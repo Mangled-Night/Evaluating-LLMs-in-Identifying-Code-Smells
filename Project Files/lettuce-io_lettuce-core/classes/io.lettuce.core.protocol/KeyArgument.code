@@ -1,0 +1,29 @@
+static class KeyArgument<K,V> extends SingularArgument {
+  final K key;
+  final RedisCodec<K,V> codec;
+  private KeyArgument(  K key,  RedisCodec<K,V> codec){
+    this.key=key;
+    this.codec=codec;
+  }
+  static <K,V>KeyArgument<K,V> of(  K key,  RedisCodec<K,V> codec){
+    return new KeyArgument<>(key,codec);
+  }
+  @SuppressWarnings("unchecked") @Override void encode(  ByteBuf target){
+    if (codec instanceof ToByteBufEncoder) {
+      ToByteBufEncoder<K,V> toByteBufEncoder=(ToByteBufEncoder<K,V>)codec;
+      ByteBuf temporaryBuffer=target.alloc().buffer(toByteBufEncoder.estimateSize(key) + 6);
+      try {
+        toByteBufEncoder.encodeKey(key,temporaryBuffer);
+        ByteBufferArgument.writeByteBuf(target,temporaryBuffer);
+      }
+  finally {
+        temporaryBuffer.release();
+      }
+      return;
+    }
+    ByteBufferArgument.writeByteBuffer(target,codec.encodeKey(key));
+  }
+  @Override public String toString(){
+    return String.format("key<%s>",new StringCodec().decodeKey(codec.encodeKey(key)));
+  }
+}

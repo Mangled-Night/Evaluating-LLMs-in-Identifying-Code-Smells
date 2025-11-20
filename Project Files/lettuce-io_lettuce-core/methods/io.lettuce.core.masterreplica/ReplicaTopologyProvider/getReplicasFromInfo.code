@@ -1,0 +1,11 @@
+private List<RedisNodeDescription> getReplicasFromInfo(String info){
+  List<RedisNodeDescription> replicas=new ArrayList<>();
+  Matcher matcher=SLAVE_PATTERN.matcher(info);
+  while (matcher.find()) {
+    String group=matcher.group(2);
+    String ip=getNested(IP_PATTERN,group,1);
+    String port=getNested(PORT_PATTERN,group,1);
+    replicas.add(new RedisMasterReplicaNode(ip,Integer.parseInt(port),redisURI,RedisInstance.Role.SLAVE));
+  }
+  return replicas;
+}

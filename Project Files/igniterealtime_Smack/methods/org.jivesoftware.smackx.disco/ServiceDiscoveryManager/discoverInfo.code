@@ -1,0 +1,39 @@
+/** 
+ * Returns the discovered information of a given XMPP entity addressed by its JID. Use null as entityID to query the server
+ * @param entityID the address of the XMPP entity or null.
+ * @return the discovered information.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public DiscoverInfo discoverInfo(Jid entityID) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  if (entityID == null)   return discoverInfo(null,null);
+synchronized (discoInfoLookupShortcutMechanisms) {
+    for (    DiscoInfoLookupShortcutMechanism discoInfoLookupShortcutMechanism : discoInfoLookupShortcutMechanisms) {
+      DiscoverInfo info=discoInfoLookupShortcutMechanism.getDiscoverInfoByUser(this,entityID);
+      if (info != null) {
+        return info;
+      }
+    }
+  }
+  return discoverInfo(entityID,null);
+}
+/** 
+ * Returns the discovered information of a given XMPP entity addressed by its JID and note attribute. Use this message only when trying to query information which is not directly addressable.
+ * @see <a href="http://xmpp.org/extensions/xep-0030.html#info-basic">XEP-30 Basic Protocol</a>
+ * @see <a href="http://xmpp.org/extensions/xep-0030.html#info-nodes">XEP-30 Info Nodes</a>
+ * @param entityID the address of the XMPP entity.
+ * @param node the optional attribute that supplements the 'jid' attribute.
+ * @return the discovered information.
+ * @throws XMPPErrorException if the operation failed for some reason.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public DiscoverInfo discoverInfo(Jid entityID,String node) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  XMPPConnection connection=connection();
+  DiscoverInfo discoInfoRequest=DiscoverInfo.builder(connection).to(entityID).setNode(node).build();
+  Stanza result=connection.sendIqRequestAndWaitForResponse(discoInfoRequest);
+  return (DiscoverInfo)result;
+}

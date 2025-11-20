@@ -1,0 +1,18 @@
+/** 
+ * Decreases the usage count for a given FBO and triggers its disposal if the count goes down to zero.
+ * @param fboName a SimpleUri uniquely identifying an FBO stored in the manager.
+ */
+@Override public void release(SimpleUri fboName){
+  Preconditions.checkArgument(fboUsageCountMap.containsKey(fboName),"The given fbo is not used.");
+  if (fboUsageCountMap.get(fboName) != 1) {
+    int usageCount=fboUsageCountMap.get(fboName);
+    fboUsageCountMap.put(fboName,usageCount - 1);
+  }
+ else {
+    get(fboName).dispose();
+    fboLookup.remove(fboName);
+    if (fboConfigs.containsKey(fboName)) {
+      fboConfigs.remove(fboName);
+    }
+  }
+}

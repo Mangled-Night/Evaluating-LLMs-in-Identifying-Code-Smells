@@ -1,0 +1,27 @@
+@Override public void channelRead0(ChannelHandlerContext ctx,HttpObject msg){
+  if (msg instanceof HttpResponse) {
+    HttpResponse response=(HttpResponse)msg;
+    simpleHttpResponse.setStatus(response.status().code());
+    if (!response.headers().isEmpty()) {
+      for (      String name : response.headers().names()) {
+        for (        String value : response.headers().getAll(name)) {
+          if (logger.isDebugEnabled()) {
+            logger.debug("header: {}, value: {}",name,value);
+          }
+          simpleHttpResponse.addHeader(name,value);
+        }
+      }
+    }
+  }
+  if (msg instanceof HttpContent) {
+    HttpContent content=(HttpContent)msg;
+    ByteBuf byteBuf=content.content();
+    byte[] bytes=new byte[byteBuf.readableBytes()];
+    byteBuf.readBytes(bytes);
+    simpleHttpResponse.setContent(bytes);
+    promise.setSuccess(simpleHttpResponse);
+    if (content instanceof LastHttpContent) {
+      ctx.close();
+    }
+  }
+}

@@ -1,0 +1,76 @@
+/** 
+ * Utility class to test for memory leaks caused by Smack. <p> Note that this test is based on the assumption that it is possible to trigger a full garbage collection run, which is not the case. See also this <a href="https://stackoverflow.com/questions/1481178/how-to-force-garbage-collection-in-java">stackoverflow question</a>. Hence the  {@link #triggerGarbageCollection()} method defined in this class is not portable and dependson implementation depended Java Virtual Machine behavior. </p>
+ * @see <a href="https://issues.igniterealtime.org/browse/SMACK-383">SMACK-383 Jira Issue</a>
+ */
+public class MemoryLeakTestUtil {
+  private static final Logger LOGGER=Logger.getLogger(MemoryLeakTestUtil.class.getName());
+  @SuppressWarnings("UnusedVariable") public static <M extends Manager>void noResourceLeakTest(  Function<DummyConnection,M> managerSupplier) throws XmppStringprepException, IllegalArgumentException, InterruptedException {
+    final int numConnections=10;
+    ReferenceQueue<DummyConnection> connectionsReferenceQueue=new ReferenceQueue<>();
+    ReferenceQueue<Manager> managerReferenceQueue=new ReferenceQueue<>();
+    @SuppressWarnings("ModifiedButNotUsed") Set<PhantomReference<DummyConnection>> connectionsPhantomReferences=new HashSet<>();
+    @SuppressWarnings("ModifiedButNotUsed") Set<PhantomReference<Manager>> managersPhantomReferences=new HashSet<>();
+    List<DummyConnection> connections=new ArrayList<>(numConnections);
+    for (int i=0; i < numConnections; i++) {
+      DummyConnection connection=new DummyConnection("foo" + i,"bar","baz");
+      PhantomReference<DummyConnection> connectionPhantomReference=new PhantomReference<>(connection,connectionsReferenceQueue);
+      connectionsPhantomReferences.add(connectionPhantomReference);
+      Manager manager=managerSupplier.apply(connection);
+      PhantomReference<Manager> managerPhantomReference=new PhantomReference<Manager>(manager,managerReferenceQueue);
+      managersPhantomReferences.add(managerPhantomReference);
+      connections.add(connection);
+    }
+    connections=null;
+    triggerGarbageCollection();
+    assertReferencesQueueSize(connectionsReferenceQueue,numConnections);
+    assertReferencesQueueIsEmpty(managerReferenceQueue);
+    DummyConnection connection=new DummyConnection("last","bar","baz");
+    @SuppressWarnings("unused") Manager manager=managerSupplier.apply(connection);
+    triggerGarbageCollection();
+    assertReferencesQueueSize(managerReferenceQueue,numConnections);
+  }
+  private static void assertReferencesQueueSize(  ReferenceQueue<?> referenceQueue,  int expectedSize) throws IllegalArgumentException, InterruptedException {
+    final int timeout=120000;
+    final int maxAttempts=3;
+    for (int itemsRemoved=0; itemsRemoved < expectedSize; ++itemsRemoved) {
+      int attempt=0;
+      Reference<?> reference=null;
+      do {
+        reference=referenceQueue.remove(timeout);
+        if (reference != null) {
+          break;
+        }
+        attempt++;
+        String message="No reference to a gc'ed object found after " + timeout + "ms in the "+ attempt+ ". attempt.";
+        if (attempt >= maxAttempts) {
+          fail(message);
+        }
+        LOGGER.warning(message);
+        triggerGarbageCollection();
+      }
+ while (true);
+      reference.clear();
+    }
+    Reference<?> reference=referenceQueue.poll();
+    assertNull(reference,"Reference queue is not empty when it should be");
+  }
+  private static void assertReferencesQueueIsEmpty(  ReferenceQueue<?> referenceQueue){
+    Reference<?> reference=referenceQueue.poll();
+    assertNull(reference);
+  }
+  @SuppressWarnings("UnusedVariable") private static void triggerGarbageCollection(){
+    Object object=new Object();
+    WeakReference<Object> weakReference=new WeakReference<>(object);
+    object=null;
+    int gcCalls=0;
+    do {
+      if (gcCalls > 1000) {
+        throw new AssertionError("No observed gargabe collection after " + gcCalls + " calls of System.gc()");
+      }
+      System.gc();
+      gcCalls++;
+    }
+ while (weakReference.get() != null);
+    LOGGER.finer("Observed garbage collection after " + gcCalls + " calls of System.gc()");
+  }
+}

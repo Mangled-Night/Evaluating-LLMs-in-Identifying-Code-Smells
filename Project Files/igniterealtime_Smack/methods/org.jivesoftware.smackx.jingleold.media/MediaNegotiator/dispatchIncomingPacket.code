@@ -1,0 +1,59 @@
+/** 
+ * Dispatch an incoming packet. The method is responsible for recognizing the stanza type and, depending on the current state, delivering the stanza to the right event handler and wait for a response.
+ * @param iq TODO javadoc me pleasethe stanza received
+ * @return the new Jingle stanza to send.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+@Override public List<IQ> dispatchIncomingPacket(IQ iq,String id) throws XMPPException, NotConnectedException, InterruptedException {
+  List<IQ> responses=new ArrayList<>();
+  IQ response=null;
+  if (iq.getType().equals(IQ.Type.error)) {
+    setNegotiatorState(JingleNegotiatorState.FAILED);
+    triggerMediaClosed(getBestCommonAudioPt());
+    throw new JingleException(iq.getError().getDescriptiveText());
+  }
+ else   if (iq.getType().equals(IQ.Type.result)) {
+    if (isExpectedId(iq.getStanzaId())) {
+      receiveResult(iq);
+      removeExpectedId(iq.getStanzaId());
+    }
+  }
+ else   if (iq instanceof Jingle) {
+    Jingle jingle=(Jingle)iq;
+    JingleActionEnum action=jingle.getAction();
+    for (    JingleContent jingleContent : jingle.getContentsList()) {
+      if (jingleContent.getName().equals(parentNegotiator.getName())) {
+        JingleDescription description=jingleContent.getDescription();
+        if (description != null) {
+switch (action) {
+case CONTENT_ACCEPT:
+            response=receiveContentAcceptAction(jingle,description);
+          break;
+case CONTENT_MODIFY:
+        break;
+case CONTENT_REMOVE:
+      break;
+case SESSION_INFO:
+    response=receiveSessionInfoAction(jingle,description);
+  break;
+case SESSION_INITIATE:
+response=receiveSessionInitiateAction(jingle,description);
+break;
+case SESSION_ACCEPT:
+response=receiveSessionAcceptAction(jingle,description);
+break;
+default :
+break;
+}
+}
+}
+}
+}
+if (response != null) {
+addExpectedId(response.getStanzaId());
+responses.add(response);
+}
+return responses;
+}

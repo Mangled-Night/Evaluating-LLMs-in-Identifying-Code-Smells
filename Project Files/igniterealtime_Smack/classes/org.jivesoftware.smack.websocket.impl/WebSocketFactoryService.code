@@ -1,0 +1,12 @@
+public final class WebSocketFactoryService {
+  private static final ServiceLoader<WebSocketFactory> SERVICE_LOADER=ServiceLoader.load(WebSocketFactory.class);
+  public static AbstractWebSocket createWebSocket(  WebSocketRemoteConnectionEndpoint endpoint,  ModularXmppClientToServerConnectionInternal connectionInternal){
+    assert connectionInternal != null;
+    Iterator<WebSocketFactory> websocketFactories=SERVICE_LOADER.iterator();
+    if (!websocketFactories.hasNext()) {
+      throw new IllegalStateException("No smack websocket service configured");
+    }
+    WebSocketFactory websocketFactory=websocketFactories.next();
+    return websocketFactory.create(endpoint,connectionInternal);
+  }
+}

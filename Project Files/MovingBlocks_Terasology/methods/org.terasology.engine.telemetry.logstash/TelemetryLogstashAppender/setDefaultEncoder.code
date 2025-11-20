@@ -1,0 +1,24 @@
+private void setDefaultEncoder(){
+  LoggingEventCompositeJsonEncoder loggingEventCompositeJsonEncoder=new LoggingEventCompositeJsonEncoder();
+  JsonProviders jsonProviders=new JsonProviders();
+  jsonProviders.addProvider(new LoggingEventFormattedTimestampJsonProvider());
+  jsonProviders.addProvider(new LogstashVersionJsonProvider());
+  jsonProviders.addProvider(new MdcJsonProvider());
+  jsonProviders.addProvider(new MessageJsonProvider());
+  jsonProviders.addProvider(new LogLevelJsonProvider());
+  jsonProviders.addProvider(new LoggerNameJsonProvider());
+  jsonProviders.addProvider(new ThreadNameJsonProvider());
+  jsonProviders.addProvider(new SystemContextJsonProvider());
+  jsonProviders.addProvider(new ModulesJsonProvider());
+  jsonProviders.addProvider(new UserIdJsonProvider());
+  StackTraceJsonProvider stackTraceJsonProvider=new StackTraceJsonProvider();
+  ShortenedThrowableConverter shortenedThrowableConverter=new ShortenedThrowableConverter();
+  shortenedThrowableConverter.setMaxDepthPerThrowable(30);
+  shortenedThrowableConverter.setMaxLength(2046);
+  shortenedThrowableConverter.setShortenedClassNameLength(20);
+  shortenedThrowableConverter.setRootCauseFirst(true);
+  stackTraceJsonProvider.setThrowableConverter(shortenedThrowableConverter);
+  jsonProviders.addProvider(stackTraceJsonProvider);
+  loggingEventCompositeJsonEncoder.setProviders(jsonProviders);
+  this.setEncoder(loggingEventCompositeJsonEncoder);
+}

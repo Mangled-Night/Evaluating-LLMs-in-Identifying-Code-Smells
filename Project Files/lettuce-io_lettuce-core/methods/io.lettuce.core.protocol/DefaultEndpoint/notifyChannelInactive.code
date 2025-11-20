@@ -1,0 +1,16 @@
+@Override public void notifyChannelInactive(Channel channel){
+  if (isClosed()) {
+    RedisException closed=new RedisException("Connection closed");
+    cancelCommands("Connection closed",drainCommands(),it -> it.completeExceptionally(closed));
+  }
+  sharedLock.doExclusive(() -> {
+    if (debugEnabled) {
+      logger.debug("{} deactivating endpoint handler",logPrefix());
+    }
+    connectionFacade.deactivated();
+  }
+);
+  if (this.channel == channel) {
+    this.channel=null;
+  }
+}

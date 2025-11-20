@@ -1,0 +1,19 @@
+private ByteBuffer write(ByteBuffer buffer,FrontendConnection c){
+  int size=calcPacketSize();
+  buffer=c.checkWriteBuffer(buffer,c.getPacketHeaderSize() + size,true);
+  BufferUtil.writeUB3(buffer,calcPacketSize());
+  buffer.put(packetId);
+  buffer.put(fieldCount);
+  BufferUtil.writeLength(buffer,affectedRows);
+  BufferUtil.writeLength(buffer,insertId);
+  BufferUtil.writeUB2(buffer,serverStatus);
+  BufferUtil.writeUB2(buffer,warningCount);
+  if (message != null) {
+    BufferUtil.writeWithLength(buffer,message);
+  }
+  return buffer;
+}
+public void write(FrontendConnection c){
+  ByteBuffer buffer=write(c.allocate(),c);
+  c.write(buffer);
+}

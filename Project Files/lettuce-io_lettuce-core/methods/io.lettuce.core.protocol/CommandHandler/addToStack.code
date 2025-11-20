@@ -1,0 +1,22 @@
+private void addToStack(RedisCommand<?,?,?> command,ChannelPromise promise){
+  try {
+    validateWrite(1);
+    if (command.getOutput() == null) {
+      complete(command);
+    }
+    RedisCommand<?,?,?> redisCommand=potentiallyWrapLatencyCommand(command);
+    if (promise.isVoid()) {
+      stack.add(redisCommand);
+    }
+ else {
+      promise.addListener(AddToStack.newInstance(stack,redisCommand));
+    }
+  }
+ catch (  Exception e) {
+    command.completeExceptionally(e);
+    throw e;
+  }
+}
+AddToStack(Recycler.Handle<AddToStack> handle){
+  this.handle=handle;
+}

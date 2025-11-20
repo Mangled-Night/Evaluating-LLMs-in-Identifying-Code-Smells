@@ -1,0 +1,49 @@
+/** 
+ * Creates a last activity manager to response last activity requests.
+ * @param connection TODO javadoc me pleaseThe XMPPConnection that the last activity requests will use.
+ */
+private LastActivityManager(XMPPConnection connection){
+  super(connection);
+  connection.addStanzaSendingListener(new StanzaListener(){
+    @Override public void processStanza(    Stanza packet){
+      Presence presence=(Presence)packet;
+      Presence.Mode mode=presence.getMode();
+      if (mode == null)       return;
+switch (mode) {
+case available:
+case chat:
+        resetIdleTime();
+      break;
+default :
+    break;
+}
+}
+}
+,StanzaTypeFilter.PRESENCE);
+connection.addStanzaSendingListener(new StanzaListener(){
+@Override public void processStanza(Stanza packet){
+Message message=(Message)packet;
+if (message.getType() == Message.Type.error) return;
+resetIdleTime();
+}
+}
+,StanzaTypeFilter.MESSAGE);
+connection.registerIQRequestHandler(new AbstractIqRequestHandler(LastActivity.ELEMENT,LastActivity.NAMESPACE,IQ.Type.get,Mode.async){
+@Override public IQ handleIQRequest(IQ iqRequest){
+if (!enabled) return IQ.createErrorResponse(iqRequest,Condition.not_acceptable);
+LastActivity message=new LastActivity();
+message.setType(IQ.Type.result);
+message.setTo(iqRequest.getFrom());
+message.setFrom(iqRequest.getTo());
+message.setStanzaId(iqRequest.getStanzaId());
+message.setLastActivity(getIdleTime());
+return message;
+}
+}
+);
+if (enabledPerDefault) {
+enable();
+}
+resetIdleTime();
+instances.put(connection,this);
+}

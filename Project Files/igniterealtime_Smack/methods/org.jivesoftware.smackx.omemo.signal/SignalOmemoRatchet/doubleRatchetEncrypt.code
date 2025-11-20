@@ -1,0 +1,11 @@
+@Override public CiphertextTuple doubleRatchetEncrypt(OmemoDevice recipient,byte[] messageKey){
+  CiphertextMessage ciphertextMessage;
+  try {
+    ciphertextMessage=getCipher(recipient).encrypt(messageKey);
+  }
+ catch (  UntrustedIdentityException e) {
+    throw new AssertionError("Signals trust management MUST be disabled.");
+  }
+  int type=ciphertextMessage.getType() == CiphertextMessage.PREKEY_TYPE ? OmemoElement.TYPE_OMEMO_PREKEY_MESSAGE : OmemoElement.TYPE_OMEMO_MESSAGE;
+  return new CiphertextTuple(ciphertextMessage.serialize(),type);
+}

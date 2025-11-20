@@ -1,0 +1,25 @@
+/** 
+ * 将zk上面的信息转换为javabean对象 方法描述
+ * @param zkDirectory
+ * @return
+ * @创建日期 2016年9月17日
+ */
+private void zktoEhcacheWrite(ZkDirectoryImpl zkDirectory){
+  DataInf ehcacheZkDirectory=this.getZkData(zkDirectory,EHCACHE_NAME);
+  Ehcache ehcache=parseJsonEhcacheService.parseJsonToBean(ehcacheZkDirectory.getDataValue());
+  String outputPath=EcacheszkToxmlLoader.class.getClassLoader().getResource(ZookeeperPath.ZK_LOCAL_WRITE_PATH.getKey()).getPath();
+  outputPath=new File(outputPath).getPath() + File.separator;
+  outputPath+=EHCACHE_NAME;
+  parseEcacheXMl.parseToXmlWrite(ehcache,outputPath,null);
+  String watchPath=zkDirectory.getName();
+  watchPath=watchPath + ZookeeperPath.ZK_SEPARATOR.getKey() + EHCACHE_NAME;
+  this.zookeeperListen.watchPath(currZkPath,watchPath);
+  DataInf cacheserZkDirectory=this.getZkData(zkDirectory,CACHESERVER_NAME);
+  if (null != cacheserZkDirectory) {
+    ZkDataImpl cacheData=(ZkDataImpl)cacheserZkDirectory;
+    this.writeCacheservice(cacheData.getName(),cacheData.getValue());
+    String watchServerPath=zkDirectory.getName();
+    watchServerPath=watchPath + ZookeeperPath.ZK_SEPARATOR.getKey() + CACHESERVER_NAME;
+    this.zookeeperListen.watchPath(currZkPath,watchServerPath);
+  }
+}

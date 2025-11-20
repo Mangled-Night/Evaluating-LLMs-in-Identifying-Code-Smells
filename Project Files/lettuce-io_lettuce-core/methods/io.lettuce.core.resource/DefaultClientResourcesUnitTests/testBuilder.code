@@ -1,0 +1,11 @@
+@Test void testBuilder() throws Exception {
+  DefaultClientResources sut=DefaultClientResources.builder().ioThreadPoolSize(4).computationThreadPoolSize(4).commandLatencyCollectorOptions(DefaultCommandLatencyCollectorOptions.disabled()).build();
+  EventExecutorGroup eventExecutors=sut.eventExecutorGroup();
+  NioEventLoopGroup eventLoopGroup=sut.eventLoopGroupProvider().allocate(NioEventLoopGroup.class);
+  assertThat(eventExecutors).hasSize(4);
+  assertThat(eventLoopGroup.executorCount()).isEqualTo(4);
+  assertThat(sut.ioThreadPoolSize()).isEqualTo(4);
+  assertThat(sut.commandLatencyRecorder()).isNotNull();
+  assertThat(sut.commandLatencyRecorder().isEnabled()).isFalse();
+  assertThat(sut.shutdown(0,0,TimeUnit.MILLISECONDS).get()).isTrue();
+}

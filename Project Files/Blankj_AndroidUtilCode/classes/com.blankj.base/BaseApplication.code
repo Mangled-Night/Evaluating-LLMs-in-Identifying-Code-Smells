@@ -1,0 +1,52 @@
+/** 
+ * <pre> author: Blankj blog  : http://blankj.com time  : 2018/11/16 desc  : base about application </pre>
+ */
+public class BaseApplication extends Application {
+  private static BaseApplication sInstance;
+  public static BaseApplication getInstance(){
+    return sInstance;
+  }
+  private Boolean isDebug;
+  private Boolean isMainProcess;
+  @Override protected void attachBaseContext(  Context base){
+    super.attachBaseContext(base);
+    MultiDex.install(this);
+  }
+  @Override public void onCreate(){
+    super.onCreate();
+    sInstance=this;
+    initLog();
+    initCrash();
+    initDebugMenu();
+  }
+  public void initLog(){
+    LogUtils.Config config=LogUtils.getConfig().setLogSwitch(isDebug()).setConsoleSwitch(isDebug()).setGlobalTag(null).setLogHeadSwitch(true).setLog2FileSwitch(false).setDir("").setFilePrefix("").setFileExtension(".log").setBorderSwitch(true).setSingleTagSwitch(true).setConsoleFilter(LogUtils.V).setFileFilter(LogUtils.V).setStackDeep(1).setStackOffset(0).setSaveDays(3).addFormatter(new LogUtils.IFormatter<ArrayList>(){
+      @Override public String format(      ArrayList arrayList){
+        return "LogUtils Formatter ArrayList { " + arrayList.toString() + " }";
+      }
+    }
+).addFileExtraHead("ExtraKey","ExtraValue");
+    LogUtils.i(config.toString());
+  }
+  private void initCrash(){
+    CrashUtils.init(new CrashUtils.OnCrashListener(){
+      @Override public void onCrash(      CrashUtils.CrashInfo crashInfo){
+        crashInfo.addExtraHead("extraKey","extraValue");
+        LogUtils.e(crashInfo.toString());
+        AppUtils.relaunchApp();
+      }
+    }
+);
+  }
+  private void initDebugMenu(){
+    DebugUtils.addDebugs(new ArrayList<IDebug>());
+  }
+  private boolean isDebug(){
+    if (isDebug == null)     isDebug=AppUtils.isAppDebug();
+    return isDebug;
+  }
+  public boolean isMainProcess(){
+    if (isMainProcess == null)     isMainProcess=ProcessUtils.isMainProcess();
+    return isMainProcess;
+  }
+}

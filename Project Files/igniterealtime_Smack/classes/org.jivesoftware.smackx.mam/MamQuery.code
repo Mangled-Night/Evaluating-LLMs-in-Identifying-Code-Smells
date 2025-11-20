@@ -1,0 +1,47 @@
+public final class MamQuery {
+  private final String node;
+  private final DataForm form;
+  private MamQueryPage mamQueryPage;
+  private MamQuery(  MamQueryPage mamQueryPage,  String node,  DataForm form){
+    this.node=node;
+    this.form=form;
+    this.mamQueryPage=mamQueryPage;
+  }
+  public boolean isComplete(){
+    return mamQueryPage.getMamFinIq().isComplete();
+  }
+  public List<Message> getMessages(){
+    return mamQueryPage.messages;
+  }
+  public List<MamResultExtension> getMamResultExtensions(){
+    return mamQueryPage.mamResultExtensions;
+  }
+  private List<Message> page(  RSMSet requestRsmSet) throws NoResponseException, XMPPErrorException, NotConnectedException, NotLoggedInException, InterruptedException {
+    String queryId=StringUtils.secureUniqueRandomString();
+    MamQueryIQ mamQueryIQ=getElementFactory().newQueryIQ(queryId,node,form);
+    mamQueryIQ.setType(IQ.Type.set);
+    mamQueryIQ.setTo(archiveAddress);
+    mamQueryIQ.addExtension(requestRsmSet);
+    mamQueryPage=queryArchivePage(mamQueryIQ);
+    return mamQueryPage.messages;
+  }
+  private RSMSet getPreviousRsmSet(){
+    return mamQueryPage.getMamFinIq().getRSMSet();
+  }
+  public List<Message> pageNext(  int count) throws NoResponseException, XMPPErrorException, NotConnectedException, NotLoggedInException, InterruptedException {
+    RSMSet previousResultRsmSet=getPreviousRsmSet();
+    RSMSet requestRsmSet=new RSMSet(count,previousResultRsmSet.getLast(),RSMSet.PageDirection.after);
+    return page(requestRsmSet);
+  }
+  public List<Message> pagePrevious(  int count) throws NoResponseException, XMPPErrorException, NotConnectedException, NotLoggedInException, InterruptedException {
+    RSMSet previousResultRsmSet=getPreviousRsmSet();
+    RSMSet requestRsmSet=new RSMSet(count,previousResultRsmSet.getFirst(),RSMSet.PageDirection.before);
+    return page(requestRsmSet);
+  }
+  public int getMessageCount(){
+    return getMessages().size();
+  }
+  public MamQueryPage getPage(){
+    return mamQueryPage;
+  }
+}

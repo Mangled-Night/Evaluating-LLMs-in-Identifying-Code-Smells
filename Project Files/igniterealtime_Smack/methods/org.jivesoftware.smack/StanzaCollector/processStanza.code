@@ -1,0 +1,19 @@
+/** 
+ * Processes a stanza to see if it meets the criteria for this stanza collector. If so, the stanza is added to the result queue.
+ * @param packet the stanza to process.
+ */
+void processStanza(Stanza packet){
+  if (packetFilter == null || packetFilter.accept(packet)) {
+synchronized (this) {
+      if (resultQueue.size() == maxQueueSize) {
+        Stanza rolledOverStanza=resultQueue.poll();
+        assert rolledOverStanza != null;
+      }
+      resultQueue.add(packet);
+      notifyAll();
+    }
+    if (collectorToReset != null) {
+      collectorToReset.waitStart=System.currentTimeMillis();
+    }
+  }
+}

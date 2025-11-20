@@ -1,0 +1,56 @@
+/** 
+ * Dispatch an incoming packet. The method is responsible for recognizing the stanza type and, depending on the current state, delivering the stanza to the right event handler and wait for a response.
+ * @param iq the stanza received
+ * @return the new Jingle stanza to send.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+@Override public final List<IQ> dispatchIncomingPacket(IQ iq,String id) throws XMPPException, SmackException, InterruptedException {
+  List<IQ> responses=new ArrayList<>();
+  IQ response=null;
+  if (iq != null) {
+    if (iq.getType().equals(IQ.Type.error)) {
+      setNegotiatorState(JingleNegotiatorState.FAILED);
+      triggerTransportClosed(null);
+      throw new JingleException(iq.getError().getDescriptiveText());
+    }
+ else     if (iq.getType().equals(IQ.Type.result)) {
+      if (isExpectedId(iq.getStanzaId())) {
+        response=receiveResult(iq);
+        removeExpectedId(iq.getStanzaId());
+      }
+    }
+ else     if (iq instanceof Jingle) {
+      Jingle jingle=(Jingle)iq;
+      JingleActionEnum action=jingle.getAction();
+switch (action) {
+case CONTENT_ACCEPT:
+        response=receiveContentAcceptAction(jingle);
+      break;
+case CONTENT_MODIFY:
+    break;
+case CONTENT_REMOVE:
+  break;
+case SESSION_INFO:
+break;
+case SESSION_INITIATE:
+response=receiveSessionInitiateAction(jingle);
+break;
+case SESSION_ACCEPT:
+response=receiveSessionAcceptAction(jingle);
+break;
+case TRANSPORT_INFO:
+response=receiveTransportInfoAction(jingle);
+break;
+default :
+break;
+}
+}
+}
+if (response != null) {
+addExpectedId(response.getStanzaId());
+responses.add(response);
+}
+return responses;
+}

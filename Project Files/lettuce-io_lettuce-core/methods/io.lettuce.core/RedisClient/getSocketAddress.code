@@ -1,0 +1,20 @@
+/** 
+ * Get a  {@link Mono} that resolves {@link RedisURI} to a {@link SocketAddress}. Resolution is performed either using Redis Sentinel (if the  {@link RedisURI} is configured with Sentinels) or via DNS resolution.<p> Subclasses of  {@link RedisClient} may override that method.
+ * @param redisURI must not be {@code null}.
+ * @return the resolved {@link SocketAddress}.
+ * @see ClientResources#dnsResolver()
+ * @see RedisURI#getSentinels()
+ * @see RedisURI#getSentinelMasterId()
+ */
+protected Mono<SocketAddress> getSocketAddress(RedisURI redisURI){
+  return Mono.defer(() -> {
+    if (redisURI.getSentinelMasterId() != null && !redisURI.getSentinels().isEmpty()) {
+      logger.debug("Connecting to Redis using Sentinels {}, MasterId {}",redisURI.getSentinels(),redisURI.getSentinelMasterId());
+      return lookupRedis(redisURI).switchIfEmpty(Mono.error(new RedisConnectionException("Cannot provide redisAddress using sentinel for masterId " + redisURI.getSentinelMasterId())));
+    }
+ else {
+      return Mono.fromCallable(() -> getResources().socketAddressResolver().resolve((redisURI)));
+    }
+  }
+);
+}

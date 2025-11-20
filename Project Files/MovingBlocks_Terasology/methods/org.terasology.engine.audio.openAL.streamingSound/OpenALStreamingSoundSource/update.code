@@ -1,0 +1,15 @@
+@Override public void update(float delta){
+  int buffersProcessed=alGetSourcei(this.getSourceId(),AL_BUFFERS_PROCESSED);
+  while (buffersProcessed-- > 0) {
+    int buffer=alSourceUnqueueBuffers(this.getSourceId());
+    OpenALException.checkState("Buffer unqueue");
+    if (audio.updateBuffer(buffer)) {
+      alSourceQueueBuffers(this.getSourceId(),buffer);
+      OpenALException.checkState("Buffer refill");
+    }
+ else {
+      stop();
+    }
+  }
+  super.update(delta);
+}

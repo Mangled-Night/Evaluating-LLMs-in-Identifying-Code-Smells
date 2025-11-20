@@ -1,0 +1,37 @@
+@Override public TeraArray deflateSparseArray16Bit(short[][] inflated,short[] deflated,short fill,int rowSize,int sizeX,int sizeY,int sizeZ){
+  if (inflated == null && deflated == null) {
+    return new TeraSparseArray16Bit(sizeX,sizeY,sizeZ,fill);
+  }
+  if (inflated == null) {
+    return new TeraSparseArray16Bit(sizeX,sizeY,sizeZ,inflated,deflated);
+  }
+  short[] packed=new short[sizeY];
+  short[][] newInflated=new short[sizeY][];
+  for (int y=0; y < sizeY; y++) {
+    short[] planeXY=inflated[y];
+    if (planeXY != null) {
+      short first=planeXY[0];
+      boolean packing=true;
+      for (int i=1; i < rowSize; i++) {
+        if (first != planeXY[i]) {
+          packing=false;
+          break;
+        }
+      }
+      if (packing) {
+        packed[y]=first;
+      }
+ else {
+        short[] xyvalues=new short[rowSize];
+        System.arraycopy(inflated[y],0,xyvalues,0,rowSize);
+        newInflated[y]=xyvalues;
+      }
+    }
+ else {
+      if (deflated != null) {
+        packed[y]=deflated[y];
+      }
+    }
+  }
+  return new TeraSparseArray16Bit(sizeX,sizeY,sizeZ,newInflated,packed);
+}

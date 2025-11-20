@@ -1,0 +1,33 @@
+private ByteBuffer[] createAtlasMipmaps(int numMipMaps,Color initialColor,List<BlockTile> tileImages,String screenshotName){
+  return createAtlasMipmaps(numMipMaps,initialColor,tileImages,screenshotName,Lists.newArrayList());
+}
+private ByteBuffer[] createAtlasMipmaps(int numMipMaps,Color initialColor,List<BlockTile> tileImages,String screenshotName,List<BlockTile> alphaMaskTiles){
+  ByteBuffer[] data=new ByteBuffer[numMipMaps];
+  for (int i=0; i < numMipMaps; ++i) {
+    BufferedImage image=generateAtlas(i,tileImages,initialColor);
+    if (alphaMaskTiles.size() > 0) {
+      BufferedImage alphaMask=generateAtlas(i,alphaMaskTiles,Color.BLACK);
+      storeGreyscaleMapIntoAlpha(image,alphaMask);
+    }
+    if (i == 0) {
+      try (OutputStream stream=new BufferedOutputStream(Files.newOutputStream(PathManager.getInstance().getScreenshotPath().resolve(screenshotName)))){
+        ImageIO.write(image,"png",stream);
+      }
+ catch (      IOException e) {
+        logger.warn("Failed to write atlas");
+      }
+    }
+    try (ByteArrayOutputStream bos=new ByteArrayOutputStream()){
+      ImageIO.write(image,"png",bos);
+      PNGDecoder decoder=new PNGDecoder(new ByteArrayInputStream(bos.toByteArray()));
+      ByteBuffer buf=ByteBuffer.allocateDirect(4 * decoder.getWidth() * decoder.getHeight());
+      decoder.decode(buf,decoder.getWidth() * 4,PNGDecoder.Format.RGBA);
+      buf.flip();
+      data[i]=buf;
+    }
+ catch (    IOException e) {
+      logger.error("Failed to create atlas texture");
+    }
+  }
+  return data;
+}

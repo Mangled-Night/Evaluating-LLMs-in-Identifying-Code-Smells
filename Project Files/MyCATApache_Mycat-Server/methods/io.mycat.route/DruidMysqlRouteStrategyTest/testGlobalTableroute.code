@@ -1,0 +1,35 @@
+public void testGlobalTableroute() throws Exception {
+  String sql=null;
+  SchemaConfig schema=schemaMap.get("TESTDB");
+  RouteResultset rrs=null;
+  sql="select * from company where company.name like 'aaa'";
+  schema=schemaMap.get("TESTDB");
+  rrs=routeStrategy.route(new SystemConfig(),schema,-1,sql,null,null,cachePool);
+  Assert.assertEquals(1,rrs.getNodes().length);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  sql="insert into company (id,name,level) values(111,'company1',3)";
+  schema=schemaMap.get("TESTDB");
+  rrs=routeStrategy.route(new SystemConfig(),schema,-1,sql,null,null,cachePool);
+  Assert.assertEquals(3,rrs.getNodes().length);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  sql="update company set name=name+aaa";
+  schema=schemaMap.get("TESTDB");
+  rrs=routeStrategy.route(new SystemConfig(),schema,-1,sql,null,null,cachePool);
+  Assert.assertEquals(3,rrs.getNodes().length);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  sql="delete from company where id = 1";
+  schema=schemaMap.get("TESTDB");
+  rrs=routeStrategy.route(new SystemConfig(),schema,-1,sql,null,null,cachePool);
+  Assert.assertEquals(3,rrs.getNodes().length);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  schema=schemaMap.get("TESTDB");
+  sql="select * from  company A where a.sharding_id=10001 union select * from  company B where B.sharding_id =10010";
+  Set<String> nodeSet=new HashSet<String>();
+  for (int i=0; i < 10; i++) {
+    rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+    Assert.assertEquals(false,rrs.isCacheAble());
+    Assert.assertEquals(1,rrs.getNodes().length);
+    nodeSet.add(rrs.getNodes()[0].getName());
+  }
+  Assert.assertEquals(true,nodeSet.size() > 1);
+}

@@ -1,0 +1,13 @@
+private void sendSyncMessages(){
+  Iterator<EntityRef> iter=physics.physicsEntitiesIterator();
+  while (iter.hasNext()) {
+    EntityRef entity=iter.next();
+    if (entity.hasComponent(NetworkComponent.class)) {
+      RigidBody body=physics.getRigidBody(entity);
+      if (body.isActive()) {
+        entity.send(new LocationResynchEvent(body.getLocation(new Vector3f()),body.getOrientation(new Quaternionf())));
+        entity.send(new PhysicsResynchEvent(body.getLinearVelocity(new Vector3f()),body.getAngularVelocity(new Vector3f())));
+      }
+    }
+  }
+}

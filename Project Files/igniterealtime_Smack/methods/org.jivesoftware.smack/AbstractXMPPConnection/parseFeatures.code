@@ -1,0 +1,41 @@
+protected final void parseFeatures(XmlPullParser parser) throws XmlPullParserException, IOException, SmackParsingException {
+  streamFeatures.clear();
+  final int initialDepth=parser.getDepth();
+  while (true) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT && parser.getDepth() == initialDepth + 1) {
+      XmlElement streamFeature=null;
+      String name=parser.getName();
+      String namespace=parser.getNamespace();
+switch (name) {
+case StartTls.ELEMENT:
+        streamFeature=PacketParserUtils.parseStartTlsFeature(parser);
+      break;
+case Mechanisms.ELEMENT:
+    streamFeature=new Mechanisms(PacketParserUtils.parseMechanisms(parser));
+  break;
+case Bind.ELEMENT:
+streamFeature=Bind.Feature.INSTANCE;
+break;
+case Session.ELEMENT:
+streamFeature=PacketParserUtils.parseSessionFeature(parser);
+break;
+case Compress.Feature.ELEMENT:
+streamFeature=PacketParserUtils.parseCompressionFeature(parser);
+break;
+default :
+ExtensionElementProvider<ExtensionElement> provider=ProviderManager.getStreamFeatureProvider(name,namespace);
+if (provider != null) {
+streamFeature=provider.parse(parser,incomingStreamXmlEnvironment);
+}
+break;
+}
+if (streamFeature != null) {
+addStreamFeature(streamFeature);
+}
+}
+ else if (eventType == XmlPullParser.Event.END_ELEMENT && parser.getDepth() == initialDepth) {
+break;
+}
+}
+}

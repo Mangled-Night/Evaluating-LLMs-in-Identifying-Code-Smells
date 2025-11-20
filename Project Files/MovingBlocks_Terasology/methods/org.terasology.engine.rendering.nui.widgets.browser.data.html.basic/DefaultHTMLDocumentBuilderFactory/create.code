@@ -1,0 +1,20 @@
+@Override public HTMLDocumentBuilder create(Attributes attributes){
+  DefaultHTMLDocumentBuilder htmlDocumentBuilder=new DefaultHTMLDocumentBuilder(htmlFontResolver,createDocumentStyle(attributes));
+  ParagraphBuilderFactory htmlParagraphBuilderFactory=new ParagraphBuilderFactory();
+  htmlDocumentBuilder.addKnownTag("p",htmlParagraphBuilderFactory);
+  MultiBlockBuilderFactory multiBlockBuilderFactory=new MultiBlockBuilderFactory(htmlDocumentBuilder);
+  htmlDocumentBuilder.addKnownTag("ul",new ListBlockBuilderFactory(false,multiBlockBuilderFactory));
+  htmlDocumentBuilder.addKnownTag("ol",new ListBlockBuilderFactory(true,multiBlockBuilderFactory));
+  return htmlDocumentBuilder;
+}
+@Override public HTMLBlockBuilder create(HTMLFontResolver htmlFontResolver,Attributes attributes){
+  ParagraphBuilder paragraphBuilder=new ParagraphBuilder(htmlFontResolver,attributes);
+  paragraphBuilder.addKnownFlowTag("img",new ImageFlowRenderableFactory());
+  return paragraphBuilder;
+}
+@Override public HTMLBlockBuilder create(HTMLFontResolver htmlFontResolver,Attributes attributes){
+  return new ListBlockBuilder(htmlFontResolver,paragraphBuilderFactory,attributes,"li",ordered);
+}
+@Override public HTMLBlockBuilder create(HTMLFontResolver htmlFontResolver,Attributes attributes){
+  return new MultiBlockBuilder(htmlDocumentBuilder,htmlFontResolver,attributes);
+}

@@ -1,0 +1,30 @@
+/** 
+ * Serializes an event.
+ * @param event
+ * @return The serialized event
+ * @throws org.terasology.engine.persistence.typeHandling.SerializationException if an error occurs during serialization
+ */
+public EntityData.Event serialize(Event event){
+  EventMetadata<?> eventMetadata=eventLibrary.getMetadata(event.getClass());
+  if (eventMetadata == null) {
+    throw new SerializationException("Unregistered event type: " + event.getClass());
+  }
+ else   if (!eventMetadata.isConstructable()) {
+    throw new SerializationException("Cannot serialize event '" + eventMetadata + "' - lacks default constructor so cannot be deserialized");
+  }
+  EntityData.Event.Builder eventData=EntityData.Event.newBuilder();
+  serializeEventType(event,eventData);
+  Serializer eventSerializer=typeHandlerLibrary.getSerializerFor(eventMetadata);
+  ByteString.Output fieldIds=ByteString.newOutput();
+  for (  ReplicatedFieldMetadata field : eventMetadata.getFields()) {
+    if (field.isReplicated()) {
+      EntityData.Value serializedValue=((ProtobufPersistedData)eventSerializer.serialize(field,event,persistedDataSerializer)).getValue();
+      if (serializedValue != null) {
+        eventData.addFieldValue(serializedValue);
+        fieldIds.write(field.getId());
+      }
+    }
+  }
+  eventData.setFieldIds(fieldIds.toByteString());
+  return eventData.build();
+}

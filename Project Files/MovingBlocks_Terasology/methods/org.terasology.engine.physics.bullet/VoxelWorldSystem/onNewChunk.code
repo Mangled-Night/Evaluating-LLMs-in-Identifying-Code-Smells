@@ -1,0 +1,22 @@
+/** 
+ * new chunks that are loaded need to update pass the data to bullet
+ * @param chunkAvailable the chunk
+ * @param worldEntity world entity
+ */
+@ReceiveEvent(components=WorldComponent.class) public void onNewChunk(OnChunkLoaded chunkAvailable,EntityRef worldEntity){
+  Vector3ic chunkPos=chunkAvailable.getChunkPos();
+  Chunk chunk=chunkProvider.getChunk(chunkPos);
+  ByteBuffer buffer=ByteBuffer.allocateDirect(2 * (Chunks.SIZE_X * Chunks.SIZE_Y * Chunks.SIZE_Z));
+  buffer.order(ByteOrder.nativeOrder());
+  for (int z=0; z < Chunks.SIZE_Z; z++) {
+    for (int x=0; x < Chunks.SIZE_X; x++) {
+      for (int y=0; y < Chunks.SIZE_Y; y++) {
+        Block block=chunk.getBlock(x,y,z);
+        colliders.forEach(k -> k.registerBlock(block));
+        buffer.putShort(block.getId());
+      }
+    }
+  }
+  buffer.rewind();
+  colliders.forEach(k -> k.loadChunk(chunk,buffer.duplicate().asShortBuffer()));
+}

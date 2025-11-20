@@ -1,0 +1,11 @@
+@Test void testConnectionEvents(){
+  RedisClient client=RedisClient.create(TestClientResources.get(),RedisURI.Builder.redis(host,port).build());
+  Flux<ConnectionEvent> publisher=client.getResources().eventBus().get().filter(event -> event instanceof ConnectionEvent).cast(ConnectionEvent.class);
+  StepVerifier.create(publisher).then(() -> client.connect().close()).assertNext(event -> {
+    assertThat(event.remoteAddress()).isNotNull();
+    assertThat(event.localAddress()).isNotNull();
+    assertThat(event.toString()).contains("->");
+  }
+).expectNextCount(3).thenCancel().verify(Duration.of(5,ChronoUnit.SECONDS));
+  FastShutdown.shutdown(client);
+}

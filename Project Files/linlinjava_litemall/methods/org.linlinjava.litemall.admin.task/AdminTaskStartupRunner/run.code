@@ -1,0 +1,14 @@
+@Override public void run(ApplicationArguments args) throws Exception {
+  List<LitemallGrouponRules> grouponRulesList=rulesService.queryByStatus(GrouponConstant.RULE_STATUS_ON);
+  for (  LitemallGrouponRules grouponRules : grouponRulesList) {
+    LocalDateTime now=LocalDateTime.now();
+    LocalDateTime expire=grouponRules.getExpireTime();
+    if (expire.isBefore(now)) {
+      taskService.addTask(new GrouponRuleExpiredTask(grouponRules.getId(),0));
+    }
+ else {
+      long delay=ChronoUnit.MILLIS.between(now,expire);
+      taskService.addTask(new GrouponRuleExpiredTask(grouponRules.getId(),delay));
+    }
+  }
+}

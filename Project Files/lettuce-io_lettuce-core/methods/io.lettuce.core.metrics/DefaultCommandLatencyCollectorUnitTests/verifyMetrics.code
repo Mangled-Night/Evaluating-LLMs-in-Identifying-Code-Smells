@@ -1,0 +1,19 @@
+@Test void verifyMetrics(){
+  sut=new DefaultCommandLatencyCollector(DefaultCommandLatencyCollectorOptions.builder().usePauseDetector().build());
+  setupData();
+  Map<CommandLatencyId,CommandMetrics> latencies=sut.retrieveMetrics();
+  assertThat(latencies).hasSize(1);
+  Map.Entry<CommandLatencyId,CommandMetrics> entry=latencies.entrySet().iterator().next();
+  assertThat(entry.getKey().commandType()).isSameAs(CommandType.BGSAVE);
+  CommandMetrics metrics=entry.getValue();
+  assertThat(metrics.getCount()).isEqualTo(3);
+  assertThat(metrics.getCompletion().getMin()).isBetween(990000L,1100000L);
+  assertThat(metrics.getCompletion().getPercentiles()).hasSize(5);
+  assertThat(metrics.getFirstResponse().getMin()).isBetween(90000L,110000L);
+  assertThat(metrics.getFirstResponse().getMax()).isBetween(290000L,310000L);
+  assertThat(metrics.getCompletion().getPercentiles()).containsKey(50.0d);
+  assertThat(metrics.getFirstResponse().getPercentiles().get(50d)).isLessThanOrEqualTo(metrics.getCompletion().getPercentiles().get(50d));
+  assertThat(metrics.getTimeUnit()).isEqualTo(MICROSECONDS);
+  assertThat(sut.retrieveMetrics()).isEmpty();
+  sut.shutdown();
+}

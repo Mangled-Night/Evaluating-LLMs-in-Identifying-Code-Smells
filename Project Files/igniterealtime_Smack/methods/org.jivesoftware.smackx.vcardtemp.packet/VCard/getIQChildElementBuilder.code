@@ -1,0 +1,103 @@
+@Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(IQChildElementXmlStringBuilder xml){
+  if (!hasContent()) {
+    xml.setEmptyElement();
+    return xml;
+  }
+  xml.rightAngleBracket();
+  if (hasNameField()) {
+    xml.openElement("N");
+    xml.optElement("FAMILY",lastName);
+    xml.optElement("GIVEN",firstName);
+    xml.optElement("MIDDLE",middleName);
+    xml.optElement("PREFIX",prefix);
+    xml.optElement("SUFFIX",suffix);
+    xml.closeElement("N");
+  }
+  if (hasOrganizationFields()) {
+    xml.openElement("ORG");
+    xml.optElement("ORGNAME",organization);
+    xml.optElement("ORGUNIT",organizationUnit);
+    xml.closeElement("ORG");
+  }
+  for (  Map.Entry<String,String> entry : otherSimpleFields.entrySet()) {
+    xml.optElement(entry.getKey(),entry.getValue());
+  }
+  for (  Map.Entry<String,String> entry : otherUnescapableFields.entrySet()) {
+    final String value=entry.getValue();
+    if (value == null) {
+      continue;
+    }
+    xml.openElement(entry.getKey());
+    xml.append(value);
+    xml.closeElement(entry.getKey());
+  }
+  if (photoBinval != null) {
+    xml.openElement("PHOTO");
+    xml.escapedElement("BINVAL",photoBinval);
+    xml.element("TYPE",photoMimeType);
+    xml.closeElement("PHOTO");
+  }
+  if (emailWork != null) {
+    xml.openElement("EMAIL");
+    xml.emptyElement("WORK");
+    xml.emptyElement("INTERNET");
+    xml.emptyElement("PREF");
+    xml.element("USERID",emailWork);
+    xml.closeElement("EMAIL");
+  }
+  if (emailHome != null) {
+    xml.openElement("EMAIL");
+    xml.emptyElement("HOME");
+    xml.emptyElement("INTERNET");
+    xml.emptyElement("PREF");
+    xml.element("USERID",emailHome);
+    xml.closeElement("EMAIL");
+  }
+  for (  Map.Entry<String,String> phone : workPhones.entrySet()) {
+    final String number=phone.getValue();
+    if (number == null) {
+      continue;
+    }
+    xml.openElement("TEL");
+    xml.emptyElement("WORK");
+    xml.emptyElement(phone.getKey());
+    xml.element("NUMBER",number);
+    xml.closeElement("TEL");
+  }
+  for (  Map.Entry<String,String> phone : homePhones.entrySet()) {
+    final String number=phone.getValue();
+    if (number == null) {
+      continue;
+    }
+    xml.openElement("TEL");
+    xml.emptyElement("HOME");
+    xml.emptyElement(phone.getKey());
+    xml.element("NUMBER",number);
+    xml.closeElement("TEL");
+  }
+  if (!workAddr.isEmpty()) {
+    xml.openElement("ADR");
+    xml.emptyElement("WORK");
+    for (    Map.Entry<String,String> entry : workAddr.entrySet()) {
+      final String value=entry.getValue();
+      if (value == null) {
+        continue;
+      }
+      xml.element(entry.getKey(),value);
+    }
+    xml.closeElement("ADR");
+  }
+  if (!homeAddr.isEmpty()) {
+    xml.openElement("ADR");
+    xml.emptyElement("HOME");
+    for (    Map.Entry<String,String> entry : homeAddr.entrySet()) {
+      final String value=entry.getValue();
+      if (value == null) {
+        continue;
+      }
+      xml.element(entry.getKey(),value);
+    }
+    xml.closeElement("ADR");
+  }
+  return xml;
+}

@@ -1,0 +1,22 @@
+/** 
+ * Join a game
+ * @param address   String containing address of game server
+ * @param portParam Integer containing game server port
+ */
+@Command(shortDescription="Join a game",requiredPermission=PermissionManager.NO_PERMISSION) public void join(@CommandParam("address") final String address,@CommandParam(value="port",required=false) Integer portParam){
+  final int port=portParam != null ? portParam : TerasologyConstants.DEFAULT_PORT;
+  Callable<JoinStatus> operation=() -> networkSystem.join(address,port);
+  final WaitPopup<JoinStatus> popup=nuiManager.pushScreen(WaitPopup.ASSET_URI,WaitPopup.class);
+  popup.setMessage("Join Game","Connecting to '" + address + ":"+ port+ "' - please wait ...");
+  popup.onSuccess(result -> {
+    if (result.getStatus() != JoinStatus.Status.FAILED) {
+      gameEngine.changeState(new StateLoading(result));
+    }
+ else {
+      MessagePopup screen=nuiManager.pushScreen(MessagePopup.ASSET_URI,MessagePopup.class);
+      screen.setMessage("Failed to Join","Could not connect to server - " + result.getErrorMessage());
+    }
+  }
+);
+  popup.startOperation(operation,true);
+}

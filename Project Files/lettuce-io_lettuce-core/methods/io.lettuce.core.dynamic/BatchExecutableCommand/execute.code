@@ -1,0 +1,14 @@
+@Override public Object execute(Object[] parameters) throws ExecutionException, InterruptedException {
+  RedisCommand<Object,Object,Object> command=commandFactory.createCommand(parameters);
+  CommandBatching batching=null;
+  if (this.parameters.hasCommandBatchingIndex()) {
+    batching=(CommandBatching)parameters[this.parameters.getCommandBatchingIndex()];
+  }
+  AsyncCommand<Object,Object,Object> asyncCommand=new AsyncCommand<>(command);
+  if (async) {
+    batcher.batch(asyncCommand,batching);
+    return asyncCommand;
+  }
+  BatchTasks batchTasks=batcher.batch(asyncCommand,batching);
+  return synchronize(batchTasks,connection);
+}

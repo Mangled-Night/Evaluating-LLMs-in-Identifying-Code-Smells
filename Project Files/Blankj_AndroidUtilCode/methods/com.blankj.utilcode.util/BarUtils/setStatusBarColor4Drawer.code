@@ -1,0 +1,33 @@
+/** 
+ * Set the status bar's color for DrawerLayout. <p>DrawLayout must add  {@code android:fitsSystemWindows="true"}</p>
+ * @param drawer        The DrawLayout.
+ * @param fakeStatusBar The fake status bar view.
+ * @param color         The status bar's color.
+ */
+public static void setStatusBarColor4Drawer(@NonNull final DrawerLayout drawer,@NonNull final View fakeStatusBar,@ColorInt final int color){
+  setStatusBarColor4Drawer(drawer,fakeStatusBar,color,false);
+}
+/** 
+ * Set the status bar's color for DrawerLayout. <p>DrawLayout must add  {@code android:fitsSystemWindows="true"}</p>
+ * @param drawer        The DrawLayout.
+ * @param fakeStatusBar The fake status bar view.
+ * @param color         The status bar's color.
+ * @param isTop         True to set DrawerLayout at the top layer, false otherwise.
+ */
+public static void setStatusBarColor4Drawer(@NonNull final DrawerLayout drawer,@NonNull final View fakeStatusBar,@ColorInt final int color,final boolean isTop){
+  if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT)   return;
+  Activity activity=UtilsBridge.getActivityByContext(fakeStatusBar.getContext());
+  if (activity == null)   return;
+  transparentStatusBar(activity);
+  drawer.setFitsSystemWindows(false);
+  setStatusBarColor(fakeStatusBar,color);
+  for (int i=0, count=drawer.getChildCount(); i < count; i++) {
+    drawer.getChildAt(i).setFitsSystemWindows(false);
+  }
+  if (isTop) {
+    hideStatusBarView(activity);
+  }
+ else {
+    setStatusBarColor(activity,color,false);
+  }
+}

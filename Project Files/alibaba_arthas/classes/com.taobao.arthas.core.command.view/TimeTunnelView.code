@@ -1,0 +1,51 @@
+/** 
+ * Term view for TimeTunnelCommand
+ * @author gongdewei 2020/4/27
+ */
+public class TimeTunnelView extends ResultView<TimeTunnelModel> {
+  @Override public void draw(  CommandProcess process,  TimeTunnelModel timeTunnelModel){
+    Integer sizeLimit=timeTunnelModel.getSizeLimit();
+    if (timeTunnelModel.getTimeFragmentList() != null) {
+      Element table=drawTimeTunnelTable(timeTunnelModel.getTimeFragmentList(),timeTunnelModel.getFirst());
+      process.write(RenderUtil.render(table,process.width()));
+    }
+ else     if (timeTunnelModel.getTimeFragment() != null) {
+      TimeFragmentVO tf=timeTunnelModel.getTimeFragment();
+      TableElement table=TimeTunnelTable.createDefaultTable();
+      TimeTunnelTable.drawTimeTunnel(table,tf);
+      TimeTunnelTable.drawParameters(table,tf.getParams());
+      TimeTunnelTable.drawReturnObj(table,tf,sizeLimit);
+      TimeTunnelTable.drawThrowException(table,tf);
+      process.write(RenderUtil.render(table,process.width()));
+    }
+ else     if (timeTunnelModel.getWatchValue() != null) {
+      ObjectVO valueVO=timeTunnelModel.getWatchValue();
+      if (valueVO.needExpand()) {
+        process.write(new ObjectView(sizeLimit,valueVO).draw()).write("\n");
+      }
+ else {
+        process.write(StringUtils.objectToString(valueVO.getObject())).write("\n");
+      }
+    }
+ else     if (timeTunnelModel.getWatchResults() != null) {
+      TableElement table=TimeTunnelTable.createDefaultTable();
+      TimeTunnelTable.drawWatchTableHeader(table);
+      TimeTunnelTable.drawWatchResults(table,timeTunnelModel.getWatchResults(),sizeLimit);
+      process.write(RenderUtil.render(table,process.width()));
+    }
+ else     if (timeTunnelModel.getReplayResult() != null) {
+      TimeFragmentVO replayResult=timeTunnelModel.getReplayResult();
+      Integer replayNo=timeTunnelModel.getReplayNo();
+      TableElement table=TimeTunnelTable.createDefaultTable();
+      TimeTunnelTable.drawPlayHeader(replayResult.getClassName(),replayResult.getMethodName(),replayResult.getObject(),replayResult.getIndex(),table);
+      TimeTunnelTable.drawParameters(table,replayResult.getParams());
+      if (replayResult.isReturn()) {
+        TimeTunnelTable.drawPlayResult(table,replayResult.getReturnObj(),sizeLimit,replayResult.getCost());
+      }
+ else {
+        TimeTunnelTable.drawPlayException(table,replayResult.getThrowExp());
+      }
+      process.write(RenderUtil.render(table,process.width())).write(format("Time fragment[%d] successfully replayed %d times.",replayResult.getIndex(),replayNo)).write("\n\n");
+    }
+  }
+}

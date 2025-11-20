@@ -1,0 +1,26 @@
+/** 
+ * Return any announced public keys. This is the set returned by  {@link #getAnyPublicKeys()} with non-announcedkeys and keys which lack a user-id with the contacts jid removed.
+ * @return announced keys of the contact
+ * @throws IOException IO is dangerous
+ * @throws PGPException PGP is brittle
+ */
+public PGPPublicKeyRingCollection getAnnouncedPublicKeys() throws IOException, PGPException {
+  PGPPublicKeyRingCollection anyKeys=getAnyPublicKeys();
+  Map<OpenPgpV4Fingerprint,Date> announced=store.getAnnouncedFingerprintsOf(jid);
+  PGPPublicKeyRingCollection announcedKeysCollection=null;
+  for (  OpenPgpV4Fingerprint announcedFingerprint : announced.keySet()) {
+    PGPPublicKeyRing ring=anyKeys.getPublicKeyRing(announcedFingerprint.getKeyId());
+    if (ring == null)     continue;
+    if (!new KeyRingInfo(ring).isUserIdValid("xmpp:" + getJid().toString())) {
+      LOGGER.log(Level.WARNING,"Ignore key " + Long.toHexString(ring.getPublicKey().getKeyID()) + " as it lacks the user-id \"xmpp"+ getJid().toString()+ "\"");
+      continue;
+    }
+    if (announcedKeysCollection == null) {
+      announcedKeysCollection=new PGPPublicKeyRingCollection(Collections.singleton(ring));
+    }
+ else {
+      announcedKeysCollection=PGPPublicKeyRingCollection.addPublicKeyRing(announcedKeysCollection,ring);
+    }
+  }
+  return announcedKeysCollection;
+}

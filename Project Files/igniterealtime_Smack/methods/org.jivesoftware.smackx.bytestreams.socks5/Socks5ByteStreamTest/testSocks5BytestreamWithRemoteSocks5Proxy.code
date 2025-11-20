@@ -1,0 +1,41 @@
+/** 
+ * Socks5 bytestream should be successfully established using a Socks5 proxy provided by the XMPP server. <p> This test will fail if the XMPP server doesn't provide any Socks5 proxies or the Socks5 proxy only allows Socks5 bytestreams in the context of a file transfer (like Openfire in default configuration, see xmpp.proxy.transfer.required flag).
+ * @throws Exception if no Socks5 proxies found or proxy is unwilling to activate Socks5bytestream
+ */
+public void testSocks5BytestreamWithRemoteSocks5Proxy() throws Exception {
+  SmackConfiguration.setLocalSocks5ProxyEnabled(false);
+  Socks5Proxy.getSocks5Proxy().stop();
+  assertFalse(Socks5Proxy.getSocks5Proxy().isRunning());
+  XMPPConnection initiatorConnection=getConnection(0);
+  XMPPConnection targetConnection=getConnection(1);
+  final byte[] data=new byte[]{1,2,3};
+  final SynchronousQueue<byte[]> queue=new SynchronousQueue<byte[]>();
+  Socks5BytestreamManager targetByteStreamManager=Socks5BytestreamManager.getBytestreamManager(targetConnection);
+  Socks5BytestreamListener incomingByteStreamListener=new Socks5BytestreamListener(){
+    public void incomingBytestreamRequest(    Socks5BytestreamRequest request){
+      InputStream inputStream;
+      try {
+        Socks5BytestreamSession session=request.accept();
+        inputStream=session.getInputStream();
+        byte[] receivedData=new byte[3];
+        inputStream.read(receivedData);
+        queue.put(receivedData);
+      }
+ catch (      Exception e) {
+        fail(e.getMessage());
+      }
+    }
+  }
+;
+  targetByteStreamManager.addIncomingBytestreamListener(incomingByteStreamListener);
+  Socks5BytestreamManager initiatorByteStreamManager=Socks5BytestreamManager.getBytestreamManager(initiatorConnection);
+  Socks5BytestreamSession session=initiatorByteStreamManager.establishSession(targetConnection.getUser());
+  OutputStream outputStream=session.getOutputStream();
+  assertTrue(session.isMediated());
+  outputStream.write(data);
+  outputStream.flush();
+  outputStream.close();
+  assertEquals("received data not equal to sent data",data,queue.take());
+  SmackConfiguration.setLocalSocks5ProxyEnabled(true);
+  Socks5Proxy.getSocks5Proxy().start();
+}

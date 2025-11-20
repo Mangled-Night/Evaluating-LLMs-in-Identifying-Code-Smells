@@ -1,0 +1,27 @@
+private void getTableName(String str){
+  String[] t=str.split(",");
+  for (int i=tableFlag ? 0 : 1; i < t.length; i++) {
+    if (t[i].endsWith(")")) {
+      tables.put(t[i].substring(0,t[i].length() - 1),"");
+      stateStack.pop();
+      state=stateStack.peek();
+      if (state.state != 1) {
+        break;
+      }
+    }
+ else     if (t[i].equals("(select")) {
+      state=new State();
+      state.state=0;
+      stateStack.push(state);
+      break;
+    }
+ else {
+      if (t[i].trim().length() > 0 && !t[i].trim().equals("(")) {
+        tables.put(t[i],"");
+      }
+    }
+  }
+  if (!str.endsWith(",")) {
+    tableFlag=false;
+  }
+}

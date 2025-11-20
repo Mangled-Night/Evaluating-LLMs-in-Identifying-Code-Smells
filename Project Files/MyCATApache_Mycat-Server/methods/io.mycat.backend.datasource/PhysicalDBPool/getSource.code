@@ -1,0 +1,36 @@
+public PhysicalDatasource getSource(){
+switch (writeType) {
+case WRITE_ONLYONE_NODE:
+{
+      return writeSources[activedIndex];
+    }
+case WRITE_RANDOM_NODE:
+{
+    int index=Math.abs(wnrandom.nextInt(Integer.MAX_VALUE)) % writeSources.length;
+    PhysicalDatasource result=writeSources[index];
+    if (!this.isAlive(result)) {
+      ArrayList<Integer> alives=new ArrayList<Integer>(writeSources.length - 1);
+      for (int i=0; i < writeSources.length; i++) {
+        if (i != index && this.isAlive(writeSources[i])) {
+          alives.add(i);
+        }
+      }
+      if (alives.isEmpty()) {
+        result=writeSources[0];
+      }
+ else {
+        index=Math.abs(wnrandom.nextInt(Integer.MAX_VALUE)) % alives.size();
+        result=writeSources[alives.get(index)];
+      }
+    }
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("select write source " + result.getName() + " for dataHost:"+ this.getHostName());
+    }
+    return result;
+  }
+default :
+{
+  throw new java.lang.IllegalArgumentException("writeType is " + writeType + " ,so can't return one write datasource ");
+}
+}
+}

@@ -1,0 +1,15 @@
+@Override public Mono<Long> touch(K... keys){
+  return touch(Arrays.asList(keys));
+}
+public Mono<Long> touch(Iterable<K> keys){
+  List<K> keyList=LettuceLists.newList(keys);
+  Map<Integer,List<K>> partitioned=SlotHash.partition(codec,keyList);
+  if (partitioned.size() < 2) {
+    return super.touch(keyList);
+  }
+  List<Publisher<Long>> publishers=new ArrayList<>();
+  for (  Map.Entry<Integer,List<K>> entry : partitioned.entrySet()) {
+    publishers.add(super.touch(entry.getValue()));
+  }
+  return Flux.merge(publishers).reduce((accu,next) -> accu + next);
+}

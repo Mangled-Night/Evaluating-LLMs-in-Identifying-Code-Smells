@@ -1,0 +1,11 @@
+private RedisCommandTimeoutException createTimeoutException(Map<RedisClusterNode,CompletionStage<?>> executions,Duration timeout){
+  List<RedisClusterNode> notFinished=new ArrayList<>();
+  executions.forEach((redisClusterNode,completionStage) -> {
+    if (!completionStage.toCompletableFuture().isDone()) {
+      notFinished.add(redisClusterNode);
+    }
+  }
+);
+  String description=getNodeDescription(notFinished);
+  return ExceptionFactory.createTimeoutException("Command timed out for node(s): " + description,timeout);
+}

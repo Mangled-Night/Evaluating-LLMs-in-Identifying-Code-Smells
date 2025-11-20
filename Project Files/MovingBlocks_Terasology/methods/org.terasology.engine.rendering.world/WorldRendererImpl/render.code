@@ -1,0 +1,13 @@
+/** 
+ * TODO: update javadocs This method triggers the execution of the rendering pipeline and, eventually, sends the output to the display or to a file, when grabbing a screenshot. <p> In this particular implementation this method can be called once per frame, when rendering to a standard display, or twice, each time with a different rendering stage, when rendering to the head mounted display. <p> PerformanceMonitor.startActivity/endActivity statements are used in this method and in those it executes, to provide statistics regarding the ongoing rendering and its individual steps (i.e. rendering shadows, reflections, 2D filters...).
+ * @param renderingStage "MONO" for standard rendering and "LEFT_EYE" or "RIGHT_EYE" for stereoscopicdisplays.
+ */
+@Override public void render(RenderingStage renderingStage){
+  preRenderUpdate(renderingStage);
+  glDisable(GL_CULL_FACE);
+  FBO lastUpdatedGBuffer=displayResolutionDependentFbo.getGBufferPair().getLastUpdatedFbo();
+  glViewport(0,0,lastUpdatedGBuffer.width(),lastUpdatedGBuffer.height());
+  renderPipelineTaskList.forEach(RenderPipelineTask::process);
+  LwjglGraphicsUtil.initOpenGLParams();
+  playerCamera.updatePrevViewProjectionMatrix();
+}

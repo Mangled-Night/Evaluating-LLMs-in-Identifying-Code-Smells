@@ -1,0 +1,23 @@
+/** 
+ * 添加意见反馈
+ * @param userId   用户ID
+ * @param feedback 意见反馈
+ * @return 操作结果
+ */
+@PostMapping("submit") public Object submit(@LoginUser Integer userId,@RequestBody LitemallFeedback feedback){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  Object error=validate(feedback);
+  if (error != null) {
+    return error;
+  }
+  LitemallUser user=userService.findById(userId);
+  String username=user.getUsername();
+  feedback.setId(null);
+  feedback.setUserId(userId);
+  feedback.setUsername(username);
+  feedback.setStatus(1);
+  feedbackService.add(feedback);
+  return ResponseUtil.ok();
+}

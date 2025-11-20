@@ -1,0 +1,13 @@
+@Test public void exceptionTestResultSyncPoint() throws Exception {
+  final CyclicBarrier barrier=new CyclicBarrier(2);
+  final ResultSyncPoint<String,TestException> rsp=new ResultSyncPoint<>();
+  Async.go(new Async.ThrowingRunnable(){
+    @Override public void runOrThrow() throws InterruptedException, BrokenBarrierException {
+      barrier.await();
+      rsp.signal(new TestException());
+    }
+  }
+);
+  barrier.await();
+  assertThrows(TestException.class,() -> rsp.waitForResult(60 * 1000));
+}

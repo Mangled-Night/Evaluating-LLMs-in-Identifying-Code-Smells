@@ -1,0 +1,13 @@
+public static void trustAllIdentitiesWithTests(OmemoManager alice,OmemoManager bob) throws InterruptedException, SmackException.NotConnectedException, SmackException.NotLoggedInException, SmackException.NoResponseException, CannotEstablishOmemoSessionException, CorruptedOmemoKeyException, XMPPException.XMPPErrorException, PubSubException.NotALeafNodeException, IOException {
+  alice.requestDeviceListUpdateFor(bob.getOwnJid());
+  HashMap<OmemoDevice,OmemoFingerprint> fps1=alice.getActiveFingerprints(bob.getOwnJid());
+  assertFalse(fps1.isEmpty());
+  assertAllDevicesAreUndecided(alice,fps1);
+  assertAllDevicesAreUntrusted(alice,fps1);
+  trustAllIdentities(alice,bob);
+  HashMap<OmemoDevice,OmemoFingerprint> fps2=alice.getActiveFingerprints(bob.getOwnJid());
+  assertEquals(fps1.size(),fps2.size());
+  assertTrue(Maps.difference(fps1,fps2).areEqual());
+  assertAllDevicesAreDecided(alice,fps2);
+  assertAllDevicesAreTrusted(alice,fps2);
+}

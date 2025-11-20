@@ -1,0 +1,26 @@
+/** 
+ * Manager for Jingle InBandBytestream transports (XEP-0261).
+ */
+public final class JingleIBBTransportManager extends JingleTransportManager<JingleIBBTransport> {
+  private static final WeakHashMap<XMPPConnection,JingleIBBTransportManager> INSTANCES=new WeakHashMap<>();
+  private JingleIBBTransportManager(  XMPPConnection connection){
+    super(connection);
+    JingleContentProviderManager.addJingleContentTransportProvider(getNamespace(),new JingleIBBTransportProvider());
+  }
+  public static synchronized JingleIBBTransportManager getInstanceFor(  XMPPConnection connection){
+    JingleIBBTransportManager manager=INSTANCES.get(connection);
+    if (manager == null) {
+      manager=new JingleIBBTransportManager(connection);
+      INSTANCES.put(connection,manager);
+    }
+    return manager;
+  }
+  @Override public String getNamespace(){
+    return JingleIBBTransport.NAMESPACE_V1;
+  }
+  @Override public JingleTransportSession<JingleIBBTransport> transportSession(  JingleSession jingleSession){
+    return new JingleIBBTransportSession(jingleSession);
+  }
+  @Override public void authenticated(  XMPPConnection connection,  boolean resumed){
+  }
+}

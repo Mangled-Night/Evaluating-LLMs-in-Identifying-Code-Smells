@@ -1,0 +1,41 @@
+private class XMPPTCPConnectionTestListener implements ConnectionListener {
+  private volatile boolean connectionClosed=false;
+  private volatile boolean connectionClosedOnError=false;
+  private volatile boolean reconnected=false;
+  private volatile boolean reconnectionFailed=false;
+  private volatile int remainingSeconds=0;
+  private volatile int attemptsNotifications=0;
+  private volatile boolean reconnectionCanceled=false;
+  private CountDownLatch countDownLatch;
+  private XMPPTCPConnectionTestListener(  CountDownLatch latch){
+    countDownLatch=latch;
+  }
+  private XMPPTCPConnectionTestListener(){
+  }
+  /** 
+ * Methods to test the listener.
+ */
+  public void connectionClosed(){
+    connectionClosed=true;
+    if (countDownLatch != null)     countDownLatch.countDown();
+  }
+  public void connectionClosedOnError(  Exception e){
+    connectionClosedOnError=true;
+  }
+  public void reconnectionCanceled(){
+    reconnectionCanceled=true;
+    if (countDownLatch != null)     countDownLatch.countDown();
+  }
+  public void reconnectingIn(  int seconds){
+    attemptsNotifications=attemptsNotifications + 1;
+    remainingSeconds=seconds;
+  }
+  public void reconnectionSuccessful(){
+    reconnected=true;
+    if (countDownLatch != null)     countDownLatch.countDown();
+  }
+  public void reconnectionFailed(  Exception error){
+    reconnectionFailed=true;
+    if (countDownLatch != null)     countDownLatch.countDown();
+  }
+}

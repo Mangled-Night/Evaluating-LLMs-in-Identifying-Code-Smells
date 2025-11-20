@@ -1,0 +1,93 @@
+@Override public UIWidget deserialize(JsonElement json,Type typeOfT,JsonDeserializationContext context) throws JsonParseException {
+  if (json.isJsonPrimitive() && json.getAsJsonPrimitive().isString()) {
+    return new UILabel(json.getAsString());
+  }
+  JsonObject jsonObject=json.getAsJsonObject();
+  String type=jsonObject.get(TYPE_FIELD).getAsString();
+  ClassMetadata<? extends UIWidget,?> elementMetadata=nuiManager.getWidgetMetadataLibrary().resolve(type,ModuleContext.getContext());
+  if (elementMetadata == null) {
+    logger.error("Unknown UIWidget type {}",type);
+    return null;
+  }
+  String id=null;
+  if (jsonObject.has(ID_FIELD)) {
+    id=jsonObject.get(ID_FIELD).getAsString();
+  }
+  UIWidget element=elementMetadata.newInstance();
+  if (id != null) {
+    FieldMetadata<?,?> fieldMetadata=elementMetadata.getField(ID_FIELD);
+    if (fieldMetadata == null) {
+      logger.warn("UIWidget type {} lacks id field",elementMetadata.getId());
+    }
+ else {
+      fieldMetadata.setValue(element,id);
+    }
+  }
+  Set<String> unknownFields=new HashSet<>();
+  for (  Entry<String,JsonElement> entry : jsonObject.entrySet()) {
+    String name=entry.getKey();
+    if (!ID_FIELD.equals(name) && !CONTENTS_FIELD.equals(name) && !TYPE_FIELD.equals(name)&& !LAYOUT_INFO_FIELD.equals(name)) {
+      unknownFields.add(name);
+    }
+  }
+  for (  FieldMetadata<? extends UIWidget,?> field : elementMetadata.getFields()) {
+    if (jsonObject.has(field.getSerializationName())) {
+      unknownFields.remove(field.getSerializationName());
+      if (field.getName().equals(CONTENTS_FIELD) && UILayout.class.isAssignableFrom(elementMetadata.getType())) {
+        continue;
+      }
+      if (field.getName().equals(ENABLED_FIELD) && UILayout.class.isAssignableFrom(elementMetadata.getType())) {
+        continue;
+      }
+      try {
+        if (List.class.isAssignableFrom(field.getType())) {
+          Type contentType=ReflectionUtil.getTypeParameter(field.getField().getGenericType(),0);
+          if (contentType != null) {
+            List<Object> result=Lists.newArrayList();
+            JsonArray list=jsonObject.getAsJsonArray(field.getSerializationName());
+            for (            JsonElement item : list) {
+              result.add(context.deserialize(item,contentType));
+            }
+            field.setValue(element,result);
+          }
+        }
+ else {
+          field.setValue(element,context.deserialize(jsonObject.get(field.getSerializationName()),field.getType()));
+        }
+      }
+ catch (      RuntimeException e) {
+        logger.error("Failed to deserialize field {} of {}",field.getName(),type,e);
+      }
+    }
+  }
+  for (  String key : unknownFields) {
+    logger.warn("Field '{}' not recognized for {} in {}",key,typeOfT,json);
+  }
+  if (UILayout.class.isAssignableFrom(elementMetadata.getType())) {
+    UILayout<LayoutHint> layout=(UILayout<LayoutHint>)element;
+    Class<? extends LayoutHint> layoutHintType=(Class<? extends LayoutHint>)ReflectionUtil.getTypeParameter(elementMetadata.getType().getGenericSuperclass(),0);
+    if (jsonObject.has(CONTENTS_FIELD)) {
+      for (      JsonElement child : jsonObject.getAsJsonArray(CONTENTS_FIELD)) {
+        UIWidget childElement=context.deserialize(child,UIWidget.class);
+        if (childElement != null) {
+          LayoutHint hint=null;
+          if (child.isJsonObject()) {
+            JsonObject childObject=child.getAsJsonObject();
+            if (layoutHintType != null && !layoutHintType.isInterface() && !Modifier.isAbstract(layoutHintType.getModifiers()) && childObject.has(LAYOUT_INFO_FIELD)) {
+              hint=context.deserialize(childObject.get(LAYOUT_INFO_FIELD),layoutHintType);
+            }
+          }
+          layout.addWidget(childElement,hint);
+        }
+      }
+    }
+    if (jsonObject.has(ENABLED_FIELD)) {
+      FieldMetadata<? extends UIWidget,?> enabledField=elementMetadata.getField(ENABLED_FIELD);
+      enabledField.setValue(element,context.deserialize(jsonObject.get(enabledField.getSerializationName()),enabledField.getType()));
+    }
+  }
+  if (element instanceof CoreScreenLayer && Objects.isNull(((CoreScreenLayer)element).getManager())) {
+    ((CoreScreenLayer)element).setManager(nuiManager);
+  }
+  return element;
+}

@@ -1,0 +1,104 @@
+/** 
+ * Rearranges the array of extended ASCII strings in ascending order. This is an unstable sorting algorithm.
+ * @param a the array to be sorted
+ */
+public static void sort(String[] a){
+  sort(a,0,a.length - 1);
+}
+public static void sort(String[] a,int lo,int hi){
+  Stack<Integer> st=new Stack<Integer>();
+  int[] first=new int[R + 2];
+  int[] next=new int[R + 2];
+  int d=0;
+  st.push(lo);
+  st.push(hi);
+  st.push(d);
+  while (!st.isEmpty()) {
+    d=st.pop();
+    hi=st.pop();
+    lo=st.pop();
+    if (hi <= lo + CUTOFF) {
+      insertion(a,lo,hi,d);
+      continue;
+    }
+    for (int i=lo; i <= hi; i++) {
+      int c=charAt(a[i],d) + 1;
+      first[c + 1]++;
+    }
+    first[0]=lo;
+    for (int c=0; c <= R; c++) {
+      first[c + 1]+=first[c];
+      if (c > 0 && first[c + 1] - 1 > first[c]) {
+        st.push(first[c]);
+        st.push(first[c + 1] - 1);
+        st.push(d + 1);
+      }
+    }
+    for (int c=0; c < R + 2; c++)     next[c]=first[c];
+    for (int k=lo; k <= hi; k++) {
+      int c=charAt(a[k],d) + 1;
+      while (first[c] > k) {
+        exch(a,k,next[c]++);
+        c=charAt(a[k],d) + 1;
+      }
+      next[c]++;
+    }
+    for (int c=0; c < R + 2; c++) {
+      first[c]=0;
+      next[c]=0;
+    }
+  }
+}
+/** 
+ * Rearranges the array of 32-bit integers in ascending order. Currently, assumes that the integers are nonnegative.
+ * @param a the array to be sorted
+ */
+public static void sort(int[] a){
+  sort(a,0,a.length - 1);
+}
+private static void sort(int[] a,int lo,int hi){
+  Stack<Integer> st=new Stack<Integer>();
+  int[] first=new int[R + 1];
+  int[] next=new int[R + 1];
+  int mask=R - 1;
+  int d=0;
+  st.push(lo);
+  st.push(hi);
+  st.push(d);
+  while (!st.isEmpty()) {
+    d=st.pop();
+    hi=st.pop();
+    lo=st.pop();
+    if (hi <= lo + CUTOFF) {
+      insertion(a,lo,hi,d);
+      continue;
+    }
+    int shift=BITS_PER_INT - BITS_PER_BYTE * d - BITS_PER_BYTE;
+    for (int i=lo; i <= hi; i++) {
+      int c=(a[i] >> shift) & mask;
+      first[c + 1]++;
+    }
+    first[0]=lo;
+    for (int c=0; c < R; c++) {
+      first[c + 1]+=first[c];
+      if (d < 3 && first[c + 1] - 1 > first[c]) {
+        st.push(first[c]);
+        st.push(first[c + 1] - 1);
+        st.push(d + 1);
+      }
+    }
+    for (int c=0; c < R + 1; c++)     next[c]=first[c];
+    for (int k=lo; k <= hi; k++) {
+      int c=(a[k] >> shift) & mask;
+      while (first[c] > k) {
+        exch(a,k,next[c]++);
+        c=(a[k] >> shift) & mask;
+      }
+      next[c]++;
+    }
+    for (int c=0; c < R + 1; c++) {
+      first[c]=0;
+      next[c]=0;
+    }
+  }
+}

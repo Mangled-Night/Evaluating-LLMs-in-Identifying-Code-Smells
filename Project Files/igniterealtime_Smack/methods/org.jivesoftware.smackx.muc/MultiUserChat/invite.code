@@ -1,0 +1,44 @@
+/** 
+ * Invites another user to the room in which one is an occupant. The invitation will be sent to the room which in turn will forward the invitation to the invitee.<p> If the room is password-protected, the invitee will receive a password to use to join the room. If the room is members-only, the the invitee may be added to the member list.
+ * @param user the user to invite to the room.(e.g. hecate@shakespeare.lit)
+ * @param reason the reason why the user is being invited.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void invite(EntityBareJid user,String reason) throws NotConnectedException, InterruptedException {
+  invite(connection.getStanzaFactory().buildMessageStanza(),user,reason);
+}
+/** 
+ * Invites another user to the room in which one is an occupant using a given Message. The invitation will be sent to the room which in turn will forward the invitation to the invitee.<p> If the room is password-protected, the invitee will receive a password to use to join the room. If the room is members-only, the the invitee may be added to the member list.
+ * @param message the message to use for sending the invitation.
+ * @param user the user to invite to the room.(e.g. hecate@shakespeare.lit)
+ * @param reason the reason why the user is being invited.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @deprecated use {@link #invite(MessageBuilder,EntityBareJid,String)} instead.
+ */
+@Deprecated public void invite(Message message,EntityBareJid user,String reason) throws NotConnectedException, InterruptedException {
+  message.setTo(room);
+  MUCUser mucUser=new MUCUser();
+  MUCUser.Invite invite=new MUCUser.Invite(reason,user);
+  mucUser.setInvite(invite);
+  message.addExtension(mucUser);
+  connection.sendStanza(message);
+}
+/** 
+ * Invites another user to the room in which one is an occupant using a given Message. The invitation will be sent to the room which in turn will forward the invitation to the invitee.<p> If the room is password-protected, the invitee will receive a password to use to join the room. If the room is members-only, the the invitee may be added to the member list.
+ * @param messageBuilder the message to use for sending the invitation.
+ * @param user the user to invite to the room.(e.g. hecate@shakespeare.lit)
+ * @param reason the reason why the user is being invited.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void invite(MessageBuilder messageBuilder,EntityBareJid user,String reason) throws NotConnectedException, InterruptedException {
+  messageBuilder.to(room);
+  MUCUser mucUser=new MUCUser();
+  MUCUser.Invite invite=new MUCUser.Invite(reason,user);
+  mucUser.setInvite(invite);
+  messageBuilder.addExtension(mucUser);
+  Message message=messageBuilder.build();
+  connection.sendStanza(message);
+}

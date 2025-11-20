@@ -1,0 +1,128 @@
+/** 
+ * Test for the InitiationListener class.
+ * @author Henning Staib
+ */
+public class InitiationListenerTest {
+  private static final int TIMEOUT=10000;
+  private static final EntityFullJid initiatorJID=JidTestUtil.DUMMY_AT_EXAMPLE_ORG_SLASH_DUMMYRESOURCE;
+  private static final EntityFullJid targetJID=JidTestUtil.FULL_JID_1_RESOURCE_1;
+  private static final DomainBareJid proxyJID=JidTestUtil.MUC_EXAMPLE_ORG;
+  private static final String proxyAddress="127.0.0.1";
+  private static final String sessionID="session_id";
+  private XMPPConnection connection;
+  private Socks5BytestreamManager byteStreamManager;
+  private InitiationListener initiationListener;
+  private Bytestream initBytestream;
+  /** 
+ * Initialize fields used in the tests.
+ */
+  @BeforeEach public void setup(){
+    connection=mock(XMPPConnection.class);
+    ServiceDiscoveryManager.getInstanceFor(connection);
+    byteStreamManager=Socks5BytestreamManager.getBytestreamManager(connection);
+    initiationListener=Whitebox.getInternalState(byteStreamManager,"initiationListener",InitiationListener.class);
+    initBytestream=Socks5PacketUtils.createBytestreamInitiation(initiatorJID,targetJID,sessionID);
+    initBytestream.addStreamHost(proxyJID,proxyAddress,7777);
+  }
+  /** 
+ * If no listeners are registered for incoming SOCKS5 Bytestream requests, all request should be rejected with an error.
+ * @throws Exception should not happen
+ */
+  @Test public void shouldRespondWithError() throws Exception {
+    initiationListener.handleIQRequest(initBytestream);
+    ArgumentCaptor<IQ> argument=ArgumentCaptor.forClass(IQ.class);
+    verify(connection,timeout(TIMEOUT)).sendStanza(argument.capture());
+    assertEquals(initiatorJID,argument.getValue().getTo());
+    assertEquals(IQ.Type.error,argument.getValue().getType());
+    assertEquals(StanzaError.Condition.not_acceptable,argument.getValue().getError().getCondition());
+  }
+  /** 
+ * If a listener for all requests is registered it should be notified on incoming requests.
+ * @throws Exception should not happen
+ */
+  @Test public void shouldInvokeListenerForAllRequests() throws Exception {
+    Socks5BytestreamListener listener=mock(Socks5BytestreamListener.class);
+    byteStreamManager.addIncomingBytestreamListener(listener);
+    initiationListener.handleIQRequest(initBytestream);
+    ArgumentCaptor<BytestreamRequest> byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+    verify(listener,timeout(TIMEOUT)).incomingBytestreamRequest(byteStreamRequest.capture());
+    assertEquals(initiatorJID,byteStreamRequest.getValue().getFrom());
+  }
+  /** 
+ * If a listener for a specific user in registered it should be notified on incoming requests for that user.
+ * @throws Exception should not happen
+ */
+  @Test public void shouldInvokeListenerForUser() throws Exception {
+    Socks5BytestreamListener listener=mock(Socks5BytestreamListener.class);
+    byteStreamManager.addIncomingBytestreamListener(listener,initiatorJID);
+    initiationListener.handleIQRequest(initBytestream);
+    ArgumentCaptor<BytestreamRequest> byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+    verify(listener,timeout(TIMEOUT)).incomingBytestreamRequest(byteStreamRequest.capture());
+    assertEquals(initiatorJID,byteStreamRequest.getValue().getFrom());
+  }
+  /** 
+ * If listener for a specific user is registered it should not be notified on incoming requests from other users.
+ * @throws Exception should not happen
+ */
+  @Test public void shouldNotInvokeListenerForUser() throws Exception {
+    Socks5BytestreamListener listener=mock(Socks5BytestreamListener.class);
+    byteStreamManager.addIncomingBytestreamListener(listener,JidCreate.from("other_" + initiatorJID));
+    initiationListener.handleIQRequest(initBytestream);
+    ArgumentCaptor<BytestreamRequest> byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+    verify(listener,never()).incomingBytestreamRequest(byteStreamRequest.capture());
+    ArgumentCaptor<IQ> argument=ArgumentCaptor.forClass(IQ.class);
+    verify(connection,timeout(TIMEOUT)).sendStanza(argument.capture());
+    assertEquals(initiatorJID,argument.getValue().getTo());
+    assertEquals(IQ.Type.error,argument.getValue().getType());
+    assertEquals(StanzaError.Condition.not_acceptable,argument.getValue().getError().getCondition());
+  }
+  /** 
+ * If a user specific listener and an all requests listener is registered only the user specific listener should be notified.
+ * @throws Exception should not happen
+ */
+  @Test public void shouldNotInvokeAllRequestsListenerIfUserListenerExists() throws Exception {
+    Socks5BytestreamListener allRequestsListener=mock(Socks5BytestreamListener.class);
+    byteStreamManager.addIncomingBytestreamListener(allRequestsListener);
+    Socks5BytestreamListener userRequestsListener=mock(Socks5BytestreamListener.class);
+    byteStreamManager.addIncomingBytestreamListener(userRequestsListener,initiatorJID);
+    initiationListener.handleIQRequest(initBytestream);
+    ArgumentCaptor<BytestreamRequest> byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+    verify(userRequestsListener,timeout(TIMEOUT)).incomingBytestreamRequest(byteStreamRequest.capture());
+    byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+    verify(allRequestsListener,never()).incomingBytestreamRequest(byteStreamRequest.capture());
+  }
+  /** 
+ * If a user specific listener and an all requests listener is registered only the all requests listener should be notified on an incoming request for another user.
+ * @throws Exception should not happen
+ */
+  @Test public void shouldInvokeAllRequestsListenerIfUserListenerExists() throws Exception {
+    Socks5BytestreamListener allRequestsListener=mock(Socks5BytestreamListener.class);
+    byteStreamManager.addIncomingBytestreamListener(allRequestsListener);
+    Socks5BytestreamListener userRequestsListener=mock(Socks5BytestreamListener.class);
+    byteStreamManager.addIncomingBytestreamListener(userRequestsListener,JidCreate.from("other_" + initiatorJID));
+    initiationListener.handleIQRequest(initBytestream);
+    ArgumentCaptor<BytestreamRequest> byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+    verify(allRequestsListener,timeout(TIMEOUT)).incomingBytestreamRequest(byteStreamRequest.capture());
+    verify(userRequestsListener,never()).incomingBytestreamRequest(byteStreamRequest.capture());
+  }
+  /** 
+ * If a request with a specific session ID should be ignored no listeners should be notified.
+ * @throws Exception should not happen
+ */
+  @Test public void shouldIgnoreSocks5BytestreamRequestOnce() throws Exception {
+    Socks5BytestreamListener allRequestsListener=mock(Socks5BytestreamListener.class);
+    byteStreamManager.addIncomingBytestreamListener(allRequestsListener);
+    Socks5BytestreamListener userRequestsListener=mock(Socks5BytestreamListener.class);
+    byteStreamManager.addIncomingBytestreamListener(userRequestsListener,initiatorJID);
+    byteStreamManager.ignoreBytestreamRequestOnce(sessionID);
+    initiationListener.handleIQRequest(initBytestream);
+    ArgumentCaptor<BytestreamRequest> byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+    verify(userRequestsListener,never()).incomingBytestreamRequest(byteStreamRequest.capture());
+    byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+    verify(allRequestsListener,never()).incomingBytestreamRequest(byteStreamRequest.capture());
+    initiationListener.handleIQRequest(initBytestream);
+    verify(userRequestsListener,timeout(TIMEOUT)).incomingBytestreamRequest(byteStreamRequest.capture());
+    byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+    verify(allRequestsListener,never()).incomingBytestreamRequest(byteStreamRequest.capture());
+  }
+}

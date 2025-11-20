@@ -1,0 +1,31 @@
+@Override public synchronized void writeCheckpoint(String id,Collection<CoordinatorLogEntry> checkpointContent){
+  try {
+    if (rwChannel == null) {
+      initChannelIfNecessary();
+    }
+    boolean isUpdate=true;
+    for (    CoordinatorLogEntry coordinatorLogEntry : checkpointContent) {
+      if (coordinatorLogEntry.id.equals(id)) {
+        isUpdate=checkForUpdate(id,coordinatorLogEntry);
+        break;
+      }
+    }
+    if (isUpdate == false) {
+      return;
+    }
+    writeStorage.clear();
+    rwChannel.position(0);
+    long writeSize=0;
+    for (    CoordinatorLogEntry coordinatorLogEntry : checkpointContent) {
+      writeSize+=write(coordinatorLogEntry,false);
+    }
+    rwChannel.truncate(writeSize);
+    rwChannel.force(true);
+    file.discardBackupVersion();
+  }
+ catch (  FileNotFoundException firstStart) {
+  }
+catch (  Exception e) {
+    logger.error("Failed to write checkpoint",e);
+  }
+}

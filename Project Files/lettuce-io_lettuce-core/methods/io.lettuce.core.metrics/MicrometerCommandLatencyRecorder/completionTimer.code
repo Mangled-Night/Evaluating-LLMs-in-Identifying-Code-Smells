@@ -1,0 +1,7 @@
+protected Timer completionTimer(CommandLatencyId commandLatencyId){
+  Timer.Builder timer=Timer.builder(METRIC_COMPLETION).description("Latency between command send and command completion (complete response received").tag(LABEL_COMMAND,commandLatencyId.commandType().name()).tag(LABEL_LOCAL,commandLatencyId.localAddress().toString()).tag(LABEL_REMOTE,commandLatencyId.remoteAddress().toString()).tags(options.tags());
+  if (options.isHistogram()) {
+    timer.publishPercentileHistogram().publishPercentiles(options.targetPercentiles()).minimumExpectedValue(options.minLatency()).maximumExpectedValue(options.maxLatency());
+  }
+  return timer.register(meterRegistry);
+}

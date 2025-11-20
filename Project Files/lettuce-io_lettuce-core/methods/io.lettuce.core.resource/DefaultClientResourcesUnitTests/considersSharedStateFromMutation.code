@@ -1,0 +1,9 @@
+@Test void considersSharedStateFromMutation(){
+  ClientResources clientResources=ClientResources.create();
+  HashedWheelTimer timer=(HashedWheelTimer)clientResources.timer();
+  assertThat(timer).hasFieldOrPropertyWithValue("workerState",1);
+  ClientResources copy=clientResources.mutate().build();
+  assertThat(copy.timer()).isSameAs(timer);
+  copy.shutdown().awaitUninterruptibly();
+  assertThat(timer).hasFieldOrPropertyWithValue("workerState",2);
+}

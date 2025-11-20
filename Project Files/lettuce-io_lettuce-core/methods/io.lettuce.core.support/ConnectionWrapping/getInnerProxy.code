@@ -1,0 +1,13 @@
+@SuppressWarnings({"unchecked","rawtypes"}) private Object getInnerProxy(Method method,Object[] args){
+  try {
+    Object result=method.invoke(connection,args);
+    result=Proxy.newProxyInstance(getClass().getClassLoader(),result.getClass().getInterfaces(),new DelegateCloseToConnectionInvocationHandler((AsyncCloseable)proxiedConnection,result));
+    return result;
+  }
+ catch (  IllegalAccessException e) {
+    throw new RedisException(e);
+  }
+catch (  InvocationTargetException e) {
+    throw new RedisException(e.getTargetException());
+  }
+}

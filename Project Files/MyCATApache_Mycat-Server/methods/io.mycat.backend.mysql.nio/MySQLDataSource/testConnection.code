@@ -1,0 +1,83 @@
+@Override public boolean testConnection(String schema) throws IOException {
+  boolean isConnected=true;
+  Socket socket=null;
+  InputStream in=null;
+  OutputStream out=null;
+  try {
+    socket=new Socket(this.getConfig().getIp(),this.getConfig().getPort());
+    socket.setSoTimeout(1000 * 20);
+    socket.setReceiveBufferSize(32768);
+    socket.setSendBufferSize(32768);
+    socket.setTcpNoDelay(true);
+    socket.setKeepAlive(true);
+    in=new BufferedInputStream(socket.getInputStream(),32768);
+    out=new BufferedOutputStream(socket.getOutputStream(),32768);
+    BinaryPacket bin1=new BinaryPacket();
+    bin1.read(in);
+    HandshakePacket handshake=new HandshakePacket();
+    handshake.read(bin1);
+    AuthPacket authPacket=new AuthPacket();
+    authPacket.packetId=1;
+    authPacket.clientFlags=getClientFlags();
+    authPacket.maxPacketSize=1024 * 1024 * 16;
+    authPacket.charsetIndex=handshake.serverCharsetIndex & 0xff;
+    authPacket.user=this.getConfig().getUser();
+    ;
+    try {
+      authPacket.password=passwd(this.getConfig().getPassword(),handshake);
+    }
+ catch (    NoSuchAlgorithmException e) {
+      throw new RuntimeException(e.getMessage());
+    }
+    authPacket.database=schema;
+    authPacket.write(out);
+    out.flush();
+    BinaryPacket bin2=new BinaryPacket();
+    bin2.read(in);
+switch (bin2.data[0]) {
+case OkPacket.FIELD_COUNT:
+      break;
+case ErrorPacket.FIELD_COUNT:
+    ErrorPacket err=new ErrorPacket();
+  err.read(bin2);
+isConnected=false;
+case EOFPacket.FIELD_COUNT:
+Reply323Packet r323=new Reply323Packet();
+r323.packetId=++bin2.packetId;
+String passwd=this.getConfig().getPassword();
+if (passwd != null && passwd.length() > 0) {
+r323.seed=SecurityUtil.scramble323(passwd,new String(handshake.seed)).getBytes();
+}
+r323.write(out);
+out.flush();
+break;
+}
+}
+ catch (IOException e) {
+isConnected=false;
+}
+ finally {
+try {
+if (in != null) {
+in.close();
+}
+}
+ catch (IOException e) {
+}
+try {
+if (out != null) {
+out.write(QuitPacket.QUIT);
+out.flush();
+out.close();
+}
+}
+ catch (IOException e) {
+}
+try {
+if (socket != null) socket.close();
+}
+ catch (IOException e) {
+}
+}
+return isConnected;
+}

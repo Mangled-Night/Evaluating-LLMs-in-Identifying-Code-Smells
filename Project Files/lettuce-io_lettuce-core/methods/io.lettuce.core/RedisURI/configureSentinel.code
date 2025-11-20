@@ -1,0 +1,46 @@
+private static RedisURI.Builder configureSentinel(URI uri){
+  String masterId=uri.getFragment();
+  RedisURI.Builder builder=null;
+  if (isNotEmpty(uri.getHost())) {
+    if (uri.getPort() != -1) {
+      builder=RedisURI.Builder.sentinel(uri.getHost(),uri.getPort());
+    }
+ else {
+      builder=RedisURI.Builder.sentinel(uri.getHost());
+    }
+  }
+  if (builder == null && isNotEmpty(uri.getAuthority())) {
+    String authority=uri.getAuthority();
+    if (authority.indexOf('@') > -1) {
+      authority=authority.substring(authority.lastIndexOf('@') + 1);
+    }
+    String[] hosts=authority.split(",");
+    for (    String host : hosts) {
+      HostAndPort hostAndPort=HostAndPort.parse(host);
+      if (builder == null) {
+        if (hostAndPort.hasPort()) {
+          builder=RedisURI.Builder.sentinel(hostAndPort.getHostText(),hostAndPort.getPort());
+        }
+ else {
+          builder=RedisURI.Builder.sentinel(hostAndPort.getHostText());
+        }
+      }
+ else {
+        if (hostAndPort.hasPort()) {
+          builder.withSentinel(hostAndPort.getHostText(),hostAndPort.getPort());
+        }
+ else {
+          builder.withSentinel(hostAndPort.getHostText());
+        }
+      }
+    }
+  }
+  LettuceAssert.notNull(builder,"Invalid URI, cannot get host part");
+  if (isNotEmpty(masterId)) {
+    builder.withSentinelMasterId(masterId);
+  }
+  if (uri.getScheme().equals(URI_SCHEME_REDIS_SENTINEL_SECURE)) {
+    builder.withSsl(true);
+  }
+  return builder;
+}

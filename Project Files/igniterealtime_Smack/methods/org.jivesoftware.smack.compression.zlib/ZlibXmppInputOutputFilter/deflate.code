@@ -1,0 +1,24 @@
+private int deflate(int flushMode){
+  int totalBytesWritten=0;
+  while (true) {
+    int initialOutputBufferPosition=outputBuffer.position();
+    byte[] buffer=outputBuffer.array();
+    int length=outputBuffer.limit() - initialOutputBufferPosition;
+    int bytesWritten=compressor.deflate(buffer,initialOutputBufferPosition,length,flushMode);
+    int newOutputBufferPosition=initialOutputBufferPosition + bytesWritten;
+    outputBuffer.position(newOutputBufferPosition);
+    totalBytesWritten+=bytesWritten;
+    if (compressor.needsInput() && outputBuffer.hasRemaining()) {
+      break;
+    }
+    int increasedBufferSize=outputBuffer.capacity() * 2;
+    if (increasedBufferSize < MINIMUM_OUTPUT_BUFFER_INCREASE) {
+      increasedBufferSize=MINIMUM_OUTPUT_BUFFER_INCREASE;
+    }
+    ByteBuffer newCurrentOutputBuffer=ByteBuffer.allocate(increasedBufferSize);
+    outputBuffer.flip();
+    newCurrentOutputBuffer.put(outputBuffer);
+    outputBuffer=newCurrentOutputBuffer;
+  }
+  return totalBytesWritten;
+}

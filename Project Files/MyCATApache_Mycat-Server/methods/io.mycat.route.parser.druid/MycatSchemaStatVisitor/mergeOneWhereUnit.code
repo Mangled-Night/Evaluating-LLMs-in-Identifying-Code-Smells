@@ -1,0 +1,30 @@
+/** 
+ * 一个WhereUnit内递归
+ * @param whereUnit
+ */
+private void mergeOneWhereUnit(WhereUnit whereUnit){
+  if (whereUnit.getSubWhereUnit().size() > 0) {
+    for (    WhereUnit sub : whereUnit.getSubWhereUnit()) {
+      mergeOneWhereUnit(sub);
+    }
+    if (whereUnit.getSubWhereUnit().size() > 1) {
+      List<List<Condition>> mergedConditionList=getMergedConditionList(whereUnit.getSubWhereUnit());
+      if (whereUnit.getOutConditions().size() > 0) {
+        for (int i=0; i < mergedConditionList.size(); i++) {
+          mergedConditionList.get(i).addAll(whereUnit.getOutConditions());
+        }
+      }
+      whereUnit.setConditionList(mergedConditionList);
+    }
+ else     if (whereUnit.getSubWhereUnit().size() == 1) {
+      if (whereUnit.getOutConditions().size() > 0 && whereUnit.getSubWhereUnit().get(0).getConditionList().size() > 0) {
+        for (int i=0; i < whereUnit.getSubWhereUnit().get(0).getConditionList().size(); i++) {
+          whereUnit.getSubWhereUnit().get(0).getConditionList().get(i).addAll(whereUnit.getOutConditions());
+        }
+      }
+      whereUnit.getConditionList().addAll(whereUnit.getSubWhereUnit().get(0).getConditionList());
+    }
+  }
+ else {
+  }
+}

@@ -1,0 +1,48 @@
+@Override public void run(){
+  int dequeueCount=0;
+  try {
+    while (true) {
+      Thread.yield();
+      Stanza packet=collector.nextResultBlockForever();
+      if (packet != null) {
+        dequeueCount++;
+      }
+    }
+  }
+ catch (  InterruptedException e) {
+  }
+ finally {
+    consumer1Dequeued.set(dequeueCount);
+  }
+}
+@Override public void run(){
+  Stanza p;
+  int dequeueCount=0;
+  do {
+    Thread.yield();
+    try {
+      p=collector.nextResult(1000);
+    }
+ catch (    InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    if (p != null) {
+      dequeueCount++;
+    }
+  }
+ while (p != null);
+  consumer2Dequeued.set(dequeueCount);
+}
+@Override public void run(){
+  Stanza p;
+  int dequeueCount=0;
+  do {
+    Thread.yield();
+    p=collector.pollResult();
+    if (p != null) {
+      dequeueCount++;
+    }
+  }
+ while (p != null);
+  consumer3Dequeued.set(dequeueCount);
+}

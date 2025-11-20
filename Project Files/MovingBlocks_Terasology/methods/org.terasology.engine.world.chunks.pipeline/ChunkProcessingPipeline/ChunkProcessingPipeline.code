@@ -1,0 +1,19 @@
+/** 
+ * Create ChunkProcessingPipeline.
+ */
+public ChunkProcessingPipeline(Function<Vector3ic,Chunk> chunkProvider,Comparator<Future<Chunk>> comparable){
+  this.chunkProvider=chunkProvider;
+  executor=new ThreadPoolExecutor(NUM_TASK_THREADS,NUM_TASK_THREADS,0L,TimeUnit.MILLISECONDS,new PriorityBlockingQueue(800,unwrappingComporator(comparable)),this::threadFactory,this::rejectQueueHandler){
+    @Override protected <T>RunnableFuture<T> newTaskFor(    Callable<T> callable){
+      RunnableFuture<T> newTaskFor=super.newTaskFor(callable);
+      return new PositionFuture<>(newTaskFor,((PositionalCallable)callable).getPosition());
+    }
+  }
+;
+  logger.debug("allocated {} threads",NUM_TASK_THREADS);
+  chunkProcessor=new ExecutorCompletionService<>(executor,new PriorityBlockingQueue<>(800,comparable));
+  reactor=new Thread(this::chunkTaskHandler);
+  reactor.setDaemon(true);
+  reactor.setName("Chunk-Processing-Reactor");
+  reactor.start();
+}

@@ -1,0 +1,11 @@
+@Test void localDistinctionDisabled(){
+  MicrometerOptions options=MicrometerOptions.builder().localDistinction(false).build();
+  MicrometerCommandLatencyRecorder commandLatencyRecorder=new MicrometerCommandLatencyRecorder(meterRegistry,options);
+  LocalAddress localAddress2=new LocalAddress("localhost:12345");
+  commandLatencyRecorder.recordCommandLatency(LOCAL_ADDRESS,REMOTE_ADDRESS,CommandType.AUTH,1,10);
+  commandLatencyRecorder.recordCommandLatency(localAddress2,REMOTE_ADDRESS,CommandType.AUTH,1,10);
+  assertThat(meterRegistry.find(METRIC_COMPLETION).tagKeys(LABEL_LOCAL).timers()).hasSize(1);
+  assertThat(meterRegistry.find(METRIC_COMPLETION).tag(LABEL_LOCAL,LocalAddress.ANY.toString()).timers()).hasSize(1);
+  assertThat(meterRegistry.find(METRIC_FIRST_RESPONSE).tagKeys(LABEL_LOCAL).timers()).hasSize(1);
+  assertThat(meterRegistry.find(METRIC_FIRST_RESPONSE).tag(LABEL_LOCAL,LocalAddress.ANY.toString()).timers()).hasSize(1);
+}

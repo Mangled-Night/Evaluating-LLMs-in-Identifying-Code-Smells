@@ -1,0 +1,14 @@
+/** 
+ * Retrieve the  {@link RedisClusterNode} from the {@code connection}.
+ * @param connection
+ * @return
+ */
+public static RedisClusterNode getOwnPartition(RedisClusterCommands<?,?> connection){
+  Partitions partitions=ClusterPartitionParser.parse(connection.clusterNodes());
+  for (  RedisClusterNode partition : partitions) {
+    if (partition.getFlags().contains(RedisClusterNode.NodeFlag.MYSELF)) {
+      return partition;
+    }
+  }
+  return null;
+}

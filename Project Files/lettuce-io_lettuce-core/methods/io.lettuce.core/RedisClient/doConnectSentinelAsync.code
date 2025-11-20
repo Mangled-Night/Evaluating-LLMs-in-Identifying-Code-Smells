@@ -1,0 +1,39 @@
+private <K,V>ConnectionFuture<StatefulRedisSentinelConnection<K,V>> doConnectSentinelAsync(RedisCodec<K,V> codec,RedisURI redisURI,Duration timeout,String clientName){
+  ConnectionBuilder connectionBuilder;
+  if (redisURI.isSsl()) {
+    SslConnectionBuilder sslConnectionBuilder=SslConnectionBuilder.sslConnectionBuilder();
+    sslConnectionBuilder.ssl(redisURI);
+    connectionBuilder=sslConnectionBuilder;
+  }
+ else {
+    connectionBuilder=ConnectionBuilder.connectionBuilder();
+  }
+  connectionBuilder.clientOptions(ClientOptions.copyOf(getOptions()));
+  connectionBuilder.clientResources(getResources());
+  DefaultEndpoint endpoint=new DefaultEndpoint(getOptions(),getResources());
+  RedisChannelWriter writer=endpoint;
+  if (CommandExpiryWriter.isSupported(getOptions())) {
+    writer=new CommandExpiryWriter(writer,getOptions(),getResources());
+  }
+  if (CommandListenerWriter.isSupported(getCommandListeners())) {
+    writer=new CommandListenerWriter(writer,getCommandListeners());
+  }
+  StatefulRedisSentinelConnectionImpl<K,V> connection=newStatefulRedisSentinelConnection(writer,codec,timeout);
+  ConnectionState state=connection.getConnectionState();
+  state.apply(redisURI);
+  if (LettuceStrings.isEmpty(state.getClientName())) {
+    state.setClientName(clientName);
+  }
+  connectionBuilder.connectionInitializer(createHandshake(state));
+  logger.debug("Connecting to Redis Sentinel, address: " + redisURI);
+  connectionBuilder.endpoint(endpoint).commandHandler(() -> new CommandHandler(getOptions(),getResources(),endpoint)).connection(connection);
+  connectionBuilder(getSocketAddressSupplier(redisURI),connectionBuilder,connection.getConnectionEvents(),redisURI);
+  ConnectionFuture<?> sync=initializeChannelAsync(connectionBuilder);
+  return sync.thenApply(ignore -> (StatefulRedisSentinelConnection<K,V>)connection).whenComplete((ignore,e) -> {
+    if (e != null) {
+      logger.warn("Cannot connect Redis Sentinel at " + redisURI + ": "+ e);
+      connection.closeAsync();
+    }
+  }
+);
+}

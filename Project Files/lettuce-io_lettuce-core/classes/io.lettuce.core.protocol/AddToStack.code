@@ -1,0 +1,44 @@
+/** 
+ * Add to stack listener. This listener is pooled and must be  {@link #recycle() recycled after usage}.
+ */
+static class AddToStack implements GenericFutureListener<Future<Void>> {
+  private static final Recycler<AddToStack> RECYCLER=new Recycler<AddToStack>(){
+    @Override protected AddToStack newObject(    Handle<AddToStack> handle){
+      return new AddToStack(handle);
+    }
+  }
+;
+  private final Recycler.Handle<AddToStack> handle;
+  private ArrayDeque<Object> stack;
+  private RedisCommand<?,?,?> command;
+  AddToStack(  Recycler.Handle<AddToStack> handle){
+    this.handle=handle;
+  }
+  /** 
+ * Allocate a new instance.
+ * @param stack
+ * @param command
+ * @return
+ */
+  @SuppressWarnings("unchecked") static AddToStack newInstance(  ArrayDeque<?> stack,  RedisCommand<?,?,?> command){
+    AddToStack entry=RECYCLER.get();
+    entry.stack=(ArrayDeque<Object>)stack;
+    entry.command=command;
+    return entry;
+  }
+  @SuppressWarnings("unchecked") @Override public void operationComplete(  Future<Void> future){
+    try {
+      if (future.isSuccess()) {
+        stack.add(command);
+      }
+    }
+  finally {
+      recycle();
+    }
+  }
+  private void recycle(){
+    this.stack=null;
+    this.command=null;
+    handle.recycle(this);
+  }
+}

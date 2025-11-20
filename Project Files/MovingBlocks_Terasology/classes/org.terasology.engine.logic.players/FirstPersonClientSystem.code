@@ -1,0 +1,135 @@
+@RegisterSystem(RegisterMode.CLIENT) public class FirstPersonClientSystem extends BaseComponentSystem implements UpdateSubscriberSystem {
+  private static final int USEANIMATIONLENGTH=200;
+  @In private LocalPlayer localPlayer;
+  @In private WorldRenderer worldRenderer;
+  @In private EntityManager entityManager;
+  @In private Time time;
+  private EntityRef handEntity;
+  private EntityRef currentHeldItem=EntityRef.NULL;
+  private EntityRef getHandEntity(){
+    if (handEntity == null) {
+      EntityBuilder entityBuilder=entityManager.newBuilder("engine:hand");
+      entityBuilder.setPersistent(false);
+      handEntity=entityBuilder.build();
+    }
+    return handEntity;
+  }
+  @ReceiveEvent public void ensureClientSideEntityOnHeldItemMountPoint(  OnActivatedComponent event,  EntityRef camera,  FirstPersonHeldItemMountPointComponent firstPersonHeldItemMountPointComponent){
+    if (!firstPersonHeldItemMountPointComponent.mountPointEntity.exists()) {
+      EntityBuilder builder=entityManager.newBuilder("engine:FirstPersonHeldItemMountPoint");
+      builder.setPersistent(false);
+      firstPersonHeldItemMountPointComponent.mountPointEntity=builder.build();
+      camera.saveComponent(firstPersonHeldItemMountPointComponent);
+    }
+    Location.removeChild(camera,firstPersonHeldItemMountPointComponent.mountPointEntity);
+    Location.attachChild(camera,firstPersonHeldItemMountPointComponent.mountPointEntity,firstPersonHeldItemMountPointComponent.translate,new Quaternionf().rotationYXZ(TeraMath.DEG_TO_RAD * firstPersonHeldItemMountPointComponent.rotateDegrees.y,TeraMath.DEG_TO_RAD * firstPersonHeldItemMountPointComponent.rotateDegrees.x,TeraMath.DEG_TO_RAD * firstPersonHeldItemMountPointComponent.rotateDegrees.z),firstPersonHeldItemMountPointComponent.scale);
+  }
+  @ReceiveEvent public void ensureHeldItemIsMountedOnLoad(  OnChangedComponent event,  EntityRef entityRef,  ClientComponent clientComponent){
+    if (localPlayer.getClientEntity().equals(entityRef) && localPlayer.getCharacterEntity().exists() && localPlayer.getCameraEntity().exists()) {
+      CharacterHeldItemComponent characterHeldItemComponent=localPlayer.getCharacterEntity().getComponent(CharacterHeldItemComponent.class);
+      if (characterHeldItemComponent != null) {
+        linkHeldItemLocationForLocalPlayer(characterHeldItemComponent.selectedItem);
+      }
+    }
+  }
+  @Command(shortDescription="Sets the held item mount point translation for the first person view") public void setFirstPersonheldItemMountPointTranslation(  @CommandParam("x") float x,  @CommandParam("y") float y,  @CommandParam("z") float z){
+    FirstPersonHeldItemMountPointComponent newComponent=localPlayer.getCameraEntity().getComponent(FirstPersonHeldItemMountPointComponent.class);
+    if (newComponent != null) {
+      newComponent.translate=new Vector3f(x,y,z);
+      ensureClientSideEntityOnHeldItemMountPoint(OnActivatedComponent.newInstance(),localPlayer.getCameraEntity(),newComponent);
+    }
+  }
+  @Command(shortDescription="Sets the held item mount point rotation for the first person view") public void setFirstPersonheldItemMountPointRotation(  @CommandParam("x") float x,  @CommandParam("y") float y,  @CommandParam("z") float z){
+    FirstPersonHeldItemMountPointComponent newComponent=localPlayer.getCameraEntity().getComponent(FirstPersonHeldItemMountPointComponent.class);
+    if (newComponent != null) {
+      newComponent.rotateDegrees=new Vector3f(x,y,z);
+      ensureClientSideEntityOnHeldItemMountPoint(OnActivatedComponent.newInstance(),localPlayer.getCameraEntity(),newComponent);
+    }
+  }
+  @ReceiveEvent public void onHeldItemActivated(  OnActivatedComponent event,  EntityRef character,  CharacterHeldItemComponent heldItemComponent,  CharacterComponent characterComponents){
+    if (localPlayer.getCharacterEntity().equals(character)) {
+      EntityRef newItem=heldItemComponent.selectedItem;
+      linkHeldItemLocationForLocalPlayer(newItem);
+    }
+  }
+  @ReceiveEvent public void onHeldItemChanged(  OnChangedComponent event,  EntityRef character,  CharacterHeldItemComponent heldItemComponent,  CharacterComponent characterComponents){
+    if (localPlayer.getCharacterEntity().equals(character)) {
+      EntityRef newItem=heldItemComponent.selectedItem;
+      linkHeldItemLocationForLocalPlayer(newItem);
+    }
+  }
+  /** 
+ * Changes held item entity. <p>Detaches old held item and removes it's components. Adds components to new held item and attaches it to the mount point entity.</p>
+ */
+  private void linkHeldItemLocationForLocalPlayer(  EntityRef newItem){
+    if (!newItem.equals(currentHeldItem)) {
+      EntityRef camera=localPlayer.getCameraEntity();
+      FirstPersonHeldItemMountPointComponent mountPointComponent=camera.getComponent(FirstPersonHeldItemMountPointComponent.class);
+      if (mountPointComponent != null) {
+        if (currentHeldItem != EntityRef.NULL) {
+          currentHeldItem.destroy();
+        }
+        EntityRef newHeldItem;
+        if (newItem == EntityRef.NULL) {
+          newHeldItem=getHandEntity();
+        }
+ else {
+          newHeldItem=newItem;
+        }
+        currentHeldItem=entityManager.create();
+        for (        Component component : newHeldItem.iterateComponents()) {
+          if (component instanceof VisualComponent) {
+            currentHeldItem.addComponent(component);
+          }
+        }
+        currentHeldItem.addComponent(new LocationComponent());
+        currentHeldItem.addComponent(new ItemIsHeldComponent());
+        FirstPersonHeldItemTransformComponent heldItemTransformComponent=currentHeldItem.getComponent(FirstPersonHeldItemTransformComponent.class);
+        if (heldItemTransformComponent == null) {
+          heldItemTransformComponent=new FirstPersonHeldItemTransformComponent();
+          currentHeldItem.addComponent(heldItemTransformComponent);
+        }
+        Location.attachChild(mountPointComponent.mountPointEntity,currentHeldItem,heldItemTransformComponent.translate,new Quaternionf().rotationYXZ(TeraMath.DEG_TO_RAD * heldItemTransformComponent.rotateDegrees.y,TeraMath.DEG_TO_RAD * heldItemTransformComponent.rotateDegrees.x,TeraMath.DEG_TO_RAD * heldItemTransformComponent.rotateDegrees.z),heldItemTransformComponent.scale);
+      }
+    }
+  }
+  /** 
+ * modifies the held item mount point to move the held item in first person view
+ */
+  @Override public void update(  float delta){
+    if (!currentHeldItem.exists() && currentHeldItem != getHandEntity()) {
+      linkHeldItemLocationForLocalPlayer(getHandEntity());
+    }
+    for (    EntityRef entityRef : entityManager.getEntitiesWith(ItemIsHeldComponent.class)) {
+      if (!entityRef.equals(currentHeldItem) && !entityRef.equals(handEntity)) {
+        entityRef.destroy();
+      }
+    }
+    CharacterHeldItemComponent characterHeldItemComponent=localPlayer.getCharacterEntity().getComponent(CharacterHeldItemComponent.class);
+    FirstPersonHeldItemMountPointComponent mountPointComponent=localPlayer.getCameraEntity().getComponent(FirstPersonHeldItemMountPointComponent.class);
+    if (characterHeldItemComponent == null || mountPointComponent == null) {
+      return;
+    }
+    LocationComponent locationComponent=mountPointComponent.mountPointEntity.getComponent(LocationComponent.class);
+    if (locationComponent == null) {
+      return;
+    }
+    long timeElapsedSinceLastUsed=time.getGameTimeInMs() - characterHeldItemComponent.lastItemUsedTime;
+    float animateAmount=0f;
+    if (timeElapsedSinceLastUsed < USEANIMATIONLENGTH) {
+      animateAmount=1f - Math.abs(((float)timeElapsedSinceLastUsed / (float)USEANIMATIONLENGTH) - 0.5f);
+    }
+    float addPitch=15f * animateAmount;
+    float addYaw=10f * animateAmount;
+    locationComponent.setLocalRotation(new Quaternionf().rotationYXZ(TeraMath.DEG_TO_RAD * (mountPointComponent.rotateDegrees.y + addYaw),TeraMath.DEG_TO_RAD * (mountPointComponent.rotateDegrees.x + addPitch),TeraMath.DEG_TO_RAD * mountPointComponent.rotateDegrees.z));
+    Vector3f offset=new Vector3f(0.25f * animateAmount,-0.12f * animateAmount,0f);
+    offset.add(mountPointComponent.translate);
+    locationComponent.setLocalPosition(offset);
+    mountPointComponent.mountPointEntity.saveComponent(locationComponent);
+  }
+  @Override public void preSave(){
+    if (currentHeldItem != EntityRef.NULL) {
+      currentHeldItem.destroy();
+    }
+  }
+}

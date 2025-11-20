@@ -1,0 +1,16 @@
+/** 
+ * Target should respond with not-acceptable error if no listeners for incoming In-Band Bytestream requests are registered.
+ * @throws XMPPException should not happen
+ */
+public void testRespondWithErrorOnInBandBytestreamRequest() throws XMPPException {
+  XMPPConnection targetConnection=getConnection(0);
+  XMPPConnection initiatorConnection=getConnection(1);
+  Open open=new Open("sessionID",1024);
+  open.setFrom(initiatorConnection.getUser());
+  open.setTo(targetConnection.getUser());
+  StanzaCollector collector=initiatorConnection.createStanzaCollector(new PacketIDFilter(open.getStanzaId()));
+  initiatorConnection.sendStanza(open);
+  Packet result=collector.nextResult();
+  assertNotNull(result.getError());
+  assertEquals(XMPPError.Condition.no_acceptable.toString(),result.getError().getCondition());
+}

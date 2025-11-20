@@ -1,0 +1,41 @@
+private void walkStateGraphInternal(WalkStateGraphContext walkStateGraphContext) throws IOException, SmackException, InterruptedException, XMPPException {
+  final GraphVertex<State> initialStateVertex=currentStateVertex;
+  final State initialState=initialStateVertex.getElement();
+  final StateDescriptor initialStateDescriptor=initialState.getStateDescriptor();
+  walkStateGraphContext.recordWalkTo(initialState);
+  if (walkStateGraphContext.isWalksFinalState(initialStateDescriptor)) {
+    assert initialStateDescriptor.isFinalState();
+    invokeConnectionStateMachineListener(new ConnectionStateEvent.FinalStateReached(initialState));
+    return;
+  }
+  List<GraphVertex<State>> outgoingStateEdges=initialStateVertex.getOutgoingEdges();
+  GraphVertex<State> mandatoryIntermediateStateVertex=walkStateGraphContext.maybeReturnMandatoryImmediateState(outgoingStateEdges);
+  if (mandatoryIntermediateStateVertex != null) {
+    StateTransitionResult reason=attemptEnterState(mandatoryIntermediateStateVertex,walkStateGraphContext);
+    if (reason instanceof StateTransitionResult.Success) {
+      walkStateGraph(walkStateGraphContext);
+      return;
+    }
+    throw new StateMachineException.SmackMandatoryStateFailedException(mandatoryIntermediateStateVertex.getElement(),reason);
+  }
+  for (Iterator<GraphVertex<State>> it=outgoingStateEdges.iterator(); it.hasNext(); ) {
+    GraphVertex<State> successorStateVertex=it.next();
+    State successorState=successorStateVertex.getElement();
+    if (walkStateGraphContext.wouldCauseCycle(successorStateVertex)) {
+      invokeConnectionStateMachineListener(new ConnectionStateEvent.TransitionIgnoredDueCycle(initialStateVertex,successorStateVertex));
+    }
+ else {
+      StateTransitionResult result=attemptEnterState(successorStateVertex,walkStateGraphContext);
+      if (result instanceof StateTransitionResult.Success) {
+        break;
+      }
+      if (result != null) {
+        walkStateGraphContext.recordFailedState(successorState,result);
+      }
+    }
+    if (!it.hasNext()) {
+      throw StateMachineException.SmackStateGraphDeadEndException.from(walkStateGraphContext,initialStateVertex);
+    }
+  }
+  walkStateGraph(walkStateGraphContext);
+}

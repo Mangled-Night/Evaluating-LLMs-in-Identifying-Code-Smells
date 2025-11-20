@@ -1,0 +1,18 @@
+@Override public TranslationData load(ResourceUrn urn,List<AssetDataFile> inputs) throws IOException {
+  if (inputs.size() != 1) {
+    throw new IOException("Failed to load translation data '" + urn + "': "+ inputs);
+  }
+  AssetDataFile file=inputs.get(0);
+  Locale locale=localeFromFilename(file.getFilename());
+  Name projName=basenameFromFilename(file.getFilename());
+  ResourceUrn projUrn=new ResourceUrn(urn.getModuleName(),projName);
+  TranslationData data=new TranslationData(projUrn,locale);
+  try (InputStreamReader isr=new InputStreamReader(file.openStream(),Charsets.UTF_8)){
+    Map<String,String> entry=gson.fromJson(isr,MAP_TOKEN.getType());
+    data.addAll(entry);
+  }
+ catch (  JsonParseException e) {
+    throw new IOException("Could not parse file '" + file + "'",e);
+  }
+  return data;
+}

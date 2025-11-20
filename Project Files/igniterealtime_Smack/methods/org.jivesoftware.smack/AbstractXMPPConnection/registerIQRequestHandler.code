@@ -1,0 +1,32 @@
+@Override public IQRequestHandler registerIQRequestHandler(final IQRequestHandler iqRequestHandler){
+  final QName key=iqRequestHandler.getQName();
+  IQRequestHandler previous;
+switch (iqRequestHandler.getType()) {
+case set:
+synchronized (setIqRequestHandler) {
+      previous=setIqRequestHandler.put(key,iqRequestHandler);
+    }
+  break;
+case get:
+synchronized (getIqRequestHandler) {
+  previous=getIqRequestHandler.put(key,iqRequestHandler);
+}
+break;
+default :
+throw new IllegalArgumentException("Only IQ type of 'get' and 'set' allowed");
+}
+final String iqNamespace=key.getNamespaceURI();
+synchronized (iqRequestHandlerNamespacesReferenceCounters) {
+Integer newValue;
+Integer counter=iqRequestHandlerNamespacesReferenceCounters.get(iqNamespace);
+if (counter == null) {
+iqRequestHandlerNamespaces.add(iqNamespace);
+newValue=0;
+}
+ else {
+newValue=counter.intValue() + 1;
+}
+iqRequestHandlerNamespacesReferenceCounters.put(iqNamespace,newValue);
+}
+return previous;
+}

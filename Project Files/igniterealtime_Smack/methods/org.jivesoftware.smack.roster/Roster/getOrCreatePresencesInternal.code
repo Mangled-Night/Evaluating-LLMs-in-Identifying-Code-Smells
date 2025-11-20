@@ -1,0 +1,20 @@
+/** 
+ * Retrieve the user presences (a map from resource to  {@link Presence}) for a given XMPP entity represented by their bare JID.
+ * @param entity the entity
+ * @return the user presences
+ */
+private synchronized Map<Resourcepart,Presence> getOrCreatePresencesInternal(BareJid entity){
+  Map<Resourcepart,Presence> entityPresences=getPresencesInternal(entity);
+  if (entityPresences == null) {
+    if (contains(entity)) {
+      entityPresences=new ConcurrentHashMap<>();
+      presenceMap.put(entity,entityPresences);
+    }
+ else {
+      LruCache<Resourcepart,Presence> nonRosterEntityPresences=new LruCache<>(32);
+      nonRosterPresenceMap.put(entity,nonRosterEntityPresences);
+      entityPresences=nonRosterEntityPresences;
+    }
+  }
+  return entityPresences;
+}

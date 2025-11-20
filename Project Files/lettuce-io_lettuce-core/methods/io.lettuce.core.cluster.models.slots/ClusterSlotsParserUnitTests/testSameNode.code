@@ -1,0 +1,15 @@
+@Test void testSameNode(){
+  List<?> list=Arrays.asList(LettuceLists.newList("100","200",LettuceLists.newList("1","2","nodeId1"),LettuceLists.newList("1",2,"nodeId2")),LettuceLists.newList("200","300",LettuceLists.newList("1","2","nodeId1"),LettuceLists.newList("1",2,"nodeId2")));
+  List<ClusterSlotRange> result=ClusterSlotsParser.parse(list);
+  assertThat(result).hasSize(2);
+  assertThat(result.get(0).getUpstream()).isSameAs(result.get(1).getUpstream());
+  RedisClusterNode upstreamNode=result.get(0).getUpstream();
+  assertThat(upstreamNode).isNotNull();
+  assertThat(upstreamNode.getNodeId()).isEqualTo("nodeId1");
+  assertThat(upstreamNode.getUri().getHost()).isEqualTo("1");
+  assertThat(upstreamNode.getUri().getPort()).isEqualTo(2);
+  assertThat(upstreamNode.is(RedisClusterNode.NodeFlag.MASTER)).isTrue();
+  assertThat(upstreamNode.getSlots()).contains(100,101,199,200,203);
+  assertThat(upstreamNode.getSlots()).doesNotContain(99,301);
+  assertThat(upstreamNode.getSlots()).hasSize(201);
+}

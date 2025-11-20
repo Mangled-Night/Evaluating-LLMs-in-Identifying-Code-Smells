@@ -1,0 +1,35 @@
+private static DruidParser getDruidParserForMultiDB(SchemaConfig schema,SQLStatement statement,SchemaStatVisitor visitor){
+  DruidParser parser=null;
+  MycatSchemaStatVisitor _visitor=SchemaStatVisitorFactory.create(schema);
+  List<String> tables=parseTables(statement,_visitor);
+  for (  String table : tables) {
+    Set<String> dbTypes=null;
+    TableConfig tableConfig=schema.getTables().get(table);
+    if (tableConfig == null) {
+      dbTypes=new HashSet<>();
+      dbTypes.add(schema.getDefaultDataNodeDbType());
+    }
+ else {
+      dbTypes=tableConfig.getDbTypes();
+    }
+    if (dbTypes.contains("oracle")) {
+      parser=new DruidSelectOracleParser();
+      ((DruidSelectOracleParser)parser).setInvocationHandler(SqlMethodInvocationHandlerFactory.getForOracle());
+      break;
+    }
+ else     if (dbTypes.contains("db2")) {
+      parser=new DruidSelectDb2Parser();
+      break;
+    }
+ else     if (dbTypes.contains("sqlserver")) {
+      parser=new DruidSelectSqlServerParser();
+      break;
+    }
+ else     if (dbTypes.contains("postgresql")) {
+      parser=new DruidSelectPostgresqlParser();
+      ((DruidSelectPostgresqlParser)parser).setInvocationHandler(SqlMethodInvocationHandlerFactory.getForPgsql());
+      break;
+    }
+  }
+  return parser;
+}

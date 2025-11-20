@@ -1,0 +1,68 @@
+/** 
+ * Test cases for the StanzaTypeFilter class.
+ */
+public class StanzaTypeFilterTest extends TestCase {
+private class InnerClassDummy {
+public class DummyPacket extends Packet {
+      public String toXML(){
+        return null;
+      }
+    }
+    public DummyPacket getInnerInstance(){
+      return new DummyPacket();
+    }
+  }
+private static class StaticInnerClassDummy {
+public static class StaticDummyPacket extends Packet {
+      public String toXML(){
+        return null;
+      }
+    }
+    public static StaticDummyPacket getInnerInstance(){
+      return new StaticDummyPacket();
+    }
+  }
+  /** 
+ * Test case for the constructor of StanzaTypeFilter objects.
+ */
+  public void testConstructor(){
+    try {
+      new StanzaTypeFilter(MockPacket.class);
+    }
+ catch (    IllegalArgumentException e) {
+      fail();
+    }
+    try {
+      new StanzaTypeFilter(IQ.class);
+    }
+ catch (    IllegalArgumentException e) {
+      fail();
+    }
+    try {
+      new StanzaTypeFilter(InnerClassDummy.DummyPacket.class);
+    }
+ catch (    IllegalArgumentException e) {
+      fail();
+    }
+    try {
+      new StanzaTypeFilter(StaticInnerClassDummy.StaticDummyPacket.class);
+    }
+ catch (    IllegalArgumentException e) {
+      fail();
+    }
+  }
+  /** 
+ * Test case to test the accept() method of StanzaTypeFilter objects.
+ */
+  public void testAccept(){
+    Packet packet=new MockPacket();
+    StanzaTypeFilter filter=new PacketTypeFilter(MockPacket.class);
+    assertTrue(filter.accept(packet));
+    packet=(new InnerClassDummy()).getInnerInstance();
+    filter=new StanzaTypeFilter(InnerClassDummy.DummyPacket.class);
+    assertTrue(filter.accept(packet));
+    packet=StaticInnerClassDummy.getInnerInstance();
+    filter=new StanzaTypeFilter(StaticInnerClassDummy.StaticDummyPacket.class);
+    assertTrue(filter.accept(packet));
+  }
+}

@@ -1,0 +1,44 @@
+static class RemoteJob implements Runnable {
+  private StringBuilder queryData=new StringBuilder();
+  public void appendQueryData(  String key,  String value){
+    if (key != null && value != null) {
+      if (queryData.length() == 0) {
+        queryData.append(key).append("=").append(value);
+      }
+ else {
+        queryData.append("&").append(key).append("=").append(value);
+      }
+    }
+  }
+  @Override public void run(){
+    String link=statUrl;
+    if (link == null) {
+      return;
+    }
+    InputStream inputStream=null;
+    try {
+      if (queryData.length() != 0) {
+        link=link + "?" + queryData;
+      }
+      URL url=new URL(link);
+      URLConnection connection=url.openConnection();
+      connection.setConnectTimeout(1000);
+      connection.setReadTimeout(1000);
+      connection.connect();
+      inputStream=connection.getInputStream();
+      while (inputStream.read(SKIP_BYTE_BUFFER) != -1) {
+      }
+    }
+ catch (    Throwable t) {
+    }
+ finally {
+      if (inputStream != null) {
+        try {
+          inputStream.close();
+        }
+ catch (        IOException e) {
+        }
+      }
+    }
+  }
+}

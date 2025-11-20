@@ -1,0 +1,27 @@
+/** 
+ * Insert node's connection after a specific node's connection and reconnect the other previously connected nodes's connections to the new one. Simple approach, maintain structure 1 to N. For M to N output do manually.
+ */
+public void reconnectAllConnectedInputsTo(DependencyConnection connectionToReplace,DependencyConnection newOutputConnection){
+  Node fromNode=findNode(connectionToReplace.getParentNode());
+  ConnectionType connectionType;
+  if (newOutputConnection instanceof FboConnection) {
+    connectionType=ConnectionType.FBO;
+  }
+ else   if (newOutputConnection instanceof BufferPairConnection) {
+    connectionType=ConnectionType.BUFFER_PAIR;
+  }
+ else {
+    logger.error("Unknown connection type: " + newOutputConnection + " .\n");
+    throw new RuntimeException("Unknown connection type: " + newOutputConnection + " .\n");
+  }
+  if (!connectionToReplace.getConnectedConnections().isEmpty()) {
+    final Map<String,DependencyConnection> connectedConnections=connectionToReplace.getConnectedConnections();
+    final Map<String,DependencyConnection> connectedConnectionsCopy=Maps.newHashMap(connectionToReplace.getConnectedConnections());
+    for (    DependencyConnection connectedConnectionCopy : connectedConnectionsCopy.values()) {
+      DependencyConnection toConnection=connectedConnections.get(connectedConnectionCopy.getName());
+      if (!toConnection.getParentNode().equals(fromNode.getUri())) {
+        reconnectInputToOutput(findNode(toConnection.getParentNode()),DependencyConnection.getIdFromConnectionName(toConnection.getName()),newOutputConnection,connectionType,true);
+      }
+    }
+  }
+}

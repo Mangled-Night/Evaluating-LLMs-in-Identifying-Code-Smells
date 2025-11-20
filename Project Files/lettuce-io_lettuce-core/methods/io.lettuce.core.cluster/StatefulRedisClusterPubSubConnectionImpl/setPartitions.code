@@ -1,0 +1,11 @@
+public void setPartitions(Partitions partitions){
+  LettuceAssert.notNull(partitions,"Partitions must not be null");
+  this.partitions=partitions;
+  String nodeId=getNodeId();
+  if (nodeId != null && expireStaleConnections()) {
+    if (partitions.getPartitionByNodeId(nodeId) == null) {
+      endpoint.disconnect();
+    }
+  }
+  getClusterDistributionChannelWriter().setPartitions(partitions);
+}

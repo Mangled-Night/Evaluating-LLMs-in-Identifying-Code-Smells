@@ -1,0 +1,68 @@
+/** 
+ * See the RenderTaskListGenerator class Javadoc for an overview of what this method does.
+ * @param orderedNodes a list of Node instances, ordered to reflect the dependencies between them,i.e. Node A must be processed before Node B to work correctly.
+ * @return an optimized list of RenderPipelineTask instances,ready to be iterated over to execute a frame worth of rendering
+ */
+public List<RenderPipelineTask> generateFrom(List<Node> orderedNodes){
+  long startTimeInNanoSeconds=System.nanoTime();
+  nodeList=orderedNodes;
+  taskList.clear();
+  Map<Class<?>,StateChange> persistentStateChanges=Maps.newHashMap();
+  Set<Class<?>> requestedStateChanges=Sets.newHashSet();
+  List<StateChange> stateChangesToAdd=Lists.newArrayList();
+  StateChange persistentStateChange;
+  Iterator<Map.Entry<Class<?>,StateChange>> iterator;
+  Map.Entry<Class<?>,StateChange> entry;
+  Class<?> key;
+  StateChange stateChange;
+  int enabledNodes=0;
+  int potentialTasks=0;
+  for (  Node node : orderedNodes) {
+    if (node.isEnabled()) {
+      if (logger.isDebugEnabled()) {
+        taskList.add(new MarkerTask(node.getUri() + " (" + node.getClass().getSimpleName()+ ")"));
+        enabledNodes++;
+        potentialTasks+=2 * node.getDesiredStateChanges().size() + 1;
+      }
+      for (      StateChange currentStateChange : node.getDesiredStateChanges()) {
+        persistentStateChange=persistentStateChanges.get(currentStateChange.getClass());
+        if (!currentStateChange.equals(persistentStateChange)) {
+          stateChangesToAdd.add(currentStateChange);
+          persistentStateChanges.put(currentStateChange.getClass(),currentStateChange);
+        }
+        requestedStateChanges.add(currentStateChange.getClass());
+      }
+      iterator=persistentStateChanges.entrySet().iterator();
+      while (iterator.hasNext()) {
+        entry=iterator.next();
+        key=entry.getKey();
+        stateChange=entry.getValue();
+        if (!requestedStateChanges.contains(key)) {
+          requestedStateChanges.remove(key);
+          StateChange resetTask=stateChange.getDefaultInstance();
+          if (resetTask != null) {
+            taskList.add(resetTask);
+          }
+          iterator.remove();
+        }
+        requestedStateChanges.remove(key);
+      }
+      taskList.addAll(stateChangesToAdd);
+      stateChangesToAdd.clear();
+      taskList.add(node);
+    }
+  }
+  for (  Map.Entry<Class<?>,StateChange> stateChangeEntry : persistentStateChanges.entrySet()) {
+    taskList.add(stateChangeEntry.getValue().getDefaultInstance());
+  }
+  long endTimeInNanoSeconds=System.nanoTime();
+  logger.debug("===== INTERMEDIATE RENDERER LIST =========================");
+  logIntermediateRendererListForDebugging(orderedNodes);
+  logger.debug("===== RENDERER TASK LIST =================================");
+  logList(taskList);
+  logger.debug("----------------------------------------------------------");
+  logger.debug(String.format("Task list generated in %.3f ms",(endTimeInNanoSeconds - startTimeInNanoSeconds) / 1000000f));
+  logger.debug(String.format("%s nodes, %s enabled - %s tasks (excluding marker tasks) out of %s potential tasks.",nodeList.size(),enabledNodes,taskList.size() - enabledNodes,potentialTasks));
+  logger.debug("----------------------------------------------------------");
+  return taskList;
+}

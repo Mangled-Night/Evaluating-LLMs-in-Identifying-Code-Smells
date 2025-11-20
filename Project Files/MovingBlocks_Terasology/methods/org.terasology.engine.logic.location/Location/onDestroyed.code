@@ -1,0 +1,17 @@
+@ReceiveEvent public void onDestroyed(BeforeRemoveComponent event,EntityRef entity,LocationComponent location){
+  if (location.parent.exists()) {
+    removeChild(location.parent,entity);
+  }
+  Iterator<EntityRef> childIterator=location.getChildren().iterator();
+  while (childIterator.hasNext()) {
+    EntityRef child=childIterator.next();
+    LocationComponent childLoc=child.getComponent(LocationComponent.class);
+    if (childLoc != null) {
+      Vector3f oldWorldPos=childLoc.getWorldPosition(new Vector3f());
+      childLoc.parent=EntityRef.NULL;
+      childLoc.setWorldPosition(oldWorldPos);
+      child.saveComponent(childLoc);
+    }
+    childIterator.remove();
+  }
+}

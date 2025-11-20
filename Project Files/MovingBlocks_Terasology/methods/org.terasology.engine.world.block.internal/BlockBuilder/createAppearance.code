@@ -1,0 +1,23 @@
+private BlockAppearance createAppearance(BlockShape shape,Map<BlockPart,BlockTile> tiles,Rotation rot){
+  Map<BlockPart,BlockMeshPart> meshParts=Maps.newEnumMap(BlockPart.class);
+  Map<BlockPart,Vector2f> textureAtlasPositions=Maps.newEnumMap(BlockPart.class);
+  for (  BlockPart part : BlockPart.values()) {
+    Vector2f atlasPos;
+    int frameCount;
+    BlockTile tile=tiles.get(part);
+    if (tile == null) {
+      atlasPos=new Vector2f();
+      frameCount=1;
+    }
+ else {
+      atlasPos=worldAtlas.getTexCoords(tile,shape.getMeshPart(part) != null);
+      frameCount=tile.getLength();
+    }
+    BlockPart targetPart=part.rotate(rot);
+    textureAtlasPositions.put(targetPart,atlasPos);
+    if (shape.getMeshPart(part) != null) {
+      meshParts.put(targetPart,shape.getMeshPart(part).rotate(rot.orientation().get(new Quaternionf())).mapTexCoords(atlasPos,worldAtlas.getRelativeTileSize(),frameCount));
+    }
+  }
+  return new BlockAppearance(meshParts,textureAtlasPositions);
+}

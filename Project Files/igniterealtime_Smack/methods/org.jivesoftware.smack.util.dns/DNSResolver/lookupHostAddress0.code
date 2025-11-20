@@ -1,0 +1,21 @@
+/** 
+ * Lookup the IP addresses of a given host name. Returns <code>null</code> if there was an error, in which the error reason will be added in form of a <code>HostAddress</code> to <code>failedAddresses</code>. Returns a empty list in case the DNS name exists but has no associated A or AAAA resource records. Otherwise, if the resolution was successful <em>and</em> there is at least one A or AAAA resource record, then a non-empty list will be returned. <p> Concrete DNS resolver implementations are free to overwrite this, but have to stick to the interface contract. </p>
+ * @param name the DNS name to lookup
+ * @param lookupFailures list of exceptions that occurred during lookup.
+ * @param dnssecMode the selected DNSSEC mode
+ * @return A list, either empty or non-empty, or <code>null</code>
+ */
+protected List<InetAddress> lookupHostAddress0(DnsName name,List<RemoteConnectionEndpointLookupFailure> lookupFailures,DnssecMode dnssecMode){
+  if (dnssecMode != DnssecMode.disabled) {
+    throw new UnsupportedOperationException("This resolver does not support DNSSEC");
+  }
+  InetAddress[] inetAddressArray;
+  try {
+    inetAddressArray=InetAddress.getAllByName(name.toString());
+  }
+ catch (  UnknownHostException e) {
+    lookupFailures.add(new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,e));
+    return null;
+  }
+  return Arrays.asList(inetAddressArray);
+}

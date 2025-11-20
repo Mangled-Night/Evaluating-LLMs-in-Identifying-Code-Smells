@@ -1,0 +1,27 @@
+private Method similarMethod(final String name,final Class<?>[] types) throws NoSuchMethodException {
+  Class<?> type=type();
+  List<Method> methods=new ArrayList<>();
+  for (  Method method : type.getMethods()) {
+    if (isSimilarSignature(method,name,types)) {
+      methods.add(method);
+    }
+  }
+  if (!methods.isEmpty()) {
+    sortMethods(methods);
+    return methods.get(0);
+  }
+  do {
+    for (    Method method : type.getDeclaredMethods()) {
+      if (isSimilarSignature(method,name,types)) {
+        methods.add(method);
+      }
+    }
+    if (!methods.isEmpty()) {
+      sortMethods(methods);
+      return methods.get(0);
+    }
+    type=type.getSuperclass();
+  }
+ while (type != null);
+  throw new NoSuchMethodException("No similar method " + name + " with params "+ Arrays.toString(types)+ " could be found on type "+ type()+ ".");
+}

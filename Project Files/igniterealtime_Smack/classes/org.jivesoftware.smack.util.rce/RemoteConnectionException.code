@@ -1,0 +1,30 @@
+public final class RemoteConnectionException<RCE extends RemoteConnectionEndpoint> {
+  private final RemoteConnectionEndpoint.InetSocketAddressCoupling<RCE> address;
+  private final Exception exception;
+  public RemoteConnectionException(  RCE remoteConnectionEndpoint,  InetAddress inetAddress,  Exception exception){
+    this(new RemoteConnectionEndpoint.InetSocketAddressCoupling<>(remoteConnectionEndpoint,inetAddress),exception);
+  }
+  public RemoteConnectionException(  RemoteConnectionEndpoint.InetSocketAddressCoupling<RCE> address,  Exception exception){
+    this.address=address;
+    this.exception=exception;
+  }
+  public RemoteConnectionEndpoint.InetSocketAddressCoupling<RCE> getAddress(){
+    return address;
+  }
+  public Exception getException(){
+    return exception;
+  }
+  public String getErrorMessage(){
+    return "\'" + address + "' failed because: "+ exception;
+  }
+  private transient String toStringCache;
+  @Override public String toString(){
+    if (toStringCache == null) {
+      toStringCache=ToStringUtil.builderFor(RemoteConnectionException.class).addValue("address",address).addValue("exception",exception).build();
+    }
+    return toStringCache;
+  }
+  public static <SARCE extends SingleAddressRemoteConnectionEndpoint>RemoteConnectionException<SARCE> from(  SARCE remoteConnectionEndpoint,  Exception exception){
+    return new RemoteConnectionException<SARCE>(remoteConnectionEndpoint,remoteConnectionEndpoint.getInetAddress(),exception);
+  }
+}

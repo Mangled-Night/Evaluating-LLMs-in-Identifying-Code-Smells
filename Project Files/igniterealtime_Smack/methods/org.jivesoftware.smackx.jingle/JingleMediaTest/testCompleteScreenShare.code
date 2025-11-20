@@ -1,0 +1,38 @@
+public void testCompleteScreenShare(){
+  try {
+    XMPPTCPConnection x0=getConnection(0);
+    XMPPTCPConnection x1=getConnection(1);
+    ICETransportManager icetm0=new ICETransportManager(x0,"stun.xten.net",3478);
+    ICETransportManager icetm1=new ICETransportManager(x1,"stun.xten.net",3478);
+    JingleMediaManager jingleMediaManager0=new ScreenShareMediaManager(icetm0);
+    JingleMediaManager jingleMediaManager1=new ScreenShareMediaManager(icetm1);
+    List<JingleMediaManager> jml0=new ArrayList<JingleMediaManager>();
+    List<JingleMediaManager> jml1=new ArrayList<JingleMediaManager>();
+    jml0.add(jingleMediaManager0);
+    jml1.add(jingleMediaManager1);
+    final JingleManager jm0=new JingleManager(x0,jml0);
+    final JingleManager jm1=new JingleManager(x1,jml1);
+    jm1.addJingleSessionRequestListener(new JingleSessionRequestListener(){
+      public void sessionRequested(      final JingleSessionRequest request){
+        try {
+          JingleSession session=request.accept();
+          session.startIncoming();
+        }
+ catch (        XMPPException e) {
+          LOGGER.log(Level.WARNING,"exception",e);
+        }
+      }
+    }
+);
+    JingleSession js0=jm0.createOutgoingJingleSession(x1.getUser());
+    js0.startOutgoing();
+    Thread.sleep(150000);
+    js0.terminate();
+    Thread.sleep(6000);
+    x0.disconnect();
+    x1.disconnect();
+  }
+ catch (  Exception e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+}

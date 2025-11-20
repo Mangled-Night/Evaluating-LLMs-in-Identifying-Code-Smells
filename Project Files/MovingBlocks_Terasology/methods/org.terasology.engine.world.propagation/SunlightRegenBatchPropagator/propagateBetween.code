@@ -1,0 +1,22 @@
+@Override public void propagateBetween(Chunk chunk,Chunk adjChunk,Side side,boolean propagateExternal){
+  if (side == Side.BOTTOM) {
+    int[] depth=new int[Chunks.SIZE_X * Chunks.SIZE_Z];
+    int[] startingRegen=new int[depth.length];
+    propagateSweep(chunk,adjChunk,depth,startingRegen);
+    int[] adjDepths=new int[depth.length];
+    BatchPropagator.populateMinAdjacent2D(depth,adjDepths,Chunks.SIZE_X,Chunks.SIZE_Z,!propagateExternal);
+    if (propagateExternal) {
+      for (int z=0; z < Chunks.SIZE_Z; ++z) {
+        adjDepths[z * Chunks.SIZE_X]=0;
+        adjDepths[Chunks.SIZE_X - 1 + z * Chunks.SIZE_X]=0;
+      }
+      for (int x=0; x < Chunks.SIZE_X; ++x) {
+        adjDepths[x]=0;
+        adjDepths[x + Chunks.SIZE_X * (Chunks.SIZE_Z - 1)]=0;
+      }
+    }
+    int[] adjStartingRegen=new int[depth.length];
+    BatchPropagator.populateMinAdjacent2D(startingRegen,adjStartingRegen,Chunks.SIZE_X,Chunks.SIZE_Z,true);
+    markForPropagation(adjChunk,depth,startingRegen,adjDepths,adjStartingRegen);
+  }
+}

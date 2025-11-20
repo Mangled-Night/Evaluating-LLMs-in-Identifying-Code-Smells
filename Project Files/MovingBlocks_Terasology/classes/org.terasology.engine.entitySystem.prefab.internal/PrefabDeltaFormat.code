@@ -1,0 +1,16 @@
+public class PrefabDeltaFormat extends AbstractAssetAlterationFileFormat<PrefabData> {
+  private final ComponentLibrary componentLibrary;
+  private final TypeHandlerLibrary typeHandlerLibrary;
+  public PrefabDeltaFormat(  ComponentLibrary componentLibrary,  TypeHandlerLibrary typeHandlerLibrary){
+    super("prefab");
+    this.componentLibrary=componentLibrary;
+    this.typeHandlerLibrary=typeHandlerLibrary;
+  }
+  @Override public void apply(  AssetDataFile assetDataFile,  PrefabData assetData) throws IOException {
+    try (BufferedReader deltaReader=new BufferedReader(new InputStreamReader(assetDataFile.openStream(),Charsets.UTF_8))){
+      EntityData.Prefab delta=EntityDataJSONFormat.readPrefab(deltaReader);
+      PrefabSerializer serializer=new PrefabSerializer(componentLibrary,typeHandlerLibrary);
+      serializer.deserializeDeltaOnto(delta,assetData);
+    }
+   }
+}

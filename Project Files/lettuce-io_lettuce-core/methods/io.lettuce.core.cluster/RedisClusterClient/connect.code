@@ -1,0 +1,26 @@
+/** 
+ * Connect to a Redis Cluster and treat keys and values as UTF-8 strings. <p> What to expect from this connection: </p> <ul> <li>A <i>default</i> connection is created to the node with the lowest latency</li> <li>Keyless commands are send to the default connection</li> <li>Single-key keyspace commands are routed to the appropriate node</li> <li>Multi-key keyspace commands require the same slot-hash and are routed to the appropriate node</li> <li>Pub/sub commands are sent to the node that handles the slot derived from the pub/sub channel</li> </ul>
+ * @return A new stateful Redis Cluster connection
+ */
+public StatefulRedisClusterConnection<String,String> connect(){
+  return connect(newStringStringCodec());
+}
+/** 
+ * Connect to a Redis Cluster. Use the supplied  {@link RedisCodec codec} to encode/decode keys and values.<p> What to expect from this connection: </p> <ul> <li>A <i>default</i> connection is created to the node with the lowest latency</li> <li>Keyless commands are send to the default connection</li> <li>Single-key keyspace commands are routed to the appropriate node</li> <li>Multi-key keyspace commands require the same slot-hash and are routed to the appropriate node</li> <li>Pub/sub commands are sent to the node that handles the slot derived from the pub/sub channel</li> </ul>
+ * @param codec Use this codec to encode/decode keys and values, must not be {@code null}
+ * @param < K > Key type
+ * @param < V > Value type
+ * @return A new stateful Redis Cluster connection
+ */
+public <K,V>StatefulRedisClusterConnection<K,V> connect(RedisCodec<K,V> codec){
+  assertInitialPartitions();
+  return getConnection(connectClusterAsync(codec));
+}
+private <T,K,V>Mono<T> connect(Mono<SocketAddress> socketAddressSupplier,DefaultEndpoint endpoint,StatefulRedisClusterConnectionImpl<K,V> connection,Supplier<CommandHandler> commandHandlerSupplier){
+  ConnectionFuture<T> future=connectStatefulAsync(connection,endpoint,getFirstUri(),socketAddressSupplier,commandHandlerSupplier);
+  return Mono.fromCompletionStage(future).doOnError(t -> logger.warn(t.getMessage()));
+}
+private <T,K,V>Mono<T> connect(Mono<SocketAddress> socketAddressSupplier,DefaultEndpoint endpoint,StatefulRedisConnectionImpl<K,V> connection,Supplier<CommandHandler> commandHandlerSupplier){
+  ConnectionFuture<T> future=connectStatefulAsync(connection,endpoint,getFirstUri(),socketAddressSupplier,commandHandlerSupplier);
+  return Mono.fromCompletionStage(future).doOnError(t -> logger.warn(t.getMessage()));
+}

@@ -1,0 +1,26 @@
+/** 
+ * Parse the available SASL mechanisms reported from the server.
+ * @param parser the XML parser, positioned at the start of the mechanisms stanza.
+ * @return a collection of Stings with the mechanisms included in the mechanisms stanza.
+ * @throws IOException if an I/O error occurred.
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ */
+public static Collection<String> parseMechanisms(XmlPullParser parser) throws XmlPullParserException, IOException {
+  List<String> mechanisms=new ArrayList<String>();
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      String elementName=parser.getName();
+      if (elementName.equals("mechanism")) {
+        mechanisms.add(parser.nextText());
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getName().equals("mechanisms")) {
+        done=true;
+      }
+    }
+  }
+  return mechanisms;
+}

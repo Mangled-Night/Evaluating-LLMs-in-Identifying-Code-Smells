@@ -1,0 +1,26 @@
+private static EntityData.RunLengthEncoding16 runLengthEncode16(TeraArray array){
+  EntityData.RunLengthEncoding16.Builder builder=EntityData.RunLengthEncoding16.newBuilder();
+  short lastItem=(short)array.get(0,0,0);
+  int counter=0;
+  for (int y=0; y < array.getSizeY(); ++y) {
+    for (int z=0; z < array.getSizeZ(); ++z) {
+      for (int x=0; x < array.getSizeX(); ++x) {
+        short item=(short)array.get(x,y,z);
+        if (lastItem != item) {
+          builder.addRunLengths(counter);
+          builder.addValues(lastItem & 0xFFFF);
+          lastItem=item;
+          counter=1;
+        }
+ else {
+          counter++;
+        }
+      }
+    }
+  }
+  if (lastItem != 0) {
+    builder.addRunLengths(counter);
+    builder.addValues(lastItem & 0xFFFF);
+  }
+  return builder.build();
+}

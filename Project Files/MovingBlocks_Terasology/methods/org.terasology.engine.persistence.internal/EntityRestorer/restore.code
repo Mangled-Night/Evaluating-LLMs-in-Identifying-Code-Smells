@@ -1,0 +1,18 @@
+public Map<String,EntityRef> restore(EntityData.EntityStore store){
+  EntitySerializer serializer=new EntitySerializer(entityManager);
+  serializer.setComponentSerializeCheck(new PersistenceComponentSerializeCheck());
+  Map<Class<? extends Component>,Integer> idMap=Maps.newHashMap();
+  for (int i=0; i < store.getComponentClassCount(); ++i) {
+    ComponentMetadata<?> metadata=entityManager.getComponentLibrary().resolve(store.getComponentClass(i));
+    if (metadata != null) {
+      idMap.put(metadata.getType(),i);
+    }
+  }
+  serializer.setComponentIdMapping(idMap);
+  store.getEntityList().forEach(serializer::deserialize);
+  Map<String,EntityRef> namedEntities=Maps.newHashMap();
+  for (int i=0; i < store.getEntityNameCount() && i < store.getEntityNamedCount(); ++i) {
+    namedEntities.put(store.getEntityName(i),entityManager.getEntity(store.getEntityNamed(i)));
+  }
+  return namedEntities;
+}

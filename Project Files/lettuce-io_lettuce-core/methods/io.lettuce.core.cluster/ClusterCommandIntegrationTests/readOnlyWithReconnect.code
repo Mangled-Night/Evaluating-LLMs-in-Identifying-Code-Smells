@@ -1,0 +1,11 @@
+@Test void readOnlyWithReconnect() throws Exception {
+  String key="b";
+  assertThat(SlotHash.getSlot(key)).isEqualTo(3300);
+  prepareReadonlyTest(key);
+  RedisCommands<String,String> connect3=client.connect(RedisURI.Builder.redis(host,ClusterTestSettings.port3).build()).sync();
+  assertThat(connect3.readOnly()).isEqualTo("OK");
+  connect3.quit();
+  waitUntilValueIsVisible(key,connect3);
+  String resultViewedByReplica=connect3.get("b");
+  assertThat(resultViewedByReplica).isEqualTo(value);
+}

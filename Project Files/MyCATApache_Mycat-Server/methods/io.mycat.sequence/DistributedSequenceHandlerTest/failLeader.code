@@ -1,0 +1,34 @@
+private int failLeader(int p){
+  int leader=0, follower=0;
+  for (int i=0; i < 16; i++) {
+    if (i == p) {
+      continue;
+    }
+    if (distributedSequenceHandler[i].getLeaderSelector().hasLeadership()) {
+      leader=i;
+    }
+ else {
+      follower=i;
+    }
+    System.out.println("Node [" + i + "]is leader:"+ distributedSequenceHandler[i].getLeaderSelector().hasLeadership());
+    System.out.println(" InstanceID:" + distributedSequenceHandler[i].getInstanceId());
+  }
+  try {
+    distributedSequenceHandler[leader].close();
+  }
+ catch (  IOException e) {
+  }
+  while (true) {
+    follower++;
+    if (follower >= 16) {
+      follower=0;
+    }
+    if (follower == leader || follower == p) {
+      continue;
+    }
+    if (distributedSequenceHandler[follower].getLeaderSelector().hasLeadership()) {
+      break;
+    }
+  }
+  return leader;
+}

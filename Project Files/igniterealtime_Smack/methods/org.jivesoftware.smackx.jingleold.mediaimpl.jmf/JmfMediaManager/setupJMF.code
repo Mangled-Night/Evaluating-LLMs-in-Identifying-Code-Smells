@@ -1,0 +1,22 @@
+/** 
+ * Runs JMFInit the first time the application is started so that capture devices are properly detected and initialized by JMF.
+ */
+public static void setupJMF(){
+  String homeDir=System.getProperty("user.home");
+  File jmfDir=new File(homeDir,".jmf");
+  String classpath=System.getProperty("java.class.path");
+  classpath+=System.getProperty("path.separator") + jmfDir.getAbsolutePath();
+  System.setProperty("java.class.path",classpath);
+  if (!jmfDir.exists())   jmfDir.mkdir();
+  File jmfProperties=new File(jmfDir,"jmf.properties");
+  if (!jmfProperties.exists()) {
+    try {
+      jmfProperties.createNewFile();
+    }
+ catch (    IOException ex) {
+      LOGGER.log(Level.FINE,"Failed to create jmf.properties",ex);
+    }
+  }
+  runLinuxPreInstall();
+  new JMFInit(null,false);
+}

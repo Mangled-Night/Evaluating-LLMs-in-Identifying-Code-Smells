@@ -1,0 +1,37 @@
+/** 
+ * 考虑因素：isChildTable、批量、是否分片
+ */
+@Override public void statementParse(SchemaConfig schema,RouteResultset rrs,SQLStatement stmt) throws SQLNonTransientException {
+  MySqlInsertStatement insert=(MySqlInsertStatement)stmt;
+  String tableName=StringUtil.removeBackquote(insert.getTableName().getSimpleName()).toUpperCase();
+  ctx.addTable(tableName);
+  if (RouterUtil.isNoSharding(schema,tableName)) {
+    RouterUtil.routeForTableMeta(rrs,schema,tableName,rrs.getStatement());
+    rrs.setFinishedRoute(true);
+    return;
+  }
+  TableConfig tc=schema.getTables().get(tableName);
+  if (tc == null) {
+    String msg="can't find table define in schema " + tableName + " schema:"+ schema.getName();
+    LOGGER.warn(msg);
+    throw new SQLNonTransientException(msg);
+  }
+ else {
+    if (tc.isChildTable()) {
+      parserChildTable(schema,rrs,tableName,insert);
+      return;
+    }
+    String partitionColumn=tc.getPartitionColumn();
+    if (partitionColumn != null) {
+      if (insert.getColumns() == null || insert.getColumns().size() == 0) {
+        throw new SQLSyntaxErrorException("partition table, insert must provide ColumnList");
+      }
+      if (isMultiInsert(insert)) {
+        parserBatchInsert(schema,rrs,partitionColumn,tableName,insert);
+      }
+ else {
+        parserSingleInsert(schema,rrs,partitionColumn,tableName,insert);
+      }
+    }
+  }
+}

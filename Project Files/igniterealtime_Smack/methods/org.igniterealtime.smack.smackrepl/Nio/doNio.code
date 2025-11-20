@@ -1,0 +1,43 @@
+public static void doNio(String username,String password,String service) throws SmackException, IOException, XMPPException, InterruptedException {
+  boolean useTls=true;
+  boolean useStreamMangement=false;
+  boolean useCompression=true;
+  boolean useFullFlush=true;
+  boolean javaNetDebug=false;
+  boolean smackDebug=true;
+  if (useFullFlush) {
+    XMPPInputOutputStream.setFlushMethod(FlushMethod.FULL_FLUSH);
+  }
+  if (javaNetDebug) {
+    System.setProperty("javax.net.debug","all");
+  }
+  final SecurityMode securityMode;
+  if (useTls) {
+    securityMode=SecurityMode.required;
+  }
+ else {
+    securityMode=SecurityMode.disabled;
+  }
+  final SmackDebuggerFactory smackDebuggerFactory;
+  if (smackDebug) {
+    smackDebuggerFactory=ConsoleDebugger.Factory.INSTANCE;
+  }
+ else {
+    smackDebuggerFactory=null;
+  }
+  ModularXmppClientToServerConnectionConfiguration.Builder configurationBuilder=ModularXmppClientToServerConnectionConfiguration.builder().setUsernameAndPassword(username,password).setXmppDomain(service).setDebuggerFactory(smackDebuggerFactory).setSecurityMode(securityMode).removeAllModules().addModule(XmppTcpTransportModuleDescriptor.class);
+  if (useCompression) {
+    configurationBuilder.addModule(CompressionModuleDescriptor.class);
+    configurationBuilder.setCompressionEnabled(true);
+  }
+  if (useStreamMangement) {
+    configurationBuilder.addModule(StreamManagementModuleDescriptor.class);
+  }
+  ModularXmppClientToServerConnectionConfiguration configuration=configurationBuilder.build();
+  PrintWriter printWriter=new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out,StandardCharsets.UTF_8)));
+  configuration.printStateGraphInDotFormat(printWriter,false);
+  printWriter.flush();
+  ModularXmppClientToServerConnection connection=new ModularXmppClientToServerConnection(configuration);
+  connection.setReplyTimeout(5 * 60 * 1000);
+  XmppTools.modularConnectionTest(connection,"flo@geekplace.eu");
+}

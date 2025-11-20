@@ -1,0 +1,21 @@
+/** 
+ * @param eventData
+ * @return The event described by the eventData
+ * @throws org.terasology.engine.persistence.typeHandling.DeserializationException if an error occurs when deserializing
+ */
+public Event deserialize(EntityData.Event eventData){
+  Class<? extends Event> eventClass=getEventClass(eventData);
+  if (eventClass != null) {
+    EventMetadata<?> eventMetadata=eventLibrary.getMetadata(eventClass);
+    if (!eventMetadata.isConstructable()) {
+      throw new DeserializationException("Cannot deserialize " + eventMetadata + " - lacks default constructor");
+    }
+ else {
+      Event event=eventMetadata.newInstance();
+      return deserializeOnto(event,eventData,eventMetadata);
+    }
+  }
+ else {
+    throw new DeserializationException("Unable to deserialize unknown event type: " + eventData.getType());
+  }
+}

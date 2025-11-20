@@ -1,0 +1,58 @@
+/** 
+ * 将mongodb的数据对象<code>dbObj</code>转换成对应类型<code>clazzToMapper</code>的对象。<br/> key=fieldName。
+ * @param dbObj         mongodb数据对象
+ * @param clazzToMapper 目标对象类
+ * @return 转换后的对象
+ */
+private static Object beanMapper(BasicDBObject dbObj,Class<?> clazzToMapper){
+  Map<String,Field> fieldMap=loadFields(clazzToMapper);
+  Map<String,Object> beanMap=new HashMap<>();
+  for (  String s : dbObj.keySet()) {
+    Object o=dbObj.get(s);
+    if (o instanceof BasicDBObject) {
+      Field field=fieldMap.get(s);
+      o=beanMapper((BasicDBObject)o,field.getType());
+    }
+ else     if (o instanceof BasicDBList) {
+      Field field=fieldMap.get(s);
+      Class<?> parameterizedClazz=getParameterizedClass(field);
+      BasicDBList basicDBs=(BasicDBList)o;
+      Collection<Object> collection=createCollection(field,basicDBs.size());
+      for (      Object basicDbObj : basicDBs) {
+        if (parameterizedClazz.isPrimitive()) {
+          collection.add(basicDbObj);
+        }
+ else         if (parameterizedClazz.getName().startsWith("java.lang")) {
+          collection.add(basicDbObj);
+        }
+ else {
+          collection.add(beanMapper((BasicDBObject)basicDbObj,parameterizedClazz));
+        }
+      }
+      o=collection;
+    }
+    beanMap.put(s,o);
+  }
+  Object instance;
+  try {
+    instance=clazzToMapper.newInstance();
+  }
+ catch (  InstantiationException|IllegalAccessException e) {
+    LOG.warn("实例化:[{}]对象异常.",clazzToMapper,e);
+    return null;
+  }
+  Set<String> fieldNames=fieldMap.keySet();
+  for (  String fieldName : fieldNames) {
+    if (beanMap.containsKey(fieldName)) {
+      Field field=fieldMap.get(fieldName);
+      Object value=beanMap.get(fieldName);
+      try {
+        field.set(instance,value);
+      }
+ catch (      IllegalAccessException e) {
+        LOG.error("为字段:[{}]设置值异常",fieldName,e);
+      }
+    }
+  }
+  return instance;
+}

@@ -1,0 +1,25 @@
+private static CuratorTransactionFinal modifyZkRules(CuratorTransactionFinal transactionFinal,String ruleName,List<String> newDataNodes) throws Exception {
+  CuratorFramework client=ZKUtils.getConnection();
+  String rulePath=ZKUtils.getZKBasePath() + "rules/function";
+  JSONArray jsonArray=JSON.parseArray(new String(client.getData().forPath(rulePath),"UTF-8"));
+  for (  Object obj : jsonArray) {
+    JSONObject func=(JSONObject)obj;
+    if (ruleName.equalsIgnoreCase(func.getString("name"))) {
+      JSONArray property=func.getJSONArray("property");
+      for (      Object o : property) {
+        JSONObject count=(JSONObject)o;
+        if ("count".equals(count.getString("name"))) {
+          Integer xcount=Integer.parseInt(count.getString("value"));
+          count.put("value",String.valueOf(xcount + newDataNodes.size()));
+          if (transactionFinal == null) {
+            transactionFinal=ZKUtils.getConnection().inTransaction().setData().forPath(rulePath,JSON.toJSONBytes(jsonArray)).and();
+          }
+ else {
+            transactionFinal.setData().forPath(rulePath,JSON.toJSONBytes(jsonArray));
+          }
+        }
+      }
+    }
+  }
+  return transactionFinal;
+}

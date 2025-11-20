@@ -1,0 +1,46 @@
+/** 
+ * 从between语句中获取字段所属的表名。 对于容易出现ambiguous的（字段不知道到底属于哪个表），实际应用中必须使用别名来避免歧义
+ * @param betweenExpr
+ * @param column
+ * @return
+ */
+private String getOwnerTableName(SQLBetweenExpr betweenExpr,String column){
+  if (tableStats.size() == 1) {
+    return tableStats.keySet().iterator().next().getName();
+  }
+ else   if (tableStats.size() == 0) {
+    return "";
+  }
+ else {
+    for (    Column col : columns.values()) {
+      if (col.getName().equals(column)) {
+        return col.getTable();
+      }
+    }
+    SQLObject parent=betweenExpr.getParent();
+    if (parent instanceof SQLBinaryOpExpr) {
+      parent=parent.getParent();
+    }
+    if (parent instanceof MySqlSelectQueryBlock) {
+      MySqlSelectQueryBlock select=(MySqlSelectQueryBlock)parent;
+      if (select.getFrom() instanceof SQLJoinTableSource) {
+        SQLJoinTableSource joinTableSource=(SQLJoinTableSource)select.getFrom();
+        return joinTableSource.getLeft().toString();
+      }
+ else       if (select.getFrom() instanceof SQLExprTableSource) {
+        return select.getFrom().toString();
+      }
+    }
+ else     if (parent instanceof SQLUpdateStatement) {
+      SQLUpdateStatement update=(SQLUpdateStatement)parent;
+      return update.getTableName().getSimpleName();
+    }
+ else     if (parent instanceof SQLDeleteStatement) {
+      SQLDeleteStatement delete=(SQLDeleteStatement)parent;
+      return delete.getTableName().getSimpleName();
+    }
+ else {
+    }
+  }
+  return "";
+}

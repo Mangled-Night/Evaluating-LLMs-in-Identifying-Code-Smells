@@ -1,0 +1,33 @@
+/** 
+ * Reset a position to only it's fixed values
+ * @param pos The position to reset
+ * @param oldValue The value present before reset
+ */
+private void purge(Vector3ic pos,byte oldValue){
+  increaseQueues[rules.getMaxValue() - oldValue].remove(pos);
+  Block block=world.getBlockAt(pos);
+  byte fixedValue=rules.getFixedValue(block,pos);
+  if (fixedValue > 0) {
+    increase(pos,fixedValue);
+  }
+ else {
+    world.setValueAt(pos,NO_VALUE);
+  }
+  Vector3i adjPos=new Vector3i();
+  for (  Side side : Side.values()) {
+    byte expectedValue=rules.propagateValue(oldValue,side,block,scale);
+    if (rules.canSpreadOutOf(block,side)) {
+      side.getAdjacentPos(pos,adjPos);
+      byte adjValue=world.getValueAt(adjPos);
+      if (adjValue == expectedValue) {
+        Block adjBlock=world.getBlockAt(adjPos);
+        if (rules.canSpreadInto(adjBlock,side.reverse())) {
+          reduce(adjPos,expectedValue);
+        }
+      }
+ else       if (adjValue > 0) {
+        queueSpreadValue(adjPos,adjValue);
+      }
+    }
+  }
+}

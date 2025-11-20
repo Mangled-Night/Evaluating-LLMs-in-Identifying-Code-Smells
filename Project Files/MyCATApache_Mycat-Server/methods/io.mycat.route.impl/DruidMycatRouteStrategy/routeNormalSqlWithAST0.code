@@ -1,0 +1,131 @@
+private RouteResultset routeNormalSqlWithAST0(SchemaConfig schema,String stmt,RouteResultset rrs,String charset,LayerCachePool cachePool,int sqlType,ServerConnection sc) throws SQLNonTransientException {
+  SQLStatementParser parser=null;
+  if (schema.isNeedSupportMultiDBType()) {
+    parser=new MycatStatementParser(stmt);
+  }
+ else {
+    parser=new MySqlStatementParser(stmt);
+  }
+  MycatSchemaStatVisitor visitor=null;
+  SQLStatement statement;
+  try {
+    if (parser instanceof MycatStatementParser || sqlType == ServerParse.LOCK) {
+      statement=parser.parseStatement();
+    }
+ else {
+      List<SQLStatement> statementList=new ArrayList<SQLStatement>();
+      parser.parseStatementList(statementList,2);
+      if (statementList.size() > 1) {
+        throw new SQLSyntaxErrorException("Multi statements is not supported,use single statement instead ");
+      }
+ else {
+        statement=statementList.get(0);
+      }
+    }
+    visitor=new MycatSchemaStatVisitor();
+  }
+ catch (  Exception t) {
+    LOGGER.error("DruidMycatRouteStrategyError",t);
+    throw new SQLSyntaxErrorException(t);
+  }
+  checkUnSupportedStatement(statement);
+  DruidParser druidParser=DruidParserFactory.create(schema,statement,visitor);
+  druidParser.parser(schema,rrs,statement,stmt,cachePool,visitor);
+  DruidShardingParseInfo ctx=druidParser.getCtx();
+  rrs.setTables(ctx.getTables());
+  if (visitor.isSubqueryRelationOr()) {
+    String err="In subQuery,the or condition is not supported.";
+    LOGGER.error(err);
+    throw new SQLSyntaxErrorException(err);
+  }
+  List<String> tables=ctx.getTables();
+  SchemaConfig schemaConf=MycatServer.getInstance().getConfig().getSchemas().get(schema.getName());
+  int index=0;
+  RuleConfig firstRule=null;
+  boolean directRoute=true;
+  Set<String> firstDataNodes=new HashSet<String>();
+  Map<String,TableConfig> tconfigs=schemaConf == null ? null : schemaConf.getTables();
+  Map<String,RuleConfig> rulemap=new HashMap<>();
+  if (tconfigs != null) {
+    for (    String tableName : tables) {
+      TableConfig tc=tconfigs.get(tableName);
+      if (tc == null) {
+        Map<String,String> tableAliasMap=ctx.getTableAliasMap();
+        if (tableAliasMap != null && tableAliasMap.get(tableName) != null) {
+          tc=schemaConf.getTables().get(tableAliasMap.get(tableName));
+        }
+      }
+      if (index == 0) {
+        if (tc != null) {
+          firstRule=tc.getRule();
+          if (firstRule == null) {
+            continue;
+          }
+          firstDataNodes.addAll(tc.getDataNodes());
+          rulemap.put(tc.getName(),firstRule);
+        }
+      }
+ else {
+        if (tc != null) {
+          RuleConfig ruleCfg=tc.getRule();
+          if (ruleCfg == null) {
+            continue;
+          }
+          Set<String> dataNodes=new HashSet<>(tc.getDataNodes());
+          rulemap.put(tc.getName(),ruleCfg);
+          if (firstRule != null && ((ruleCfg != null && !ruleCfg.getRuleAlgorithm().equals(firstRule.getRuleAlgorithm())) || (!dataNodes.equals(firstDataNodes)))) {
+            directRoute=false;
+            break;
+          }
+        }
+      }
+      index++;
+    }
+  }
+  RouteResultset rrsResult=rrs;
+  if (directRoute) {
+    if (!RouterUtil.isAllGlobalTable(ctx,schemaConf)) {
+      if (rulemap.size() > 1 && !checkRuleField(rulemap,visitor)) {
+        String err="In case of slice table,there is no rule field in the relationship condition!";
+        LOGGER.error(err);
+        throw new SQLSyntaxErrorException(err);
+      }
+    }
+    rrsResult=directRoute(rrs,ctx,schema,druidParser,statement,cachePool);
+  }
+ else {
+    int subQuerySize=visitor.getSubQuerys().size();
+    if (subQuerySize == 0 && ctx.getTables().size() == 2) {
+      if (!visitor.getRelationships().isEmpty()) {
+        rrs.setCacheAble(false);
+        rrs.setFinishedRoute(true);
+        rrsResult=catletRoute(schema,ctx.getSql(),charset,sc);
+      }
+ else {
+        rrsResult=directRoute(rrs,ctx,schema,druidParser,statement,cachePool);
+      }
+    }
+ else     if (subQuerySize == 1) {
+      SQLSelect sqlselect=visitor.getSubQuerys().iterator().next();
+      if (!visitor.getRelationships().isEmpty()) {
+        String err="In case of slice table,sql have different rules,the relationship condition is not supported.";
+        LOGGER.error(err);
+        throw new SQLSyntaxErrorException(err);
+      }
+ else {
+        SQLSelectQuery sqlSelectQuery=sqlselect.getQuery();
+        if (((MySqlSelectQueryBlock)sqlSelectQuery).getFrom() instanceof SQLExprTableSource) {
+          rrs.setCacheAble(false);
+          rrs.setFinishedRoute(true);
+          rrsResult=middlerResultRoute(schema,charset,sqlselect,sqlType,statement,sc);
+        }
+      }
+    }
+ else     if (subQuerySize >= 2) {
+      String err="In case of slice table,sql has different rules,currently only one subQuery is supported.";
+      LOGGER.error(err);
+      throw new SQLSyntaxErrorException(err);
+    }
+  }
+  return rrsResult;
+}

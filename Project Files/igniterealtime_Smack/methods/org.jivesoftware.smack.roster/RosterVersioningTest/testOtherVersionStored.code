@@ -1,0 +1,35 @@
+/** 
+ * Tests that a non-empty roster result empties the store.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws XmppStringprepException if the provided string is invalid.
+ */
+@Test(timeout=5000) public void testOtherVersionStored() throws XMPPException, SmackException, XmppStringprepException {
+  Item vaglafItem=vaglafItem();
+  Stanza sentPacket=connection.getSentPacket();
+  if (sentPacket instanceof RosterPacket) {
+    RosterPacket sentRP=(RosterPacket)sentPacket;
+    RosterPacket answer=new RosterPacket();
+    answer.setStanzaId(sentRP.getStanzaId());
+    answer.setType(IQ.Type.result);
+    answer.setTo(sentRP.getFrom());
+    answer.setVersion("newVersion");
+    answer.addRosterItem(vaglafItem);
+    rosterListener.reset();
+    connection.processStanza(answer);
+    rosterListener.waitUntilInvocationOrTimeout();
+  }
+ else {
+    assertTrue("Expected to get a RosterPacket ",false);
+  }
+  Roster roster=Roster.getInstanceFor(connection);
+  assertEquals("Size of roster",1,roster.getEntries().size());
+  RosterEntry entry=roster.getEntry(vaglafItem.getJid());
+  assertNotNull("Roster contains vaglaf entry",entry);
+  assertEquals("vaglaf entry in roster equals the sent entry",vaglafItem,RosterEntry.toRosterItem(entry));
+  RosterStore store=roster.getRosterStore();
+  assertEquals("Size of store",1,store.getEntries().size());
+  Item item=store.getEntry(vaglafItem.getJid());
+  assertNotNull("Store contains vaglaf entry",item);
+  assertEquals("vaglaf entry in store equals the sent entry",vaglafItem,item);
+}

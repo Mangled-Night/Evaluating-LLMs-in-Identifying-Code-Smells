@@ -1,0 +1,25 @@
+public static void execute(ManagerConnection c,boolean isClear){
+  ByteBuffer buffer=c.allocate();
+  buffer=header.write(buffer,c,true);
+  for (  FieldPacket field : fields) {
+    buffer=field.write(buffer,c,true);
+  }
+  buffer=eof.write(buffer,c,true);
+  byte packetId=eof.packetId;
+  List<TableStat> list=TableStatAnalyzer.getInstance().getTableStats(isClear);
+  if (list != null) {
+    int i=1;
+    for (    TableStat tableStat : list) {
+      if (tableStat != null) {
+        RowDataPacket row=getRow(tableStat,i,c.getCharset());
+        i++;
+        row.packetId=++packetId;
+        buffer=row.write(buffer,c,true);
+      }
+    }
+  }
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

@@ -1,0 +1,9 @@
+@Test void shouldPropagatePubSubResponseToOutput() throws Exception {
+  Command<String,String,String> command1=new Command<>(CommandType.APPEND,new StatusOutput<>(StringCodec.UTF8),null);
+  sut.channelRegistered(context);
+  sut.channelActive(context);
+  stack.add(command1);
+  sut.channelRead(context,responseBytes("*3\r\n$7\r\nmessage\r\n$3\r\nfoo\r\n$3\r\nbar\r\n"));
+  assertThat(command1.isDone()).isFalse();
+  verify(endpoint).notifyMessage(any());
+}

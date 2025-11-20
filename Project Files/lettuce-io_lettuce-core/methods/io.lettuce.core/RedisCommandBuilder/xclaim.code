@@ -1,0 +1,13 @@
+public Command<K,V,List<StreamMessage<K,V>>> xclaim(K key,Consumer<K> consumer,XClaimArgs xClaimArgs,String[] messageIds){
+  notNullKey(key);
+  LettuceAssert.notNull(consumer,"Consumer " + MUST_NOT_BE_NULL);
+  LettuceAssert.notEmpty(messageIds,"MessageIds " + MUST_NOT_BE_EMPTY);
+  LettuceAssert.noNullElements(messageIds,"MessageIds " + MUST_NOT_CONTAIN_NULL_ELEMENTS);
+  LettuceAssert.notNull(xClaimArgs,"XClaimArgs " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key).addKey(consumer.group).addKey(consumer.name).add(xClaimArgs.minIdleTime);
+  for (  String messageId : messageIds) {
+    args.add(messageId);
+  }
+  xClaimArgs.build(args);
+  return createCommand(XCLAIM,new StreamMessageListOutput<>(codec,key),args);
+}

@@ -1,0 +1,25 @@
+private static ClusterSlotRange parseRange(List<?> range,Map<String,RedisClusterNode> nodeCache){
+  Iterator<?> iterator=range.iterator();
+  int from=Math.toIntExact(getLongFromIterator(iterator,0));
+  int to=Math.toIntExact(getLongFromIterator(iterator,0));
+  RedisClusterNode upstream=null;
+  List<RedisClusterNode> replicas=new ArrayList<>();
+  if (iterator.hasNext()) {
+    upstream=getRedisClusterNode(iterator,nodeCache);
+    if (upstream != null) {
+      upstream.setFlags(Collections.singleton(RedisClusterNode.NodeFlag.UPSTREAM));
+      Set<Integer> slots=new TreeSet<>(upstream.getSlots());
+      slots.addAll(createSlots(from,to));
+      upstream.setSlots(new ArrayList<>(slots));
+    }
+  }
+  while (iterator.hasNext()) {
+    RedisClusterNode replica=getRedisClusterNode(iterator,nodeCache);
+    if (replica != null && upstream != null) {
+      replica.setSlaveOf(upstream.getNodeId());
+      replica.setFlags(Collections.singleton(RedisClusterNode.NodeFlag.REPLICA));
+      replicas.add(replica);
+    }
+  }
+  return new ClusterSlotRange(from,to,upstream,Collections.unmodifiableList(replicas));
+}

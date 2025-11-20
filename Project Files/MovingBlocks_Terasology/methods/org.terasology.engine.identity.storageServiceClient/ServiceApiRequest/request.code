@@ -1,0 +1,51 @@
+public static <REQUEST,RESPONSE>RESPONSE request(HttpURLConnection firstConn,HttpMethod method,String sessionToken,REQUEST data,Class<RESPONSE> responseClass) throws IOException, StorageServiceException {
+  HttpURLConnection conn=null;
+  int followedRedirects=0;
+  do {
+    if (conn == null) {
+      conn=firstConn;
+    }
+ else     if (followedRedirects >= 8) {
+      throw new IOException("Reached max limit of HTTP redirects");
+    }
+ else {
+      String redirectUrl=conn.getHeaderField("Location");
+      if (redirectUrl == null) {
+        throw new IOException("An HTTP redirect status code was received, but no Location header was specified");
+      }
+      redirectUrl=URLDecoder.decode(redirectUrl,"UTF-8");
+      URL baseUrl=conn.getURL();
+      URL target=new URL(baseUrl,redirectUrl);
+      conn=(HttpURLConnection)target.openConnection();
+      followedRedirects++;
+    }
+    conn.setRequestMethod(method.name());
+    conn.setUseCaches(false);
+    conn.setDoOutput(true);
+    conn.setRequestProperty("Content-Type","application/json");
+    if (sessionToken != null) {
+      conn.setRequestProperty("Session-Token",sessionToken);
+    }
+    if (data != null) {
+      try (OutputStream request=conn.getOutputStream()){
+        request.write(GSON.toJson(data).getBytes());
+      }
+     }
+    conn.connect();
+  }
+ while (isRedirect(conn.getResponseCode()));
+  if (!isSuccessful(conn.getResponseCode())) {
+    parseError(conn);
+  }
+  try (InputStream response=conn.getInputStream()){
+    if (responseClass != null) {
+      return GSON.fromJson(new InputStreamReader(response),responseClass);
+    }
+ else {
+      return null;
+    }
+  }
+ }
+public static <REQUEST,RESPONSE>RESPONSE request(URL url,HttpMethod method,String sessionToken,REQUEST data,Class<RESPONSE> responseClass) throws IOException, StorageServiceException {
+  return request((HttpURLConnection)url.openConnection(),method,sessionToken,data,responseClass);
+}

@@ -1,0 +1,24 @@
+private void comparePostTemplate(String name,int subscribeNum,int postTimes){
+  final List<BusUtilsVsEventBusTest> tests=new ArrayList<>();
+  for (int i=0; i < subscribeNum; i++) {
+    BusUtilsVsEventBusTest test=new BusUtilsVsEventBusTest();
+    EventBus.getDefault().register(test);
+    BusUtils.register(test);
+    tests.add(test);
+  }
+  compareWithEventBus(name,10,postTimes,new CompareCallback(){
+    @Override public void runEventBus(){
+      EventBus.getDefault().post("EventBus");
+    }
+    @Override public void runBusUtils(){
+      BusUtils.post("busUtilsFun","BusUtils");
+    }
+    @Override public void restState(){
+    }
+  }
+);
+  for (  BusUtilsVsEventBusTest test : tests) {
+    EventBus.getDefault().unregister(test);
+    BusUtils.unregister(test);
+  }
+}

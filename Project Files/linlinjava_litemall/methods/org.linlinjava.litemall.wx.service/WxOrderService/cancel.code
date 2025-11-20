@@ -1,0 +1,42 @@
+/** 
+ * 取消订单 <p> 1. 检测当前订单是否能够取消； 2. 设置订单取消状态； 3. 商品货品库存恢复； 4. 返还优惠券；
+ * @param userId 用户ID
+ * @param body   订单信息，{ orderId：xxx }
+ * @return 取消订单操作结果
+ */
+@Transactional public Object cancel(Integer userId,String body){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  Integer orderId=JacksonUtil.parseInteger(body,"orderId");
+  if (orderId == null) {
+    return ResponseUtil.badArgument();
+  }
+  LitemallOrder order=orderService.findById(userId,orderId);
+  if (order == null) {
+    return ResponseUtil.badArgumentValue();
+  }
+  if (!order.getUserId().equals(userId)) {
+    return ResponseUtil.badArgumentValue();
+  }
+  LocalDateTime preUpdateTime=order.getUpdateTime();
+  OrderHandleOption handleOption=OrderUtil.build(order);
+  if (!handleOption.isCancel()) {
+    return ResponseUtil.fail(ORDER_INVALID_OPERATION,"订单不能取消");
+  }
+  order.setOrderStatus(OrderUtil.STATUS_CANCEL);
+  order.setEndTime(LocalDateTime.now());
+  if (orderService.updateWithOptimisticLocker(order) == 0) {
+    throw new RuntimeException("更新数据已失效");
+  }
+  List<LitemallOrderGoods> orderGoodsList=orderGoodsService.queryByOid(orderId);
+  for (  LitemallOrderGoods orderGoods : orderGoodsList) {
+    Integer productId=orderGoods.getProductId();
+    Short number=orderGoods.getNumber();
+    if (productService.addStock(productId,number) == 0) {
+      throw new RuntimeException("商品货品库存增加失败");
+    }
+  }
+  releaseCoupon(orderId);
+  return ResponseUtil.ok();
+}

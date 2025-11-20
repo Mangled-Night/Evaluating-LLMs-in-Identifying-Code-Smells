@@ -1,0 +1,39 @@
+/** 
+ * Translates the specified byte array into a Base64 string as per Preferences.put(byte[]).
+ */
+public static String byteArrayToBase64(byte[] a){
+  return byteArrayToBase64(a,false);
+}
+private static String byteArrayToBase64(byte[] a,boolean alternate){
+  int aLen=a.length;
+  int numFullGroups=aLen / 3;
+  int numBytesInPartialGroup=aLen - 3 * numFullGroups;
+  int resultLen=4 * ((aLen + 2) / 3);
+  StringBuilder result=new StringBuilder(resultLen);
+  char[] intToAlpha=(alternate ? intToAltBase64 : intToBase64);
+  int inCursor=0;
+  for (int i=0; i < numFullGroups; i++) {
+    int byte0=a[inCursor++] & 0xff;
+    int byte1=a[inCursor++] & 0xff;
+    int byte2=a[inCursor++] & 0xff;
+    result.append(intToAlpha[byte0 >> 2]);
+    result.append(intToAlpha[(byte0 << 4) & 0x3f | (byte1 >> 4)]);
+    result.append(intToAlpha[(byte1 << 2) & 0x3f | (byte2 >> 6)]);
+    result.append(intToAlpha[byte2 & 0x3f]);
+  }
+  if (numBytesInPartialGroup != 0) {
+    int byte0=a[inCursor++] & 0xff;
+    result.append(intToAlpha[byte0 >> 2]);
+    if (numBytesInPartialGroup == 1) {
+      result.append(intToAlpha[(byte0 << 4) & 0x3f]);
+      result.append("==");
+    }
+ else {
+      int byte1=a[inCursor++] & 0xff;
+      result.append(intToAlpha[(byte0 << 4) & 0x3f | (byte1 >> 4)]);
+      result.append(intToAlpha[(byte1 << 2) & 0x3f]);
+      result.append('=');
+    }
+  }
+  return result.toString();
+}

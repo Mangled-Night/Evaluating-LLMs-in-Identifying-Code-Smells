@@ -1,0 +1,16 @@
+public void testPublishAndReceiveNoPayload() throws Exception {
+  String nodeId="TestNode" + System.currentTimeMillis();
+  PubSubManager creatorMgr=new PubSubManager(getConnection(0),getService());
+  LeafNode creatorNode=getPubnode(creatorMgr,nodeId,true,false);
+  BlockingQueue<ItemEventCoordinator<Item>> queue=new ArrayBlockingQueue<ItemEventCoordinator<Item>>(3);
+  PubSubManager subMgr=new PubSubManager(getConnection(1),getService());
+  LeafNode subNode=(LeafNode)subMgr.getNode(nodeId);
+  ItemEventCoordinator<Item> sub1Handler=new ItemEventCoordinator<Item>(queue,"sub1");
+  subNode.addItemEventListener(sub1Handler);
+  Subscription sub1=subNode.subscribe(getConnection(1).getUser());
+  String itemId=String.valueOf(System.currentTimeMillis());
+  creatorNode.publish(new Item(itemId));
+  ItemEventCoordinator<Item> coord=queue.poll(5,TimeUnit.SECONDS);
+  assertEquals(1,coord.events.getItems().size());
+  assertEquals(itemId,coord.events.getItems().get(0).getId());
+}

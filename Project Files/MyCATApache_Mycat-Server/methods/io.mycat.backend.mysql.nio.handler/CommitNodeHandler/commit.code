@@ -1,0 +1,36 @@
+public void commit(){
+  final int initCount=session.getTargetCount();
+  lock.lock();
+  try {
+    reset(initCount);
+  }
+  finally {
+    lock.unlock();
+  }
+  for (  RouteResultsetNode rrn : session.getTargetKeys()) {
+    final BackendConnection conn=session.getTarget(rrn);
+    commit(conn);
+  }
+}
+public void commit(BackendConnection conn){
+  conn.setResponseHandler(CommitNodeHandler.this);
+  boolean isClosed=conn.isClosedOrQuit();
+  if (isClosed) {
+    session.getSource().writeErrMessage(ErrorCode.ER_UNKNOWN_ERROR,"receive commit,but find backend con is closed or quit");
+    LOGGER.error(conn + "receive commit,but fond backend con is closed or quit");
+  }
+  if (conn instanceof MySQLConnection) {
+    MySQLConnection mysqlCon=(MySQLConnection)conn;
+    if (mysqlCon.getXaStatus() == 1) {
+      String xaTxId=session.getXaTXID() + ",'" + mysqlCon.getSchema()+ "'";
+      String[] cmds=new String[]{"XA END " + xaTxId,"XA PREPARE " + xaTxId};
+      mysqlCon.execBatchCmd(cmds);
+    }
+ else {
+      conn.commit();
+    }
+  }
+ else {
+    conn.commit();
+  }
+}

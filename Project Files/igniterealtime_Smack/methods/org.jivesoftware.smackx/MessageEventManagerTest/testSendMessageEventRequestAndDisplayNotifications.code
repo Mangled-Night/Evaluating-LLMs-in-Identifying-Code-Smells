@@ -1,0 +1,36 @@
+/** 
+ * High level API test. This is a simple test to use with an XMPP client, check if the client receives the message and display in the console any notification 1. User_1 will send a message to user_2 requesting to be notified when any of these events occurs: offline, composing, displayed or delivered 2. User_2 will use an XMPP client (like Exodus) to display the message and compose a reply 3. User_1 will display any notification that receives
+ */
+public void testSendMessageEventRequestAndDisplayNotifications(){
+  Chat chat1=getConnection(0).getChatManager().createChat(getBareJID(1),null);
+  MessageEventManager messageEventManager=new MessageEventManager(getConnection(0));
+  messageEventManager.addMessageEventNotificationListener(new MessageEventNotificationListener(){
+    public void deliveredNotification(    String from,    String packetID){
+      System.out.println("From: " + from + " PacketID: "+ packetID+ "(delivered)");
+    }
+    public void displayedNotification(    String from,    String packetID){
+      System.out.println("From: " + from + " PacketID: "+ packetID+ "(displayed)");
+    }
+    public void composingNotification(    String from,    String packetID){
+      System.out.println("From: " + from + " PacketID: "+ packetID+ "(composing)");
+    }
+    public void offlineNotification(    String from,    String packetID){
+      System.out.println("From: " + from + " PacketID: "+ packetID+ "(offline)");
+    }
+    public void cancelledNotification(    String from,    String packetID){
+      System.out.println("From: " + from + " PacketID: "+ packetID+ "(cancelled)");
+    }
+  }
+);
+  Message msg=new Message();
+  msg.setSubject("Any subject you want");
+  msg.setBody("An interesting body comes here...");
+  MessageEventManager.addNotificationsRequests(msg,true,true,true,true);
+  try {
+    chat1.sendMessage(msg);
+    Thread.sleep(200);
+  }
+ catch (  Exception e) {
+    fail("An error occurred sending the message");
+  }
+}

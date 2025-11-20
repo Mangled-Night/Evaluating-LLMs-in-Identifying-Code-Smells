@@ -1,0 +1,23 @@
+/** 
+ * Apply authentication from another  {@link RedisURI}. The SSL settings of the  {@code source} URI will be applied tothis URI. That is in particular SSL usage, peer verification and StartTLS.
+ * @param source must not be {@code null}.
+ * @since 6.0
+ * @return the builder
+ */
+public Builder withSsl(RedisURI source){
+  LettuceAssert.notNull(source,"Source RedisURI must not be null");
+  withSsl(source.isSsl());
+  withVerifyPeer(source.getVerifyMode());
+  withStartTls(source.isStartTls());
+  return this;
+}
+/** 
+ * Adds ssl information to the builder. Sets SSL also for already configured Redis Sentinel nodes.
+ * @param ssl {@code true} if use SSL
+ * @return the builder
+ */
+public Builder withSsl(boolean ssl){
+  this.ssl=ssl;
+  this.sentinels.forEach(it -> it.setSsl(ssl));
+  return this;
+}

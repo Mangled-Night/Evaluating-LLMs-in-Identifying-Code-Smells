@@ -1,0 +1,34 @@
+@Override public void instantShutdown(){
+  outgoingQueue.shutdown();
+  try {
+    boolean writerThreadTerminated=waitFor(() -> !writerThreadRunning);
+    if (!writerThreadTerminated) {
+      LOGGER.severe("Writer thread of " + this + " did not terminate timely");
+    }
+  }
+ catch (  InterruptedException e) {
+    LOGGER.log(Level.FINE,"Interrupted while waiting for writer thread to terminate",e);
+  }
+  if (client != null) {
+    try {
+      client.disconnect();
+    }
+ catch (    Exception e) {
+      LOGGER.log(Level.WARNING,"shutdown",e);
+    }
+  }
+  setWasAuthenticated();
+  sessionID=null;
+  done=true;
+  authenticated=false;
+  connected=false;
+  isFirstInitialization=false;
+  client=null;
+  CloseableUtil.maybeClose(readerPipe,LOGGER);
+  CloseableUtil.maybeClose(reader,LOGGER);
+  CloseableUtil.maybeClose(writer,LOGGER);
+  readerPipe=null;
+  reader=null;
+  writer=null;
+  readerConsumer=null;
+}

@@ -1,0 +1,17 @@
+/** 
+ * Wrap a connection along its  {@link Origin} reference.
+ * @param connection
+ * @param pool
+ * @param < T >
+ * @return
+ */
+@SuppressWarnings({"unchecked","rawtypes"}) static <T>T wrapConnection(T connection,Origin<T> pool){
+  ReturnObjectOnCloseInvocationHandler<T> handler=new ReturnObjectOnCloseInvocationHandler<T>(connection,pool);
+  Class<?>[] implementedInterfaces=connection.getClass().getInterfaces();
+  Class[] interfaces=new Class[implementedInterfaces.length + 1];
+  interfaces[0]=HasTargetConnection.class;
+  System.arraycopy(implementedInterfaces,0,interfaces,1,implementedInterfaces.length);
+  T proxiedConnection=(T)Proxy.newProxyInstance(connection.getClass().getClassLoader(),interfaces,handler);
+  handler.setProxiedConnection(proxiedConnection);
+  return proxiedConnection;
+}

@@ -1,0 +1,33 @@
+private static void parseLayout(List<DataFormLayoutElement> layout,XmlPullParser parser) throws XmlPullParserException, IOException {
+  final int initialDepth=parser.getDepth();
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+switch (parser.getName()) {
+case Text.ELEMENT:
+        layout.add(new Text(parser.nextText()));
+      break;
+case Section.ELEMENT:
+    layout.add(parseSection(parser));
+  break;
+case Fieldref.ELEMENT:
+layout.add(parseFieldref(parser));
+break;
+case Reportedref.ELEMENT:
+layout.add(new Reportedref());
+break;
+default :
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+}

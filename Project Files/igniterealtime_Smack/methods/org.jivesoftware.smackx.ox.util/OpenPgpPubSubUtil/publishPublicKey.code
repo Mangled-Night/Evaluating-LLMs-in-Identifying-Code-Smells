@@ -1,0 +1,38 @@
+/** 
+ * Publish the users OpenPGP public key to the public key node if necessary. Also announce the key to other users by updating the metadata node.
+ * @see <a href="https://xmpp.org/extensions/xep-0373.html#announcing-pubkey">XEP-0373 §4.1</a>
+ * @param pepManager The PEP manager.
+ * @param pubkeyElement {@link PubkeyElement} containing the public key
+ * @param fingerprint fingerprint of the public key
+ * @throws InterruptedException if the thread gets interrupted.
+ * @throws PubSubException.NotALeafNodeException if either the metadata node or the public key node is not a{@link LeafNode}.
+ * @throws XMPPException.XMPPErrorException in case of an XMPP protocol error.
+ * @throws SmackException.NotConnectedException if we are not connected.
+ * @throws SmackException.NoResponseException if the server doesn't respond.
+ */
+public static void publishPublicKey(PepManager pepManager,PubkeyElement pubkeyElement,OpenPgpV4Fingerprint fingerprint) throws InterruptedException, PubSubException.NotALeafNodeException, XMPPException.XMPPErrorException, SmackException.NotConnectedException, SmackException.NoResponseException {
+  String keyNodeName=PEP_NODE_PUBLIC_KEY(fingerprint);
+  PubSubManager pm=pepManager.getPepPubSubManager();
+  LeafNode keyNode=pm.getOrCreateLeafNode(keyNodeName);
+  changeAccessModelIfNecessary(keyNode,AccessModel.open);
+  List<Item> items=keyNode.getItems(1);
+  if (items.isEmpty()) {
+    LOGGER.log(Level.FINE,"Node " + keyNodeName + " is empty. Publish.");
+    keyNode.publish(new PayloadItem<>(pubkeyElement));
+  }
+ else {
+    LOGGER.log(Level.FINE,"Node " + keyNodeName + " already contains key. Skip.");
+  }
+  LeafNode metadataNode=pm.getOrCreateLeafNode(PEP_NODE_PUBLIC_KEYS);
+  changeAccessModelIfNecessary(metadataNode,AccessModel.open);
+  List<PayloadItem<PublicKeysListElement>> metadataItems=metadataNode.getItems(1);
+  PublicKeysListElement.Builder builder=PublicKeysListElement.builder();
+  if (!metadataItems.isEmpty() && metadataItems.get(0).getPayload() != null) {
+    PublicKeysListElement publishedList=metadataItems.get(0).getPayload();
+    for (    PublicKeysListElement.PubkeyMetadataElement meta : publishedList.getMetadata().values()) {
+      builder.addMetadata(meta);
+    }
+  }
+  builder.addMetadata(new PublicKeysListElement.PubkeyMetadataElement(fingerprint,new Date()));
+  metadataNode.publish(new PayloadItem<>(builder.build()));
+}

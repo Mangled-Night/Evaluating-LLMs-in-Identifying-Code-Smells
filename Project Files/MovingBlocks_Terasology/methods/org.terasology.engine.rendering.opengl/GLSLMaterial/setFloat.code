@@ -1,0 +1,20 @@
+@Override public void setFloat(String desc,float f,boolean currentOnly){
+  if (isDisposed()) {
+    return;
+  }
+  if (currentOnly) {
+    enable();
+    int id=getUniformLocation(getActiveShaderProgramId(),desc);
+    GL20.glUniform1f(id,f);
+  }
+ else {
+    TIntIntIterator it=disposalAction.shaderPrograms.iterator();
+    while (it.hasNext()) {
+      it.advance();
+      GL20.glUseProgram(it.value());
+      int id=getUniformLocation(it.value(),desc);
+      GL20.glUniform1f(id,f);
+    }
+    restoreStateAfterUniformsSet();
+  }
+}

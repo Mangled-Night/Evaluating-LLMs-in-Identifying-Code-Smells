@@ -1,0 +1,51 @@
+public void execute(String sql,int type){
+  if (this.isClosed()) {
+    LOGGER.warn("ignore execute ,server connection is closed " + this);
+    return;
+  }
+  if (txInterrupted) {
+    writeErrMessage(ErrorCode.ER_YES,"Transaction error, need to rollback." + txInterrputMsg);
+    return;
+  }
+  String db=this.schema;
+  boolean isDefault=true;
+  if (db == null) {
+    db=SchemaUtil.detectDefaultDb(sql,type);
+    if (db == null) {
+      db=MycatServer.getInstance().getConfig().getUsers().get(user).getDefaultSchema();
+      if (db == null) {
+        writeErrMessage(ErrorCode.ERR_BAD_LOGICDB,"No MyCAT Database selected");
+        return;
+      }
+    }
+    isDefault=false;
+  }
+  if (ServerParse.SELECT == type && sql.contains("mysql") && sql.contains("proc")) {
+    SchemaUtil.SchemaInfo schemaInfo=SchemaUtil.parseSchema(sql);
+    if (schemaInfo != null && "mysql".equalsIgnoreCase(schemaInfo.schema) && "proc".equalsIgnoreCase(schemaInfo.table)) {
+      MysqlProcHandler.handle(sql,this);
+      return;
+    }
+  }
+  SchemaConfig schema=MycatServer.getInstance().getConfig().getSchemas().get(db);
+  if (schema == null) {
+    writeErrMessage(ErrorCode.ERR_BAD_LOGICDB,"Unknown MyCAT Database '" + db + "'");
+    return;
+  }
+  if (ServerParse.SELECT == type && sql.contains(" INFORMATION_SCHEMA.PROFILING ") && sql.contains("CONCAT(ROUND(SUM(DURATION)/")) {
+    InformationSchemaProfiling.response(this);
+    return;
+  }
+  if (ServerParse.SELECT == type && sql.contains(" information_schema.profiling ") && sql.contains("duration (summed) in sec")) {
+    InformationSchemaProfilingSqlyog.response(this);
+    return;
+  }
+  if (isDefault && schema.isCheckSQLSchema() && isNormalSql(type)) {
+    SchemaUtil.SchemaInfo schemaInfo=SchemaUtil.parseSchema(sql);
+    if (schemaInfo != null && schemaInfo.schema != null && !schemaInfo.schema.equals(db)) {
+      SchemaConfig schemaConfig=MycatServer.getInstance().getConfig().getSchemas().get(schemaInfo.schema);
+      if (schemaConfig != null)       schema=schemaConfig;
+    }
+  }
+  routeEndExecuteSQL(sql,type,schema);
+}

@@ -1,0 +1,26 @@
+protected void notifyListeners(PubSubMessage<K,V> message){
+  for (  RedisPubSubListener<K,V> listener : listeners) {
+switch (message.type()) {
+case message:
+      listener.message(message.channel(),message.body());
+    break;
+case pmessage:
+  listener.message(message.pattern(),message.channel(),message.body());
+break;
+case psubscribe:
+listener.psubscribed(message.pattern(),message.count());
+break;
+case punsubscribe:
+listener.punsubscribed(message.pattern(),message.count());
+break;
+case subscribe:
+listener.subscribed(message.channel(),message.count());
+break;
+case unsubscribe:
+listener.unsubscribed(message.channel(),message.count());
+break;
+default :
+throw new UnsupportedOperationException("Operation " + message.type() + " not supported");
+}
+}
+}

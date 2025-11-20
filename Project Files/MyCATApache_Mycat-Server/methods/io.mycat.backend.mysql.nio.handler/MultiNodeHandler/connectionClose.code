@@ -1,0 +1,21 @@
+public void connectionClose(BackendConnection conn,String reason){
+  this.setFail("closed connection:" + reason + " con:"+ conn);
+  if (LOGGER.isDebugEnabled()) {
+    LOGGER.debug(this.toString() + "closed connection:" + reason+ " con:"+ conn);
+  }
+  boolean finished=false;
+  lock.lock();
+  try {
+    finished=(this.nodeCount == 0);
+  }
+  finally {
+    lock.unlock();
+  }
+  if (finished == false) {
+    finished=this.decrementCountBy(1);
+  }
+  if (error == null) {
+    error="back connection closed ";
+  }
+  tryErrorFinished(finished);
+}

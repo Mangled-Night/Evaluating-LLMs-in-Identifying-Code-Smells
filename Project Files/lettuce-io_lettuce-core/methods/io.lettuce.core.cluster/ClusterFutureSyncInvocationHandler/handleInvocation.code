@@ -1,0 +1,45 @@
+/** 
+ * @see AbstractInvocationHandler#handleInvocation(Object,Method,Object[])
+ */
+@Override protected Object handleInvocation(Object proxy,Method method,Object[] args) throws Throwable {
+  try {
+    if (method.isDefault()) {
+      return methodHandleCache.computeIfAbsent(method,ClusterFutureSyncInvocationHandler::lookupDefaultMethod).bindTo(proxy).invokeWithArguments(args);
+    }
+    if (method.getName().equals("getConnection") && args.length > 0) {
+      return getConnection(method,args);
+    }
+    if (method.getName().equals("readonly") && args.length == 1) {
+      return nodes((Predicate<RedisClusterNode>)args[0],ConnectionIntent.READ,false);
+    }
+    if (method.getName().equals("nodes") && args.length == 1) {
+      return nodes((Predicate<RedisClusterNode>)args[0],ConnectionIntent.WRITE,false);
+    }
+    if (method.getName().equals("nodes") && args.length == 2) {
+      return nodes((Predicate<RedisClusterNode>)args[0],ConnectionIntent.WRITE,(Boolean)args[1]);
+    }
+    Method targetMethod=apiMethodCache.computeIfAbsent(method,key -> {
+      try {
+        return asyncApi.getClass().getMethod(key.getName(),key.getParameterTypes());
+      }
+ catch (      NoSuchMethodException e) {
+        throw new IllegalStateException(e);
+      }
+    }
+);
+    Object result=targetMethod.invoke(asyncApi,args);
+    if (result instanceof RedisFuture) {
+      RedisFuture<?> command=(RedisFuture<?>)result;
+      if (!method.getName().equals("exec") && !method.getName().equals("multi")) {
+        if (connection instanceof StatefulRedisConnection && ((StatefulRedisConnection)connection).isMulti()) {
+          return null;
+        }
+      }
+      return Futures.awaitOrCancel(command,getTimeoutNs(command),TimeUnit.NANOSECONDS);
+    }
+    return result;
+  }
+ catch (  InvocationTargetException e) {
+    throw e.getTargetException();
+  }
+}

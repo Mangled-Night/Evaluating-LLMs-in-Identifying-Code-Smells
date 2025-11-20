@@ -1,0 +1,39 @@
+/** 
+ * Shutdown the  {@link ClientResources}.
+ * @return eventually the success/failure of the shutdown without errors.
+ */
+@Override public Future<Boolean> shutdown(){
+  return shutdown(0,2,TimeUnit.SECONDS);
+}
+/** 
+ * Shutdown the  {@link ClientResources}.
+ * @param quietPeriod the quiet period as described in the documentation
+ * @param timeout the maximum amount of time to wait until the executor is shutdown regardless if a task was submittedduring the quiet period
+ * @param timeUnit the unit of {@code quietPeriod} and {@code timeout}
+ * @return eventually the success/failure of the shutdown without errors.
+ */
+@SuppressWarnings("unchecked") public Future<Boolean> shutdown(long quietPeriod,long timeout,TimeUnit timeUnit){
+  logger.debug("Initiate shutdown ({}, {}, {})",quietPeriod,timeout,timeUnit);
+  shutdownCalled=true;
+  DefaultPromise<Void> voidPromise=new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+  PromiseCombiner aggregator=new PromiseCombiner(ImmediateEventExecutor.INSTANCE);
+  if (metricEventPublisher != null) {
+    metricEventPublisher.shutdown();
+  }
+  if (!sharedTimer) {
+    timer.stop();
+  }
+  if (!sharedEventLoopGroupProvider) {
+    Future<Boolean> shutdown=eventLoopGroupProvider.shutdown(quietPeriod,timeout,timeUnit);
+    aggregator.add(shutdown);
+  }
+  if (!sharedEventExecutor) {
+    Future<?> shutdown=eventExecutorGroup.shutdownGracefully(quietPeriod,timeout,timeUnit);
+    aggregator.add(shutdown);
+  }
+  if (!sharedCommandLatencyRecorder && commandLatencyRecorder instanceof MetricCollector) {
+    ((MetricCollector<?>)commandLatencyRecorder).shutdown();
+  }
+  aggregator.finish(voidPromise);
+  return PromiseAdapter.toBooleanPromise(voidPromise);
+}

@@ -1,0 +1,39 @@
+private void handleDeleteRowsEvent(Event event){
+  DeleteRowsEventData eventData=event.getData();
+  TableMapEventData tableMapEvent=tablesById.get(eventData.getTableId());
+  if (isShouldBeFilter(tableMapEvent.getDatabase(),tableMapEvent.getTable()))   return;
+  Map<Integer,Map<String,Object>> xxx=tablesColumnMap.get(tableMapEvent.getDatabase() + "." + tableMapEvent.getTable());
+  BitSet inculudeColumn=eventData.getIncludedColumns();
+  StringBuilder sba=new StringBuilder("delete from ");
+  sba.append(tableMapEvent.getTable());
+  sba.append(" where ");
+  int size=inculudeColumn.length();
+  List<Serializable[]> rows=eventData.getRows();
+  for (  Serializable[] row : rows) {
+    StringBuilder sb=new StringBuilder(sba);
+    Serializable[] value=row;
+    int slot=-1;
+    for (int i=0; i < size; i++) {
+      int column=inculudeColumn.nextSetBit(i);
+      Map<String,Object> coumnMap=xxx.get(column + 1);
+      sb.append(coumnMap.get("COLUMN_NAME"));
+      Serializable value1=value[i];
+      if (value1 == null) {
+        sb.append(" is null");
+      }
+ else {
+        sb.append("=");
+        String dataType=(String)coumnMap.get("DATA_TYPE");
+        sb.append(convertBinlogValue(value1,dataType));
+      }
+      String columnName=(String)coumnMap.get("COLUMN_NAME");
+      if ("_slot".equalsIgnoreCase(columnName)) {
+        slot=value1 instanceof BigInteger ? ((BigInteger)value1).intValue() : ((Integer)value1);
+      }
+      if (i != size - 1) {
+        sb.append(" and ");
+      }
+    }
+    checkIfExeSql(tableMapEvent,sb,slot);
+  }
+}

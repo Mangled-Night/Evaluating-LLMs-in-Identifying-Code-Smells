@@ -1,0 +1,24 @@
+/** 
+ * Release `numBytes` of memory acquired by the given task.
+ */
+public void releaseMemory(long numBytes,long connAttemptId){
+synchronized (lock) {
+    long curMem=memoryForConnection.get(connAttemptId);
+    long memoryToFree=0L;
+    if (curMem < numBytes) {
+      LOG.error("Internal error: release called on $numBytes bytes but task only has $curMem bytes " + "of memory from the " + poolName() + "  pool");
+      memoryToFree=curMem;
+    }
+ else {
+      memoryToFree=numBytes;
+    }
+    if (memoryForConnection.containsKey(connAttemptId)) {
+      long temp=memoryForConnection.get(connAttemptId);
+      memoryForConnection.put(connAttemptId,(temp - memoryToFree));
+      if (memoryForConnection.get(connAttemptId) <= 0) {
+        memoryForConnection.remove(connAttemptId);
+      }
+    }
+    lock.notifyAll();
+  }
+}

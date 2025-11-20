@@ -1,0 +1,57 @@
+/** 
+ * The supporting data structure for the SpaceTree object. The SpaceTree made up of Node objects.
+ */
+private final class Node {
+  private Set<NodeEntry<T>> nodeBucket;
+  private float[] center;
+  private T centerValue;
+  private float[] minValues;
+  private float[] maxValues;
+  private Node[] subNodes;
+  /** 
+ * The Constructor for the Node Object.
+ * @param position      The position of the node
+ * @param value         The value which the node holds
+ * @param minValues     The minimum values of the node in terms of position
+ * @param maxValues     The maximum values of the node in terms of position
+ */
+  private Node(  float[] position,  T value,  float[] minValues,  float[] maxValues){
+    nodeBucket=new HashSet<>();
+    nodeBucket.add(new NodeEntry<>(position,value));
+    this.minValues=minValues;
+    this.maxValues=maxValues;
+  }
+  /** 
+ * Splits the node into two nodes to help maintain order within the tree.
+ */
+  void splitNode(){
+    Iterator<NodeEntry<T>> iterator=nodeBucket.iterator();
+    NodeEntry<T> newCenter=iterator.next();
+    center=newCenter.position;
+    centerValue=newCenter.value;
+    subNodes=new SpaceTree.Node[subNodeCount];
+    while (iterator.hasNext()) {
+      NodeEntry<T> nodeEntry=iterator.next();
+      int subNodeIndex=getSubNodeIndex(nodeEntry.position,center);
+      if (subNodes[subNodeIndex] == null) {
+        float[] min=new float[dimensions];
+        float[] max=new float[dimensions];
+        for (int i=0; i < dimensions; i++) {
+          if (nodeEntry.position[i] > center[i]) {
+            min[i]=center[i];
+            max[i]=maxValues[i];
+          }
+ else {
+            min[i]=minValues[i];
+            max[i]=center[i];
+          }
+        }
+        subNodes[subNodeIndex]=new Node(nodeEntry.position,nodeEntry.value,min,max);
+      }
+ else {
+        subNodes[subNodeIndex].nodeBucket.add(nodeEntry);
+      }
+    }
+    nodeBucket=null;
+  }
+}

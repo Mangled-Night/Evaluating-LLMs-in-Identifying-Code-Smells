@@ -1,0 +1,204 @@
+protected class PacketReader {
+  private final String threadName="Smack Reader (" + getConnectionCounter() + ')';
+  XmlPullParser parser;
+  private volatile boolean done;
+  private boolean running;
+  /** 
+ * Initializes the reader in order to be used. The reader is initialized during the first connection and when reconnecting due to an abruptly disconnection.
+ */
+  void init(){
+    done=false;
+    running=true;
+    Async.go(new Runnable(){
+      @Override public void run(){
+        LOGGER.finer(threadName + " start");
+        try {
+          parsePackets();
+        }
+  finally {
+          LOGGER.finer(threadName + " exit");
+          running=false;
+          notifyWaitingThreads();
+        }
+      }
+    }
+,threadName);
+  }
+  /** 
+ * Shuts the stanza reader down. This method simply sets the 'done' flag to true.
+ */
+  void shutdown(){
+    done=true;
+  }
+  /** 
+ * Parse top-level packets in order to process them further.
+ */
+  private void parsePackets(){
+    try {
+      openStreamAndResetParser();
+      XmlPullParser.Event eventType=parser.getEventType();
+      while (!done) {
+switch (eventType) {
+case START_ELEMENT:
+          final String name=parser.getName();
+        final String namespace=parser.getNamespace();
+switch (name) {
+case Message.ELEMENT:
+case IQ.IQ_ELEMENT:
+case Presence.ELEMENT:
+        try {
+          parseAndProcessStanza(parser);
+        }
+  finally {
+          clientHandledStanzasCount=SMUtils.incrementHeight(clientHandledStanzasCount);
+        }
+      break;
+case "stream":
+    if (StreamOpen.ETHERX_JABBER_STREAMS_NAMESPACE.equals(namespace)) {
+      onStreamOpen(parser);
+    }
+  break;
+case "error":
+StreamError streamError=PacketParserUtils.parseStreamError(parser);
+throw new StreamErrorException(streamError);
+case "features":
+parseFeaturesAndNotify(parser);
+break;
+case "proceed":
+proceedTLSReceived();
+openStreamAndResetParser();
+break;
+case "failure":
+switch (namespace) {
+case "urn:ietf:params:xml:ns:xmpp-tls":
+throw new SmackException.SmackMessageException("TLS negotiation has failed");
+case "http://jabber.org/protocol/compress":
+currentSmackException=new SmackException.SmackMessageException("Could not establish compression");
+notifyWaitingThreads();
+break;
+default :
+parseAndProcessNonza(parser);
+}
+break;
+case Compressed.ELEMENT:
+initReaderAndWriter();
+openStreamAndResetParser();
+compressSyncPoint=true;
+notifyWaitingThreads();
+break;
+case Enabled.ELEMENT:
+Enabled enabled=ParseStreamManagement.enabled(parser);
+if (enabled.isResumeSet()) {
+smSessionId=enabled.getId();
+if (StringUtils.isNullOrEmpty(smSessionId)) {
+SmackException xmppException=new SmackException.SmackMessageException("Stream Management 'enabled' element with resume attribute but without session id received");
+setCurrentConnectionExceptionAndNotify(xmppException);
+throw xmppException;
+}
+smServerMaxResumptionTime=enabled.getMaxResumptionTime();
+}
+ else {
+smSessionId=null;
+}
+clientHandledStanzasCount=0;
+smWasEnabledAtLeastOnce=true;
+smEnabledSyncPoint=true;
+notifyWaitingThreads();
+break;
+case Failed.ELEMENT:
+Failed failed=ParseStreamManagement.failed(parser);
+if (smResumedSyncPoint == SyncPointState.request_sent) {
+smResumptionFailed=failed;
+notifyWaitingThreads();
+}
+ else {
+FailedNonzaException xmppException=new FailedNonzaException(failed,failed.getStanzaErrorCondition());
+setCurrentConnectionExceptionAndNotify(xmppException);
+}
+break;
+case Resumed.ELEMENT:
+Resumed resumed=ParseStreamManagement.resumed(parser);
+if (!smSessionId.equals(resumed.getPrevId())) {
+throw new StreamIdDoesNotMatchException(smSessionId,resumed.getPrevId());
+}
+smEnabledSyncPoint=true;
+processHandledCount(resumed.getHandledCount());
+List<Stanza> stanzasToResend=new ArrayList<>(unacknowledgedStanzas.size());
+unacknowledgedStanzas.drainTo(stanzasToResend);
+for (Stanza stanza : stanzasToResend) {
+XMPPTCPConnection.this.sendInternal(stanza);
+}
+if (!stanzasToResend.isEmpty()) {
+requestSmAcknowledgementInternal();
+}
+smResumedSyncPoint=SyncPointState.successful;
+notifyWaitingThreads();
+break;
+case AckAnswer.ELEMENT:
+AckAnswer ackAnswer=ParseStreamManagement.ackAnswer(parser);
+processHandledCount(ackAnswer.getHandledCount());
+break;
+case AckRequest.ELEMENT:
+ParseStreamManagement.ackRequest(parser);
+if (smEnabledSyncPoint) {
+sendSmAcknowledgementInternal();
+}
+ else {
+LOGGER.warning("SM Ack Request received while SM is not enabled");
+}
+break;
+default :
+parseAndProcessNonza(parser);
+break;
+}
+break;
+case END_ELEMENT:
+final String endTagName=parser.getName();
+if ("stream".equals(endTagName)) {
+if (!parser.getNamespace().equals("http://etherx.jabber.org/streams")) {
+LOGGER.warning(XMPPTCPConnection.this + " </stream> but different namespace " + parser.getNamespace());
+break;
+}
+final boolean queueWasShutdown=packetWriter.queue.isShutdown();
+closingStreamReceived=true;
+notifyWaitingThreads();
+if (queueWasShutdown) {
+return;
+}
+ else {
+LOGGER.info(XMPPTCPConnection.this + " received closing </stream> element." + " Server wants to terminate the connection, calling disconnect()");
+ASYNC_BUT_ORDERED.performAsyncButOrdered(XMPPTCPConnection.this,new Runnable(){
+@Override public void run(){
+disconnect();
+}
+}
+);
+}
+}
+break;
+case END_DOCUMENT:
+throw new SmackException.SmackMessageException("Parser got END_DOCUMENT event. This could happen e.g. if the server closed the connection without sending a closing stream element");
+default :
+break;
+}
+eventType=parser.next();
+}
+}
+ catch (Exception e) {
+running=false;
+String ignoreReasonThread=null;
+boolean writerThreadWasShutDown=packetWriter.queue.isShutdown();
+if (writerThreadWasShutDown) {
+ignoreReasonThread="writer";
+}
+ else if (done) {
+ignoreReasonThread="reader";
+}
+if (ignoreReasonThread != null) {
+LOGGER.log(Level.FINER,"Ignoring " + e + " as "+ ignoreReasonThread+ " was already shut down");
+return;
+}
+notifyConnectionError(e);
+}
+}
+}

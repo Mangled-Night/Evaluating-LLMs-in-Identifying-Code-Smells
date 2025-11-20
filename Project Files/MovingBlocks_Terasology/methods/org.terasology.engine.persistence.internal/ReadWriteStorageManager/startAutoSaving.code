@@ -1,0 +1,17 @@
+private void startAutoSaving(){
+  logger.info("Auto Saving - Creating game snapshot");
+  try (var ignored=PerformanceMonitor.startActivity("Auto Saving")){
+    ComponentSystemManager componentSystemManager=CoreRegistry.get(ComponentSystemManager.class);
+    for (    ComponentSystem sys : componentSystemManager.getAllSystems()) {
+      sys.preAutoSave();
+    }
+    saveTransaction=Mono.fromRunnable(createSaveTransaction()).subscribeOn(GameScheduler.parallel()).doFinally(unused -> this.saveComplete()).share();
+    saveTransaction.subscribe();
+    for (    ComponentSystem sys : componentSystemManager.getAllSystems()) {
+      sys.postAutoSave();
+    }
+    scheduleNextAutoSave();
+  }
+   entitySetDeltaRecorder=new EntitySetDeltaRecorder(this.entityRefReplacingComponentLibrary);
+  logger.info("Auto Saving - Snapshot created: Writing phase starts");
+}

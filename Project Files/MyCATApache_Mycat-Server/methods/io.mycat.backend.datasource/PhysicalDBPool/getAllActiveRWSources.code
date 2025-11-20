@@ -1,0 +1,77 @@
+/** 
+ * return all backup write sources
+ * @param includeWriteNode if include write nodes
+ * @param includeCurWriteNode if include current active write node. invalid when <code>includeWriteNode<code> is false
+ * @param filterWithSlaveThreshold
+ * @return
+ */
+private ArrayList<PhysicalDatasource> getAllActiveRWSources(boolean includeWriteNode,boolean includeCurWriteNode,boolean filterWithSlaveThreshold){
+  int curActive=activedIndex;
+  ArrayList<PhysicalDatasource> okSources=new ArrayList<PhysicalDatasource>(this.allDs.size());
+  for (int i=0; i < this.writeSources.length; i++) {
+    PhysicalDatasource theSource=writeSources[i];
+    if (isAlive(theSource)) {
+      if (includeWriteNode) {
+        boolean isCurWriteNode=(i == curActive);
+        if (isCurWriteNode && includeCurWriteNode == false) {
+        }
+ else         if (filterWithSlaveThreshold && theSource.isSalveOrRead()) {
+          boolean selected=canSelectAsReadNode(theSource);
+          if (selected) {
+            okSources.add(theSource);
+          }
+ else {
+            continue;
+          }
+        }
+ else {
+          okSources.add(theSource);
+        }
+      }
+      if (!readSources.isEmpty()) {
+        PhysicalDatasource[] allSlaves=this.readSources.get(i);
+        if (allSlaves != null) {
+          for (          PhysicalDatasource slave : allSlaves) {
+            if (isAlive(slave)) {
+              if (filterWithSlaveThreshold) {
+                boolean selected=canSelectAsReadNode(slave);
+                if (selected) {
+                  okSources.add(slave);
+                }
+ else {
+                  continue;
+                }
+              }
+ else {
+                okSources.add(slave);
+              }
+            }
+          }
+        }
+      }
+    }
+ else {
+      if (this.dataHostConfig.isTempReadHostAvailable() && !readSources.isEmpty()) {
+        PhysicalDatasource[] allSlaves=this.readSources.get(i);
+        if (allSlaves != null) {
+          for (          PhysicalDatasource slave : allSlaves) {
+            if (isAlive(slave)) {
+              if (filterWithSlaveThreshold) {
+                if (canSelectAsReadNode(slave)) {
+                  okSources.add(slave);
+                }
+ else {
+                  continue;
+                }
+              }
+ else {
+                okSources.add(slave);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return okSources;
+}

@@ -1,0 +1,14 @@
+/** 
+ * Handles view distance changes on the server
+ */
+@RegisterSystem(RegisterMode.AUTHORITY) public class ServerViewDistanceSystem extends BaseComponentSystem {
+  @In private NetworkSystem networkSystem;
+  @In private RelevanceSystem relevanceSystem;
+  @ReceiveEvent(components=ClientComponent.class) public void onChangeViewDistanceChanged(  ViewDistanceChangedEvent request,  EntityRef entity){
+    Client client=networkSystem.getOwner(entity);
+    if (client != null) {
+      client.setViewDistanceMode(request.getNewViewRange());
+      relevanceSystem.updateRelevanceEntityDistance(entity,client.getViewDistance().getChunkDistance());
+    }
+  }
+}

@@ -1,0 +1,18 @@
+@Test public void t07_multipleKeysTest() throws PGPException, NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException, IOException, MissingUserIdOnKeyException {
+  PGPSecretKeyRing one=openPgpStoreInstance1.generateKeyRing(alice);
+  PGPSecretKeyRing two=openPgpStoreInstance1.generateKeyRing(alice);
+  OpenPgpV4Fingerprint fingerprint1=new OpenPgpV4Fingerprint(one);
+  OpenPgpV4Fingerprint fingerprint2=new OpenPgpV4Fingerprint(two);
+  openPgpStoreInstance1.importSecretKey(alice,one);
+  openPgpStoreInstance1.importSecretKey(alice,two);
+  openPgpStoreInstance1.importPublicKey(alice,KeyRingUtils.publicKeyRingFrom(one));
+  openPgpStoreInstance1.importPublicKey(alice,KeyRingUtils.publicKeyRingFrom(two));
+  assertArrayEquals(one.getEncoded(),openPgpStoreInstance1.getSecretKeyRing(alice,fingerprint1).getEncoded());
+  assertArrayEquals(two.getEncoded(),openPgpStoreInstance1.getSecretKeyRing(alice,fingerprint2).getEncoded());
+  assertArrayEquals(one.getEncoded(),openPgpStoreInstance1.getSecretKeysOf(alice).getSecretKeyRing(fingerprint1.getKeyId()).getEncoded());
+  assertArrayEquals(KeyRingUtils.publicKeyRingFrom(one).getEncoded(),openPgpStoreInstance1.getPublicKeyRing(alice,fingerprint1).getEncoded());
+  openPgpStoreInstance1.deletePublicKeyRing(alice,fingerprint1);
+  openPgpStoreInstance1.deletePublicKeyRing(alice,fingerprint2);
+  openPgpStoreInstance1.deleteSecretKeyRing(alice,fingerprint1);
+  openPgpStoreInstance1.deleteSecretKeyRing(alice,fingerprint2);
+}

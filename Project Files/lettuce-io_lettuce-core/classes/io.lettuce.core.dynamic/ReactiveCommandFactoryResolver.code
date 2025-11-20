@@ -1,0 +1,17 @@
+class ReactiveCommandFactoryResolver implements CommandFactoryResolver {
+  final AnnotationCommandSegmentFactory commandSegmentFactory=new AnnotationCommandSegmentFactory();
+  final AnnotationRedisCodecResolver codecResolver;
+  ReactiveCommandFactoryResolver(){
+    codecResolver=new AnnotationRedisCodecResolver(redisCodecs);
+  }
+  public ReactiveCommandSegmentCommandFactory resolveRedisCommandFactory(  CommandMethod commandMethod,  RedisCommandsMetadata redisCommandsMetadata){
+    RedisCodec<?,?> codec=codecResolver.resolve(commandMethod);
+    if (codec == null) {
+      throw new CommandCreationException(commandMethod,"Cannot resolve RedisCodec");
+    }
+    CommandSegments commandSegments=commandSegmentFactory.createCommandSegments(commandMethod);
+    commandMethodVerifier.validate(commandSegments,commandMethod);
+    CodecAwareOutputFactoryResolver outputFactoryResolver=new CodecAwareOutputFactoryResolver(ReactiveExecutableCommandLookupStrategy.this.outputFactoryResolver,codec);
+    return new ReactiveCommandSegmentCommandFactory(commandSegments,commandMethod,codec,outputFactoryResolver);
+  }
+}

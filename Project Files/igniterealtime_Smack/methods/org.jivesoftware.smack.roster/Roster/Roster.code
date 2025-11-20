@@ -1,0 +1,89 @@
+/** 
+ * Creates a new roster.
+ * @param connection an XMPP connection.
+ */
+private Roster(final XMPPConnection connection){
+  super(connection);
+  connection.registerIQRequestHandler(new RosterPushListener());
+  connection.addSyncStanzaListener(presencePacketListener,PRESENCE_PACKET_FILTER);
+  connection.addAsyncStanzaListener(new StanzaListener(){
+    @SuppressWarnings("fallthrough") @Override public void processStanza(    Stanza stanza) throws NotConnectedException, InterruptedException, NotLoggedInException {
+      Presence presence=(Presence)stanza;
+      Jid from=presence.getFrom();
+      SubscribeAnswer subscribeAnswer=null;
+switch (subscriptionMode) {
+case manual:
+        for (        SubscribeListener subscribeListener : subscribeListeners) {
+          subscribeAnswer=subscribeListener.processSubscribe(from,presence);
+          if (subscribeAnswer != null) {
+            break;
+          }
+        }
+      if (subscribeAnswer == null) {
+        return;
+      }
+    break;
+case accept_all:
+  subscribeAnswer=SubscribeAnswer.Approve;
+break;
+case reject_all:
+subscribeAnswer=SubscribeAnswer.Deny;
+break;
+}
+if (subscribeAnswer == null) {
+return;
+}
+Presence.Type type;
+switch (subscribeAnswer) {
+case ApproveAndAlsoRequestIfRequired:
+BareJid bareFrom=from.asBareJid();
+RosterUtil.askForSubscriptionIfRequired(Roster.this,bareFrom);
+case Approve:
+type=Presence.Type.subscribed;
+break;
+case Deny:
+type=Presence.Type.unsubscribed;
+break;
+default :
+throw new AssertionError();
+}
+Presence response=connection.getStanzaFactory().buildPresenceStanza().ofType(type).to(presence.getFrom()).build();
+connection.sendStanza(response);
+}
+}
+,PresenceTypeFilter.SUBSCRIBE);
+connection.addConnectionListener(new ConnectionListener(){
+@Override public void authenticated(XMPPConnection connection,boolean resumed){
+if (!isRosterLoadedAtLogin()) return;
+if (resumed) {
+return;
+}
+setOfflinePresencesAndResetLoaded();
+try {
+Roster.this.reload();
+}
+ catch (InterruptedException|SmackException e) {
+LOGGER.log(Level.SEVERE,"Could not reload Roster",e);
+return;
+}
+}
+@Override public void connectionClosed(){
+setOfflinePresencesAndResetLoaded();
+}
+}
+);
+connection.addStanzaSendingListener(new StanzaListener(){
+@Override public void processStanza(Stanza stanzav) throws NotConnectedException, InterruptedException {
+setOfflinePresences();
+}
+}
+,OUTGOING_USER_UNAVAILABLE_PRESENCE);
+if (connection.isAuthenticated()) {
+try {
+reloadAndWait();
+}
+ catch (InterruptedException|SmackException e) {
+LOGGER.log(Level.SEVERE,"Could not reload Roster",e);
+}
+}
+}

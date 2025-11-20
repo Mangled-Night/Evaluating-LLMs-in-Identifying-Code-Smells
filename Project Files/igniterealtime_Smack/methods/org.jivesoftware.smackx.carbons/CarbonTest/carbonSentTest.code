@@ -1,0 +1,15 @@
+@Test public void carbonSentTest() throws Exception {
+  XmlPullParser parser;
+  String control;
+  CarbonExtension cc;
+  Forwarded<Message> fwd;
+  control=XMLBuilder.create("sent").e("forwarded").a("xmlns","urn:xmpp:forwarded:0").e("message").a("from","romeo@montague.com").asString(outputProperties);
+  parser=PacketParserUtils.getParserFor(control);
+  cc=new CarbonManagerProvider().parse(parser);
+  fwd=cc.getForwarded();
+  assertEquals(CarbonExtension.Direction.sent,cc.getDirection());
+  assertEquals(null,fwd.getDelayInformation());
+  assertEquals("romeo@montague.com",fwd.getForwardedStanza().getFrom().toString());
+  assertEquals(XmlPullParser.Event.END_ELEMENT,parser.getEventType());
+  assertEquals("sent",parser.getName());
+}

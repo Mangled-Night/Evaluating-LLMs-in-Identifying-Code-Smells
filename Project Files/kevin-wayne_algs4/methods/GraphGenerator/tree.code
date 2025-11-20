@@ -1,0 +1,25 @@
+/** 
+ * Returns a uniformly random tree on  {@code V} vertices.This algorithm uses a Prufer sequence and takes time proportional to <em>V log V</em>.
+ * @param V the number of vertices in the tree
+ * @return a uniformly random tree on {@code V} vertices
+ */
+public static Graph tree(int V){
+  Graph G=new Graph(V);
+  if (V == 1)   return G;
+  int[] prufer=new int[V - 2];
+  for (int i=0; i < V - 2; i++)   prufer[i]=StdRandom.uniformInt(V);
+  int[] degree=new int[V];
+  for (int v=0; v < V; v++)   degree[v]=1;
+  for (int i=0; i < V - 2; i++)   degree[prufer[i]]++;
+  MinPQ<Integer> pq=new MinPQ<Integer>();
+  for (int v=0; v < V; v++)   if (degree[v] == 1)   pq.insert(v);
+  for (int i=0; i < V - 2; i++) {
+    int v=pq.delMin();
+    G.addEdge(v,prufer[i]);
+    degree[v]--;
+    degree[prufer[i]]--;
+    if (degree[prufer[i]] == 1)     pq.insert(prufer[i]);
+  }
+  G.addEdge(pq.delMin(),pq.delMin());
+  return G;
+}

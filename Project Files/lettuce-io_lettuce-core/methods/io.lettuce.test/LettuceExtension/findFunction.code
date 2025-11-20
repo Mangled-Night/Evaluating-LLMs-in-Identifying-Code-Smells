@@ -1,0 +1,9 @@
+private static Optional<ResourceFunction> findFunction(Type type){
+  ResolvableType requested=ResolvableType.forType(type);
+  return RESOURCE_FUNCTIONS.stream().map(it -> {
+    ResolvableType dependsOn=ResolvableType.forType(it.getClass()).as(Function.class).getGeneric(0);
+    ResolvableType providedType=ResolvableType.forType(it.getClass()).as(Function.class).getGeneric(1);
+    return new ResourceFunction(dependsOn,providedType,it);
+  }
+).filter(it -> requested.isAssignableFrom(it.provides)).findFirst();
+}

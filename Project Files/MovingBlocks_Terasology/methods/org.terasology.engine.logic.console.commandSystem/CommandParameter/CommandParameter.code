@@ -1,0 +1,25 @@
+private CommandParameter(String name,Class<T> typeParam,boolean required,CommandParameterSuggester<T> suggester,ParameterAdapterManager parameterAdapterManager){
+  Preconditions.checkNotNull(name,"The parameter name must not be null!");
+  if (name.length() <= 0) {
+    throw new IllegalArgumentException("The parameter name must not be empty!");
+  }
+  Preconditions.checkNotNull(typeParam,"The parameter type must not be null!");
+  Class<T> resultType;
+  if (typeParam.isPrimitive()) {
+    if (required) {
+      resultType=Primitives.wrap(typeParam);
+    }
+ else {
+      throw new IllegalArgumentException("An optional parameter must not be primitive!" + " Use " + Primitives.wrap(typeParam).getSimpleName() + " instead of "+ typeParam.getSimpleName()+ ".");
+    }
+  }
+ else {
+    resultType=typeParam;
+  }
+  Preconditions.checkNotNull(suggester,"The suggester must not be null!");
+  this.name=name;
+  this.type=resultType;
+  this.suggester=suggester;
+  this.required=required;
+  this.parameterAdapterManager=parameterAdapterManager;
+}

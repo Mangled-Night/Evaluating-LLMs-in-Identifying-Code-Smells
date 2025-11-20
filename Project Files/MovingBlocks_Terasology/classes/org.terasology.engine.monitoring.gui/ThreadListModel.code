@@ -1,0 +1,75 @@
+private final class ThreadListModel extends AbstractListModel {
+  private final java.util.List<SingleThreadMonitor> monitors=new ArrayList<>();
+  private final ExecutorService executor=Executors.newSingleThreadExecutor();
+  private final BlockingQueue<Task> queue=new LinkedBlockingQueue<>();
+  private ThreadListModel(){
+    ThreadMonitor.registerForEvents(this);
+    queue.add(new Task("Sort Monitors"){
+      @Override public void execute(){
+        ThreadMonitor.getThreadMonitors(monitors,false);
+        if (monitors.size() > 0) {
+          Collections.sort(monitors);
+          invokeIntervalAdded(0,monitors.size() - 1);
+        }
+      }
+    }
+);
+    executor.execute(() -> {
+      Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
+      try {
+        while (!stopThread) {
+          final Task task=queue.poll(500,TimeUnit.MILLISECONDS);
+          if (task != null) {
+            try (ThreadActivity ignored=ThreadMonitor.startThreadActivity(task.getName())){
+              task.execute();
+            }
+           }
+ else {
+            try (ThreadActivity ignored=ThreadMonitor.startThreadActivity("Sort Monitors")){
+              Collections.sort(monitors);
+              invokeContentsChanged(0,monitors.size() - 1);
+            }
+           }
+        }
+      }
+ catch (      Exception e) {
+        ThreadMonitor.addError(e);
+        LOGGER.error("Error executing thread monitor update",e);
+      }
+      executor.shutdownNow();
+    }
+);
+  }
+  private void invokeIntervalAdded(  final int a,  final int b){
+    final Object source=this;
+    SwingUtilities.invokeLater(() -> fireIntervalAdded(source,a,b));
+  }
+  private void invokeContentsChanged(  final int a,  final int b){
+    final Object source=this;
+    SwingUtilities.invokeLater(() -> fireContentsChanged(source,a,b));
+  }
+  @Subscribe public void receiveThreadMonitorEvent(  final ThreadMonitorEvent event){
+    if (event != null) {
+switch (event.type) {
+case MonitorAdded:
+        queue.add(new Task("Register Monitor"){
+          @Override public void execute(){
+            if (!monitors.contains(event.monitor)) {
+              monitors.add(event.monitor);
+              Collections.sort(monitors);
+              invokeContentsChanged(0,monitors.size() - 1);
+            }
+          }
+        }
+);
+      break;
+  }
+}
+}
+@Override public int getSize(){
+return monitors.size();
+}
+@Override public Object getElementAt(int index){
+return monitors.get(index);
+}
+}

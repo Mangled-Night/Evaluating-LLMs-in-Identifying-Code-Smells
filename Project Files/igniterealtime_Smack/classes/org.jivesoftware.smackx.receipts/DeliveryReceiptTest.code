@@ -1,0 +1,52 @@
+public class DeliveryReceiptTest extends SmackTestSuite {
+  private static Properties outputProperties=new Properties();
+static {
+    outputProperties.put(javax.xml.transform.OutputKeys.OMIT_XML_DECLARATION,"yes");
+  }
+  @Test public void receiptTest() throws Exception {
+    XmlPullParser parser;
+    String control;
+    control=XMLBuilder.create("message").a("from","romeo@montague.com").e("request").a("xmlns","urn:xmpp:receipts").asString(outputProperties);
+    parser=PacketParserUtils.getParserFor(control);
+    Message p=PacketParserUtils.parseMessage(parser);
+    DeliveryReceiptRequest drr=p.getExtension(DeliveryReceiptRequest.class);
+    assertNotNull(drr);
+    assertTrue(DeliveryReceiptManager.hasDeliveryReceiptRequest(p));
+    MessageBuilder messageBuilder=StanzaBuilder.buildMessage("request-id").to("romeo@montague.com").ofType(Message.Type.normal);
+    assertFalse(DeliveryReceiptManager.hasDeliveryReceiptRequest(messageBuilder.build()));
+    DeliveryReceiptRequest.addTo(messageBuilder);
+    assertTrue(DeliveryReceiptManager.hasDeliveryReceiptRequest(messageBuilder.build()));
+  }
+  @Test public void receiptManagerListenerTest() throws Exception {
+    DummyConnection c=new DummyConnection();
+    c.connect();
+    DeliveryReceiptManager drm=DeliveryReceiptManager.getInstanceFor(c);
+    TestReceiptReceivedListener rrl=new TestReceiptReceivedListener();
+    drm.addReceiptReceivedListener(rrl);
+    Message m=StanzaBuilder.buildMessage("reply-id").from("julia@capulet.com").to("romeo@montague.com").ofType(Message.Type.normal).addExtension(new DeliveryReceipt("original-test-id")).build();
+    c.processStanza(m);
+    rrl.waitUntilInvocationOrTimeout();
+  }
+private static class TestReceiptReceivedListener extends WaitForPacketListener implements ReceiptReceivedListener {
+    @Override public void onReceiptReceived(    Jid fromJid,    Jid toJid,    String receiptId,    Stanza receipt){
+      assertThat("julia@capulet.com",equalsCharSequence(fromJid));
+      assertThat("romeo@montague.com",equalsCharSequence(toJid));
+      assertEquals("original-test-id",receiptId);
+      reportInvoked();
+    }
+  }
+  @Test public void receiptManagerAutoReplyTest() throws Exception {
+    DummyConnection c=new DummyConnection();
+    c.connect();
+    DeliveryReceiptManager drm=DeliveryReceiptManager.getInstanceFor(c);
+    drm.setAutoReceiptMode(AutoReceiptMode.always);
+    assertEquals(AutoReceiptMode.always,drm.getAutoReceiptMode());
+    MessageBuilder messageBuilder=StanzaBuilder.buildMessage("test-receipt-request").to("julia@capulet.com").from("romeo@montague.com").ofType(Message.Type.normal);
+    DeliveryReceiptRequest.addTo(messageBuilder);
+    c.processStanza(messageBuilder.build());
+    Stanza reply=c.getSentPacket();
+    DeliveryReceipt r=DeliveryReceipt.from((Message)reply);
+    assertThat("romeo@montague.com",equalsCharSequence(reply.getTo()));
+    assertEquals("test-receipt-request",r.getId());
+  }
+}

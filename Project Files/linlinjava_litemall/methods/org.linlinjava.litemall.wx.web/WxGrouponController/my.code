@@ -1,0 +1,63 @@
+/** 
+ * 用户开团或入团情况
+ * @param userId 用户ID
+ * @param showType 显示类型，如果是0，则是当前用户开的团购；否则，则是当前用户参加的团购
+ * @return 用户开团或入团情况
+ */
+@GetMapping("my") public Object my(@LoginUser Integer userId,@RequestParam(defaultValue="0") Integer showType){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  List<LitemallGroupon> myGroupons;
+  if (showType == 0) {
+    myGroupons=grouponService.queryMyGroupon(userId);
+  }
+ else {
+    myGroupons=grouponService.queryMyJoinGroupon(userId);
+  }
+  List<Map<String,Object>> grouponVoList=new ArrayList<>(myGroupons.size());
+  LitemallOrder order;
+  LitemallGrouponRules rules;
+  LitemallUser creator;
+  for (  LitemallGroupon groupon : myGroupons) {
+    order=orderService.findById(userId,groupon.getOrderId());
+    rules=rulesService.findById(groupon.getRulesId());
+    creator=userService.findById(groupon.getCreatorUserId());
+    Map<String,Object> grouponVo=new HashMap<>();
+    grouponVo.put("id",groupon.getId());
+    grouponVo.put("groupon",groupon);
+    grouponVo.put("rules",rules);
+    grouponVo.put("creator",creator.getNickname());
+    int linkGrouponId;
+    if (groupon.getGrouponId() == 0) {
+      linkGrouponId=groupon.getId();
+      grouponVo.put("isCreator",creator.getId() == userId);
+    }
+ else {
+      linkGrouponId=groupon.getGrouponId();
+      grouponVo.put("isCreator",false);
+    }
+    int joinerCount=grouponService.countGroupon(linkGrouponId);
+    grouponVo.put("joinerCount",joinerCount + 1);
+    grouponVo.put("orderId",order.getId());
+    grouponVo.put("orderSn",order.getOrderSn());
+    grouponVo.put("actualPrice",order.getActualPrice());
+    grouponVo.put("orderStatusText",OrderUtil.orderStatusText(order));
+    List<LitemallOrderGoods> orderGoodsList=orderGoodsService.queryByOid(order.getId());
+    List<Map<String,Object>> orderGoodsVoList=new ArrayList<>(orderGoodsList.size());
+    for (    LitemallOrderGoods orderGoods : orderGoodsList) {
+      Map<String,Object> orderGoodsVo=new HashMap<>();
+      orderGoodsVo.put("id",orderGoods.getId());
+      orderGoodsVo.put("goodsName",orderGoods.getGoodsName());
+      orderGoodsVo.put("number",orderGoods.getNumber());
+      orderGoodsVo.put("picUrl",orderGoods.getPicUrl());
+      orderGoodsVoList.add(orderGoodsVo);
+    }
+    grouponVo.put("goodsList",orderGoodsVoList);
+    grouponVoList.add(grouponVo);
+  }
+  Map<String,Object> result=new HashMap<>();
+  result.put("total",grouponVoList.size());
+  result.put("list",grouponVoList);
+  return ResponseUtil.ok(result);
+}

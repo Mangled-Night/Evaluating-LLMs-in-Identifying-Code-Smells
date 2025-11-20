@@ -1,0 +1,9 @@
+private Object doInvoke(Object[] args,Method targetMethod,StatefulRedisConnection<?,?> it) throws IllegalAccessException, InvocationTargetException {
+  Object[] argsToUse=args;
+  if (targetMethod.getName().equals("dispatch") && args.length > 1 && args[1] instanceof Supplier) {
+    argsToUse=new Object[args.length];
+    System.arraycopy(args,0,argsToUse,0,args.length);
+    argsToUse[1]=((Supplier)args[1]).get();
+  }
+  return targetMethod.invoke(executionModel == ExecutionModel.REACTIVE ? it.reactive() : it.async(),argsToUse);
+}

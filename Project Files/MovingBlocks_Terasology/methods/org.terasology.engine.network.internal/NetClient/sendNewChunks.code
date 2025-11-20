@@ -1,0 +1,32 @@
+private void sendNewChunks(NetData.NetMessage.Builder message){
+  if (!readyChunks.isEmpty()) {
+    chunkSendCounter+=chunkSendRate * NET_TICK_RATE * networkSystem.getBandwidthPerClient();
+    if (chunkSendCounter > 1.0f) {
+      chunkSendCounter-=1.0f;
+      Vector3i center=new Vector3i();
+      LocationComponent loc=getEntity().getComponent(ClientComponent.class).character.getComponent(LocationComponent.class);
+      if (loc != null) {
+        Vector3f target=loc.getWorldPosition(new Vector3f());
+        if (target.isFinite()) {
+          center.set(target,RoundingMode.HALF_UP);
+          Chunks.toChunkPos(center,center);
+        }
+      }
+      Vector3i pos=null;
+      long distance=Integer.MAX_VALUE;
+      for (      Vector3i chunkPos : readyChunks.keySet()) {
+        long chunkDistance=chunkPos.distanceSquared(center);
+        if (pos == null || chunkDistance < distance) {
+          pos=chunkPos;
+          distance=chunkDistance;
+        }
+      }
+      Chunk chunk=readyChunks.remove(pos);
+      relevantChunks.add(pos);
+      message.addChunkInfo(chunk.encode());
+    }
+  }
+ else {
+    chunkSendCounter=1.0f;
+  }
+}

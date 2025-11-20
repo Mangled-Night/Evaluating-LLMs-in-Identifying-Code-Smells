@@ -1,0 +1,14 @@
+@Test public void testAddLightInVacuum(){
+  StubPropagatorWorldView worldView=new StubPropagatorWorldView(testingRegion,air);
+  worldView.setBlockAt(new Vector3i(0,0,0),fullLight);
+  BatchPropagator propagator=new StandardBatchPropagator(lightRules,worldView);
+  propagator.process(new BlockChange(ZERO_VECTOR,air,fullLight));
+  assertEquals(fullLight.getLuminance(),worldView.getValueAt(new Vector3i(0,0,0)));
+  assertEquals(fullLight.getLuminance() - 1,worldView.getValueAt(new Vector3i(0,1,0)));
+  assertEquals(fullLight.getLuminance() - 14,worldView.getValueAt(new Vector3i(0,14,0)));
+  for (int i=1; i < fullLight.getLuminance(); ++i) {
+    for (    Vector3ic pos : Diamond3iIterable.shell(new Vector3i(0,0,0),i).build()) {
+      assertEquals(fullLight.getLuminance() - i,worldView.getValueAt(pos));
+    }
+  }
+}

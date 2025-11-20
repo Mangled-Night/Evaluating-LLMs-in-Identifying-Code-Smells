@@ -1,0 +1,27 @@
+/** 
+ * Triggers the regeneration of the shadow map FBOs, if necessary. Once triggered this method checks if "dynamic shadows" are enabled. If dynamics shadows are enabled it obtains the new Shadow Map resolution from the event passed to the method and regenerates the shadow map FBOs.
+ * @param evt a PropertyChangeEvent, containing the shadow map resolution.
+ */
+@Override public void propertyChange(PropertyChangeEvent evt){
+  if (renderingConfig.isDynamicShadows()) {
+    int shadowMapResFromSettings=(int)evt.getNewValue();
+    shadowMapResolution=new FBO.Dimensions(shadowMapResFromSettings,shadowMapResFromSettings);
+    for (    Map.Entry<SimpleUri,FboConfig> entry : fboConfigs.entrySet()) {
+      SimpleUri fboName=entry.getKey();
+      FboConfig fboConfig=entry.getValue();
+      if (fboLookup.containsKey(fboName)) {
+        FBO fbo=fboLookup.get(fboName);
+        if (fbo != null) {
+          fbo.dispose();
+        }
+      }
+      FBO shadowMapResDependentFBO=generateWithDimensions(fboConfig,shadowMapResolution);
+      if (shadowMapResDependentFBO.getStatus() == FBO.Status.DISPOSED) {
+        logger.warn("Failed to generate ShadowMap FBO. Turning off shadows.");
+        renderingConfig.setDynamicShadows(false);
+        break;
+      }
+      fboLookup.put(fboName,shadowMapResDependentFBO);
+    }
+  }
+}

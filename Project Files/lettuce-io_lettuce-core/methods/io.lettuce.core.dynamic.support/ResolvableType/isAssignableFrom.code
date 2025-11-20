@@ -1,0 +1,102 @@
+/** 
+ * Determine whether this  {@code ResolvableType} is assignable from the specified other type.
+ * @param other the type to be checked against (as a {@code Class})
+ * @see #isAssignableFrom(ResolvableType)
+ */
+public boolean isAssignableFrom(Class<?> other){
+  return isAssignableFrom(forClass(other),null);
+}
+/** 
+ * Determine whether this  {@code ResolvableType} is assignable from the specified other type.<p> Attempts to follow the same rules as the Java compiler, considering whether both the  {@link #resolve() resolved}{@code Class} is {@link Class#isAssignableFrom(Class) assignable from} the given type as well as whether all{@link #getGenerics() generics} are assignable.
+ * @param other the type to be checked against (as a {@code ResolvableType})
+ * @return {@code true} if the specified other type can be assigned to this {@code ResolvableType};  {@code false} otherwise
+ */
+public boolean isAssignableFrom(ResolvableType other){
+  return isAssignableFrom(other,null);
+}
+private boolean isAssignableFrom(ResolvableType other,Map<Type,Type> matchedBefore){
+  LettuceAssert.notNull(other,"ResolvableType must not be null");
+  if (this == NONE || other == NONE) {
+    return false;
+  }
+  if (isArray()) {
+    return (other.isArray() && getComponentType().isAssignableFrom(other.getComponentType()));
+  }
+  if (matchedBefore != null && matchedBefore.get(this.type) == other.type) {
+    return true;
+  }
+  WildcardBounds ourBounds=WildcardBounds.get(this);
+  WildcardBounds typeBounds=WildcardBounds.get(other);
+  if (typeBounds != null) {
+    return (ourBounds != null && ourBounds.isSameKind(typeBounds) && ourBounds.isAssignableFrom(typeBounds.getBounds()));
+  }
+  if (ourBounds != null) {
+    return ourBounds.isAssignableFrom(other);
+  }
+  boolean exactMatch=(matchedBefore != null);
+  boolean checkGenerics=true;
+  Class<?> ourResolved=null;
+  if (this.type instanceof TypeVariable) {
+    TypeVariable<?> variable=(TypeVariable<?>)this.type;
+    if (this.variableResolver != null) {
+      ResolvableType resolved=this.variableResolver.resolveVariable(variable);
+      if (resolved != null) {
+        ourResolved=resolved.resolve();
+      }
+    }
+    if (ourResolved == null) {
+      if (other.variableResolver != null) {
+        ResolvableType resolved=other.variableResolver.resolveVariable(variable);
+        if (resolved != null) {
+          ourResolved=resolved.resolve();
+          checkGenerics=false;
+        }
+      }
+    }
+    if (ourResolved == null) {
+      exactMatch=false;
+    }
+  }
+  if (ourResolved == null) {
+    ourResolved=resolve(Object.class);
+  }
+  Class<?> otherResolved=other.resolve(Object.class);
+  if (exactMatch ? !ourResolved.equals(otherResolved) : !LettuceClassUtils.isAssignable(ourResolved,otherResolved)) {
+    return false;
+  }
+  if (checkGenerics) {
+    ResolvableType[] ourGenerics=getGenerics();
+    ResolvableType[] typeGenerics=other.as(ourResolved).getGenerics();
+    if (ourGenerics.length != typeGenerics.length) {
+      return false;
+    }
+    if (matchedBefore == null) {
+      matchedBefore=new IdentityHashMap<Type,Type>(1);
+    }
+    matchedBefore.put(this.type,other.type);
+    for (int i=0; i < ourGenerics.length; i++) {
+      if (!ourGenerics[i].isAssignableFrom(typeGenerics[i],matchedBefore)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+@Override public boolean isAssignableFrom(Class<?> other){
+  return LettuceClassUtils.isAssignable(getRawClass(),other);
+}
+/** 
+ * Return  {@code true} if this bounds is assignable to all the specified types.
+ * @param types the types to test against
+ * @return {@code true} if this bounds is assignable to all types
+ */
+public boolean isAssignableFrom(ResolvableType... types){
+  for (  ResolvableType bound : this.bounds) {
+    for (    ResolvableType type : types) {
+      if (!isAssignable(bound,type)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}

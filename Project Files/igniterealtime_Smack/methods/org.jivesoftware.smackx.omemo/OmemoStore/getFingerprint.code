@@ -1,0 +1,30 @@
+/** 
+ * Return our identityKeys fingerprint.
+ * @param userDevice our OmemoDevice.
+ * @return fingerprint of our identityKeyPair
+ * @throws CorruptedOmemoKeyException if the identityKey of userDevice is corrupted.
+ * @throws IOException if an I/O error occurred.
+ */
+public OmemoFingerprint getFingerprint(OmemoDevice userDevice) throws CorruptedOmemoKeyException, IOException {
+  T_IdKeyPair keyPair=loadOmemoIdentityKeyPair(userDevice);
+  if (keyPair == null) {
+    return null;
+  }
+  return keyUtil().getFingerprintOfIdentityKey(keyUtil().identityKeyFromPair(keyPair));
+}
+/** 
+ * Return the fingerprint of the identityKey belonging to contactsDevice.
+ * @param userDevice our OmemoDevice.
+ * @param contactsDevice OmemoDevice we want to have the fingerprint for.
+ * @return fingerprint of the userDevices IdentityKey.
+ * @throws CorruptedOmemoKeyException if the IdentityKey is corrupted.
+ * @throws NoIdentityKeyException if no IdentityKey for contactsDevice has been found locally.
+ * @throws IOException if an I/O error occurred.
+ */
+public OmemoFingerprint getFingerprint(OmemoDevice userDevice,OmemoDevice contactsDevice) throws CorruptedOmemoKeyException, NoIdentityKeyException, IOException {
+  T_IdKey identityKey=loadOmemoIdentityKey(userDevice,contactsDevice);
+  if (identityKey == null) {
+    throw new NoIdentityKeyException(contactsDevice);
+  }
+  return keyUtil().getFingerprintOfIdentityKey(identityKey);
+}

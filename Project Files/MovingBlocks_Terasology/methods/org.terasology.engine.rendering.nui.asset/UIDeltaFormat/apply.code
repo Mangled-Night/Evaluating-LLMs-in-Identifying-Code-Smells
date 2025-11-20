@@ -1,0 +1,15 @@
+@Override public void apply(AssetDataFile input,UIData assetData) throws IOException {
+  try (JsonReader reader=new JsonReader(new InputStreamReader(input.openStream(),Charsets.UTF_8))){
+    JsonElement jsonElement=new JsonParser().parse(reader);
+    String skinUri=jsonElement.getAsJsonObject().get("skin").getAsString();
+    String filePath=input.toString();
+    String moduleName=filePath.substring(1,filePath.indexOf('/',1));
+    Optional<UISkin> skin=Assets.getSkin(moduleName + ":" + skinUri);
+    if (skin.isPresent()) {
+      assetData.getRootWidget().setSkin(skin.get());
+    }
+ else {
+      logger.warn("Failed to load skin " + skinUri + " for the delta file "+ input.getFilename());
+    }
+  }
+ }

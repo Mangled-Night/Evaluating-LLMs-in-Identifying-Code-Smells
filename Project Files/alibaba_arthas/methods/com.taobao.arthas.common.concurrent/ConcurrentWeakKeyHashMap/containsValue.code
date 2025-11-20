@@ -1,0 +1,72 @@
+boolean containsValue(Object value){
+  if (count != 0) {
+    for (    HashEntry<K,V> e : table) {
+      for (; e != null; e=e.next) {
+        Object opaque=e.valueRef;
+        V v;
+        if (opaque == null) {
+          v=readValueUnderLock(e);
+        }
+ else {
+          v=e.dereferenceValue(opaque);
+        }
+        if (value.equals(v)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+/** 
+ * Returns <tt>true</tt> if this map maps one or more keys to the specified value. Note: This method requires a full internal traversal of the hash table, and so is much slower than method <tt>containsKey</tt>.
+ * @param value value whose presence in this map is to be tested
+ * @return <tt>true</tt> if this map maps one or more keys to the specifiedvalue
+ * @throws NullPointerException if the specified value is null
+ */
+@Override public boolean containsValue(Object value){
+  if (value == null) {
+    throw new NullPointerException();
+  }
+  final Segment<K,V>[] segments=this.segments;
+  int[] mc=new int[segments.length];
+  for (int k=0; k < RETRIES_BEFORE_LOCK; ++k) {
+    int mcsum=0;
+    for (int i=0; i < segments.length; ++i) {
+      mcsum+=mc[i]=segments[i].modCount;
+      if (segments[i].containsValue(value)) {
+        return true;
+      }
+    }
+    boolean cleanSweep=true;
+    if (mcsum != 0) {
+      for (int i=0; i < segments.length; ++i) {
+        if (mc[i] != segments[i].modCount) {
+          cleanSweep=false;
+          break;
+        }
+      }
+    }
+    if (cleanSweep) {
+      return false;
+    }
+  }
+  for (  Segment<K,V> segment : segments) {
+    segment.lock();
+  }
+  boolean found=false;
+  try {
+    for (    Segment<K,V> segment : segments) {
+      if (segment.containsValue(value)) {
+        found=true;
+        break;
+      }
+    }
+  }
+  finally {
+    for (    Segment<K,V> segment : segments) {
+      segment.unlock();
+    }
+  }
+  return found;
+}

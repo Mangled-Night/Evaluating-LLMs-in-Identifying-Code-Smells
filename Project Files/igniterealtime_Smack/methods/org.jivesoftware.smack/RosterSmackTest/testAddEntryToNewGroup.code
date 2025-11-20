@@ -1,0 +1,36 @@
+/** 
+ * Tests that adding an existing roster entry that belongs to a group to another group works fine.
+ */
+public void testAddEntryToNewGroup(){
+  try {
+    Thread.sleep(500);
+    Roster roster=getConnection(0).getRoster();
+    roster.createEntry(getBareJID(1),"gato11",new String[]{"Friends"});
+    roster.createEntry(getBareJID(2),"gato12",new String[]{"Family"});
+    long initial=System.currentTimeMillis();
+    while (System.currentTimeMillis() - initial < 2000 && roster.getEntryCount() != 2) {
+      Thread.sleep(100);
+    }
+    assertEquals("Wrong number of entries in connection 0",2,roster.getEntryCount());
+    roster.createGroup("NewGroup").addEntry(roster.getEntry(getBareJID(1)));
+    XMPPTCPConnection con2=createConnection();
+    con2.connect();
+    con2.login(getUsername(0),getUsername(0),"MyNewResource");
+    Roster roster2=con2.getRoster();
+    assertEquals("Wrong number of entries in new connection",2,roster2.getEntryCount());
+    assertEquals("Wrong number of groups in new connection",3,roster2.getGroupCount());
+    RosterEntry entry=roster2.getEntry(getBareJID(1));
+    assertNotNull("No entry for user 1 was found",entry);
+    List<String> groupNames=new ArrayList<String>();
+    for (    RosterGroup rosterGroup : entry.getGroups()) {
+      groupNames.add(rosterGroup.getName());
+    }
+    assertTrue("Friends group was not found",groupNames.contains("Friends"));
+    assertTrue("NewGroup group was not found",groupNames.contains("NewGroup"));
+    con2.disconnect();
+    Thread.sleep(500);
+  }
+ catch (  Exception e) {
+    fail(e.getMessage());
+  }
+}

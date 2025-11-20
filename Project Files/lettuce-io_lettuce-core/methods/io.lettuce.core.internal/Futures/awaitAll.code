@@ -1,0 +1,44 @@
+/** 
+ * Wait until futures are complete or the supplied timeout is reached.
+ * @param timeout Maximum time to wait for futures to complete.
+ * @param futures Futures to wait for.
+ * @return {@code true} if all futures complete in time, otherwise {@code false}
+ * @since 6.0
+ */
+public static boolean awaitAll(Duration timeout,Future<?>... futures){
+  return awaitAll(timeout.toNanos(),TimeUnit.NANOSECONDS,futures);
+}
+/** 
+ * Wait until futures are complete or the supplied timeout is reached.
+ * @param timeout Maximum time to wait for futures to complete.
+ * @param unit Unit of time for the timeout.
+ * @param futures Futures to wait for.
+ * @return {@code true} if all futures complete in time, otherwise {@code false}
+ */
+public static boolean awaitAll(long timeout,TimeUnit unit,Future<?>... futures){
+  try {
+    long nanos=unit.toNanos(timeout);
+    long time=System.nanoTime();
+    for (    Future<?> f : futures) {
+      if (timeout <= 0) {
+        f.get();
+      }
+ else {
+        if (nanos < 0) {
+          return false;
+        }
+        f.get(nanos,TimeUnit.NANOSECONDS);
+        long now=System.nanoTime();
+        nanos-=now - time;
+        time=now;
+      }
+    }
+    return true;
+  }
+ catch (  TimeoutException e) {
+    return false;
+  }
+catch (  Exception e) {
+    throw Exceptions.fromSynchronization(e);
+  }
+}

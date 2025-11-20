@@ -1,0 +1,24 @@
+private void initGson(){
+  if (gson == null) {
+    GsonBuilder gsonBuilder=new GsonBuilder();
+    gsonBuilder.registerTypeHierarchyAdapter(BehaviorNode.class,this);
+    gsonBuilder.registerTypeAdapterFactory(new UriTypeAdapterFactory());
+    gsonBuilder.registerTypeAdapter(BehaviorTree.class,new TypeAdapter<BehaviorTree>(){
+      @Override public void write(      JsonWriter out,      BehaviorTree value) throws IOException {
+        if (value != null) {
+          out.value(value.getUrn().toString());
+        }
+ else {
+          out.value("");
+        }
+      }
+      @Override public BehaviorTree read(      JsonReader in) throws IOException {
+        String uri=in.nextString();
+        AssetManager assetManager=CoreRegistry.get(AssetManager.class);
+        return assetManager.getAsset(new ResourceUrn(uri),BehaviorTree.class).orElse(assetManager.getAsset(new ResourceUrn("engine:default"),BehaviorTree.class).get());
+      }
+    }
+);
+    gson=gsonBuilder.create();
+  }
+}

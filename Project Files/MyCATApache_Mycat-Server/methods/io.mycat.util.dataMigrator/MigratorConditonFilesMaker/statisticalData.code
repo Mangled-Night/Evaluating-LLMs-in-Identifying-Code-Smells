@@ -1,0 +1,23 @@
+private void statisticalData(int total,long[] count){
+  tableInfo.getSize().addAndGet(total);
+  List<DataNodeMigrateInfo> list=tableInfo.getDataNodesDetail();
+  List<Long> sizeList=new ArrayList<>();
+  for (int i=0; i < count.length; i++) {
+    long c=count[i];
+    sizeList.add(c);
+    DataNode targetDn=newDnList.get(i);
+    if (count[i] > 0) {
+      DataNodeMigrateInfo info=new DataNodeMigrateInfo(tableInfo,srcDn,targetDn,files.get(targetDn),c);
+      list.add(info);
+    }
+ else {
+      File f=files.get(targetDn);
+      if (f != null && f.exists()) {
+        f.delete();
+      }
+      files.remove(targetDn);
+    }
+  }
+  Map<String,String> map=tableInfo.getDnMigrateSize();
+  map.put(srcDn.getName() + "[" + total+ "]",sizeList.toString());
+}

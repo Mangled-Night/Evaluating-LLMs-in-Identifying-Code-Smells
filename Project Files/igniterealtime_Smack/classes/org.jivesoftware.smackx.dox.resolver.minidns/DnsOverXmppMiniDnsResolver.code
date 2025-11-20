@@ -1,0 +1,21 @@
+public final class DnsOverXmppMiniDnsResolver implements DnsOverXmppResolver {
+  public static final DnsOverXmppMiniDnsResolver INSTANCE=new DnsOverXmppMiniDnsResolver(new DnsClient(),new DnssecClient());
+  private final DnsClient dnsClient;
+  private final DnssecClient dnssecClient;
+  DnsOverXmppMiniDnsResolver(  DnsClient dnsClient,  DnssecClient dnssecClient){
+    this.dnsClient=dnsClient;
+    this.dnssecClient=dnssecClient;
+  }
+  @Override public DnsMessage resolve(  DnsMessage query) throws IOException {
+    Question question=query.getQuestion();
+    final DnsQueryResult dnsQueryResult;
+    if (query.isDnssecOk()) {
+      DnssecQueryResult dnssecQueryResult=dnssecClient.queryDnssec(question);
+      dnsQueryResult=dnssecQueryResult.dnsQueryResult;
+    }
+ else {
+      dnsQueryResult=dnsClient.query(question);
+    }
+    return dnsQueryResult.response;
+  }
+}

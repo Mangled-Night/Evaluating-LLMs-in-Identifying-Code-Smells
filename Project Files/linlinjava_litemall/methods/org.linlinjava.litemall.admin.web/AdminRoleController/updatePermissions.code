@@ -1,0 +1,23 @@
+/** 
+ * 更新管理员的权限
+ * @param body
+ * @return
+ */
+@RequiresPermissions("admin:role:permission:update") @RequiresPermissionsDesc(menu={"系统管理","角色管理"},button="权限变更") @PostMapping("/permissions") public Object updatePermissions(@RequestBody String body){
+  Integer roleId=JacksonUtil.parseInteger(body,"roleId");
+  List<String> permissions=JacksonUtil.parseStringList(body,"permissions");
+  if (roleId == null || permissions == null) {
+    return ResponseUtil.badArgument();
+  }
+  if (permissionService.checkSuperPermission(roleId)) {
+    return ResponseUtil.fail(AdminResponseCode.ROLE_SUPER_SUPERMISSION,"当前角色的超级权限不能变更");
+  }
+  permissionService.deleteByRoleId(roleId);
+  for (  String permission : permissions) {
+    LitemallPermission litemallPermission=new LitemallPermission();
+    litemallPermission.setRoleId(roleId);
+    litemallPermission.setPermission(permission);
+    permissionService.add(litemallPermission);
+  }
+  return ResponseUtil.ok();
+}

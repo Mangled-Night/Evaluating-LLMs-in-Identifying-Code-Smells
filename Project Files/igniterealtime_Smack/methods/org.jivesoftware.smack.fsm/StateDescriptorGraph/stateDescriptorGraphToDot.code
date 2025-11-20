@@ -1,0 +1,31 @@
+public static <E>void stateDescriptorGraphToDot(Collection<GraphVertex<StateDescriptor>> vertexes,PrintWriter dotOut,boolean breakStateName){
+  dotOut.append("digraph {\n");
+  dfs(vertexes,finishedVertex -> {
+    boolean isMultiVisitState=finishedVertex.element.isMultiVisitState();
+    boolean isFinalState=finishedVertex.element.isFinalState();
+    boolean isNotImplemented=finishedVertex.element.isNotImplemented();
+    String style=null;
+    if (isMultiVisitState) {
+      style="bold";
+    }
+ else     if (isFinalState) {
+      style="filled";
+    }
+ else     if (isNotImplemented) {
+      style="dashed";
+    }
+    if (style == null) {
+      return;
+    }
+    dotOut.append('"').append(finishedVertex.element.getFullStateName(breakStateName)).append("\" [ ").append("style=").append(style).append(" ]\n");
+  }
+,(from,to,edgeId,totalEdgeCount) -> {
+    dotOut.append("  \"").append(from.element.getFullStateName(breakStateName)).append("\" -> \"").append(to.element.getFullStateName(breakStateName)).append('"');
+    if (totalEdgeCount > 1) {
+      dotOut.append(" [xlabel=\"").append(Integer.toString(edgeId)).append("\"]");
+    }
+    dotOut.append(";\n");
+  }
+);
+  dotOut.append("}\n");
+}

@@ -1,0 +1,15 @@
+@Override public int setExtraData(int index,Vector3ic worldPos,int value){
+  Vector3i chunkPos=Chunks.toChunkPos(worldPos,new Vector3i());
+  Chunk chunk=chunkProvider.getChunk(chunkPos);
+  if (chunk != null) {
+    Vector3i blockPos=Chunks.toRelative(worldPos,new Vector3i());
+    int oldValue=chunk.getExtraData(index,blockPos.x,blockPos.y,blockPos.z);
+    chunk.setExtraData(index,blockPos.x,blockPos.y,blockPos.z,value);
+    if (oldValue != value) {
+      setDirtyChunksNear(worldPos);
+      notifyExtraDataChanged(index,worldPos,value,oldValue);
+    }
+    return oldValue;
+  }
+  return 0;
+}

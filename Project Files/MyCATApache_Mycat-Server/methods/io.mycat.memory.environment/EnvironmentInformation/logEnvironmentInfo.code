@@ -1,0 +1,43 @@
+/** 
+ * Logs a information about the environment, like code revision, current user, java version, and JVM parameters.
+ * @param log The logger to log the information to.
+ * @param componentName The component name to mention in the log.
+ * @param commandLineArgs The arguments accompanying the starting the component.
+ */
+public static void logEnvironmentInfo(Logger log,String componentName,String[] commandLineArgs){
+  if (log.isInfoEnabled()) {
+    RevisionInformation rev=getRevisionInformation();
+    String version=getVersion();
+    String user=getUserRunning();
+    String jvmVersion=getJvmVersion();
+    String[] options=getJvmStartupOptionsArray();
+    String javaHome=System.getenv("JAVA_HOME");
+    long maxHeapMegabytes=getMaxJvmHeapMemory() >>> 20;
+    log.info("--------------------------------------------------------------------------------");
+    log.info(" Starting " + componentName + " (Version: "+ version+ ", "+ "Rev:"+ rev.commitId+ ", "+ "Date:"+ rev.commitDate+ ")");
+    log.info(" Current user: " + user);
+    log.info(" JVM: " + jvmVersion);
+    log.info(" Maximum heap size: " + maxHeapMegabytes + " MiBytes");
+    log.info(" JAVA_HOME: " + (javaHome == null ? "(not set)" : javaHome));
+    if (options.length == 0) {
+      log.info(" JVM Options: (none)");
+    }
+ else {
+      log.info(" JVM Options:");
+      for (      String s : options) {
+        log.info("    " + s);
+      }
+    }
+    if (commandLineArgs == null || commandLineArgs.length == 0) {
+      log.info(" Program Arguments: (none)");
+    }
+ else {
+      log.info(" Program Arguments:");
+      for (      String s : commandLineArgs) {
+        log.info("    " + s);
+      }
+    }
+    log.info(" Classpath: " + System.getProperty("java.class.path"));
+    log.info("--------------------------------------------------------------------------------");
+  }
+}

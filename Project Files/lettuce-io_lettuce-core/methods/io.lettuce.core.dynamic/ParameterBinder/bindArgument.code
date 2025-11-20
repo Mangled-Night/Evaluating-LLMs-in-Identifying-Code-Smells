@@ -1,0 +1,69 @@
+@SuppressWarnings("unchecked") private static <K,V>void bindArgument(CommandArgs<K,V> args,Object argument){
+  if (argument instanceof byte[]) {
+    args.add((byte[])argument);
+    return;
+  }
+  if (argument instanceof String) {
+    args.add((String)argument);
+    return;
+  }
+  if (argument instanceof Double) {
+    args.add(((Double)argument));
+    return;
+  }
+ else   if (argument instanceof Number) {
+    args.add(((Number)argument).longValue());
+    return;
+  }
+  if (argument instanceof ProtocolKeyword) {
+    args.add((ProtocolKeyword)argument);
+    return;
+  }
+  if (argument instanceof Map) {
+    args.add((Map<K,V>)argument);
+    return;
+  }
+  if (argument instanceof ScoredValue) {
+    ScoredValue<V> scoredValue=(ScoredValue<V>)argument;
+    V value=scoredValue.getValueOrElseThrow(() -> new IllegalArgumentException("Cannot bind empty ScoredValue to a Redis command."));
+    args.add(scoredValue.getScore());
+    args.addValue(value);
+    return;
+  }
+  if (argument instanceof KeyValue) {
+    KeyValue<K,V> keyValue=(KeyValue<K,V>)argument;
+    V value=keyValue.getValueOrElseThrow(() -> new IllegalArgumentException("Cannot bind empty KeyValue to a Redis command."));
+    args.addKey(keyValue.getKey());
+    args.addValue(value);
+    return;
+  }
+  if (argument instanceof Value) {
+    Value<V> valueWrapper=(Value<V>)argument;
+    V value=valueWrapper.getValueOrElseThrow(() -> new IllegalArgumentException("Cannot bind empty Value to a Redis command."));
+    args.addValue(value);
+    return;
+  }
+  if (argument instanceof Limit) {
+    Limit limit=(Limit)argument;
+    args.add(LIMIT);
+    args.add(limit.getOffset());
+    args.add(limit.getCount());
+    return;
+  }
+  if (argument instanceof Range) {
+    Range<? extends Number> range=(Range<? extends Number>)argument;
+    bindNumericRange(args,range);
+    return;
+  }
+  if (argument instanceof GeoCoordinates) {
+    GeoCoordinates coordinates=(GeoCoordinates)argument;
+    args.add(coordinates.getX().doubleValue());
+    args.add(coordinates.getY().doubleValue());
+    return;
+  }
+  if (argument instanceof CompositeArgument) {
+    ((CompositeArgument)argument).build(args);
+    return;
+  }
+  throw new IllegalArgumentException("Cannot bind unsupported command argument " + args);
+}

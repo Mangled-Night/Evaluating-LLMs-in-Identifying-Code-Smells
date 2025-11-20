@@ -1,0 +1,49 @@
+public void deserializeOnto(MutableComponentContainer entity,EntityData.PackedEntity entityData){
+  deserializeOnto(entity,entityData,FieldSerializeCheck.NullCheck.<Component>newInstance());
+}
+public void deserializeOnto(MutableComponentContainer entity,EntityData.PackedEntity entityData,FieldSerializeCheck<Component> fieldCheck){
+  int fieldPos=0;
+  for (int componentIndex=0; componentIndex < entityData.getComponentIdCount(); ++componentIndex) {
+    Integer componentId=entityData.getComponentId(componentIndex);
+    Class<? extends Component> componentClass=idTable.inverse().get(componentId);
+    ComponentMetadata<?> metadata=componentLibrary.getMetadata(componentClass);
+    if (metadata == null) {
+      logger.warn("Skipping unknown component {}",componentId);
+      fieldPos+=UnsignedBytes.toInt(entityData.getComponentFieldCounts().byteAt(componentIndex));
+      continue;
+    }
+    if (!componentSerializeCheck.serialize(metadata)) {
+      fieldPos+=UnsignedBytes.toInt(entityData.getComponentFieldCounts().byteAt(componentIndex));
+      continue;
+    }
+    Component component=entity.getComponent(metadata.getType());
+    boolean createdNewComponent=false;
+    if (component == null) {
+      createdNewComponent=true;
+      component=metadata.newInstance();
+    }
+    Serializer serializer=typeHandlerLibrary.getSerializerFor(metadata);
+    for (int fieldIndex=0; fieldIndex < UnsignedBytes.toInt(entityData.getComponentFieldCounts().byteAt(componentIndex)); ++fieldIndex) {
+      byte fieldId=entityData.getFieldIds().byteAt(fieldPos);
+      ReplicatedFieldMetadata fieldMetadata=metadata.getField(fieldId);
+      if (fieldMetadata != null && fieldCheck.shouldDeserialize(metadata,fieldMetadata)) {
+        logger.trace("Deserializing field {} of component {} as value {}",fieldMetadata,metadata,entityData.getFieldValue(fieldPos));
+        serializer.deserializeOnto(component,fieldMetadata,new ProtobufPersistedData(entityData.getFieldValue(fieldPos)));
+      }
+      fieldPos++;
+    }
+    if (createdNewComponent) {
+      entity.addComponent(component);
+    }
+ else {
+      entity.saveComponent(component);
+    }
+  }
+  for (  int componentId : entityData.getRemovedComponentList()) {
+    Class<? extends Component> componentClass=idTable.inverse().get(componentId);
+    ComponentMetadata<?> metadata=componentLibrary.getMetadata(componentClass);
+    if (componentSerializeCheck.serialize(metadata)) {
+      entity.removeComponent(metadata.getType());
+    }
+  }
+}

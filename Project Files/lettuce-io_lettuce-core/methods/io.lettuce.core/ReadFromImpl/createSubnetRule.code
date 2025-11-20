@@ -1,0 +1,15 @@
+SubnetRule createSubnetRule(String cidrNotation){
+  String[] parts=cidrNotation.split("/");
+  LettuceAssert.isTrue(parts.length == 2,"CIDR notation must have exact one '/'");
+  String ipAddress=parts[0];
+  int cidrPrefix=Integer.parseInt(parts[1]);
+  if (NetUtil.isValidIpV4Address(ipAddress)) {
+    return new Ipv4SubnetRule(ipAddress,cidrPrefix,ipv4AddressCache);
+  }
+ else   if (NetUtil.isValidIpV6Address(ipAddress)) {
+    return new Ipv6SubnetRule(ipAddress,cidrPrefix,ipv6AddressCache);
+  }
+ else {
+    throw new IllegalArgumentException("Invalid CIDR notation " + cidrNotation);
+  }
+}

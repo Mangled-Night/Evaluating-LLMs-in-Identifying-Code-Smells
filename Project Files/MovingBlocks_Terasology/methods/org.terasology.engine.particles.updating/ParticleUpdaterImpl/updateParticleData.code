@@ -1,0 +1,16 @@
+/** 
+ * Updates the particle data inside the particle pool, referenced by the specified particle emitter. During a single update cycle, each pool is only updated once. In case multiple particle emitters are referencing it, it is only updated the first time it's encountered. The update involves updating the trajectory and life time (optionally dependent on collisions)
+ * @param particleSystem the particle system referencing the pool to update
+ * @param delta delta time
+ */
+private void updateParticleData(final ParticleEmitterComponent particleSystem,float delta){
+  if (!updatedParticlePools.contains(particleSystem.particlePool)) {
+    updateParticles(particleSystem,delta);
+    if (particleSystem.particleCollision) {
+      checkCollision(particleSystem.particlePool,particleSystem.collisionUpdateIteration);
+      particleSystem.collisionUpdateIteration=(particleSystem.collisionUpdateIteration + 1) % PHYSICS_SKIP_NR;
+    }
+    particleSystem.particlePool.prepareRendering();
+    updatedParticlePools.add(particleSystem.particlePool);
+  }
+}

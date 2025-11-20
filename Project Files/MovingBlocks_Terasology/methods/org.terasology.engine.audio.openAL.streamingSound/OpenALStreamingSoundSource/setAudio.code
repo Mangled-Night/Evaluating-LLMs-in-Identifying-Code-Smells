@@ -1,0 +1,19 @@
+@Override public OpenALStreamingSoundSource setAudio(OpenALStreamingSound sound){
+  boolean isPlaying=this.isPlaying();
+  if (isPlaying) {
+    alSourceStop(getSourceId());
+    alSourceRewind(getSourceId());
+  }
+  alSourcei(this.getSourceId(),AL_BUFFER,0);
+  this.audio=sound;
+  sound.reset();
+  int[] buffers=sound.getBuffers();
+  for (  int buffer : buffers) {
+    sound.updateBuffer(buffer);
+  }
+  alSourceQueueBuffers(this.getSourceId(),(IntBuffer)BufferUtils.createIntBuffer(buffers.length).put(buffers).flip());
+  if (isPlaying) {
+    this.play();
+  }
+  return this;
+}

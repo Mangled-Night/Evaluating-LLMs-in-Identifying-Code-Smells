@@ -1,0 +1,17 @@
+/** 
+ * The SOCKS5 proxy should use a free port above the one configured.
+ * @throws Exception should not happen
+ */
+@Test public void shouldUseFreePortOnNegativeValues() throws Exception {
+  Socks5Proxy proxy=new Socks5Proxy();
+  assertFalse(proxy.isRunning());
+  try (ServerSocket serverSocket=new ServerSocket(0)){
+    proxy.setLocalSocks5ProxyPort(-serverSocket.getLocalPort());
+    proxy.start();
+    assertTrue(proxy.isRunning());
+    assertTrue(proxy.getPort() > serverSocket.getLocalPort());
+  }
+  finally {
+    proxy.stop();
+  }
+}

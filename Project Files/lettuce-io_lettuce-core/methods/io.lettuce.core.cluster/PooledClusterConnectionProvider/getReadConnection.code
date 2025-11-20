@@ -1,0 +1,86 @@
+private CompletableFuture<StatefulRedisConnection<K,V>> getReadConnection(int slot){
+  CompletableFuture<StatefulRedisConnection<K,V>> readerCandidates[];
+  boolean cached=true;
+synchronized (stateLock) {
+    readerCandidates=readers[slot];
+  }
+  if (readerCandidates == null) {
+    RedisClusterNode master=partitions.getMasterBySlot(slot);
+    if (master == null) {
+      clusterEventListener.onUncoveredSlot(slot);
+      return Futures.failed(new PartitionSelectorException(String.format("Cannot determine a partition to read for slot %d.",slot),partitions.clone()));
+    }
+    List<RedisNodeDescription> candidates=getReadCandidates(master);
+    List<RedisNodeDescription> selection=readFrom.select(new ReadFrom.Nodes(){
+      @Override public List<RedisNodeDescription> getNodes(){
+        return candidates;
+      }
+      @Override public Iterator<RedisNodeDescription> iterator(){
+        return candidates.iterator();
+      }
+    }
+);
+    if (selection.isEmpty()) {
+      clusterEventListener.onUncoveredSlot(slot);
+      return Futures.failed(new PartitionSelectorException(String.format("Cannot determine a partition to read for slot %d with setting %s.",slot,readFrom),partitions.clone()));
+    }
+    readerCandidates=getReadFromConnections(selection);
+    cached=false;
+  }
+  CompletableFuture<StatefulRedisConnection<K,V>> selectedReaderCandidates[]=readerCandidates;
+  if (cached) {
+    return CompletableFuture.allOf(readerCandidates).thenCompose(v -> {
+      boolean orderSensitive=isOrderSensitive(selectedReaderCandidates);
+      if (!orderSensitive) {
+        CompletableFuture<StatefulRedisConnection<K,V>> candidate=findRandomActiveConnection(selectedReaderCandidates,Function.identity());
+        if (candidate != null) {
+          return candidate;
+        }
+      }
+      for (      CompletableFuture<StatefulRedisConnection<K,V>> candidate : selectedReaderCandidates) {
+        if (candidate.join().isOpen()) {
+          return candidate;
+        }
+      }
+      return selectedReaderCandidates[0];
+    }
+);
+  }
+  CompletableFuture<StatefulRedisConnection<K,V>[]> filteredReaderCandidates=new CompletableFuture<>();
+  CompletableFuture.allOf(readerCandidates).thenApply(v -> selectedReaderCandidates).whenComplete((candidates,throwable) -> {
+    if (throwable == null) {
+      filteredReaderCandidates.complete(getConnections(candidates));
+      return;
+    }
+    StatefulRedisConnection<K,V>[] connections=getConnections(selectedReaderCandidates);
+    if (connections.length == 0) {
+      filteredReaderCandidates.completeExceptionally(throwable);
+      return;
+    }
+    filteredReaderCandidates.complete(connections);
+  }
+);
+  return filteredReaderCandidates.thenApply(statefulRedisConnections -> {
+    boolean orderSensitive=isOrderSensitive(statefulRedisConnections);
+    CompletableFuture<StatefulRedisConnection<K,V>> toCache[]=new CompletableFuture[statefulRedisConnections.length];
+    for (int i=0; i < toCache.length; i++) {
+      toCache[i]=CompletableFuture.completedFuture(statefulRedisConnections[i]);
+    }
+synchronized (stateLock) {
+      readers[slot]=toCache;
+    }
+    if (!orderSensitive) {
+      StatefulRedisConnection<K,V> candidate=findRandomActiveConnection(selectedReaderCandidates,CompletableFuture::join);
+      if (candidate != null) {
+        return candidate;
+      }
+    }
+    for (    StatefulRedisConnection<K,V> candidate : statefulRedisConnections) {
+      if (candidate.isOpen()) {
+        return candidate;
+      }
+    }
+    return statefulRedisConnections[0];
+  }
+);
+}

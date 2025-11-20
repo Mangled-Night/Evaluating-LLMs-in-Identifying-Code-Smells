@@ -1,0 +1,26 @@
+@Override public void run(){
+  boolean isExist=false;
+  try {
+    Collection<Participant> participants=latch.getParticipants();
+    for (    Participant participant : participants) {
+      if (myId.equals(participant.getId())) {
+        isExist=true;
+        break;
+      }
+    }
+    if (!isExist) {
+      LOGGER.info(myId + " current does not exist on zk");
+      latch.close();
+      latch=new LeaderLatch(client,latchPath,myId);
+      latch.start();
+      LOGGER.info(myId + " success reset leaderLatch @ " + latchPath);
+    }
+    Participant leader=latch.getLeader();
+    boolean hashLeaderShip=myId.equals(leader.getId());
+    judgeIsLeader(hashLeaderShip);
+  }
+ catch (  Exception e) {
+    judgeIsLeader(false);
+    e.printStackTrace();
+  }
+}

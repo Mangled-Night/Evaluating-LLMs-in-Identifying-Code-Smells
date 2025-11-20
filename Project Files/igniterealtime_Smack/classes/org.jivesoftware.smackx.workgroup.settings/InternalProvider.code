@@ -1,0 +1,176 @@
+/** 
+ * Stanza extension provider for AgentStatusRequest packets.
+ */
+public static class InternalProvider extends IqProvider<ChatSettings> {
+  @Override public ChatSettings parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    if (parser.getEventType() != XmlPullParser.Event.START_ELEMENT) {
+      throw new IllegalStateException("Parser not in proper position, or bad XML.");
+    }
+    ChatSettings chatSettings=new ChatSettings();
+    boolean done=false;
+    while (!done) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT && "chat-setting".equals(parser.getName())) {
+        chatSettings.addSetting(parseChatSetting(parser));
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT && ELEMENT_NAME.equals(parser.getName())) {
+        done=true;
+      }
+    }
+    return chatSettings;
+  }
+  private static ChatSetting parseChatSetting(  XmlPullParser parser) throws XmlPullParserException, IOException {
+    boolean done=false;
+    String key=null;
+    String value=null;
+    int type=0;
+    while (!done) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT && "key".equals(parser.getName())) {
+        key=parser.nextText();
+      }
+ else       if (eventType == XmlPullParser.Event.START_ELEMENT && "value".equals(parser.getName())) {
+        value=parser.nextText();
+      }
+ else       if (eventType == XmlPullParser.Event.START_ELEMENT && "type".equals(parser.getName())) {
+        type=Integer.parseInt(parser.nextText());
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT && "chat-setting".equals(parser.getName())) {
+        done=true;
+      }
+    }
+    return new ChatSetting(key,value,type);
+  }
+}
+/** 
+ * Stanza extension provider for SoundSetting Packets.
+ */
+public static class InternalProvider extends IqProvider<GenericSettings> {
+  @Override public GenericSettings parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    GenericSettings setting=new GenericSettings();
+    boolean done=false;
+    while (!done) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT && "entry".equals(parser.getName())) {
+        eventType=parser.next();
+        String name=parser.nextText();
+        eventType=parser.next();
+        String value=parser.nextText();
+        setting.getMap().put(name,value);
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT && ELEMENT_NAME.equals(parser.getName())) {
+        done=true;
+      }
+    }
+    return setting;
+  }
+}
+/** 
+ * Stanza extension provider for AgentStatusRequest packets.
+ */
+public static class InternalProvider extends IqProvider<OfflineSettings> {
+  @Override public OfflineSettings parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    OfflineSettings offlineSettings=new OfflineSettings();
+    boolean done=false;
+    String redirectPage=null;
+    String subject=null;
+    String offlineText=null;
+    String emailAddress=null;
+    while (!done) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT && "redirectPage".equals(parser.getName())) {
+        redirectPage=parser.nextText();
+      }
+ else       if (eventType == XmlPullParser.Event.START_ELEMENT && "subject".equals(parser.getName())) {
+        subject=parser.nextText();
+      }
+ else       if (eventType == XmlPullParser.Event.START_ELEMENT && "offlineText".equals(parser.getName())) {
+        offlineText=parser.nextText();
+      }
+ else       if (eventType == XmlPullParser.Event.START_ELEMENT && "emailAddress".equals(parser.getName())) {
+        emailAddress=parser.nextText();
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT && "offline-settings".equals(parser.getName())) {
+        done=true;
+      }
+    }
+    offlineSettings.setEmailAddress(emailAddress);
+    offlineSettings.setRedirectURL(redirectPage);
+    offlineSettings.setSubject(subject);
+    offlineSettings.setOfflineText(offlineText);
+    return offlineSettings;
+  }
+}
+/** 
+ * Stanza extension provider for AgentStatusRequest packets.
+ */
+public static class InternalProvider extends IqProvider<SearchSettings> {
+  @Override public SearchSettings parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    SearchSettings settings=new SearchSettings();
+    boolean done=false;
+    String kb=null;
+    String forums=null;
+    while (!done) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT && "forums".equals(parser.getName())) {
+        forums=parser.nextText();
+      }
+ else       if ((eventType == XmlPullParser.Event.START_ELEMENT) && "kb".equals(parser.getName())) {
+        kb=parser.nextText();
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT && "search-settings".equals(parser.getName())) {
+        done=true;
+      }
+    }
+    settings.setForumsLocation(forums);
+    settings.setKbLocation(kb);
+    return settings;
+  }
+}
+/** 
+ * Stanza extension provider for SoundSetting Packets.
+ */
+public static class InternalProvider extends IqProvider<SoundSettings> {
+  @Override public SoundSettings parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    SoundSettings soundSettings=new SoundSettings();
+    boolean done=false;
+    while (!done) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT && "outgoingSound".equals(parser.getName())) {
+        soundSettings.setOutgoingSound(parser.nextText());
+      }
+ else       if ((eventType == XmlPullParser.Event.START_ELEMENT) && "incomingSound".equals(parser.getName())) {
+        soundSettings.setIncomingSound(parser.nextText());
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT && "sound-settings".equals(parser.getName())) {
+        done=true;
+      }
+    }
+    return soundSettings;
+  }
+}
+/** 
+ * Stanza extension provider for SoundSetting Packets.
+ */
+public static class InternalProvider extends IqProvider<WorkgroupProperties> {
+  @Override public WorkgroupProperties parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    WorkgroupProperties props=new WorkgroupProperties();
+    boolean done=false;
+    while (!done) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT && "authRequired".equals(parser.getName())) {
+        props.setAuthRequired(Boolean.valueOf(parser.nextText()).booleanValue());
+      }
+ else       if (eventType == XmlPullParser.Event.START_ELEMENT && "email".equals(parser.getName())) {
+        props.setEmail(parser.nextText());
+      }
+ else       if (eventType == XmlPullParser.Event.START_ELEMENT && "name".equals(parser.getName())) {
+        props.setFullName(parser.nextText());
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT && "workgroup-properties".equals(parser.getName())) {
+        done=true;
+      }
+    }
+    return props;
+  }
+}

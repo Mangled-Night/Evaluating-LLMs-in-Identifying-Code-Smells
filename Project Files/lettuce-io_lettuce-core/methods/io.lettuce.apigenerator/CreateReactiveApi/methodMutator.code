@@ -1,0 +1,14 @@
+protected Consumer<MethodDeclaration> methodMutator(){
+  return method -> {
+    if (isStreamingChannelMethod(method)) {
+      if (!method.getAnnotationByClass(Deprecated.class).isPresent()) {
+        method.addAnnotation(new MarkerAnnotationExpr("Deprecated"));
+      }
+    }
+    if (method.getNameAsString().equals("dispatch")) {
+      Parameter output=method.getParameterByName("output").get();
+      output.setType("CommandOutput<K, V, ?>");
+    }
+  }
+;
+}

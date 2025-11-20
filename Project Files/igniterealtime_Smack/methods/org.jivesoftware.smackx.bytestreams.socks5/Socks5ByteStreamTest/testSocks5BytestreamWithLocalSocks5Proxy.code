@@ -1,0 +1,42 @@
+/** 
+ * Socks5 bytestream should be successfully established using the local Socks5 proxy.
+ * @throws Exception should not happen
+ */
+public void testSocks5BytestreamWithLocalSocks5Proxy() throws Exception {
+  SmackConfiguration.setLocalSocks5ProxyEnabled(true);
+  SmackConfiguration.setLocalSocks5ProxyPort(7778);
+  Socks5Proxy socks5Proxy=Socks5Proxy.getSocks5Proxy();
+  socks5Proxy.start();
+  assertTrue(socks5Proxy.isRunning());
+  XMPPConnection initiatorConnection=getConnection(0);
+  XMPPConnection targetConnection=getConnection(1);
+  final byte[] data=new byte[]{1,2,3};
+  final SynchronousQueue<byte[]> queue=new SynchronousQueue<byte[]>();
+  Socks5BytestreamManager targetByteStreamManager=Socks5BytestreamManager.getBytestreamManager(targetConnection);
+  Socks5BytestreamListener incomingByteStreamListener=new Socks5BytestreamListener(){
+    public void incomingBytestreamRequest(    Socks5BytestreamRequest request){
+      InputStream inputStream;
+      try {
+        Socks5BytestreamSession session=request.accept();
+        inputStream=session.getInputStream();
+        byte[] receivedData=new byte[3];
+        inputStream.read(receivedData);
+        queue.put(receivedData);
+      }
+ catch (      Exception e) {
+        fail(e.getMessage());
+      }
+    }
+  }
+;
+  targetByteStreamManager.addIncomingBytestreamListener(incomingByteStreamListener);
+  Socks5BytestreamManager initiatorByteStreamManager=Socks5BytestreamManager.getBytestreamManager(initiatorConnection);
+  Socks5BytestreamSession session=initiatorByteStreamManager.establishSession(targetConnection.getUser());
+  OutputStream outputStream=session.getOutputStream();
+  assertTrue(session.isDirect());
+  outputStream.write(data);
+  outputStream.flush();
+  outputStream.close();
+  assertEquals("received data not equal to sent data",data,queue.take());
+  SmackConfiguration.setLocalSocks5ProxyPort(7777);
+}

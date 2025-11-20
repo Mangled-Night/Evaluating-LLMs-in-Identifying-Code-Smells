@@ -1,0 +1,14 @@
+@ApiOperation(value="新增类目") @RequiresPermissions("cms:category:create") @RequestMapping(value="/create",method=RequestMethod.GET) public String create(){
+  return "/manage/category/create.jsp";
+}
+@ApiOperation(value="新增类目") @RequiresPermissions("cms:category:create") @RequestMapping(value="/create",method=RequestMethod.POST) @ResponseBody public Object create(CmsCategory cmsCategory){
+  ComplexResult result=FluentValidator.checkAll().on(cmsCategory.getName(),new LengthValidator(1,20,"名称")).doValidate().result(ResultCollectors.toComplex());
+  if (!result.isSuccess()) {
+    return new CmsResult(CmsResultConstant.INVALID_LENGTH,result.getErrors());
+  }
+  long time=System.currentTimeMillis();
+  cmsCategory.setCtime(time);
+  cmsCategory.setOrders(time);
+  int count=cmsCategoryService.insertSelective(cmsCategory);
+  return new CmsResult(CmsResultConstant.SUCCESS,count);
+}

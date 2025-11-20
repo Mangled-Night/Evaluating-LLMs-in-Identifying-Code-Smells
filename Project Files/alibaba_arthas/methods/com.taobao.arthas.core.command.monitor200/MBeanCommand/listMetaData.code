@@ -1,0 +1,19 @@
+private void listMetaData(CommandProcess process){
+  Set<ObjectName> objectNames=queryObjectNames();
+  MBeanServer mBeanServer=ManagementFactory.getPlatformMBeanServer();
+  try {
+    MBeanModel mbeanModel=new MBeanModel();
+    Map<String,MBeanInfo> mbeanMetaData=new LinkedHashMap<String,MBeanInfo>();
+    mbeanModel.setMbeanMetadata(mbeanMetaData);
+    for (    ObjectName objectName : objectNames) {
+      MBeanInfo mBeanInfo=mBeanServer.getMBeanInfo(objectName);
+      mbeanMetaData.put(objectName.toString(),mBeanInfo);
+    }
+    process.appendResult(mbeanModel);
+    process.end();
+  }
+ catch (  Throwable e) {
+    logger.warn("listMetaData error",e);
+    process.end(1,"list mbean metadata error");
+  }
+}

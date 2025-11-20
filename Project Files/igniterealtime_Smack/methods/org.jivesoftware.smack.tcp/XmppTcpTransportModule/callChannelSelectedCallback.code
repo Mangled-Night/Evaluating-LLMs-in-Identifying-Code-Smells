@@ -1,0 +1,21 @@
+private void callChannelSelectedCallback(boolean setPendingInputFilterData,boolean setPendingOutputFilterData){
+  final SocketChannel channel=socketChannel;
+  final SelectionKey key=selectionKey;
+  if (channel == null || key == null) {
+    LOGGER.info("Not calling channel selected callback because the connection was eventually disconnected");
+    return;
+  }
+  channelSelectedCallbackLock.lock();
+  try {
+    if (setPendingInputFilterData) {
+      pendingInputFilterData=true;
+    }
+    if (setPendingOutputFilterData) {
+      pendingOutputFilterData=true;
+    }
+    onChannelSelected(channel,key);
+  }
+  finally {
+    channelSelectedCallbackLock.unlock();
+  }
+}

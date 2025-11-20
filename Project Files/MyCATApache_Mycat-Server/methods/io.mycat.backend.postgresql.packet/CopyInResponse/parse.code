@@ -1,0 +1,19 @@
+public static CopyInResponse parse(ByteBuffer buffer,int offset){
+  if (buffer.get(offset) != PacketMarker.B_CopyInResponse.getValue()) {
+    throw new IllegalArgumentException("this packetData not is CopyInResponse");
+  }
+  int _offset=offset + 1;
+  CopyInResponse pack=new CopyInResponse();
+  pack.length=PIOUtils.redInteger4(buffer,_offset);
+  _offset+=4;
+  pack.protocol=DataProtocol.valueOf(PIOUtils.redInteger1(buffer,_offset));
+  _offset+=1;
+  pack.dataLength=PIOUtils.redInteger2(buffer,_offset);
+  _offset+=2;
+  pack.columnType=new DataProtocol[pack.dataLength];
+  for (int i=0; i < pack.columnType.length; i++) {
+    pack.columnType[i]=DataProtocol.valueOf(PIOUtils.redInteger2(buffer,_offset));
+    _offset+=2;
+  }
+  return pack;
+}

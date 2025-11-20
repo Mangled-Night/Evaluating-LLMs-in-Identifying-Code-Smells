@@ -1,0 +1,35 @@
+private static SmackTlsContext getSmackTlsContext(DnssecMode dnssecMode,SslContextFactory sslContextFactory,X509TrustManager trustManager,KeyManager[] keyManagers,SecureRandom secureRandom,String keystoreType,String keystorePath,CallbackHandler callbackHandler,String pkcs11Library) throws NoSuchAlgorithmException, CertificateException, IOException, KeyStoreException, NoSuchProviderException, UnrecoverableKeyException, KeyManagementException, UnsupportedCallbackException, NoSuchMethodException, SecurityException, ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+  final SSLContext context;
+  if (sslContextFactory != null) {
+    context=sslContextFactory.createSslContext();
+  }
+ else {
+    context=SSLContext.getInstance("TLS");
+  }
+  if (keyManagers == null) {
+    keyManagers=Builder.getKeyManagersFrom(keystoreType,keystorePath,callbackHandler,pkcs11Library);
+  }
+  SmackDaneVerifier daneVerifier=null;
+  if (dnssecMode == DnssecMode.needsDnssecAndDane) {
+    SmackDaneProvider daneProvider=DNSUtil.getDaneProvider();
+    if (daneProvider == null) {
+      throw new UnsupportedOperationException("DANE enabled but no SmackDaneProvider configured");
+    }
+    daneVerifier=daneProvider.newInstance();
+    if (daneVerifier == null) {
+      throw new IllegalStateException("DANE requested but DANE provider did not return a DANE verifier");
+    }
+    daneVerifier.init(context,keyManagers,trustManager,secureRandom);
+  }
+ else {
+    final TrustManager[] trustManagers;
+    if (trustManager != null) {
+      trustManagers=new TrustManager[]{trustManager};
+    }
+ else {
+      trustManagers=null;
+    }
+    context.init(keyManagers,trustManagers,secureRandom);
+  }
+  return new SmackTlsContext(context,daneVerifier);
+}

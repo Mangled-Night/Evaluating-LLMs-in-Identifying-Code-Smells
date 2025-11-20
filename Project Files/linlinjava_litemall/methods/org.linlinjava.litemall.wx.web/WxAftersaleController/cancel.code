@@ -1,0 +1,36 @@
+/** 
+ * 取消售后 如果管理员还没有审核，用户可以取消自己的售后申请
+ * @param userId   用户ID
+ * @param aftersale 用户售后信息
+ * @return 操作结果
+ */
+@PostMapping("cancel") public Object cancel(@LoginUser Integer userId,@RequestBody LitemallAftersale aftersale){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  Integer id=aftersale.getId();
+  if (id == null) {
+    return ResponseUtil.badArgument();
+  }
+  LitemallAftersale aftersaleOne=aftersaleService.findById(userId,id);
+  if (aftersaleOne == null) {
+    return ResponseUtil.badArgument();
+  }
+  Integer orderId=aftersaleOne.getOrderId();
+  LitemallOrder order=orderService.findById(userId,orderId);
+  if (!order.getUserId().equals(userId)) {
+    return ResponseUtil.badArgumentValue();
+  }
+  if (!OrderUtil.isConfirmStatus(order) && !OrderUtil.isAutoConfirmStatus(order)) {
+    return ResponseUtil.fail(WxResponseCode.AFTERSALE_UNALLOWED,"不支持售后");
+  }
+  Short afterStatus=order.getAftersaleStatus();
+  if (!afterStatus.equals(AftersaleConstant.STATUS_REQUEST)) {
+    return ResponseUtil.fail(WxResponseCode.AFTERSALE_INVALID_STATUS,"不能取消售后");
+  }
+  aftersale.setStatus(AftersaleConstant.STATUS_CANCEL);
+  aftersale.setUserId(userId);
+  aftersaleService.updateById(aftersale);
+  orderService.updateAftersaleStatus(orderId,AftersaleConstant.STATUS_CANCEL);
+  return ResponseUtil.ok();
+}

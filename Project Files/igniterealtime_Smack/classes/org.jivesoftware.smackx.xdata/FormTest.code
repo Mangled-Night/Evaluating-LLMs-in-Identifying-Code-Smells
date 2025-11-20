@@ -1,0 +1,68 @@
+/** 
+ * Tests the DataForms extensions.
+ * @author Gaston Dombiak
+ */
+public class FormTest extends AbstractSmackIntegrationTest {
+  public FormTest(  SmackIntegrationTestEnvironment environment){
+    super(environment);
+  }
+  /** 
+ * 1. Create a form to fill out and send it to the other user 2. Retrieve the form to fill out, complete it and return it to the requestor 3. Retrieve the completed form and check that everything is OK
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ */
+  @SuppressWarnings("deprecation") @SmackIntegrationTest public void testFilloutForm() throws NotConnectedException, InterruptedException {
+    DataForm.Builder formToSend=DataForm.builder(DataForm.Type.form);
+    formToSend.setInstructions("Fill out this form to report your case.\nThe case will be created automatically.");
+    formToSend.setTitle("Case configurations");
+    formToSend.setFormType("https://igniterealtime.org/projects/smack/sinttest/form-test/1");
+    FormField field=FormField.hiddenBuilder("hidden_var").setValue("Some value for the hidden variable").build();
+    formToSend.addField(field);
+    field=FormField.fixedBuilder().setValue("Section 1: Case description").build();
+    formToSend.addField(field);
+    field=FormField.textSingleBuilder("name").setLabel("Enter a name for the case").build();
+    formToSend.addField(field);
+    field=FormField.textMultiBuilder("description").setLabel("Enter a description").build();
+    formToSend.addField(field);
+    field=FormField.booleanBuilder("time").setLabel("Is this your first case?").build();
+    formToSend.addField(field);
+    field=FormField.textSingleBuilder("age").setLabel("How old are you?").build();
+    formToSend.addField(field);
+    org.jivesoftware.smack.chat.Chat chat=org.jivesoftware.smack.chat.ChatManager.getInstanceFor(conOne).createChat(conTwo.getUser(),null);
+    StanzaCollector collector=conOne.createStanzaCollector(new ThreadFilter(chat.getThreadID()));
+    StanzaCollector collector2=conTwo.createStanzaCollector(new ThreadFilter(chat.getThreadID()));
+    Message msg=StanzaBuilder.buildMessage().setBody("To enter a case please fill out this form and send it back to me").addExtension(formToSend.build()).build();
+    try {
+      chat.sendMessage(msg);
+      Message msg2=collector2.nextResult();
+      assertNotNull(msg2,"Message not found");
+      Form formToRespond=Form.from(msg2);
+      assertNotNull(formToRespond);
+      assertNotNull(formToRespond.getField("name"));
+      assertNotNull(formToRespond.getField("description"));
+      final FillableForm completedForm=formToRespond.getFillableForm();
+      assertNotNull(completedForm.getField("hidden_var"));
+      assertThrows(IllegalArgumentException.class,() -> completedForm.setAnswer("name",true));
+      completedForm.setAnswer("name","Credit card number invalid");
+      completedForm.setAnswer("description","The ATM says that my credit card number is invalid. What's going on?");
+      completedForm.setAnswer("time",true);
+      completedForm.setAnswer("age",20);
+      msg2=StanzaBuilder.buildMessage().to(conOne.getUser().asBareJid()).setThread(msg.getThread()).ofType(Message.Type.chat).setBody("To enter a case please fill out this form and send it back to me").addExtension(completedForm.getDataFormToSubmit()).build();
+      conTwo.sendStanza(msg2);
+      Message msg3=collector.nextResult();
+      assertNotNull(msg3,"Message not found");
+      final DataForm completedForm2=DataForm.from(msg3);
+      assertNotNull(completedForm2);
+      assertNotNull(completedForm2.getField("name"));
+      assertNotNull(completedForm2.getField("description"));
+      assertEquals(completedForm2.getField("name").getValues().get(0).toString(),"Credit card number invalid");
+      assertNotNull(completedForm2.getField("time"));
+      assertNotNull(completedForm2.getField("age"));
+      assertEquals("20",completedForm2.getField("age").getValues().get(0).toString(),"The age is bad");
+    }
+  finally {
+      collector.cancel();
+      collector2.cancel();
+    }
+  }
+}

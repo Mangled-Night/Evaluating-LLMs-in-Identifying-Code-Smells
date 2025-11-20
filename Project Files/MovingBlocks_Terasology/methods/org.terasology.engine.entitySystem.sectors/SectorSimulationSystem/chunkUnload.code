@@ -1,0 +1,15 @@
+/** 
+ * Handles the BeforeChunkUnload event for sector entities. Forwards the event to the appropriate sector-scope entities, if they are watching that chunk, and sends a {@link SectorEntityUnload} event if this chunk is the last chunk that the entity is watching.
+ * @param event the event sent when any chunk is about to be unloaded
+ * @param worldEntity ignored
+ */
+@ReceiveEvent(components=WorldComponent.class) public void chunkUnload(BeforeChunkUnload event,EntityRef worldEntity){
+  for (  EntityRef entity : entityManager.getEntitiesWith(SectorSimulationComponent.class)) {
+    if (SectorUtil.getWatchedChunks(entity).contains(event.getChunkPos())) {
+      entity.send(new BeforeChunkUnload(event.getChunkPos()));
+      if (SectorUtil.onlyWatchedChunk(entity,event.getChunkPos(),chunkProvider)) {
+        entity.send(new SectorEntityUnload());
+      }
+    }
+  }
+}

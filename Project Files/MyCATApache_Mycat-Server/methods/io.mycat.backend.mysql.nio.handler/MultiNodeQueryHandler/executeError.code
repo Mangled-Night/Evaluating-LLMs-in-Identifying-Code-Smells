@@ -1,0 +1,18 @@
+private void executeError(BackendConnection conn,ErrorPacket errPacket){
+  lock.lock();
+  try {
+    if (!isFail()) {
+      setFail(new String(errPacket.message));
+    }
+    if (conn != null) {
+      errConnections.add(conn);
+    }
+    if (--nodeCount == 0) {
+      errPacket.packetId=++packetId;
+      processFinishWork(errPacket.writeToBytes(),false,conn);
+    }
+  }
+  finally {
+    lock.unlock();
+  }
+}

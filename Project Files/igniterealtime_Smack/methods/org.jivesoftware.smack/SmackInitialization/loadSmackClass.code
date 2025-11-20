@@ -1,0 +1,37 @@
+private static void loadSmackClass(String className,boolean optional,ClassLoader classLoader) throws Exception {
+  Class<?> initClass;
+  try {
+    initClass=Class.forName(className,true,classLoader);
+  }
+ catch (  ClassNotFoundException cnfe) {
+    Level logLevel;
+    if (optional) {
+      logLevel=Level.FINE;
+    }
+ else {
+      logLevel=Level.WARNING;
+    }
+    LOGGER.log(logLevel,"A startup class '" + className + "' could not be loaded.");
+    if (!optional) {
+      throw cnfe;
+    }
+ else {
+      return;
+    }
+  }
+  if (SmackInitializer.class.isAssignableFrom(initClass)) {
+    SmackInitializer initializer=(SmackInitializer)initClass.getConstructor().newInstance();
+    List<Exception> exceptions=initializer.initialize();
+    if (exceptions == null || exceptions.size() == 0) {
+      LOGGER.log(Level.FINE,"Loaded SmackInitializer " + className);
+    }
+ else {
+      for (      Exception e : exceptions) {
+        LOGGER.log(Level.SEVERE,"Exception in loadSmackClass",e);
+      }
+    }
+  }
+ else {
+    LOGGER.log(Level.FINE,"Loaded " + className);
+  }
+}

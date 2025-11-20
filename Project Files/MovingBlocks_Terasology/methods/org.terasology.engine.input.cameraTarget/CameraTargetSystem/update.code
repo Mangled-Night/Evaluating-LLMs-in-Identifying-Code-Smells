@@ -1,0 +1,29 @@
+public void update(float delta){
+  boolean lostTarget=false;
+  updateTarget();
+  if (!target.exists()) {
+    targetBlockPos=null;
+    lostTarget=true;
+  }
+  HitResult hitInfo=physics.rayTrace(localPlayer.getViewPosition(new Vector3f()),localPlayer.getViewDirection(new Vector3f()),targetDistance,filter);
+  updateFocalDistance(hitInfo,delta);
+  Vector3i newBlockPos=null;
+  EntityRef newTarget=EntityRef.NULL;
+  if (hitInfo.isHit()) {
+    newTarget=hitInfo.getEntity();
+    hitPosition=hitInfo.getHitPoint();
+    hitNormal=hitInfo.getHitNormal();
+    if (hitInfo.isWorldHit()) {
+      newBlockPos=new Vector3i(hitInfo.getBlockPosition());
+    }
+  }
+  if (!Objects.equal(target,newTarget) || lostTarget) {
+    EntityRef oldTarget=target;
+    oldTarget.send(new CameraOutEvent());
+    newTarget.send(new CameraOverEvent());
+    localPlayer.getCharacterEntity().send(new CameraTargetChangedEvent(oldTarget,newTarget));
+    isBlock=!(isTargetAvailable() && !newTarget.hasComponent(BlockComponent.class));
+  }
+  target=newTarget;
+  targetBlockPos=newBlockPos;
+}

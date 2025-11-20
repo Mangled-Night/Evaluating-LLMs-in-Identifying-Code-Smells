@@ -1,0 +1,14 @@
+@Override public Map<Vector3ic,Block> setBlocks(Map<? extends Vector3ic,Block> blocks){
+  if (GameThread.isCurrentThread()) {
+    Map<Vector3ic,Block> oldBlocks=super.setBlocks(blocks);
+    for (    Vector3ic vec : oldBlocks.keySet()) {
+      if (oldBlocks.get(vec) != null) {
+        EntityRef blockEntity=getBlockEntityAt(vec);
+        final Set<Class<? extends Component>> retainComponents=Optional.ofNullable(blockEntity.getComponent(RetainComponentsComponent.class)).map(retainComponentsComponent -> retainComponentsComponent.components).orElse(Collections.emptySet());
+        updateBlockEntity(blockEntity,vec,oldBlocks.get(vec),blocks.get(vec),false,retainComponents);
+      }
+    }
+    return oldBlocks;
+  }
+  return null;
+}

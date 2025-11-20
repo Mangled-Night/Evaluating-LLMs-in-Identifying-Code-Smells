@@ -1,0 +1,51 @@
+/** 
+ * Updates the list of chunks around the player.
+ * @param force Forces the update
+ * @return True if the list was changed
+ */
+public boolean updateChunksInProximity(boolean force){
+  Vector3i newChunkPos=calcCamChunkOffset();
+  boolean chunksCurrentlyPending=false;
+  if (!newChunkPos.equals(chunkPos) || force || pendingChunks) {
+    Vector3ic viewingDistance=config.getRendering().getViewDistance().getChunkDistance();
+    BlockRegion viewRegion=new BlockRegion(newChunkPos).expand(new Vector3i(viewingDistance.x() / 2,viewingDistance.y() / 2,viewingDistance.z() / 2));
+    if (chunksInProximity.size() == 0 || force || pendingChunks) {
+      chunksInProximity.clear();
+      for (      Vector3ic chunkPosition : viewRegion) {
+        Chunk c=chunkProvider.getChunk(chunkPosition);
+        if (c != null && worldProvider.getLocalView(c.getPosition()) != null) {
+          chunksInProximity.add(c);
+        }
+ else {
+          chunksCurrentlyPending=true;
+        }
+      }
+    }
+ else {
+      BlockRegion oldRegion=new BlockRegion(chunkPos).expand(new Vector3i(viewingDistance.x() / 2,viewingDistance.y() / 2,viewingDistance.z() / 2));
+      for (      Vector3ic candidateForRemove : viewRegion) {
+        if (!oldRegion.contains(candidateForRemove)) {
+          Chunk c=chunkProvider.getChunk(candidateForRemove);
+          if (c != null) {
+            chunksInProximity.remove(c);
+            c.disposeMesh();
+          }
+        }
+      }
+      for (      Vector3ic chunkPosition : viewRegion) {
+        Chunk c=chunkProvider.getChunk(chunkPosition);
+        if (c != null && worldProvider.getLocalView(c.getPosition()) != null) {
+          chunksInProximity.add(c);
+        }
+ else {
+          chunksCurrentlyPending=true;
+        }
+      }
+    }
+    chunkPos.set(newChunkPos);
+    pendingChunks=chunksCurrentlyPending;
+    Collections.sort(chunksInProximity,new ChunkFrontToBackComparator());
+    return true;
+  }
+  return false;
+}

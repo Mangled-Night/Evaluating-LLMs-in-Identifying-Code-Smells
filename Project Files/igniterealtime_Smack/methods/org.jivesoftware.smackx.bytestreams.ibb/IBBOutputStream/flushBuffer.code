@@ -1,0 +1,17 @@
+private synchronized void flushBuffer() throws IOException {
+  if (bufferPointer == 0) {
+    return;
+  }
+  String enc=Base64.encodeToString(buffer,0,bufferPointer);
+  DataPacketExtension data=new DataPacketExtension(byteStreamRequest.getSessionID(),this.seq,enc);
+  try {
+    writeToXML(data);
+  }
+ catch (  InterruptedException|NotConnectedException e) {
+    IOException ioException=new IOException();
+    ioException.initCause(e);
+    throw ioException;
+  }
+  bufferPointer=0;
+  seq=seq.incrementedByOne();
+}

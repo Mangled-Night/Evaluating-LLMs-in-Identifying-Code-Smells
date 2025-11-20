@@ -1,0 +1,28 @@
+public static void handle(String stmt,ServerConnection c,int offset){
+  stmt=stmt.substring(offset).trim();
+  RouteResultset rrs=getRouteResultset(c,stmt);
+  if (rrs == null) {
+    return;
+  }
+  ByteBuffer buffer=c.allocate();
+  ResultSetHeaderPacket header=PacketUtil.getHeader(FIELD_COUNT);
+  byte packetId=header.packetId;
+  buffer=header.write(buffer,c,true);
+  for (  FieldPacket field : fields) {
+    field.packetId=++packetId;
+    buffer=field.write(buffer,c,true);
+  }
+  EOFPacket eof=new EOFPacket();
+  eof.packetId=++packetId;
+  buffer=eof.write(buffer,c,true);
+  RouteResultsetNode[] rrsn=rrs.getNodes();
+  for (  RouteResultsetNode node : rrsn) {
+    RowDataPacket row=getRow(node,c.getCharset());
+    row.packetId=++packetId;
+    buffer=row.write(buffer,c,true);
+  }
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

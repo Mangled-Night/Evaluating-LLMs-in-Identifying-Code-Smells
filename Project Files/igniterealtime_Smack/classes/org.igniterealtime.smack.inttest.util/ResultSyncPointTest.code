@@ -1,0 +1,35 @@
+public class ResultSyncPointTest {
+  @Test public void testResultSyncPoint() throws Exception {
+    final String result="Hip Hip Hurrary!!111!";
+    final CyclicBarrier barrier=new CyclicBarrier(2);
+    final ResultSyncPoint<String,Exception> rsp=new ResultSyncPoint<>();
+    Async.go(new Async.ThrowingRunnable(){
+      @Override public void runOrThrow() throws InterruptedException, BrokenBarrierException {
+        barrier.await();
+        rsp.signal(result);
+      }
+    }
+);
+    barrier.await();
+    String receivedResult=rsp.waitForResult(60 * 1000);
+    assertEquals(result,receivedResult);
+  }
+  @Test public void exceptionTestResultSyncPoint() throws Exception {
+    final CyclicBarrier barrier=new CyclicBarrier(2);
+    final ResultSyncPoint<String,TestException> rsp=new ResultSyncPoint<>();
+    Async.go(new Async.ThrowingRunnable(){
+      @Override public void runOrThrow() throws InterruptedException, BrokenBarrierException {
+        barrier.await();
+        rsp.signal(new TestException());
+      }
+    }
+);
+    barrier.await();
+    assertThrows(TestException.class,() -> rsp.waitForResult(60 * 1000));
+  }
+private static class TestException extends Exception {
+    /** 
+ */
+    private static final long serialVersionUID=1L;
+  }
+}

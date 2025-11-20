@@ -1,0 +1,41 @@
+/** 
+ * Returns the domain-rotated noise value at the given position. If generating noise with a clearly defined vertical direction, assign that to Y.  {@code noise(horz0, vert, horz1)}If generating noise to animate a 2D plane, use Y as your time variable.  {@code noise(horz0, time, horz1)}If generating 2D-only noise, use X and Z, with Y set to a constant value.  {@code noise(horz0, const, horz1)}Y should always be the "different" direction in whatever your use case is. The way the noise changes along Y is slightly different from its behavior in X/Z.
+ * @param posX Position on the x-axis (horizontal)
+ * @param posY Position on the y-axis (vertical, time, or fixed)
+ * @param posZ Position on the z-axis (horizontal)
+ * @return The noise value
+ */
+@Override public float noise(float posX,float posY,float posZ){
+  float xz=posX + posZ;
+  float s2=xz * -0.211324865405187f;
+  float yy=posY * 0.577350269189626f;
+  float rPosX=posX + (s2 + yy);
+  float rPosY=xz * -0.577350269189626f + yy;
+  float rPosZ=posZ + (s2 + yy);
+  int xInt=Math.floorMod(TeraMath.floorToInt(rPosX),permCount);
+  int yInt=Math.floorMod(TeraMath.floorToInt(rPosY),permCount);
+  int zInt=Math.floorMod(TeraMath.floorToInt(rPosZ),permCount);
+  float x=rPosX - TeraMath.fastFloor(rPosX);
+  float y=rPosY - TeraMath.fastFloor(rPosY);
+  float z=rPosZ - TeraMath.fastFloor(rPosZ);
+  float u=TeraMath.fadePerlin(x);
+  float v=TeraMath.fadePerlin(y);
+  float w=TeraMath.fadePerlin(z);
+  int a=noisePermutations[xInt] + yInt;
+  int aa=noisePermutations[a] + zInt;
+  int ab=noisePermutations[(a + 1)] + zInt;
+  int b=noisePermutations[(xInt + 1)] + yInt;
+  int ba=noisePermutations[b] + zInt;
+  int bb=noisePermutations[(b + 1)] + zInt;
+  float gradAA=grad(noisePermutations[aa],x,y,z);
+  float gradBA=grad(noisePermutations[ba],x - 1,y,z);
+  float gradAB=grad(noisePermutations[ab],x,y - 1,z);
+  float gradBB=grad(noisePermutations[bb],x - 1,y - 1,z);
+  float val1=TeraMath.lerp(TeraMath.lerp(gradAA,gradBA,u),TeraMath.lerp(gradAB,gradBB,u),v);
+  float gradAA1=grad(noisePermutations[(aa + 1)],x,y,z - 1);
+  float gradBA1=grad(noisePermutations[(ba + 1)],x - 1,y,z - 1);
+  float gradAB1=grad(noisePermutations[(ab + 1)],x,y - 1,z - 1);
+  float gradBB1=grad(noisePermutations[(bb + 1)],x - 1,y - 1,z - 1);
+  float val2=TeraMath.lerp(TeraMath.lerp(gradAA1,gradBA1,u),TeraMath.lerp(gradAB1,gradBB1,u),v);
+  return TeraMath.lerp(val1,val2,w);
+}

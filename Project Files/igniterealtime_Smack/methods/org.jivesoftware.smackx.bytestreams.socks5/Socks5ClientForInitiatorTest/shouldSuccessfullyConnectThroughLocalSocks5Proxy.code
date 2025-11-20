@@ -1,0 +1,43 @@
+/** 
+ * Initiator and target should successfully connect to the local SOCKS5 proxy.
+ * @throws Exception should not happen
+ */
+@Test public void shouldSuccessfullyConnectThroughLocalSocks5Proxy() throws Exception {
+  Protocol protocol=new Protocol();
+  XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+  Socks5Proxy socks5Proxy=new Socks5Proxy();
+  socks5Proxy.start();
+  try {
+    final byte[] data=new byte[]{1,2,3};
+    final String digest=Socks5Utils.createDigest(sessionID,initiatorJID,targetJID);
+    socks5Proxy.addTransfer(digest);
+    final StreamHost streamHost=new StreamHost(connection.getUser(),loopbackAddress,socks5Proxy.getPort());
+    Thread targetThread=new Thread(){
+      @Override public void run(){
+        try {
+          Socks5Client targetClient=new Socks5Client(streamHost,digest);
+          Socket socket=targetClient.getSocket(10000);
+          socket.getOutputStream().write(data);
+        }
+ catch (        Exception e) {
+          fail(e.getMessage());
+        }
+      }
+    }
+;
+    targetThread.start();
+    Thread.sleep(200);
+    Socks5ClientForInitiator socks5Client=new Socks5ClientForInitiator(streamHost,digest,connection,sessionID,targetJID);
+    Socket socket=socks5Client.getSocket(GET_SOCKET_TIMEOUT);
+    InputStream in=socket.getInputStream();
+    for (int i=0; i < data.length; i++) {
+      assertEquals(data[i],in.read());
+    }
+    targetThread.join();
+    protocol.verifyAll();
+    socks5Proxy.removeTransfer(digest);
+  }
+  finally {
+    socks5Proxy.stop();
+  }
+}

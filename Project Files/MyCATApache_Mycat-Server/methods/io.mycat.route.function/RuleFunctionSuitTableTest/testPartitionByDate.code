@@ -1,0 +1,29 @@
+@Test public void testPartitionByDate(){
+  PartitionByDate partition=new PartitionByDate();
+  partition.setDateFormat("yyyy-MM-dd");
+  partition.setsBeginDate("2014-01-01");
+  partition.setsEndDate("2014-01-31");
+  partition.setsPartionDay("10");
+  partition.init();
+  Assert.assertEquals(4,partition.getPartitionNum());
+  RuleConfig rule=new RuleConfig("col_date","partition-date");
+  rule.setRuleAlgorithm(partition);
+  TableConfig tableConf=new TableConfig("test","id",true,false,-1,"dn1,dn2,dn3",null,rule,true,null,false,null,null,null,false);
+  int suit1=partition.suitableFor(tableConf);
+  Assert.assertEquals(-1,suit1);
+  tableConf.getDataNodes().clear();
+  tableConf.getDataNodes().addAll(Arrays.asList("dn1","dn2","dn3","dn4"));
+  int suit2=partition.suitableFor(tableConf);
+  Assert.assertEquals(0,suit2);
+  tableConf.getDataNodes().clear();
+  tableConf.getDataNodes().addAll(Arrays.asList("dn1","dn2","dn3","dn4","dn5"));
+  int suit3=partition.suitableFor(tableConf);
+  Assert.assertEquals(1,suit3);
+  PartitionByDate partition1=new PartitionByDate();
+  partition.setDateFormat("yyyy-MM-dd");
+  partition.setsBeginDate("2014-01-01");
+  partition.setsPartionDay("10");
+  partition.init();
+  int suit4=partition1.suitableFor(tableConf);
+  Assert.assertEquals(0,suit4);
+}

@@ -1,0 +1,19 @@
+/** 
+ * This is a test to check if a LastActivity request for server uptime is answered and correct
+ */
+public void testServerUptime(){
+  TCPConnection conn0=getConnection(0);
+  LastActivity lastActivity=null;
+  try {
+    lastActivity=LastActivityManager.getLastActivity(conn0,getHost());
+  }
+ catch (  XMPPException e) {
+    if (e.getStanzaError().getCode() == 403) {
+      return;
+    }
+    e.printStackTrace();
+    fail("An error occurred requesting the Last Activity");
+  }
+  assertNotNull("No last activity packet",lastActivity);
+  assertTrue("The last activity idle time should be greater than 0 : " + lastActivity.getIdleTime(),lastActivity.getIdleTime() > 0);
+}

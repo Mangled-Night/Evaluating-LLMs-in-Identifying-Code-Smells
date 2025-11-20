@@ -1,0 +1,20 @@
+protected void tryErrorFinished(boolean allEnd){
+  if (allEnd && !session.closed()) {
+    if (coorXaStatus == TxState.TX_STARTED_STATE) {
+      LOGGER.info("{} found failure in xa ,so to rollback ,reason :{}",this,this.error);
+      session.rollback();
+      return;
+    }
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug(this.toString() + "error all end ,clear session resource ");
+    }
+    session.clearResources(session.getSource().isTxInterrupted());
+    ErrorPacket errPkg=new ErrorPacket();
+    errPkg.packetId=1;
+    errPkg.errno=ErrorCode.ER_UNKNOWN_ERROR;
+    errPkg.message=(this.error).getBytes();
+    session.setAutoCommitStatus();
+    cmdHandler.errorResponse(session,errPkg.writeToBytes(),this.nodeCount,this.faileCount.get());
+    session.getSource().clearTxInterrupt();
+  }
+}

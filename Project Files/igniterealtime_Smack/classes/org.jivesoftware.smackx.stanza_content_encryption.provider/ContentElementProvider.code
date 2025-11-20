@@ -1,0 +1,73 @@
+public class ContentElementProvider extends ExtensionElementProvider<ContentElement> {
+  @Override public ContentElement parse(  XmlPullParser parser,  int initialDepth,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, ParseException, SmackParsingException {
+    ContentElement.Builder builder=ContentElement.builder();
+    while (true) {
+      XmlPullParser.Event tag=parser.next();
+      if (tag == XmlPullParser.Event.START_ELEMENT) {
+        String name=parser.getName();
+switch (name) {
+case ToAffixElement.ELEMENT:
+          parseToAffix(parser,builder);
+        break;
+case FromAffixElement.ELEMENT:
+      parseFromAffix(parser,builder);
+    break;
+case TimestampAffixElement.ELEMENT:
+  parseTimestampAffix(parser,builder);
+break;
+case RandomPaddingAffixElement.ELEMENT:
+parseRPadAffix(parser,builder);
+break;
+case PayloadElement.ELEMENT:
+parsePayload(parser,xmlEnvironment,builder);
+break;
+default :
+parseCustomAffix(parser,xmlEnvironment,builder);
+break;
+}
+}
+ else if (tag == XmlPullParser.Event.END_ELEMENT) {
+if (parser.getDepth() == initialDepth) {
+break;
+}
+}
+}
+return builder.build();
+}
+private static void parseCustomAffix(XmlPullParser parser,XmlEnvironment outerXmlEnvironment,ContentElement.Builder builder) throws XmlPullParserException, IOException, SmackParsingException {
+String name=parser.getName();
+String namespace=parser.getNamespace();
+AffixElement element=(AffixElement)PacketParserUtils.parseExtensionElement(name,namespace,parser,outerXmlEnvironment);
+builder.addFurtherAffixElement(element);
+}
+private static void parsePayload(XmlPullParser parser,XmlEnvironment outerXmlEnvironment,ContentElement.Builder builder) throws IOException, XmlPullParserException, SmackParsingException {
+final int initialDepth=parser.getDepth();
+while (true) {
+XmlPullParser.Event tag=parser.next();
+if (tag == XmlPullParser.Event.START_ELEMENT) {
+String name=parser.getName();
+String namespace=parser.getNamespace();
+XmlElement element=PacketParserUtils.parseExtensionElement(name,namespace,parser,outerXmlEnvironment);
+builder.addPayloadItem(element);
+}
+if (tag == XmlPullParser.Event.END_ELEMENT && parser.getDepth() == initialDepth) {
+return;
+}
+}
+}
+private static void parseRPadAffix(XmlPullParser parser,ContentElement.Builder builder) throws IOException, XmlPullParserException {
+builder.setRandomPadding(parser.nextText());
+}
+private static void parseTimestampAffix(XmlPullParser parser,ContentElement.Builder builder) throws ParseException {
+Date timestamp=ParserUtils.getDateFromXep82String(parser.getAttributeValue("",TimestampAffixElement.ATTR_STAMP));
+builder.setTimestamp(timestamp);
+}
+private static void parseFromAffix(XmlPullParser parser,ContentElement.Builder builder) throws XmppStringprepException {
+String jidString=parser.getAttributeValue("",FromAffixElement.ATTR_JID);
+builder.setFrom(JidCreate.from(jidString));
+}
+private static void parseToAffix(XmlPullParser parser,ContentElement.Builder builder) throws XmppStringprepException {
+String jidString=parser.getAttributeValue("",ToAffixElement.ATTR_JID);
+builder.addTo(JidCreate.from(jidString));
+}
+}

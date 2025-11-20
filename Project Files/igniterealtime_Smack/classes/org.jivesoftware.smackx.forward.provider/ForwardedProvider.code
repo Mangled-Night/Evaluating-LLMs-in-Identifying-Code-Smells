@@ -1,0 +1,57 @@
+/** 
+ * This class implements the  {@link ExtensionElementProvider} to parseforwarded messages from a packet.  It will return a  {@link Forwarded} stanza extension.
+ * @author Georg Lukas
+ */
+public class ForwardedProvider extends ExtensionElementProvider<Forwarded<?>> {
+  public static final ForwardedProvider INSTANCE=new ForwardedProvider();
+  private static final Logger LOGGER=Logger.getLogger(ForwardedProvider.class.getName());
+  @Override public Forwarded<?> parse(  XmlPullParser parser,  int initialDepth,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException, ParseException {
+    DelayInformation di=null;
+    Stanza packet=null;
+    outerloop:     while (true) {
+      XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+        String name=parser.getName();
+      String namespace=parser.getNamespace();
+switch (name) {
+case DelayInformation.ELEMENT:
+      if (DelayInformation.NAMESPACE.equals(namespace)) {
+        di=DelayInformationProvider.INSTANCE.parse(parser,parser.getDepth(),null);
+      }
+ else {
+        LOGGER.warning("Namespace '" + namespace + "' does not match expected namespace '"+ DelayInformation.NAMESPACE+ "'");
+      }
+    break;
+case Message.ELEMENT:
+  packet=PacketParserUtils.parseMessage(parser);
+break;
+default :
+LOGGER.warning("Unsupported forwarded packet type: " + name);
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+if (packet == null) {
+throw new IOException("forwarded extension must contain a packet");
+}
+return new Forwarded<>(packet,di);
+}
+public static Forwarded<Message> parseForwardedMessage(XmlPullParser parser,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException, ParseException {
+return parseForwardedMessage(parser,parser.getDepth(),xmlEnvironment);
+}
+@SuppressWarnings("unchecked") public static Forwarded<Message> parseForwardedMessage(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException, ParseException {
+Forwarded<?> forwarded=INSTANCE.parse(parser,initialDepth,xmlEnvironment);
+if (!forwarded.isForwarded(Message.class)) {
+throw new SmackParsingException("Expecting a forwarded message, but got " + forwarded);
+}
+return (Forwarded<Message>)forwarded;
+}
+}

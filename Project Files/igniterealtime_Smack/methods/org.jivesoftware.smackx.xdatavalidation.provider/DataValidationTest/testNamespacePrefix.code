@@ -1,0 +1,11 @@
+@ParameterizedTest @EnumSource(SmackTestUtil.XmlPullParserKind.class) public void testNamespacePrefix(SmackTestUtil.XmlPullParserKind parserKind) throws Exception {
+  String formFieldUsingNamespacePrefix="<x xmlns='jabber:x:data'" + "   xmlns:xdv='http://jabber.org/protocol/xdata-validate'" + "   type='form'>"+ "  <title>Sample Form</title>"+ "  <instructions>"+ "    Please provide information for the following fields..."+ "  </instructions>"+ "  <field type='text-single' var='name' label='Event Name'/>"+ "  <field type='text-single' var='date/start' label='Starting Date'>"+ "    <xdv:validate datatype='xs:date'>"+ "      <basic/>"+ "    </xdv:validate>"+ "  </field>"+ "  <field type='text-single' var='date/end' label='Ending Date'>"+ "    <xdv:validate datatype='xs:date'>"+ "      <basic/>"+ "    </xdv:validate>"+ "  </field>"+ "</x>";
+  DataForm dataForm=SmackTestUtil.parse(formFieldUsingNamespacePrefix,DataFormProvider.class,parserKind);
+  assertEquals("Sample Form",dataForm.getTitle());
+  FormField nameField=dataForm.getField("name");
+  assertEquals("Event Name",nameField.getLabel());
+  FormField dataStartField=dataForm.getField("date/start");
+  ValidateElement dataStartValidateElement=ValidateElement.from(dataStartField);
+  assertEquals("xs:date",dataStartValidateElement.getDatatype());
+  assertTrue(dataStartValidateElement instanceof BasicValidateElement);
+}

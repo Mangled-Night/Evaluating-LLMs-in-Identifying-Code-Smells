@@ -1,0 +1,23 @@
+/** 
+ * Removes a url from the bookmarks.
+ * @param bookmarkURL the url of the bookmark to remove
+ * @throws XMPPErrorException thrown if there is an error retriving or saving bookmarks from or tothe server.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void removeBookmarkedURL(String bookmarkURL) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  retrieveBookmarks();
+  Iterator<BookmarkedURL> it=bookmarks.getBookmarkedURLS().iterator();
+  while (it.hasNext()) {
+    BookmarkedURL bookmark=it.next();
+    if (bookmark.getURL().equalsIgnoreCase(bookmarkURL)) {
+      if (bookmark.isShared()) {
+        throw new IllegalArgumentException("Cannot delete a shared bookmark.");
+      }
+      it.remove();
+      privateDataManager.setPrivateData(bookmarks);
+      return;
+    }
+  }
+}

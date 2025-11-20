@@ -1,0 +1,20 @@
+private Map<URI,Path> getDownloadUrls(Iterable<Module> modules){
+  Map<URI,Path> result=new HashMap<>();
+  for (  Module module : modules) {
+    ModuleMetadata metadata=module.getMetadata();
+    String version=metadata.getVersion().toString();
+    String id=metadata.getId().toString();
+    URI uri=null;
+    try {
+      uri=RemoteModuleExtension.getDownloadUrl(metadata).toURI();
+    }
+ catch (    URISyntaxException e) {
+      e.printStackTrace();
+    }
+    String fileName=String.format("%s-%s.jar",id,version);
+    Path folder=PathManager.getInstance().getHomeModPath().normalize();
+    Path target=folder.resolve(fileName);
+    result.put(uri,target);
+  }
+  return result;
+}

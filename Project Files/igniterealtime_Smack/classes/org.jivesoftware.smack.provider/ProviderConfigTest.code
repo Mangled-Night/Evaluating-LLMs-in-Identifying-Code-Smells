@@ -1,0 +1,28 @@
+public class ProviderConfigTest {
+  @Test public void addGenericLoaderProvider(){
+    ProviderManager.addLoader(new ProviderLoader(){
+      @Override public Collection<IQProviderInfo> getIQProviderInfo(){
+        ArrayList<IQProviderInfo> l=new ArrayList<IQProviderInfo>(1);
+        l.add(new IQProviderInfo("provider","test:provider",new TestIQProvider()));
+        return l;
+      }
+      @Override public Collection<ExtensionProviderInfo> getExtensionProviderInfo(){
+        return null;
+      }
+      @Override public Collection<StreamFeatureProviderInfo> getStreamFeatureProviderInfo(){
+        return null;
+      }
+    }
+);
+    Assert.assertNotNull(ProviderManager.getIQProvider("provider","test:provider"));
+  }
+  @Test public void addClasspathFileLoaderProvider() throws Exception {
+    ProviderManager.addLoader(new ProviderFileLoader(FileUtils.getStreamForClasspathFile("test.providers",null)));
+    Assert.assertNotNull(ProviderManager.getIQProvider("provider","test:file_provider"));
+  }
+public static class TestIQProvider extends IqProvider<IQ> {
+    @Override public IQ parse(    XmlPullParser parser,    int initialDepth,    IqData iqData,    XmlEnvironment xmlEnvironment){
+      return null;
+    }
+  }
+}

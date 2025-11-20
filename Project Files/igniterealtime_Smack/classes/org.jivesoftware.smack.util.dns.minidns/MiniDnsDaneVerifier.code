@@ -1,0 +1,21 @@
+public class MiniDnsDaneVerifier implements SmackDaneVerifier {
+  private static final DaneVerifier VERIFIER=new DaneVerifier();
+  private ExpectingTrustManager expectingTrustManager;
+  MiniDnsDaneVerifier(){
+  }
+  @Override public void init(  SSLContext context,  KeyManager[] km,  X509TrustManager tm,  SecureRandom random) throws KeyManagementException {
+    if (expectingTrustManager != null) {
+      throw new IllegalStateException("DaneProvider was initialized before. Use newInstance() instead.");
+    }
+    expectingTrustManager=new ExpectingTrustManager(tm);
+    context.init(km,new TrustManager[]{expectingTrustManager},random);
+  }
+  @Override public void finish(  SSLSession sslSession) throws CertificateException {
+    if (VERIFIER.verify(sslSession)) {
+      return;
+    }
+    if (expectingTrustManager.hasException()) {
+      throw expectingTrustManager.getException();
+    }
+  }
+}

@@ -1,0 +1,58 @@
+public abstract class ModularXmppClientToServerConnectionInternal {
+  private final SmackReactor reactor;
+  public final ModularXmppClientToServerConnection connection;
+  public final SmackDebugger smackDebugger;
+  public final Queue<TopLevelStreamElement> outgoingElementsQueue;
+  public ModularXmppClientToServerConnectionInternal(  ModularXmppClientToServerConnection connection,  SmackReactor reactor,  SmackDebugger smackDebugger,  Queue<TopLevelStreamElement> outgoingElementsQueue){
+    this.connection=connection;
+    this.reactor=reactor;
+    this.smackDebugger=smackDebugger;
+    this.outgoingElementsQueue=outgoingElementsQueue;
+  }
+  public SelectionKey registerWithSelector(  SelectableChannel channel,  int ops,  ChannelSelectedCallback callback) throws ClosedChannelException {
+    return reactor.registerWithSelector(channel,ops,callback);
+  }
+  public void setInterestOps(  SelectionKey selectionKey,  int interestOps){
+    reactor.setInterestOps(selectionKey,interestOps);
+  }
+  public final void withSmackDebugger(  Consumer<SmackDebugger> smackDebuggerConsumer){
+    if (smackDebugger == null) {
+      return;
+    }
+    smackDebuggerConsumer.accept(smackDebugger);
+  }
+  public abstract XmlEnvironment getOutgoingStreamXmlEnvironment();
+  public abstract void parseAndProcessElement(  String wrappedCompleteIncomingElement);
+  public abstract void notifyConnectionError(  Exception e);
+  public final String onStreamOpen(  String streamOpen){
+    XmlPullParser streamOpenParser;
+    try {
+      streamOpenParser=PacketParserUtils.getParserFor(streamOpen);
+    }
+ catch (    XmlPullParserException|IOException e) {
+      throw new AssertionError(e);
+    }
+    String streamClose=onStreamOpen(streamOpenParser);
+    return streamClose;
+  }
+  public abstract String onStreamOpen(  XmlPullParser parser);
+  public abstract void onStreamClosed();
+  public abstract void fireFirstLevelElementSendListeners(  TopLevelStreamElement element);
+  public abstract void invokeConnectionStateMachineListener(  ConnectionStateEvent connectionStateEvent);
+  public abstract void addXmppInputOutputFilter(  XmppInputOutputFilter xmppInputOutputFilter);
+  public abstract ListIterator<XmppInputOutputFilter> getXmppInputOutputFilterBeginIterator();
+  public abstract ListIterator<XmppInputOutputFilter> getXmppInputOutputFilterEndIterator();
+  public abstract void waitForFeaturesReceived(  String waitFor) throws InterruptedException, SmackException, XMPPException ;
+  public abstract void newStreamOpenWaitForFeaturesSequence(  String waitFor) throws InterruptedException, NoResponseException, NotConnectedException, SmackException, XMPPException ;
+  public abstract SmackTlsContext getSmackTlsContext();
+  public abstract <SN extends Nonza,FN extends Nonza>SN sendAndWaitForResponse(  Nonza nonza,  Class<SN> successNonzaClass,  Class<FN> failedNonzaClass) throws NoResponseException, NotConnectedException, FailedNonzaException, InterruptedException ;
+  public abstract void asyncGo(  Runnable runnable);
+  public abstract void waitForConditionOrThrowConnectionException(  Supplier<Boolean> condition,  String waitFor) throws InterruptedException, SmackException, XMPPException ;
+  public abstract void notifyWaitingThreads();
+  public abstract void setCompressionEnabled(  boolean compressionEnabled);
+  /** 
+ * Set the active transport (TCP, BOSH, WebSocket, …) to be used for the XMPP connection. Also marks the connection as connected.
+ * @param xmppTransport the active transport.
+ */
+  public abstract void setTransport(  XmppClientToServerTransport xmppTransport);
+}

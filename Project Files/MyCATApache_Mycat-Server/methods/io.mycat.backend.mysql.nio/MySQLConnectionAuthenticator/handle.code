@@ -1,0 +1,50 @@
+@Override public void handle(byte[] data){
+  try {
+switch (data[4]) {
+case OkPacket.FIELD_COUNT:
+      HandshakePacket packet=source.getHandshake();
+    if (packet == null) {
+      processHandShakePacket(data);
+      source.authenticate();
+      break;
+    }
+  source.setHandler(new MySQLConnectionHandler(source));
+source.setAuthenticated(true);
+boolean clientCompress=Capabilities.CLIENT_COMPRESS == (Capabilities.CLIENT_COMPRESS & packet.serverCapabilities);
+boolean usingCompress=MycatServer.getInstance().getConfig().getSystem().getUseCompression() == 1;
+if (clientCompress && usingCompress) {
+source.setSupportCompress(true);
+}
+if (listener != null) {
+listener.connectionAcquired(source);
+}
+break;
+case ErrorPacket.FIELD_COUNT:
+ErrorPacket err=new ErrorPacket();
+err.read(data);
+String errMsg=new String(err.message);
+LOGGER.warn("can't connect to mysql server ,errmsg:" + errMsg + " "+ source);
+throw new ConnectionException(err.errno,errMsg);
+case EOFPacket.FIELD_COUNT:
+auth323(data[3]);
+break;
+default :
+packet=source.getHandshake();
+if (packet == null) {
+processHandShakePacket(data);
+source.authenticate();
+break;
+}
+ else {
+throw new RuntimeException("Unknown Packet!");
+}
+}
+}
+ catch (RuntimeException e) {
+if (listener != null) {
+listener.connectionError(e,source);
+return;
+}
+throw e;
+}
+}

@@ -1,0 +1,91 @@
+/** 
+ * MAM Query IQ class.
+ * @see <a href="http://xmpp.org/extensions/xep-0313.html">XEP-0313: Message
+ *      Archive Management</a>
+ * @author Fernando Ramirez and Florian Schmaus
+ */
+public class MamQueryIQ extends IQ {
+  /** 
+ * the MAM query IQ element.
+ */
+  public static final String ELEMENT=QUERY_ELEMENT;
+  private final String queryId;
+  private final String node;
+  private final DataForm dataForm;
+  /** 
+ * MAM query IQ constructor.
+ * @param version TODO javadoc me please
+ * @param queryId TODO javadoc me please
+ */
+  public MamQueryIQ(  MamVersion version,  String queryId){
+    this(version,queryId,null,null);
+    setType(IQ.Type.get);
+  }
+  /** 
+ * MAM query IQ constructor.
+ * @param version TODO javadoc me please
+ * @param form TODO javadoc me please
+ */
+  public MamQueryIQ(  MamVersion version,  DataForm form){
+    this(version,null,null,form);
+  }
+  /** 
+ * MAM query IQ constructor.
+ * @param version TODO javadoc me please
+ * @param queryId TODO javadoc me please
+ * @param form TODO javadoc me please
+ */
+  public MamQueryIQ(  MamVersion version,  String queryId,  DataForm form){
+    this(version,queryId,null,form);
+  }
+  /** 
+ * MAM query IQ constructor.
+ * @param version TODO javadoc me please
+ * @param queryId TODO javadoc me please
+ * @param node TODO javadoc me please
+ * @param dataForm TODO javadoc me please
+ */
+  public MamQueryIQ(  MamVersion version,  String queryId,  String node,  DataForm dataForm){
+    super(ELEMENT,version.getNamespace());
+    this.queryId=queryId;
+    this.node=node;
+    this.dataForm=dataForm;
+    if (dataForm != null) {
+      String formType=dataForm.getFormType();
+      if (formType == null) {
+        throw new IllegalArgumentException("If a data form is given it must posses a hidden form type field");
+      }
+      if (!formType.equals(version.getNamespace())) {
+        throw new IllegalArgumentException("Value of the hidden form type field must be '" + version.getNamespace() + "'");
+      }
+      addExtension(dataForm);
+    }
+  }
+  /** 
+ * Get query id.
+ * @return the query id
+ */
+  public String getQueryId(){
+    return queryId;
+  }
+  /** 
+ * Get the Node name.
+ * @return the node
+ */
+  public String getNode(){
+    return node;
+  }
+  /** 
+ * Get the data form.
+ * @return the data form
+ */
+  public DataForm getDataForm(){
+    return dataForm;
+  }
+  @Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(  IQChildElementXmlStringBuilder xml){
+    xml.optAttribute("queryid",queryId);
+    xml.optAttribute("node",node);
+    xml.rightAngleBracket();
+    return xml;
+  }
+}

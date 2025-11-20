@@ -1,0 +1,19 @@
+/** 
+ * Test a simple roster initialization according to the example in <a href="http://xmpp.org/rfcs/rfc3921.html#roster-login" >RFC3921: Retrieving One's Roster on Login</a>.
+ * @throws Exception in case of an exception.
+ */
+@Test public void testSimpleRosterInitialization() throws Exception {
+  assertNotNull("Can't get the roster from the provided connection!",roster);
+  assertFalse("Roster shouldn't be already loaded!",roster.isLoaded());
+  initRoster();
+  assertTrue("Roster can't be loaded!",roster.waitUntilLoaded());
+  verifyRomeosEntry(roster.getEntry(JidCreate.entityBareFrom("romeo@example.net")));
+  verifyMercutiosEntry(roster.getEntry(JidCreate.entityBareFrom("mercutio@example.com")));
+  verifyBenvoliosEntry(roster.getEntry(JidCreate.entityBareFrom("benvolio@example.net")));
+  assertSame("Wrong number of roster entries.",3,roster.getEntries().size());
+  assertTrue("The roster listener wasn't invoked for Romeo.",rosterListener.addedAddressesContains("romeo@example.net"));
+  assertTrue("The roster listener wasn't invoked for Mercutio.",rosterListener.addedAddressesContains("mercutio@example.com"));
+  assertTrue("The roster listener wasn't invoked for Benvolio.",rosterListener.addedAddressesContains("benvolio@example.net"));
+  assertSame("RosterListeners implies that a item was deleted!",0,rosterListener.getDeletedAddresses().size());
+  assertSame("RosterListeners implies that a item was updated!",0,rosterListener.getUpdatedAddresses().size());
+}

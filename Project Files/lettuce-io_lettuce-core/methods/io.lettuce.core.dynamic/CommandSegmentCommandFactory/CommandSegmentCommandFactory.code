@@ -1,0 +1,19 @@
+public CommandSegmentCommandFactory(CommandSegments commandSegments,CommandMethod commandMethod,RedisCodec<?,?> redisCodec,CommandOutputFactoryResolver outputResolver){
+  this.segments=commandSegments;
+  this.commandMethod=commandMethod;
+  this.redisCodec=(RedisCodec)redisCodec;
+  this.outputResolver=outputResolver;
+  this.typeContext=new TypeContext(redisCodec);
+  OutputSelector outputSelector=new OutputSelector(commandMethod.getActualReturnType(),redisCodec);
+  CommandOutputFactory factory=resolveCommandOutputFactory(outputSelector);
+  if (factory == null) {
+    throw new IllegalArgumentException(String.format("Cannot resolve CommandOutput for result type %s on method %s",commandMethod.getActualReturnType(),commandMethod.getMethod()));
+  }
+  if (commandMethod.getParameters() instanceof ExecutionSpecificParameters) {
+    ExecutionSpecificParameters executionAwareParameters=(ExecutionSpecificParameters)commandMethod.getParameters();
+    if (commandMethod.isFutureExecution() && executionAwareParameters.hasTimeoutIndex()) {
+      throw new CommandCreationException(commandMethod,"Asynchronous command methods do not support Timeout parameters");
+    }
+  }
+  this.outputFactory=factory;
+}

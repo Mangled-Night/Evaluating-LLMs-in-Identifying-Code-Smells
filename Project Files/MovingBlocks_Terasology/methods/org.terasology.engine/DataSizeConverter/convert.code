@@ -1,0 +1,15 @@
+@Override public Long convert(String value){
+  if (value == null) {
+    throw new CommandLine.TypeConversionException("null input");
+  }
+  Matcher match=pattern.matcher(value);
+  if (!match.matches()) {
+    throw new CommandLine.TypeConversionException("Expected a number followed by K, M, G, or T. " + "Failed to parse '" + value + "'");
+  }
+  BigDecimal n=new BigDecimal(match.group("n"));
+  if (match.group("suffix") != null) {
+    Unit unit=Unit.valueOf(match.group("suffix").toUpperCase(Locale.ROOT));
+    n=unit.multiply(n);
+  }
+  return n.toBigInteger().longValueExact();
+}

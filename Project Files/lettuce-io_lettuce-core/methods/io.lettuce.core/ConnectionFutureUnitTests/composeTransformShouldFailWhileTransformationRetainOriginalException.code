@@ -1,0 +1,18 @@
+@Test void composeTransformShouldFailWhileTransformationRetainOriginalException(){
+  CompletableFuture<String> foo=new CompletableFuture<>();
+  ConnectionFuture<Object> transformed=ConnectionFuture.from(null,foo).thenCompose((s,t) -> {
+    throw new IllegalStateException();
+  }
+);
+  Throwable t=new Throwable();
+  foo.completeExceptionally(t);
+  assertThat(transformed.toCompletableFuture()).isDone();
+  assertThat(transformed.toCompletableFuture()).isCompletedExceptionally();
+  try {
+    transformed.join();
+  }
+ catch (  CompletionException e) {
+    assertThat(e).hasRootCauseInstanceOf(IllegalStateException.class);
+    assertThat(e.getCause()).hasSuppressedException(t);
+  }
+}

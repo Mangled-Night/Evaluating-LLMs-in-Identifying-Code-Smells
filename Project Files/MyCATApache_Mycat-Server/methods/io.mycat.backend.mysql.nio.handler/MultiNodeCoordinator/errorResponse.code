@@ -1,0 +1,43 @@
+@Override public void errorResponse(byte[] err,BackendConnection conn){
+  ErrorPacket errorPacket=new ErrorPacket();
+  errorPacket.read(err);
+  String msg=new String(errorPacket.message);
+  if (LOGGER.isInfoEnabled()) {
+    LOGGER.info("======================" + "errorResponse from {} msg: {}",conn,new String(errorPacket.message));
+  }
+  if (conn instanceof MySQLConnection) {
+    MySQLConnection mysqlCon=(MySQLConnection)conn;
+    if (coorXaStatus == TxState.TX_STARTED_STATE) {
+      this.setFail(msg);
+      LOGGER.error("XA prepare failure in :xa end;xa prepare; XA id is:" + session.getXaTXID() + " errmsg {},current conn:{}",msg,conn);
+      if (mysqlCon.batchCmdFinished()) {
+        if (prepareCount.decrementAndGet() == 0) {
+          this.tryErrorFinished(true);
+        }
+        return;
+      }
+    }
+    if (coorXaStatus == TxState.TX_PREPARED_STATE) {
+      String xaTxId=session.getXaTXID();
+      if (xaTxId != null) {
+        xaTxId+=",'" + mysqlCon.getSchema() + "'";
+        String cmd="XA COMMIT " + xaTxId;
+        if (LOGGER.isInfoEnabled()) {
+          LOGGER.info("Replay Commit execute the cmd :" + cmd + ",current host:"+ mysqlCon.getHost()+ ":"+ mysqlCon.getPort());
+        }
+        mysqlCon.execCmd(cmd);
+        return;
+      }
+    }
+  }
+  if (this.cmdHandler.releaseConOnErr()) {
+    session.releaseConnection(conn);
+  }
+ else {
+    session.releaseConnectionIfSafe(conn,LOGGER.isDebugEnabled(),false);
+  }
+  this.setFail(msg);
+  if (this.finished()) {
+    this.tryErrorFinished(true);
+  }
+}

@@ -1,0 +1,9 @@
+@Test void georadiusStoreWithCountAndSort(){
+  prepareGeo();
+  String resultKey="38o54";
+  Long result=redis.georadius(key,8.665351,49.553302,5,GeoArgs.Unit.km,new GeoRadiusStoreArgs<>().withCount(1).desc().withStore(resultKey));
+  assertThat(result).isEqualTo(1);
+  List<ScoredValue<String>> results=redis.zrangeWithScores(resultKey,0,-1);
+  assertThat(results).hasSize(1);
+  assertThat(results.get(0).getScore()).isGreaterThan(99999);
+}

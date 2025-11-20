@@ -1,0 +1,31 @@
+private void runConcreteTest(ConcreteTest concreteTest) throws InterruptedException, XMPPException, IOException, SmackException {
+  LOGGER.info(concreteTest + " Start");
+  long testStart=System.currentTimeMillis();
+  try {
+    concreteTest.executor.execute();
+    long testEnd=System.currentTimeMillis();
+    LOGGER.info(concreteTest + " Success");
+    testRunResult.successfulIntegrationTests.add(new SuccessfulTest(concreteTest,testStart,testEnd,null));
+  }
+ catch (  InvocationTargetException e) {
+    long testEnd=System.currentTimeMillis();
+    Throwable cause=e.getCause();
+    if (cause instanceof TestNotPossibleException) {
+      LOGGER.info(concreteTest + " is not possible");
+      testRunResult.impossibleIntegrationTests.add(new TestNotPossible(concreteTest,testStart,testEnd,null,(TestNotPossibleException)cause));
+      return;
+    }
+    Throwable nonFatalFailureReason;
+    if (cause instanceof AssertionError) {
+      nonFatalFailureReason=cause;
+    }
+ else {
+      nonFatalFailureReason=throwFatalException(cause);
+    }
+    testRunResult.failedIntegrationTests.add(new FailedTest(concreteTest,testStart,testEnd,null,nonFatalFailureReason));
+    LOGGER.log(Level.SEVERE,concreteTest + " Failed",e);
+  }
+catch (  IllegalArgumentException|IllegalAccessException e) {
+    throw new AssertionError(e);
+  }
+}

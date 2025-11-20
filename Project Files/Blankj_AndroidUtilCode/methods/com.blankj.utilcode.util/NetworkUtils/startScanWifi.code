@@ -1,0 +1,23 @@
+private static void startScanWifi(){
+  sPreWifiScanResults=new WifiScanResults();
+  sScanWifiTimer=new Timer();
+  sScanWifiTimer.schedule(new TimerTask(){
+    @RequiresPermission(allOf={ACCESS_WIFI_STATE,CHANGE_WIFI_STATE,ACCESS_COARSE_LOCATION}) @Override public void run(){
+      startScanWifiIfEnabled();
+      WifiScanResults scanResults=getWifiScanResult();
+      if (isSameScanResults(sPreWifiScanResults.allResults,scanResults.allResults)) {
+        return;
+      }
+      sPreWifiScanResults=scanResults;
+      UtilsBridge.runOnUiThread(new Runnable(){
+        @Override public void run(){
+          for (          Utils.Consumer<WifiScanResults> consumer : SCAN_RESULT_CONSUMERS) {
+            consumer.accept(sPreWifiScanResults);
+          }
+        }
+      }
+);
+    }
+  }
+,0,SCAN_PERIOD_MILLIS);
+}

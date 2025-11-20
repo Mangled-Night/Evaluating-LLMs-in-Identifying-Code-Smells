@@ -1,0 +1,11 @@
+@Test public void testPersistBytes() throws Exception {
+  ByteString bytes=ByteString.copyFrom(new byte[]{1,2,3,4});
+  nameValueBuilder.setName(VALUE_NAME);
+  nameValueBuilder.setValue(EntityData.Value.newBuilder().setBytes(bytes));
+  componentBuilder.addField(nameValueBuilder);
+  entityBuilder.addComponent(componentBuilder.build());
+  worldBuilder.addEntity(entityBuilder.build());
+  EntityData.GlobalStore actual=persistAndRetrieve(worldBuilder.build());
+  assertEquals(VALUE_NAME,actual.getEntity(0).getComponent(0).getField(0).getName());
+  assertArrayEquals(bytes.toByteArray(),actual.getEntity(0).getComponent(0).getField(0).getValue().getBytes().toByteArray());
+}

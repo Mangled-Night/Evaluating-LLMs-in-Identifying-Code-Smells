@@ -1,0 +1,12 @@
+public class CommandsProviderTest {
+  @Test public void parseErrorWithRequest() throws Exception {
+    final String errorWithRequest="<iq id='sid' type='error' from='from@example.com' to='to@example.com'>" + "<command xmlns='http://jabber.org/protocol/commands' node='http://example.com' action='execute'>" + "</command>"+ "<error type='cancel'>"+ "<bad-request xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>"+ "</error>"+ "</iq>";
+    final Stanza requestStanza=PacketParserUtils.parseStanza(errorWithRequest);
+    final AdHocCommandData adHocIq=(AdHocCommandData)requestStanza;
+    assertEquals(IQ.Type.error,adHocIq.getType());
+    assertEquals(AdHocCommand.Action.execute,adHocIq.getAction());
+    StanzaError error=adHocIq.getError();
+    assertEquals(StanzaError.Type.CANCEL,error.getType());
+    assertEquals(StanzaError.Condition.bad_request,error.getCondition());
+  }
+}

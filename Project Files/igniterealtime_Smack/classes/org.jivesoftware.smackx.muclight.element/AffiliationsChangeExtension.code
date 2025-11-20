@@ -1,0 +1,60 @@
+/** 
+ * Affiliations change extension element class.
+ * @author Fernando Ramirez
+ */
+public static class AffiliationsChangeExtension implements ExtensionElement {
+  public static final String ELEMENT=DataForm.ELEMENT;
+  public static final String NAMESPACE=MultiUserChatLight.NAMESPACE + MultiUserChatLight.AFFILIATIONS;
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  private final HashMap<Jid,MUCLightAffiliation> affiliations;
+  private final String prevVersion;
+  private final String version;
+  public AffiliationsChangeExtension(  HashMap<Jid,MUCLightAffiliation> affiliations,  String prevVersion,  String version){
+    this.affiliations=affiliations;
+    this.prevVersion=prevVersion;
+    this.version=version;
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  /** 
+ * Get the affiliations.
+ * @return the affiliations
+ */
+  public HashMap<Jid,MUCLightAffiliation> getAffiliations(){
+    return affiliations;
+  }
+  /** 
+ * Get the previous version.
+ * @return the previous version
+ */
+  public String getPrevVersion(){
+    return prevVersion;
+  }
+  /** 
+ * Get the version.
+ * @return the version
+ */
+  public String getVersion(){
+    return version;
+  }
+  @Override public CharSequence toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this);
+    xml.rightAngleBracket();
+    xml.optElement("prev-version",prevVersion);
+    xml.optElement("version",version);
+    Iterator<Map.Entry<Jid,MUCLightAffiliation>> it=affiliations.entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<Jid,MUCLightAffiliation> pair=it.next();
+      xml.append(new UserWithAffiliationElement(pair.getKey(),pair.getValue()));
+    }
+    xml.closeElement(this);
+    return xml;
+  }
+  public static AffiliationsChangeExtension from(  Message message){
+    return message.getExtension(AffiliationsChangeExtension.class);
+  }
+}

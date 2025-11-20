@@ -1,0 +1,17 @@
+@SuppressWarnings("unchecked") @BeforeEach void before(){
+  when(channel.config()).thenReturn(channelConfig);
+  when(context.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
+  when(context.channel()).thenReturn(channel);
+  when(channel.pipeline()).thenReturn(pipeline);
+  when(channel.eventLoop()).thenReturn(eventLoop);
+  when(eventLoop.submit(any(Runnable.class))).thenAnswer(invocation -> {
+    Runnable r=(Runnable)invocation.getArguments()[0];
+    r.run();
+    return null;
+  }
+);
+  when(clientResources.commandLatencyRecorder()).thenReturn(new DefaultCommandLatencyCollector(DefaultCommandLatencyCollectorOptions.create()));
+  when(clientResources.tracing()).thenReturn(Tracing.disabled());
+  sut=new PubSubCommandHandler<>(ClientOptions.create(),clientResources,StringCodec.UTF8,endpoint);
+  stack=(Queue)ReflectionTestUtils.getField(sut,"stack");
+}

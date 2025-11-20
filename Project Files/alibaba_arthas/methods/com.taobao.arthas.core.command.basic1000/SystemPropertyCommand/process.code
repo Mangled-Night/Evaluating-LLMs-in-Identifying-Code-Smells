@@ -1,0 +1,26 @@
+@Override public void process(CommandProcess process){
+  try {
+    if (StringUtils.isBlank(propertyName) && StringUtils.isBlank(propertyValue)) {
+      process.appendResult(new SystemPropertyModel(System.getProperties()));
+    }
+ else     if (StringUtils.isBlank(propertyValue)) {
+      String value=System.getProperty(propertyName);
+      if (value == null) {
+        process.end(1,"There is no property with the key " + propertyName);
+        return;
+      }
+ else {
+        process.appendResult(new SystemPropertyModel(propertyName,value));
+      }
+    }
+ else {
+      System.setProperty(propertyName,propertyValue);
+      process.appendResult(new MessageModel("Successfully changed the system property."));
+      process.appendResult(new SystemPropertyModel(propertyName,System.getProperty(propertyName)));
+    }
+    process.end();
+  }
+ catch (  Throwable t) {
+    process.end(-1,"Error during setting system property: " + t.getMessage());
+  }
+}

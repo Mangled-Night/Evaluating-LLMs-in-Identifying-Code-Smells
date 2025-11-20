@@ -1,0 +1,21 @@
+@Test void readOnlyReadWrite() throws Exception {
+  String key="b";
+  assertThat(SlotHash.getSlot(key)).isEqualTo(3300);
+  prepareReadonlyTest(key);
+  final RedisCommands<String,String> connect3=client.connect(RedisURI.Builder.redis(host,ClusterTestSettings.port3).build()).sync();
+  try {
+    connect3.get("b");
+  }
+ catch (  Exception e) {
+    assertThat(e).hasMessageContaining("MOVED");
+  }
+  assertThat(connect3.readOnly()).isEqualTo("OK");
+  waitUntilValueIsVisible(key,connect3);
+  connect3.readWrite();
+  try {
+    connect3.get("b");
+  }
+ catch (  Exception e) {
+    assertThat(e).hasMessageContaining("MOVED");
+  }
+}

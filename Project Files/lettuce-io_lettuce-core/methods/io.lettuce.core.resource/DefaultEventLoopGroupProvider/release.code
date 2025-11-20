@@ -1,0 +1,26 @@
+private <T extends ExecutorService>T release(T reference){
+  lock.lock();
+  try {
+    long counter=0;
+    if (refCounter.containsKey(reference)) {
+      counter=refCounter.get(reference);
+    }
+    if (counter < 1) {
+      logger.debug("Attempting to release {} but ref count is {}",reference,counter);
+    }
+    counter--;
+    if (counter == 0) {
+      refCounter.remove(reference);
+    }
+ else {
+      refCounter.put(reference,counter);
+    }
+  }
+  finally {
+    lock.unlock();
+  }
+  return reference;
+}
+@Override public Promise<Boolean> release(EventExecutorGroup eventLoopGroup,long quietPeriod,long timeout,TimeUnit unit){
+  return toBooleanPromise(doRelease(eventLoopGroup,quietPeriod,timeout,unit));
+}

@@ -1,0 +1,28 @@
+@Override public void purgeWorld(){
+  ChunkMonitor.fireChunkProviderDisposed(this);
+  loadingPipeline.shutdown();
+  unloadRequestTaskMaster.shutdown(new ChunkUnloadRequest(),true);
+  getAllChunks().stream().filter(Chunk::isReady).forEach(chunk -> {
+    worldEntity.send(new BeforeChunkUnload(chunk.getPosition()));
+    storageManager.deactivateChunk(chunk);
+    chunk.dispose();
+  }
+);
+  chunkCache.clear();
+  storageManager.deleteWorld();
+  worldEntity.send(new PurgeWorldEvent());
+  loadingPipeline=new ChunkProcessingPipeline(this::getChunk,relevanceSystem.createChunkTaskComporator());
+  loadingPipeline.addStage(ChunkTaskProvider.create("Chunk generate internal lightning",(Consumer<Chunk>)InternalLightProcessor::generateInternalLighting)).addStage(ChunkTaskProvider.create("Chunk deflate",Chunk::deflate)).addStage(ChunkTaskProvider.createMulti("Light merging",chunks -> {
+    Chunk[] localChunks=chunks.toArray(new Chunk[0]);
+    return LightMerger.merge(localChunks);
+  }
+,LightMerger::requiredChunks)).addStage(ChunkTaskProvider.create("Chunk ready",readyChunks::add));
+  unloadRequestTaskMaster=TaskMaster.createFIFOTaskMaster("Chunk-Unloader",8);
+  ChunkMonitor.fireChunkProviderInitialized(this);
+  for (  ChunkRelevanceRegion chunkRelevanceRegion : relevanceSystem.getRegions()) {
+    for (    Vector3ic pos : chunkRelevanceRegion.getCurrentRegion()) {
+      createOrLoadChunk(pos);
+    }
+    chunkRelevanceRegion.setUpToDate();
+  }
+}

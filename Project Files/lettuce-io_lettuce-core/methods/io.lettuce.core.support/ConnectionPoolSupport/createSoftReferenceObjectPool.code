@@ -1,0 +1,35 @@
+/** 
+ * Creates a new  {@link SoftReferenceObjectPool} using the {@link Supplier}. Allocated instances are wrapped and must not be returned with  {@link ObjectPool#returnObject(Object)}.
+ * @param connectionSupplier must not be {@code null}.
+ * @param < T > connection type.
+ * @return the connection pool.
+ */
+public static <T extends StatefulConnection<?,?>>SoftReferenceObjectPool<T> createSoftReferenceObjectPool(Supplier<T> connectionSupplier){
+  return createSoftReferenceObjectPool(connectionSupplier,true);
+}
+/** 
+ * Creates a new  {@link SoftReferenceObjectPool} using the {@link Supplier}.
+ * @param connectionSupplier must not be {@code null}.
+ * @param wrapConnections {@code false} to return direct connections that need to be returned to the pool using{@link ObjectPool#returnObject(Object)}.  {@code true} to return wrapped connection that are returned to thepool when invoking  {@link StatefulConnection#close()}.
+ * @param < T > connection type.
+ * @return the connection pool.
+ */
+@SuppressWarnings("unchecked") public static <T extends StatefulConnection<?,?>>SoftReferenceObjectPool<T> createSoftReferenceObjectPool(Supplier<T> connectionSupplier,boolean wrapConnections){
+  LettuceAssert.notNull(connectionSupplier,"Connection supplier must not be null");
+  AtomicReference<Origin<T>> poolRef=new AtomicReference<>();
+  SoftReferenceObjectPool<T> pool=new SoftReferenceObjectPool<T>(new RedisPooledObjectFactory<>(connectionSupplier)){
+    @Override public synchronized T borrowObject() throws Exception {
+      return wrapConnections ? ConnectionWrapping.wrapConnection(super.borrowObject(),poolRef.get()) : super.borrowObject();
+    }
+    @Override public synchronized void returnObject(    T obj) throws Exception {
+      if (wrapConnections && obj instanceof HasTargetConnection) {
+        super.returnObject((T)((HasTargetConnection)obj).getTargetConnection());
+        return;
+      }
+      super.returnObject(obj);
+    }
+  }
+;
+  poolRef.set(new ObjectPoolWrapper<>(pool));
+  return pool;
+}

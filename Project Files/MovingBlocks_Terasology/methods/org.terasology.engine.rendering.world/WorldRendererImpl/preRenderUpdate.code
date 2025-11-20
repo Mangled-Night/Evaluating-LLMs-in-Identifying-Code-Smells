@@ -1,0 +1,27 @@
+private void preRenderUpdate(RenderingStage renderingStage){
+  resetStats();
+  currentRenderingStage=renderingStage;
+  if (currentRenderingStage == RenderingStage.MONO || currentRenderingStage == RenderingStage.LEFT_EYE) {
+    isFirstRenderingStageForCurrentFrame=true;
+  }
+ else {
+    isFirstRenderingStageForCurrentFrame=false;
+  }
+  if (isFirstRenderingStageForCurrentFrame) {
+    timeSmoothedMainLightIntensity=TeraMath.lerp(timeSmoothedMainLightIntensity,getMainLightIntensityAt(playerCamera.getPosition()),secondsSinceLastFrame);
+    playerCamera.update(secondsSinceLastFrame);
+    renderableWorld.update();
+    secondsSinceLastFrame=0;
+    displayResolutionDependentFbo.update();
+    millisecondsSinceRenderingStart+=secondsSinceLastFrame * 1000;
+  }
+  if (currentRenderingStage != RenderingStage.MONO) {
+    playerCamera.updateFrustum();
+  }
+  renderableWorld.queueVisibleChunks(isFirstRenderingStageForCurrentFrame);
+  if (requestedTaskListRefresh) {
+    List<Node> orderedNodes=renderGraph.getNodesInTopologicalOrder();
+    renderPipelineTaskList=renderTaskListGenerator.generateFrom(orderedNodes);
+    requestedTaskListRefresh=false;
+  }
+}

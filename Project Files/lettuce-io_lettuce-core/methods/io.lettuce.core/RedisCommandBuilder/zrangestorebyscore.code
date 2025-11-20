@@ -1,0 +1,20 @@
+Command<K,V,Long> zrangestorebyscore(K dstKey,K srcKey,Range<? extends Number> range,Limit limit,boolean rev){
+  notNullKey(srcKey);
+  notNullKey(dstKey);
+  notNullRange(range);
+  notNullLimit(limit);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  args.addKeys(dstKey,srcKey);
+  if (rev) {
+    args.add(max(range)).add(min(range));
+  }
+ else {
+    args.add(min(range)).add(max(range));
+  }
+  args.add(BYSCORE);
+  if (rev) {
+    args.add(REV);
+  }
+  addLimit(args,limit);
+  return createCommand(ZRANGESTORE,new IntegerOutput<>(codec),args);
+}

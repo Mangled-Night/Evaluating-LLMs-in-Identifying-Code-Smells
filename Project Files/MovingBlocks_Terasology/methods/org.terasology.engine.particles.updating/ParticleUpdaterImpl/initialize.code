@@ -1,0 +1,25 @@
+@Override public void initialize(){
+  ModuleEnvironment environment=moduleManager.getEnvironment();
+  for (  Class<?> type : environment.getTypesAnnotatedWith(RegisterParticleSystemFunction.class)) {
+    RegisterParticleSystemFunction annotation=type.getAnnotation(RegisterParticleSystemFunction.class);
+    if (!ParticleSystemFunction.class.isAssignableFrom(type)) {
+      logger.error("Cannot register particle system function {}, must be a subclass of ParticleSystemFunction",type.getSimpleName());
+    }
+ else {
+      try {
+        ParticleSystemFunction function=(ParticleSystemFunction)type.newInstance();
+        if (function instanceof GeneratorFunction) {
+          Type componentClass=ReflectionUtil.getTypeParameterForSuper(type,GeneratorFunction.class,0);
+          mapGeneratorFunction((GeneratorFunction)function,(Class<? extends Component>)componentClass);
+        }
+ else         if (function instanceof AffectorFunction) {
+          Type componentClass=ReflectionUtil.getTypeParameterForSuper(type,AffectorFunction.class,0);
+          mapAffectorFunction((AffectorFunction)function,(Class<? extends Component>)componentClass);
+        }
+      }
+ catch (      InstantiationException|IllegalAccessException e) {
+        logger.error("Failed to register particle system",e);
+      }
+    }
+  }
+}

@@ -1,0 +1,65 @@
+/** 
+ * 评价订单商品 <p> 确认商品收货或者系统自动确认商品收货后7天内可以评价，过期不能评价。
+ * @param userId 用户ID
+ * @param body   订单信息，{ orderId：xxx }
+ * @return 订单操作结果
+ */
+public Object comment(Integer userId,String body){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  Integer orderGoodsId=JacksonUtil.parseInteger(body,"orderGoodsId");
+  if (orderGoodsId == null) {
+    return ResponseUtil.badArgument();
+  }
+  LitemallOrderGoods orderGoods=orderGoodsService.findById(orderGoodsId);
+  if (orderGoods == null) {
+    return ResponseUtil.badArgumentValue();
+  }
+  Integer orderId=orderGoods.getOrderId();
+  LitemallOrder order=orderService.findById(userId,orderId);
+  if (order == null) {
+    return ResponseUtil.badArgumentValue();
+  }
+  if (!OrderUtil.isConfirmStatus(order) && !OrderUtil.isAutoConfirmStatus(order)) {
+    return ResponseUtil.fail(ORDER_INVALID_OPERATION,"当前商品不能评价");
+  }
+  if (!order.getUserId().equals(userId)) {
+    return ResponseUtil.fail(ORDER_INVALID,"当前商品不属于用户");
+  }
+  Integer commentId=orderGoods.getComment();
+  if (commentId == -1) {
+    return ResponseUtil.fail(ORDER_COMMENT_EXPIRED,"当前商品评价时间已经过期");
+  }
+  if (commentId != 0) {
+    return ResponseUtil.fail(ORDER_COMMENTED,"订单商品已评价");
+  }
+  String content=JacksonUtil.parseString(body,"content");
+  Integer star=JacksonUtil.parseInteger(body,"star");
+  if (star == null || star < 0 || star > 5) {
+    return ResponseUtil.badArgumentValue();
+  }
+  Boolean hasPicture=JacksonUtil.parseBoolean(body,"hasPicture");
+  List<String> picUrls=JacksonUtil.parseStringList(body,"picUrls");
+  if (hasPicture == null || !hasPicture) {
+    picUrls=new ArrayList<>(0);
+  }
+  LitemallComment comment=new LitemallComment();
+  comment.setUserId(userId);
+  comment.setType((byte)0);
+  comment.setValueId(orderGoods.getGoodsId());
+  comment.setStar(star.shortValue());
+  comment.setContent(content);
+  comment.setHasPicture(hasPicture);
+  comment.setPicUrls(picUrls.toArray(new String[]{}));
+  commentService.save(comment);
+  orderGoods.setComment(comment.getId());
+  orderGoodsService.updateById(orderGoods);
+  Short commentCount=order.getComments();
+  if (commentCount > 0) {
+    commentCount--;
+  }
+  order.setComments(commentCount);
+  orderService.updateWithOptimisticLocker(order);
+  return ResponseUtil.ok();
+}

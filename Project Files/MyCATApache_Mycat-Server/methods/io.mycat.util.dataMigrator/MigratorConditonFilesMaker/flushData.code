@@ -1,0 +1,17 @@
+private void flushData(boolean isForce) throws IOException {
+  for (  DataNode dn : newDnList) {
+    StringBuilder sb=map.get(dn);
+    if (sb == null) {
+      continue;
+    }
+    if ((isForce || sb.toString().getBytes().length > 1024) && sb.length() > 0) {
+      String s=sb.toString();
+      if (isForce) {
+        s=s.substring(0,s.length() - 1);
+      }
+      DataMigratorUtil.appendDataToFile(files.get(dn),s);
+      sb=new StringBuilder();
+      map.put(dn,sb);
+    }
+  }
+}

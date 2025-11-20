@@ -1,0 +1,21 @@
+@Override public E take() throws InterruptedException {
+  lock.lockInterruptibly();
+  try {
+    checkNotShutdown();
+    try {
+      while (hasNoElements()) {
+        notEmpty.await();
+        checkNotShutdown();
+      }
+    }
+ catch (    InterruptedException ie) {
+      notEmpty.signal();
+      throw ie;
+    }
+    E e=extract();
+    return e;
+  }
+  finally {
+    lock.unlock();
+  }
+}

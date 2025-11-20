@@ -1,0 +1,23 @@
+boolean free(ByteBuffer buffer){
+  ByteBufferChunk cur=getIndex(buffer);
+  if (cur == null) {
+    LOGGER.info("not in this list!");
+    return false;
+  }
+  cur.freeByteBuffer(buffer);
+  final int usage=cur.usage();
+  if (usage < minUsage) {
+    ByteBufferChunkList prev=prevList;
+    ByteBufferChunkList current=this;
+    while (prev != null) {
+      current.byteBufferChunks.remove(cur);
+      prev.byteBufferChunks.add(cur);
+      if (prev.minUsage < usage) {
+        break;
+      }
+      current=prev;
+      prev=prev.prevList;
+    }
+  }
+  return true;
+}

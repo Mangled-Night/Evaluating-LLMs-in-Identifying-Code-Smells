@@ -1,0 +1,23 @@
+/** 
+ * Parse a given string as numbered game name according to the following regular expression: <p> <pre> "^(.*?)(\\d+)?$" </pre> These examples will be parsed as follows: <pre> "Gooey's 1st Game"  -> ("Gooey's 1st Game", None) "Gooey 42"          -> ("Gooey", Optional(42)) "42"                -> ("42", None) </pre> <p> The input string will be trimmed before matching.
+ * @param fullName the full game name
+ * @return the parsed numbered game name, the number may be {@code Optional::empty}
+ */
+static NumberedGameName fromString(String fullName){
+  final Pattern p=Pattern.compile("^(.*?)(\\d+)?$");
+  Matcher matcher=p.matcher(fullName.trim());
+  if (matcher.find()) {
+    String prefix;
+    Optional<Integer> number;
+    if (matcher.start(2) > 0) {
+      prefix=matcher.group(1);
+      number=Optional.of(Integer.parseInt(matcher.group(2)));
+    }
+ else {
+      prefix=matcher.group(0);
+      number=Optional.empty();
+    }
+    return new NumberedGameName(prefix,number);
+  }
+  throw new IllegalArgumentException("Unexpected error: Cannot parse '" + fullName + "' as numbered game name.");
+}

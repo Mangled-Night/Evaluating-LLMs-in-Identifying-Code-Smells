@@ -1,0 +1,24 @@
+/** 
+ * {@link Predicate}-based  {@link ReadFrom} implementation.
+ * @since 5.2
+ */
+static class OrderedPredicateReadFromAdapter extends ReadFrom {
+  private final Predicate<RedisNodeDescription> predicates[];
+  @SafeVarargs OrderedPredicateReadFromAdapter(  Predicate<RedisNodeDescription>... predicates){
+    this.predicates=predicates;
+  }
+  @Override public List<RedisNodeDescription> select(  Nodes nodes){
+    List<RedisNodeDescription> result=new ArrayList<>(nodes.getNodes().size());
+    for (    Predicate<RedisNodeDescription> predicate : predicates) {
+      for (      RedisNodeDescription node : nodes) {
+        if (predicate.test(node)) {
+          result.add(node);
+        }
+      }
+    }
+    return result;
+  }
+  @Override protected boolean isOrderSensitive(){
+    return true;
+  }
+}

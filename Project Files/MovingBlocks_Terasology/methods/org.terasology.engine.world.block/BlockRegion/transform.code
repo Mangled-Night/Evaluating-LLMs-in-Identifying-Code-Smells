@@ -1,0 +1,36 @@
+@Override public BlockRegion transform(Matrix4fc m,BlockRegion dest){
+  Preconditions.checkArgument(m.isAffine());
+  float dx=maxX - minX;
+  float dy=maxY - minY;
+  float dz=maxZ - minZ;
+  float minx=Float.POSITIVE_INFINITY;
+  float miny=Float.POSITIVE_INFINITY;
+  float minz=Float.POSITIVE_INFINITY;
+  float maxx=Float.NEGATIVE_INFINITY;
+  float maxy=Float.NEGATIVE_INFINITY;
+  float maxz=Float.NEGATIVE_INFINITY;
+  for (int i=0; i < 8; i++) {
+    float x=minX + (i & 1) * dx;
+    float y=minY + (i >> 1 & 1) * dy;
+    float z=minZ + (i >> 2 & 1) * dz;
+    float tx=m.m00() * x + m.m10() * y + m.m20() * z + m.m30();
+    float ty=m.m01() * x + m.m11() * y + m.m21() * z + m.m31();
+    float tz=m.m02() * x + m.m12() * y + m.m22() * z + m.m32();
+    minx=Math.min(tx,minx);
+    miny=Math.min(ty,miny);
+    minz=Math.min(tz,minz);
+    maxx=Math.max(tx,maxx);
+    maxy=Math.max(ty,maxy);
+    maxz=Math.max(tz,maxz);
+  }
+  dest.minX=Math.roundUsing(minx,RoundingMode.FLOOR);
+  dest.minY=Math.roundUsing(miny,RoundingMode.FLOOR);
+  dest.minZ=Math.roundUsing(minz,RoundingMode.FLOOR);
+  dest.maxX=Math.roundUsing(maxx,RoundingMode.CEILING);
+  dest.maxY=Math.roundUsing(maxy,RoundingMode.CEILING);
+  dest.maxZ=Math.roundUsing(maxz,RoundingMode.CEILING);
+  return dest;
+}
+public BlockRegion transform(Matrix4fc m){
+  return transform(m,this);
+}

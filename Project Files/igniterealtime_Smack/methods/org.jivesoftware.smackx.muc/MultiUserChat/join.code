@@ -1,0 +1,52 @@
+/** 
+ * Joins the chat room using the specified nickname. If already joined using another nickname, this method will first leave the room and then re-join using the new nickname. The default connection timeout for a reply from the group chat server that the join succeeded will be used. After joining the room, the room will decide the amount of history to send.
+ * @param nickname the nickname to use.
+ * @return the leave self-presence as reflected by the MUC.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws XMPPErrorException if an error occurs joining the room. In particular, a401 error can occur if no password was provided and one is required; or a 403 error can occur if the user is banned; or a 404 error can occur if the room does not exist or is locked; or a 407 error can occur if user is not on the member list; or a 409 error can occur if someone is already in the group chat with the same nickname.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws NotAMucServiceException if the entity is not a MUC serivce.
+ */
+public Presence join(Resourcepart nickname) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException, NotAMucServiceException {
+  MucEnterConfiguration.Builder builder=getEnterConfigurationBuilder(nickname);
+  Presence reflectedJoinPresence=join(builder.build());
+  return reflectedJoinPresence;
+}
+/** 
+ * Joins the chat room using the specified nickname and password. If already joined using another nickname, this method will first leave the room and then re-join using the new nickname. The default connection timeout for a reply from the group chat server that the join succeeded will be used. After joining the room, the room will decide the amount of history to send.<p> A password is required when joining password protected rooms. If the room does not require a password there is no need to provide one.
+ * @param nickname the nickname to use.
+ * @param password the password to use.
+ * @throws XMPPErrorException if an error occurs joining the room. In particular, a401 error can occur if no password was provided and one is required; or a 403 error can occur if the user is banned; or a 404 error can occur if the room does not exist or is locked; or a 407 error can occur if user is not on the member list; or a 409 error can occur if someone is already in the group chat with the same nickname.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotAMucServiceException if the entity is not a MUC serivce.
+ */
+public void join(Resourcepart nickname,String password) throws XMPPErrorException, InterruptedException, NoResponseException, NotConnectedException, NotAMucServiceException {
+  MucEnterConfiguration.Builder builder=getEnterConfigurationBuilder(nickname).withPassword(password);
+  join(builder.build());
+}
+/** 
+ * Joins the chat room using the specified nickname and password. If already joined using another nickname, this method will first leave the room and then re-join using the new nickname.<p> To control the amount of history to receive while joining a room you will need to provide a configured DiscussionHistory object.<p> A password is required when joining password protected rooms. If the room does not require a password there is no need to provide one.<p> If the room does not already exist when the user seeks to enter it, the server will decide to create a new room or not.
+ * @param mucEnterConfiguration the configuration used to enter the MUC.
+ * @return the join self-presence as reflected by the MUC.
+ * @throws XMPPErrorException if an error occurs joining the room. In particular, a401 error can occur if no password was provided and one is required; or a 403 error can occur if the user is banned; or a 404 error can occur if the room does not exist or is locked; or a 407 error can occur if user is not on the member list; or a 409 error can occur if someone is already in the group chat with the same nickname.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws NotAMucServiceException if the entity is not a MUC serivce.
+ */
+public synchronized Presence join(MucEnterConfiguration mucEnterConfiguration) throws XMPPErrorException, NoResponseException, NotConnectedException, InterruptedException, NotAMucServiceException {
+  if (isJoined()) {
+    try {
+      leaveSync();
+    }
+ catch (    XMPPErrorException|NoResponseException|MucNotJoinedException e) {
+      LOGGER.log(Level.WARNING,"Could not leave MUC prior joining, assuming we are not joined",e);
+    }
+  }
+  Presence reflectedJoinPresence=enter(mucEnterConfiguration);
+  return reflectedJoinPresence;
+}

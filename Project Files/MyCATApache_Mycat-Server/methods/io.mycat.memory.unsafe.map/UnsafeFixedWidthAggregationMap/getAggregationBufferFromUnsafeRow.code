@@ -1,0 +1,14 @@
+public UnsafeRow getAggregationBufferFromUnsafeRow(UnsafeRow key){
+  return getAggregationBufferFromUnsafeRow(key,Murmur3_x86_32.hashUnsafeWords(key.getBaseObject(),key.getBaseOffset(),key.getSizeInBytes(),SEED));
+}
+public UnsafeRow getAggregationBufferFromUnsafeRow(UnsafeRow key,int hash){
+  final BytesToBytesMap.Location loc=map.lookup(key.getBaseObject(),key.getBaseOffset(),key.getSizeInBytes(),hash);
+  if (!loc.isDefined()) {
+    boolean putSucceeded=loc.append(key.getBaseObject(),key.getBaseOffset(),key.getSizeInBytes(),emptyAggregationBuffer,Platform.BYTE_ARRAY_OFFSET,emptyAggregationBuffer.length);
+    if (!putSucceeded) {
+      return null;
+    }
+  }
+  currentAggregationBuffer.pointTo(loc.getValueBase(),loc.getValueOffset(),loc.getValueLength());
+  return currentAggregationBuffer;
+}

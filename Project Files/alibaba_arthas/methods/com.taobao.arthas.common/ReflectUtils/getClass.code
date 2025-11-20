@@ -1,0 +1,47 @@
+private static Class getClass(String className,ClassLoader loader) throws ClassNotFoundException {
+  return getClass(className,loader,CGLIB_PACKAGES);
+}
+private static Class getClass(String className,ClassLoader loader,String[] packages) throws ClassNotFoundException {
+  String save=className;
+  int dimensions=0;
+  int index=0;
+  while ((index=className.indexOf("[]",index) + 1) > 0) {
+    dimensions++;
+  }
+  StringBuilder brackets=new StringBuilder(className.length() - dimensions);
+  for (int i=0; i < dimensions; i++) {
+    brackets.append('[');
+  }
+  className=className.substring(0,className.length() - 2 * dimensions);
+  String prefix=(dimensions > 0) ? brackets + "L" : "";
+  String suffix=(dimensions > 0) ? ";" : "";
+  try {
+    return Class.forName(prefix + className + suffix,false,loader);
+  }
+ catch (  ClassNotFoundException ignore) {
+  }
+  for (int i=0; i < packages.length; i++) {
+    try {
+      return Class.forName(prefix + packages[i] + '.'+ className+ suffix,false,loader);
+    }
+ catch (    ClassNotFoundException ignore) {
+    }
+  }
+  if (dimensions == 0) {
+    Class c=(Class)primitives.get(className);
+    if (c != null) {
+      return c;
+    }
+  }
+ else {
+    String transform=(String)transforms.get(className);
+    if (transform != null) {
+      try {
+        return Class.forName(brackets + transform,false,loader);
+      }
+ catch (      ClassNotFoundException ignore) {
+      }
+    }
+  }
+  throw new ClassNotFoundException(save);
+}

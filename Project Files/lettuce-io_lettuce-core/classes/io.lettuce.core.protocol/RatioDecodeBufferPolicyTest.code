@@ -1,0 +1,23 @@
+/** 
+ * Unit tests for  {@link RatioDecodeBufferPolicy}.
+ * @author Shaphan
+ */
+@ExtendWith(MockitoExtension.class) class RatioDecodeBufferPolicyTest {
+  @Mock ByteBuf buffer;
+  RatioDecodeBufferPolicy policy=new RatioDecodeBufferPolicy(3);
+  @Test void shouldNotDiscardReadBytesWhenDidntReachUsageRatio(){
+    when(buffer.capacity()).thenReturn(10);
+    policy.afterCommandDecoded(buffer);
+    verify(buffer).capacity();
+    verify(buffer).readerIndex();
+    verifyNoMoreInteractions(buffer);
+  }
+  @Test void shouldDiscardReadBytesWhenReachedUsageRatio(){
+    when(buffer.readerIndex()).thenReturn(9);
+    when(buffer.capacity()).thenReturn(10);
+    policy.afterCommandDecoded(buffer);
+    verify(buffer).capacity();
+    verify(buffer).readerIndex();
+    verify(buffer).discardReadBytes();
+  }
+}

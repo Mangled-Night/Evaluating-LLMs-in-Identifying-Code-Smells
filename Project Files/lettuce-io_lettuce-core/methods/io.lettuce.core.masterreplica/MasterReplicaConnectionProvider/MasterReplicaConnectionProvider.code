@@ -1,0 +1,8 @@
+MasterReplicaConnectionProvider(RedisClient redisClient,RedisCodec<K,V> redisCodec,RedisURI initialRedisUri,Map<RedisURI,StatefulRedisConnection<K,V>> initialConnections){
+  this.initialRedisUri=initialRedisUri;
+  Function<ConnectionKey,CompletionStage<StatefulRedisConnection<K,V>>> connectionFactory=new DefaultConnectionFactory(redisClient,redisCodec);
+  this.connectionProvider=new AsyncConnectionProvider<>(connectionFactory);
+  for (  Map.Entry<RedisURI,StatefulRedisConnection<K,V>> entry : initialConnections.entrySet()) {
+    connectionProvider.register(toConnectionKey(entry.getKey()),entry.getValue());
+  }
+}

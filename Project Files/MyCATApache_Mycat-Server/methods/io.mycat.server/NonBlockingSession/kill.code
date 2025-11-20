@@ -1,0 +1,31 @@
+protected void kill(){
+  boolean hooked=false;
+  AtomicInteger count=null;
+  Map<RouteResultsetNode,BackendConnection> killees=null;
+  for (  RouteResultsetNode node : target.keySet()) {
+    BackendConnection c=target.get(node);
+    if (c != null) {
+      if (!hooked) {
+        hooked=true;
+        killees=new HashMap<RouteResultsetNode,BackendConnection>();
+        count=new AtomicInteger(0);
+      }
+      killees.put(node,c);
+      count.incrementAndGet();
+    }
+  }
+  if (hooked) {
+    for (    Entry<RouteResultsetNode,BackendConnection> en : killees.entrySet()) {
+      KillConnectionHandler kill=new KillConnectionHandler(en.getValue(),this);
+      MycatConfig conf=MycatServer.getInstance().getConfig();
+      PhysicalDBNode dn=conf.getDataNodes().get(en.getKey().getName());
+      try {
+        dn.getConnectionFromSameSource(null,true,en.getValue(),kill,en.getKey());
+      }
+ catch (      Exception e) {
+        LOGGER.error("get killer connection failed for " + en.getKey(),e);
+        kill.connectionError(e,null);
+      }
+    }
+  }
+}

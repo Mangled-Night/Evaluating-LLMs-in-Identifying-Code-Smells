@@ -1,0 +1,11 @@
+@Test void awaitAll(){
+  Future<String> get1=async.get(key);
+  Future<String> set=async.set(key,value);
+  Future<String> get2=async.get(key);
+  Future<Long> append=async.append(key,value);
+  assertThat(Futures.awaitAll(1,TimeUnit.SECONDS,get1,set,get2,append)).isTrue();
+  assertThat(TestFutures.getOrTimeout(get1)).isNull();
+  assertThat(TestFutures.getOrTimeout(set)).isEqualTo("OK");
+  assertThat(TestFutures.getOrTimeout(get2)).isEqualTo(value);
+  assertThat(TestFutures.getOrTimeout(append).longValue()).isEqualTo(value.length() * 2);
+}

@@ -1,0 +1,30 @@
+private void invokeMethod(final Object arg,final BusInfo busInfo,final boolean sticky){
+  invokeMethod(null,arg,busInfo,sticky);
+}
+private void invokeMethod(final Object bus,final Object arg,final BusInfo busInfo,final boolean sticky){
+  Runnable runnable=new Runnable(){
+    @Override public void run(){
+      realInvokeMethod(bus,arg,busInfo,sticky);
+    }
+  }
+;
+switch (busInfo.threadMode) {
+case "MAIN":
+    ThreadUtils.runOnUiThread(runnable);
+  return;
+case "IO":
+ThreadUtils.getIoPool().execute(runnable);
+return;
+case "CPU":
+ThreadUtils.getCpuPool().execute(runnable);
+return;
+case "CACHED":
+ThreadUtils.getCachedPool().execute(runnable);
+return;
+case "SINGLE":
+ThreadUtils.getSinglePool().execute(runnable);
+return;
+default :
+runnable.run();
+}
+}

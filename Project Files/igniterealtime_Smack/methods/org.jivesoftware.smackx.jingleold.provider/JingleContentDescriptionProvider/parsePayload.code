@@ -1,0 +1,24 @@
+/** 
+ * Parse a iq/jingle/description/payload-type element.
+ * @param parser the input to parse
+ * @return a payload type element
+ */
+protected JinglePayloadType parsePayload(final XmlPullParser parser){
+  int ptId;
+  String ptName;
+  int ptChannels;
+  ptId=Integer.parseInt(parser.getAttributeValue("","id"));
+  ptName=parser.getAttributeValue("","name");
+  ptChannels=Integer.parseInt(parser.getAttributeValue("","channels"));
+  return new JinglePayloadType(new PayloadType(ptId,ptName,ptChannels));
+}
+/** 
+ * Parse an audio payload type.
+ */
+@Override public JinglePayloadType parsePayload(final XmlPullParser parser){
+  JinglePayloadType pte=super.parsePayload(parser);
+  PayloadType.Audio pt=new PayloadType.Audio(pte.getPayloadType());
+  int ptClockRate=Integer.parseInt(parser.getAttributeValue("","clockrate"));
+  pt.setClockRate(ptClockRate);
+  return new JinglePayloadType.Audio(pt);
+}

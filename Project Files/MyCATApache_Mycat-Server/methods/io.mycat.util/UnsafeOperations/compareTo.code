@@ -1,0 +1,65 @@
+public static int compareTo(ByteBuffer buffer1,ByteBuffer buffer2){
+  Object obj1;
+  long offset1;
+  int length1;
+  if (buffer1.hasArray()) {
+    obj1=buffer1.array();
+    offset1=BYTE_ARRAY_BASE_OFFSET + buffer1.arrayOffset();
+  }
+ else {
+    obj1=null;
+    offset1=theUnsafe.getLong(buffer1,DIRECT_BUFFER_ADDRESS_OFFSET);
+  }
+  offset1+=buffer1.position();
+  length1=buffer1.remaining();
+  return compareTo(obj1,offset1,length1,buffer2);
+}
+public static int compareTo(Object buffer1,long offset1,int length1,ByteBuffer buffer){
+  Object obj2;
+  long offset2;
+  int position=buffer.position();
+  int limit=buffer.limit();
+  if (buffer.hasArray()) {
+    obj2=buffer.array();
+    offset2=BYTE_ARRAY_BASE_OFFSET + buffer.arrayOffset();
+  }
+ else {
+    obj2=null;
+    offset2=theUnsafe.getLong(buffer,DIRECT_BUFFER_ADDRESS_OFFSET);
+  }
+  int length2=limit - position;
+  offset2+=position;
+  return compareTo(buffer1,offset1,length1,obj2,offset2,length2);
+}
+/** 
+ * Lexicographically compare two arrays.
+ * @param buffer1 left operand: a byte[] or null
+ * @param buffer2 right operand: a byte[] or null
+ * @param memoryOffset1 Where to start comparing in the left buffer (pure memory address if buffer1 is null, or relative otherwise)
+ * @param memoryOffset2 Where to start comparing in the right buffer (pure memory address if buffer1 is null, or relative otherwise)
+ * @param length1 How much to compare from the left buffer
+ * @param length2 How much to compare from the right buffer
+ * @return 0 if equal, < 0 if left is less than right, etc.
+ */
+public static int compareTo(Object buffer1,long memoryOffset1,int length1,Object buffer2,long memoryOffset2,int length2){
+  int minLength=Math.min(length1,length2);
+  int wordComparisons=minLength & ~7;
+  for (int i=0; i < wordComparisons; i+=Longs.BYTES) {
+    long lw=theUnsafe.getLong(buffer1,memoryOffset1 + (long)i);
+    long rw=theUnsafe.getLong(buffer2,memoryOffset2 + (long)i);
+    if (lw != rw) {
+      if (BIG_ENDIAN) {
+        return UnsignedLongs.compare(lw,rw);
+      }
+      return UnsignedLongs.compare(Long.reverseBytes(lw),Long.reverseBytes(rw));
+    }
+  }
+  for (int i=wordComparisons; i < minLength; i++) {
+    int b1=theUnsafe.getByte(buffer1,memoryOffset1 + i) & 0xFF;
+    int b2=theUnsafe.getByte(buffer2,memoryOffset2 + i) & 0xFF;
+    if (b1 != b2) {
+      return b1 - b2;
+    }
+  }
+  return length1 - length2;
+}

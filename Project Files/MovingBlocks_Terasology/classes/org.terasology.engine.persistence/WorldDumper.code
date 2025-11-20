@@ -1,0 +1,44 @@
+/** 
+ * Used to create a dump of the current state of the world (specifically, entities)
+ */
+public class WorldDumper {
+  private WorldSerializer persisterHelper;
+  public WorldDumper(  EngineEntityManager entityManager,  PrefabSerializer prefabSerializer){
+    this.persisterHelper=new WorldSerializerImpl(entityManager,prefabSerializer);
+  }
+  /** 
+ * Save all world entities to file
+ * @param file  path to file in which entities will be saved
+ * @return number of saved entities and prefabs
+ * @throws IOException thrown when error occurs while saving world to file
+ */
+  public int save(  Path file) throws IOException {
+    final EntityData.GlobalStore world=persisterHelper.serializeWorld(true);
+    Path parentFile=file.toAbsolutePath().getParent();
+    if (!Files.isDirectory(parentFile)) {
+      Files.createDirectories(parentFile);
+    }
+    try (BufferedWriter writer=Files.newBufferedWriter(file,TerasologyConstants.CHARSET)){
+      EntityDataJSONFormat.write(world,writer);
+    }
+     return world.getEntityCount() + world.getPrefabCount();
+  }
+  /** 
+ * Save World entities, which only contain some of Components
+ * @param file  path to file in which entities will be saved
+ * @param filterComponents list of component classes to filter by World entities
+ * @return number of saved entities and prefabs
+ * @throws IOException thrown when error occurs while saving world to file
+ */
+  public int save(  Path file,  List<Class<? extends Component>> filterComponents) throws IOException {
+    final EntityData.GlobalStore world=persisterHelper.serializeWorld(true,filterComponents);
+    Path parentFile=file.toAbsolutePath().getParent();
+    if (!Files.isDirectory(parentFile)) {
+      Files.createDirectories(parentFile);
+    }
+    try (BufferedWriter writer=Files.newBufferedWriter(file,TerasologyConstants.CHARSET)){
+      EntityDataJSONFormat.write(world,writer);
+    }
+     return world.getEntityCount() + world.getPrefabCount();
+  }
+}

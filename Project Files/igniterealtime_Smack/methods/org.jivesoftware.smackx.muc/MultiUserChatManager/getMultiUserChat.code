@@ -1,0 +1,16 @@
+/** 
+ * Creates a multi user chat. Note: no information is sent to or received from the server until you attempt to {@link MultiUserChat#join(org.jxmpp.jid.parts.Resourcepart) join} the chat room. On some server implementations, the room will not becreated until the first person joins it. <p> Most XMPP servers use a sub-domain for the chat service (eg chat.example.com for the XMPP server example.com). You must ensure that the room address you're trying to connect to includes the proper chat sub-domain. </p>
+ * @param jid the name of the room in the form "roomName@service", where "service" is the hostname at which themulti-user chat service is running. Make sure to provide a valid JID.
+ * @return MultiUserChat instance of the room with the given jid.
+ */
+public synchronized MultiUserChat getMultiUserChat(EntityBareJid jid){
+  WeakReference<MultiUserChat> weakRefMultiUserChat=multiUserChats.get(jid);
+  if (weakRefMultiUserChat == null) {
+    return createNewMucAndAddToMap(jid);
+  }
+  MultiUserChat multiUserChat=weakRefMultiUserChat.get();
+  if (multiUserChat == null) {
+    return createNewMucAndAddToMap(jid);
+  }
+  return multiUserChat;
+}

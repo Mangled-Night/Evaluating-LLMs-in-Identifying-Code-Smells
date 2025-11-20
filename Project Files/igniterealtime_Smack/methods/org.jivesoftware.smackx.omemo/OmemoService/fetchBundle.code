@@ -1,0 +1,24 @@
+/** 
+ * Retrieve a users OMEMO bundle.
+ * @param connection authenticated XMPP connection.
+ * @param contactsDevice device of which we want to retrieve the bundle.
+ * @return OmemoBundle of the device or null, if it doesn't exist.
+ * @throws SmackException.NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws SmackException.NoResponseException if there was no response from the remote entity.
+ * @throws XMPPException.XMPPErrorException if there was an XMPP error returned.
+ * @throws PubSubException.NotALeafNodeException if a PubSub leaf node operation was attempted on a non-leaf node.
+ * @throws PubSubException.NotAPubSubNodeException if a involved node is not a PubSub node.
+ */
+private static OmemoBundleElement fetchBundle(XMPPConnection connection,OmemoDevice contactsDevice) throws SmackException.NotConnectedException, InterruptedException, SmackException.NoResponseException, XMPPException.XMPPErrorException, PubSubException.NotALeafNodeException, PubSubException.NotAPubSubNodeException {
+  PubSubManager pm=PubSubManager.getInstanceFor(connection,contactsDevice.getJid());
+  LeafNode node=pm.getLeafNode(contactsDevice.getBundleNodeName());
+  if (node == null) {
+    return null;
+  }
+  List<PayloadItem<OmemoBundleElement>> bundleItems=node.getItems();
+  if (bundleItems.isEmpty()) {
+    return null;
+  }
+  return bundleItems.get(bundleItems.size() - 1).getPayload();
+}

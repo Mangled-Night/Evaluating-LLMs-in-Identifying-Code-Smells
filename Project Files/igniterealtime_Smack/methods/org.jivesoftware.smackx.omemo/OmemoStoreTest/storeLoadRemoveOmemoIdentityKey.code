@@ -1,0 +1,20 @@
+@Test public void storeLoadRemoveOmemoIdentityKey() throws IOException, CorruptedOmemoKeyException {
+  T_IdKey keyA1=store.keyUtil().identityKeyFromPair(store.generateOmemoIdentityKeyPair());
+  T_IdKey keyB1=store.keyUtil().identityKeyFromPair(store.generateOmemoIdentityKeyPair());
+  byte[] bytesA1=store.keyUtil().identityKeyToBytes(keyA1);
+  byte[] bytesB=store.keyUtil().identityKeyToBytes(keyB1);
+  assertNotNull("Serialized identityKey cannot be null.",bytesA1);
+  assertNotNull("Serialized identityKey cannot be null.",bytesB);
+  assertNotSame("Serialized identityKey must be of length > 0.",0,bytesA1.length);
+  assertNotSame("Serialized identityKey must be of length > 0.",0,bytesB.length);
+  assertFalse("Generated IdentityKeys must not be equal (ULTRA unlikely).",Arrays.equals(bytesA1,bytesB));
+  assertNull("Must return null, the store could not have this key by now.",store.loadOmemoIdentityKey(alice,bob));
+  store.storeOmemoIdentityKey(alice,bob,keyA1);
+  T_IdKey keyA2=store.loadOmemoIdentityKey(alice,bob);
+  assertNotNull(keyA2);
+  byte[] bytesA2=store.keyUtil().identityKeyToBytes(keyA2);
+  assertTrue("Serialized loaded key must equal serialized stored one.",Arrays.equals(bytesA1,bytesA2));
+  assertNull("Non-existing keys must be returned as null.",store.loadOmemoIdentityKey(bob,alice));
+  store.removeOmemoIdentityKey(alice,bob);
+  assertNull(store.loadOmemoIdentityKey(alice,bob));
+}

@@ -1,0 +1,18 @@
+public void unregister() throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  unregister(NodeInfo.EMPTY);
+}
+public void unregister(NodeInfo nodeInfo) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  Jid registry=findRegistry();
+  unregister(registry,nodeInfo);
+}
+public void unregister(Jid registry,NodeInfo nodeInfo) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  interactWithRegistry(registry);
+  IoTUnregister iotUnregister=new IoTUnregister(nodeInfo);
+  iotUnregister.setTo(registry);
+  connection().sendIqRequestAndWaitForResponse(iotUnregister);
+  ThingState state=getStateFor(nodeInfo);
+  state.setUnregistered();
+  final XMPPConnection connection=connection();
+  IoTDataManager.getInstanceFor(connection).uninstallThing(nodeInfo);
+  IoTControlManager.getInstanceFor(connection).uninstallThing(nodeInfo);
+}

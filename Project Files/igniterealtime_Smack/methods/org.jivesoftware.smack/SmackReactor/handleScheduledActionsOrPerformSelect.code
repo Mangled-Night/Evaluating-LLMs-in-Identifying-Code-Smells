@@ -1,0 +1,89 @@
+@SuppressWarnings("LockNotBeforeTry") private void handleScheduledActionsOrPerformSelect(){
+  ScheduledAction dueScheduledAction=null;
+  boolean permitToHandleScheduledActions=actionsSemaphore.tryAcquire();
+  if (permitToHandleScheduledActions) {
+    try {
+      dueScheduledAction=scheduledActions.poll();
+    }
+  finally {
+      actionsSemaphore.release();
+    }
+  }
+  if (dueScheduledAction != null) {
+    dueScheduledAction.run();
+    return;
+  }
+  int newSelectedKeysCount=0;
+  List<SelectionKey> selectedKeys;
+synchronized (selector) {
+    ScheduledAction nextScheduledAction=scheduledActions.peek();
+    long selectWait;
+    if (nextScheduledAction == null) {
+      selectWait=0;
+    }
+ else {
+      selectWait=nextScheduledAction.getTimeToDueMillis();
+      if (selectWait <= 0) {
+        return;
+      }
+    }
+    int myHandledPendingSetInterestOps=0;
+    for (SetInterestOps setInterestOps; (setInterestOps=pendingSetInterestOps.poll()) != null; ) {
+      setInterestOpsCancelledKeySafe(setInterestOps.selectionKey,setInterestOps.interestOps);
+      if (myHandledPendingSetInterestOps++ >= PENDING_SET_INTEREST_OPS_MAX_BATCH_SIZE) {
+        selector.wakeup();
+        break;
+      }
+    }
+    registrationLock.lock();
+    registrationLock.unlock();
+    try {
+      newSelectedKeysCount=selector.select(selectWait);
+    }
+ catch (    IOException e) {
+      LOGGER.log(Level.SEVERE,"IOException while using select()",e);
+      return;
+    }
+    if (newSelectedKeysCount == 0) {
+      return;
+    }
+    Set<SelectionKey> selectedKeySet=selector.selectedKeys();
+    for (    SelectionKey selectionKey : selectedKeySet) {
+      SelectionKeyAttachment selectionKeyAttachment=(SelectionKeyAttachment)selectionKey.attachment();
+      selectionKeyAttachment.setRacing();
+    }
+    for (    SelectionKey selectionKey : selectedKeySet) {
+      setInterestOpsCancelledKeySafe(selectionKey,0);
+    }
+    selectedKeys=new ArrayList<>(selectedKeySet.size());
+    selectedKeys.addAll(selectedKeySet);
+    selectedKeySet.clear();
+  }
+  int selectedKeysCount=selectedKeys.size();
+  int currentReactorThreadCount=reactorThreads.size();
+  int myKeyCount;
+  if (selectedKeysCount > currentReactorThreadCount) {
+    myKeyCount=selectedKeysCount / currentReactorThreadCount;
+  }
+ else {
+    myKeyCount=selectedKeysCount;
+  }
+  final Level reactorSelectStatsLogLevel=Level.FINE;
+  if (LOGGER.isLoggable(reactorSelectStatsLogLevel)) {
+    LOGGER.log(reactorSelectStatsLogLevel,"New selected key count: " + newSelectedKeysCount + ". Total selected key count "+ selectedKeysCount+ ". My key count: "+ myKeyCount+ ". Current reactor thread count: "+ currentReactorThreadCount);
+  }
+  Collection<SelectionKey> mySelectedKeys=new ArrayList<>(myKeyCount);
+  Iterator<SelectionKey> it=selectedKeys.iterator();
+  for (int i=0; i < myKeyCount; i++) {
+    SelectionKey selectionKey=it.next();
+    mySelectedKeys.add(selectionKey);
+  }
+  while (it.hasNext()) {
+    SelectionKey selectionKey=it.next();
+    pendingSelectionKeys.add(selectionKey);
+  }
+  if (selectedKeysCount - myKeyCount > 0) {
+    selector.wakeup();
+  }
+  handleSelectedKeys(mySelectedKeys);
+}

@@ -1,0 +1,19 @@
+/** 
+ * Extracts the damage type name from a prefab. If the prefab has a  {@link DisplayNameComponent}, it will be used. Otherwise the damage type name is parsed, e.g. "engine:directDamage" will become "Direct Damage".
+ * @param damageType The damage type prefab.
+ * @return A readable name for the damage type.
+ */
+public String getDamageTypeName(Prefab damageType){
+  if (damageType.hasComponent(DisplayNameComponent.class)) {
+    DisplayNameComponent displayNameComponent=damageType.getComponent(DisplayNameComponent.class);
+    return displayNameComponent.name;
+  }
+ else {
+    logger.info(String.format("%s is missing a readable DisplayName",damageType.getName()));
+    String damageTypeName=damageType.getName();
+    damageTypeName=damageTypeName.replaceAll(".*:(.*)","$1");
+    damageTypeName=damageTypeName.replaceAll("([A-Z])"," $1");
+    damageTypeName=Character.toUpperCase(damageTypeName.charAt(0)) + damageTypeName.substring(1);
+    return damageTypeName;
+  }
+}

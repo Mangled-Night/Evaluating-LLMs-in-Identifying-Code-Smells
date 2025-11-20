@@ -1,0 +1,28 @@
+private EntityData.PackedEntity.Builder serializeEntityDelta(EntityRef entityRef,Prefab prefab,FieldSerializeCheck<Component> fieldCheck){
+  EntityData.PackedEntity.Builder entity=EntityData.PackedEntity.newBuilder();
+  entity.setParentPrefabUri(prefab.getName());
+  Set<Class<? extends Component>> presentClasses=Sets.newHashSet();
+  ByteString.Output fieldIds=ByteString.newOutput();
+  ByteString.Output componentFieldCounts=ByteString.newOutput();
+  for (  Component component : entityRef.iterateComponents()) {
+    if (!componentSerializeCheck.serialize(componentLibrary.getMetadata(component.getClass()))) {
+      continue;
+    }
+    presentClasses.add(component.getClass());
+    Component prefabComponent=prefab.getComponent(component.getClass());
+    if (prefabComponent == null) {
+      serializeComponentFull(component,false,fieldCheck,entity,fieldIds,componentFieldCounts,true);
+    }
+ else {
+      serializeComponentDelta(prefabComponent,component,fieldCheck,entity,fieldIds,componentFieldCounts,true);
+    }
+  }
+  entity.setFieldIds(fieldIds.toByteString());
+  entity.setComponentFieldCounts(componentFieldCounts.toByteString());
+  for (  Component prefabComponent : prefab.iterateComponents()) {
+    if (!presentClasses.contains(prefabComponent.getClass()) && componentSerializeCheck.serialize(componentLibrary.getMetadata(prefabComponent.getClass()))) {
+      entity.addRemovedComponent(idTable.get(prefabComponent.getClass()));
+    }
+  }
+  return entity;
+}

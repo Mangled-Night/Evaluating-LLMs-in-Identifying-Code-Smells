@@ -1,0 +1,9 @@
+@SuppressWarnings({"unchecked","rawtypes"}) public RoundRobinSocketAddressSupplier(Supplier<Partitions> partitions,Function<? extends Collection<RedisClusterNode>,Collection<RedisClusterNode>> sortFunction,ClientResources clientResources){
+  LettuceAssert.notNull(partitions,"Partitions must not be null");
+  LettuceAssert.notNull(sortFunction,"Sort-Function must not be null");
+  this.partitions=partitions;
+  this.roundRobin=new RoundRobin<>((l,r) -> l.getUri() == r.getUri() || (l.getUri() != null && l.getUri().equals(r.getUri())));
+  this.sortFunction=(Function)sortFunction;
+  this.clientResources=clientResources;
+  resetRoundRobin(partitions.get());
+}

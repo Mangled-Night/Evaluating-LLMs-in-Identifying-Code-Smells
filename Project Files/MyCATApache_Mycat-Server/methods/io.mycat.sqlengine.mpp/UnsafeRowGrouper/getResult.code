@@ -1,0 +1,22 @@
+public Iterator<UnsafeRow> getResult(@Nonnull UnsafeExternalRowSorter sorter) throws IOException {
+  KVIterator<UnsafeRow,UnsafeRow> iter=aggregationMap.iterator();
+  if (isMergeAvg() && !isMergAvg) {
+    try {
+      while (iter.next()) {
+        mergAvg(iter.getValue());
+      }
+    }
+ catch (    IOException e) {
+      logger.error(e.getMessage());
+    }
+    isMergAvg=true;
+    processAvgFieldPrecision();
+  }
+  if (havingCols != null) {
+    filterHaving(sorter);
+  }
+ else {
+    insertValue(sorter);
+  }
+  return sorter.sort();
+}

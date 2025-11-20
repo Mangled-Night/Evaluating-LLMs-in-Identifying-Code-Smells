@@ -1,0 +1,22 @@
+public abstract class AbstractDelayInformationProvider extends ExtensionElementProvider<DelayInformation> {
+  @Override public final DelayInformation parse(  XmlPullParser parser,  int initialDepth,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, ParseException {
+    String stampString=parser.getAttributeValue("","stamp");
+    String from=parser.getAttributeValue("","from");
+    final String reason;
+    XmlPullParser.Event event=parser.next();
+switch (event) {
+case TEXT_CHARACTERS:
+      reason=parser.getText();
+    parser.next();
+  break;
+case END_ELEMENT:
+reason=null;
+break;
+default :
+throw new IOException("Unexpected event: " + event);
+}
+Date stamp=parseDate(stampString);
+return new DelayInformation(stamp,from,reason);
+}
+protected abstract Date parseDate(String string) throws ParseException ;
+}

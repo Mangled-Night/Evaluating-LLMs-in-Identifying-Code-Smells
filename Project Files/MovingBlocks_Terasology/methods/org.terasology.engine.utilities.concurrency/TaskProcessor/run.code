@@ -1,0 +1,31 @@
+@Override public void run(){
+  boolean running=true;
+  Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
+  Thread.currentThread().setName(name);
+  while (running) {
+    try {
+      T task=queue.take();
+      try (ThreadActivity ignored=ThreadMonitor.startThreadActivity(task.getName())){
+        task.run();
+      }
+       if (task.isTerminateSignal()) {
+        running=false;
+      }
+    }
+ catch (    InterruptedException e) {
+      ThreadMonitor.addError(e);
+      logger.error("Thread interrupted",e);
+    }
+catch (    RuntimeException e) {
+      ThreadMonitor.addError(e);
+      logger.error("Error in thread {}",Thread.currentThread().getName(),e);
+    }
+catch (    Error e) {
+      GameThread.asynch(() -> {
+        throw e;
+      }
+);
+    }
+  }
+  logger.debug("Thread shutdown safely");
+}

@@ -1,0 +1,8 @@
+@Override public void channelActive(ChannelHandlerContext ctx) throws Exception {
+  super.channelActive(ctx);
+  serverConnectionHandler=ctx.pipeline().get(ServerConnectionHandler.class);
+  PublicIdentityCertificate serverPublicCert=verifyNotNull(config.getSecurity(),"config.security").getServerPublicCertificate();
+  new SecureRandom().nextBytes(serverRandom);
+  serverHello=NetData.HandshakeHello.newBuilder().setRandom(ByteString.copyFrom(serverRandom)).setCertificate(NetMessageUtil.convert(serverPublicCert)).setTimestamp(System.currentTimeMillis()).build();
+  ctx.channel().writeAndFlush(NetData.NetMessage.newBuilder().setHandshakeHello(serverHello).build());
+}

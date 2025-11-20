@@ -1,0 +1,19 @@
+/** 
+ * Expect to disable  {@link ConnectionWatchdog} when closing a broken connection.
+ */
+@Test void closingDisconnectedConnectionShouldDisableConnectionWatchdog(){
+  client.setOptions(ClientOptions.create());
+  RedisURI redisUri=RedisURI.Builder.redis(TestSettings.host(),TestSettings.port()).withTimeout(Duration.ofMinutes(10)).build();
+  StatefulRedisConnection<String,String> connection=client.connect(redisUri);
+  ConnectionWatchdog connectionWatchdog=ConnectionTestUtil.getConnectionWatchdog(connection);
+  assertThat(connectionWatchdog.isReconnectSuspended()).isFalse();
+  assertThat(connectionWatchdog.isListenOnChannelInactive()).isTrue();
+  connection.sync().ping();
+  redisUri.setPort(TestSettings.nonexistentPort() + 5);
+  connection.async().quit();
+  Wait.untilTrue(() -> !connection.isOpen()).waitOrTimeout();
+  connection.close();
+  Delay.delay(Duration.ofMillis(100));
+  assertThat(connectionWatchdog.isReconnectSuspended()).isTrue();
+  assertThat(connectionWatchdog.isListenOnChannelInactive()).isFalse();
+}

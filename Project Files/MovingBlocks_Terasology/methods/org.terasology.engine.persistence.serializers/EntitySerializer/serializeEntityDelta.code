@@ -1,0 +1,53 @@
+private EntityData.Entity serializeEntityDelta(EntityRef entityRef,Prefab prefab,FieldSerializeCheck<Component> fieldCheck){
+  EntityData.Entity.Builder entity=EntityData.Entity.newBuilder();
+  if (!ignoringEntityId) {
+    entity.setId(entityRef.getId());
+  }
+  entity.setParentPrefab(prefab.getName());
+  if (entityRef.isAlwaysRelevant() != prefab.isAlwaysRelevant()) {
+    entity.setAlwaysRelevant(entityRef.isAlwaysRelevant());
+  }
+  EntityRef owner=entityRef.getOwner();
+  if (owner.exists()) {
+    entity.setOwner(owner.getId());
+  }
+  EntityScope scope=entityRef.getScope();
+  if (scope != null) {
+switch (scope) {
+case GLOBAL:
+      entity.setScope(GLOBAL);
+    break;
+case SECTOR:
+  entity.setScope(SECTOR);
+break;
+case CHUNK:
+entity.setScope(CHUNK);
+break;
+}
+}
+Set<Class<? extends Component>> presentClasses=Sets.newHashSet();
+for (Component component : entityRef.iterateComponents()) {
+if (!componentSerializeCheck.serialize(componentLibrary.getMetadata(component.getClass()))) {
+continue;
+}
+presentClasses.add(component.getClass());
+Component prefabComponent=prefab.getComponent(component.getClass());
+EntityData.Component componentData;
+if (prefabComponent == null) {
+componentData=componentSerializer.serialize(component,fieldCheck);
+}
+ else {
+componentData=componentSerializer.serialize(prefabComponent,component,fieldCheck);
+}
+if (componentData != null) {
+entity.addComponent(componentData);
+}
+}
+for (Component prefabComponent : prefab.iterateComponents()) {
+ComponentMetadata<?> metadata=componentLibrary.getMetadata(prefabComponent.getClass());
+if (!presentClasses.contains(prefabComponent.getClass()) && componentSerializeCheck.serialize(metadata)) {
+entity.addRemovedComponent(metadata.getId().toString());
+}
+}
+return entity.build();
+}

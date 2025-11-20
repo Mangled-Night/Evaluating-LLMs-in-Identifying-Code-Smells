@@ -1,0 +1,26 @@
+public class CollectionTypeHandler<E> extends TypeHandler<Collection<E>> {
+  private TypeHandler<E> elementTypeHandler;
+  private CollectionCopyConstructor<? extends Collection<E>,E> constructor;
+  public CollectionTypeHandler(  TypeHandler<E> elementTypeHandler,  CollectionCopyConstructor<? extends Collection<E>,E> constructor){
+    this.elementTypeHandler=elementTypeHandler;
+    this.constructor=constructor;
+  }
+  @Override public PersistedData serializeNonNull(  Collection<E> value,  PersistedDataSerializer serializer){
+    List<PersistedData> items=Lists.newArrayList();
+    for (    E element : value) {
+      items.add(elementTypeHandler.serialize(element,serializer));
+    }
+    return serializer.serialize(items);
+  }
+  @Override public Optional<Collection<E>> deserialize(  PersistedData data){
+    if (!data.isArray()) {
+      return Optional.empty();
+    }
+    Collection<E> items=Lists.newArrayList();
+    for (    PersistedData item : data.getAsArray()) {
+      Optional<E> element=elementTypeHandler.deserialize(item);
+      element.ifPresent(items::add);
+    }
+    return Optional.of(constructor.construct(items));
+  }
+}

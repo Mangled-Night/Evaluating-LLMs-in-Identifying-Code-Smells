@@ -1,0 +1,17 @@
+@Test public void cannotEstablishOmemoSessionExceptionTest() throws XmppStringprepException {
+  OmemoDevice alice1=new OmemoDevice(JidCreate.bareFrom("alice@server.tld"),1234);
+  OmemoDevice alice2=new OmemoDevice(JidCreate.bareFrom("alice@server.tld"),2345);
+  OmemoDevice bob=new OmemoDevice(JidCreate.bareFrom("bob@server.tld"),5678);
+  CannotEstablishOmemoSessionException c=new CannotEstablishOmemoSessionException(alice1,null);
+  assertEquals(1,c.getFailures().size());
+  assertTrue(c.getFailures().containsKey(alice1.getJid()));
+  c.addSuccess(alice2);
+  assertFalse(c.requiresThrowing());
+  c.addFailures(new CannotEstablishOmemoSessionException(bob,null));
+  assertTrue(c.requiresThrowing());
+  assertEquals(1,c.getSuccesses().size());
+  assertEquals(2,c.getFailures().size());
+  c.getSuccesses().remove(alice2.getJid());
+  c.addFailures(new CannotEstablishOmemoSessionException(alice2,null));
+  assertEquals(2,c.getFailures().size());
+}

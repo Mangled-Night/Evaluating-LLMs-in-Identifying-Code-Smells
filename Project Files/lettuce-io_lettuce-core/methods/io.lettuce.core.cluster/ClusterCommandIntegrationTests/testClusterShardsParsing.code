@@ -1,0 +1,9 @@
+@Test @EnabledOnCommand("EXPIRETIME") void testClusterShardsParsing(){
+  List<Object> result=sync.clusterShards();
+  Partitions partitions=ClusterPartitionParser.parse(result);
+  assertThat(partitions).hasSize(4);
+  assertThat(partitions.getPartitionBySlot(1).getUri().getPort()).isIn(7379,7381);
+  assertThat(partitions.getPartitionBySlot(12001).getUri().getPort()).isIn(7380,7382);
+  assertThat(partitions.getPartition("127.0.0.1",7382).is(RedisClusterNode.NodeFlag.REPLICA)).isTrue();
+  assertThat(partitions.getPartition("127.0.0.1",7382).is(RedisClusterNode.NodeFlag.SLAVE)).isTrue();
+}

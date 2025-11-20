@@ -1,0 +1,55 @@
+/** 
+ * Adds the received stanza detail to the messages table.
+ * @param dateFormatter the SimpleDateFormat to use to format Dates
+ * @param packet        the read stanza to add to the table
+ */
+private void addReadPacketToTable(final SimpleDateFormat dateFormatter,final TopLevelStreamElement packet){
+  SwingUtilities.invokeLater(new Runnable(){
+    @Override public void run(){
+      String messageType;
+      Jid from;
+      String stanzaId;
+      if (packet instanceof Stanza) {
+        Stanza stanza=(Stanza)packet;
+        from=stanza.getFrom();
+        stanzaId=stanza.getStanzaId();
+      }
+ else {
+        from=null;
+        stanzaId="(Nonza)";
+      }
+      String type="";
+      Icon packetTypeIcon;
+      receivedPackets++;
+      if (packet instanceof IQ) {
+        packetTypeIcon=iqPacketIcon;
+        messageType="IQ Received (class=" + packet.getClass().getName() + ")";
+        type=((IQ)packet).getType().toString();
+        receivedIQPackets++;
+      }
+ else       if (packet instanceof Message) {
+        packetTypeIcon=messagePacketIcon;
+        messageType="Message Received";
+        type=((Message)packet).getType().toString();
+        receivedMessagePackets++;
+      }
+ else       if (packet instanceof Presence) {
+        packetTypeIcon=presencePacketIcon;
+        messageType="Presence Received";
+        type=((Presence)packet).getType().toString();
+        receivedPresencePackets++;
+      }
+ else {
+        packetTypeIcon=unknownPacketTypeIcon;
+        messageType=packet.getClass().getName() + " Received";
+        receivedOtherPackets++;
+      }
+      if (EnhancedDebuggerWindow.MAX_TABLE_ROWS > 0 && messagesTable.getRowCount() >= EnhancedDebuggerWindow.MAX_TABLE_ROWS) {
+        messagesTable.removeRow(0);
+      }
+      messagesTable.addRow(new Object[]{XmlUtil.prettyFormatXml(packet.toXML().toString()),dateFormatter.format(new Date()),packetReceivedIcon,packetTypeIcon,messageType,stanzaId,type,"",from});
+      updateStatistics();
+    }
+  }
+);
+}

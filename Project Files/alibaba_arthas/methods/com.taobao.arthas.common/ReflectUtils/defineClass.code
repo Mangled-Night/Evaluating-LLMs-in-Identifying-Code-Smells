@@ -1,0 +1,61 @@
+public static Class defineClass(String className,byte[] b,ClassLoader loader) throws Exception {
+  return defineClass(className,b,loader,null,null);
+}
+public static Class defineClass(String className,byte[] b,ClassLoader loader,ProtectionDomain protectionDomain) throws Exception {
+  return defineClass(className,b,loader,protectionDomain,null);
+}
+public static Class defineClass(String className,byte[] b,ClassLoader loader,ProtectionDomain protectionDomain,Class<?> contextClass) throws Exception {
+  Class c=null;
+  if (contextClass != null && contextClass.getClassLoader() == loader && privateLookupInMethod != null && lookupDefineClassMethod != null) {
+    try {
+      MethodHandles.Lookup lookup=(MethodHandles.Lookup)privateLookupInMethod.invoke(null,contextClass,MethodHandles.lookup());
+      c=(Class)lookupDefineClassMethod.invoke(lookup,b);
+    }
+ catch (    InvocationTargetException ex) {
+      Throwable target=ex.getTargetException();
+      if (target.getClass() != LinkageError.class && target.getClass() != IllegalArgumentException.class) {
+        throw new ReflectException(target);
+      }
+    }
+catch (    Throwable ex) {
+      throw new ReflectException(ex);
+    }
+  }
+  if (c == null && classLoaderDefineClassMethod != null) {
+    if (protectionDomain == null) {
+      protectionDomain=PROTECTION_DOMAIN;
+    }
+    Object[] args=new Object[]{className,b,0,b.length,protectionDomain};
+    try {
+      if (!classLoaderDefineClassMethod.isAccessible()) {
+        classLoaderDefineClassMethod.setAccessible(true);
+      }
+      c=(Class)classLoaderDefineClassMethod.invoke(loader,args);
+    }
+ catch (    InvocationTargetException ex) {
+      throw new ReflectException(ex.getTargetException());
+    }
+catch (    Throwable ex) {
+      if (!ex.getClass().getName().endsWith("InaccessibleObjectException")) {
+        throw new ReflectException(ex);
+      }
+    }
+  }
+  if (c == null && contextClass != null && contextClass.getClassLoader() != loader && privateLookupInMethod != null && lookupDefineClassMethod != null) {
+    try {
+      MethodHandles.Lookup lookup=(MethodHandles.Lookup)privateLookupInMethod.invoke(null,contextClass,MethodHandles.lookup());
+      c=(Class)lookupDefineClassMethod.invoke(lookup,b);
+    }
+ catch (    InvocationTargetException ex) {
+      throw new ReflectException(ex.getTargetException());
+    }
+catch (    Throwable ex) {
+      throw new ReflectException(ex);
+    }
+  }
+  if (c == null) {
+    throw new ReflectException(THROWABLE);
+  }
+  Class.forName(className,true,loader);
+  return c;
+}

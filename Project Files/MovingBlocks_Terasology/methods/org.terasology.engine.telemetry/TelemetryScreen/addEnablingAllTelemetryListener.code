@@ -1,0 +1,31 @@
+/** 
+ * Add a listener to the telemetryEnable checkbox. If the checkbox os enabled/disabled, it will enable/disable all the telemetry field.
+ */
+private void addEnablingAllTelemetryListener(){
+  UICheckbox uiCheckbox=this.find("telemetryEnabled",UICheckbox.class);
+  if (uiCheckbox != null) {
+    uiCheckbox.subscribe((checkbox) -> {
+      boolean telemetryEnabled=config.getTelemetryConfig().isTelemetryEnabled();
+      Map<String,Boolean> bindingMap=config.getTelemetryConfig().getMetricsUserPermissionConfig().getBindingMap();
+      for (      Map.Entry<String,Boolean> entry : bindingMap.entrySet()) {
+        entry.setValue(telemetryEnabled);
+      }
+      fetchTelemetryCategoriesFromEngineOnlyEnvironment();
+      for (      Map.Entry<TelemetryCategory,Class> telemetryCategory : telemetryCategories.entrySet()) {
+        UICheckbox categoryBox=this.find(telemetryCategory.getKey().id(),UICheckbox.class);
+        if (categoryBox != null) {
+          categoryBox.setEnabled(telemetryEnabled);
+        }
+        Set<Field> fields=ReflectionUtils.getFields(telemetryCategory.getValue(),ReflectionUtils.withAnnotation(TelemetryField.class));
+        for (        Field field : fields) {
+          String fieldName=telemetryCategory.getKey().id() + ":" + field.getName();
+          UICheckbox fieldBox=this.find(fieldName,UICheckbox.class);
+          if (fieldBox != null) {
+            fieldBox.setEnabled(telemetryEnabled);
+          }
+        }
+      }
+    }
+);
+  }
+}

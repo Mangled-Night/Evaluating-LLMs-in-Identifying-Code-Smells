@@ -1,0 +1,131 @@
+/** 
+ * 将汇聚结果集数据真正的发送给Mycat客户端
+ * @param source
+ * @param eof
+ * @param
+ */
+public void outputMergeResult(final ServerConnection source,final byte[] eof,Iterator<UnsafeRow> iter,AtomicBoolean isMiddleResultDone){
+  try {
+    lock.lock();
+    ByteBuffer buffer=session.getSource().allocate();
+    final RouteResultset rrs=this.dataMergeSvr.getRrs();
+    int start=rrs.getLimitStart();
+    int end=start + rrs.getLimitSize();
+    int index=0;
+    if (start < 0)     start=0;
+    if (rrs.getLimitSize() < 0)     end=Integer.MAX_VALUE;
+    if (prepared) {
+      while (iter.hasNext()) {
+        UnsafeRow row=iter.next();
+        if (index >= start) {
+          row.packetId=++packetId;
+          BinaryRowDataPacket binRowPacket=new BinaryRowDataPacket();
+          binRowPacket.read(fieldPackets,row);
+          buffer=binRowPacket.write(buffer,source,true);
+        }
+        index++;
+        if (index == end) {
+          break;
+        }
+      }
+    }
+ else {
+      while (iter.hasNext()) {
+        UnsafeRow row=iter.next();
+        if (index >= start) {
+          row.packetId=++packetId;
+          buffer=row.write(buffer,source,true);
+        }
+        index++;
+        if (index == end) {
+          break;
+        }
+      }
+    }
+    eof[3]=++packetId;
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("last packet id:" + packetId);
+    }
+    MiddlerResultHandler middlerResultHandler=source.getSession2().getMiddlerResultHandler();
+    if (null != middlerResultHandler) {
+      if (buffer.position() > 0) {
+        buffer.flip();
+        byte[] data=new byte[buffer.limit()];
+        buffer.get(data);
+        buffer.clear();
+        String str=ResultSetUtil.getColumnValAsString(data,fields,0);
+        if (rrs.isHasAggrColumn()) {
+          middlerResultHandler.getResult().clear();
+          if (str != null) {
+            middlerResultHandler.add(str);
+          }
+        }
+      }
+      isMiddleResultDone.set(false);
+    }
+ else {
+      ByteBuffer byteBuffer=source.writeToBuffer(eof,buffer);
+      if (source.canResponse()) {
+        source.write(byteBuffer);
+      }
+    }
+    session.getSource().getListener().fireEvent(SqlExecuteStage.END);
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    handleDataProcessException(e);
+  }
+ finally {
+    dataMergeSvr.clear();
+    lock.unlock();
+  }
+}
+public void outputMergeResult(final ServerConnection source,final byte[] eof,List<RowDataPacket> results){
+  try {
+    lock.lock();
+    ByteBuffer buffer=session.getSource().allocate();
+    final RouteResultset rrs=this.dataMergeSvr.getRrs();
+    int start=rrs.getLimitStart();
+    int end=start + rrs.getLimitSize();
+    if (start < 0) {
+      start=0;
+    }
+    if (rrs.getLimitSize() < 0) {
+      end=results.size();
+    }
+    if (end > results.size()) {
+      end=results.size();
+    }
+    if (prepared) {
+      for (int i=start; i < end; i++) {
+        RowDataPacket row=results.get(i);
+        BinaryRowDataPacket binRowDataPk=new BinaryRowDataPacket();
+        binRowDataPk.read(fieldPackets,row);
+        binRowDataPk.packetId=++packetId;
+        buffer=binRowDataPk.write(buffer,session.getSource(),true);
+      }
+    }
+ else {
+      for (int i=start; i < end; i++) {
+        RowDataPacket row=results.get(i);
+        row.packetId=++packetId;
+        buffer=row.write(buffer,source,true);
+      }
+    }
+    eof[3]=++packetId;
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("last packet id:" + packetId);
+    }
+    if (source.canResponse()) {
+      source.write(source.writeToBuffer(eof,buffer));
+    }
+    session.getSource().getListener().fireEvent(SqlExecuteStage.END);
+  }
+ catch (  Exception e) {
+    handleDataProcessException(e);
+  }
+ finally {
+    dataMergeSvr.clear();
+    lock.unlock();
+  }
+}

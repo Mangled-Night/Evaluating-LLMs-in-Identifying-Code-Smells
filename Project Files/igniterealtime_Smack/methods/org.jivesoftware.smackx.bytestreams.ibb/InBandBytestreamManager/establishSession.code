@@ -1,0 +1,31 @@
+/** 
+ * Establishes an In-Band Bytestream with the given user and returns the session to send/receive data to/from the user. <p> Use this method to establish In-Band Bytestreams to users accepting all incoming In-Band Bytestream requests since this method doesn't provide a way to tell the user something about the data to be sent. <p> To establish an In-Band Bytestream after negotiation the kind of data to be sent (e.g. file transfer) use  {@link #establishSession(Jid,String)}.
+ * @param targetJID the JID of the user an In-Band Bytestream should be established
+ * @return the session to send/receive data to/from the user
+ * @throws XMPPException if the user doesn't support or accept in-band bytestreams, or if theuser prefers smaller block sizes
+ * @throws SmackException if there was no response from the server.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+@Override public InBandBytestreamSession establishSession(Jid targetJID) throws XMPPException, SmackException, InterruptedException {
+  String sessionID=getNextSessionID();
+  return establishSession(targetJID,sessionID);
+}
+/** 
+ * Establishes an In-Band Bytestream with the given user using the given session ID and returns the session to send/receive data to/from the user.
+ * @param targetJID the JID of the user an In-Band Bytestream should be established
+ * @param sessionID the session ID for the In-Band Bytestream request
+ * @return the session to send/receive data to/from the user
+ * @throws XMPPErrorException if the user doesn't support or accept in-band bytestreams, or if theuser prefers smaller block sizes
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+@Override public InBandBytestreamSession establishSession(Jid targetJID,String sessionID) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  Open byteStreamRequest=new Open(sessionID,this.defaultBlockSize,this.stanza);
+  byteStreamRequest.setTo(targetJID);
+  final XMPPConnection connection=connection();
+  connection.sendIqRequestAndWaitForResponse(byteStreamRequest);
+  InBandBytestreamSession inBandBytestreamSession=new InBandBytestreamSession(connection,byteStreamRequest,targetJID);
+  this.sessions.put(sessionID,inBandBytestreamSession);
+  return inBandBytestreamSession;
+}

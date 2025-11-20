@@ -1,0 +1,22 @@
+/** 
+ * Non-private constructor to make  {@link RedisClusterClient} proxyable.
+ */
+protected RedisClusterClient(){
+  super(null);
+  this.initialUris=Collections.emptyList();
+  this.refresh=createTopologyRefresh();
+}
+/** 
+ * Initialize the client with a list of cluster URI's. All uris are tried in sequence for connecting initially to the cluster. If any uri is successful for connection, the others are not tried anymore. The initial uri is needed to discover the cluster structure for distributing the requests.
+ * @param clientResources the client resources. If {@code null}, the client will create a new dedicated instance of client resources and keep track of them.
+ * @param redisURIs iterable of initial {@link RedisURI cluster URIs}. Must not be  {@code null} and not empty.
+ */
+protected RedisClusterClient(ClientResources clientResources,Iterable<RedisURI> redisURIs){
+  super(clientResources);
+  assertNotEmpty(redisURIs);
+  assertSameOptions(redisURIs);
+  this.initialUris=Collections.unmodifiableList(LettuceLists.newList(redisURIs));
+  this.refresh=createTopologyRefresh();
+  setDefaultTimeout(getFirstUri().getTimeout());
+  setOptions(ClusterClientOptions.create());
+}

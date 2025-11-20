@@ -1,0 +1,28 @@
+public SingleNodeHandler(RouteResultset rrs,NonBlockingSession session){
+  this.rrs=rrs;
+  this.node=rrs.getNodes()[0];
+  if (node == null) {
+    throw new IllegalArgumentException("routeNode is null!");
+  }
+  if (session == null) {
+    throw new IllegalArgumentException("session is null!");
+  }
+  this.session=session;
+  ServerConnection source=session.getSource();
+  String schema=source.getSchema();
+  if (schema != null && ServerParse.SHOW == rrs.getSqlType()) {
+    SchemaConfig schemaConfig=MycatServer.getInstance().getConfig().getSchemas().get(schema);
+    int type=ServerParseShow.tableCheck(rrs.getStatement(),0);
+    isDefaultNodeShowTable=(ServerParseShow.TABLES == type && !Strings.isNullOrEmpty(schemaConfig.getDataNode()));
+    isDefaultNodeShowFullTable=(ServerParseShow.FULLTABLES == type && !Strings.isNullOrEmpty(schemaConfig.getDataNode()));
+    if (isDefaultNodeShowTable) {
+      shardingTablesSet=ShowTables.getTableSet(source,rrs.getStatement());
+    }
+ else     if (isDefaultNodeShowFullTable) {
+      shardingTablesSet=ShowFullTables.getTableSet(source,rrs.getStatement());
+    }
+  }
+  if (rrs != null && rrs.getStatement() != null) {
+    netInBytes+=rrs.getStatement().getBytes().length;
+  }
+}

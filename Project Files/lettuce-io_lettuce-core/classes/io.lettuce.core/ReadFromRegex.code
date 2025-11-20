@@ -1,0 +1,26 @@
+/** 
+ * Read from any node that has  {@link RedisURI} matching with the given pattern.
+ * @since 6.1
+ */
+static class ReadFromRegex extends ReadFrom {
+  private final ReadFrom delegate;
+  private final boolean orderSensitive;
+  public ReadFromRegex(  Pattern pattern,  boolean orderSensitive){
+    LettuceAssert.notNull(pattern,"Pattern must not be null");
+    this.orderSensitive=orderSensitive;
+    delegate=new UnorderedPredicateReadFromAdapter(redisNodeDescription -> {
+      String host=redisNodeDescription.getUri().getHost();
+      if (LettuceStrings.isEmpty(host)) {
+        return false;
+      }
+      return pattern.matcher(host).matches();
+    }
+);
+  }
+  @Override public List<RedisNodeDescription> select(  Nodes nodes){
+    return delegate.select(nodes);
+  }
+  @Override protected boolean isOrderSensitive(){
+    return orderSensitive;
+  }
+}

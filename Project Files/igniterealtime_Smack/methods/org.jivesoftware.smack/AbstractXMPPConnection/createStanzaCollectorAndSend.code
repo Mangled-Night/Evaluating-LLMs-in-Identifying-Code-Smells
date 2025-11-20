@@ -1,0 +1,17 @@
+@Override public StanzaCollector createStanzaCollectorAndSend(IQ packet) throws NotConnectedException, InterruptedException {
+  StanzaFilter packetFilter=new IQReplyFilter(packet,this);
+  StanzaCollector packetCollector=createStanzaCollectorAndSend(packetFilter,packet);
+  return packetCollector;
+}
+@Override public StanzaCollector createStanzaCollectorAndSend(StanzaFilter packetFilter,Stanza packet) throws NotConnectedException, InterruptedException {
+  StanzaCollector.Configuration configuration=StanzaCollector.newConfiguration().setStanzaFilter(packetFilter).setRequest(packet);
+  StanzaCollector packetCollector=createStanzaCollector(configuration);
+  try {
+    sendStanza(packet);
+  }
+ catch (  InterruptedException|NotConnectedException|RuntimeException e) {
+    packetCollector.cancel();
+    throw e;
+  }
+  return packetCollector;
+}

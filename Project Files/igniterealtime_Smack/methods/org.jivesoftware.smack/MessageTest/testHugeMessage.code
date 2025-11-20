@@ -1,0 +1,22 @@
+/** 
+ * Check that two clients are able to send messages with a body of 4K characters and their connections are not being closed.
+ */
+public void testHugeMessage(){
+  getConnection(0).sendStanza(new Presence(Presence.Type.available));
+  getConnection(1).sendStanza(new Presence(Presence.Type.available));
+  StanzaCollector collector=getConnection(1).createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+  Message msg=new Message(getFullJID(1),Message.Type.chat);
+  StringBuilder sb=new StringBuilder(5000);
+  for (int i=0; i <= 4000; i++) {
+    sb.append('X');
+  }
+  msg.setBody(sb.toString());
+  getConnection(0).sendStanza(msg);
+  assertTrue("XMPPConnection was closed",getConnection(0).isConnected());
+  Message rcv=(Message)collector.nextResult(1000);
+  assertNotNull("No Message was received",rcv);
+  getConnection(0).sendStanza(msg);
+  assertTrue("XMPPConnection was closed",getConnection(0).isConnected());
+  rcv=(Message)collector.nextResult(1000);
+  assertNotNull("No Message was received",rcv);
+}

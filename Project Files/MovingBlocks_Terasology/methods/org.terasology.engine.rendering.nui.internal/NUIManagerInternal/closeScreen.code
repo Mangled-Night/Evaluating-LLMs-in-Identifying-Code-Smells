@@ -1,0 +1,23 @@
+@Override public void closeScreen(String screenUri){
+  closeScreen(new ResourceUrn(screenUri));
+}
+@Override public void closeScreen(ResourceUrn screenUri){
+  boolean sendEvents=true;
+  closeScreen(screenUri,sendEvents);
+}
+private void closeScreen(ResourceUrn screenUri,boolean sendEvents){
+  UIScreenLayer screen=screenLookup.remove(screenUri);
+  if (screen != null) {
+    screens.remove(screen);
+    onCloseScreen(screen,screenUri,sendEvents);
+  }
+}
+@Override public void closeScreen(UIScreenLayer screen){
+  if (screens.remove(screen)) {
+    ResourceUrn screenUri=screenLookup.inverse().remove(screen);
+    onCloseScreen(screen,screenUri,true);
+  }
+}
+@Override public void closeScreen(UIElement element){
+  closeScreen(element.getUrn());
+}

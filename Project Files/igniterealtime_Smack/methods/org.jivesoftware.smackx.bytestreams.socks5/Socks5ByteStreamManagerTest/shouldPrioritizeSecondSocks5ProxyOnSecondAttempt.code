@@ -1,0 +1,52 @@
+/** 
+ * Invoking  {@link Socks5BytestreamManager#establishSession(org.jxmpp.jid.Jid,String)} the first timeshould successfully negotiate a SOCKS5 Bytestream via the second SOCKS5 proxy and should prioritize this proxy for a second SOCKS5 Bytestream negotiation.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws IOException if an I/O error occurred.
+ */
+@Test public void shouldPrioritizeSecondSocks5ProxyOnSecondAttempt() throws SmackException, InterruptedException, IOException, XMPPException {
+  final Protocol protocol=new Protocol();
+  final XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+  final String sessionID="session_id_shouldPrioritizeSecondSocks5ProxyOnSecondAttempt";
+  Socks5BytestreamManager byteStreamManager=Socks5BytestreamManager.getBytestreamManager(connection);
+  byteStreamManager.setAnnounceLocalStreamHost(false);
+  assertTrue(byteStreamManager.isProxyPrioritizationEnabled());
+  Verification<Bytestream,Bytestream> streamHostUsedVerification1=new Verification<Bytestream,Bytestream>(){
+    @Override public void verify(    Bytestream request,    Bytestream response){
+      assertEquals(response.getSessionID(),request.getSessionID());
+      assertEquals(2,request.getStreamHosts().size());
+      StreamHost streamHost=(StreamHost)request.getStreamHosts().toArray()[1];
+      assertEquals(response.getUsedHost().getJID(),streamHost.getJID());
+    }
+  }
+;
+  try (Socks5TestProxy socks5Proxy=new Socks5TestProxy()){
+    createResponses(protocol,sessionID,streamHostUsedVerification1,socks5Proxy);
+    String digest=Socks5Utils.createDigest(sessionID,initiatorJID,targetJID);
+    OutputStream outputStream=byteStreamManager.establishSession(targetJID,sessionID).getOutputStream();
+    InputStream inputStream=socks5Proxy.getSocket(digest).getInputStream();
+    byte[] data=new byte[]{1,2,3};
+    outputStream.write(data);
+    byte[] result=new byte[3];
+    inputStream.read(result);
+    assertArrayEquals(data,result);
+    protocol.verifyAll();
+    Verification<Bytestream,Bytestream> streamHostUsedVerification2=new Verification<Bytestream,Bytestream>(){
+      @Override public void verify(      Bytestream request,      Bytestream response){
+        assertEquals(response.getSessionID(),request.getSessionID());
+        assertEquals(2,request.getStreamHosts().size());
+        StreamHost streamHost=(StreamHost)request.getStreamHosts().toArray()[0];
+        assertEquals(response.getUsedHost().getJID(),streamHost.getJID());
+      }
+    }
+;
+    createResponses(protocol,sessionID,streamHostUsedVerification2,socks5Proxy);
+    outputStream=byteStreamManager.establishSession(targetJID,sessionID).getOutputStream();
+    inputStream=socks5Proxy.getSocket(digest).getInputStream();
+    outputStream.write(data);
+    inputStream.read(result);
+    assertArrayEquals(data,result);
+    protocol.verifyAll();
+  }
+ }

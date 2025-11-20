@@ -1,0 +1,47 @@
+private void download(){
+  try {
+    try {
+      download(serverAddress);
+    }
+ catch (    Exception e) {
+      String defaultAddress=new NetworkConfig().getMasterServer();
+      if (!defaultAddress.equals(serverAddress)) {
+        logger.warn("Download server list from {} failed. Trying default ..",serverAddress);
+        download(defaultAddress);
+      }
+ else {
+        throw e;
+      }
+    }
+  }
+ catch (  Exception e) {
+    status="${engine:menu#error-downloading-server-list}";
+    logger.error("Error downloading online server list!",e);
+  }
+}
+private void download(String address) throws IOException {
+  status="${engine:menu#downloading-server-list}";
+  URL url=new URL("http",address,"/servers/list");
+  try (Reader reader=new InputStreamReader(url.openStream(),charset);JsonReader jsonReader=new JsonReader(reader)){
+    status="${engine:menu#parsing-content}";
+    jsonReader.beginArray();
+    TypeAdapter<ServerInfo> adapter=GSON.getAdapter(ServerInfo.class);
+    while (jsonReader.hasNext()) {
+      ServerInfo entry=adapter.read(jsonReader);
+      servers.add(entry);
+      logger.info("Retrieved game server {}",entry);
+      try {
+        Thread.sleep(250);
+      }
+ catch (      InterruptedException e) {
+      }
+    }
+    jsonReader.endArray();
+    if (servers.size() == 0) {
+      status=String.format("Server Error!");
+    }
+ else {
+      status=String.format("${engine:menu#server-list-complete}");
+    }
+  }
+ }

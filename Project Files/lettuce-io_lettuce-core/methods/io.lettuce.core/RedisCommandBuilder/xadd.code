@@ -1,0 +1,32 @@
+public Command<K,V,String> xadd(K key,XAddArgs xAddArgs,Map<K,V> map){
+  notNullKey(key);
+  LettuceAssert.notNull(map,"Message body " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key);
+  if (xAddArgs != null) {
+    xAddArgs.build(args);
+  }
+ else {
+    args.add("*");
+  }
+  args.add(map);
+  return createCommand(XADD,new StatusOutput<>(codec),args);
+}
+public Command<K,V,String> xadd(K key,XAddArgs xAddArgs,Object[] body){
+  notNullKey(key);
+  LettuceAssert.notNull(body,"Message body " + MUST_NOT_BE_NULL);
+  LettuceAssert.notEmpty(body,"Message body " + MUST_NOT_BE_EMPTY);
+  LettuceAssert.noNullElements(body,"Message body " + MUST_NOT_CONTAIN_NULL_ELEMENTS);
+  LettuceAssert.isTrue(body.length % 2 == 0,"Message body.length must be a multiple of 2 and contain a " + "sequence of field1, value1, field2, value2, fieldN, valueN");
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key);
+  if (xAddArgs != null) {
+    xAddArgs.build(args);
+  }
+ else {
+    args.add("*");
+  }
+  for (int i=0; i < body.length; i+=2) {
+    args.addKey((K)body[i]);
+    args.addValue((V)body[i + 1]);
+  }
+  return createCommand(XADD,new StatusOutput<>(codec),args);
+}

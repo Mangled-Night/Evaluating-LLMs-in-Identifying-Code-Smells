@@ -1,0 +1,22 @@
+public void addModule(ModularXmppClientToServerConnectionModuleDescriptor connectionModule){
+  Class<? extends ModularXmppClientToServerConnectionModuleDescriptor> moduleDescriptorClass=connectionModule.getClass();
+  if (modulesDescriptors.containsKey(moduleDescriptorClass)) {
+    throw new IllegalArgumentException("A connection module for " + moduleDescriptorClass + " is already configured");
+  }
+  modulesDescriptors.put(moduleDescriptorClass,connectionModule);
+}
+@SuppressWarnings("unchecked") public Builder addModule(Class<? extends ModularXmppClientToServerConnectionModuleDescriptor> moduleClass){
+  Class<?>[] declaredClasses=moduleClass.getDeclaredClasses();
+  Class<? extends ModularXmppClientToServerConnectionModuleDescriptor.Builder> builderClass=null;
+  for (  Class<?> declaredClass : declaredClasses) {
+    if (!ModularXmppClientToServerConnectionModuleDescriptor.Builder.class.isAssignableFrom(declaredClass)) {
+      continue;
+    }
+    builderClass=(Class<? extends ModularXmppClientToServerConnectionModuleDescriptor.Builder>)declaredClass;
+    break;
+  }
+  if (builderClass == null) {
+    throw new IllegalArgumentException("Found no builder for " + moduleClass + ". Delcared classes: "+ Arrays.toString(declaredClasses));
+  }
+  return with(builderClass).buildModule();
+}

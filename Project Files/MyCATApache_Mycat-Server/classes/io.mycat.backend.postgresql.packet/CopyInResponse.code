@@ -1,0 +1,69 @@
+/** 
+ * 拷贝数据开始
+ * @author Coollf
+ */
+public class CopyInResponse extends PostgreSQLPacket {
+  /** 
+ * 标示
+ */
+  private char marker=PacketMarker.B_CopyInResponse.getValue();
+  /** 
+ * 长度
+ */
+  private int length;
+  /** 
+ * 拷贝协议, 0 文本, 1 二进制
+ */
+  private DataProtocol protocol;
+  /** 
+ * 拷贝的数据字段数
+ */
+  private short dataLength;
+  /** 
+ * @return the protocol
+ */
+  public DataProtocol getProtocol(){
+    return protocol;
+  }
+  /** 
+ * @return the dataLength
+ */
+  public short getDataLength(){
+    return dataLength;
+  }
+  /** 
+ * @return the columnType
+ */
+  public DataProtocol[] getColumnType(){
+    return columnType;
+  }
+  /** 
+ * 要拷贝数据列的类型  Int16[N]
+ */
+  private DataProtocol[] columnType;
+  @Override public int getLength(){
+    return length;
+  }
+  @Override public char getMarker(){
+    return marker;
+  }
+  public static CopyInResponse parse(  ByteBuffer buffer,  int offset){
+    if (buffer.get(offset) != PacketMarker.B_CopyInResponse.getValue()) {
+      throw new IllegalArgumentException("this packetData not is CopyInResponse");
+    }
+    int _offset=offset + 1;
+    CopyInResponse pack=new CopyInResponse();
+    pack.length=PIOUtils.redInteger4(buffer,_offset);
+    _offset+=4;
+    pack.protocol=DataProtocol.valueOf(PIOUtils.redInteger1(buffer,_offset));
+    _offset+=1;
+    pack.dataLength=PIOUtils.redInteger2(buffer,_offset);
+    _offset+=2;
+    pack.columnType=new DataProtocol[pack.dataLength];
+    for (int i=0; i < pack.columnType.length; i++) {
+      pack.columnType[i]=DataProtocol.valueOf(PIOUtils.redInteger2(buffer,_offset));
+      _offset+=2;
+    }
+    return pack;
+  }
+}

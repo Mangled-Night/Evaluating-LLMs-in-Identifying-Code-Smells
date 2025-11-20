@@ -1,0 +1,26 @@
+public final class OnceForThisStanza implements StanzaFilter {
+  private final String id;
+  private final XMPPTCPConnection connection;
+  public static void setup(  XMPPTCPConnection connection,  Stanza packet){
+    StanzaFilter packetFilter=new OnceForThisStanza(connection,packet);
+    connection.addRequestAckPredicate(packetFilter);
+  }
+  private OnceForThisStanza(  XMPPTCPConnection connection,  Stanza packet){
+    this.connection=connection;
+    this.id=packet.getStanzaId();
+    if (StringUtils.isNullOrEmpty(id)) {
+      throw new IllegalArgumentException("Stanza ID must be set");
+    }
+  }
+  @Override public boolean accept(  Stanza packet){
+    String otherId=packet.getStanzaId();
+    if (StringUtils.isNullOrEmpty(otherId)) {
+      return false;
+    }
+    if (id.equals(otherId)) {
+      connection.removeRequestAckPredicate(this);
+      return true;
+    }
+    return false;
+  }
+}

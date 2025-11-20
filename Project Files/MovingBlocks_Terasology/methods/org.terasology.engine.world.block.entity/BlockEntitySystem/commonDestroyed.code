@@ -1,0 +1,18 @@
+private void commonDestroyed(DoDestroyEvent event,EntityRef entity,Block block){
+  entity.send(new CreateBlockDropsEvent(event.getInstigator(),event.getDirectCause(),event.getDamageType()));
+  BlockDamageModifierComponent blockDamageModifierComponent=event.getDamageType().getComponent(BlockDamageModifierComponent.class);
+  if (blockDamageModifierComponent == null || !blockDamageModifierComponent.skipPerBlockEffects) {
+    if (entity.hasComponent(LocationComponent.class) && block.isDebrisOnDestroy()) {
+      EntityBuilder dustBuilder=entityManager.newBuilder("CoreAssets:dustEffect");
+      if (dustBuilder.hasComponent(LocationComponent.class)) {
+        dustBuilder.getComponent(LocationComponent.class).setWorldPosition(entity.getComponent(LocationComponent.class).getWorldPosition(new Vector3f()));
+        dustBuilder.build();
+      }
+    }
+    BlockSounds sounds=block.getSounds();
+    if (!sounds.getDestroySounds().isEmpty()) {
+      StaticSound sound=random.nextItem(sounds.getDestroySounds());
+      entity.send(new PlaySoundEvent(sound,0.6f));
+    }
+  }
+}

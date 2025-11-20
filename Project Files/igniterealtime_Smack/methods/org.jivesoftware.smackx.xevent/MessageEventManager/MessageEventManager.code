@@ -1,0 +1,18 @@
+/** 
+ * Creates a new message event manager.
+ * @param connection an XMPPConnection to a XMPP server.
+ */
+private MessageEventManager(XMPPConnection connection){
+  super(connection);
+  connection.addAsyncStanzaListener(new StanzaListener(){
+    @Override public void processStanza(    Stanza packet){
+      Message message=(Message)packet;
+      MessageEvent messageEvent=(MessageEvent)message.getExtensionElement("x","jabber:x:event");
+      if (messageEvent.isMessageEventRequest()) {
+        for (        String eventType : messageEvent.getEventTypes())         fireMessageEventRequestListeners(message.getFrom(),message.getStanzaId(),eventType.concat("NotificationRequested"));
+      }
+ else       for (      String eventType : messageEvent.getEventTypes())       fireMessageEventNotificationListeners(message.getFrom(),messageEvent.getStanzaId(),eventType.concat("Notification"));
+    }
+  }
+,PACKET_FILTER);
+}

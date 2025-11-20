@@ -1,0 +1,15 @@
+@Test void wrappedObjectClosedAfterReturn(){
+  AsyncPool<StatefulRedisConnection<String,String>> pool=AsyncConnectionPoolSupport.createBoundedObjectPool(() -> client.connectAsync(StringCodec.ASCII,uri),BoundedPoolConfig.create(),true);
+  StatefulRedisConnection<String,String> connection=TestFutures.getOrTimeout(pool.acquire());
+  RedisCommands<String,String> sync=connection.sync();
+  sync.ping();
+  connection.close();
+  try {
+    connection.isMulti();
+    fail("Missing RedisException");
+  }
+ catch (  RedisException e) {
+    assertThat(e).hasMessageContaining("deallocated");
+  }
+  pool.close();
+}

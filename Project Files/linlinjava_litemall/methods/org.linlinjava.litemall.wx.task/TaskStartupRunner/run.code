@@ -1,0 +1,15 @@
+@Override public void run(ApplicationArguments args) throws Exception {
+  List<LitemallOrder> orderList=orderService.queryUnpaid(SystemConfig.getOrderUnpaid());
+  for (  LitemallOrder order : orderList) {
+    LocalDateTime add=order.getAddTime();
+    LocalDateTime now=LocalDateTime.now();
+    LocalDateTime expire=add.plusMinutes(SystemConfig.getOrderUnpaid());
+    if (expire.isBefore(now)) {
+      taskService.addTask(new OrderUnpaidTask(order.getId(),0));
+    }
+ else {
+      long delay=ChronoUnit.MILLIS.between(now,expire);
+      taskService.addTask(new OrderUnpaidTask(order.getId(),delay));
+    }
+  }
+}

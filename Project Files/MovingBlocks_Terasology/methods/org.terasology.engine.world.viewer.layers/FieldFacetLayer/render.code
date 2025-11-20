@@ -1,0 +1,17 @@
+@Override public void render(BufferedImage img,Region region){
+  FieldFacet2D facet=region.getFacet(clazz);
+  int width=img.getWidth();
+  int height=img.getHeight();
+  ColorModel colorModel=img.getColorModel();
+  ColorBlender blender=ColorBlenders.forColorModel(ColorModels.RGBA,colorModel);
+  DataBufferInt dataBuffer=(DataBufferInt)img.getRaster().getDataBuffer();
+  for (int z=0; z < height; z++) {
+    for (int x=0; x < width; x++) {
+      Color col=getColor(facet,x,z);
+      int src=col.rgba();
+      int dst=dataBuffer.getElem(z * width + x);
+      int mix=blender.add(src,dst);
+      dataBuffer.setElem(z * width + x,mix);
+    }
+  }
+}

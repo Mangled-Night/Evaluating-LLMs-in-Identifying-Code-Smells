@@ -1,0 +1,38 @@
+/** 
+ * Merge light for chunk.
+ * @param localChunks nearest chunks with target chunk
+ * @throws IllegalArgumentException if {@code localChunks.length != LOCAL_CHUNKS_ARRAY_LENGTH} or {@code chunk} not in center of {@code localChunks}
+ */
+public static Chunk merge(Chunk[] localChunks){
+  Preconditions.checkArgument(localChunks.length == LOCAL_CHUNKS_ARRAY_LENGTH,"Length of parameter [localChunks] must be equals [" + LOCAL_CHUNKS_ARRAY_LENGTH + "]");
+  Preconditions.checkArgument(Arrays.stream(localChunks).noneMatch(Objects::isNull),"Parameter [localChunks] " + "must not contains nulls");
+  Arrays.sort(localChunks,Comparator.<Chunk>comparingInt(c -> c.getPosition().x()).thenComparingInt(c -> c.getPosition().y()).thenComparing(c -> c.getPosition().z()));
+  Chunk chunk=localChunks[CENTER_INDEX];
+  List<BatchPropagator> propagators=Lists.newArrayList();
+  propagators.add(new StandardBatchPropagator(new LightPropagationRules(),new LocalChunkView(localChunks,LIGHT_RULES)));
+  PropagatorWorldView regenWorldView=new LocalChunkView(localChunks,SUNLIGHT_REGEN_RULES);
+  PropagationRules sunlightRules=new SunlightPropagationRules(regenWorldView);
+  PropagatorWorldView sunlightWorldView=new LocalChunkView(localChunks,sunlightRules);
+  BatchPropagator sunlightPropagator=new StandardBatchPropagator(sunlightRules,sunlightWorldView);
+  propagators.add(new SunlightRegenBatchPropagator(SUNLIGHT_REGEN_RULES,regenWorldView,sunlightPropagator,sunlightWorldView));
+  propagators.add(sunlightPropagator);
+  for (  BatchPropagator propagator : propagators) {
+    for (    Side side : Side.allSides()) {
+      Chunk adjChunk=localChunks[indexOf(side)];
+      if (adjChunk != null) {
+        propagator.propagateBetween(adjChunk,chunk,side.reverse(),false);
+      }
+    }
+    for (    Side side : Side.allSides()) {
+      Chunk adjChunk=localChunks[indexOf(side)];
+      if (adjChunk != null) {
+        propagator.propagateBetween(chunk,adjChunk,side,true);
+      }
+    }
+  }
+  for (  BatchPropagator propagator : propagators) {
+    propagator.process();
+  }
+  chunk.deflateSunlight();
+  return chunk;
+}

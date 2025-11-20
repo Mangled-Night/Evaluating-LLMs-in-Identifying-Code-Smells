@@ -1,0 +1,79 @@
+public MongoData query() throws MongoSQLException {
+  if (!(statement instanceof SQLSelectStatement)) {
+    throw new IllegalArgumentException("not a query sql statement");
+  }
+  MongoData mongo=new MongoData();
+  DBCursor c=null;
+  SQLSelectStatement selectStmt=(SQLSelectStatement)statement;
+  SQLSelectQuery sqlSelectQuery=selectStmt.getSelect().getQuery();
+  int icount=0;
+  if (sqlSelectQuery instanceof MySqlSelectQueryBlock) {
+    MySqlSelectQueryBlock mysqlSelectQuery=(MySqlSelectQueryBlock)selectStmt.getSelect().getQuery();
+    BasicDBObject fields=new BasicDBObject();
+    for (    SQLSelectItem item : mysqlSelectQuery.getSelectList()) {
+      if (!(item.getExpr() instanceof SQLAllColumnExpr)) {
+        if (item.getExpr() instanceof SQLAggregateExpr) {
+          SQLAggregateExpr expr=(SQLAggregateExpr)item.getExpr();
+          if (expr.getMethodName().equals("COUNT")) {
+            icount=1;
+            mongo.setField(getExprFieldName(expr),Types.BIGINT);
+          }
+          fields.put(getExprFieldName(expr),Integer.valueOf(1));
+        }
+ else {
+          fields.put(getFieldName(item),Integer.valueOf(1));
+        }
+      }
+    }
+    SQLTableSource table=mysqlSelectQuery.getFrom();
+    DBCollection coll=this._db.getCollection(table.toString());
+    mongo.setTable(table.toString());
+    SQLExpr expr=mysqlSelectQuery.getWhere();
+    DBObject query=parserWhere(expr);
+    SQLSelectGroupByClause groupby=mysqlSelectQuery.getGroupBy();
+    BasicDBObject gbkey=new BasicDBObject();
+    if (groupby != null) {
+      for (      SQLExpr gbexpr : groupby.getItems()) {
+        if (gbexpr instanceof SQLIdentifierExpr) {
+          String name=((SQLIdentifierExpr)gbexpr).getName();
+          gbkey.put(name,Integer.valueOf(1));
+        }
+      }
+      icount=2;
+    }
+    int limitoff=0;
+    int limitnum=0;
+    if (mysqlSelectQuery.getLimit() != null) {
+      limitoff=getSQLExprToInt(mysqlSelectQuery.getLimit().getOffset());
+      limitnum=getSQLExprToInt(mysqlSelectQuery.getLimit().getRowCount());
+    }
+    if (icount == 1) {
+      mongo.setCount(coll.count(query));
+    }
+ else     if (icount == 2) {
+      BasicDBObject initial=new BasicDBObject();
+      initial.put("num",0);
+      String reduce="function (obj, prev) { " + "  prev.num++}";
+      mongo.setGrouyBy(coll.group(gbkey,query,initial,reduce));
+    }
+ else {
+      if ((limitoff > 0) || (limitnum > 0)) {
+        c=coll.find(query,fields).skip(limitoff).limit(limitnum);
+      }
+ else {
+        c=coll.find(query,fields);
+      }
+      SQLOrderBy orderby=mysqlSelectQuery.getOrderBy();
+      if (orderby != null) {
+        BasicDBObject order=new BasicDBObject();
+        for (int i=0; i < orderby.getItems().size(); i++) {
+          SQLSelectOrderByItem orderitem=orderby.getItems().get(i);
+          order.put(orderitem.getExpr().toString(),Integer.valueOf(getSQLExprToAsc(orderitem.getType())));
+        }
+        c.sort(order);
+      }
+    }
+    mongo.setCursor(c);
+  }
+  return mongo;
+}

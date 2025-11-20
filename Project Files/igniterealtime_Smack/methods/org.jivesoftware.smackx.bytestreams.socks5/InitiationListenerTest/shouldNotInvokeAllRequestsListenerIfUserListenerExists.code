@@ -1,0 +1,15 @@
+/** 
+ * If a user specific listener and an all requests listener is registered only the user specific listener should be notified.
+ * @throws Exception should not happen
+ */
+@Test public void shouldNotInvokeAllRequestsListenerIfUserListenerExists() throws Exception {
+  Socks5BytestreamListener allRequestsListener=mock(Socks5BytestreamListener.class);
+  byteStreamManager.addIncomingBytestreamListener(allRequestsListener);
+  Socks5BytestreamListener userRequestsListener=mock(Socks5BytestreamListener.class);
+  byteStreamManager.addIncomingBytestreamListener(userRequestsListener,initiatorJID);
+  initiationListener.handleIQRequest(initBytestream);
+  ArgumentCaptor<BytestreamRequest> byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+  verify(userRequestsListener,timeout(TIMEOUT)).incomingBytestreamRequest(byteStreamRequest.capture());
+  byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+  verify(allRequestsListener,never()).incomingBytestreamRequest(byteStreamRequest.capture());
+}

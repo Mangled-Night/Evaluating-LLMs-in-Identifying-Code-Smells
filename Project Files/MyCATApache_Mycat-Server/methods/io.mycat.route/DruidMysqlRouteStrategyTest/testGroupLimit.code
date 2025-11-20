@@ -1,0 +1,29 @@
+public void testGroupLimit() throws Exception {
+  final SchemaConfig schema=schemaMap.get("cndb");
+  String sql=null;
+  RouteResultset rrs=null;
+  sql="select count(*) from (select * from(select * from offer_detail where offer_id='123' or offer_id='234' limit 88)offer  where offer.member_id='abc' limit 60) w " + " where w.member_id ='pavarotti17' limit 99";
+  rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(true,rrs.isCacheAble());
+  Map<String,RouteResultsetNode> nodeMap=getNodeMap(rrs,2);
+  NodeNameAsserter nameAsserter=new NodeNameAsserter("detail_dn29","detail_dn15");
+  nameAsserter.assertRouteNodeNames(nodeMap.keySet());
+  sql="select count(*) from (select * from(select max(id) from offer_detail where offer_id='123' or offer_id='234' limit 88)offer  where offer.member_id='abc' limit 60) w " + " where w.member_id ='pavarotti17' limit 99";
+  rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(true,rrs.isCacheAble());
+  nodeMap=getNodeMap(rrs,2);
+  nameAsserter=new NodeNameAsserter("detail_dn29","detail_dn15");
+  nameAsserter.assertRouteNodeNames(nodeMap.keySet());
+  sql="select * from (select * from(select max(id) from offer_detail where offer_id='123' or offer_id='234' limit 88)offer  where offer.member_id='abc' limit 60) w " + " where w.member_id ='pavarotti17' limit 99";
+  rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(true,rrs.isCacheAble());
+  nodeMap=getNodeMap(rrs,2);
+  nameAsserter=new NodeNameAsserter("detail_dn29","detail_dn15");
+  nameAsserter.assertRouteNodeNames(nodeMap.keySet());
+  sql="select * from (select count(*) from(select * from offer_detail where offer_id='123' or offer_id='234' limit 88)offer  where offer.member_id='abc' limit 60) w " + " where w.member_id ='pavarotti17' limit 99";
+  rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(true,rrs.isCacheAble());
+  nodeMap=getNodeMap(rrs,2);
+  nameAsserter=new NodeNameAsserter("detail_dn29","detail_dn15");
+  nameAsserter.assertRouteNodeNames(nodeMap.keySet());
+}

@@ -1,0 +1,14 @@
+@ReceiveEvent public void onBumpGiveItemToEntity(CollideEvent event,EntityRef entity,PickupComponent pickupComponent){
+  if (pickupComponent.timeDropped + pickupComponent.timeToPickUp < time.getGameTimeInMs()) {
+    GiveItemEvent giveItemEvent=new GiveItemEvent(event.getOtherEntity());
+    entity.send(giveItemEvent);
+    if (giveItemEvent.isHandled()) {
+      ItemComponent itemComponent=entity.getComponent(ItemComponent.class);
+      if (itemComponent != null) {
+        for (        Component component : itemComponent.pickupPrefab.iterateComponents()) {
+          entity.removeComponent(component.getClass());
+        }
+      }
+    }
+  }
+}

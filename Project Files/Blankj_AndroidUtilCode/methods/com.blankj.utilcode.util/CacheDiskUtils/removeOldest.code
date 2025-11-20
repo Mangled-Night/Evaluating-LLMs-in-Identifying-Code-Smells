@@ -1,0 +1,26 @@
+/** 
+ * Remove the oldest files.
+ * @return the size of oldest files, in bytes
+ */
+private long removeOldest(){
+  if (lastUsageDates.isEmpty())   return 0;
+  Long oldestUsage=Long.MAX_VALUE;
+  File oldestFile=null;
+  Set<Map.Entry<File,Long>> entries=lastUsageDates.entrySet();
+synchronized (lastUsageDates) {
+    for (    Map.Entry<File,Long> entry : entries) {
+      Long lastValueUsage=entry.getValue();
+      if (lastValueUsage < oldestUsage) {
+        oldestUsage=lastValueUsage;
+        oldestFile=entry.getKey();
+      }
+    }
+  }
+  if (oldestFile == null)   return 0;
+  long fileSize=oldestFile.length();
+  if (oldestFile.delete()) {
+    lastUsageDates.remove(oldestFile);
+    return fileSize;
+  }
+  return 0;
+}

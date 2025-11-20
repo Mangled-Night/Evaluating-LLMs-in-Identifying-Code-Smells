@@ -1,0 +1,25 @@
+public static class TestHighPriorityEventHandler extends BaseComponentSystem {
+  public boolean cancel;
+  List<Received> receivedList=Lists.newArrayList();
+  @Priority(EventPriority.PRIORITY_HIGH) @ReceiveEvent(components=StringComponent.class) public void handleStringEvent(  TestEvent event,  EntityRef entity){
+    receivedList.add(new Received(event,entity));
+    if (cancel) {
+      event.consume();
+    }
+  }
+  @Priority(EventPriority.PRIORITY_HIGH) @ReceiveEvent(components=IntegerComponent.class) public void handleIntegerEvent(  TestEvent event,  EntityRef entity){
+    receivedList.add(new Received(event,entity));
+  }
+  public void initialise(){
+  }
+  @Override public void shutdown(){
+  }
+public static class Received {
+    TestEvent event;
+    EntityRef entity;
+    public Received(    TestEvent event,    EntityRef entity){
+      this.event=event;
+      this.entity=entity;
+    }
+  }
+}

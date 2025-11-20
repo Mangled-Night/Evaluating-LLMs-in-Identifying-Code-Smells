@@ -1,0 +1,31 @@
+/** 
+ * Returns a random rooted-in DAG on  {@code V} vertices and {@code E} edges.A rooted in-tree is a DAG in which there is a single vertex reachable from every other vertex. The DAG returned is not chosen uniformly at random among all such DAGs.
+ * @param V the number of vertices
+ * @param E the number of edges
+ * @return a random rooted-in DAG on {@code V} vertices and {@code E} edges
+ */
+public static Digraph rootedInDAG(int V,int E){
+  if (E > (long)V * (V - 1) / 2)   throw new IllegalArgumentException("Too many edges");
+  if (E < V - 1)   throw new IllegalArgumentException("Too few edges");
+  Digraph G=new Digraph(V);
+  SET<Edge> set=new SET<Edge>();
+  int[] vertices=new int[V];
+  for (int i=0; i < V; i++)   vertices[i]=i;
+  StdRandom.shuffle(vertices);
+  for (int v=0; v < V - 1; v++) {
+    int w=StdRandom.uniformInt(v + 1,V);
+    Edge e=new Edge(v,w);
+    set.add(e);
+    G.addEdge(vertices[v],vertices[w]);
+  }
+  while (G.E() < E) {
+    int v=StdRandom.uniformInt(V);
+    int w=StdRandom.uniformInt(V);
+    Edge e=new Edge(v,w);
+    if ((v < w) && !set.contains(e)) {
+      set.add(e);
+      G.addEdge(vertices[v],vertices[w]);
+    }
+  }
+  return G;
+}

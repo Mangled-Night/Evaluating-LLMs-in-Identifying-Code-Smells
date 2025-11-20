@@ -1,0 +1,44 @@
+@Override public Boolean fetchNextPeriod(String prefixName){
+  InterProcessSemaphoreMutex interProcessSemaphoreMutex=interProcessSemaphoreMutexThreadLocal.get();
+  try {
+    if (interProcessSemaphoreMutex == null) {
+      throw new IllegalStateException("IncrSequenceZKHandler should be loaded first!");
+    }
+    interProcessSemaphoreMutex.acquire();
+    Map<String,Map<String,String>> tableParaValMap=tableParaValMapThreadLocal.get();
+    if (tableParaValMap == null) {
+      throw new IllegalStateException("IncrSequenceZKHandler should be loaded first!");
+    }
+    Map<String,String> paraValMap=tableParaValMap.get(prefixName);
+    if (paraValMap == null) {
+      throw new IllegalStateException("IncrSequenceZKHandler should be loaded first!");
+    }
+    if (paraValMap.get(prefixName + KEY_MAX_NAME) == null) {
+      paraValMap.put(prefixName + KEY_MAX_NAME,props.getProperty(prefixName + KEY_MAX_NAME));
+    }
+    if (paraValMap.get(prefixName + KEY_MIN_NAME) == null) {
+      paraValMap.put(prefixName + KEY_MIN_NAME,props.getProperty(prefixName + KEY_MIN_NAME));
+    }
+    if (paraValMap.get(prefixName + KEY_CUR_NAME) == null) {
+      paraValMap.put(prefixName + KEY_CUR_NAME,props.getProperty(prefixName + KEY_CUR_NAME));
+    }
+    long period=Long.parseLong(paraValMap.get(prefixName + KEY_MAX_NAME)) - Long.parseLong(paraValMap.get(prefixName + KEY_MIN_NAME));
+    long now=Long.parseLong(new String(client.getData().forPath(PATH + "/" + prefixName+ SEQ)));
+    client.setData().forPath(PATH + "/" + prefixName+ SEQ,((now + period + 1) + "").getBytes());
+    paraValMap.put(prefixName + KEY_MAX_NAME,(now + period + 1) + "");
+    paraValMap.put(prefixName + KEY_MIN_NAME,(now + 1) + "");
+    paraValMap.put(prefixName + KEY_CUR_NAME,(now) + "");
+  }
+ catch (  Exception e) {
+    LOGGER.error("Error caught while updating period from ZK:" + e.getCause());
+  }
+ finally {
+    try {
+      interProcessSemaphoreMutex.release();
+    }
+ catch (    Exception e) {
+      LOGGER.error("Error caught while realeasing distributed lock" + e.getCause());
+    }
+  }
+  return true;
+}

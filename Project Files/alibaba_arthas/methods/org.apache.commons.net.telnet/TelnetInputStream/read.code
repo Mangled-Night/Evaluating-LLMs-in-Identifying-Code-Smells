@@ -1,0 +1,117 @@
+@Override public int read() throws IOException {
+synchronized (__queue) {
+    while (true) {
+      if (__ioException != null) {
+        IOException e;
+        e=__ioException;
+        __ioException=null;
+        throw e;
+      }
+      if (__bytesAvailable == 0) {
+        if (__hasReachedEOF) {
+          return EOF;
+        }
+        if (__threaded) {
+          __queue.notify();
+          try {
+            __readIsWaiting=true;
+            __queue.wait();
+            __readIsWaiting=false;
+          }
+ catch (          InterruptedException e) {
+            throw new InterruptedIOException("Fatal thread interruption during read.");
+          }
+        }
+ else {
+          __readIsWaiting=true;
+          int ch;
+          boolean mayBlock=true;
+          do {
+            try {
+              if ((ch=__read(mayBlock)) < 0) {
+                if (ch != WOULD_BLOCK) {
+                  return (ch);
+                }
+              }
+            }
+ catch (            InterruptedIOException e) {
+synchronized (__queue) {
+                __ioException=e;
+                __queue.notifyAll();
+                try {
+                  __queue.wait(100);
+                }
+ catch (                InterruptedException interrupted) {
+                }
+              }
+              return EOF;
+            }
+            try {
+              if (ch != WOULD_BLOCK) {
+                __processChar(ch);
+              }
+            }
+ catch (            InterruptedException e) {
+              if (__isClosed) {
+                return EOF;
+              }
+            }
+            mayBlock=false;
+          }
+ while (super.available() > 0 && __bytesAvailable < __queue.length - 1);
+          __readIsWaiting=false;
+        }
+        continue;
+      }
+ else {
+        int ch;
+        ch=__queue[__queueHead];
+        if (++__queueHead >= __queue.length) {
+          __queueHead=0;
+        }
+        --__bytesAvailable;
+        if (__bytesAvailable == 0 && __threaded) {
+          __queue.notify();
+        }
+        return ch;
+      }
+    }
+  }
+}
+/** 
+ * Reads the next number of bytes from the stream into an array and returns the number of bytes read.  Returns -1 if the end of the stream has been reached. <p>
+ * @param buffer  The byte array in which to store the data.
+ * @return The number of bytes read. Returns -1 if theend of the message has been reached.
+ * @exception IOException If an error occurs in reading the underlyingstream.
+ */
+@Override public int read(byte buffer[]) throws IOException {
+  return read(buffer,0,buffer.length);
+}
+/** 
+ * Reads the next number of bytes from the stream into an array and returns the number of bytes read.  Returns -1 if the end of the message has been reached.  The characters are stored in the array starting from the given offset and up to the length specified. <p>
+ * @param buffer The byte array in which to store the data.
+ * @param offset  The offset into the array at which to start storing data.
+ * @param length   The number of bytes to read.
+ * @return The number of bytes read. Returns -1 if theend of the stream has been reached.
+ * @exception IOException If an error occurs while reading the underlyingstream.
+ */
+@Override public int read(byte buffer[],int offset,int length) throws IOException {
+  int ch, off;
+  if (length < 1) {
+    return 0;
+  }
+synchronized (__queue) {
+    if (length > __bytesAvailable) {
+      length=__bytesAvailable;
+    }
+  }
+  if ((ch=read()) == EOF) {
+    return EOF;
+  }
+  off=offset;
+  do {
+    buffer[offset++]=(byte)ch;
+  }
+ while (--length > 0 && (ch=read()) != EOF);
+  return (offset - off);
+}

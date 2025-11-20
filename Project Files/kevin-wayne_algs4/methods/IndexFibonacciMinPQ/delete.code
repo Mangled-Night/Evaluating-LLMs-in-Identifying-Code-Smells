@@ -1,0 +1,31 @@
+/** 
+ * Deletes the key associated the given index Worst case is O(log(n)) (amortized)
+ * @param i an index
+ * @throws java.lang.IllegalArgumentException if the specified index is invalid
+ * @throws java.util.NoSuchElementException if the given index has no key associated with
+ */
+public void delete(int i){
+  if (i < 0 || i >= n)   throw new IllegalArgumentException();
+  if (!contains(i))   throw new NoSuchElementException("Specified index is not in the queue");
+  Node<Key> x=nodes[i];
+  x.key=null;
+  if (x.parent != null) {
+    cut(i);
+  }
+  head=cut(x,head);
+  if (x.child != null) {
+    Node<Key> child=x.child;
+    x.child=null;
+    x=child;
+    do {
+      child.parent=null;
+      child=child.next;
+    }
+ while (child != x);
+    head=meld(head,child);
+  }
+  if (!isEmpty())   consolidate();
+ else   min=null;
+  nodes[i]=null;
+  size--;
+}

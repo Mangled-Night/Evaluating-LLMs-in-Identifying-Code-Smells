@@ -1,0 +1,37 @@
+/** 
+ * Parse a host and port string into a  {@link HostAndPort}. The port is optional. Examples:  {@code host:port} or{@code host}
+ * @param hostPortString
+ * @return
+ */
+public static HostAndPort parse(String hostPortString){
+  LettuceAssert.notNull(hostPortString,"HostPortString must not be null");
+  String host;
+  String portString=null;
+  if (hostPortString.startsWith("[")) {
+    String[] hostAndPort=getHostAndPortFromBracketedHost(hostPortString);
+    host=hostAndPort[0];
+    portString=hostAndPort[1];
+  }
+ else {
+    int colonPos=hostPortString.indexOf(':');
+    if (colonPos >= 0 && hostPortString.indexOf(':',colonPos + 1) == -1) {
+      host=hostPortString.substring(0,colonPos);
+      portString=hostPortString.substring(colonPos + 1);
+    }
+ else {
+      host=hostPortString;
+    }
+  }
+  int port=NO_PORT;
+  if (!LettuceStrings.isEmpty(portString)) {
+    LettuceAssert.isTrue(!portString.startsWith("+"),() -> String.format("Cannot port number: %s",hostPortString));
+    try {
+      port=Integer.parseInt(portString);
+    }
+ catch (    NumberFormatException e) {
+      throw new IllegalArgumentException(String.format("Cannot parse port number: %s",hostPortString));
+    }
+    LettuceAssert.isTrue(isValidPort(port),() -> String.format("Port number out of range: %s",hostPortString));
+  }
+  return new HostAndPort(host,port);
+}

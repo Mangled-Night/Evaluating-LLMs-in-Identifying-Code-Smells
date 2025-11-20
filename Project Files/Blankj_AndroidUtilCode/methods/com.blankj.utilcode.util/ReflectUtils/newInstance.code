@@ -1,0 +1,42 @@
+/** 
+ * Create and initialize a new instance.
+ * @return the single {@link ReflectUtils} instance
+ */
+public ReflectUtils newInstance(){
+  return newInstance(new Object[0]);
+}
+/** 
+ * Create and initialize a new instance.
+ * @param args The args.
+ * @return the single {@link ReflectUtils} instance
+ */
+public ReflectUtils newInstance(Object... args){
+  Class<?>[] types=getArgsType(args);
+  try {
+    Constructor<?> constructor=type().getDeclaredConstructor(types);
+    return newInstance(constructor,args);
+  }
+ catch (  NoSuchMethodException e) {
+    List<Constructor<?>> list=new ArrayList<>();
+    for (    Constructor<?> constructor : type().getDeclaredConstructors()) {
+      if (match(constructor.getParameterTypes(),types)) {
+        list.add(constructor);
+      }
+    }
+    if (list.isEmpty()) {
+      throw new ReflectException(e);
+    }
+ else {
+      sortConstructors(list);
+      return newInstance(list.get(0),args);
+    }
+  }
+}
+private ReflectUtils newInstance(final Constructor<?> constructor,final Object... args){
+  try {
+    return new ReflectUtils(constructor.getDeclaringClass(),accessible(constructor).newInstance(args));
+  }
+ catch (  Exception e) {
+    throw new ReflectException(e);
+  }
+}

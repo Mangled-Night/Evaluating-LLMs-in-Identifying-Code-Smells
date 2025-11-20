@@ -1,0 +1,21 @@
+public Builder limitResultsBefore(Date end){
+  if (end == null) {
+    return this;
+  }
+  FormField formField=FormField.builder(FORM_FIELD_END).setValue(end).build();
+  formFields.put(formField.getFieldName(),formField);
+  FormField startFormField=formFields.get(FORM_FIELD_START);
+  if (startFormField != null) {
+    Date start;
+    try {
+      start=startFormField.getFirstValueAsDate();
+    }
+ catch (    ParseException e) {
+      throw new IllegalStateException(e);
+    }
+    if (end.getTime() <= start.getTime()) {
+      throw new IllegalArgumentException("Given end date (" + end + ") is before the existing start date ("+ start+ ')');
+    }
+  }
+  return this;
+}

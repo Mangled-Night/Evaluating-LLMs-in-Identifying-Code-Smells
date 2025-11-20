@@ -1,0 +1,21 @@
+public ModuleManager(String masterServerAddress){
+  this(masterServerAddress,Collections.emptyList());
+}
+public ModuleManager(String masterServerAddress,List<Class<?>> classesOnClasspathsToAddToEngine){
+  engineModule=loadAndConfigureEngineModule(moduleFactory,classesOnClasspathsToAddToEngine);
+  registry.add(engineModule);
+  if (isLoadingClasspathModules()) {
+    loadModulesFromClassPath();
+  }
+  loadModulesFromApplicationPath(PathManager.getInstance());
+  ensureModulesDependOnEngine();
+  setupSandbox();
+  loadEnvironment(Sets.newHashSet(engineModule),true);
+  installManager=new ModuleInstallManager(this,masterServerAddress);
+}
+public ModuleManager(Config config){
+  this(config,Collections.emptyList());
+}
+public ModuleManager(Config config,List<Class<?>> classesOnClasspathsToAddToEngine){
+  this(config.getNetwork().getMasterServer(),classesOnClasspathsToAddToEngine);
+}

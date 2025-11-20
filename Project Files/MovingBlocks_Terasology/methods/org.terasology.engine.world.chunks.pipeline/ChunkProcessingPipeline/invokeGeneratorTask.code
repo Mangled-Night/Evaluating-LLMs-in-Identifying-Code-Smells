@@ -1,0 +1,19 @@
+/** 
+ * Run generator task and then run pipeline processing with it. <p> Additionally add technical stages for cleaning pipeline after chunk processing and handles errors in stages.
+ * @param generatorTask ChunkTask which provides new chunk to pipeline
+ * @return Future of chunk processing.
+ */
+public ListenableFuture<Chunk> invokeGeneratorTask(Vector3ic position,Supplier<Chunk> generatorTask){
+  Preconditions.checkState(!stages.isEmpty(),"ChunkProcessingPipeline must to have at least one stage");
+  ChunkProcessingInfo chunkProcessingInfo=chunkProcessingInfoMap.get(position);
+  if (chunkProcessingInfo != null) {
+    return chunkProcessingInfo.getExternalFuture();
+  }
+ else {
+    SettableFuture<Chunk> exitFuture=SettableFuture.create();
+    chunkProcessingInfo=new ChunkProcessingInfo(position,exitFuture);
+    chunkProcessingInfoMap.put(position,chunkProcessingInfo);
+    chunkProcessingInfo.setCurrentFuture(chunkProcessor.submit(new PositionalCallable(generatorTask::get,position)));
+    return exitFuture;
+  }
+}

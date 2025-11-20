@@ -1,0 +1,46 @@
+/** 
+ * Represents the top level element of a PubSub event extension.  All types of PubSub events are represented by this class.  The specific type can be found by  {@link #getEventType()}.  The embedded event information, which is specific to the event type, can be retrieved by the  {@link #getEvent()}method.
+ * @author Robin Collier
+ */
+public class EventElement implements EmbeddedPacketExtension, ExtensionElement {
+  /** 
+ * The constant String "event".
+ */
+  public static final String ELEMENT="event";
+  /** 
+ * The constant String "http://jabber.org/protocol/pubsub#event".
+ */
+  public static final String NAMESPACE=PubSubNamespace.event.getXmlns();
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  private final EventElementType type;
+  private final NodeExtension ext;
+  public EventElement(  EventElementType eventType,  NodeExtension eventExt){
+    type=eventType;
+    ext=eventExt;
+  }
+  public EventElementType getEventType(){
+    return type;
+  }
+  @Override public List<XmlElement> getExtensions(){
+    return Arrays.asList(new XmlElement[]{getEvent()});
+  }
+  public NodeExtension getEvent(){
+    return ext;
+  }
+  @Override public String getElementName(){
+    return QNAME.getLocalPart();
+  }
+  @Override public String getNamespace(){
+    return QNAME.getNamespaceURI();
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this);
+    xml.rightAngleBracket();
+    xml.append(ext.toXML());
+    xml.closeElement(this);
+    return xml;
+  }
+  public static EventElement from(  Stanza stanza){
+    return stanza.getExtension(EventElement.class);
+  }
+}

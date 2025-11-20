@@ -1,0 +1,31 @@
+private static class ShellJobHandler implements JobListener {
+  ShellImpl shell;
+  public ShellJobHandler(  ShellImpl shell){
+    this.shell=shell;
+  }
+  @Override public void onForeground(  Job job){
+    shell.setForegroundJob(job);
+  }
+  @Override public void onBackground(  Job job){
+    resetAndReadLine();
+  }
+  @Override public void onTerminated(  Job job){
+    if (!job.isRunInBackground()) {
+      resetAndReadLine();
+    }
+    Term term=shell.term();
+    if (term instanceof TermImpl) {
+      List<int[]> history=((TermImpl)term).getReadline().getHistory();
+      FileUtils.saveCommandHistory(history,new File(Constants.CMD_HISTORY_FILE));
+    }
+  }
+  @Override public void onSuspend(  Job job){
+    if (!job.isRunInBackground()) {
+      resetAndReadLine();
+    }
+  }
+  private void resetAndReadLine(){
+    shell.setForegroundJob(null);
+    shell.readline();
+  }
+}

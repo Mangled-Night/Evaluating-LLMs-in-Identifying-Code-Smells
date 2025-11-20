@@ -1,0 +1,26 @@
+/** 
+ * function标签结构： <function name="partbymonth" class="io.mycat.route.function.PartitionByMonth"> <property name="dateFormat">yyyy-MM-dd</property> <property name="sBeginDate">2015-01-01</property> </function>
+ * @param root
+ * @throws ClassNotFoundException
+ * @throws InstantiationException
+ * @throws IllegalAccessException
+ * @throws InvocationTargetException
+ */
+private void loadFunctions(Element root) throws ClassNotFoundException, InstantiationException, IllegalAccessException, InvocationTargetException {
+  NodeList list=root.getElementsByTagName("function");
+  for (int i=0, n=list.getLength(); i < n; ++i) {
+    Node node=list.item(i);
+    if (node instanceof Element) {
+      Element e=(Element)node;
+      String name=e.getAttribute("name");
+      if (functions.containsKey(name)) {
+        throw new ConfigException("rule function " + name + " duplicated!");
+      }
+      String clazz=e.getAttribute("class");
+      AbstractPartitionAlgorithm function=createFunction(name,clazz);
+      ParameterMapping.mapping(function,ConfigUtil.loadElements(e));
+      function.init();
+      functions.put(name,function);
+    }
+  }
+}

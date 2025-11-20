@@ -1,0 +1,26 @@
+private static BookmarkedConference getConferenceStorage(XmlPullParser parser) throws XmlPullParserException, IOException {
+  String name=parser.getAttributeValue("","name");
+  boolean autojoin=ParserUtils.getBooleanAttribute(parser,"autojoin",false);
+  EntityBareJid jid=ParserUtils.getBareJidAttribute(parser);
+  BookmarkedConference conf=new BookmarkedConference(jid);
+  conf.setName(name);
+  conf.setAutoJoin(autojoin);
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT && "nick".equals(parser.getName())) {
+      String nickString=parser.nextText();
+      conf.setNickname(Resourcepart.from(nickString));
+    }
+ else     if (eventType == XmlPullParser.Event.START_ELEMENT && "password".equals(parser.getName())) {
+      conf.setPassword(parser.nextText());
+    }
+ else     if (eventType == XmlPullParser.Event.START_ELEMENT && "shared_bookmark".equals(parser.getName())) {
+      conf.setShared(true);
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT && "conference".equals(parser.getName())) {
+      done=true;
+    }
+  }
+  return conf;
+}

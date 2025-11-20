@@ -1,0 +1,43 @@
+/** 
+ * Retrieve a  {@link StatefulRedisConnection} by the intent. {@link ConnectionIntent#WRITE} intentions use the masterconnection,  {@link ConnectionIntent#READ} intentions lookup one or more read candidates using the {@link ReadFrom}setting.
+ * @param intent command intent
+ * @return the connection.
+ * @throws RedisException if the host is not part of the cluster
+ */
+public CompletableFuture<StatefulRedisConnection<K,V>> getConnectionAsync(ConnectionIntent intent){
+  if (debugEnabled) {
+    logger.debug("getConnectionAsync(" + intent + ")");
+  }
+  if (readFrom != null && intent == ConnectionIntent.READ) {
+    List<RedisNodeDescription> selection=readFrom.select(new ReadFrom.Nodes(){
+      @Override public List<RedisNodeDescription> getNodes(){
+        return knownNodes;
+      }
+      @Override public Iterator<RedisNodeDescription> iterator(){
+        return knownNodes.iterator();
+      }
+    }
+);
+    if (selection.isEmpty()) {
+      throw new RedisException(String.format("Cannot determine a node to read (Known nodes: %s) with setting %s",knownNodes,readFrom));
+    }
+    try {
+      Flux<StatefulRedisConnection<K,V>> connections=Flux.empty();
+      for (      RedisNodeDescription node : selection) {
+        connections=connections.concatWith(Mono.fromFuture(getConnection(node)));
+      }
+      if (OrderingReadFromAccessor.isOrderSensitive(readFrom) || selection.size() == 1) {
+        return connections.filter(StatefulConnection::isOpen).next().switchIfEmpty(connections.next()).toFuture();
+      }
+      return connections.filter(StatefulConnection::isOpen).collectList().filter(it -> !it.isEmpty()).map(it -> {
+        int index=ThreadLocalRandom.current().nextInt(it.size());
+        return it.get(index);
+      }
+).switchIfEmpty(connections.next()).toFuture();
+    }
+ catch (    RuntimeException e) {
+      throw Exceptions.bubble(e);
+    }
+  }
+  return getConnection(getMaster());
+}

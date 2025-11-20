@@ -1,0 +1,49 @@
+/** 
+ * Constructs a new agent session instance. Note, the  {@link #setOnline(boolean)}method must be called with an argument of <code>true</code> to mark the agent as available to accept chat requests.
+ * @param connection   a connection instance which must have already gone throughauthentication.
+ * @param workgroupJID the fully qualified JID of the workgroup.
+ */
+public AgentSession(EntityBareJid workgroupJID,XMPPConnection connection){
+  if (!connection.isAuthenticated()) {
+    throw new IllegalStateException("Must login to server before creating workgroup.");
+  }
+  this.workgroupJID=workgroupJID;
+  this.connection=connection;
+  this.transcriptManager=new TranscriptManager(connection);
+  this.transcriptSearchManager=new TranscriptSearchManager(connection);
+  this.maxChats=-1;
+  this.metaData=new HashMap<>();
+  offerListeners=new ArrayList<>();
+  invitationListeners=new ArrayList<>();
+  queueUsersListeners=new ArrayList<>();
+  OrFilter filter=new OrFilter(new StanzaTypeFilter(Presence.class),new StanzaTypeFilter(Message.class));
+  packetListener=new StanzaListener(){
+    @Override public void processStanza(    Stanza packet){
+      try {
+        handlePacket(packet);
+      }
+ catch (      Exception e) {
+        LOGGER.log(Level.SEVERE,"Error processing packet",e);
+      }
+    }
+  }
+;
+  connection.addAsyncStanzaListener(packetListener,filter);
+  connection.registerIQRequestHandler(new AbstractIqRequestHandler(OfferRequestProvider.OfferRequestPacket.ELEMENT,OfferRequestProvider.OfferRequestPacket.NAMESPACE,IQ.Type.set,Mode.async){
+    @Override public IQ handleIQRequest(    IQ iqRequest){
+      IQ reply=IQ.createResultIQ(iqRequest);
+      fireOfferRequestEvent((OfferRequestProvider.OfferRequestPacket)iqRequest);
+      return reply;
+    }
+  }
+);
+  connection.registerIQRequestHandler(new AbstractIqRequestHandler(OfferRevokeProvider.OfferRevokePacket.ELEMENT,OfferRevokeProvider.OfferRevokePacket.NAMESPACE,IQ.Type.set,Mode.async){
+    @Override public IQ handleIQRequest(    IQ iqRequest){
+      IQ reply=IQ.createResultIQ(iqRequest);
+      fireOfferRevokeEvent((OfferRevokeProvider.OfferRevokePacket)iqRequest);
+      return reply;
+    }
+  }
+);
+  agent=new Agent(connection,workgroupJID);
+}

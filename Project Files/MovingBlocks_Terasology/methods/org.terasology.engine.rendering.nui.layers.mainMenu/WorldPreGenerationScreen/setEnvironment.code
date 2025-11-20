@@ -1,0 +1,22 @@
+/** 
+ * A function called before the screen comes to the forefront to setup the environment and extract necessary objects from the new Context.
+ * @param subContext The new environment created in {@link UniverseSetupScreen}
+ * @throws UnresolvedWorldGeneratorException The creation of a world generator can throw this Exception
+ */
+public void setEnvironment(Context subContext) throws UnresolvedWorldGeneratorException {
+  context=subContext;
+  environment=context.get(ModuleEnvironment.class);
+  context.put(WorldGeneratorPluginLibrary.class,new TempWorldGeneratorPluginLibrary(environment,context));
+  worldList=context.get(UniverseSetupScreen.class).getWorldsList();
+  selectedWorld=context.get(UniverseSetupScreen.class).getSelectedWorld();
+  worldNames=context.get(UniverseSetupScreen.class).worldNames();
+  setWorldGenerators();
+  worldGenerator=findWorldByName(selectedWorld).getWorldGenerator();
+  final UIDropdownScrollable worldsDropdown=find("worlds",UIDropdownScrollable.class);
+  worldsDropdown.setOptions(worldNames);
+  genTexture();
+  List<Zone> previewZones=Lists.newArrayList(worldGenerator.getZones()).stream().filter(z -> !z.getPreviewLayers().isEmpty()).collect(Collectors.toList());
+  if (previewZones.isEmpty()) {
+    previewGen=new FacetLayerPreview(environment,worldGenerator);
+  }
+}

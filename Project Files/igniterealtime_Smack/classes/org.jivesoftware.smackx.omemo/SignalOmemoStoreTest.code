@@ -1,0 +1,20 @@
+/** 
+ * smack-omemo-signal implementation of  {@link OmemoStoreTest}. This class executes tests of its super class with available implementations of  {@link OmemoStore}. So far this includes  {@link SignalFileBasedOmemoStore},  {@link SignalCachingOmemoStore}.
+ */
+@RunWith(value=Parameterized.class) public class SignalOmemoStoreTest extends OmemoStoreTest<IdentityKeyPair,IdentityKey,PreKeyRecord,SignedPreKeyRecord,SessionRecord,SignalProtocolAddress,ECPublicKey,PreKeyBundle,SessionCipher> {
+  public SignalOmemoStoreTest(  OmemoStore<IdentityKeyPair,IdentityKey,PreKeyRecord,SignedPreKeyRecord,SessionRecord,SignalProtocolAddress,ECPublicKey,PreKeyBundle,SessionCipher> store) throws XmppStringprepException {
+    super(store);
+  }
+  /** 
+ * We are running this Test with multiple available OmemoStore implementations.
+ * @return the test parameters.
+ * @throws IOException if an I/O error occurred.
+ */
+  @Parameterized.Parameters public static Collection<Object[]> getParameters() throws IOException {
+    TemporaryFolder temp=initStaticTemp();
+    return Arrays.asList(new Object[][]{{new SignalFileBasedOmemoStore(temp.newFolder("sigFileBased"))},{new SignalCachingOmemoStore()},{new SignalCachingOmemoStore(new SignalFileBasedOmemoStore(temp.newFolder("cachingSigFileBased")))}});
+  }
+  @Test public void keyUtilTest(){
+    assertTrue(store.keyUtil() instanceof SignalOmemoKeyUtil);
+  }
+}

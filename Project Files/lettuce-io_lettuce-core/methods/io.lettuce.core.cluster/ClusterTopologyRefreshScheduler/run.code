@@ -1,0 +1,23 @@
+@Override public void run(){
+  logger.debug("ClusterTopologyRefreshScheduler.run()");
+  if (isEventLoopActive()) {
+    if (!clientOptions.get().isRefreshClusterView()) {
+      logger.debug("Periodic ClusterTopologyRefresh is disabled");
+      return;
+    }
+  }
+ else {
+    logger.debug("Periodic ClusterTopologyRefresh is disabled");
+    return;
+  }
+  clientResources.eventExecutorGroup().submit(clusterTopologyRefreshTask);
+}
+public void run(){
+  if (compareAndSet(false,true)) {
+    doRun();
+    return;
+  }
+  if (logger.isDebugEnabled()) {
+    logger.debug("ClusterTopologyRefreshTask already in progress");
+  }
+}

@@ -1,0 +1,67 @@
+/** 
+ * A TranscriptSummary contains some information about a conversation such as the ID of the session or the date when the conversation started and finished. You will need to use the sessionID to get the full conversation transcript.
+ */
+public static class TranscriptSummary {
+  private final String sessionID;
+  private final Date joinTime;
+  private final Date leftTime;
+  private final List<AgentDetail> agentDetails;
+  public TranscriptSummary(  String sessionID,  Date joinTime,  Date leftTime,  List<AgentDetail> agentDetails){
+    this.sessionID=sessionID;
+    this.joinTime=joinTime;
+    this.leftTime=leftTime;
+    this.agentDetails=agentDetails;
+  }
+  /** 
+ * Returns the ID of the session that is related to this conversation transcript. The sessionID could be used for getting the full conversation transcript.
+ * @return the ID of the session that is related to this conversation transcript.
+ */
+  public String getSessionID(){
+    return sessionID;
+  }
+  /** 
+ * Returns the Date when the conversation started.
+ * @return the Date when the conversation started.
+ */
+  public Date getJoinTime(){
+    return joinTime;
+  }
+  /** 
+ * Returns the Date when the conversation finished.
+ * @return the Date when the conversation finished.
+ */
+  public Date getLeftTime(){
+    return leftTime;
+  }
+  /** 
+ * Returns a list of AgentDetails. For each Agent that was involved in the conversation the list will include an AgentDetail. An AgentDetail contains the JID of the agent as well as the time when the Agent joined and left the conversation.
+ * @return a list of AgentDetails.
+ */
+  public List<AgentDetail> getAgentDetails(){
+    return agentDetails;
+  }
+  public String toXML(){
+    StringBuilder buf=new StringBuilder();
+    buf.append("<transcript sessionID=\"").append(sessionID).append("\">");
+    if (joinTime != null) {
+      buf.append("<joinTime>");
+synchronized (UTC_FORMAT) {
+        buf.append(UTC_FORMAT.format(joinTime));
+      }
+      buf.append("</joinTime>");
+    }
+    if (leftTime != null) {
+      buf.append("<leftTime>");
+synchronized (UTC_FORMAT) {
+        buf.append(UTC_FORMAT.format(leftTime));
+      }
+      buf.append("</leftTime>");
+    }
+    buf.append("<agents>");
+    for (    AgentDetail agentDetail : agentDetails) {
+      buf.append(agentDetail.toXML());
+    }
+    buf.append("</agents></transcript>");
+    return buf.toString();
+  }
+}

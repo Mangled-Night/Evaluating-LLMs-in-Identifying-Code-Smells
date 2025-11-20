@@ -1,0 +1,39 @@
+public class ClasspathCompromisingModuleFactoryTest {
+  static final Class<?> someClassOutsideTheModule=ClasspathCompromisingModuleFactory.class;
+  static final String METADATA_NAME="module.json";
+  ClasspathCompromisingModuleFactory factory;
+  @BeforeEach public void newFactory(){
+    factory=new ClasspathCompromisingModuleFactory();
+    factory.setDefaultLibsSubpath("build/libs");
+  }
+  @Test public void directoryModuleContainsClass(){
+    File engineTestDirectory=new File(System.getProperty("user.dir","."));
+    ModuleMetadata metadata=new ModuleMetadata(new Name("unittest"),new Version("1.0.0"));
+    Module module=factory.createDirectoryModule(metadata,engineTestDirectory);
+    assertTrue(module.getClassPredicate().test(ExampleClass.class));
+    assertFalse(module.getClassPredicate().test(someClassOutsideTheModule));
+  }
+  @Test @Disabled("TODO: need a jar module containing classes") public void archiveModuleContainsClass() throws IOException {
+    Module module=factory.createArchiveModule(new File("FIXME.jar"));
+    Class<?> someClassInTheModule=module.getModuleManifest().getTypesAnnotatedWith(API.class).iterator().next();
+    assertTrue(module.getClassPredicate().test(someClassInTheModule));
+    assertFalse(module.getClassPredicate().test(someClassOutsideTheModule));
+  }
+  @Test @Disabled("TODO: need a jar module alongside a classes directory") public void directoryModuleContainsClassLoadedFromJar(){
+  }
+  @Test public void canGetPathFromJarResource() throws MalformedURLException {
+    URL jarUrl=new URL("jar:file:/example/Terasology/cachedModules/CoreAssets-2.3.0-SNAPSHOT.jar!/module.json");
+    Path expectedPath=Paths.get("/example/Terasology/cachedModules/CoreAssets-2.3.0-SNAPSHOT.jar");
+    assertThat(factory.canonicalModuleLocation(METADATA_NAME,jarUrl)).isEqualTo(expectedPath);
+  }
+  @Test public void canGetPathFromLocalJarBuild() throws MalformedURLException {
+    URL jarUrl=new URL("jar:file:/example/Terasology/modules/CoreAssets/build/libs/CoreAssets-2.3.0-SNAPSHOT.jar!/module.json");
+    Path expectedPath=Paths.get("/example/Terasology/modules/CoreAssets");
+    assertThat(factory.canonicalModuleLocation(METADATA_NAME,jarUrl)).isEqualTo(expectedPath);
+  }
+  @Test public void canGetPathFromFilesystemResource() throws MalformedURLException {
+    URL fileUrl=new URL("file:/example/Terasology/modules/Health/build/classes/module.json");
+    Path expectedPath=Paths.get("/example/Terasology/modules/Health");
+    assertThat(factory.canonicalModuleLocation(METADATA_NAME,fileUrl)).isEqualTo(expectedPath);
+  }
+}

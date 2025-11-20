@@ -1,0 +1,13 @@
+private static <T,E extends StatefulConnection<?,?>>T findRandomActiveConnection(CompletableFuture<E>[] selectedReaderCandidates,Function<CompletableFuture<E>,T> mappingFunction){
+  for (int i=0; i < Math.min(2,selectedReaderCandidates.length); i++) {
+    int index=ThreadLocalRandom.current().nextInt(selectedReaderCandidates.length);
+    CompletableFuture<E> candidateFuture=selectedReaderCandidates[index];
+    if (candidateFuture.isDone() && !candidateFuture.isCompletedExceptionally()) {
+      E candidate=candidateFuture.join();
+      if (candidate.isOpen()) {
+        return mappingFunction.apply(candidateFuture);
+      }
+    }
+  }
+  return null;
+}

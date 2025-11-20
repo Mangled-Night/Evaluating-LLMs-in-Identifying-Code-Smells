@@ -1,0 +1,39 @@
+public static void main(String[] args) throws IOException, KeyManagementException, NoSuchAlgorithmException, SmackException, XMPPException, InterruptedException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+  Configuration config=Configuration.newConfiguration(args);
+  SmackIntegrationTestFramework sinttest=new SmackIntegrationTestFramework(config);
+  TestRunResult testRunResult=sinttest.run();
+  for (  Map.Entry<Class<? extends AbstractSmackIntTest>,Throwable> entry : testRunResult.impossibleTestClasses.entrySet()) {
+    LOGGER.info("Could not run " + entry.getKey().getName() + " because: "+ entry.getValue().getLocalizedMessage());
+  }
+  for (  TestNotPossible testNotPossible : testRunResult.impossibleIntegrationTests) {
+    LOGGER.info("Could not run " + testNotPossible.concreteTest + " because: "+ testNotPossible.testNotPossibleException.getMessage());
+  }
+  for (  SuccessfulTest successfulTest : testRunResult.successfulIntegrationTests) {
+    LOGGER.info(successfulTest.concreteTest + " ✔");
+  }
+  final int successfulTests=testRunResult.successfulIntegrationTests.size();
+  final int failedTests=testRunResult.failedIntegrationTests.size();
+  final int availableTests=testRunResult.getNumberOfAvailableTests();
+  LOGGER.info("SmackIntegrationTestFramework[" + testRunResult.testRunId + ']'+ " finished: "+ successfulTests+ '/'+ availableTests+ " ["+ failedTests+ " failed]");
+  final int exitStatus;
+  if (failedTests > 0) {
+    LOGGER.warning("💀 The following " + failedTests + " tests failed! 💀");
+    for (    FailedTest failedTest : testRunResult.failedIntegrationTests) {
+      final Throwable cause=failedTest.failureReason;
+      LOGGER.log(Level.SEVERE,failedTest.concreteTest + " failed: " + cause,cause);
+    }
+    exitStatus=2;
+  }
+ else {
+    LOGGER.info("All possible Smack Integration Tests completed successfully. \\o/");
+    exitStatus=0;
+  }
+switch (config.debugger) {
+case enhanced:
+    EnhancedDebuggerWindow.getInstance().waitUntilClosed();
+  break;
+default :
+break;
+}
+System.exit(exitStatus);
+}

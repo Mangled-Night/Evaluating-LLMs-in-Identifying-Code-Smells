@@ -1,0 +1,15 @@
+@Test void asyncPoolUsingWrappingShouldPropagateExceptionsCorrectly(){
+  AsyncPool<StatefulRedisConnection<String,String>> pool=AsyncConnectionPoolSupport.createBoundedObjectPool(() -> client.connectAsync(StringCodec.ASCII,uri),BoundedPoolConfig.create());
+  StatefulRedisConnection<String,String> connection=TestFutures.getOrTimeout(pool.acquire());
+  RedisCommands<String,String> sync=connection.sync();
+  sync.set(key,value);
+  try {
+    sync.hgetall(key);
+    fail("Missing RedisCommandExecutionException");
+  }
+ catch (  RedisCommandExecutionException e) {
+    assertThat(e).hasMessageContaining("WRONGTYPE");
+  }
+  connection.close();
+  pool.close();
+}

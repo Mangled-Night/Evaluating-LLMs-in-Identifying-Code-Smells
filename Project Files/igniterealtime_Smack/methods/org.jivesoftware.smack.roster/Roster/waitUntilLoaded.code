@@ -1,0 +1,18 @@
+boolean waitUntilLoaded() throws InterruptedException {
+  long waitTime=connection().getReplyTimeout();
+  long start=System.currentTimeMillis();
+  while (!isLoaded()) {
+    if (waitTime <= 0) {
+      break;
+    }
+synchronized (this) {
+      if (!isLoaded()) {
+        wait(waitTime);
+      }
+    }
+    long now=System.currentTimeMillis();
+    waitTime-=now - start;
+    start=now;
+  }
+  return isLoaded();
+}

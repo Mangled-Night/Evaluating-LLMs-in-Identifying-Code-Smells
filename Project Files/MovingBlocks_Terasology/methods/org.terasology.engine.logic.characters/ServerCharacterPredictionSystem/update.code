@@ -1,0 +1,33 @@
+@Override public void update(float delta){
+  if (nextSendState < time.getGameTimeInMs()) {
+    long lastSendTime=nextSendState - TIME_BETWEEN_STATE_REPLICATE;
+    for (    Map.Entry<EntityRef,CircularBuffer<CharacterStateEvent>> entry : characterStates.entrySet()) {
+      if (entry.getValue().size() > 0) {
+        CharacterStateEvent state=entry.getValue().getLast();
+        if (state.getTime() >= lastSendTime) {
+          entry.getKey().send(state);
+        }
+ else         if (time.getGameTimeInMs() - state.getTime() > MAX_INPUT_UNDERFLOW) {
+          CharacterMoveInputEvent lastInput=lastInputEvent.get(entry.getKey());
+          if (lastInput != null) {
+            CharacterMoveInputEvent newInput=new CharacterMoveInputEvent(lastInput,(int)(time.getGameTimeInMs() - state.getTime()));
+            onPlayerInput(newInput,entry.getKey());
+          }
+          entry.getKey().send(state);
+        }
+      }
+    }
+    nextSendState+=TIME_BETWEEN_STATE_REPLICATE;
+  }
+  long renderTime=time.getGameTimeInMs() - RENDER_DELAY;
+  for (  Map.Entry<EntityRef,CircularBuffer<CharacterStateEvent>> entry : characterStates.entrySet()) {
+    if (entry.getKey().equals(localPlayer.getCharacterEntity())) {
+      continue;
+    }
+    if (!characterStatesToRemove.contains(entry.getKey())) {
+      setToTime(renderTime,entry.getKey(),entry.getValue());
+    }
+  }
+  characterStates.keySet().removeAll(characterStatesToRemove);
+  characterStatesToRemove.clear();
+}

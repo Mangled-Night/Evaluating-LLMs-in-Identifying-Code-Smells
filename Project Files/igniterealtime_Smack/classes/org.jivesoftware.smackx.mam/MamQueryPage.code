@@ -1,0 +1,40 @@
+public static final class MamQueryPage {
+  private final MamFinIQ mamFin;
+  private final List<Message> mamResultCarrierMessages;
+  private final List<MamResultExtension> mamResultExtensions;
+  private final List<Forwarded<Message>> forwardedMessages;
+  private final List<Message> messages;
+  private MamQueryPage(  StanzaCollector stanzaCollector,  MamFinIQ mamFin){
+    this.mamFin=mamFin;
+    List<Stanza> mamResultCarrierStanzas=stanzaCollector.getCollectedStanzasAfterCancelled();
+    List<Message> mamResultCarrierMessages=new ArrayList<>(mamResultCarrierStanzas.size());
+    List<MamResultExtension> mamResultExtensions=new ArrayList<>(mamResultCarrierStanzas.size());
+    List<Forwarded<Message>> forwardedMessages=new ArrayList<>(mamResultCarrierStanzas.size());
+    for (    Stanza mamResultStanza : mamResultCarrierStanzas) {
+      Message resultMessage=(Message)mamResultStanza;
+      mamResultCarrierMessages.add(resultMessage);
+      MamElements.MamResultExtension mamResultExtension=MamElements.MamResultExtension.from(resultMessage);
+      mamResultExtensions.add(mamResultExtension);
+      forwardedMessages.add(mamResultExtension.getForwarded());
+    }
+    this.mamResultCarrierMessages=Collections.unmodifiableList(mamResultCarrierMessages);
+    this.mamResultExtensions=Collections.unmodifiableList(mamResultExtensions);
+    this.forwardedMessages=Collections.unmodifiableList(forwardedMessages);
+    this.messages=Collections.unmodifiableList(Forwarded.extractMessagesFrom(forwardedMessages));
+  }
+  public List<Message> getMessages(){
+    return messages;
+  }
+  public List<Forwarded<Message>> getForwarded(){
+    return forwardedMessages;
+  }
+  public List<MamResultExtension> getMamResultExtensions(){
+    return mamResultExtensions;
+  }
+  public List<Message> getMamResultCarrierMessages(){
+    return mamResultCarrierMessages;
+  }
+  public MamFinIQ getMamFinIq(){
+    return mamFin;
+  }
+}

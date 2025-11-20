@@ -1,0 +1,33 @@
+/** 
+ * Initialize permutations with a given seed and grid dimension.
+ * @param seed a seed value used for permutation shuffling
+ */
+public SimplexNoise(long seed){
+  this(seed,256);
+}
+/** 
+ * Initialize permutations with a given seed and grid dimension. Supports 1D tileable noise
+ * @see SimplexNoise#TILEABLE1DMAGICNUMBER
+ * @param seed a seed value used for permutation shuffling
+ * @param gridDim gridDim x gridDim will be the number of squares in the square grid formed after skewing the simplices belonging to once "tile"
+ */
+public SimplexNoise(long seed,int gridDim){
+  FastRandom rand=new FastRandom(seed);
+  permCount=gridDim;
+  perm=new short[permCount * 2];
+  permMod12=new short[permCount * 2];
+  short[] p=new short[permCount];
+  for (short i=0; i < permCount; i++) {
+    p[i]=i;
+  }
+  for (int i=0; i < permCount; i++) {
+    int j=rand.nextInt(permCount);
+    short swap=p[i];
+    p[i]=p[j];
+    p[j]=swap;
+  }
+  for (int i=0; i < permCount * 2; i++) {
+    perm[i]=p[i % permCount];
+    permMod12[i]=(short)(perm[i] % 12);
+  }
+}

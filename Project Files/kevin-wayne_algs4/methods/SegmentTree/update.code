@@ -1,0 +1,23 @@
+/** 
+ * Range Update Operation. With this operation you can update either one position or a range of positions with a given number. The update operations will update the less it can to update the whole range (Lazy Propagation). The values will be propagated lazily from top to bottom of the segment tree. This behavior is really useful for updates on portions of the array <p> Time-Complexity: O(log(n))
+ * @param from  from index
+ * @param to    to index
+ * @param value value
+ */
+public void update(int from,int to,int value){
+  update(1,from,to,value);
+}
+private void update(int v,int from,int to,int value){
+  Node n=heap[v];
+  if (contains(from,to,n.from,n.to)) {
+    change(n,value);
+  }
+  if (n.size() == 1)   return;
+  if (intersects(from,to,n.from,n.to)) {
+    propagate(v);
+    update(2 * v,from,to,value);
+    update(2 * v + 1,from,to,value);
+    n.sum=heap[2 * v].sum + heap[2 * v + 1].sum;
+    n.min=Math.min(heap[2 * v].min,heap[2 * v + 1].min);
+  }
+}

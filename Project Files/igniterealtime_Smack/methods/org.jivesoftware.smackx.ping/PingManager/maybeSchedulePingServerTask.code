@@ -1,0 +1,15 @@
+private void maybeSchedulePingServerTask(){
+  maybeSchedulePingServerTask(0);
+}
+/** 
+ * Cancels any existing periodic ping task if there is one and schedules a new ping task if pingInterval is greater then zero.
+ * @param delta the delta to the last received stanza in seconds
+ */
+private synchronized void maybeSchedulePingServerTask(int delta){
+  maybeStopPingServerTask();
+  if (pingInterval > 0) {
+    int nextPingIn=pingInterval - delta;
+    LOGGER.fine("Scheduling ServerPingTask in " + nextPingIn + " seconds (pingInterval="+ pingInterval+ ", delta="+ delta+ ")");
+    nextAutomaticPing=schedule(this::pingServerIfNecessary,nextPingIn,TimeUnit.SECONDS);
+  }
+}

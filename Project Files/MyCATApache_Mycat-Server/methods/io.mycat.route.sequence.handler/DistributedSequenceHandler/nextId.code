@@ -1,0 +1,33 @@
+@Override public long nextId(String prefixName){
+  while (!ready) {
+    try {
+      Thread.sleep(50);
+    }
+ catch (    InterruptedException e) {
+      LOGGER.warn("Unexpected thread interruption!");
+      Thread.currentThread().interrupt();
+    }
+  }
+  long time=System.currentTimeMillis();
+  if (threadLastTime.get() == null) {
+    threadLastTime.set(time);
+  }
+  if (threadInc.get() == null) {
+    threadInc.set(0L);
+  }
+  if (threadID.get() == null) {
+    threadID.set(getNextThreadID());
+  }
+  long a=threadInc.get();
+  if ((a + 1L) >= maxIncrement) {
+    if (threadLastTime.get() == time) {
+      time=blockUntilNextMillis(time);
+    }
+    threadInc.set(0L);
+  }
+ else {
+    threadInc.set(a + 1L);
+  }
+  threadLastTime.set(time);
+  return ((time & timestampMask) << timestampShift) | (((threadID.get() % maxThreadId) << threadIdShift)) | (instanceId << instanceIdShift)| (clusterId << clusterIdShift)| a;
+}

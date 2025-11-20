@@ -1,0 +1,17 @@
+private static class CummulativeLatencies extends Latencies {
+  private final Histogram firstResponse;
+  private final Histogram completion;
+  CummulativeLatencies(  PauseDetector pauseDetector){
+    super(pauseDetector);
+    firstResponse=super.firstResponse.getIntervalHistogram();
+    completion=super.completion.getIntervalHistogram();
+  }
+  @Override public Histogram getFirstResponseHistogram(){
+    firstResponse.add(super.getFirstResponseHistogram());
+    return firstResponse;
+  }
+  @Override public Histogram getCompletionHistogram(){
+    completion.add(super.getFirstResponseHistogram());
+    return completion;
+  }
+}

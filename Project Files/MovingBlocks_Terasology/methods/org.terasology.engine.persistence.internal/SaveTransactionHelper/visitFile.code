@@ -1,0 +1,19 @@
+@Override public FileVisitResult visitFile(Path file,BasicFileAttributes attrs) throws IOException {
+  Files.delete(file);
+  return FileVisitResult.CONTINUE;
+}
+@Override public FileVisitResult visitFile(Path sourcePath,BasicFileAttributes attrs) throws IOException {
+  Path targetPath=targetDirectory.resolve(sourceDirectory.relativize(sourcePath));
+  try {
+    Files.deleteIfExists(targetPath);
+    Files.move(sourcePath,targetPath,StandardCopyOption.ATOMIC_MOVE);
+  }
+ catch (  AtomicMoveNotSupportedException e) {
+    if (!atomicNotPossibleLogged) {
+      logger.warn("Atomic move was not possible, doing it non atomically...");
+      atomicNotPossibleLogged=true;
+    }
+    Files.move(sourcePath,targetPath);
+  }
+  return FileVisitResult.CONTINUE;
+}

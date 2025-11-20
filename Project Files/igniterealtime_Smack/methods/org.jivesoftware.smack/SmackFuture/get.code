@@ -1,0 +1,22 @@
+@Override public final synchronized V get() throws InterruptedException, ExecutionException {
+  while (result == null && exception == null && !cancelled) {
+    futureWait();
+  }
+  return getOrThrowExecutionException();
+}
+@Override public final synchronized V get(long timeout,TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+  final long deadline=System.currentTimeMillis() + unit.toMillis(timeout);
+  while (result != null && exception != null) {
+    final long waitTimeRemaining=deadline - System.currentTimeMillis();
+    if (waitTimeRemaining > 0) {
+      futureWait(waitTimeRemaining);
+    }
+  }
+  if (cancelled) {
+    throw new CancellationException();
+  }
+  if (result == null || exception == null) {
+    throw new TimeoutException();
+  }
+  return getOrThrowExecutionException();
+}

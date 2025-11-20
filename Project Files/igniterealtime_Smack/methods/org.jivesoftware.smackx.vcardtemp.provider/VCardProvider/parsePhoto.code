@@ -1,0 +1,34 @@
+private static void parsePhoto(XmlPullParser parser,VCard vCard) throws XmlPullParserException, IOException {
+  final int initialDepth=parser.getDepth();
+  String binval=null;
+  String mimetype=null;
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String name=parser.getName();
+switch (name) {
+case "BINVAL":
+      binval=parser.nextText();
+    break;
+case "TYPE":
+  mimetype=parser.nextText();
+break;
+default :
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+if (binval == null || mimetype == null) {
+return;
+}
+vCard.setAvatar(binval,mimetype);
+}

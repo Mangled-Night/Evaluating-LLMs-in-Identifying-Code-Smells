@@ -1,0 +1,38 @@
+public class SoftwareInfoManagerTest {
+  private static final EntityFullJid initiatorJID=JidTestUtil.DUMMY_AT_EXAMPLE_ORG_SLASH_DUMMYRESOURCE;
+  private XMPPConnection connection;
+  private Protocol protocol;
+  @BeforeEach public void setup() throws XMPPException, SmackException, InterruptedException {
+    protocol=new Protocol();
+    connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+  }
+  @Test public void softwareInfoManagerTest() throws IOException, XmlPullParserException, SmackParsingException, URISyntaxException {
+    SoftwareInfoManager manager=SoftwareInfoManager.getInstanceFor(connection);
+    manager.publishSoftwareInformationForm(buildSoftwareInfoFormUsingBuilder());
+    manager.publishSoftwareInformationForm(buildSoftwareInfoFromDataForm());
+  }
+  public static SoftwareInfoForm buildSoftwareInfoFormUsingBuilder() throws URISyntaxException {
+    SoftwareInfoForm.Builder builder=SoftwareInfoForm.getBuilder();
+    MediaElement mediaElement=createMediaElement();
+    builder.setIcon(mediaElement);
+    builder.setOS("Windows");
+    builder.setOSVersion("XP");
+    builder.setSoftware("Exodus");
+    builder.setSoftwareVersion("0.9.1");
+    return builder.build();
+  }
+  public static SoftwareInfoForm buildSoftwareInfoFromDataForm() throws URISyntaxException {
+    DataForm.Builder dataFormBuilder=DataForm.builder(DataForm.Type.result);
+    dataFormBuilder.addField(FormField.buildHiddenFormType(SoftwareInfoForm.FORM_TYPE));
+    dataFormBuilder.addField(FormField.builder("icon").addFormFieldChildElement(createMediaElement()).build());
+    dataFormBuilder.addField(FormField.builder("os").setValue("Windows").build());
+    dataFormBuilder.addField(FormField.builder("os_version").setValue("XP").build());
+    dataFormBuilder.addField(FormField.builder("software").setValue("Exodus").build());
+    dataFormBuilder.addField(FormField.builder("software_version").setValue("0.9.1").build());
+    SoftwareInfoForm softwareInfoForm=SoftwareInfoForm.getBuilder().setDataForm(dataFormBuilder.build()).build();
+    return softwareInfoForm;
+  }
+  public static MediaElement createMediaElement() throws URISyntaxException {
+    return MediaElement.builder().addUri(new MediaElement.Uri(new URI("http://example.org"),"test-type")).setHeightAndWidth(16,16).build();
+  }
+}

@@ -1,0 +1,73 @@
+@Override public void processStanza(Stanza packet){
+  Presence presence=(Presence)packet;
+  EntityFullJid from=presence.getFrom().asEntityFullJidIfPossible();
+  if (from == null) {
+    LOGGER.warning("Presence with non full JID from: " + presence.toXML());
+    return;
+  }
+  Jid key=getPresenceMapKey(from);
+  if (presence.getType() == Presence.Type.available) {
+    AgentStatus agentStatus=(AgentStatus)presence.getExtensionElement(AgentStatus.ELEMENT_NAME,AgentStatus.NAMESPACE);
+    if (agentStatus == null) {
+      return;
+    }
+ else     if (!workgroupJID.equals(agentStatus.getWorkgroupJID())) {
+      return;
+    }
+    Map<Resourcepart,Presence> userPresences;
+    if (presenceMap.get(key) == null) {
+      userPresences=new HashMap<>();
+      presenceMap.put(key,userPresences);
+    }
+ else {
+      userPresences=presenceMap.get(key);
+    }
+synchronized (userPresences) {
+      userPresences.put(from.getResourcepart(),presence);
+    }
+synchronized (entries) {
+      for (Iterator<EntityBareJid> i=entries.iterator(); i.hasNext(); ) {
+        EntityBareJid entry=i.next();
+        if (entry.equals(key.asEntityBareJidIfPossible())) {
+          fireEvent(EVENT_PRESENCE_CHANGED,packet);
+        }
+      }
+    }
+  }
+ else   if (presence.getType() == Presence.Type.unavailable) {
+    if (presenceMap.get(key) != null) {
+      Map<Resourcepart,Presence> userPresences=presenceMap.get(key);
+synchronized (userPresences) {
+        userPresences.remove(from.getResourcepart());
+      }
+      if (userPresences.isEmpty()) {
+        presenceMap.remove(key);
+      }
+    }
+synchronized (entries) {
+      for (      EntityBareJid entry : entries) {
+        if (entry.equals(key.asEntityBareJidIfPossible())) {
+          fireEvent(EVENT_PRESENCE_CHANGED,packet);
+        }
+      }
+    }
+  }
+}
+@Override public void processStanza(Stanza packet){
+  if (packet instanceof AgentStatusRequest) {
+    AgentStatusRequest statusRequest=(AgentStatusRequest)packet;
+    for (Iterator<AgentStatusRequest.Item> i=statusRequest.getAgents().iterator(); i.hasNext(); ) {
+      AgentStatusRequest.Item item=i.next();
+      EntityBareJid agentJID=item.getJID();
+      if ("remove".equals(item.getType())) {
+        presenceMap.remove(agentJID.asBareJid());
+        fireEvent(EVENT_AGENT_REMOVED,agentJID);
+      }
+ else {
+        entries.add(agentJID);
+        fireEvent(EVENT_AGENT_ADDED,agentJID);
+      }
+    }
+    rosterInitialized=true;
+  }
+}

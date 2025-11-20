@@ -1,0 +1,38 @@
+/** 
+ * @param result         
+ */
+@Override public void onResult(SQLQueryResult<Map<String,String>> result){
+  try {
+    table.getReentrantReadWriteLock().writeLock().lock();
+    if (!result.isSuccess()) {
+      LOGGER.warn("Can't get table " + table.getName() + "'s config from DataNode:"+ dataNode+ "! Maybe the table is not initialized!");
+      return;
+    }
+    String currentSql=result.getResult().get(MYSQL_SHOW_CREATE_TABLE_COLMS[1]);
+    Map<String,List<String>> dataNodeTableStructureSQLMap=table.getDataNodeTableStructureSQLMap();
+    if (dataNodeTableStructureSQLMap.containsKey(currentSql)) {
+      List<String> dataNodeList=dataNodeTableStructureSQLMap.get(currentSql);
+      dataNodeList.add(dataNode);
+    }
+ else {
+      List<String> dataNodeList=new LinkedList<>();
+      dataNodeList.add(dataNode);
+      dataNodeTableStructureSQLMap.put(currentSql,dataNodeList);
+    }
+    if (dataNodeTableStructureSQLMap.size() > 1) {
+      LOGGER.warn("Table [" + table.getName() + "] structure are not consistent!");
+      LOGGER.warn("Currently detected: ");
+      for (      String sql : dataNodeTableStructureSQLMap.keySet()) {
+        StringBuilder stringBuilder=new StringBuilder();
+        for (        String dn : dataNodeTableStructureSQLMap.get(sql)) {
+          stringBuilder.append("DataNode:[").append(dn).append("]");
+        }
+        stringBuilder.append(":").append(sql);
+        LOGGER.warn(stringBuilder.toString());
+      }
+    }
+  }
+  finally {
+    table.getReentrantReadWriteLock().writeLock().unlock();
+  }
+}

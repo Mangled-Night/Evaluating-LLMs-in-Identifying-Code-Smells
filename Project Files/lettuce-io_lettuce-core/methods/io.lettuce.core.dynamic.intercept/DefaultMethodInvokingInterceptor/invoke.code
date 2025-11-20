@@ -1,0 +1,9 @@
+@Override public Object invoke(MethodInvocation invocation) throws Throwable {
+  Method method=invocation.getMethod();
+  if (!method.isDefault()) {
+    return invocation.proceed();
+  }
+  LettuceAssert.isTrue(invocation instanceof InvocationTargetProvider,"Invocation must provide a target object via InvocationTargetProvider");
+  InvocationTargetProvider targetProvider=(InvocationTargetProvider)invocation;
+  return methodHandleCache.computeIfAbsent(method,DefaultMethodInvokingInterceptor::lookupMethodHandle).bindTo(targetProvider.getInvocationTarget()).invokeWithArguments(invocation.getArguments());
+}

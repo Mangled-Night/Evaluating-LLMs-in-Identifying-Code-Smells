@@ -1,0 +1,46 @@
+/** 
+ * 单表且是全局表 单表且rule为空且nodeNodes只有一个
+ * @param schema
+ * @param rrs
+ * @param mysqlSelectQuery
+ * @return
+ */
+private boolean isNeedAddLimit(SchemaConfig schema,RouteResultset rrs,MySqlSelectQueryBlock mysqlSelectQuery,Map<String,Map<String,Set<ColumnRoutePair>>> allConditions){
+  if (rrs.getLimitSize() > -1) {
+    return false;
+  }
+ else   if (schema.getDefaultMaxLimit() == -1) {
+    return false;
+  }
+ else   if (mysqlSelectQuery.getLimit() != null) {
+    return false;
+  }
+ else   if (ctx.getTables().size() == 1) {
+    String tableName=ctx.getTables().get(0);
+    TableConfig tableConfig=schema.getTables().get(tableName);
+    if (tableConfig == null) {
+      return schema.getDefaultMaxLimit() > -1;
+    }
+    boolean isNeedAddLimit=tableConfig.isNeedAddLimit();
+    if (!isNeedAddLimit) {
+      return false;
+    }
+    if (schema.getTables().get(tableName).isGlobalTable()) {
+      return true;
+    }
+    String primaryKey=schema.getTables().get(tableName).getPrimaryKey();
+    if (allConditions.get(tableName) == null) {
+      return true;
+    }
+    if (allConditions.get(tableName).get(primaryKey) != null) {
+      return false;
+    }
+    return true;
+  }
+ else   if (rrs.hasPrimaryKeyToCache() && ctx.getTables().size() == 1) {
+    return false;
+  }
+ else {
+    return false;
+  }
+}

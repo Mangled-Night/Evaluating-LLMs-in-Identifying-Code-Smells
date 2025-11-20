@@ -1,0 +1,12 @@
+@ApiOperation(value="评论列表") @RequiresPermissions("cms:comment:read") @RequestMapping(value="/list",method=RequestMethod.GET) @ResponseBody public Object list(@RequestParam(required=false,defaultValue="0",value="offset") int offset,@RequestParam(required=false,defaultValue="10",value="limit") int limit,@RequestParam(required=false,value="sort") String sort,@RequestParam(required=false,value="order") String order){
+  CmsCommentExample cmsCommentExample=new CmsCommentExample();
+  if (!StringUtils.isBlank(sort) && !StringUtils.isBlank(order)) {
+    cmsCommentExample.setOrderByClause(sort + " " + order);
+  }
+  List<CmsComment> rows=cmsCommentService.selectByExampleWithBLOBsForOffsetPage(cmsCommentExample,offset,limit);
+  long total=cmsCommentService.countByExample(cmsCommentExample);
+  Map<String,Object> result=new HashMap<>(2);
+  result.put("rows",rows);
+  result.put("total",total);
+  return result;
+}

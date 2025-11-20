@@ -1,0 +1,24 @@
+public void testDuplicatePartitionKey() throws Exception {
+  String sql=null;
+  SchemaConfig schema=schemaMap.get("cndb");
+  RouteResultset rrs=null;
+  sql="select * from cndb.offer where (offer_id, group_id ) In (123,234)";
+  schema=schemaMap.get("cndb");
+  rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(true,rrs.isCacheAble());
+  Assert.assertEquals(-1l,rrs.getLimitSize());
+  Assert.assertEquals(128,rrs.getNodes().length);
+  for (int i=0; i < 128; i++) {
+    Assert.assertEquals("select * from offer where (offer_id, group_id ) In (123,234)",rrs.getNodes()[i].getStatement());
+  }
+  sql="SELECT * FROM offer WHERE FALSE OR offer_id = 123 AND member_id = 123 OR member_id = 123 AND member_id = 234 OR member_id = 123 AND member_id = 345 OR member_id = 123 AND member_id = 456 OR offer_id = 234 AND group_id = 123 OR offer_id = 234 AND group_id = 234 OR offer_id = 234 AND group_id = 345 OR offer_id = 234 AND group_id = 456 OR offer_id = 345 AND group_id = 123 OR offer_id = 345 AND group_id = 234 OR offer_id = 345 AND group_id = 345 OR offer_id = 345 AND group_id = 456 OR offer_id = 456 AND group_id = 123 OR offer_id = 456 AND group_id = 234 OR offer_id = 456 AND group_id = 345 OR offer_id = 456 AND group_id = 456";
+  schema=schemaMap.get("cndb");
+  rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(true,rrs.isCacheAble());
+  getNodeMap(rrs,128);
+  sql="select * from  offer where false" + " or offer_id=123 and group_id=123" + " or group_id=123 and offer_id=234"+ " or offer_id=123 and group_id=345"+ " or offer_id=123 and group_id=456  ";
+  schema=schemaMap.get("cndb");
+  rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(true,rrs.isCacheAble());
+  Assert.assertEquals(-1l,rrs.getLimitSize());
+}

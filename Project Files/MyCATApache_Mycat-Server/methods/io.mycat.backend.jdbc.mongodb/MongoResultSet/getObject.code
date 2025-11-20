@@ -1,0 +1,46 @@
+@Override public Object getObject(int columnIndex) throws SQLException {
+  if (columnIndex == 0) {
+    if (isSum) {
+      return getObject(getField(1));
+    }
+ else {
+      return this._cur;
+    }
+  }
+ else {
+    return getObject(getField(columnIndex));
+  }
+}
+@Override public Object getObject(String columnLabel) throws SQLException {
+  if (isSum) {
+    if (isGroupBy) {
+      Object ob=dblist.get(_row - 1);
+      if (ob instanceof DBObject) {
+        return ((DBObject)ob).get(columnLabel);
+      }
+ else {
+        return "0";
+      }
+    }
+ else {
+      return this._sum;
+    }
+  }
+ else {
+    return this._cur.get(columnLabel);
+  }
+}
+@Override public Object getObject(int columnIndex,Map<String,Class<?>> map) throws SQLException {
+  return null;
+}
+@Override public Object getObject(String columnLabel,Map<String,Class<?>> map) throws SQLException {
+  return null;
+}
+@Override public <T>T getObject(int columnIndex,Class<T> type) throws SQLException {
+  Object value=getObject(columnIndex);
+  return (T)MongoEmbeddedObjectProcessor.valueMapper(getField(columnIndex),value,type);
+}
+@Override public <T>T getObject(String columnLabel,Class<T> type) throws SQLException {
+  Object value=getObject(columnLabel);
+  return (T)MongoEmbeddedObjectProcessor.valueMapper(columnLabel,value,type);
+}

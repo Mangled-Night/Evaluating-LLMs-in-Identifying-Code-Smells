@@ -1,0 +1,52 @@
+/** 
+ * eval template contains random vars and replace them with real value alues ( '${date(yyyyMMddHHmmsss-[2014-2015]y)}/psn${date(yyyy)}s/${int(0-9999)}/1 6 7 6 7 : 2 0 7 2 5 ' , ' $ { s t r i n g ( 2 , 0 - 9 9 )} OPP_${enum(BJ,SH,GZ,SZ)}_${int(0-9)} ',${int(10,11)},$int(400,420,500,600,800),$int(0-1000),$int(0-100),$int(0-10),$int(0-99),'201408040028317067b41c0db-4a93-4360-9eb4-e159d1 d b e f 4 5 ' , $ p h o n e , 2 , 2 0 1 4 0 7 1 7 1 5 , 2 3 1 5 9 9 8 , 1 3 9 7 , 1 5 2 3 1 7 9 9 8 , 1 3 9 5 , ' 0 0 0 0 ' )
+ * @param templateStr
+ * @return
+ * @throws IllegalAccessException
+ * @throws InstantiationException
+ */
+public static LinkedList<StringItem> parselRandVarTemplateString(String templateStr) throws Exception {
+  char[] chars=templateStr.toCharArray();
+  LinkedList<StringItem> stringItems=new LinkedList<StringItem>();
+  int curPos=0;
+  int prevPattenEndPos=0;
+  while (curPos < chars.length) {
+    char c=chars[curPos];
+    if (c == '$' && curPos + 1 < chars.length && chars[curPos + 1] == '{') {
+      int start=curPos;
+      curPos+=2;
+      int end=-1;
+      if (curPos < chars.length) {
+        for (int i=curPos; i < chars.length; i++) {
+          if (chars[i] == '}') {
+            end=i;
+            if (prevPattenEndPos < start) {
+              StringItem item=new StringItem();
+              item.initString(templateStr.substring(prevPattenEndPos,start));
+              stringItems.add(item);
+            }
+            stringItems.add(StringItemFactory.parseVarPattern(templateStr.substring(curPos,end)));
+            prevPattenEndPos=end + 1;
+            curPos=end + 1;
+            break;
+          }
+        }
+        if (end == -1) {
+          throw new RuntimeException("can't find var patten end pos ,start at " + start);
+        }
+      }
+ else {
+        curPos++;
+      }
+    }
+ else {
+      curPos++;
+    }
+  }
+  if (prevPattenEndPos < templateStr.length()) {
+    StringItem item=new StringItem();
+    item.initString(templateStr.substring(prevPattenEndPos,templateStr.length()));
+    stringItems.add(item);
+  }
+  return stringItems;
+}

@@ -1,0 +1,42 @@
+private AbstractXMPPConnection getConnectedMainConnectionFor(AccountNum accountNum) throws SmackException, IOException, XMPPException, InterruptedException, KeyManagementException, NoSuchAlgorithmException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+  String middlefix;
+  String accountUsername;
+  String accountPassword;
+switch (accountNum) {
+case One:
+    accountUsername=sinttestConfiguration.accountOneUsername;
+  accountPassword=sinttestConfiguration.accountOnePassword;
+middlefix="one";
+break;
+case Two:
+accountUsername=sinttestConfiguration.accountTwoUsername;
+accountPassword=sinttestConfiguration.accountTwoPassword;
+middlefix="two";
+break;
+case Three:
+accountUsername=sinttestConfiguration.accountThreeUsername;
+accountPassword=sinttestConfiguration.accountThreePassword;
+middlefix="three";
+break;
+default :
+throw new IllegalStateException();
+}
+final String finalAccountUsername=StringUtils.isNullOrEmpty(accountUsername) ? USERNAME_PREFIX + '-' + middlefix+ '-'+ testRunId : accountUsername;
+final String finalAccountPassword=StringUtils.isNullOrEmpty(accountPassword) ? StringUtils.insecureRandomString(16) : accountPassword;
+if (sinttestConfiguration.isAccountRegistrationPossible()) {
+registerAccount(finalAccountUsername,finalAccountPassword);
+}
+AbstractXMPPConnection mainConnection=defaultConnectionDescriptor.construct(sinttestConfiguration,builder -> {
+try {
+builder.setUsernameAndPassword(finalAccountUsername,finalAccountPassword).setResource(middlefix + '-' + testRunId);
+}
+ catch (XmppStringprepException e) {
+throw new IllegalArgumentException(e);
+}
+}
+);
+connections.put(mainConnection,defaultConnectionDescriptor);
+mainConnection.connect();
+mainConnection.login();
+return mainConnection;
+}

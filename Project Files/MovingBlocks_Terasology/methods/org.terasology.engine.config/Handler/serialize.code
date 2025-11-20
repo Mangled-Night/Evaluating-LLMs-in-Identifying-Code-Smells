@@ -1,0 +1,29 @@
+@Override public JsonElement serialize(BindsConfig bindsConfig,Type typeOfBindsConfig,JsonSerializationContext context){
+  JsonObject result=new JsonObject();
+  SetMultimap<Name,SimpleUri> bindingByModuleName=listBindingsByModuleName(bindsConfig);
+  List<Name> sortedModuleNames=bindingByModuleName.keySet().stream().sorted().collect(toList());
+  for (  Name moduleName : sortedModuleNames) {
+    SetMultimap<String,Input> moduleBinds=HashMultimap.create();
+    for (    SimpleUri bindingUri : bindingByModuleName.get(moduleName)) {
+      moduleBinds.putAll(bindingUri.getObjectName().toString(),bindsConfig.uriBoundInputs.get(bindingUri));
+    }
+    JsonElement map=context.serialize(moduleBinds,SetMultimap.class);
+    result.add(moduleName.toString(),map);
+  }
+  return result;
+}
+@Override public JsonElement serialize(SecurityConfig src,Type typeOfSrc,JsonSerializationContext context){
+  JsonObject result=new JsonObject();
+  result.add(SERVER_PUBLIC_CERTIFICATE,context.serialize(src.serverPublicCertificate));
+  result.add(SERVER_PRIVATE_CERTIFICATE,context.serialize(src.serverPrivateCertificate));
+  JsonArray clientArray=new JsonArray();
+  for (  Map.Entry<PublicIdentityCertificate,ClientIdentity> entry : src.clientCertificates.entrySet()) {
+    ClientEntry clientEntry=new ClientEntry();
+    clientEntry.server=entry.getKey();
+    clientEntry.clientPublic=entry.getValue().getPlayerPublicCertificate();
+    clientEntry.clientPrivate=entry.getValue().getPlayerPrivateCertificate();
+    clientArray.add(context.serialize(clientEntry));
+  }
+  result.add(CLIENT_IDENTITIES,clientArray);
+  return result;
+}

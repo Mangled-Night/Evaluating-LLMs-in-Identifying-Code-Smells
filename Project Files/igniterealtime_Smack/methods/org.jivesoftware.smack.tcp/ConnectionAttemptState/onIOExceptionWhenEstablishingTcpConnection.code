@@ -1,0 +1,15 @@
+private void onIOExceptionWhenEstablishingTcpConnection(IOException exception,RemoteConnectionEndpoint.InetSocketAddressCoupling<Rfc6120TcpRemoteConnectionEndpoint> failedAddress){
+  RemoteConnectionEndpoint.InetSocketAddressCoupling<Rfc6120TcpRemoteConnectionEndpoint> nextInetSocketAddress=nextAddress();
+  if (nextInetSocketAddress == null) {
+    connectionException=EndpointConnectionException.from(discoveredEndpoints.result.lookupFailures,connectionExceptions);
+synchronized (this) {
+      notifyAll();
+    }
+    return;
+  }
+  RemoteConnectionException<Rfc6120TcpRemoteConnectionEndpoint> rce=new RemoteConnectionException<>(failedAddress,exception);
+  connectionExceptions.add(rce);
+  TcpHostEvent.ConnectionToHostFailedEvent connectionToHostFailedEvent=new TcpHostEvent.ConnectionToHostFailedEvent(establishingTcpConnectionState,nextInetSocketAddress,exception);
+  connectionInternal.invokeConnectionStateMachineListener(connectionToHostFailedEvent);
+  establishTcpConnection(nextInetSocketAddress);
+}

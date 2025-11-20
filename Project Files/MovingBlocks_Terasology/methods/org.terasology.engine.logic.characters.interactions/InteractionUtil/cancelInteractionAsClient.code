@@ -1,0 +1,22 @@
+/** 
+ * This method can be used by clients to request the cancelation of an interaction. The client will update it's
+ */
+public static void cancelInteractionAsClient(EntityRef character){
+  cancelInteractionAsClient(character,true);
+}
+static void cancelInteractionAsClient(EntityRef character,boolean notifyServer){
+  CharacterComponent characterComponent=character.getComponent(CharacterComponent.class);
+  if (characterComponent == null) {
+    logger.error("Interaction instigator has no character component");
+    return;
+  }
+  EntityRef oldTarget=characterComponent.predictedInteractionTarget;
+  if (oldTarget.exists()) {
+    characterComponent.predictedInteractionTarget=EntityRef.NULL;
+    character.saveComponent(characterComponent);
+    oldTarget.send(new InteractionEndPredicted(character));
+    if (notifyServer) {
+      character.send(new InteractionEndRequest());
+    }
+  }
+}

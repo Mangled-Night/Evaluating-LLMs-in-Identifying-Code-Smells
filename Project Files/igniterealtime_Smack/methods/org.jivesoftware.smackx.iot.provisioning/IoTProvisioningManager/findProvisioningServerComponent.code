@@ -1,0 +1,20 @@
+/** 
+ * Try to find a provisioning server component.
+ * @return the XMPP address of the provisioning server component if one was found.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @see <a href="http://xmpp.org/extensions/xep-0324.html#servercomponent">XEP-0324 § 3.1.2 Provisioning Server as a server component</a>
+ */
+public DomainBareJid findProvisioningServerComponent() throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  final XMPPConnection connection=connection();
+  ServiceDiscoveryManager sdm=ServiceDiscoveryManager.getInstanceFor(connection);
+  List<DiscoverInfo> discoverInfos=sdm.findServicesDiscoverInfo(Constants.IOT_PROVISIONING_NAMESPACE,true,true);
+  if (discoverInfos.isEmpty()) {
+    return null;
+  }
+  Jid jid=discoverInfos.get(0).getFrom();
+  assert jid.isDomainBareJid();
+  return jid.asDomainBareJid();
+}

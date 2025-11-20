@@ -1,0 +1,32 @@
+private static Map<String,Set<String>> convertTestsToMap(Set<String> tests){
+  Map<String,Set<String>> res=new HashMap<>();
+  for (  String test : tests) {
+    String[] testParts=test.split("\\.");
+    if (testParts.length == 1) {
+      res.put(test,Collections.emptySet());
+      continue;
+    }
+    String lastTestPart=testParts[testParts.length - 1];
+    if (lastTestPart.isEmpty()) {
+      throw new IllegalArgumentException("Invalid test specifier: " + test);
+    }
+    char firstCharOfLastTestPart=lastTestPart.charAt(0);
+    if (!Character.isLowerCase(firstCharOfLastTestPart)) {
+      res.put(test,Collections.emptySet());
+    }
+    String testMethodName=lastTestPart;
+    int classPartsCount=testParts.length - 1;
+    String[] classParts=new String[classPartsCount];
+    System.arraycopy(testParts,0,classParts,0,classPartsCount);
+    String testClass=String.join(".",classParts);
+    res.compute(testClass,(k,v) -> {
+      if (v == null) {
+        v=new HashSet<>();
+      }
+      v.add(testMethodName);
+      return v;
+    }
+);
+  }
+  return res;
+}

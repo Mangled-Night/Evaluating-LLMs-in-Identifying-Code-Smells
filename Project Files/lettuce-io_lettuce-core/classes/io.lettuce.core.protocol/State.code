@@ -1,0 +1,94 @@
+static class State {
+  /** 
+ * Callback interface to handle a  {@link State}.
+ */
+@FunctionalInterface interface StateHandler {
+    Result handle(    RedisStateMachine rsm,    State state,    ByteBuf buffer,    CommandOutput<?,?,?> output,    Consumer<Exception> errorHandler);
+  }
+  enum Type implements StateHandler {  /** 
+ * First byte:  {@code +}.
+ */
+  SINGLE('+',RedisStateMachine::handleSingle),   /** 
+ * First byte:  {@code -}.
+ */
+  ERROR('-',RedisStateMachine::handleError),   /** 
+ * First byte:  {@code :}.
+ */
+  INTEGER(':',RedisStateMachine::handleInteger),   /** 
+ * First byte:  {@code ,}.
+ * @since 6.0/RESP3
+ */
+  FLOAT(',',RedisStateMachine::handleFloat),   /** 
+ * First byte:  {@code #}.
+ * @since 6.0/RESP3
+ */
+  BOOLEAN('#',RedisStateMachine::handleBoolean),   /** 
+ * First byte:  {@code !}.
+ * @since 6.0/RESP3
+ */
+  BULK_ERROR('!',RedisStateMachine::handleBulkError),   /** 
+ * First byte:  {@code =}.
+ * @since 6.0/RESP3
+ */
+  VERBATIM('=',RedisStateMachine::handleBulkAndVerbatim),   VERBATIM_STRING('=',RedisStateMachine::handleVerbatim),   /** 
+ * First byte:  {@code (}.
+ * @since 6.0/RESP3
+ */
+  BIG_NUMBER('(',RedisStateMachine::handleBigNumber),   /** 
+ * First byte:  {@code %}.
+ * @see #HELLO_V3
+ * @since 6.0/RESP3
+ */
+  MAP('%',RedisStateMachine::handleMap),   /** 
+ * First byte:  {@code ~}.
+ * @see #MULTI
+ * @since 6.0/RESP3
+ */
+  SET('~',RedisStateMachine::handleSet),   /** 
+ * First byte:  {@code |}.
+ * @since 6.0/RESP3
+ */
+  ATTRIBUTE('|',RedisStateMachine::handleAttribute),   /** 
+ * First byte:  {@code >}.
+ * @see #MULTI
+ * @since 6.0/RESP3
+ */
+  PUSH('>',RedisStateMachine::handlePushAndMulti),   /** 
+ * First byte:  {@code @}.
+ * @see #MAP
+ * @since 6.0/RESP3
+ */
+  HELLO_V3('@',RedisStateMachine::handleHelloV3),   /** 
+ * First byte:  {@code _}.
+ * @since 6.0/RESP3
+ */
+  NULL('_',RedisStateMachine::handleNull),   /** 
+ * First byte:  {@code $}.
+ */
+  BULK('$',RedisStateMachine::handleBulkAndVerbatim),   /** 
+ * First byte:  {@code *}.
+ * @see #SET
+ * @see #MAP
+ */
+  MULTI('*',RedisStateMachine::handlePushAndMulti),   BYTES('*',RedisStateMachine::handleBytes);   final byte marker;
+  private final StateHandler behavior;
+  Type(  char marker,  StateHandler behavior){
+    this.marker=(byte)marker;
+    this.behavior=behavior;
+  }
+  @Override public Result handle(  RedisStateMachine rsm,  State state,  ByteBuf buffer,  CommandOutput<?,?,?> output,  Consumer<Exception> errorHandler){
+    return behavior.handle(rsm,state,buffer,output,errorHandler);
+  }
+}
+  enum Result {  NORMAL_END,   BREAK_LOOP,   CONTINUE_LOOP}
+  Type type=null;
+  int count=NOT_FOUND;
+  @Override public String toString(){
+    final StringBuffer sb=new StringBuffer();
+    sb.append(getClass().getSimpleName());
+    sb.append(" [type=").append(type);
+    sb.append(", count=").append(count);
+    sb.append(']');
+    return sb.toString();
+  }
+}

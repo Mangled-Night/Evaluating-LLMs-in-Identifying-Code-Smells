@@ -1,0 +1,31 @@
+@SuppressWarnings("unchecked") @Override public R read(JsonReader in) throws IOException {
+  JsonElement jsonElement=Streams.parse(in);
+  Class<?> valueClass;
+  if (jsonElement.isJsonObject()) {
+    JsonElement typeNameJsonElement=jsonElement.getAsJsonObject().remove(TYPE_FIELD_NAME);
+    if (typeNameJsonElement != null) {
+      String typeName=typeNameJsonElement.getAsString();
+      try {
+        valueClass=Class.forName(typeName);
+      }
+ catch (      ClassNotFoundException e) {
+        throw new JsonParseException("Could not find class " + typeName);
+      }
+    }
+ else {
+      valueClass=baseClass;
+    }
+  }
+ else {
+    valueClass=baseClass;
+  }
+  if (!baseClass.isAssignableFrom(valueClass)) {
+    throw new JsonParseException(valueClass.getName() + " does not derive from " + baseClass.getName());
+  }
+  TypeToken<?> valueType=TypeToken.get(valueClass);
+  TypeAdapter<R> delegate=(TypeAdapter<R>)gson.getDelegateAdapter(PolymorphicTypeAdapterFactory.this,valueType);
+  if (delegate == null) {
+    throw new JsonParseException("Could not deserialize " + valueClass.getName());
+  }
+  return delegate.fromJsonTree(jsonElement);
+}

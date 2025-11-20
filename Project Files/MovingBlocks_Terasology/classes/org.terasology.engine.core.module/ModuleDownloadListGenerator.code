@@ -1,0 +1,48 @@
+class ModuleDownloadListGenerator {
+  private ModuleRegistry localRegistry;
+  private DependencyResolver remoteDependencyResolver;
+  ModuleDownloadListGenerator(  ModuleRegistry localRegistry,  DependencyResolver remoteDependencyResolver){
+    this.localRegistry=localRegistry;
+    this.remoteDependencyResolver=remoteDependencyResolver;
+  }
+  Set<Module> getAllModulesToDownloadFor(  Name... modulesToInstall) throws DependencyResolutionFailedException {
+    Version currentEngineVersion=localRegistry.getLatestModuleVersion(TerasologyConstants.ENGINE_MODULE).getVersion();
+    ResolutionResult resolutionResult=remoteDependencyResolver.builder().requireVersion(TerasologyConstants.ENGINE_MODULE,currentEngineVersion).requireAll(modulesToInstall).build();
+    return processResolutionResult(resolutionResult);
+  }
+  private Set<Module> processResolutionResult(  ResolutionResult resolutionResult) throws DependencyResolutionFailedException {
+    if (!resolutionResult.isSuccess()) {
+      throw new DependencyResolutionFailedException("Module dependency resolution failed.");
+    }
+    return resolutionResult.getModules().stream().filter(module -> !module.getId().equals(TerasologyConstants.ENGINE_MODULE)).filter(module -> isOnlineVersionNewer(localRegistry.getLatestModuleVersion(module.getId()),module)).collect(Collectors.toSet());
+  }
+  /** 
+ * Whether the given module is present as source in the workspace. This is relevant when running the game from a local workspace to prevent downloading modules already present as source.
+ */
+  private boolean isSourceModule(  Module module){
+    return module.getResources() instanceof DirectoryFileSource;
+  }
+  private boolean isOnlineVersionNewer(  Module localVersion,  Module onlineVersion){
+    if (onlineVersion == null) {
+      return false;
+    }
+    if (localVersion == null) {
+      return true;
+    }
+    int versionCompare=onlineVersion.getVersion().compareTo(localVersion.getVersion());
+    if (versionCompare > 0) {
+      return true;
+    }
+ else     if (versionCompare == 0) {
+      if (isSourceModule(localVersion)) {
+        return false;
+      }
+ else {
+        return onlineVersion.getVersion().isSnapshot();
+      }
+    }
+ else {
+      return false;
+    }
+  }
+}

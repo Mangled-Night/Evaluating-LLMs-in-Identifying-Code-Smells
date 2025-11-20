@@ -1,0 +1,24 @@
+/** 
+ * Publish data using PEP, and block until the server has echoed the publication back to the publishing user.
+ * @param userTuneManager The UserTuneManager instance for the connection that is expected to publish data.
+ * @param discoManager The ServiceDiscoveryManager instance for the connection that is expected to publish data.
+ * @param data The data to be published.
+ * @throws Exception if the test fails
+ */
+public void publishAndWait(UserTuneManager userTuneManager,ServiceDiscoveryManager discoManager,UserTuneElement data) throws Exception {
+  final SimpleResultSyncPoint publicationEchoReceived=new SimpleResultSyncPoint();
+  final PepEventListener<UserTuneElement> publicationEchoListener=(jid,userTune,id,message) -> {
+    if (userTune.equals(data)) {
+      publicationEchoReceived.signal();
+    }
+  }
+;
+  try {
+    registerListenerAndWait(userTuneManager,discoManager,publicationEchoListener);
+    userTuneManager.addUserTuneListener(publicationEchoListener);
+    userTuneManager.publishUserTune(data);
+  }
+  finally {
+    userTuneManager.removeUserTuneListener(publicationEchoListener);
+  }
+}

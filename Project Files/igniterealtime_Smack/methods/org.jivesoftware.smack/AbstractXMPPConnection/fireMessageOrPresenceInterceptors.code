@@ -1,0 +1,20 @@
+private static <MPB extends MessageOrPresenceBuilder<MP,MPB>,MP extends MessageOrPresence<MPB>>MP fireMessageOrPresenceInterceptors(MP messageOrPresence,Map<Consumer<MPB>,GenericInterceptorWrapper<MPB,MP>> interceptors){
+  List<Consumer<MPB>> interceptorsToInvoke=new LinkedList<>();
+synchronized (interceptors) {
+    for (    GenericInterceptorWrapper<MPB,MP> interceptorWrapper : interceptors.values()) {
+      if (interceptorWrapper.filterMatches(messageOrPresence)) {
+        Consumer<MPB> interceptor=interceptorWrapper.getInterceptor();
+        interceptorsToInvoke.add(interceptor);
+      }
+    }
+  }
+  if (interceptorsToInvoke.isEmpty()) {
+    return messageOrPresence;
+  }
+  MPB builder=messageOrPresence.asBuilder();
+  for (  Consumer<MPB> interceptor : interceptorsToInvoke) {
+    interceptor.accept(builder);
+  }
+  messageOrPresence=builder.build();
+  return messageOrPresence;
+}

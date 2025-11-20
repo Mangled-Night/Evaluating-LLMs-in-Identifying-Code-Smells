@@ -1,0 +1,39 @@
+/** 
+ * Notify the  {@link EntityCapabilitiesChangedListener} about changed capabilities.
+ */
+private synchronized void renewEntityCapsVersion(){
+  if (entityCapabilitiesChangedListeners.isEmpty()) {
+    return;
+  }
+  renewEntityCapsRequested++;
+  if (renewEntityCapsScheduledAction != null) {
+    boolean canceled=renewEntityCapsScheduledAction.cancel();
+    if (canceled) {
+      scheduledRenewEntityCapsAvoided++;
+    }
+  }
+  renewEntityCapsScheduledAction=scheduleBlocking(() -> {
+    final XMPPConnection connection=connection();
+    if (connection == null) {
+      return;
+    }
+    renewEntityCapsPerformed.incrementAndGet();
+    DiscoverInfoBuilder discoverInfoBuilder=DiscoverInfo.builder("synthetized-disco-info-response").ofType(IQ.Type.result);
+    addDiscoverInfoTo(discoverInfoBuilder);
+    DiscoverInfo synthesizedDiscoveryInfo=discoverInfoBuilder.build();
+    for (    EntityCapabilitiesChangedListener entityCapabilitiesChangedListener : entityCapabilitiesChangedListeners) {
+      entityCapabilitiesChangedListener.onEntityCapabilitiesChanged(synthesizedDiscoveryInfo);
+    }
+    final Presence presenceSend=this.presenceSend;
+    if (connection.isAuthenticated() && presenceSend != null) {
+      Presence presence=presenceSend.asBuilder(connection).build();
+      try {
+        connection.sendStanza(presence);
+      }
+ catch (      InterruptedException|NotConnectedException e) {
+        LOGGER.log(Level.WARNING,"Could could not update presence with caps info",e);
+      }
+    }
+  }
+,RENEW_ENTITY_CAPS_DELAY_MILLIS,TimeUnit.MILLISECONDS);
+}

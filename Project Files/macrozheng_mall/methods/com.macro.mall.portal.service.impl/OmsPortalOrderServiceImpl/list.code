@@ -1,0 +1,38 @@
+@Override public CommonPage<OmsOrderDetail> list(Integer status,Integer pageNum,Integer pageSize){
+  if (status == -1) {
+    status=null;
+  }
+  UmsMember member=memberService.getCurrentMember();
+  PageHelper.startPage(pageNum,pageSize);
+  OmsOrderExample orderExample=new OmsOrderExample();
+  OmsOrderExample.Criteria criteria=orderExample.createCriteria();
+  criteria.andDeleteStatusEqualTo(0).andMemberIdEqualTo(member.getId());
+  if (status != null) {
+    criteria.andStatusEqualTo(status);
+  }
+  orderExample.setOrderByClause("create_time desc");
+  List<OmsOrder> orderList=orderMapper.selectByExample(orderExample);
+  CommonPage<OmsOrder> orderPage=CommonPage.restPage(orderList);
+  CommonPage<OmsOrderDetail> resultPage=new CommonPage<>();
+  resultPage.setPageNum(orderPage.getPageNum());
+  resultPage.setPageSize(orderPage.getPageSize());
+  resultPage.setTotal(orderPage.getTotal());
+  resultPage.setTotalPage(orderPage.getTotalPage());
+  if (CollUtil.isEmpty(orderList)) {
+    return resultPage;
+  }
+  List<Long> orderIds=orderList.stream().map(OmsOrder::getId).collect(Collectors.toList());
+  OmsOrderItemExample orderItemExample=new OmsOrderItemExample();
+  orderItemExample.createCriteria().andOrderIdIn(orderIds);
+  List<OmsOrderItem> orderItemList=orderItemMapper.selectByExample(orderItemExample);
+  List<OmsOrderDetail> orderDetailList=new ArrayList<>();
+  for (  OmsOrder omsOrder : orderList) {
+    OmsOrderDetail orderDetail=new OmsOrderDetail();
+    BeanUtil.copyProperties(omsOrder,orderDetail);
+    List<OmsOrderItem> relatedItemList=orderItemList.stream().filter(item -> item.getOrderId().equals(orderDetail.getId())).collect(Collectors.toList());
+    orderDetail.setOrderItemList(relatedItemList);
+    orderDetailList.add(orderDetail);
+  }
+  resultPage.setList(orderDetailList);
+  return resultPage;
+}

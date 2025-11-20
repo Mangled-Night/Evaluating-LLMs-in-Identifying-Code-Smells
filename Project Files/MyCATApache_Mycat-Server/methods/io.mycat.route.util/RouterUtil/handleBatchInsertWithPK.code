@@ -1,0 +1,27 @@
+private static boolean handleBatchInsertWithPK(ServerConnection sc,SchemaConfig schema,int sqlType,String origSQL,int valuesIndex,String tableName,String primaryKey,List<List<String>> vauleList,String suffixStr,int pkIndex){
+  boolean processedInsert=false;
+  final String mycatSeqPrefix="next value for MYCATSEQ_" + tableName.toUpperCase();
+  String prefix=origSQL.substring(0,valuesIndex + 6);
+  StringBuilder sb=new StringBuilder("");
+  for (  List<String> list : vauleList) {
+    sb.append("(");
+    String pkValue=list.get(pkIndex).trim().toLowerCase();
+    if ("null".equals(pkValue.trim())) {
+      list.set(pkIndex,mycatSeqPrefix);
+      processedInsert=true;
+    }
+    for (    String val : list) {
+      sb.append(val).append(",");
+    }
+    sb.setCharAt(sb.length() - 1,')');
+    sb.append(",");
+  }
+  sb.setCharAt(sb.length() - 1,' ');
+  if (suffixStr != null) {
+    sb.append(suffixStr);
+  }
+  if (processedInsert) {
+    processSQL(sc,schema,prefix + sb.toString(),sqlType);
+  }
+  return processedInsert;
+}

@@ -1,0 +1,27 @@
+/** 
+ * @param uri uri of the world generator to create.
+ * @param context objects from this context will be injected into the
+ * @return The instantiated world generator.
+ */
+public static WorldGenerator createGenerator(SimpleUri uri,Context context) throws UnresolvedWorldGeneratorException {
+  ModuleManager moduleManager=context.get(ModuleManager.class);
+  Module module=moduleManager.getEnvironment().get(uri.getModuleName());
+  if (module == null) {
+    DependencyResolver resolver=new DependencyResolver(moduleManager.getRegistry());
+    ResolutionResult result=resolver.resolve(uri.getModuleName());
+    if (!result.isSuccess()) {
+      if (moduleManager.getRegistry().getLatestModuleVersion(uri.getModuleName()) == null) {
+        throw new UnresolvedWorldGeneratorException("Unable to resolve world generator '" + uri + "' - not found");
+      }
+ else {
+        throw new UnresolvedWorldGeneratorException("Unable to resolve world generator '" + uri + "' - unable to resolve module dependencies");
+      }
+    }
+    try (ModuleEnvironment environment=moduleManager.loadEnvironment(result.getModules(),false)){
+      return createWorldGenerator(uri,context,environment);
+    }
+   }
+ else {
+    return createWorldGenerator(uri,context,moduleManager.getEnvironment());
+  }
+}

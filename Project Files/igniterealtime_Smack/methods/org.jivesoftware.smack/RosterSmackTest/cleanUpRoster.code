@@ -1,0 +1,39 @@
+/** 
+ * Clean up all the entries in the roster
+ */
+private void cleanUpRoster(){
+  for (int i=0; i < getMaxConnections(); i++) {
+    Roster roster=getConnection(i).getRoster();
+    final CountDownLatch removalLatch=new CountDownLatch(roster.getEntryCount());
+    roster.addRosterListener(new RosterListener(){
+      @Override public void presenceChanged(      Presence presence){
+      }
+      @Override public void entriesUpdated(      Collection<String> addresses){
+      }
+      @Override public void entriesDeleted(      Collection<String> addresses){
+        removalLatch.countDown();
+      }
+      @Override public void entriesAdded(      Collection<String> addresses){
+      }
+    }
+);
+    for (    RosterEntry entry : roster.getEntries()) {
+      try {
+        roster.removeEntry(entry);
+      }
+ catch (      XMPPException e) {
+        e.printStackTrace();
+        fail(e.getMessage());
+      }
+    }
+    try {
+      removalLatch.await(5,TimeUnit.SECONDS);
+    }
+ catch (    InterruptedException e) {
+      fail(e.getMessage());
+    }
+  }
+  assertEquals("Wrong number of entries in connection 0",0,getConnection(0).getRoster().getEntryCount());
+  assertEquals("Wrong number of entries in connection 1",0,getConnection(1).getRoster().getEntryCount());
+  assertEquals("Wrong number of entries in connection 2",0,getConnection(2).getRoster().getEntryCount());
+}

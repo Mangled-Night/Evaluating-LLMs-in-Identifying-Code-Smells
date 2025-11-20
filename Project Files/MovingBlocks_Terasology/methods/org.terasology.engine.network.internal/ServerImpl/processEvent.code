@@ -1,0 +1,21 @@
+private void processEvent(NetData.EventMessage message){
+  try {
+    Event event=eventSerializer.deserialize(message.getEvent());
+    EntityRef target=EntityRef.NULL;
+    if (message.hasTargetBlockPos()) {
+      target=blockEntityRegistry.getBlockEntityAt(NetMessageUtil.convert(message.getTargetBlockPos()));
+    }
+ else     if (message.hasTargetId()) {
+      target=networkSystem.getEntity(message.getTargetId());
+    }
+    if (target.exists()) {
+      target.send(event);
+    }
+ else {
+      logger.info("Dropping event {} for unavailable entity {}",event.getClass().getSimpleName(),target);
+    }
+  }
+ catch (  DeserializationException e) {
+    logger.error("Failed to deserialize event",e);
+  }
+}

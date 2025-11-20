@@ -1,0 +1,31 @@
+public class DataFormsXmlElement implements FormFieldChildElement {
+  public static final String ELEMENT="wrapper";
+  public static final String NAMESPACE="urn:xmpp:xml-element";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  private final StandardExtensionElement payload;
+  public DataFormsXmlElement(  StandardExtensionElement payload){
+    this.payload=payload;
+  }
+  @Override public QName getQName(){
+    return QNAME;
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  @Override public XmlStringBuilder toXML(  XmlEnvironment xmlEnvironment){
+    XmlStringBuilder xml=new XmlStringBuilder(this,xmlEnvironment);
+    if (payload == null) {
+      return xml.closeEmptyElement();
+    }
+    xml.rightAngleBracket();
+    xml.append(payload.toXML());
+    xml.closeElement(this);
+    return xml;
+  }
+  public static DataFormsXmlElement from(  FormField formField){
+    return (DataFormsXmlElement)formField.getFormFieldChildElement(QNAME);
+  }
+}

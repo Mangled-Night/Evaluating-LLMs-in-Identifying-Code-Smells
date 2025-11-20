@@ -1,0 +1,49 @@
+/** 
+ * Add a withSentinel host to the existing builder.
+ * @param host the host name
+ * @return the builder
+ */
+public Builder withSentinel(String host){
+  return withSentinel(host,DEFAULT_SENTINEL_PORT);
+}
+/** 
+ * Add a withSentinel host/port to the existing builder.
+ * @param host the host name
+ * @param port the port
+ * @return the builder
+ */
+public Builder withSentinel(String host,int port){
+  if (this.sentinelPassword != null) {
+    return withSentinel(host,port,new String(this.sentinelPassword));
+  }
+  return withSentinel(host,port,null);
+}
+/** 
+ * Add a withSentinel host/port and Sentinel authentication to the existing builder.
+ * @param host the host name
+ * @param port the port
+ * @param password the Sentinel password (supported since Redis 5.0.1)
+ * @return the builder
+ * @since 5.2
+ */
+public Builder withSentinel(String host,int port,CharSequence password){
+  LettuceAssert.assertState(this.host == null,"Cannot use with Redis mode.");
+  LettuceAssert.notEmpty(host,"Host must not be empty");
+  LettuceAssert.isTrue(isValidPort(port),() -> String.format("Port out of range: %s",port));
+  RedisURI redisURI=RedisURI.create(host,port);
+  if (password != null) {
+    redisURI.setPassword(password);
+  }
+  return withSentinel(redisURI);
+}
+/** 
+ * Add a withSentinel RedisURI to the existing builder.
+ * @param redisURI the sentinel URI
+ * @return the builder
+ * @since 5.2
+ */
+public Builder withSentinel(RedisURI redisURI){
+  LettuceAssert.notNull(redisURI,"Redis URI must not be null");
+  sentinels.add(redisURI);
+  return this;
+}

@@ -1,0 +1,19 @@
+private static RowDataPacket getRow(BackendConnection c,String charset){
+  RowDataPacket row=new RowDataPacket(FIELD_COUNT);
+  row.add(LongUtil.toBytes(c.getId()));
+  long threadId=0;
+  if (c instanceof MySQLConnection) {
+    threadId=((MySQLConnection)c).getThreadId();
+  }
+  row.add(LongUtil.toBytes(threadId));
+  row.add(StringUtil.encode(c.getHost(),charset));
+  row.add(IntegerUtil.toBytes(c.getPort()));
+  row.add(IntegerUtil.toBytes(c.getLocalPort()));
+  row.add(LongUtil.toBytes(c.getNetInBytes()));
+  row.add(LongUtil.toBytes(c.getNetOutBytes()));
+  row.add(LongUtil.toBytes((TimeUtil.currentTimeMillis() - c.getStartupTime()) / 1000L));
+  row.add(LongUtil.toBytes(c.getLastTime()));
+  boolean isBorrowed=c.isBorrowed();
+  row.add(isBorrowed ? "true".getBytes() : "false".getBytes());
+  return row;
+}

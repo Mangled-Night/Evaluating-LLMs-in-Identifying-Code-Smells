@@ -1,0 +1,29 @@
+public MenuTree createAddSkinContextMenu(JsonTree node){
+  MenuTree addTree=new MenuTree(OPTION_ADD_EXTENDED);
+  JsonTreeValue.Type type=node.getValue().getType();
+  if (type == JsonTreeValue.Type.OBJECT) {
+    if ("families".equals(node.getValue().getKey())) {
+      addTree.addOption("New family",n -> {
+        JsonTree child=new JsonTree(new JsonTreeValue("",null,JsonTreeValue.Type.OBJECT));
+        child.setExpanded(true);
+        n.addChild(child);
+        for (        Consumer<JsonTree> listener : addContextMenuListeners) {
+          listener.accept(child);
+        }
+      }
+,node);
+    }
+ else {
+      addTree.addOption("Key/value pair",n -> {
+        JsonTree child=new JsonTree((new JsonTreeValue("","",JsonTreeValue.Type.KEY_VALUE_PAIR)));
+        n.addChild(child);
+        for (        Consumer<JsonTree> listener : addContextMenuListeners) {
+          listener.accept(child);
+        }
+      }
+,node);
+      populateContextMenu(node,addTree,true);
+    }
+  }
+  return addTree;
+}

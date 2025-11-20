@@ -1,0 +1,18 @@
+@Test void testReplicasReadWrite(){
+  NodeSelection<String,String> nodes=commands.nodes(redisClusterNode -> redisClusterNode.getFlags().contains(RedisClusterNode.NodeFlag.SLAVE));
+  assertThat(nodes.size()).isEqualTo(2);
+  commands.set(key,value);
+  waitForReplication(key,ClusterTestSettings.port4);
+  try {
+    nodes.commands().get(key);
+    fail("Missing RedisCommandExecutionException: MOVED");
+  }
+ catch (  RedisCommandExecutionException e) {
+    if (e.getMessage().startsWith("MOVED")) {
+      assertThat(e.getSuppressed()).isEmpty();
+    }
+ else {
+      assertThat(e.getSuppressed()).isNotEmpty();
+    }
+  }
+}

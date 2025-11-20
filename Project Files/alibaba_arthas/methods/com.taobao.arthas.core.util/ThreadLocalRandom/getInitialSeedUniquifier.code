@@ -1,0 +1,35 @@
+public static synchronized long getInitialSeedUniquifier(){
+  long initialSeedUniquifier=ThreadLocalRandom.initialSeedUniquifier;
+  if (initialSeedUniquifier == 0) {
+    final BlockingQueue<Long> queue=new LinkedBlockingQueue<Long>();
+    Thread generatorThread=new Thread("initialSeedUniquifierGenerator"){
+      @Override public void run(){
+        SecureRandom random=new SecureRandom();
+        queue.add(random.nextLong());
+      }
+    }
+;
+    generatorThread.start();
+    final long timeoutSeconds=3;
+    final long deadLine=System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
+    for (; ; ) {
+      long waitTime=deadLine - System.nanoTime();
+      if (waitTime <= 0) {
+        break;
+      }
+      try {
+        Long result=queue.poll(waitTime,TimeUnit.NANOSECONDS);
+        if (result != null) {
+          initialSeedUniquifier=result;
+          break;
+        }
+      }
+ catch (      InterruptedException ignore) {
+      }
+    }
+    initialSeedUniquifier^=0x3255ecdc33bae119L;
+    initialSeedUniquifier^=Long.reverse(System.nanoTime());
+    ThreadLocalRandom.initialSeedUniquifier=initialSeedUniquifier;
+  }
+  return initialSeedUniquifier;
+}

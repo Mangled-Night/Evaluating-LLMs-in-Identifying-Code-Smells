@@ -1,0 +1,17 @@
+/** 
+ * To make sure the state of the physics engine is constant, all changes are stored and executed at the same time. This method executes the stored additions and removals of bodies to and from the physics engine. It also ensures that impulses requested before the body is added to the engine are applied after the body is added to the engine.
+ */
+private synchronized void processQueuedBodies(){
+  while (!insertionQueue.isEmpty()) {
+    RigidBodyRequest request=insertionQueue.poll();
+    discreteDynamicsWorld.addRigidBody(request.body.rb,request.groups,request.filter);
+  }
+  while (!removalQueue.isEmpty()) {
+    BulletRigidBody body=removalQueue.poll();
+    if (body.isDisposed) {
+      continue;
+    }
+    discreteDynamicsWorld.removeRigidBody(body.rb);
+    body.dispose();
+  }
+}

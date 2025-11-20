@@ -1,0 +1,15 @@
+@SuppressWarnings("unchecked") @Override void encode(ByteBuf target){
+  if (codec instanceof ToByteBufEncoder) {
+    ToByteBufEncoder<K,V> toByteBufEncoder=(ToByteBufEncoder<K,V>)codec;
+    ByteBuf temporaryBuffer=target.alloc().buffer(toByteBufEncoder.estimateSize(key) + 6);
+    try {
+      toByteBufEncoder.encodeKey(key,temporaryBuffer);
+      ByteBufferArgument.writeByteBuf(target,temporaryBuffer);
+    }
+  finally {
+      temporaryBuffer.release();
+    }
+    return;
+  }
+  ByteBufferArgument.writeByteBuffer(target,codec.encodeKey(key));
+}

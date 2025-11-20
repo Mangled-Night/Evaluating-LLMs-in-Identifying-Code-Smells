@@ -1,0 +1,25 @@
+private static byte[] phash(byte[] secret,byte[] seed,String algorithm,int targetLength){
+  SecretKeySpec signingKey=new SecretKeySpec(secret,algorithm);
+  try {
+    Mac mac=Mac.getInstance(algorithm);
+    mac.init(signingKey);
+    byte[] prevHash=mac.doFinal(seed);
+    byte[] result=new byte[targetLength];
+    int lengthGenerated=0;
+    while (lengthGenerated < targetLength) {
+      byte[] value=new byte[prevHash.length + secret.length];
+      System.arraycopy(prevHash,0,value,0,prevHash.length);
+      System.arraycopy(secret,0,value,prevHash.length,secret.length);
+      prevHash=mac.doFinal(value);
+      System.arraycopy(prevHash,0,result,lengthGenerated,Math.min(prevHash.length,targetLength - lengthGenerated));
+      lengthGenerated+=prevHash.length;
+    }
+    return result;
+  }
+ catch (  NoSuchAlgorithmException e) {
+    throw new RuntimeException(algorithm + " not supported, required for authentication",e);
+  }
+catch (  InvalidKeyException e) {
+    throw new RuntimeException("Error computing master secret",e);
+  }
+}

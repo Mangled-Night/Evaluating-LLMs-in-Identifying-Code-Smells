@@ -1,0 +1,45 @@
+/** 
+ * @param inputFboId Input FBO id is a number of the input connection on this node.Chosen arbitrarily, integers starting by 1 typically.
+ * @param fromConnection FboConnection obtained form another node's output.
+ */
+private void connectFbo(Node toNode,int inputFboId,DependencyConnection fromConnection){
+  if (!fromConnection.getConnectedConnections().isEmpty()) {
+    logger.warn("Warning, " + fromConnection + "connection is already read somewhere else.");
+  }
+  if (toNode.addInputConnection(inputFboId,fromConnection)) {
+    DependencyConnection localConnection=toNode.getInputFboConnection(inputFboId);
+    localConnection.connectInputToOutput(fromConnection);
+  }
+ else {
+    logger.info(toNode.getUri() + ".connectFbo(" + inputFboId+ ", "+ fromConnection.getName()+ "):"+ " Connection already existed. Testing for its connections..");
+    DependencyConnection localConnection=toNode.getInputFboConnection(inputFboId);
+    if (!localConnection.getConnectedConnections().isEmpty()) {
+      localConnection.connectInputToOutput(fromConnection);
+    }
+ else {
+      throw new RuntimeException(" Could not connect node " + toNode + ", inputConnection with id "+ inputFboId+ " already connected to "+ localConnection.getConnectedConnections());
+    }
+  }
+}
+/** 
+ * Connect Fbo output of fromNode to toNode's Fbo input.
+ * @param toNode Input node
+ * @param inputId Number/id of input
+ * @param fromNode Output node
+ * @param outputId Number/id of output
+ */
+public void connectFbo(Node fromNode,int outputId,Node toNode,int inputId){
+  connectFbo(toNode,inputId,fromNode.getOutputFboConnection(outputId));
+  logger.debug("Connected " + fromNode.getOutputFboConnection(outputId) + " to "+ toNode+ ".");
+}
+/** 
+ * Connect Fbo output of fromNode to toNode's Fbo input.
+ * @param toNode Input node
+ * @param inputId Number/id of input
+ * @param fromNodeUri Output node's Uri (already added to graph)
+ * @param outputId Number/id of output
+ */
+public void connectFbo(String fromNodeUri,int outputId,Node toNode,int inputId){
+  Node fromNode=findNode(new SimpleUri(fromNodeUri));
+  connectFbo(toNode,inputId,fromNode,outputId);
+}

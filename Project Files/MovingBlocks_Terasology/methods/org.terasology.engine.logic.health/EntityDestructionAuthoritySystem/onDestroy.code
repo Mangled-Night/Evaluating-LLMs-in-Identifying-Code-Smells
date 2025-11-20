@@ -1,0 +1,9 @@
+@ReceiveEvent public void onDestroy(DestroyEvent event,EntityRef entity){
+  recordDestroyed(event,entity);
+  BeforeDestroyEvent destroyCheck=new BeforeDestroyEvent(event.getInstigator(),event.getDirectCause(),event.getDamageType());
+  entity.send(destroyCheck);
+  if (!destroyCheck.isConsumed()) {
+    entity.send(new DoDestroyEvent(event.getInstigator(),event.getDirectCause(),event.getDamageType()));
+    entity.destroy();
+  }
+}

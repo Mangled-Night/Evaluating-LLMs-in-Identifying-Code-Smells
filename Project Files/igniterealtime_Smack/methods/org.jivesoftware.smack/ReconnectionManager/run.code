@@ -1,0 +1,58 @@
+/** 
+ * The process will try the reconnection until the connection succeed or the user cancel it
+ */
+@Override public void run(){
+  final AbstractXMPPConnection connection=weakRefConnection.get();
+  if (connection == null) {
+    return;
+  }
+  attempts=0;
+  while (isReconnectionPossible(connection)) {
+    int remainingSeconds=timeDelay();
+    while (remainingSeconds > 0) {
+      if (!isReconnectionPossible(connection)) {
+        return;
+      }
+      try {
+        Thread.sleep(1000);
+        remainingSeconds--;
+        for (        ReconnectionListener listener : reconnectionListeners) {
+          listener.reconnectingIn(remainingSeconds);
+        }
+      }
+ catch (      InterruptedException e) {
+        LOGGER.log(Level.FINE,"Reconnection Thread was interrupted, aborting reconnection mechanism",e);
+        return;
+      }
+    }
+    for (    ReconnectionListener listener : reconnectionListeners) {
+      listener.reconnectingIn(0);
+    }
+    if (!isReconnectionPossible(connection)) {
+      return;
+    }
+    try {
+      try {
+        connection.connect();
+      }
+ catch (      SmackException.AlreadyConnectedException e) {
+        LOGGER.log(Level.FINER,"Connection was already connected on reconnection attempt",e);
+      }
+      connection.login();
+    }
+ catch (    SmackException.AlreadyLoggedInException e) {
+      LOGGER.log(Level.FINER,"Reconnection not required, was already logged in",e);
+    }
+catch (    SmackException|IOException|XMPPException e) {
+      for (      ReconnectionListener listener : reconnectionListeners) {
+        listener.reconnectionFailed(e);
+      }
+      continue;
+    }
+catch (    InterruptedException e) {
+      LOGGER.log(Level.FINE,"Reconnection Thread was interrupted, aborting reconnection mechanism",e);
+      return;
+    }
+    return;
+  }
+}

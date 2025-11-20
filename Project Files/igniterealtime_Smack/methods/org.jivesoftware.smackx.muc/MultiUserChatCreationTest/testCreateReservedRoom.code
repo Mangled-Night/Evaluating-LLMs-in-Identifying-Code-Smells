@@ -1,0 +1,27 @@
+/** 
+ * Tests creating a new "Reserved Room".
+ */
+public void testCreateReservedRoom(){
+  MultiUserChat muc=new MultiUserChat(getConnection(0),room);
+  try {
+    muc.create("testbot1");
+    Form form=muc.getConfigurationForm();
+    assertNotNull("No room configuration form",form);
+    Form submitForm=form.createAnswerForm();
+    for (Iterator<FormField> fields=form.getFields(); fields.hasNext(); ) {
+      FormField field=fields.next();
+      if (!FormField.TYPE_HIDDEN.equals(field.getType()) && field.getVariable() != null) {
+        submitForm.setDefaultAnswer(field.getVariable());
+      }
+    }
+    List<String> owners=new ArrayList<String>();
+    owners.add(getBareJID(0));
+    submitForm.setAnswer("muc#roomconfig_roomowners",owners);
+    muc.sendConfigurationForm(submitForm);
+    muc.destroy("The room has almost no activity...",null);
+  }
+ catch (  XMPPException e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

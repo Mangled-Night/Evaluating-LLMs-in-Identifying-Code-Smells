@@ -1,0 +1,41 @@
+/** 
+ * Send a request to another user to send them a file. The other user has the option of, accepting, rejecting, or not responding to a received file transfer request. <p> If they accept, the stanza will contain the other user's chosen stream type to send the file across. The two choices this implementation provides to the other user for file transfer are <a href="http://www.xmpp.org/extensions/jep-0065.html">SOCKS5 Bytestreams</a>, which is the preferred method of transfer, and <a href="http://www.xmpp.org/extensions/jep-0047.html">In-Band Bytestreams</a>, which is the fallback mechanism. </p> <p> The other user may choose to decline the file request if they do not desire the file, their client does not support XEP-0096, or if there are no acceptable means to transfer the file. </p> Finally, if the other user does not respond this method will return null after the specified timeout.
+ * @param userID          The userID of the user to whom the file will be sent.
+ * @param streamID        The unique identifier for this file transfer.
+ * @param fileName        The name of this file. Preferably it should include anextension as it is used to determine what type of file it is.
+ * @param size            The size, in bytes, of the file.
+ * @param desc            A description of the file.
+ * @param responseTimeout The amount of time, in milliseconds, to wait for the remoteuser to respond. If they do not respond in time, this
+ * @return Returns the stream negotiator selected by the peer.
+ * @throws XMPPErrorException Thrown if there is an error negotiating the file transfer.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NoAcceptableTransferMechanisms if no acceptable transfer mechanisms are available
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public StreamNegotiator negotiateOutgoingTransfer(final Jid userID,final String streamID,final String fileName,final long size,final String desc,int responseTimeout) throws XMPPErrorException, NotConnectedException, NoResponseException, NoAcceptableTransferMechanisms, InterruptedException {
+  StreamInitiation si=new StreamInitiation();
+  si.setSessionID(streamID);
+  si.setMimeType(URLConnection.guessContentTypeFromName(fileName));
+  StreamInitiation.File siFile=new StreamInitiation.File(fileName,size);
+  siFile.setDesc(desc);
+  si.setFile(siFile);
+  si.setFeatureNegotiationForm(createDefaultInitiationForm());
+  si.setFrom(connection().getUser());
+  si.setTo(userID);
+  si.setType(IQ.Type.set);
+  Stanza siResponse=connection().createStanzaCollectorAndSend(si).nextResultOrThrow(responseTimeout);
+  if (siResponse instanceof IQ) {
+    IQ iqResponse=(IQ)siResponse;
+    if (iqResponse.getType().equals(IQ.Type.result)) {
+      StreamInitiation response=(StreamInitiation)siResponse;
+      return getOutgoingNegotiator(getStreamMethodField(response.getFeatureNegotiationForm()));
+    }
+ else {
+      throw new XMPPErrorException(iqResponse,iqResponse.getError());
+    }
+  }
+ else {
+    return null;
+  }
+}

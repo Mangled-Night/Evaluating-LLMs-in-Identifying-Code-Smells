@@ -1,0 +1,19 @@
+@Override public void processStanza(Stanza stanza){
+  final Message message=(Message)stanza;
+  if (!shouldAcceptMessage(message)) {
+    return;
+  }
+  final Jid from=message.getFrom();
+  final EntityFullJid fullFrom=from.asEntityFullJidOrThrow();
+  final EntityBareJid bareFrom=fullFrom.asEntityBareJid();
+  final Chat chat=chatWith(bareFrom);
+  chat.lockedResource=fullFrom;
+  asyncButOrdered.performAsyncButOrdered(chat,new Runnable(){
+    @Override public void run(){
+      for (      IncomingChatMessageListener listener : incomingListeners) {
+        listener.newIncomingMessage(bareFrom,message,chat);
+      }
+    }
+  }
+);
+}

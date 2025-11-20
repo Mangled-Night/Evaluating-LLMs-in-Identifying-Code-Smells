@@ -1,0 +1,46 @@
+class NodeConnectionPostProcessor implements ClusterNodeConnectionFactory<K,V> {
+  private final ClusterNodeConnectionFactory<K,V> delegate;
+  NodeConnectionPostProcessor(  ClusterNodeConnectionFactory<K,V> delegate){
+    this.delegate=delegate;
+  }
+  @Override public void setPartitions(  Partitions partitions){
+    this.delegate.setPartitions(partitions);
+  }
+  @Override public ConnectionFuture<StatefulRedisConnection<K,V>> apply(  ConnectionKey key){
+    RedisClusterNode targetNode=null;
+    if (key.nodeId != null && (targetNode=getPartitions().getPartitionByNodeId(key.nodeId)) == null) {
+      clusterEventListener.onUnknownNode();
+      throw connectionAttemptRejected("node id " + key.nodeId);
+    }
+    if (key.host != null && (targetNode=partitions.getPartition(key.host,key.port)) == null) {
+      clusterEventListener.onUnknownNode();
+      if (validateClusterNodeMembership()) {
+        throw connectionAttemptRejected(key.host + ":" + key.port);
+      }
+    }
+    ConnectionFuture<StatefulRedisConnection<K,V>> connection=delegate.apply(key);
+    LettuceAssert.notNull(connection,"Connection is null. Check ConnectionKey because host and nodeId are null.");
+    if (key.connectionIntent == ConnectionIntent.READ) {
+      connection=connection.thenCompose(c -> {
+        RedisFuture<String> stringRedisFuture=c.async().readOnly();
+        return stringRedisFuture.thenApply(s -> c).whenCompleteAsync((s,throwable) -> {
+          if (throwable != null) {
+            c.close();
+          }
+        }
+);
+      }
+);
+    }
+    RedisClusterNode actualNode=targetNode;
+    connection=connection.thenApply(c -> {
+synchronized (stateLock) {
+        c.setAutoFlushCommands(autoFlushCommands);
+        c.addListener(message -> onPushMessage(actualNode,message));
+      }
+      return c;
+    }
+);
+    return connection;
+  }
+}

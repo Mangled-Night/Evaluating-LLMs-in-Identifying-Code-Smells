@@ -1,0 +1,37 @@
+private void populateConstructorParameters(Binding<T> binding,ColumnLayout parameterLayout,UIButton createInstanceButton,Binding<Constructor<T>> selectedConstructor){
+  parameterLayout.removeAllWidgets();
+  Parameter[] parameters=selectedConstructor.get().getParameters();
+  List<TypeInfo<?>> parameterTypes=Arrays.stream(parameters).map(Parameter::getParameterizedType).map(parameterType -> ReflectionUtil.resolveType(type.getType(),parameterType)).map(TypeInfo::of).collect(Collectors.toList());
+  List<Binding<?>> argumentBindings=parameterTypes.stream().map(parameterType -> new DefaultBinding<>(Defaults.defaultValue(parameterType.getRawType()))).collect(Collectors.toList());
+  createInstanceButton.subscribe(widget -> {
+    Object[] arguments=argumentBindings.stream().map(Binding::get).toArray();
+    try {
+      binding.set(selectedConstructor.get().newInstance(arguments));
+    }
+ catch (    InstantiationException|IllegalAccessException|InvocationTargetException e) {
+      throw new RuntimeException(e);
+    }
+  }
+);
+  if (argumentBindings.isEmpty()) {
+    parameterLayout.addWidget(new UILabel("Constructor has no parameters"));
+    return;
+  }
+  ColumnLayout parametersExpandableLayout=WidgetUtil.createExpandableLayout("Constructor Parameters",this::createDefaultLayout,layout -> {
+    for (int i=0; i < parameterTypes.size(); i++) {
+      TypeInfo<?> parameterType=parameterTypes.get(i);
+      Binding<?> argumentBinding=argumentBindings.get(i);
+      Parameter parameter=parameters[i];
+      Optional<UIWidget> optionalWidget=library.getBaseTypeWidget((Binding)argumentBinding,parameterType);
+      if (!optionalWidget.isPresent()) {
+        LOGGER.warn("Could not create widget for parameter of type {} of constructor {}",parameter,selectedConstructor.get());
+        continue;
+      }
+      UIWidget widget=optionalWidget.get();
+      String parameterLabelText=ReflectionUtil.typeToString(parameterType.getType(),true);
+      layout.addWidget(WidgetUtil.labelize(widget,parameterLabelText,LABEL_WIDGET_ID));
+    }
+  }
+,this::createDefaultLayout);
+  parameterLayout.addWidget(parametersExpandableLayout);
+}

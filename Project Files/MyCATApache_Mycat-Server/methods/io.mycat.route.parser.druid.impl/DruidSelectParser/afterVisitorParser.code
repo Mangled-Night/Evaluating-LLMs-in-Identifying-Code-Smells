@@ -1,0 +1,18 @@
+/** 
+ * 现阶段目标为 有一个只涉及到一张表的子查询时,先执行子查询,获得返回结果后,改写原有sql继续执行,得到最终结果. 在这种情况下,原sql不需要继续解析. 使用catlet 的情况也不再继续解析.
+ */
+@Override public boolean afterVisitorParser(RouteResultset rrs,SQLStatement stmt,MycatSchemaStatVisitor visitor){
+  int subQuerySize=visitor.getSubQuerys().size();
+  if (subQuerySize == 0 && ctx.getTables().size() == 2) {
+    if (ctx.getVisitor().getConditions() != null && ctx.getVisitor().getConditions().size() > 0) {
+      return true;
+    }
+  }
+ else   if (subQuerySize == 1) {
+    SQLSelectQuery sqlSelectQuery=visitor.getSubQuerys().iterator().next().getQuery();
+    if (((MySqlSelectQueryBlock)sqlSelectQuery).getFrom() instanceof SQLExprTableSource) {
+      return true;
+    }
+  }
+  return super.afterVisitorParser(rrs,stmt,visitor);
+}

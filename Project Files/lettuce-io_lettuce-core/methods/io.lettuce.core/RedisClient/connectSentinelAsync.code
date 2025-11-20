@@ -1,0 +1,47 @@
+/** 
+ * Open asynchronously a connection to a Redis Sentinel using the supplied  {@link RedisURI} and use the supplied{@link RedisCodec codec} to encode/decode keys and values. The client {@link RedisURI} must contain one or moresentinels.
+ * @param codec the Redis server to connect to, must not be {@code null}
+ * @param redisURI the Redis server to connect to, must not be {@code null}
+ * @param < K > Key type
+ * @param < V > Value type
+ * @return A new connection
+ * @since 5.1
+ */
+public <K,V>CompletableFuture<StatefulRedisSentinelConnection<K,V>> connectSentinelAsync(RedisCodec<K,V> codec,RedisURI redisURI){
+  assertNotNull(redisURI);
+  return transformAsyncConnectionException(connectSentinelAsync(codec,redisURI,redisURI.getTimeout()),redisURI);
+}
+private <K,V>CompletableFuture<StatefulRedisSentinelConnection<K,V>> connectSentinelAsync(RedisCodec<K,V> codec,RedisURI redisURI,Duration timeout){
+  assertNotNull(codec);
+  checkValidRedisURI(redisURI);
+  logger.debug("Trying to get a Redis Sentinel connection for one of: " + redisURI.getSentinels());
+  if (redisURI.getSentinels().isEmpty() && (isNotEmpty(redisURI.getHost()) || !isEmpty(redisURI.getSocket()))) {
+    return doConnectSentinelAsync(codec,redisURI,timeout,redisURI.getClientName()).toCompletableFuture();
+  }
+  List<RedisURI> sentinels=redisURI.getSentinels();
+  Queue<Throwable> exceptionCollector=new LinkedBlockingQueue<>();
+  validateUrisAreOfSameConnectionType(sentinels);
+  Mono<StatefulRedisSentinelConnection<K,V>> connectionLoop=null;
+  for (  RedisURI uri : sentinels) {
+    Mono<StatefulRedisSentinelConnection<K,V>> connectionMono=Mono.fromCompletionStage(() -> doConnectSentinelAsync(codec,uri,timeout,redisURI.getClientName())).onErrorMap(CompletionException.class,Throwable::getCause).onErrorMap(e -> new RedisConnectionException("Cannot connect Redis Sentinel at " + uri,e)).doOnError(exceptionCollector::add);
+    if (connectionLoop == null) {
+      connectionLoop=connectionMono;
+    }
+ else {
+      connectionLoop=connectionLoop.onErrorResume(t -> connectionMono);
+    }
+  }
+  if (connectionLoop == null) {
+    return Mono.<StatefulRedisSentinelConnection<K,V>>error(new RedisConnectionException("Cannot connect to a Redis Sentinel: " + redisURI.getSentinels())).toFuture();
+  }
+  return connectionLoop.onErrorMap(e -> {
+    RedisConnectionException ex=new RedisConnectionException("Cannot connect to a Redis Sentinel: " + redisURI.getSentinels(),e);
+    for (    Throwable throwable : exceptionCollector) {
+      if (e != throwable) {
+        ex.addSuppressed(throwable);
+      }
+    }
+    return ex;
+  }
+).toFuture();
+}

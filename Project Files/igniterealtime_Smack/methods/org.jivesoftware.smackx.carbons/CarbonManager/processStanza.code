@@ -1,0 +1,16 @@
+@Override public void processStanza(final Stanza stanza){
+  final Message wrappingMessage=(Message)stanza;
+  final CarbonExtension carbonExtension=CarbonExtension.from(wrappingMessage);
+  final Direction direction=carbonExtension.getDirection();
+  final Forwarded<Message> forwarded=carbonExtension.getForwarded();
+  final Message carbonCopy=forwarded.getForwardedStanza();
+  final BareJid from=carbonCopy.getFrom().asBareJid();
+  carbonsListenerAsyncButOrdered.performAsyncButOrdered(from,new Runnable(){
+    @Override public void run(){
+      for (      CarbonCopyReceivedListener listener : listeners) {
+        listener.onCarbonCopyReceived(direction,carbonCopy,wrappingMessage);
+      }
+    }
+  }
+);
+}

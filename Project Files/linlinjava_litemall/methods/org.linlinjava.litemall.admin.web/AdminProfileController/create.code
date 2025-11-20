@@ -1,0 +1,20 @@
+@RequiresAuthentication @PostMapping("/password") public Object create(@RequestBody String body){
+  String oldPassword=JacksonUtil.parseString(body,"oldPassword");
+  String newPassword=JacksonUtil.parseString(body,"newPassword");
+  if (StringUtils.isEmpty(oldPassword)) {
+    return ResponseUtil.badArgument();
+  }
+  if (StringUtils.isEmpty(newPassword)) {
+    return ResponseUtil.badArgument();
+  }
+  Subject currentUser=SecurityUtils.getSubject();
+  LitemallAdmin admin=(LitemallAdmin)currentUser.getPrincipal();
+  BCryptPasswordEncoder encoder=new BCryptPasswordEncoder();
+  if (!encoder.matches(oldPassword,admin.getPassword())) {
+    return ResponseUtil.fail(ADMIN_INVALID_ACCOUNT,"账号密码不对");
+  }
+  String encodedNewPassword=encoder.encode(newPassword);
+  admin.setPassword(encodedNewPassword);
+  adminService.updateById(admin);
+  return ResponseUtil.ok();
+}

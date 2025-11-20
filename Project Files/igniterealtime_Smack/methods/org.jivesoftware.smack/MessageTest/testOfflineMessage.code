@@ -1,0 +1,27 @@
+/** 
+ * Check that when a client becomes unavailable all messages sent to the client are stored offline. So that when the client becomes available again the offline messages are received.
+ */
+public void testOfflineMessage(){
+  getConnection(0).sendStanza(new Presence(Presence.Type.available));
+  getConnection(1).sendStanza(new Presence(Presence.Type.available));
+  getConnection(1).sendStanza(new Presence(Presence.Type.unavailable));
+  try {
+    Thread.sleep(500);
+    Chat chat=getConnection(0).getChatManager().createChat(getBareJID(1),null);
+    StanzaCollector collector=getConnection(1).createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+    chat.sendMessage("Test 1");
+    chat.sendMessage("Test 2");
+    Thread.sleep(500);
+    getConnection(1).sendStanza(new Presence(Presence.Type.available));
+    Message message=(Message)collector.nextResult(2500);
+    assertNotNull(message);
+    message=(Message)collector.nextResult(2000);
+    assertNotNull(message);
+    message=(Message)collector.nextResult(1000);
+    assertNull(message);
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

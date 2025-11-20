@@ -1,0 +1,21 @@
+private <K,V>ConnectionBuilder createConnectionBuilder(RedisChannelHandler<K,V> connection,ConnectionState state,DefaultEndpoint endpoint,RedisURI connectionSettings,Mono<SocketAddress> socketAddressSupplier,Supplier<CommandHandler> commandHandlerSupplier){
+  ConnectionBuilder connectionBuilder;
+  if (connectionSettings.isSsl()) {
+    SslConnectionBuilder sslConnectionBuilder=SslConnectionBuilder.sslConnectionBuilder();
+    sslConnectionBuilder.ssl(connectionSettings);
+    connectionBuilder=sslConnectionBuilder;
+  }
+ else {
+    connectionBuilder=ConnectionBuilder.connectionBuilder();
+  }
+  state.apply(connectionSettings);
+  connectionBuilder.connectionInitializer(createHandshake(state));
+  connectionBuilder.reconnectionListener(new ReconnectEventListener(topologyRefreshScheduler));
+  connectionBuilder.clientOptions(getClusterClientOptions());
+  connectionBuilder.connection(connection);
+  connectionBuilder.clientResources(getResources());
+  connectionBuilder.endpoint(endpoint);
+  connectionBuilder.commandHandler(commandHandlerSupplier);
+  connectionBuilder(socketAddressSupplier,connectionBuilder,connection.getConnectionEvents(),connectionSettings);
+  return connectionBuilder;
+}

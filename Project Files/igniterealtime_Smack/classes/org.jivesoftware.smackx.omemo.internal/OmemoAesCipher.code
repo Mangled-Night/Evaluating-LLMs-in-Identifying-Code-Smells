@@ -1,0 +1,37 @@
+public class OmemoAesCipher {
+static {
+    byte[] iv=OmemoMessageBuilder.generateIv();
+    byte[] key=new byte[16];
+    RandomUtil.fillWithSecureRandom(key);
+    try {
+      encryptAesGcmNoPadding("This is just a test",key,iv);
+    }
+ catch (    InvalidKeyException|NoSuchAlgorithmException|NoSuchPaddingException|InvalidAlgorithmParameterException|IllegalBlockSizeException|BadPaddingException e) {
+      String message="Unable to perform " + OmemoConstants.Crypto.CIPHERMODE + " operation requires by OMEMO. Ensure that a suitable crypto provider for is available."+ " For example Bouncycastle on Android (BouncyCastleProvider)";
+      throw new AssertionError(message);
+    }
+  }
+  private enum CipherOpmode {  encrypt(Cipher.ENCRYPT_MODE),   decrypt(Cipher.DECRYPT_MODE);   public final int opmodeInt;
+  CipherOpmode(  int opmodeInt){
+    this.opmodeInt=opmodeInt;
+  }
+}
+  private static byte[] performCipherOperation(  CipherOpmode opmode,  byte[] input,  byte[] key,  byte[] initializationVector) throws IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
+    SecretKey secretKey=new SecretKeySpec(key,OmemoConstants.Crypto.KEYTYPE);
+    IvParameterSpec ivSpec=new IvParameterSpec(initializationVector);
+    Cipher cipher=Cipher.getInstance(OmemoConstants.Crypto.CIPHERMODE);
+    cipher.init(opmode.opmodeInt,secretKey,ivSpec);
+    byte[] ciphertext=cipher.doFinal(input);
+    return ciphertext;
+  }
+  public static byte[] decryptAesGcmNoPadding(  byte[] ciphertext,  byte[] key,  byte[] initializationVector) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException {
+    return performCipherOperation(CipherOpmode.decrypt,ciphertext,key,initializationVector);
+  }
+  public static byte[] encryptAesGcmNoPadding(  byte[] plaintext,  byte[] key,  byte[] initializationVector) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
+    return performCipherOperation(CipherOpmode.encrypt,plaintext,key,initializationVector);
+  }
+  public static byte[] encryptAesGcmNoPadding(  String plaintext,  byte[] key,  byte[] initializationVector) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
+    byte[] plaintextBytes=plaintext.getBytes(StandardCharsets.UTF_8);
+    return encryptAesGcmNoPadding(plaintextBytes,key,initializationVector);
+  }
+}

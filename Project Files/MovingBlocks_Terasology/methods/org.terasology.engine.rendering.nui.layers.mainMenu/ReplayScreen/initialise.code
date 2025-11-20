@@ -1,0 +1,35 @@
+@Override public void initialise(){
+  setAnimationSystem(MenuAnimationSystems.createDefaultSwipeAnimation());
+  initWidgets();
+  if (isValidScreen()) {
+    initSaveGamePathWidget(PathManager.getInstance().getRecordingsPath());
+    getGameInfos().subscribeSelection((widget,item) -> {
+      load.setEnabled(item != null);
+      delete.setEnabled(item != null);
+      updateDescription(item);
+    }
+);
+    getGameInfos().subscribe((widget,item) -> loadGame(item));
+    load.subscribe(e -> {
+      GameInfo gameInfo=getGameInfos().getSelection();
+      if (gameInfo != null) {
+        loadGame(gameInfo);
+      }
+    }
+);
+    delete.subscribe(button -> {
+      TwoButtonPopup confirmationPopup=getManager().pushScreen(TwoButtonPopup.ASSET_URI,TwoButtonPopup.class);
+      confirmationPopup.setMessage(translationSystem.translate("${engine:menu#remove-confirmation-popup" + "-title}"),translationSystem.translate("${engine:menu#remove-confirmation-popup-message}"));
+      confirmationPopup.setLeftButton(translationSystem.translate("${engine:menu#dialog-yes}"),this::removeSelectedReplay);
+      confirmationPopup.setRightButton(translationSystem.translate("${engine:menu#dialog-no}"),() -> {
+      }
+);
+    }
+);
+    close.subscribe(button -> {
+      recordAndReplayCurrentStatus.setStatus(RecordAndReplayStatus.NOT_ACTIVATED);
+      triggerBackAnimation();
+    }
+);
+  }
+}

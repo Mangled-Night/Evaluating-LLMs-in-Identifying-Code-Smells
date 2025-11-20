@@ -1,0 +1,17 @@
+public ChunkMonitorDisplay(int refreshInterval,int chunkSize){
+  Preconditions.checkArgument(refreshInterval >= 500,"Parameter 'refreshInterval' has to be greater or equal 500 (" + refreshInterval + ")");
+  Preconditions.checkArgument(chunkSize >= 6,"Parameter 'chunkSize' has to be greater or equal 6 (" + chunkSize + ")");
+  addComponentListener(new ResizeListener());
+  final MouseInputListener ml=new MouseInputListener();
+  addMouseListener(ml);
+  addMouseMotionListener(ml);
+  addMouseWheelListener(ml);
+  this.followPlayer=true;
+  this.refreshInterval=refreshInterval;
+  this.chunkSize=chunkSize;
+  this.executor=Executors.newSingleThreadExecutor();
+  ChunkMonitor.registerForEvents(this);
+  this.queue=new LinkedBlockingQueue<>();
+  this.queue.offer(new InitialRequest());
+  this.executor.execute(new RenderTask());
+}

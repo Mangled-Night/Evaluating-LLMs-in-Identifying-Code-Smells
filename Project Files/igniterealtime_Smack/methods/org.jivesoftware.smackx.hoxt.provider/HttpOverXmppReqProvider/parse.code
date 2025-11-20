@@ -1,0 +1,26 @@
+@Override public HttpOverXmppReq parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws IOException, XmlPullParserException, SmackParsingException {
+  HttpOverXmppReq.Builder builder=HttpOverXmppReq.builder();
+  builder.setResource(parser.getAttributeValue("",ATTRIBUTE_RESOURCE));
+  builder.setVersion(parser.getAttributeValue("",ATTRIBUTE_VERSION));
+  String method=parser.getAttributeValue("",ATTRIBUTE_METHOD);
+  builder.setMethod(HttpMethod.valueOf(method));
+  String sipubStr=parser.getAttributeValue("",AbstractHttpOverXmppProvider.ELEMENT_SIPUB);
+  String ibbStr=parser.getAttributeValue("",AbstractHttpOverXmppProvider.ELEMENT_IBB);
+  String jingleStr=parser.getAttributeValue("",AbstractHttpOverXmppProvider.ELEMENT_JINGLE);
+  if (sipubStr != null) {
+    builder.setSipub(ParserUtils.parseXmlBoolean(sipubStr));
+  }
+  if (ibbStr != null) {
+    builder.setIbb(ParserUtils.parseXmlBoolean(ibbStr));
+  }
+  if (jingleStr != null) {
+    builder.setJingle(ParserUtils.parseXmlBoolean(jingleStr));
+  }
+  String maxChunkSize=parser.getAttributeValue("",ATTRIBUTE_MAX_CHUNK_SIZE);
+  if (maxChunkSize != null) {
+    builder.setMaxChunkSize(Integer.parseInt(maxChunkSize));
+  }
+  builder.setHeaders(parseHeaders(parser));
+  builder.setData(parseData(parser));
+  return builder.build();
+}

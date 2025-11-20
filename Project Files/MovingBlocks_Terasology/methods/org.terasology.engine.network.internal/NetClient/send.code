@@ -1,0 +1,27 @@
+@Override public void send(Event event,EntityRef target){
+  try {
+    BlockComponent blockComp=target.getComponent(BlockComponent.class);
+    if (blockComp != null) {
+      if (relevantChunks.contains(Chunks.toChunkPos(blockComp.getPosition(),new Vector3i()))) {
+        queuedOutgoingEvents.add(NetData.EventMessage.newBuilder().setTargetBlockPos(NetMessageUtil.convert(blockComp.getPosition())).setEvent(eventSerializer.serialize(event)).build());
+      }
+    }
+ else {
+      NetworkComponent networkComponent=target.getComponent(NetworkComponent.class);
+      if (networkComponent != null) {
+        if (netRelevant.contains(networkComponent.getNetworkId()) || netInitial.contains(networkComponent.getNetworkId())) {
+          queuedOutgoingEvents.add(NetData.EventMessage.newBuilder().setTargetId(networkComponent.getNetworkId()).setEvent(eventSerializer.serialize(event)).build());
+        }
+      }
+    }
+  }
+ catch (  SerializationException e) {
+    logger.error("Failed to serialize event",e);
+  }
+}
+void send(NetData.NetMessage data){
+  logger.trace("Sending packet with size {}",data.getSerializedSize());
+  sentMessages.incrementAndGet();
+  sentBytes.addAndGet(data.getSerializedSize());
+  channel.writeAndFlush(data);
+}

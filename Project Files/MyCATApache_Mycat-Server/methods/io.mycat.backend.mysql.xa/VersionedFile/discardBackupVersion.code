@@ -1,0 +1,11 @@
+/** 
+ * Discards the backup version (if any). After calling this method, the newer version produced after calling  {@link #openNewVersionForWriting()}becomes valid for reading next time when {@link #openLastValidVersionForReading()} is called.Note: it is the caller's responsibility to make sure that all new data has been flushed to disk before calling this method!
+ * @throws IllegalStateException If {@link #openNewVersionForWriting()} has not been called yet.
+ * @throws IOException If the previous version exists but could no be deleted.
+ */
+public void discardBackupVersion() throws IllegalStateException, IOException {
+  if (randomAccessFile == null)   throw new IllegalStateException("No new version yet!");
+  String fileName=getBackupVersionFileName();
+  File temp=new File(fileName);
+  if (temp.exists() && !temp.delete())   throw new IOException("Failed to delete backup version: " + fileName);
+}

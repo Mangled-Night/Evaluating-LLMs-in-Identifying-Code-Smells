@@ -1,0 +1,49 @@
+@RequiresPermissions("admin:aftersale:refund") @RequiresPermissionsDesc(menu={"商城管理","售后管理"},button="退款") @PostMapping("/refund") public Object refund(@RequestBody LitemallAftersale aftersale){
+  Integer id=aftersale.getId();
+  LitemallAftersale aftersaleOne=aftersaleService.findById(id);
+  if (aftersaleOne == null) {
+    return ResponseUtil.badArgumentValue();
+  }
+  if (!aftersaleOne.getStatus().equals(AftersaleConstant.STATUS_RECEPT)) {
+    return ResponseUtil.fail(AdminResponseCode.AFTERSALE_NOT_ALLOWED,"售后不能进行退款操作");
+  }
+  Integer orderId=aftersaleOne.getOrderId();
+  LitemallOrder order=orderService.findById(orderId);
+  WxPayRefundRequest wxPayRefundRequest=new WxPayRefundRequest();
+  wxPayRefundRequest.setOutTradeNo(order.getOrderSn());
+  wxPayRefundRequest.setOutRefundNo("refund_" + order.getOrderSn());
+  Integer totalFee=aftersaleOne.getAmount().multiply(new BigDecimal(100)).intValue();
+  wxPayRefundRequest.setTotalFee(order.getActualPrice().multiply(new BigDecimal(100)).intValue());
+  wxPayRefundRequest.setRefundFee(totalFee);
+  WxPayRefundResult wxPayRefundResult;
+  try {
+    wxPayRefundResult=wxPayService.refund(wxPayRefundRequest);
+  }
+ catch (  WxPayException e) {
+    logger.error(e.getMessage(),e);
+    return ResponseUtil.fail(ORDER_REFUND_FAILED,"订单退款失败");
+  }
+  if (!wxPayRefundResult.getReturnCode().equals("SUCCESS")) {
+    logger.warn("refund fail: " + wxPayRefundResult.getReturnMsg());
+    return ResponseUtil.fail(ORDER_REFUND_FAILED,"订单退款失败");
+  }
+  if (!wxPayRefundResult.getResultCode().equals("SUCCESS")) {
+    logger.warn("refund fail: " + wxPayRefundResult.getReturnMsg());
+    return ResponseUtil.fail(ORDER_REFUND_FAILED,"订单退款失败");
+  }
+  aftersaleOne.setStatus(AftersaleConstant.STATUS_REFUND);
+  aftersaleOne.setHandleTime(LocalDateTime.now());
+  aftersaleService.updateById(aftersaleOne);
+  orderService.updateAftersaleStatus(orderId,AftersaleConstant.STATUS_REFUND);
+  if (aftersale.getType().equals(AftersaleConstant.TYPE_GOODS_REQUIRED)) {
+    List<LitemallOrderGoods> orderGoodsList=orderGoodsService.queryByOid(orderId);
+    for (    LitemallOrderGoods orderGoods : orderGoodsList) {
+      Integer productId=orderGoods.getProductId();
+      Short number=orderGoods.getNumber();
+      goodsProductService.addStock(productId,number);
+    }
+  }
+  notifyService.notifySmsTemplate(order.getMobile(),NotifyType.REFUND,new String[]{order.getOrderSn().substring(8,14)});
+  logHelper.logOrderSucceed("退款","订单编号 " + order.getOrderSn() + " 售后编号 "+ aftersale.getAftersaleSn());
+  return ResponseUtil.ok();
+}

@@ -1,0 +1,79 @@
+@Override public void run(){
+  try {
+    OutgoingFileTransfer.this.outputStream=negotiateStream(fileName,fileSize,description);
+    progress.outputStreamEstablished(OutgoingFileTransfer.this.outputStream);
+  }
+ catch (  XMPPErrorException e) {
+    handleXMPPException(e);
+  }
+catch (  Exception e) {
+    setException(e);
+  }
+}
+@Override public void run(){
+  try {
+    outputStream=negotiateStream(file.getName(),file.length(),description);
+  }
+ catch (  XMPPErrorException e) {
+    handleXMPPException(e);
+    return;
+  }
+catch (  Exception e) {
+    setException(e);
+  }
+  if (outputStream == null) {
+    return;
+  }
+  if (!updateStatus(Status.negotiated,Status.in_progress)) {
+    return;
+  }
+  InputStream inputStream=null;
+  try {
+    inputStream=new FileInputStream(file);
+    writeToStream(inputStream,outputStream);
+  }
+ catch (  FileNotFoundException e) {
+    setStatus(FileTransfer.Status.error);
+    setError(Error.bad_file);
+    setException(e);
+  }
+catch (  IOException e) {
+    setStatus(FileTransfer.Status.error);
+    setException(e);
+  }
+ finally {
+    CloseableUtil.maybeClose(inputStream,LOGGER);
+    CloseableUtil.maybeClose(outputStream,LOGGER);
+  }
+  updateStatus(Status.in_progress,FileTransfer.Status.complete);
+}
+@Override public void run(){
+  try {
+    outputStream=negotiateStream(fileName,fileSize,description);
+  }
+ catch (  XMPPErrorException e) {
+    handleXMPPException(e);
+    return;
+  }
+catch (  Exception e) {
+    setException(e);
+  }
+  if (outputStream == null) {
+    return;
+  }
+  if (!updateStatus(Status.negotiated,Status.in_progress)) {
+    return;
+  }
+  try {
+    writeToStream(in,outputStream);
+  }
+ catch (  IOException e) {
+    setStatus(FileTransfer.Status.error);
+    setException(e);
+  }
+ finally {
+    CloseableUtil.maybeClose(in,LOGGER);
+    CloseableUtil.maybeClose(outputStream,LOGGER);
+  }
+  updateStatus(Status.in_progress,FileTransfer.Status.complete);
+}

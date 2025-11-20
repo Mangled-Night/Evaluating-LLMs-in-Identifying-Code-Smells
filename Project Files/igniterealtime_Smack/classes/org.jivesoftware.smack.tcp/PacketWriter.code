@@ -1,0 +1,227 @@
+protected class PacketWriter {
+  public static final int QUEUE_SIZE=XMPPTCPConnection.QUEUE_SIZE;
+  public static final int UNACKKNOWLEDGED_STANZAS_QUEUE_SIZE=1024;
+  public static final int UNACKKNOWLEDGED_STANZAS_QUEUE_SIZE_HIGH_WATER_MARK=(int)(0.3 * UNACKKNOWLEDGED_STANZAS_QUEUE_SIZE);
+  private final String threadName="Smack Writer (" + getConnectionCounter() + ')';
+  private final ArrayBlockingQueueWithShutdown<Element> queue=new ArrayBlockingQueueWithShutdown<>(QUEUE_SIZE,true);
+  /** 
+ * If set, the stanza writer is shut down
+ */
+  protected volatile Long shutdownTimestamp=null;
+  private volatile boolean instantShutdown;
+  /** 
+ * True if some preconditions are given to start the bundle and defer mechanism. <p> This will likely get set to true right after the start of the writer thread, because {@link #nextStreamElement()} will check if {@link queue} is empty, which is probably the case, and then setthis field to true. </p>
+ */
+  private boolean shouldBundleAndDefer;
+  private boolean running;
+  /** 
+ * Initializes the writer in order to be used. It is called at the first connection and also is invoked if the connection is disconnected by an error.
+ */
+  void init(){
+    shutdownTimestamp=null;
+    if (unacknowledgedStanzas != null) {
+      drainWriterQueueToUnacknowledgedStanzas();
+    }
+    queue.start();
+    running=true;
+    Async.go(new Runnable(){
+      @Override public void run(){
+        LOGGER.finer(threadName + " start");
+        try {
+          writePackets();
+        }
+  finally {
+          LOGGER.finer(threadName + " exit");
+          running=false;
+          notifyWaitingThreads();
+        }
+      }
+    }
+,threadName);
+  }
+  private boolean done(){
+    return shutdownTimestamp != null;
+  }
+  protected void throwNotConnectedExceptionIfDoneAndResumptionNotPossible() throws NotConnectedException {
+    final boolean done=done();
+    if (done) {
+      final boolean smResumptionPossible=isSmResumptionPossible();
+      if (!smResumptionPossible) {
+        throw new NotConnectedException(XMPPTCPConnection.this,"done=" + done + " smResumptionPossible="+ smResumptionPossible);
+      }
+    }
+  }
+  /** 
+ * Sends the specified element to the server.
+ * @param element the element to send.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  protected void sendStreamElement(  Element element) throws NotConnectedException, InterruptedException {
+    throwNotConnectedExceptionIfDoneAndResumptionNotPossible();
+    try {
+      queue.put(element);
+    }
+ catch (    InterruptedException e) {
+      throwNotConnectedExceptionIfDoneAndResumptionNotPossible();
+      throw e;
+    }
+  }
+  /** 
+ * Sends the specified element to the server.
+ * @param element the element to send.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws OutgoingQueueFullException if there is no space in the outgoing queue.
+ */
+  protected void sendNonBlocking(  Element element) throws NotConnectedException, OutgoingQueueFullException {
+    throwNotConnectedExceptionIfDoneAndResumptionNotPossible();
+    boolean enqueued=queue.offer(element);
+    if (!enqueued) {
+      throwNotConnectedExceptionIfDoneAndResumptionNotPossible();
+      throw new OutgoingQueueFullException();
+    }
+  }
+  /** 
+ * Shuts down the stanza writer. Once this method has been called, no further packets will be written to the server.
+ */
+  void shutdown(  boolean instant){
+    instantShutdown=instant;
+    queue.shutdown();
+    shutdownTimestamp=System.currentTimeMillis();
+  }
+  /** 
+ * Maybe return the next available element from the queue for writing. If the queue is shut down <b>or</b> a spurious interrupt occurs, <code>null</code> is returned. So it is important to check the 'done' condition in that case.
+ * @return the next element for writing or null.
+ */
+  private Element nextStreamElement(){
+    if (queue.isEmpty()) {
+      shouldBundleAndDefer=true;
+    }
+    Element packet=null;
+    try {
+      packet=queue.take();
+    }
+ catch (    InterruptedException e) {
+      if (!queue.isShutdown()) {
+        LOGGER.log(Level.WARNING,"Writer thread was interrupted. Don't do that. Use disconnect() instead.",e);
+      }
+    }
+    return packet;
+  }
+  private void writePackets(){
+    try {
+      while (!done()) {
+        Element element=nextStreamElement();
+        if (element == null) {
+          continue;
+        }
+        final BundleAndDeferCallback localBundleAndDeferCallback=bundleAndDeferCallback;
+        if (localBundleAndDeferCallback != null && isAuthenticated() && shouldBundleAndDefer) {
+          shouldBundleAndDefer=false;
+          final AtomicBoolean bundlingAndDeferringStopped=new AtomicBoolean();
+          final int bundleAndDeferMillis=localBundleAndDeferCallback.getBundleAndDeferMillis(new BundleAndDefer(bundlingAndDeferringStopped));
+          if (bundleAndDeferMillis > 0) {
+            long remainingWait=bundleAndDeferMillis;
+            final long waitStart=System.currentTimeMillis();
+synchronized (bundlingAndDeferringStopped) {
+              while (!bundlingAndDeferringStopped.get() && remainingWait > 0) {
+                bundlingAndDeferringStopped.wait(remainingWait);
+                remainingWait=bundleAndDeferMillis - (System.currentTimeMillis() - waitStart);
+              }
+            }
+          }
+        }
+        Stanza packet=null;
+        if (element instanceof Stanza) {
+          packet=(Stanza)element;
+        }
+ else         if (element instanceof Enable) {
+          unacknowledgedStanzas=new ArrayBlockingQueue<>(UNACKKNOWLEDGED_STANZAS_QUEUE_SIZE);
+        }
+        maybeAddToUnacknowledgedStanzas(packet);
+        CharSequence elementXml=element.toXML(outgoingStreamXmlEnvironment);
+        if (elementXml instanceof XmlStringBuilder) {
+          try {
+            ((XmlStringBuilder)elementXml).write(writer,outgoingStreamXmlEnvironment);
+          }
+ catch (          NullPointerException npe) {
+            LOGGER.log(Level.FINE,"NPE in XmlStringBuilder of " + element.getClass() + ": "+ element,npe);
+            throw npe;
+          }
+        }
+ else {
+          writer.write(elementXml.toString());
+        }
+        if (queue.isEmpty()) {
+          writer.flush();
+        }
+        if (packet != null) {
+          firePacketSendingListeners(packet);
+        }
+      }
+      if (!instantShutdown) {
+        try {
+          while (!queue.isEmpty()) {
+            Element packet=queue.remove();
+            if (packet instanceof Stanza) {
+              Stanza stanza=(Stanza)packet;
+              maybeAddToUnacknowledgedStanzas(stanza);
+            }
+            writer.write(packet.toXML().toString());
+          }
+        }
+ catch (        Exception e) {
+          LOGGER.log(Level.WARNING,"Exception flushing queue during shutdown, ignore and continue",e);
+        }
+        try {
+          writer.write("</stream:stream>");
+          writer.flush();
+        }
+ catch (        Exception e) {
+          LOGGER.log(Level.WARNING,"Exception writing closing stream element",e);
+        }
+        queue.clear();
+      }
+ else       if (instantShutdown && isSmEnabled()) {
+        drainWriterQueueToUnacknowledgedStanzas();
+      }
+    }
+ catch (    Exception e) {
+      if (!(done() || queue.isShutdown())) {
+        running=false;
+        notifyConnectionError(e);
+      }
+ else {
+        LOGGER.log(Level.FINE,"Ignoring Exception in writePackets()",e);
+      }
+    }
+  }
+  private void drainWriterQueueToUnacknowledgedStanzas(){
+    List<Element> elements=new ArrayList<>(queue.size());
+    queue.drainTo(elements);
+    for (int i=0; i < elements.size(); i++) {
+      Element element=elements.get(i);
+      if (unacknowledgedStanzas.remainingCapacity() == 0) {
+        StreamManagementException.UnacknowledgedQueueFullException exception=StreamManagementException.UnacknowledgedQueueFullException.newWith(i,elements,unacknowledgedStanzas);
+        LOGGER.log(Level.WARNING,"Some stanzas may be lost as not all could be drained to the unacknowledged stanzas queue",exception);
+        return;
+      }
+      if (element instanceof Stanza) {
+        unacknowledgedStanzas.add((Stanza)element);
+      }
+    }
+  }
+  private void maybeAddToUnacknowledgedStanzas(  Stanza stanza) throws IOException {
+    if (unacknowledgedStanzas != null && stanza != null) {
+      if (unacknowledgedStanzas.size() == UNACKKNOWLEDGED_STANZAS_QUEUE_SIZE_HIGH_WATER_MARK) {
+        writer.write(AckRequest.INSTANCE.toXML().toString());
+      }
+      try {
+        unacknowledgedStanzas.put(stanza);
+      }
+ catch (      InterruptedException e) {
+        throw new IllegalStateException(e);
+      }
+    }
+  }
+}

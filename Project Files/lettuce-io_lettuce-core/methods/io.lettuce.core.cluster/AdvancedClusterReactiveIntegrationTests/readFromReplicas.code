@@ -1,0 +1,11 @@
+@Test void readFromReplicas(){
+  RedisClusterReactiveCommands<String,String> connection=commands.getConnection(ClusterTestSettings.host,ClusterTestSettings.port4);
+  connection.readOnly().subscribe();
+  commands.set(key,value).subscribe();
+  NodeSelectionAsyncIntegrationTests.waitForReplication(commands.getStatefulConnection().async(),ClusterTestSettings.key,ClusterTestSettings.port4);
+  AtomicBoolean error=new AtomicBoolean();
+  connection.get(key).doOnError(throwable -> error.set(true)).block();
+  assertThat(error.get()).isFalse();
+  connection.readWrite().subscribe();
+  StepVerifier.create(connection.get(key)).expectError(RedisCommandExecutionException.class).verify();
+}

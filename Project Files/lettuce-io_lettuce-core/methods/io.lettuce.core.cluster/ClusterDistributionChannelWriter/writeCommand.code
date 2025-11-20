@@ -1,0 +1,25 @@
+@SuppressWarnings("unchecked") private static <K,V>void writeCommand(RedisCommand<K,V,?> command,boolean asking,StatefulRedisConnection<K,V> connection,Throwable throwable){
+  if (throwable != null) {
+    command.completeExceptionally(throwable);
+    return;
+  }
+  try {
+    if (asking) {
+      writeCommands(Arrays.asList(asking(),command),((RedisChannelHandler<K,V>)connection).getChannelWriter());
+    }
+ else {
+      writeCommand(command,((RedisChannelHandler<K,V>)connection).getChannelWriter());
+    }
+  }
+ catch (  Exception e) {
+    command.completeExceptionally(e);
+  }
+}
+private static <K,V>void writeCommand(RedisCommand<K,V,?> command,RedisChannelWriter writer){
+  try {
+    getWriterToUse(writer).write(command);
+  }
+ catch (  Exception e) {
+    command.completeExceptionally(e);
+  }
+}

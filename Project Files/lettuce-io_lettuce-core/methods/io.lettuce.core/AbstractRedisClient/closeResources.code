@@ -1,0 +1,35 @@
+private CompletableFuture<Void> closeResources(){
+  List<CompletionStage<Void>> closeFutures=new ArrayList<>();
+  List<Closeable> closeableResources=new ArrayList<>(this.closeableResources);
+  for (  Closeable closeableResource : closeableResources) {
+    if (closeableResource instanceof AsyncCloseable) {
+      closeFutures.add(((AsyncCloseable)closeableResource).closeAsync());
+    }
+ else {
+      try {
+        closeableResource.close();
+      }
+ catch (      Exception e) {
+        logger.debug("Exception on Close: " + e.getMessage(),e);
+      }
+    }
+    this.closeableResources.remove(closeableResource);
+  }
+  for (  Channel c : channels.toArray(new Channel[0])) {
+    if (c == null) {
+      continue;
+    }
+    ChannelPipeline pipeline=c.pipeline();
+    ConnectionWatchdog commandHandler=pipeline.get(ConnectionWatchdog.class);
+    if (commandHandler != null) {
+      commandHandler.setListenOnChannelInactive(false);
+    }
+  }
+  try {
+    closeFutures.add(Futures.toCompletionStage(channels.close()));
+  }
+ catch (  Exception e) {
+    logger.debug("Cannot close channels",e);
+  }
+  return Futures.allOf(closeFutures);
+}

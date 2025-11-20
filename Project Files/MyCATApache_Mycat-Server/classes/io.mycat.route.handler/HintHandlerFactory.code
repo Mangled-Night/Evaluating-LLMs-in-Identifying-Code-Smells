@@ -1,0 +1,24 @@
+public class HintHandlerFactory {
+  private static volatile boolean isInit=false;
+  private static Map<String,HintHandler> hintHandlerMap=new HashMap<String,HintHandler>();
+  private HintHandlerFactory(){
+  }
+  private static void init(){
+    hintHandlerMap.put("sql",new HintSQLHandler());
+    hintHandlerMap.put("schema",new HintSchemaHandler());
+    hintHandlerMap.put("datanode",new HintDataNodeHandler());
+    hintHandlerMap.put("catlet",new HintCatletHandler());
+    hintHandlerMap.put("db_type",new HintMasterDBHandler());
+    isInit=true;
+  }
+  public static HintHandler getHintHandler(  String hintType){
+    if (!isInit) {
+synchronized (HintHandlerFactory.class) {
+        if (!isInit) {
+          init();
+        }
+      }
+    }
+    return hintHandlerMap.get(hintType);
+  }
+}

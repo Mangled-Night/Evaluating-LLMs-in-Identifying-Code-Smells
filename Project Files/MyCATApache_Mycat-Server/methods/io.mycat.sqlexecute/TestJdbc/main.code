@@ -1,0 +1,52 @@
+public static void main(String[] args) throws SQLException {
+  try {
+    Class.forName("com.mysql.jdbc.Driver");
+  }
+ catch (  ClassNotFoundException e) {
+    System.out.println("找不到驱动程序类 ，加载驱动失败！");
+    e.printStackTrace();
+  }
+  String url="jdbc:mysql://127.0.0.1:8066/TESTDB";
+  String username="test";
+  String password="test";
+  Connection con=null;
+  try {
+    con=DriverManager.getConnection(url,username,password);
+  }
+ catch (  SQLException se) {
+    System.out.println("数据库连接失败！");
+    se.printStackTrace();
+  }
+  PreparedStatement stmt=null;
+  ResultSet rs=null;
+  try {
+    con.setAutoCommit(false);
+    stmt=con.prepareStatement("update company set name=concat(name,'1')");
+    long begin=System.currentTimeMillis();
+    System.out.println();
+    stmt.addBatch();
+    stmt.executeBatch();
+    con.commit();
+    System.out.println((System.currentTimeMillis() - begin) / 1000.0);
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    try {
+      con.rollback();
+    }
+ catch (    Exception e2) {
+      e2.printStackTrace();
+    }
+  }
+ finally {
+    if (rs != null) {
+      rs.close();
+    }
+    if (stmt != null) {
+      stmt.close();
+    }
+    if (con != null) {
+      con.close();
+    }
+  }
+}

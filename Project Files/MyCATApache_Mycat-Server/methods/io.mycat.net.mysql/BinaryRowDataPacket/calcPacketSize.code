@@ -1,0 +1,37 @@
+@Override public int calcPacketSize(){
+  int size=0;
+  size=size + 1 + nullBitMap.length;
+  for (int i=0, n=fieldValues.size(); i < n; i++) {
+    byte[] value=fieldValues.get(i);
+    if (value != null) {
+      FieldPacket fieldPk=this.fieldPackets.get(i);
+      int fieldType=fieldPk.type;
+switch (fieldType) {
+case Fields.FIELD_TYPE_STRING:
+case Fields.FIELD_TYPE_VARCHAR:
+case Fields.FIELD_TYPE_VAR_STRING:
+case Fields.FIELD_TYPE_ENUM:
+case Fields.FIELD_TYPE_SET:
+case Fields.FIELD_TYPE_LONG_BLOB:
+case Fields.FIELD_TYPE_MEDIUM_BLOB:
+case Fields.FIELD_TYPE_BLOB:
+case Fields.FIELD_TYPE_TINY_BLOB:
+case Fields.FIELD_TYPE_GEOMETRY:
+case Fields.FIELD_TYPE_BIT:
+case Fields.FIELD_TYPE_DECIMAL:
+case Fields.FIELD_TYPE_NEW_DECIMAL:
+        if (value.length != 0) {
+          size=size + BufferUtil.getLength(value);
+        }
+ else {
+          size=size + 1;
+        }
+      break;
+default :
+    size=size + value.length;
+  break;
+}
+}
+}
+return size;
+}

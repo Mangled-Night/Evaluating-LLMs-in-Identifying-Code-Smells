@@ -1,0 +1,15 @@
+@Override public void deactivateForStorage(EntityRef entity){
+  if (!entity.exists()) {
+    return;
+  }
+  long entityId=entity.getId();
+  if (eventSystem != null) {
+    eventSystem.send(entity,BeforeDeactivateComponent.newInstance());
+  }
+  List<Component> components=Collections.unmodifiableList(getPool(entityId).map(pool -> pool.getComponentStore().getComponentsInNewList(entityId)).orElse(Collections.emptyList()));
+  notifyBeforeDeactivation(entity,components);
+  for (  Component component : components) {
+    getPool(entityId).ifPresent(pool -> pool.getComponentStore().remove(entityId,component.getClass()));
+  }
+  loadedIds.remove(entityId);
+}

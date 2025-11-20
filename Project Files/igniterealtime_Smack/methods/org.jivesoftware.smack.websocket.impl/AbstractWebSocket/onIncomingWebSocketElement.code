@@ -1,0 +1,17 @@
+protected final void onIncomingWebSocketElement(String element){
+  if (debugger != null) {
+    debugger.incoming(element);
+  }
+  if (isOpenElement(element)) {
+    streamOpen=getStreamFromOpenElement(element);
+    streamClose=connectionInternal.onStreamOpen(streamOpen);
+    return;
+  }
+  if (isCloseElement(element)) {
+    connectionInternal.onStreamClosed();
+    return;
+  }
+  connectionInternal.withSmackDebugger(debugger -> debugger.onIncomingElementCompleted());
+  String wrappedCompleteElement=streamOpen + element + streamClose;
+  connectionInternal.parseAndProcessElement(wrappedCompleteElement);
+}

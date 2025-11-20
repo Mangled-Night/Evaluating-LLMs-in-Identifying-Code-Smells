@@ -1,0 +1,21 @@
+@RequiresPermissions("admin:notice:update") @RequiresPermissionsDesc(menu={"推广管理","通知管理"},button="编辑") @PostMapping("/update") public Object update(@RequestBody LitemallNotice notice){
+  Object error=validate(notice);
+  if (error != null) {
+    return error;
+  }
+  LitemallNotice originalNotice=noticeService.findById(notice.getId());
+  if (originalNotice == null) {
+    return ResponseUtil.badArgument();
+  }
+  if (noticeAdminService.countReadByNoticeId(notice.getId()) > 0) {
+    return ResponseUtil.fail(NOTICE_UPDATE_NOT_ALLOWED,"通知已被阅读，不能重新编辑");
+  }
+  notice.setAdminId(getAdminId());
+  noticeService.updateById(notice);
+  if (!originalNotice.getTitle().equals(notice.getTitle())) {
+    LitemallNoticeAdmin noticeAdmin=new LitemallNoticeAdmin();
+    noticeAdmin.setNoticeTitle(notice.getTitle());
+    noticeAdminService.updateByNoticeId(noticeAdmin,notice.getId());
+  }
+  return ResponseUtil.ok(notice);
+}

@@ -1,0 +1,129 @@
+@RegisterSystem(RegisterMode.AUTHORITY) public class BlockItemSystem extends BaseComponentSystem {
+  /** 
+ * Margin and other allowed penetration is also 0.03 or 0.04. Since precision is only float it needs to be that high.
+ */
+  private static final float ADDITIONAL_ALLOWED_PENETRATION=0.04f;
+  @In private WorldProvider worldProvider;
+  @In private BlockEntityRegistry blockEntityRegistry;
+  @In private AudioManager audioManager;
+  @In private NetworkSystem networkSystem;
+  @ReceiveEvent(components={BlockItemComponent.class,ItemComponent.class}) public void onPlaceBlock(  ActivateEvent event,  EntityRef item){
+    if (!event.getTarget().exists()) {
+      event.consume();
+      return;
+    }
+    BlockItemComponent blockItem=item.getComponent(BlockItemComponent.class);
+    BlockFamily blockFamily=blockItem.blockFamily;
+    Side surfaceSide=Side.inDirection(event.getHitNormal());
+    BlockComponent blockComponent=event.getTarget().getComponent(BlockComponent.class);
+    if (blockComponent == null) {
+      event.consume();
+      return;
+    }
+    Vector3i targetBlock=new Vector3i(blockComponent.getPosition());
+    Vector3i placementPos=new Vector3i(targetBlock);
+    placementPos.add(surfaceSide.direction());
+    Vector2f relativeAttachmentPosition=getRelativeAttachmentPosition(event);
+    Block block=blockFamily.getBlockForPlacement(new BlockPlacementData(placementPos,surfaceSide,event.getDirection(),relativeAttachmentPosition));
+    if (canPlaceBlock(block,targetBlock,placementPos)) {
+      if (networkSystem.getMode().isAuthority()) {
+        PlaceBlocks placeBlocks=new PlaceBlocks(placementPos,block,event.getInstigator());
+        worldProvider.getWorldEntity().send(placeBlocks);
+        if (!placeBlocks.isConsumed()) {
+          item.send(new OnBlockItemPlaced(placementPos,blockEntityRegistry.getBlockEntityAt(placementPos),event.getInstigator()));
+        }
+ else {
+          event.consume();
+        }
+      }
+      recordBlockPlaced(event,blockFamily);
+      event.getInstigator().send(new PlaySoundEvent(Assets.getSound("engine:PlaceBlock").get(),0.5f));
+    }
+ else {
+      event.consume();
+    }
+  }
+  private Vector2f getRelativeAttachmentPosition(  ActivateEvent event){
+    Vector3f targetPosition=event.getTargetLocation();
+    if (event.getHitPosition() != null && targetPosition != null) {
+      return getSideHitPosition(event.getHitPosition(),targetPosition);
+    }
+ else {
+      return new Vector2f();
+    }
+  }
+  /** 
+ * Returns the position at which the block side was hit, relative to the side. <p/> The specified hit position is expected to be on the surface of the cubic block at the specified position. Example: The front side was hit right in the center. The result will be (0.5, 0.5), representing the relative hit position on the side's surface.
+ * @param hitPosition the hit position
+ * @param blockPosition the block position relative to its center (block (0, 0, 0) has block position (0.5, 0.5,0.5))
+ * @return the 2D hit position relative to the side that was hit
+ */
+  private Vector2f getSideHitPosition(  Vector3fc hitPosition,  Vector3fc blockPosition){
+    float epsilon=0.0001f;
+    Vector3f relativeHitPosition=new Vector3f(hitPosition).sub(blockPosition);
+    if (Math.abs(relativeHitPosition.x) > 0.5f - epsilon) {
+      return new Vector2f(relativeHitPosition.z,relativeHitPosition.y).add(0.5f,0.5f);
+    }
+ else     if (Math.abs(relativeHitPosition.y) > 0.5f - epsilon) {
+      return new Vector2f(relativeHitPosition.x,relativeHitPosition.z).add(0.5f,0.5f);
+    }
+ else {
+      return new Vector2f(relativeHitPosition.x,relativeHitPosition.y).add(0.5f,0.5f);
+    }
+  }
+  private void recordBlockPlaced(  ActivateEvent event,  BlockFamily block){
+    EntityRef instigator=event.getInstigator();
+    String blockName=block.getDisplayName();
+    if (instigator.hasComponent(GamePlayStatsComponent.class)) {
+      GamePlayStatsComponent gamePlayStatsComponent=instigator.getComponent(GamePlayStatsComponent.class);
+      Map<String,Integer> blockPlacedMap=gamePlayStatsComponent.blockPlacedMap;
+      if (blockPlacedMap.containsKey(blockName)) {
+        blockPlacedMap.put(blockName,blockPlacedMap.get(blockName) + 1);
+      }
+ else {
+        blockPlacedMap.put(blockName,1);
+      }
+      instigator.saveComponent(gamePlayStatsComponent);
+    }
+ else {
+      GamePlayStatsComponent gamePlayStatsComponent=new GamePlayStatsComponent();
+      Map<String,Integer> blockPlacedMap=gamePlayStatsComponent.blockPlacedMap;
+      blockPlacedMap.put(blockName,1);
+      instigator.addOrSaveComponent(gamePlayStatsComponent);
+    }
+  }
+  private boolean canPlaceBlock(  Block block,  Vector3i targetBlock,  Vector3i blockPos){
+    if (block == null) {
+      return false;
+    }
+    Block centerBlock=worldProvider.getBlock(targetBlock.x,targetBlock.y,targetBlock.z);
+    if (!centerBlock.isAttachmentAllowed()) {
+      return false;
+    }
+    Block adjBlock=worldProvider.getBlock(blockPos.x,blockPos.y,blockPos.z);
+    if (!adjBlock.isReplacementAllowed() || adjBlock.isTargetable()) {
+      return false;
+    }
+    if (block.getBlockFamily().equals(adjBlock.getBlockFamily())) {
+      return false;
+    }
+    if (!block.isPenetrable()) {
+      Physics physics=CoreRegistry.get(Physics.class);
+      AABBf blockBounds=block.getBounds(blockPos);
+      blockBounds.minX+=KinematicCharacterMover.HORIZONTAL_PENETRATION;
+      blockBounds.maxX-=KinematicCharacterMover.HORIZONTAL_PENETRATION;
+      blockBounds.minY+=KinematicCharacterMover.VERTICAL_PENETRATION;
+      blockBounds.maxY-=KinematicCharacterMover.VERTICAL_PENETRATION;
+      blockBounds.minZ+=KinematicCharacterMover.HORIZONTAL_PENETRATION;
+      blockBounds.maxZ-=KinematicCharacterMover.HORIZONTAL_PENETRATION;
+      blockBounds.minX+=ADDITIONAL_ALLOWED_PENETRATION;
+      blockBounds.minY+=ADDITIONAL_ALLOWED_PENETRATION;
+      blockBounds.minZ+=ADDITIONAL_ALLOWED_PENETRATION;
+      blockBounds.maxX-=ADDITIONAL_ALLOWED_PENETRATION;
+      blockBounds.maxY-=ADDITIONAL_ALLOWED_PENETRATION;
+      blockBounds.maxZ-=ADDITIONAL_ALLOWED_PENETRATION;
+      return physics.scanArea(blockBounds,StandardCollisionGroup.DEFAULT,StandardCollisionGroup.CHARACTER).isEmpty();
+    }
+    return true;
+  }
+}

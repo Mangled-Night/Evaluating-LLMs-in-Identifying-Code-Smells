@@ -1,0 +1,38 @@
+public static void handle(String stmt,ManagerConnection c){
+  ByteBuffer buffer=c.allocate();
+  buffer=header.write(buffer,c,true);
+  for (  FieldPacket field : fields) {
+    buffer=field.write(buffer,c,true);
+  }
+  buffer=eof.write(buffer,c,true);
+  byte packetId=eof.packetId;
+  String theStmt=stmt.toUpperCase().trim();
+  PackageBufINf bufInf=null;
+  if (theStmt.equals("FILE @@LIST")) {
+    bufInf=listConfigFiles(c,buffer,packetId);
+  }
+ else   if (theStmt.startsWith("FILE @@SHOW")) {
+    int index=stmt.lastIndexOf(' ');
+    String fileName=stmt.substring(index + 1);
+    bufInf=showConfigFile(c,buffer,packetId,fileName);
+  }
+ else   if (theStmt.startsWith(UPLOAD_CMD)) {
+    int index=stmt.indexOf(' ',UPLOAD_CMD.length());
+    int index2=stmt.indexOf(' ',index + 1);
+    if (index <= 0 || index2 <= 0 || index + 1 > stmt.length() || index2 + 1 > stmt.length()) {
+      bufInf=showInfo(c,buffer,packetId,"Invald param ,usage  ");
+    }
+    String fileName=stmt.substring(index + 1,index2);
+    String content=stmt.substring(index2 + 1).trim();
+    bufInf=upLoadConfigFile(c,buffer,packetId,fileName,content);
+  }
+ else {
+    bufInf=showInfo(c,buffer,packetId,"Invald command ");
+  }
+  packetId=bufInf.packetId;
+  buffer=bufInf.buffer;
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

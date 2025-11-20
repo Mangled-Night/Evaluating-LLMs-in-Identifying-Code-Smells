@@ -1,0 +1,23 @@
+/** 
+ * 进行zk的watch操作 方法描述
+ * @param zkConn zk的连接信息
+ * @param path 路径信息
+ * @param zkListen 监控路径信息
+ * @throws Exception
+ * @创建日期 2016年9月20日
+ */
+private static NodeCache runWatch(final CuratorFramework zkConn,final String path,final ZookeeperProcessListen zkListen) throws Exception {
+  final NodeCache cache=new NodeCache(zkConn,path);
+  NodeCacheListener listen=new NodeCacheListener(){
+    @Override public void nodeChanged() throws Exception {
+      LOGGER.info("ZktoxmlMain runWatch  process path  event start ");
+      LOGGER.info("NodeCache changed, path is: " + cache.getCurrentData().getPath());
+      String notPath=cache.getCurrentData().getPath();
+      zkListen.notifly(notPath);
+      LOGGER.info("ZktoxmlMain runWatch  process path  event over");
+    }
+  }
+;
+  cache.getListenable().addListener(listen);
+  return cache;
+}

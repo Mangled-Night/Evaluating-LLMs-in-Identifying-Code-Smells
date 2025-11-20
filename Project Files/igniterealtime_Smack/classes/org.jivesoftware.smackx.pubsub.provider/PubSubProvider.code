@@ -1,0 +1,27 @@
+/** 
+ * Parses the root PubSub stanza extensions of the  {@link IQ} stanza and returnsa  {@link PubSub} instance.
+ * @author Robin Collier
+ */
+public class PubSubProvider extends IqProvider<PubSub> {
+  @Override public PubSub parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+    String namespace=parser.getNamespace();
+    PubSubNamespace pubSubNamespace=PubSubNamespace.valueOfFromXmlns(namespace);
+    PubSub pubsub=new PubSub(pubSubNamespace);
+    outerloop:     while (true) {
+      XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+        PacketParserUtils.addExtensionElement(pubsub,parser,xmlEnvironment);
+      break;
+case END_ELEMENT:
+    if (parser.getDepth() == initialDepth) {
+      break outerloop;
+    }
+  break;
+default :
+break;
+}
+}
+return pubsub;
+}
+}

@@ -1,0 +1,45 @@
+/** 
+ * @return dataNodeIndex -&gt; [partitionKeysValueTuple+]
+ */
+public static Set<String> ruleCalculate(TableConfig tc,Set<ColumnRoutePair> colRoutePairSet,Map<String,Integer> dataNodeSlotMap){
+  Set<String> routeNodeSet=new LinkedHashSet<String>();
+  String col=tc.getRule().getColumn();
+  RuleConfig rule=tc.getRule();
+  AbstractPartitionAlgorithm algorithm=rule.getRuleAlgorithm();
+  for (  ColumnRoutePair colPair : colRoutePairSet) {
+    if (colPair.colValue != null) {
+      Integer nodeIndx=algorithm.calculate(StringUtil.removeBackquote(colPair.colValue));
+      if (nodeIndx == null) {
+        throw new IllegalArgumentException("can't find datanode for sharding column:" + col + " val:"+ colPair.colValue);
+      }
+ else {
+        String dataNode=tc.getDataNodes().get(nodeIndx);
+        routeNodeSet.add(dataNode);
+        if (algorithm instanceof SlotFunction) {
+          dataNodeSlotMap.put(dataNode,((SlotFunction)algorithm).slotValue());
+        }
+        colPair.setNodeId(nodeIndx);
+      }
+    }
+ else     if (colPair.rangeValue != null) {
+      Integer[] nodeRange=algorithm.calculateRange(String.valueOf(colPair.rangeValue.beginValue),String.valueOf(colPair.rangeValue.endValue));
+      if (nodeRange != null) {
+        if (nodeRange.length == 0) {
+          routeNodeSet.addAll(tc.getDataNodes());
+        }
+ else {
+          ArrayList<String> dataNodes=tc.getDataNodes();
+          String dataNode=null;
+          for (          Integer nodeId : nodeRange) {
+            dataNode=dataNodes.get(nodeId);
+            if (algorithm instanceof SlotFunction) {
+              dataNodeSlotMap.put(dataNode,((SlotFunction)algorithm).slotValue());
+            }
+            routeNodeSet.add(dataNode);
+          }
+        }
+      }
+    }
+  }
+  return routeNodeSet;
+}

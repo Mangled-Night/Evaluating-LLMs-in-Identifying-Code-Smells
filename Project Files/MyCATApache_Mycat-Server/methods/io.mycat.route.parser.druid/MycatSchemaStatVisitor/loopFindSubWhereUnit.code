@@ -1,0 +1,33 @@
+/** 
+ * 循环寻找子WhereUnit（实际是嵌套的or）
+ * @param whereUnitList
+ */
+private void loopFindSubWhereUnit(List<WhereUnit> whereUnitList){
+  List<WhereUnit> subWhereUnits=new ArrayList<WhereUnit>();
+  for (  WhereUnit whereUnit : new ArrayList<>(whereUnitList)) {
+    if (whereUnit.getSplitedExprList().size() > 0) {
+      List<SQLExpr> removeSplitedList=new ArrayList<SQLExpr>();
+      for (      SQLExpr sqlExpr : whereUnit.getSplitedExprList()) {
+        reset();
+        if (isExprHasOr(sqlExpr)) {
+          this.buildWhereUnits();
+          removeSplitedList.add(sqlExpr);
+          WhereUnit subWhereUnit=this.whereUnits.get(0);
+          splitUntilNoOr(subWhereUnit);
+          whereUnit.addSubWhereUnit(subWhereUnit);
+          subWhereUnits.add(subWhereUnit);
+        }
+ else {
+          this.conditions.clear();
+        }
+      }
+      if (removeSplitedList.size() > 0) {
+        whereUnit.getSplitedExprList().removeAll(removeSplitedList);
+      }
+    }
+    subWhereUnits.addAll(whereUnit.getSubWhereUnit());
+  }
+  if (subWhereUnits.size() > 0) {
+    loopFindSubWhereUnit(subWhereUnits);
+  }
+}

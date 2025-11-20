@@ -1,0 +1,14 @@
+@Override public List<SmsFlashPromotionSessionDetail> selectList(Long flashPromotionId){
+  List<SmsFlashPromotionSessionDetail> result=new ArrayList<>();
+  SmsFlashPromotionSessionExample example=new SmsFlashPromotionSessionExample();
+  example.createCriteria().andStatusEqualTo(1);
+  List<SmsFlashPromotionSession> list=promotionSessionMapper.selectByExample(example);
+  for (  SmsFlashPromotionSession promotionSession : list) {
+    SmsFlashPromotionSessionDetail detail=new SmsFlashPromotionSessionDetail();
+    BeanUtils.copyProperties(promotionSession,detail);
+    long count=relationService.getCount(flashPromotionId,promotionSession.getId());
+    detail.setProductCount(count);
+    result.add(detail);
+  }
+  return result;
+}

@@ -1,0 +1,16 @@
+/** 
+ * Tests a manual reconnection. Simulates a connection error, disables the reconnection mechanism and then reconnects.
+ */
+public void testManualReconnectionWithCancelation() throws Exception {
+  XMPPTCPConnection connection=getConnection(0);
+  CountDownLatch latch=new CountDownLatch(1);
+  XMPPTCPConnectionTestListener listener=new XMPPConnectionTestListener(latch);
+  connection.addConnectionListener(listener);
+  connection.notifyConnectionError(new Exception("Simulated Error"));
+  assertEquals("An error occurs but the ConnectionListener.connectionClosedOnError(e) was not notified",true,listener.connectionClosedOnError);
+  connection.getConfiguration().setReconnectionAllowed(false);
+  Thread.sleep(MIN_RECONNECT_WAIT * 1000);
+  assertEquals(false,listener.reconnected);
+  connection.connect();
+  executeSomeServerInteraction(connection);
+}

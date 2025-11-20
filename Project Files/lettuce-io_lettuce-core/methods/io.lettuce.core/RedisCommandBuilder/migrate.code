@@ -1,0 +1,24 @@
+Command<K,V,String> migrate(String host,int port,K key,int db,long timeout){
+  LettuceAssert.notNull(host,"Host " + MUST_NOT_BE_NULL);
+  LettuceAssert.notEmpty(host,"Host " + MUST_NOT_BE_EMPTY);
+  notNullKey(key);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  args.add(host).add(port).addKey(key).add(db).add(timeout);
+  return createCommand(MIGRATE,new StatusOutput<>(codec),args);
+}
+Command<K,V,String> migrate(String host,int port,int db,long timeout,MigrateArgs<K> migrateArgs){
+  LettuceAssert.notNull(host,"Host " + MUST_NOT_BE_NULL);
+  LettuceAssert.notEmpty(host,"Host " + MUST_NOT_BE_EMPTY);
+  LettuceAssert.notNull(migrateArgs,"migrateArgs " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  args.add(host).add(port);
+  if (migrateArgs.keys.size() == 1) {
+    args.addKey(migrateArgs.keys.get(0));
+  }
+ else {
+    args.add("");
+  }
+  args.add(db).add(timeout);
+  migrateArgs.build(args);
+  return createCommand(MIGRATE,new StatusOutput<>(codec),args);
+}

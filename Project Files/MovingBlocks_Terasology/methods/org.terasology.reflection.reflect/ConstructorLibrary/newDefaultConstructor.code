@@ -1,0 +1,16 @@
+/** 
+ * Constructors for common interface types like Map and List and their subtypes.
+ */
+@SuppressWarnings("unchecked") public static <T>ObjectConstructor<T> newDefaultConstructor(TypeInfo<T> typeInfo){
+  Class<T> rawType=typeInfo.getRawType();
+  if (rawType.isArray()) {
+    return () -> (T)Array.newInstance(rawType.getComponentType(),0);
+  }
+  if (Collection.class.isAssignableFrom(rawType)) {
+    return (ObjectConstructor<T>)getCollectionConstructor((TypeInfo<? extends Collection<Object>>)typeInfo);
+  }
+  if (Map.class.isAssignableFrom(rawType)) {
+    return (ObjectConstructor<T>)getMapConstructor((Class<? extends Map<?,?>>)rawType);
+  }
+  return null;
+}

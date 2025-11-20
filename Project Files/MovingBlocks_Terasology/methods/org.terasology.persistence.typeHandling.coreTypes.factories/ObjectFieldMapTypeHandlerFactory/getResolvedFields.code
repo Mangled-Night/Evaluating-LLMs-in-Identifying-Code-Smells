@@ -1,0 +1,20 @@
+private <T>Map<Field,Type> getResolvedFields(TypeInfo<T> typeInfo){
+  return AccessController.doPrivileged((PrivilegedAction<Map<Field,Type>>)() -> {
+    Map<Field,Type> fields=Maps.newLinkedHashMap();
+    Type type=typeInfo.getType();
+    Class<? super T> rawType=typeInfo.getRawType();
+    while (!Object.class.equals(rawType)) {
+      for (      Field field : rawType.getDeclaredFields()) {
+        if (Modifier.isTransient(field.getModifiers()) || Modifier.isStatic(field.getModifiers())) {
+          continue;
+        }
+        field.setAccessible(true);
+        Type fieldType=ReflectionUtil.resolveType(type,field.getGenericType());
+        fields.put(field,fieldType);
+      }
+      rawType=rawType.getSuperclass();
+    }
+    return fields;
+  }
+);
+}

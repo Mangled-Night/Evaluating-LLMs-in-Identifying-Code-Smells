@@ -1,0 +1,38 @@
+private AsyncConnections getConnections(Iterable<RedisNodeDescription> nodes){
+  List<RedisNodeDescription> nodeList=LettuceLists.newList(nodes);
+  AsyncConnections connections=new AsyncConnections(nodeList);
+  for (  RedisNodeDescription node : nodeList) {
+    RedisURI redisURI=node.getUri();
+    String message=String.format("Unable to connect to %s",redisURI);
+    try {
+      CompletableFuture<StatefulRedisConnection<String,String>> connectionFuture=nodeConnectionFactory.connectToNodeAsync(CODEC,redisURI);
+      CompletableFuture<StatefulRedisConnection<String,String>> sync=new CompletableFuture<>();
+      connectionFuture.whenComplete((connection,throwable) -> {
+        if (throwable != null) {
+          if (throwable instanceof RedisConnectionException) {
+            if (logger.isDebugEnabled()) {
+              logger.debug(throwable.getMessage(),throwable);
+            }
+ else {
+              logger.warn(throwable.getMessage());
+            }
+          }
+ else {
+            logger.warn(message,throwable);
+          }
+          sync.completeExceptionally(new RedisConnectionException(message,throwable));
+        }
+ else {
+          connection.async().clientSetname("lettuce#MasterReplicaTopologyRefresh");
+          sync.complete(connection);
+        }
+      }
+);
+      connections.addConnection(redisURI,sync);
+    }
+ catch (    RuntimeException e) {
+      logger.warn(String.format(message,redisURI),e);
+    }
+  }
+  return connections;
+}

@@ -1,0 +1,14 @@
+/** 
+ * Returns a builder to create new  {@link DefaultClientResources} whose settings are replicated from the current{@link DefaultClientResources}. <p> Note: The resulting  {@link DefaultClientResources} retains shared state for {@link Timer}, {@link CommandLatencyRecorder},  {@link EventExecutorGroup}, and  {@link EventLoopGroupProvider} if these are leftunchanged. Thus you need only to shut down the last created  {@link ClientResources} instances. Shutdown affects anypreviously created  {@link ClientResources}. </p>
+ * @return a {@link DefaultClientResources.Builder} to create new {@link DefaultClientResources} whose settings arereplicated from the current  {@link DefaultClientResources}.
+ * @since 5.1
+ */
+@Override public DefaultClientResources.Builder mutate(){
+  Builder builder=new Builder();
+  builder.afterBuild(() -> this.shutdownCheck=false).commandLatencyRecorder(commandLatencyRecorder()).commandLatencyPublisherOptions(commandLatencyPublisherOptions()).dnsResolver(dnsResolver()).eventBus(eventBus()).eventExecutorGroup(eventExecutorGroup()).reconnectDelay(reconnectDelay).socketAddressResolver(socketAddressResolver()).nettyCustomizer(nettyCustomizer()).threadFactoryProvider(threadFactoryProvider).timer(timer()).tracing(tracing()).addressResolverGroup(addressResolverGroup());
+  builder.sharedCommandLatencyCollector=sharedEventLoopGroupProvider;
+  builder.sharedEventExecutor=sharedEventExecutor;
+  builder.sharedEventLoopGroupProvider=sharedEventLoopGroupProvider;
+  builder.sharedTimer=sharedTimer;
+  return builder;
+}

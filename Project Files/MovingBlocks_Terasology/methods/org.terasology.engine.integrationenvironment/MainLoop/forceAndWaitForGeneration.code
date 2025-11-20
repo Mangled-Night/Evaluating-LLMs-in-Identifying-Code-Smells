@@ -1,0 +1,12 @@
+/** 
+ * Creates a dummy entity with RelevanceRegion component to force a chunk's generation and availability. Blocks while waiting for the chunk to become loaded
+ * @param blockPos the block position of the dummy entity. Only the chunk containing this position will be available
+ */
+public void forceAndWaitForGeneration(Vector3ic blockPos){
+  WorldProvider worldProvider=engines.getHostContext().get(WorldProvider.class);
+  if (worldProvider.isBlockRelevant(blockPos)) {
+    return;
+  }
+  ListenableFuture<ChunkRegionFuture> chunkRegion=makeBlocksRelevant(new BlockRegion(blockPos));
+  runUntil(chunkRegion);
+}

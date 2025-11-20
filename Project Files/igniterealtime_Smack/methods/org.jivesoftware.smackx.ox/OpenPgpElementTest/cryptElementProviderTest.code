@@ -1,0 +1,14 @@
+@SuppressWarnings("UndefinedEquals") @Test public void cryptElementProviderTest() throws Exception {
+  String expected="<crypt xmlns='urn:xmpp:openpgp:0'>" + "<to jid='alice@wonderland.lit'/>" + "<time stamp='2014-07-10T15:06:00.000+00:00'/>"+ "<payload>"+ "<body xmlns='jabber:client' xml:lang='en'>The cake is a lie.</body>"+ "</payload>"+ "<rpad>f0rm1l4n4-mT8y33j!Y%fRSrcd^ZE4Q7VDt1L%WEgR!kv</rpad>"+ "</crypt>";
+  List<ExtensionElement> payload=new ArrayList<>();
+  payload.add(new Message.Body("en","The cake is a lie."));
+  Set<Jid> to=new HashSet<>();
+  to.add(JidCreate.bareFrom("alice@wonderland.lit"));
+  CryptElement element=new CryptElement(to,"f0rm1l4n4-mT8y33j!Y%fRSrcd^ZE4Q7VDt1L%WEgR!kv",testDate,payload);
+  assertXmlSimilar(expected,element.toXML().toString());
+  XmlPullParser parser=TestUtils.getParser(expected);
+  CryptElement parsed=(CryptElement)OpenPgpContentElementProvider.parseOpenPgpContentElement(parser);
+  assertEquals(element.getTimestamp(),parsed.getTimestamp());
+  assertEquals(element.getTo(),parsed.getTo());
+  assertEquals(element.getExtensions(),parsed.getExtensions());
+}

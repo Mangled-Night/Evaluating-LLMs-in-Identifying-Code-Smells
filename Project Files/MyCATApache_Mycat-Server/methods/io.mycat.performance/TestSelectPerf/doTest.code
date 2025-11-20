@@ -1,0 +1,49 @@
+private static void doTest(String url,String user,String password,int threadCount,long minId,long maxId,int executetimes,boolean outmidle){
+  final CopyOnWriteArrayList<Thread> threads=new CopyOnWriteArrayList<Thread>();
+  final CopyOnWriteArrayList<SelectJob> jobs=new CopyOnWriteArrayList<SelectJob>();
+  for (int i=0; i < threadCount; i++) {
+    try {
+      Connection con=getCon(url,user,password);
+      System.out.println("create thread " + i);
+      SelectJob job=createQueryJob(con);
+      Thread thread=new Thread((Runnable)job);
+      threads.add(thread);
+      jobs.add(job);
+    }
+ catch (    Exception e) {
+      System.out.println("failed create thread " + i + " err "+ e.toString());
+    }
+  }
+  System.out.println("success create thread count: " + threads.size());
+  for (  Thread thread : threads) {
+    thread.start();
+  }
+  System.out.println("all thread started,waiting finsh...");
+  long start=System.currentTimeMillis();
+  boolean notFinished=true;
+  int remainThread=0;
+  while (notFinished) {
+    notFinished=false;
+    remainThread=0;
+    for (    Thread thread : threads) {
+      if (thread.isAlive()) {
+        notFinished=true;
+        remainThread++;
+      }
+    }
+    if (remainThread < threads.size() / 2) {
+      System.out.println("warning many test threads finished ,qps may NOT Accurate ,alive threads:" + remainThread);
+    }
+    if (outmidle) {
+      report(jobs);
+    }
+    try {
+      Thread.sleep(1000);
+    }
+ catch (    InterruptedException e) {
+      e.printStackTrace();
+    }
+  }
+  report(jobs);
+  System.out.println("finished all,total time :" + (System.currentTimeMillis() - start) / 1000);
+}

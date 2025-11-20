@@ -1,0 +1,36 @@
+private Object validate(LitemallComment comment){
+  String content=comment.getContent();
+  if (StringUtils.isEmpty(content)) {
+    return ResponseUtil.badArgument();
+  }
+  Short star=comment.getStar();
+  if (star == null) {
+    return ResponseUtil.badArgument();
+  }
+  if (star < 0 || star > 5) {
+    return ResponseUtil.badArgumentValue();
+  }
+  Byte type=comment.getType();
+  Integer valueId=comment.getValueId();
+  if (type == null || valueId == null) {
+    return ResponseUtil.badArgument();
+  }
+  if (type == 0) {
+    if (goodsService.findById(valueId) == null) {
+      return ResponseUtil.badArgumentValue();
+    }
+  }
+ else   if (type == 1) {
+    if (topicService.findById(valueId) == null) {
+      return ResponseUtil.badArgumentValue();
+    }
+  }
+ else {
+    return ResponseUtil.badArgumentValue();
+  }
+  Boolean hasPicture=comment.getHasPicture();
+  if (hasPicture == null || !hasPicture) {
+    comment.setPicUrls(new String[0]);
+  }
+  return null;
+}

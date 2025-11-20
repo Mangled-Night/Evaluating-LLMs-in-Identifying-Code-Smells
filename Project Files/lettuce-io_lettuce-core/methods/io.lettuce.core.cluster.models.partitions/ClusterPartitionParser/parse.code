@@ -1,0 +1,60 @@
+/** 
+ * Parse partition lines into Partitions object.
+ * @param clusterShards output of CLUSTER SHARDS
+ * @return the partitions object.
+ * @since 6.2
+ */
+public static Partitions parse(List<Object> clusterShards){
+  Partitions partitions=new Partitions();
+  try {
+    Map<String,RedisClusterNode> nodeMap=new LinkedHashMap<>();
+    for (    Object s : clusterShards) {
+      List<Object> shard=(List<Object>)s;
+      if (shard.size() < 4) {
+        continue;
+      }
+      KeyValueMap shardMap=toMap(shard);
+      List<Integer> slotRanges=shardMap.get("slots");
+      List<List<Object>> nodes=shardMap.get("nodes");
+      BitSet bitSet=readSlotRanges(slotRanges);
+      List<RedisClusterNode> parsedNodes=new ArrayList<>(nodes.size());
+      for (      List<Object> node : nodes) {
+        RedisClusterNode clusterNode=parseNode(node,(BitSet)bitSet.clone());
+        nodeMap.putIfAbsent(clusterNode.getNodeId(),clusterNode);
+        parsedNodes.add(clusterNode);
+      }
+      RedisClusterNode master=findMaster(parsedNodes);
+      if (master != null) {
+        associateMasterWithReplicas(master,parsedNodes);
+      }
+    }
+    partitions.addAll(nodeMap.values());
+  }
+ catch (  Exception e) {
+    throw new RedisException("Cannot parse " + clusterShards,e);
+  }
+  return partitions;
+}
+/** 
+ * Parse partition lines into Partitions object.
+ * @param nodes output of CLUSTER NODES
+ * @return the partitions object.
+ */
+public static Partitions parse(String nodes){
+  Partitions partitions=new Partitions();
+  try {
+    String[] lines=nodes.split(Character.toString(TOKEN_NODE_SEPARATOR));
+    List<RedisClusterNode> mappedNodes=new ArrayList<>(lines.length);
+    for (    String line : lines) {
+      if (line.isEmpty()) {
+        continue;
+      }
+      mappedNodes.add(ClusterPartitionParser.parseNode(line));
+    }
+    partitions.addAll(mappedNodes);
+  }
+ catch (  Exception e) {
+    throw new RedisException("Cannot parse " + nodes,e);
+  }
+  return partitions;
+}

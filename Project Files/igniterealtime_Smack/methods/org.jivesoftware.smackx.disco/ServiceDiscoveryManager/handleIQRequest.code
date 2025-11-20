@@ -1,0 +1,39 @@
+@Override public IQ handleIQRequest(IQ iqRequest){
+  DiscoverItems discoverItems=(DiscoverItems)iqRequest;
+  DiscoverItems response=new DiscoverItems();
+  response.setType(IQ.Type.result);
+  response.setTo(discoverItems.getFrom());
+  response.setStanzaId(discoverItems.getStanzaId());
+  response.setNode(discoverItems.getNode());
+  NodeInformationProvider nodeInformationProvider=getNodeInformationProvider(discoverItems.getNode());
+  if (nodeInformationProvider != null) {
+    response.addItems(nodeInformationProvider.getNodeItems());
+    response.addExtensions(nodeInformationProvider.getNodePacketExtensions());
+  }
+ else   if (discoverItems.getNode() != null) {
+    response.setType(IQ.Type.error);
+    response.setError(StanzaError.getBuilder(StanzaError.Condition.item_not_found).build());
+  }
+  return response;
+}
+@Override public IQ handleIQRequest(IQ iqRequest){
+  DiscoverInfo discoverInfo=(DiscoverInfo)iqRequest;
+  DiscoverInfoBuilder responseBuilder=DiscoverInfoBuilder.buildResponseFor(discoverInfo,IQ.ResponseType.result);
+  if (discoverInfo.getNode() == null) {
+    addDiscoverInfoTo(responseBuilder);
+  }
+ else {
+    NodeInformationProvider nodeInformationProvider=getNodeInformationProvider(discoverInfo.getNode());
+    if (nodeInformationProvider != null) {
+      responseBuilder.addFeatures(nodeInformationProvider.getNodeFeatures());
+      responseBuilder.addIdentities(nodeInformationProvider.getNodeIdentities());
+      responseBuilder.addOptExtensions(nodeInformationProvider.getNodePacketExtensions());
+    }
+ else {
+      responseBuilder.ofType(IQ.Type.error);
+      responseBuilder.setError(StanzaError.getBuilder(StanzaError.Condition.item_not_found).build());
+    }
+  }
+  DiscoverInfo response=responseBuilder.build();
+  return response;
+}

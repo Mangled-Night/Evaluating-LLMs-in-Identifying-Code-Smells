@@ -1,0 +1,28 @@
+@ReceiveEvent(components={CharacterMovementComponent.class,LocationComponent.class,AliveCharacterComponent.class}) public void onPlayerInput(CharacterMoveInputEvent input,EntityRef entity){
+  CharacterCollider characterCollider=physics.getCharacterCollider(entity);
+  if (characterCollider.isPending()) {
+    logger.debug("Skipping input, collision not yet established");
+    return;
+  }
+  CircularBuffer<CharacterStateEvent> stateBuffer=characterStates.get(entity);
+  CharacterStateEvent lastState=stateBuffer.getLast();
+  float delta=input.getDeltaMs() + lastState.getTime() - (time.getGameTimeInMs() + MAX_INPUT_OVERFLOW);
+  if (recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.REPLAYING) {
+    delta-=MAX_INPUT_OVERFLOW_REPLAY_INCREASE;
+  }
+  if (delta < 0) {
+    CharacterStateEvent newState=stepState(input,lastState,entity);
+    stateBuffer.add(newState);
+    if (recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.REPLAYING) {
+      characterStateEventPositionMap.updateCharacterStateEvent(newState);
+    }
+ else     if (recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.RECORDING) {
+      characterStateEventPositionMap.add(newState.getSequenceNumber(),newState.getPosition(),newState.getVelocity());
+    }
+    characterMovementSystemUtility.setToState(entity,newState);
+    lastInputEvent.put(entity,input);
+  }
+ else {
+    logger.warn("Received too much input from {}, dropping input. Delta difference: {}",entity,delta);
+  }
+}

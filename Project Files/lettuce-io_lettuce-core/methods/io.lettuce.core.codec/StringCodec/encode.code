@@ -1,0 +1,32 @@
+public void encode(String str,ByteBuf target){
+  if (str == null) {
+    return;
+  }
+  if (utf8) {
+    ByteBufUtil.writeUtf8(target,str);
+    return;
+  }
+  if (ascii) {
+    ByteBufUtil.writeAscii(target,str);
+    return;
+  }
+  CharsetEncoder encoder=CharsetUtil.encoder(charset);
+  int length=sizeOf(str,false);
+  target.ensureWritable(length);
+  try {
+    ByteBuffer dstBuf=target.nioBuffer(0,length);
+    int pos=dstBuf.position();
+    CoderResult cr=encoder.encode(CharBuffer.wrap(str),dstBuf,true);
+    if (!cr.isUnderflow()) {
+      cr.throwException();
+    }
+    cr=encoder.flush(dstBuf);
+    if (!cr.isUnderflow()) {
+      cr.throwException();
+    }
+    target.writerIndex(target.writerIndex() + dstBuf.position() - pos);
+  }
+ catch (  CharacterCodingException x) {
+    throw new IllegalStateException(x);
+  }
+}

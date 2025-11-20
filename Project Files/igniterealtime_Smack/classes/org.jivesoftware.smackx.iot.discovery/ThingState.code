@@ -1,0 +1,54 @@
+public class ThingState {
+  private final NodeInfo nodeInfo;
+  private BareJid registry;
+  private BareJid owner;
+  private boolean removed;
+  private final List<ThingStateChangeListener> listeners=new CopyOnWriteArrayList<>();
+  ThingState(  NodeInfo nodeInfo){
+    this.nodeInfo=nodeInfo;
+  }
+  void setRegistry(  BareJid registry){
+    this.registry=registry;
+  }
+  void setUnregistered(){
+    this.registry=null;
+  }
+  void setOwner(  final BareJid owner){
+    this.owner=owner;
+    Async.go(new Runnable(){
+      @Override public void run(){
+        for (        ThingStateChangeListener thingStateChangeListener : listeners) {
+          thingStateChangeListener.owned(owner);
+        }
+      }
+    }
+);
+  }
+  void setUnowned(){
+    this.owner=null;
+  }
+  void setRemoved(){
+    removed=true;
+  }
+  public NodeInfo getNodeInfo(){
+    return nodeInfo;
+  }
+  public BareJid getRegistry(){
+    return registry;
+  }
+  public BareJid getOwner(){
+    return owner;
+  }
+  public boolean isOwned(){
+    return owner != null;
+  }
+  public boolean isRemoved(){
+    return removed;
+  }
+  public boolean setThingStateChangeListener(  ThingStateChangeListener thingStateChangeListener){
+    return listeners.add(thingStateChangeListener);
+  }
+  public boolean removeThingStateChangeListener(  ThingStateChangeListener thingStateChangeListener){
+    return listeners.remove(thingStateChangeListener);
+  }
+}

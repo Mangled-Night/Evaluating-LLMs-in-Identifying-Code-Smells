@@ -1,0 +1,102 @@
+@Override public ModuleMetadata get(){
+  if (moduleList.getSelection() != null) {
+    return moduleList.getSelection().getMetadata();
+  }
+  return null;
+}
+@Override public String get(){
+  if (moduleInfoBinding.get() != null) {
+    return moduleInfoBinding.get().getDisplayName().toString();
+  }
+  return "";
+}
+@Override public String get(){
+  ModuleSelectionInfo sel=moduleList.getSelection();
+  if (sel == null) {
+    return "";
+  }
+  return sel.isPresent() ? sel.getMetadata().getVersion().toString() : translationSystem.translate("${engine:menu#module-version-installed-none}");
+}
+@Override public String get(){
+  ModuleSelectionInfo sel=moduleList.getSelection();
+  if (sel == null) {
+    return "";
+  }
+  return (sel.getOnlineVersion() != null) ? sel.getOnlineVersion().getVersion().toString() : "none";
+}
+@Override public String get(){
+  ModuleMetadata moduleMetadata=moduleInfoBinding.get();
+  if (moduleMetadata != null) {
+    StringBuilder dependenciesNames;
+    List<DependencyInfo> dependencies=moduleMetadata.getDependencies();
+    if (dependencies != null && !dependencies.isEmpty()) {
+      dependenciesNames=new StringBuilder(translationSystem.translate("${engine:menu#module-dependencies-exist}") + ":" + '\n');
+      for (      DependencyInfo dependency : dependencies) {
+        dependenciesNames.append("   ").append(dependency.getId().toString()).append('\n');
+      }
+    }
+ else {
+      dependenciesNames=new StringBuilder(translationSystem.translate("${engine:menu#module-dependencies-empty}") + ".");
+    }
+    return moduleMetadata.getDescription().toString() + '\n' + '\n'+ dependenciesNames;
+  }
+  return "";
+}
+@Override public String get(){
+  ModuleSelectionInfo info=moduleList.getSelection();
+  if (info != null) {
+    if (isSelectedGameplayModule(info)) {
+      return translationSystem.translate("${engine:menu#module-status-activegameplay}");
+    }
+ else     if (info.isSelected() && info.isExplicitSelection()) {
+      return translationSystem.translate("${engine:menu#module-status-activated}");
+    }
+ else     if (info.isSelected()) {
+      return translationSystem.translate("${engine:menu#module-status-dependency}");
+    }
+ else     if (!info.isPresent()) {
+      return translationSystem.translate("${engine:menu#module-status-notpresent}");
+    }
+ else     if (info.isValidToSelect()) {
+      return translationSystem.translate("${engine:menu#module-status-available}");
+    }
+ else {
+      return translationSystem.translate("${engine:menu#module-status-error}");
+    }
+  }
+  return "";
+}
+@Override public Boolean get(){
+  ModuleSelectionInfo info=moduleList.getSelection();
+  return info != null && info.isPresent() && !isSelectedGameplayModule(info) && (info.isSelected() || info.isValidToSelect());
+}
+@Override public String get(){
+  if (moduleList.getSelection() != null) {
+    if (moduleList.getSelection().isExplicitSelection()) {
+      return translationSystem.translate("${engine:menu#deactivate-module}");
+    }
+ else {
+      return translationSystem.translate("${engine:menu#activate-module}");
+    }
+  }
+  return translationSystem.translate("${engine:menu#activate-module}");
+}
+@Override public Boolean get(){
+  ModuleSelectionInfo selection=moduleList.getSelection();
+  if (null == selection) {
+    return false;
+  }
+  return selection.getOnlineVersion() != null;
+}
+@Override public String get(){
+  ModuleSelectionInfo info=moduleList.getSelection();
+  if (info != null && !info.isPresent()) {
+    return translationSystem.translate("${engine:menu#download-module}");
+  }
+ else {
+    return translationSystem.translate("${engine:menu#update-module}");
+  }
+}
+@Override public Boolean get(){
+  return moduleInfoBinding.get() != null;
+}

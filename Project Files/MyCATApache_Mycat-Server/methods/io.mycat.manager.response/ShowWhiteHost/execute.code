@@ -1,0 +1,45 @@
+public static void execute(ManagerConnection c){
+  ByteBuffer buffer=c.allocate();
+  buffer=header.write(buffer,c,true);
+  for (  FieldPacket field : fields) {
+    buffer=field.write(buffer,c,true);
+  }
+  buffer=eof.write(buffer,c,true);
+  byte packetId=eof.packetId;
+  Map<String,List<UserConfig>> map=MycatServer.getInstance().getConfig().getFirewall().getWhitehost();
+  for (  String key : map.keySet()) {
+    List<UserConfig> userConfigs=map.get(key);
+    String users="";
+    for (int i=0; i < userConfigs.size(); i++) {
+      if (i > 0) {
+        users+="," + userConfigs.get(i).getName();
+      }
+ else {
+        users+=userConfigs.get(i).getName();
+      }
+    }
+    RowDataPacket row=getRow(key,users,c.getCharset());
+    row.packetId=++packetId;
+    buffer=row.write(buffer,c,true);
+  }
+  Map<Pattern,List<UserConfig>> map2=MycatServer.getInstance().getConfig().getFirewall().getWhitehostMask();
+  for (  Pattern key : map2.keySet()) {
+    List<UserConfig> userConfigs=map2.get(key);
+    String users="";
+    for (int i=0; i < userConfigs.size(); i++) {
+      if (i > 0) {
+        users+="," + userConfigs.get(i).getName();
+      }
+ else {
+        users+=userConfigs.get(i).getName();
+      }
+    }
+    RowDataPacket row=getRow(FirewallConfig.getHost(key),users,c.getCharset());
+    row.packetId=++packetId;
+    buffer=row.write(buffer,c,true);
+  }
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

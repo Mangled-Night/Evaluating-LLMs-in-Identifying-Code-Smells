@@ -1,0 +1,49 @@
+@Override public <K,V,T>RedisCommand<K,V,T> write(RedisCommand<K,V,T> command){
+  LettuceAssert.notNull(command,"Command must not be null");
+  if (closed) {
+    command.completeExceptionally(new RedisException("Connection is closed"));
+    return command;
+  }
+  return doWrite(command);
+}
+@SuppressWarnings("unchecked") @Override public <K,V>Collection<RedisCommand<K,V,?>> write(Collection<? extends RedisCommand<K,V,?>> commands){
+  LettuceAssert.notNull(commands,"Commands must not be null");
+  if (closed) {
+    commands.forEach(it -> it.completeExceptionally(new RedisException("Connection is closed")));
+    return (Collection<RedisCommand<K,V,?>>)commands;
+  }
+  List<ClusterCommand<K,V,?>> clusterCommands=new ArrayList<>(commands.size());
+  List<ClusterCommand<K,V,?>> defaultCommands=new ArrayList<>(commands.size());
+  Map<SlotIntent,List<ClusterCommand<K,V,?>>> partitions=new HashMap<>();
+  ConnectionIntent connectionIntent=getIntent(commands);
+  for (  RedisCommand<K,V,?> cmd : commands) {
+    if (cmd instanceof ClusterCommand) {
+      clusterCommands.add((ClusterCommand)cmd);
+      continue;
+    }
+    CommandArgs<K,V> args=cmd.getArgs();
+    ByteBuffer firstEncodedKey=args != null ? args.getFirstEncodedKey() : null;
+    if (firstEncodedKey == null) {
+      defaultCommands.add(new ClusterCommand<>(cmd,this,executionLimit));
+      continue;
+    }
+    int hash=getSlot(args.getFirstEncodedKey());
+    List<ClusterCommand<K,V,?>> commandPartition=partitions.computeIfAbsent(SlotIntent.of(connectionIntent,hash),slotIntent -> new ArrayList<>());
+    commandPartition.add(new ClusterCommand<>(cmd,this,executionLimit));
+  }
+  for (  Map.Entry<SlotIntent,List<ClusterCommand<K,V,?>>> entry : partitions.entrySet()) {
+    SlotIntent slotIntent=entry.getKey();
+    RedisChannelHandler<K,V> connection=(RedisChannelHandler<K,V>)clusterConnectionProvider.getConnection(slotIntent.connectionIntent,slotIntent.slotHash);
+    RedisChannelWriter channelWriter=connection.getChannelWriter();
+    if (channelWriter instanceof ClusterDistributionChannelWriter) {
+      ClusterDistributionChannelWriter writer=(ClusterDistributionChannelWriter)channelWriter;
+      channelWriter=writer.defaultWriter;
+    }
+    if (channelWriter != null && channelWriter != this && channelWriter != defaultWriter) {
+      channelWriter.write(entry.getValue());
+    }
+  }
+  clusterCommands.forEach(this::write);
+  defaultCommands.forEach(defaultWriter::write);
+  return (Collection)commands;
+}

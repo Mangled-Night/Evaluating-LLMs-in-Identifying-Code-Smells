@@ -1,0 +1,24 @@
+private boolean checkIsInTransation(BackendConnection backendConnection){
+  if (!taskNode.getSchema().equalsIgnoreCase(backendConnection.getSchema()))   return false;
+  Object attach=backendConnection.getAttachment();
+  if (attach instanceof RouteResultsetNode) {
+    RouteResultsetNode resultsetNode=(RouteResultsetNode)attach;
+    RouteResultset rrs=resultsetNode.getSource();
+    for (    String table : rrs.getTables()) {
+      if (table.equalsIgnoreCase(taskNode.getTable())) {
+        int slot=resultsetNode.getSlot();
+        if (slot < 0 && resultsetNode.isUpdateSql()) {
+          return true;
+        }
+ else         if (resultsetNode.isUpdateSql()) {
+          for (          PartitionByCRC32PreSlot.Range range : rangeList) {
+            if (slot >= range.start && slot <= range.end) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+  return false;
+}

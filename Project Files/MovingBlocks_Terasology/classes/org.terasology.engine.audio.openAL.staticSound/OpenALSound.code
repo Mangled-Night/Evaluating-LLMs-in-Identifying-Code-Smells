@@ -1,0 +1,94 @@
+public final class OpenALSound extends StaticSound {
+  private static final Logger logger=LoggerFactory.getLogger(OpenALSound.class);
+  protected float length;
+  private final OpenALManager audioManager;
+  private final DisposalAction disposalAction;
+  private int bufferId;
+  public OpenALSound(  ResourceUrn urn,  AssetType<?,StaticSoundData> assetType,  StaticSoundData data,  OpenALManager audioManager,  OpenALSound.DisposalAction disposalAction){
+    super(urn,assetType,disposalAction);
+    disposalAction.setAsset(this);
+    this.audioManager=audioManager;
+    this.disposalAction=disposalAction;
+    reload(data);
+  }
+  @Override public float getLength(){
+    return length;
+  }
+  @Override public int getChannels(){
+    return alGetBufferi(bufferId,AL_CHANNELS);
+  }
+  @Override public int getSamplingRate(){
+    return alGetBufferi(bufferId,AL_FREQUENCY);
+  }
+  public int getBufferId(){
+    return bufferId;
+  }
+  public int getBufferBits(){
+    return alGetBufferi(bufferId,AL_BITS);
+  }
+  @Override public int getBufferSize(){
+    return alGetBufferi(bufferId,AL_SIZE);
+  }
+  @Override public void play(){
+    audioManager.playSound(this);
+  }
+  @Override public void play(  float volume){
+    audioManager.playSound(this,volume);
+  }
+  @Override protected void doReload(  StaticSoundData newData){
+    try {
+      GameThread.synch(() -> {
+        if (bufferId == 0) {
+          bufferId=alGenBuffers();
+          disposalAction.bufferId=bufferId;
+        }
+ else {
+          audioManager.purgeSound(this);
+        }
+        AL10.alBufferData(bufferId,newData.getChannels() == 1 ? AL10.AL_FORMAT_MONO16 : AL10.AL_FORMAT_STEREO16,newData.getData(),newData.getSampleRate());
+        OpenALException.checkState("Allocating sound buffer");
+        int bits=newData.getBufferBits();
+        int size=getBufferSize();
+        int channels=getChannels();
+        int frequency=getSamplingRate();
+        length=(float)size / channels / (bits / 8)/ frequency;
+      }
+);
+    }
+ catch (    InterruptedException e) {
+      logger.error("Failed to reload {}",getUrn(),e);
+    }
+  }
+public static class DisposalAction implements DisposableResource {
+    private final ResourceUrn urn;
+    private int bufferId;
+    private WeakReference<OpenALSound> asset;
+    public DisposalAction(    ResourceUrn urn){
+      this.urn=urn;
+    }
+    public OpenALSound getAsset(){
+      return asset.get();
+    }
+    public void setAsset(    OpenALSound asset){
+      this.asset=new WeakReference<>(asset);
+    }
+    @Override public void close(){
+      try {
+        GameThread.synch(() -> {
+          OpenALSound sound=asset.get();
+          if (bufferId != 0) {
+            if (sound != null) {
+              sound.audioManager.purgeSound(sound);
+            }
+            alDeleteBuffers(bufferId);
+            OpenALException.checkState("Deleting buffer data");
+          }
+        }
+);
+      }
+ catch (      InterruptedException e) {
+        logger.error("Failed to dispose {}",urn,e);
+      }
+    }
+  }
+}

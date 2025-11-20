@@ -1,0 +1,44 @@
+/** 
+ * Raw-UDP transport negotiator.
+ * @author Alvaro Saurin
+ */
+public static final class RawUdp extends TransportNegotiator {
+  /** 
+ * Default constructor, with a JingleSession and transport manager.
+ * @param js  The Jingle session this negotiation belongs to.
+ * @param res The transport resolver to use.
+ * @param parentNegotiator the parent content negotiator.
+ */
+  public RawUdp(  JingleSession js,  final TransportResolver res,  ContentNegotiator parentNegotiator){
+    super(js,res,parentNegotiator);
+  }
+  /** 
+ * Get a TransportNegotiator instance.
+ */
+  @Override public org.jivesoftware.smackx.jingleold.packet.JingleTransport getJingleTransport(  TransportCandidate bestRemote){
+    org.jivesoftware.smackx.jingleold.packet.JingleTransport.RawUdp jt=new org.jivesoftware.smackx.jingleold.packet.JingleTransport.RawUdp();
+    jt.addCandidate(new org.jivesoftware.smackx.jingleold.packet.JingleTransport.RawUdp.Candidate(bestRemote));
+    return jt;
+  }
+  /** 
+ * Obtain the best common transport candidate obtained in the negotiation.
+ * @return the bestRemoteCandidate
+ */
+  @Override public TransportCandidate getBestRemoteCandidate(){
+    ArrayList<TransportCandidate> cands=getValidRemoteCandidatesList();
+    if (!cands.isEmpty()) {
+      LOGGER.fine("RAW CAND");
+      return cands.get(0);
+    }
+ else {
+      LOGGER.fine("No Remote Candidate");
+      return null;
+    }
+  }
+  /** 
+ * Return true for fixed candidates.
+ */
+  @Override public boolean acceptableTransportCandidate(  TransportCandidate tc,  List<TransportCandidate> localCandidates){
+    return tc instanceof TransportCandidate.Fixed;
+  }
+}

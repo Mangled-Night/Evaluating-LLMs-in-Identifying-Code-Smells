@@ -1,0 +1,20 @@
+/** 
+ * Write a key-value record to the sorter. The key and value will be put together in-memory, using the following format: record length (4 bytes), key length (4 bytes), key data, value data record length = key length + value length + 4
+ */
+public void insertKVRecord(Object keyBase,long keyOffset,int keyLen,Object valueBase,long valueOffset,int valueLen,long prefix) throws IOException {
+  growPointerArrayIfNecessary();
+  final int required=keyLen + valueLen + 4+ 4;
+  acquireNewPageIfNecessary(required);
+  final Object base=currentPage.getBaseObject();
+  final long recordAddress=dataNodeMemoryManager.encodePageNumberAndOffset(currentPage,pageCursor);
+  Platform.putInt(base,pageCursor,keyLen + valueLen + 4);
+  pageCursor+=4;
+  Platform.putInt(base,pageCursor,keyLen);
+  pageCursor+=4;
+  Platform.copyMemory(keyBase,keyOffset,base,pageCursor,keyLen);
+  pageCursor+=keyLen;
+  Platform.copyMemory(valueBase,valueOffset,base,pageCursor,valueLen);
+  pageCursor+=valueLen;
+  assert (inMemSorter != null);
+  inMemSorter.insertRecord(recordAddress,prefix);
+}

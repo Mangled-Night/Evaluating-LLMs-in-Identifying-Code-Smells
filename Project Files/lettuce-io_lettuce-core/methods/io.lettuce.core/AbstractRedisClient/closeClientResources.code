@@ -1,0 +1,14 @@
+private CompletableFuture<Void> closeClientResources(long quietPeriod,long timeout,TimeUnit timeUnit){
+  List<CompletionStage<?>> groupCloseFutures=new ArrayList<>();
+  if (!sharedResources) {
+    Future<?> groupCloseFuture=clientResources.shutdown(quietPeriod,timeout,timeUnit);
+    groupCloseFutures.add(Futures.toCompletionStage(groupCloseFuture));
+  }
+ else {
+    for (    EventLoopGroup eventExecutors : eventLoopGroups.values()) {
+      Future<?> groupCloseFuture=clientResources.eventLoopGroupProvider().release(eventExecutors,quietPeriod,timeout,timeUnit);
+      groupCloseFutures.add(Futures.toCompletionStage(groupCloseFuture));
+    }
+  }
+  return Futures.allOf(groupCloseFutures);
+}

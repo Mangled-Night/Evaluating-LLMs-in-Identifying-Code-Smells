@@ -1,0 +1,30 @@
+@Test public void infoProviderTest() throws Exception {
+  String candidateError="<transport xmlns='urn:xmpp:jingle:transports:s5b:1' sid='vj3hs98y'>" + "<candidate-error/>" + "</transport>";
+  JingleS5BTransport candidateErrorTransport=new JingleS5BTransportProvider().parse(TestUtils.getParser(candidateError));
+  assertNull(candidateErrorTransport.getDestinationAddress());
+  assertNotNull(candidateErrorTransport.getInfo());
+  assertEquals("vj3hs98y",candidateErrorTransport.getStreamId());
+  assertEquals(JingleS5BTransportInfo.CandidateError.INSTANCE,candidateErrorTransport.getInfo());
+  assertEquals(candidateError,candidateErrorTransport.toXML().toString());
+  String proxyError="<transport xmlns='urn:xmpp:jingle:transports:s5b:1' sid='vj3hs98y'>" + "<proxy-error/>" + "</transport>";
+  JingleS5BTransport proxyErrorTransport=new JingleS5BTransportProvider().parse(TestUtils.getParser(proxyError));
+  assertNull(proxyErrorTransport.getDestinationAddress());
+  assertNotNull(proxyErrorTransport.getInfo());
+  assertNotNull(candidateErrorTransport.getInfo());
+  assertEquals("vj3hs98y",proxyErrorTransport.getStreamId());
+  assertEquals(JingleS5BTransportInfo.ProxyError.INSTANCE,proxyErrorTransport.getInfo());
+  assertEquals(proxyError,proxyErrorTransport.toXML().toString());
+  String candidateUsed="<transport xmlns='urn:xmpp:jingle:transports:s5b:1' sid='vj3hs98y'>" + "<candidate-used cid='hr65dqyd'/>" + "</transport>";
+  JingleS5BTransport candidateUsedTransport=new JingleS5BTransportProvider().parse(TestUtils.getParser(candidateUsed));
+  assertNotNull(candidateUsedTransport.getInfo());
+  assertEquals(new JingleS5BTransportInfo.CandidateUsed("hr65dqyd"),candidateUsedTransport.getInfo());
+  assertEquals("hr65dqyd",((JingleS5BTransportInfo.CandidateUsed)candidateUsedTransport.getInfo()).getCandidateId());
+  assertEquals(candidateUsed,candidateUsedTransport.toXML().toString());
+  String candidateActivated="<transport xmlns='urn:xmpp:jingle:transports:s5b:1' sid='vj3hs98y'>" + "<candidate-activated cid='hr65dqyd'/>" + "</transport>";
+  JingleS5BTransport candidateActivatedTransport=new JingleS5BTransportProvider().parse(TestUtils.getParser(candidateActivated));
+  assertNotNull(candidateActivatedTransport.getInfo());
+  assertNotNull(candidateErrorTransport.getInfo());
+  assertEquals(new JingleS5BTransportInfo.CandidateActivated("hr65dqyd"),candidateActivatedTransport.getInfo());
+  assertEquals("hr65dqyd",((JingleS5BTransportInfo.CandidateActivated)candidateActivatedTransport.getInfo()).getCandidateId());
+  assertEquals(candidateActivated,candidateActivatedTransport.toXML().toString());
+}

@@ -1,0 +1,99 @@
+public class JingleProviderTest {
+  @ParameterizedTest @EnumSource(SmackTestUtil.XmlPullParserKind.class) public void testParseUnknownJingleContentDescrption(  SmackTestUtil.XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+    final String unknownJingleContentDescriptionNamespace="urn:xmpp:jingle:unknown-description:5";
+    final String unknownJingleContentDescription="<description xmlns='" + unknownJingleContentDescriptionNamespace + "'>"+ "<file>"+ "<date>1969-07-21T02:56:15Z</date>"+ "<desc>This is a test. If this were a real file...</desc>"+ "<media-type>text/plain</media-type>"+ "<name>test.txt</name>"+ "<range/>"+ "<size>6144</size>"+ "<hash xmlns='urn:xmpp:hashes:2'"+ " algo='sha-1'>w0mcJylzCn+AfvuGdqkty2+KP48=</hash>"+ "</file>"+ "</description>";
+    CharSequence xml=createTestJingle(unknownJingleContentDescription);
+    Jingle jingle=SmackTestUtil.parse(xml,JingleProvider.class,parserKind);
+    JingleContentDescription jingleContentDescription=jingle.getSoleContentOrThrow().getDescription();
+    String parsedUnknownJingleContentDescriptionNamespace=jingleContentDescription.getNamespace();
+    assertEquals(unknownJingleContentDescriptionNamespace,parsedUnknownJingleContentDescriptionNamespace);
+  }
+  @ParameterizedTest @EnumSource(SmackTestUtil.XmlPullParserKind.class) public void testParseUnknownJingleContentTransport(  SmackTestUtil.XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+    final String unknownJingleContentTransportNamespace="urn:xmpp:jingle:unknown-transport:foo:1";
+    final String unknownJingleContentTransport="<transport xmlns='" + unknownJingleContentTransportNamespace + "'"+ " mode='tcp'"+ " sid='vj3hs98y'>"+ "<candidate cid='hft54dqy'"+ " host='192.168.4.1'"+ " jid='romeo@montague.example/dr4hcr0st3lup4c'"+ " port='5086'"+ " priority='8257636'"+ " type='direct'/>"+ "<candidate cid='hutr46fe'"+ " host='24.24.24.1'"+ " jid='romeo@montague.example/dr4hcr0st3lup4c'"+ " port='5087'"+ " priority='8258636'"+ " type='direct'/>"+ "</transport>";
+    CharSequence xml=createTestJingle(unknownJingleContentTransport);
+    Jingle jingle=SmackTestUtil.parse(xml,JingleProvider.class,parserKind);
+    JingleContentTransport jingleContentTransport=jingle.getSoleContentOrThrow().getTransport();
+    String parsedUnknownJingleContentTransportNamespace=jingleContentTransport.getNamespace();
+    assertEquals(unknownJingleContentTransportNamespace,parsedUnknownJingleContentTransportNamespace);
+  }
+  @ParameterizedTest @EnumSource(SmackTestUtil.XmlPullParserKind.class) public void testReasonElementWithExtraElement(  SmackTestUtil.XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+    String xml="<iq from='juliet@capulet.lit/balcony'" + " id='le71fa63'" + " to='romeo@montague.lit/orchard'"+ " type='set'>"+ "<jingle xmlns='urn:xmpp:jingle:1'"+ " action='session-terminate'"+ " sid='a73sjjvkla37jfea'>"+ "<reason>"+ "<success/>"+ "<my-element xmlns='https://example.org' foo='bar'/>"+ "</reason>"+ "</jingle>"+ "</iq>";
+    Jingle jingle=SmackTestUtil.parse(xml,JingleProvider.class,parserKind);
+    JingleReason jingleReason=jingle.getReason();
+    assertEquals(JingleReason.Reason.success,jingleReason.asEnum());
+    XmlElement element=jingleReason.getElement();
+    assertTrue(element instanceof StandardExtensionElement);
+    StandardExtensionElement extraElement=(StandardExtensionElement)element;
+    assertEquals("https://example.org",extraElement.getNamespace());
+    assertEquals("bar",extraElement.getAttributes().get("foo"));
+  }
+  private static CharSequence createTestJingle(  String... childs) throws XmlPullParserException, IOException {
+    StringBuilder sb=new StringBuilder();
+    sb.append("<iq from='romeo@montague.example/dr4hcr0st3lup4c'" + " id='nzu25s8'" + " to='juliet@capulet.example/yn0cl4bnw0yr3vym'"+ " type='set'>"+ "<jingle xmlns='urn:xmpp:jingle:1' "+ "action='session-initiate' "+ "initiator='romeo@montague.example/dr4hcr0st3lup4c' "+ "sid='851ba2'>"+ "<content creator='initiator' name='a-file-offer' senders='initiator'>");
+    for (    String child : childs) {
+      sb.append(child);
+    }
+    sb.append("</content>" + "</jingle>" + "</iq>");
+    return sb;
+  }
+}
+public class JingleProviderTest extends SmackTestCase {
+  public JingleProviderTest(  final String name){
+    super(name);
+  }
+  public void testProviderManager(){
+    IQProvider iqProv;
+    String elementNamee=Jingle.getElementName();
+    String nameSpace=Jingle.getNamespace();
+    System.out.println("Testing if the Jingle IQ provider is registered...");
+    iqProv=(IQProvider)ProviderManager.getInstance().getIQProvider(elementNamee,nameSpace);
+    assertNotNull(iqProv);
+  }
+  /** 
+ * Test for parsing a Jingle
+ */
+  public void testParseIQSimple(){
+    IQfake iqSent=new IQfake(" <jingle xmlns='urn:xmpp:tmp:jingle'" + " initiator=\"gorrino@viejo.com\"" + " responder=\"colico@hepatico.com\""+ " action=\"transport-info\" sid=\"\">"+ " <transport xmlns='urn:xmpp:tmp:jingle:transports:ice-udp'>"+ " <candidate generation=\"1\""+ " ip=\"192.168.1.1\""+ " password=\"secret\""+ " port=\"8080\""+ " username=\"username\""+ " preference=\"1\"/>"+ " </transport>"+ "</jingle>");
+    iqSent.setTo(getFullJID(0));
+    iqSent.setFrom(getFullJID(0));
+    iqSent.setType(IQ.Type.get);
+    PacketFilter filter=new StanzaTypeFilter(IQ.class);
+    StanzaCollector collector=getConnection(0).createStanzaCollector(filter);
+    System.out.println("Testing if a Jingle IQ can be sent and received...");
+    getConnection(0).sendStanza(iqSent);
+    IQ iqReceived=(IQ)collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
+    collector.cancel();
+    if (iqReceived == null) {
+      fail("No response from server");
+    }
+ else     if (iqReceived.getType() == IQ.Type.error) {
+      fail("The server did reply with an error packet: " + iqReceived.getError().getCode());
+    }
+ else {
+      assertTrue(iqReceived instanceof Jingle);
+      Jingle jin=(Jingle)iqReceived;
+      System.out.println("Sent:     " + iqSent.toXML());
+      System.out.println("Received: " + jin.toXML());
+    }
+  }
+  /** 
+ * Simple class for testing an IQ...
+ * @author Alvaro Saurin
+ */
+private class IQfake extends IQ {
+    private String s;
+    public IQfake(    final String s){
+      super();
+      this.s=s;
+    }
+    public String getChildElementXML(){
+      StringBuilder buf=new StringBuilder();
+      buf.append(s);
+      return buf.toString();
+    }
+  }
+  protected int getMaxConnections(){
+    return 2;
+  }
+}

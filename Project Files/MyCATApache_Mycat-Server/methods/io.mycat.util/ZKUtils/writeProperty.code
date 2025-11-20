@@ -1,0 +1,31 @@
+public static boolean writeProperty(String path,Map<String,String> propertyMap) throws Exception {
+  CuratorFramework client=ZKUtils.getConnection();
+  Properties properties=new Properties();
+  ByteArrayOutputStream out=new ByteArrayOutputStream();
+  if (client.checkExists().forPath(path) == null) {
+    for (    String key : propertyMap.keySet()) {
+      properties.setProperty(key,propertyMap.get(key));
+    }
+    properties.store(out,"add");
+    client.create().creatingParentsIfNeeded().forPath(path,out.toByteArray());
+    return true;
+  }
+ else {
+    byte[] data=client.getData().forPath(path);
+    properties.load(new ByteArrayInputStream(data));
+    boolean isUpdate=false;
+    for (    String key : propertyMap.keySet()) {
+      String value=propertyMap.get(key);
+      if (!String.valueOf(value).equals(properties.getProperty(key))) {
+        properties.setProperty(key,String.valueOf(value));
+        isUpdate=true;
+      }
+    }
+    properties.store(out,"update");
+    if (isUpdate) {
+      client.setData().forPath(path,out.toByteArray());
+      return true;
+    }
+    return false;
+  }
+}

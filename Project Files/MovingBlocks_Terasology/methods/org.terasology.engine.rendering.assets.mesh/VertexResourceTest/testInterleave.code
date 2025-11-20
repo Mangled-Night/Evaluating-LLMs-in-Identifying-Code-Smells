@@ -1,0 +1,24 @@
+@Test public void testInterleave(){
+  VertexResourceBuilder builder=new VertexResourceBuilder();
+  VertexAttributeBinding<Vector3fc,Vector3f> a1=builder.add(0,GLAttributes.VECTOR_3_F_VERTEX_ATTRIBUTE);
+  VertexByteAttributeBinding a2=builder.add(0,GLAttributes.BYTE_1_VERTEX_ATTRIBUTE);
+  VertexResource resource=builder.build();
+  a1.put(new Vector3f(10,0,-4));
+  a2.put(UnsignedBytes.checkedCast(2));
+  a2.put(UnsignedBytes.checkedCast(10));
+  assertEquals(2,a2.getPosition());
+  assertEquals(1,a1.getPosition());
+  int stride=(Float.BYTES * 3) + Byte.BYTES;
+  resource.writeBuffer(buffer -> {
+    assertEquals(buffer.limit(),stride * 2);
+    assertEquals(10,buffer.getFloat((0 * Float.BYTES)),0.001f);
+    assertEquals(0,buffer.getFloat((1 * Float.BYTES)),0.001f);
+    assertEquals(-4,buffer.getFloat(2 * Float.BYTES),0.001f);
+    assertEquals(2,buffer.get((3 * Float.BYTES)));
+    assertEquals(0,buffer.getFloat(stride + (0 * Float.BYTES)),0.001f);
+    assertEquals(0,buffer.getFloat(stride + (1 * Float.BYTES)),0.001f);
+    assertEquals(0,buffer.getFloat(stride + (2 * Float.BYTES)),0.001f);
+    assertEquals(10,buffer.get(stride + (3 * Float.BYTES)));
+  }
+);
+}

@@ -1,0 +1,50 @@
+/** 
+ * call reset() before destroy()
+ */
+public void destroy(){
+  if (shellServer != null) {
+    shellServer.close();
+    shellServer=null;
+  }
+  if (sessionManager != null) {
+    sessionManager.close();
+    sessionManager=null;
+  }
+  if (this.httpSessionManager != null) {
+    httpSessionManager.stop();
+  }
+  if (timer != null) {
+    timer.cancel();
+  }
+  if (this.tunnelClient != null) {
+    try {
+      tunnelClient.stop();
+    }
+ catch (    Throwable e) {
+      logger().error("stop tunnel client error",e);
+    }
+  }
+  if (executorService != null) {
+    executorService.shutdownNow();
+  }
+  if (transformerManager != null) {
+    transformerManager.destroy();
+  }
+  if (classLoaderInstrumentTransformer != null) {
+    instrumentation.removeTransformer(classLoaderInstrumentTransformer);
+  }
+  cleanUpSpyReference();
+  shutdownWorkGroup();
+  UserStatUtil.destroy();
+  if (shutdown != null) {
+    try {
+      Runtime.getRuntime().removeShutdownHook(shutdown);
+    }
+ catch (    Throwable t) {
+    }
+  }
+  logger().info("as-server destroy completed.");
+  if (loggerContext != null) {
+    loggerContext.stop();
+  }
+}

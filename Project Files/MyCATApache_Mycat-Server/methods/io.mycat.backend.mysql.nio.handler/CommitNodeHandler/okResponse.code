@@ -1,0 +1,36 @@
+@Override public void okResponse(byte[] ok,BackendConnection conn){
+  if (conn instanceof MySQLConnection) {
+    MySQLConnection mysqlCon=(MySQLConnection)conn;
+switch (mysqlCon.getXaStatus()) {
+case TxState.TX_STARTED_STATE:
+      if (mysqlCon.batchCmdFinished()) {
+        String xaTxId=session.getXaTXID() + ",'" + mysqlCon.getSchema()+ "'";
+        mysqlCon.execCmd("XA COMMIT " + xaTxId);
+        mysqlCon.setXaStatus(TxState.TX_PREPARED_STATE);
+      }
+    return;
+case TxState.TX_PREPARED_STATE:
+{
+    mysqlCon.setXaStatus(TxState.TX_INITIALIZE_STATE);
+    break;
+  }
+default :
+}
+if (TxState.TX_INITIALIZE_STATE == mysqlCon.getXaStatus()) {
+if (session.getXaTXID() != null) {
+  session.setXATXEnabled(false);
+}
+}
+}
+if (session.getSource().isPreAcStates() && !session.getSource().isAutocommit()) {
+session.getSource().setAutocommit(true);
+}
+if (decrementCountBy(1)) {
+if (responseData != null) {
+cleanAndFeedback(responseData);
+}
+ else {
+cleanAndFeedback(ok);
+}
+}
+}

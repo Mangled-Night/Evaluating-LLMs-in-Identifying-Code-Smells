@@ -1,0 +1,21 @@
+private ExitStatus processMatch(CommandProcess process,RowAffect effect,Instrumentation inst,Set<Class<?>> matchedClasses){
+  try {
+    Map<Class<?>,File> classFiles=dump(inst,matchedClasses);
+    List<DumpClassVO> dumpedClasses=new ArrayList<DumpClassVO>(classFiles.size());
+    for (    Map.Entry<Class<?>,File> entry : classFiles.entrySet()) {
+      Class<?> clazz=entry.getKey();
+      File file=entry.getValue();
+      DumpClassVO dumpClassVO=new DumpClassVO();
+      dumpClassVO.setLocation(file.getCanonicalPath());
+      ClassUtils.fillSimpleClassVO(clazz,dumpClassVO);
+      dumpedClasses.add(dumpClassVO);
+    }
+    process.appendResult(new DumpClassModel().setDumpedClasses(dumpedClasses));
+    effect.rCnt(classFiles.keySet().size());
+    return ExitStatus.success();
+  }
+ catch (  Throwable t) {
+    logger.error("dump: fail to dump classes: " + matchedClasses,t);
+    return ExitStatus.failure(-1,"dump: fail to dump classes: " + matchedClasses);
+  }
+}

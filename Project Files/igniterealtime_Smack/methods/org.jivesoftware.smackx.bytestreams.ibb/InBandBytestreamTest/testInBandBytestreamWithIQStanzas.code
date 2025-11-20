@@ -1,0 +1,39 @@
+/** 
+ * An In-Band Bytestream should be successfully established using IQ stanzas.
+ * @throws Exception should not happen
+ */
+public void testInBandBytestreamWithIQStanzas() throws Exception {
+  XMPPConnection initiatorConnection=getConnection(0);
+  XMPPConnection targetConnection=getConnection(1);
+  Random rand=new Random();
+  final byte[] data=new byte[dataSize];
+  rand.nextBytes(data);
+  final SynchronousQueue<byte[]> queue=new SynchronousQueue<byte[]>();
+  InBandBytestreamManager targetByteStreamManager=InBandBytestreamManager.getByteStreamManager(targetConnection);
+  InBandBytestreamListener incomingByteStreamListener=new InBandBytestreamListener(){
+    public void incomingBytestreamRequest(    InBandBytestreamRequest request){
+      InputStream inputStream;
+      try {
+        inputStream=request.accept().getInputStream();
+        byte[] receivedData=new byte[dataSize];
+        int totalRead=0;
+        while (totalRead < dataSize) {
+          int read=inputStream.read(receivedData,totalRead,dataSize - totalRead);
+          totalRead+=read;
+        }
+        queue.put(receivedData);
+      }
+ catch (      Exception e) {
+        fail(e.getMessage());
+      }
+    }
+  }
+;
+  targetByteStreamManager.addIncomingBytestreamListener(incomingByteStreamListener);
+  InBandBytestreamManager initiatorByteStreamManager=InBandBytestreamManager.getByteStreamManager(initiatorConnection);
+  OutputStream outputStream=initiatorByteStreamManager.establishSession(targetConnection.getUser()).getOutputStream();
+  outputStream.write(data);
+  outputStream.flush();
+  outputStream.close();
+  assertEquals("received data not equal to sent data",data,queue.take());
+}

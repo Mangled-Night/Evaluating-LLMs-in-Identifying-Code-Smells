@@ -1,0 +1,17 @@
+@Override public void update(float delta){
+  if (enableAutomaticTimeDilation && lastCheckedAutomaticTimeDilation < time.getRealTimeInMs()) {
+    lastCheckedAutomaticTimeDilation=time.getRealTimeInMs() + CHECK_AUTOMATIC_TIME_DILATION_MS;
+    float newGameTimeDilation=Math.max(0.1f,Math.min(1f,TARGET_DELTA / time.getGameDelta()));
+    float deltaGameTimeDilation=newGameTimeDilation - time.getGameTimeDilation();
+    if (deltaGameTimeDilation > 0.1f) {
+      time.setGameTimeDilation(time.getGameTimeDilation() + 0.1f);
+    }
+ else     if (deltaGameTimeDilation < -0.1f) {
+      time.setGameTimeDilation(time.getGameTimeDilation() - 0.1f);
+    }
+  }
+  if (lastGameTimeDilationValue != time.getGameTimeDilation()) {
+    lastGameTimeDilationValue=time.getGameTimeDilation();
+    worldProvider.getWorldEntity().send(new TimeResynchEvent(lastGameTimeDilationValue));
+  }
+}

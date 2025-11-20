@@ -1,0 +1,53 @@
+@Override public List<SmsCouponHistoryDetail> listCart(List<CartPromotionItem> cartItemList,Integer type){
+  UmsMember currentMember=memberService.getCurrentMember();
+  Date now=new Date();
+  List<SmsCouponHistoryDetail> allList=couponHistoryDao.getDetailList(currentMember.getId());
+  List<SmsCouponHistoryDetail> enableList=new ArrayList<>();
+  List<SmsCouponHistoryDetail> disableList=new ArrayList<>();
+  for (  SmsCouponHistoryDetail couponHistoryDetail : allList) {
+    Integer useType=couponHistoryDetail.getCoupon().getUseType();
+    BigDecimal minPoint=couponHistoryDetail.getCoupon().getMinPoint();
+    Date endTime=couponHistoryDetail.getCoupon().getEndTime();
+    if (useType.equals(0)) {
+      BigDecimal totalAmount=calcTotalAmount(cartItemList);
+      if (now.before(endTime) && totalAmount.subtract(minPoint).intValue() >= 0) {
+        enableList.add(couponHistoryDetail);
+      }
+ else {
+        disableList.add(couponHistoryDetail);
+      }
+    }
+ else     if (useType.equals(1)) {
+      List<Long> productCategoryIds=new ArrayList<>();
+      for (      SmsCouponProductCategoryRelation categoryRelation : couponHistoryDetail.getCategoryRelationList()) {
+        productCategoryIds.add(categoryRelation.getProductCategoryId());
+      }
+      BigDecimal totalAmount=calcTotalAmountByproductCategoryId(cartItemList,productCategoryIds);
+      if (now.before(endTime) && totalAmount.intValue() > 0 && totalAmount.subtract(minPoint).intValue() >= 0) {
+        enableList.add(couponHistoryDetail);
+      }
+ else {
+        disableList.add(couponHistoryDetail);
+      }
+    }
+ else     if (useType.equals(2)) {
+      List<Long> productIds=new ArrayList<>();
+      for (      SmsCouponProductRelation productRelation : couponHistoryDetail.getProductRelationList()) {
+        productIds.add(productRelation.getProductId());
+      }
+      BigDecimal totalAmount=calcTotalAmountByProductId(cartItemList,productIds);
+      if (now.before(endTime) && totalAmount.intValue() > 0 && totalAmount.subtract(minPoint).intValue() >= 0) {
+        enableList.add(couponHistoryDetail);
+      }
+ else {
+        disableList.add(couponHistoryDetail);
+      }
+    }
+  }
+  if (type.equals(1)) {
+    return enableList;
+  }
+ else {
+    return disableList;
+  }
+}

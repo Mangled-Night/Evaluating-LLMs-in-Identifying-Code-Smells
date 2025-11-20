@@ -1,0 +1,31 @@
+@Override public BatchTasks flush(){
+  return flush(true);
+}
+protected BatchTasks flush(boolean forcedFlush){
+  boolean defaultFlush=false;
+  List<RedisCommand<?,?,?>> commands=new ArrayList<>(Math.max(batchSize,10));
+  while (flushing.compareAndSet(false,true)) {
+    try {
+      int consume=-1;
+      if (!forcedFlush) {
+        long queuedItems=queue.size();
+        if (queuedItems >= batchSize) {
+          consume=batchSize;
+          defaultFlush=true;
+        }
+      }
+      List<? extends RedisCommand<?,?,?>> batch=doFlush(forcedFlush,defaultFlush,consume);
+      if (batch != null) {
+        commands.addAll(batch);
+      }
+      if (defaultFlush && !queue.isEmpty() && queue.size() > batchSize) {
+        continue;
+      }
+      return new BatchTasks(commands);
+    }
+  finally {
+      flushing.set(false);
+    }
+  }
+  return BatchTasks.EMPTY;
+}

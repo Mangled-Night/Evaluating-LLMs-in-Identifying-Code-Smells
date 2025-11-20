@@ -1,0 +1,60 @@
+/** 
+ * Represents a message body, its language and the content of the message.
+ */
+public static final class Body implements ExtensionElement {
+  public static final String ELEMENT="body";
+  public static final String NAMESPACE=StreamOpen.CLIENT_NAMESPACE;
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  enum BodyElementNamespace {  client(StreamOpen.CLIENT_NAMESPACE),   server(StreamOpen.SERVER_NAMESPACE);   private final String xmlNamespace;
+  BodyElementNamespace(  String xmlNamespace){
+    this.xmlNamespace=xmlNamespace;
+  }
+  public String getNamespace(){
+    return xmlNamespace;
+  }
+}
+  private final String message;
+  private final String language;
+  private final BodyElementNamespace namespace;
+  public Body(  String language,  String message){
+    this(language,message,BodyElementNamespace.client);
+  }
+  public Body(  String language,  String message,  BodyElementNamespace namespace){
+    if (message == null) {
+      throw new NullPointerException("Message cannot be null.");
+    }
+    this.language=language;
+    this.message=message;
+    this.namespace=Objects.requireNonNull(namespace);
+  }
+  @Override public String getLanguage(){
+    return language;
+  }
+  /** 
+ * Returns the message content.
+ * @return the content of the message.
+ */
+  public String getMessage(){
+    return message;
+  }
+  private final HashCode.Cache hashCodeCache=new HashCode.Cache();
+  @Override public int hashCode(){
+    return hashCodeCache.getHashCode(c -> c.append(language).append(message));
+  }
+  @Override public boolean equals(  Object obj){
+    return EqualsUtil.equals(this,obj,(e,o) -> e.append(language,o.language).append(message,o.message));
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return namespace.xmlNamespace;
+  }
+  @Override public XmlStringBuilder toXML(  XmlEnvironment enclosingXmlEnvironment){
+    XmlStringBuilder xml=new XmlStringBuilder(this,enclosingXmlEnvironment);
+    xml.rightAngleBracket();
+    xml.text(message);
+    xml.closeElement(getElementName());
+    return xml;
+  }
+}

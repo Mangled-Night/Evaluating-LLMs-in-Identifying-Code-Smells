@@ -1,0 +1,24 @@
+public static void unregister(){
+  if (UtilsBridge.isMainProcess()) {
+    if (!UtilsBridge.isServiceRunning(ServerService.class.getName())) {
+      Log.i("MessengerUtils","Server service isn't running.");
+      return;
+    }
+    Intent intent=new Intent(Utils.getApp(),ServerService.class);
+    Utils.getApp().stopService(intent);
+  }
+  if (sLocalClient != null) {
+    sLocalClient.unbind();
+  }
+}
+public static void unregister(final String pkgName){
+  if (!sClientMap.containsKey(pkgName)) {
+    Log.i("MessengerUtils","unregister: client didn't register: " + pkgName);
+    return;
+  }
+  Client client=sClientMap.get(pkgName);
+  sClientMap.remove(pkgName);
+  if (client != null) {
+    client.unbind();
+  }
+}

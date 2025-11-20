@@ -1,0 +1,60 @@
+@Override public OutputResult output(ByteBuffer outputData,boolean isFinalDataOfElement,boolean destinationAddressChanged,boolean moreDataAvailable) throws SSLException {
+  if (outputData != null) {
+    pendingOutputData.add(outputData);
+    pendingOutputBytes+=outputData.remaining();
+    if (moreDataAvailable && pendingOutputBytes < MAX_PENDING_OUTPUT_BYTES) {
+      return OutputResult.NO_OUTPUT;
+    }
+  }
+  ByteBuffer[] outputDataArray=pendingOutputData.toArray(new ByteBuffer[pendingOutputData.size()]);
+  myNetData.clear();
+  while (true) {
+    SSLEngineResult result;
+    try {
+      result=engine.wrap(outputDataArray,myNetData);
+    }
+ catch (    SSLException e) {
+      handleSslException(e);
+      throw e;
+    }
+    debugLogSslEngineResult("wrap",result);
+    SSLEngineResult.Status engineResultStatus=result.getStatus();
+    pendingOutputBytes-=result.bytesConsumed();
+    if (engineResultStatus == SSLEngineResult.Status.OK) {
+      wrapInBytes+=result.bytesConsumed();
+      wrapOutBytes+=result.bytesProduced();
+      SSLEngineResult.HandshakeStatus handshakeStatus=handleHandshakeStatus(result);
+switch (handshakeStatus) {
+case NEED_UNWRAP:
+        break;
+case NEED_WRAP:
+case NEED_TASK:
+      return new OutputResult(true,myNetData);
+default :
+    break;
+}
+}
+switch (engineResultStatus) {
+case OK:
+pruneBufferList(pendingOutputData);
+return new OutputResult(!pendingOutputData.isEmpty(),myNetData);
+case CLOSED:
+pendingOutputData.clear();
+return OutputResult.NO_OUTPUT;
+case BUFFER_OVERFLOW:
+LOGGER.warning("SSLEngine status BUFFER_OVERFLOW, this is hopefully uncommon");
+int outputDataRemaining=outputData != null ? outputData.remaining() : 0;
+int newCapacity=(int)(1.3 * outputDataRemaining);
+if (newCapacity <= myNetData.capacity()) {
+newCapacity=2 * myNetData.capacity();
+}
+ByteBuffer newMyNetData=ByteBuffer.allocateDirect(newCapacity);
+myNetData.flip();
+newMyNetData.put(myNetData);
+myNetData=newMyNetData;
+continue;
+case BUFFER_UNDERFLOW:
+throw new IllegalStateException("Buffer underflow as result of SSLEngine.wrap() should never happen");
+}
+}
+}

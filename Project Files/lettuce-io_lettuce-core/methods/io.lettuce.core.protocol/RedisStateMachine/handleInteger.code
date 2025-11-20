@@ -1,0 +1,9 @@
+static State.Result handleInteger(RedisStateMachine rsm,State state,ByteBuf buffer,CommandOutput<?,?,?> output,Consumer<Exception> errorHandler){
+  int end;
+  if ((end=rsm.findLineEnd(buffer)) == NOT_FOUND) {
+    return State.Result.BREAK_LOOP;
+  }
+  long integer=rsm.readLong(buffer,buffer.readerIndex(),end);
+  rsm.safeSet(output,integer,errorHandler);
+  return State.Result.NORMAL_END;
+}

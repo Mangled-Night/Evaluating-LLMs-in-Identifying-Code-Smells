@@ -1,0 +1,29 @@
+/** 
+ * A jmf description has been accepted. In this case, we must save the accepted payload type and notify any listener...
+ * @param jingle TODO javadoc me please
+ * @param description the description.
+ * @return a Jingle packet
+ * @throws JingleException in case of an jingle exception.
+ */
+private IQ receiveSessionAcceptAction(Jingle jingle,JingleDescription description) throws JingleException {
+  IQ response=null;
+  PayloadType.Audio agreedCommonAudioPt;
+  if (bestCommonAudioPt == null) {
+    bestCommonAudioPt=calculateBestCommonAudioPt(remoteAudioPts);
+  }
+  List<PayloadType> offeredPayloads=description.getAudioPayloadTypesList();
+  if (!offeredPayloads.isEmpty()) {
+    if (offeredPayloads.size() == 1) {
+      agreedCommonAudioPt=(PayloadType.Audio)offeredPayloads.get(0);
+      if (bestCommonAudioPt != null) {
+        if (!agreedCommonAudioPt.equals(bestCommonAudioPt)) {
+          throw new JingleException(JingleError.NEGOTIATION_ERROR);
+        }
+      }
+    }
+ else     if (offeredPayloads.size() > 1) {
+      throw new JingleException(JingleError.MALFORMED_STANZA);
+    }
+  }
+  return response;
+}

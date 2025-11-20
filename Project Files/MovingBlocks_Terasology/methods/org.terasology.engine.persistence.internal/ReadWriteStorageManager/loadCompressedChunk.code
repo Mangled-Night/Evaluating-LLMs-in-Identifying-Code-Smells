@@ -1,0 +1,17 @@
+@Override protected byte[] loadCompressedChunk(Vector3ic chunkPos){
+  CompressedChunkBuilder disposedUnsavedChunk=unloadedAndUnsavedChunkMap.get(chunkPos);
+  if (disposedUnsavedChunk != null) {
+    return disposedUnsavedChunk.buildEncodedChunk();
+  }
+  CompressedChunkBuilder disposedSavingChunk=unloadedAndSavingChunkMap.get(chunkPos);
+  if (disposedSavingChunk != null) {
+    return disposedSavingChunk.buildEncodedChunk();
+  }
+  worldDirectoryReadLock.lock();
+  try {
+    return super.loadCompressedChunk(chunkPos);
+  }
+  finally {
+    worldDirectoryReadLock.unlock();
+  }
+}

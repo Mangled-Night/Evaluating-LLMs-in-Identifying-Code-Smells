@@ -1,0 +1,96 @@
+public final class VCardManager extends Manager {
+  public static final String NAMESPACE=VCard.NAMESPACE;
+  public static final String ELEMENT=VCard.ELEMENT;
+  private static final Map<XMPPConnection,VCardManager> INSTANCES=new WeakHashMap<>();
+static {
+    XMPPConnectionRegistry.addConnectionCreationListener(new ConnectionCreationListener(){
+      @Override public void connectionCreated(      XMPPConnection connection){
+        getInstanceFor(connection);
+      }
+    }
+);
+  }
+  /** 
+ * Retrieves a  {@link VCardManager} for the specified {@link XMPPConnection}, creating one if it doesn't already exist.
+ * @param connection the connection the manager is attached to.
+ * @return The new or existing manager.
+ */
+  public static synchronized VCardManager getInstanceFor(  XMPPConnection connection){
+    VCardManager vcardManager=INSTANCES.get(connection);
+    if (vcardManager == null) {
+      vcardManager=new VCardManager(connection);
+      INSTANCES.put(connection,vcardManager);
+    }
+    return vcardManager;
+  }
+  /** 
+ * Returns true if the given entity understands the vCard-XML format and allows the exchange of such.
+ * @param jid TODO javadoc me please
+ * @param connection TODO javadoc me please
+ * @return true if the given entity understands the vCard-XML format and exchange.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @deprecated use {@link #isSupported(Jid)} instead.
+ */
+  @Deprecated public static boolean isSupported(  Jid jid,  XMPPConnection connection) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    return VCardManager.getInstanceFor(connection).isSupported(jid);
+  }
+  private VCardManager(  XMPPConnection connection){
+    super(connection);
+    ServiceDiscoveryManager.getInstanceFor(connection).addFeature(NAMESPACE);
+  }
+  /** 
+ * Save this vCard for the user connected by 'connection'. XMPPConnection should be authenticated and not anonymous.
+ * @param vcard VCard.
+ * @throws XMPPErrorException thrown if there was an issue setting the VCard in the server.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  @SuppressWarnings("deprecation") public void saveVCard(  VCard vcard) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    vcard.setTo((Jid)null);
+    vcard.setType(IQ.Type.set);
+    vcard.setStanzaId();
+    connection().sendIqRequestAndWaitForResponse(vcard);
+  }
+  /** 
+ * Load the VCard of the current user.
+ * @return VCard.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  public VCard loadVCard() throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    return loadVCard(null);
+  }
+  /** 
+ * Load VCard information for a given user.
+ * @param bareJid bareJid of the user.
+ * @return VCard.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  public VCard loadVCard(  EntityBareJid bareJid) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    VCard vcardRequest=new VCard();
+    vcardRequest.setTo(bareJid);
+    VCard result=connection().sendIqRequestAndWaitForResponse(vcardRequest);
+    return result;
+  }
+  /** 
+ * Returns true if the given entity understands the vCard-XML format and allows the exchange of such.
+ * @param jid TODO javadoc me please
+ * @return true if the given entity understands the vCard-XML format and exchange.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  public boolean isSupported(  Jid jid) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    return ServiceDiscoveryManager.getInstanceFor(connection()).supportsFeature(jid,NAMESPACE);
+  }
+}

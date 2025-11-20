@@ -1,0 +1,23 @@
+/** 
+ * Return the  {@link PGPSecretKeyRing} which we will use to sign our messages.
+ * @return signing key
+ * @throws IOException IO is dangerous
+ * @throws PGPException PGP is brittle
+ */
+public PGPSecretKeyRing getSigningKeyRing() throws IOException, PGPException {
+  PGPSecretKeyRingCollection secretKeyRings=getSecretKeys();
+  if (secretKeyRings == null) {
+    return null;
+  }
+  PGPSecretKeyRing signingKeyRing=null;
+  for (  PGPSecretKeyRing ring : secretKeyRings) {
+    if (signingKeyRing == null) {
+      signingKeyRing=ring;
+      continue;
+    }
+    if (ring.getPublicKey().getCreationTime().after(signingKeyRing.getPublicKey().getCreationTime())) {
+      signingKeyRing=ring;
+    }
+  }
+  return signingKeyRing;
+}

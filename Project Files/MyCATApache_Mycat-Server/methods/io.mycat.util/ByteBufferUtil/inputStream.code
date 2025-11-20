@@ -1,0 +1,23 @@
+public static InputStream inputStream(ByteBuffer bytes){
+  final ByteBuffer copy=bytes.duplicate();
+  return new InputStream(){
+    public int read(){
+      if (!copy.hasRemaining()) {
+        return -1;
+      }
+      return copy.get() & 0xFF;
+    }
+    @Override public int read(    byte[] bytes,    int off,    int len){
+      if (!copy.hasRemaining()) {
+        return -1;
+      }
+      len=Math.min(len,copy.remaining());
+      copy.get(bytes,off,len);
+      return len;
+    }
+    @Override public int available(){
+      return copy.remaining();
+    }
+  }
+;
+}

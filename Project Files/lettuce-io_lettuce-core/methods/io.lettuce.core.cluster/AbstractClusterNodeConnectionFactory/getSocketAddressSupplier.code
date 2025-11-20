@@ -1,0 +1,18 @@
+/** 
+ * Get a  {@link Mono} of {@link SocketAddress} for a{@link io.lettuce.core.cluster.ClusterNodeConnectionFactory.ConnectionKey}. <p> This  {@link Supplier} resolves the requested endpoint on each {@link Supplier#get()}.
+ * @param connectionKey must not be {@code null}.
+ * @return
+ */
+Mono<SocketAddress> getSocketAddressSupplier(ConnectionKey connectionKey){
+  return Mono.fromCallable(() -> {
+    if (connectionKey.nodeId != null) {
+      SocketAddress socketAddress=getSocketAddress(connectionKey.nodeId);
+      logger.debug("Resolved SocketAddress {} using for Cluster node {}",socketAddress,connectionKey.nodeId);
+      return socketAddress;
+    }
+    SocketAddress socketAddress=resolve(RedisURI.create(connectionKey.host,connectionKey.port));
+    logger.debug("Resolved SocketAddress {} using for Cluster node at {}:{}",socketAddress,connectionKey.host,connectionKey.port);
+    return socketAddress;
+  }
+);
+}

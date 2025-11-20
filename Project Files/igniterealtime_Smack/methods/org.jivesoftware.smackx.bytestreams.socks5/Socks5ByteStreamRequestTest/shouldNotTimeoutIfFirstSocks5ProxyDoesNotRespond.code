@@ -1,0 +1,39 @@
+/** 
+ * If the SOCKS5 Bytestream request contains multiple SOCKS5 proxies and the first one doesn't respond, the connection attempt to this proxy should not consume the whole timeout for connecting to the proxies.
+ * @throws Exception should not happen
+ */
+@Test public void shouldNotTimeoutIfFirstSocks5ProxyDoesNotRespond() throws Exception {
+  final Protocol protocol=new Protocol();
+  final XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,targetJID);
+  try (Socks5TestProxy socks5Proxy=new Socks5TestProxy()){
+    ServerSocket unresponsiveSocks5Socket=NetworkUtil.getSocketOnLoopback();
+    try {
+      Bytestream bytestreamInitialization=Socks5PacketUtils.createBytestreamInitiation(initiatorJID,targetJID,sessionID);
+      bytestreamInitialization.addStreamHost(proxyJID,proxyAddress,unresponsiveSocks5Socket.getLocalPort());
+      bytestreamInitialization.addStreamHost(proxyJID,proxyAddress,socks5Proxy.getPort());
+      byte[] data=new byte[]{1,2,3};
+      Socks5BytestreamManager byteStreamManager=Socks5BytestreamManager.getBytestreamManager(connection);
+      Socks5BytestreamRequest byteStreamRequest=new Socks5BytestreamRequest(byteStreamManager,bytestreamInitialization);
+      byteStreamRequest.setTotalConnectTimeout(2000);
+      byteStreamRequest.setMinimumConnectTimeout(1000);
+      InputStream inputStream=byteStreamRequest.accept().getInputStream();
+      Socket socket=unresponsiveSocks5Socket.accept();
+      assertNotNull(socket);
+      String digest=Socks5Utils.createDigest(sessionID,initiatorJID,targetJID);
+      OutputStream outputStream=socks5Proxy.getSocket(digest).getOutputStream();
+      outputStream.write(data);
+      byte[] result=new byte[3];
+      inputStream.read(result);
+      assertArrayEquals(data,result);
+      assertEquals(1,protocol.getRequests().size());
+      Stanza targetResponse=protocol.getRequests().remove(0);
+      assertEquals(Bytestream.class,targetResponse.getClass());
+      assertEquals(initiatorJID,targetResponse.getTo());
+      assertEquals(IQ.Type.result,((Bytestream)targetResponse).getType());
+      assertEquals(proxyJID,((Bytestream)targetResponse).getUsedHost().getJID());
+    }
+  finally {
+      unresponsiveSocks5Socket.close();
+    }
+  }
+ }

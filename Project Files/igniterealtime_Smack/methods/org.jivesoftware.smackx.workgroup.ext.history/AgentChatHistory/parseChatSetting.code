@@ -1,0 +1,36 @@
+private static AgentChatSession parseChatSetting(XmlPullParser parser) throws XmlPullParserException, IOException {
+  boolean done=false;
+  Date date=null;
+  long duration=0;
+  String visitorsName=null;
+  String visitorsEmail=null;
+  String sessionID=null;
+  String question=null;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT && "date".equals(parser.getName())) {
+      String dateStr=parser.nextText();
+      long l=Long.valueOf(dateStr).longValue();
+      date=new Date(l);
+    }
+ else     if (eventType == XmlPullParser.Event.START_ELEMENT && "duration".equals(parser.getName())) {
+      duration=Long.valueOf(parser.nextText()).longValue();
+    }
+ else     if (eventType == XmlPullParser.Event.START_ELEMENT && "visitorsName".equals(parser.getName())) {
+      visitorsName=parser.nextText();
+    }
+ else     if (eventType == XmlPullParser.Event.START_ELEMENT && "visitorsEmail".equals(parser.getName())) {
+      visitorsEmail=parser.nextText();
+    }
+ else     if (eventType == XmlPullParser.Event.START_ELEMENT && "sessionID".equals(parser.getName())) {
+      sessionID=parser.nextText();
+    }
+ else     if (eventType == XmlPullParser.Event.START_ELEMENT && "question".equals(parser.getName())) {
+      question=parser.nextText();
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT && "chat-session".equals(parser.getName())) {
+      done=true;
+    }
+  }
+  return new AgentChatSession(date,duration,visitorsName,visitorsEmail,sessionID,question);
+}

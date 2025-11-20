@@ -1,0 +1,57 @@
+private ApiResponse processRequest(ChannelHandlerContext ctx,ApiRequest apiRequest){
+  String actionStr=apiRequest.getAction();
+  try {
+    if (StringUtils.isBlank(actionStr)) {
+      throw new ApiException("'action' is required");
+    }
+    ApiAction action;
+    try {
+      action=ApiAction.valueOf(actionStr.trim().toUpperCase());
+    }
+ catch (    IllegalArgumentException e) {
+      throw new ApiException("unknown action: " + actionStr);
+    }
+    if (ApiAction.INIT_SESSION.equals(action)) {
+      return processInitSessionRequest(apiRequest);
+    }
+    Session session=null;
+    boolean allowNullSession=ApiAction.EXEC.equals(action);
+    String sessionId=apiRequest.getSessionId();
+    if (StringUtils.isBlank(sessionId)) {
+      if (!allowNullSession) {
+        throw new ApiException("'sessionId' is required");
+      }
+    }
+ else {
+      session=sessionManager.getSession(sessionId);
+      if (session == null) {
+        throw new ApiException("session not found: " + sessionId);
+      }
+      sessionManager.updateAccessTime(session);
+    }
+    if (session == null) {
+      session=sessionManager.createSession();
+      session.put(ONETIME_SESSION_KEY,new Object());
+    }
+    HttpSession httpSession=HttpSessionManager.getHttpSessionFromContext(ctx);
+    if (httpSession != null) {
+      Object subject=httpSession.getAttribute(ArthasConstants.SUBJECT_KEY);
+      if (subject != null) {
+        session.put(ArthasConstants.SUBJECT_KEY,subject);
+      }
+    }
+    ApiResponse response=dispatchRequest(action,apiRequest,session);
+    if (response != null) {
+      return response;
+    }
+  }
+ catch (  ApiException e) {
+    logger.info("process http api request failed: {}",e.getMessage());
+    return createResponse(ApiState.FAILED,e.getMessage());
+  }
+catch (  Throwable e) {
+    logger.error("process http api request failed: " + e.getMessage(),e);
+    return createResponse(ApiState.FAILED,"process http api request failed: " + e.getMessage());
+  }
+  return createResponse(ApiState.REFUSED,"Unsupported action: " + actionStr);
+}

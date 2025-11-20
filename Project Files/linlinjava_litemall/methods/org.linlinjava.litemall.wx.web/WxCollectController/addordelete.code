@@ -1,0 +1,28 @@
+/** 
+ * 用户收藏添加或删除 <p> 如果商品没有收藏，则添加收藏；如果商品已经收藏，则删除收藏状态。
+ * @param userId 用户ID
+ * @param body   请求内容，{ type: xxx, valueId: xxx }
+ * @return 操作结果
+ */
+@PostMapping("addordelete") public Object addordelete(@LoginUser Integer userId,@RequestBody String body){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  Byte type=JacksonUtil.parseByte(body,"type");
+  Integer valueId=JacksonUtil.parseInteger(body,"valueId");
+  if (!ObjectUtils.allNotNull(type,valueId)) {
+    return ResponseUtil.badArgument();
+  }
+  LitemallCollect collect=collectService.queryByTypeAndValue(userId,type,valueId);
+  if (collect != null) {
+    collectService.deleteById(collect.getId());
+  }
+ else {
+    collect=new LitemallCollect();
+    collect.setUserId(userId);
+    collect.setValueId(valueId);
+    collect.setType(type);
+    collectService.add(collect);
+  }
+  return ResponseUtil.ok();
+}

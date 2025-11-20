@@ -1,0 +1,39 @@
+/** 
+ * @param node A node in an asset tree.
+ * @return The info about this node's type.
+ */
+public static NodeInfo getSkinNodeInfo(JsonTree node){
+  Deque<JsonTree> pathToRoot=getPathToRoot(node);
+  Class nodeClass=null;
+  for (  JsonTree n : pathToRoot) {
+    if (n.isRoot()) {
+      nodeClass=UIStyleFragment.class;
+    }
+ else {
+      if ("elements".equals(n.getValue().getKey()) || "families".equals(n.getValue().getKey())) {
+        nodeClass=null;
+      }
+ else       if (n.getParent().getValue().getKey() != null && ("elements".equals(n.getParent().getValue().getKey()) || "families".equals(n.getParent().getValue().getKey()))) {
+        nodeClass=UIStyleFragment.class;
+      }
+ else {
+        String value=n.getValue().toString();
+        Set<Field> fields=ReflectionUtils.getAllFields(nodeClass);
+        Optional<Field> newField=fields.stream().filter(f -> f.getName().equalsIgnoreCase(value)).findFirst();
+        if (newField.isPresent()) {
+          nodeClass=newField.get().getType();
+        }
+ else {
+          Optional<Field> serializedNameField=fields.stream().filter(f -> f.isAnnotationPresent(SerializedName.class) && f.getAnnotation(SerializedName.class).value().equals(value)).findFirst();
+          if (serializedNameField.isPresent()) {
+            nodeClass=serializedNameField.get().getType();
+          }
+ else {
+            return null;
+          }
+        }
+      }
+    }
+  }
+  return new NodeInfo(nodeClass,null);
+}

@@ -1,0 +1,24 @@
+@Test public void testIdentity(){
+  String stmt="select @@identity";
+  int indexAfterLastInsertIdFunc=ServerParseSelect.indexAfterIdentity(stmt,stmt.indexOf('i'));
+  Assert.assertEquals(stmt.length(),indexAfterLastInsertIdFunc);
+  Assert.assertEquals(ServerParseSelect.IDENTITY,ServerParseSelect.parse(stmt,6));
+  stmt="select  @@identity as id";
+  Assert.assertEquals(ServerParseSelect.IDENTITY,ServerParseSelect.parse(stmt,6));
+  stmt="select  @@identitY  id";
+  Assert.assertEquals(ServerParseSelect.IDENTITY,ServerParseSelect.parse(stmt,6));
+  stmt="select  /*foo*/@@identitY  id";
+  Assert.assertEquals(ServerParseSelect.IDENTITY,ServerParseSelect.parse(stmt,6));
+  stmt="select/*foo*/ @@identitY  id";
+  Assert.assertEquals(ServerParseSelect.IDENTITY,ServerParseSelect.parse(stmt,6));
+  stmt="select/*foo*/ @@identitY As id";
+  Assert.assertEquals(ServerParseSelect.IDENTITY,ServerParseSelect.parse(stmt,6));
+  stmt="select  @@identity ,";
+  Assert.assertEquals(ServerParseSelect.OTHER,ServerParseSelect.parse(stmt,6));
+  stmt="select  @@identity as, ";
+  Assert.assertEquals(ServerParseSelect.OTHER,ServerParseSelect.parse(stmt,6));
+  stmt="select  @@identity as id  , ";
+  Assert.assertEquals(ServerParseSelect.OTHER,ServerParseSelect.parse(stmt,6));
+  stmt="select  @@identity ass id   ";
+  Assert.assertEquals(ServerParseSelect.OTHER,ServerParseSelect.parse(stmt,6));
+}

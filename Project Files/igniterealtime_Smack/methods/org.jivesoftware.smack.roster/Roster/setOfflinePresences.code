@@ -1,0 +1,28 @@
+/** 
+ * Changes the presence of available contacts offline by simulating an unavailable presence sent from the server.
+ */
+private void setOfflinePresences(){
+  outerloop:   for (  Jid user : presenceMap.keySet()) {
+    Map<Resourcepart,Presence> resources=presenceMap.get(user);
+    if (resources != null) {
+      for (      Resourcepart resource : resources.keySet()) {
+        PresenceBuilder presenceBuilder=StanzaBuilder.buildPresence().ofType(Presence.Type.unavailable);
+        EntityBareJid bareUserJid=user.asEntityBareJidIfPossible();
+        if (bareUserJid == null) {
+          LOGGER.warning("Can not transform user JID to bare JID: '" + user + "'");
+          continue;
+        }
+        presenceBuilder.from(JidCreate.fullFrom(bareUserJid,resource));
+        try {
+          presencePacketListener.processStanza(presenceBuilder.build());
+        }
+ catch (        NotConnectedException e) {
+          throw new IllegalStateException("presencePacketListener should never throw a NotConnectedException when processStanza is called with a presence of type unavailable",e);
+        }
+catch (        InterruptedException e) {
+          break outerloop;
+        }
+      }
+    }
+  }
+}

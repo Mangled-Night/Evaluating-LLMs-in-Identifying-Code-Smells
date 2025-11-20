@@ -1,0 +1,36 @@
+private int getNextPacket() throws IOException {
+  boolean fetchedPacket=false;
+  while (!eos && !fetchedPacket) {
+    int result1=streamState.packetout(packet);
+    if (result1 == 0) {
+      int result2=0;
+      while (!eos && result2 == 0) {
+        result2=syncState.pageout(page);
+        if (result2 == 0) {
+          fetchData();
+        }
+      }
+      if ((result2 == 0) && (page.eos() != 0)) {
+        return -1;
+      }
+      if (result2 == 0) {
+        fetchData();
+      }
+ else       if (result2 == -1) {
+        logger.warn("syncState.pageout(page) result == -1");
+        return -1;
+      }
+ else {
+        streamState.pagein(page);
+      }
+    }
+ else     if (result1 == -1) {
+      logger.warn("streamState.packetout(packet) result == -1");
+      return -1;
+    }
+ else {
+      fetchedPacket=true;
+    }
+  }
+  return 0;
+}

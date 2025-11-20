@@ -1,0 +1,14 @@
+@Override public Mono<Long> del(K... keys){
+  return del(Arrays.asList(keys));
+}
+@Override public Mono<Long> del(Iterable<K> keys){
+  Map<Integer,List<K>> partitioned=SlotHash.partition(codec,keys);
+  if (partitioned.size() < 2) {
+    return super.del(keys);
+  }
+  List<Publisher<Long>> publishers=new ArrayList<>();
+  for (  Map.Entry<Integer,List<K>> entry : partitioned.entrySet()) {
+    publishers.add(super.del(entry.getValue()));
+  }
+  return Flux.merge(publishers).reduce((accu,next) -> accu + next);
+}

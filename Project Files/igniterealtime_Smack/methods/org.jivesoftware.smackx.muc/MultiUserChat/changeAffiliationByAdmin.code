@@ -1,0 +1,40 @@
+/** 
+ * Tries to change the affiliation with an 'muc#admin' namespace
+ * @param jid TODO javadoc me please
+ * @param affiliation TODO javadoc me please
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+private void changeAffiliationByAdmin(Jid jid,MUCAffiliation affiliation) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  changeAffiliationByAdmin(jid,affiliation,null);
+}
+/** 
+ * Tries to change the affiliation with an 'muc#admin' namespace
+ * @param jid TODO javadoc me please
+ * @param affiliation TODO javadoc me please
+ * @param reason the reason for the affiliation change (optional)
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+private void changeAffiliationByAdmin(Jid jid,MUCAffiliation affiliation,String reason) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  MUCAdmin iq=new MUCAdmin();
+  iq.setTo(room);
+  iq.setType(IQ.Type.set);
+  MUCItem item=new MUCItem(affiliation,jid,reason);
+  iq.addItem(item);
+  connection.sendIqRequestAndWaitForResponse(iq);
+}
+private void changeAffiliationByAdmin(Collection<? extends Jid> jids,MUCAffiliation affiliation) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  MUCAdmin iq=new MUCAdmin();
+  iq.setTo(room);
+  iq.setType(IQ.Type.set);
+  for (  Jid jid : jids) {
+    MUCItem item=new MUCItem(affiliation,jid);
+    iq.addItem(item);
+  }
+  connection.sendIqRequestAndWaitForResponse(iq);
+}

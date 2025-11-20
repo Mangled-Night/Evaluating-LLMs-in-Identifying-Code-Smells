@@ -1,0 +1,23 @@
+@Override public EntityData.GlobalStore deserialize(JsonElement json,Type typeOfT,JsonDeserializationContext context) throws JsonParseException {
+  EntityData.GlobalStore.Builder world=EntityData.GlobalStore.newBuilder();
+  if (json.isJsonObject()) {
+    JsonObject jsonObject=json.getAsJsonObject();
+    JsonArray prefabArray=jsonObject.getAsJsonArray("prefab");
+    if (prefabArray != null) {
+      for (      JsonElement prefabElem : prefabArray) {
+        world.addPrefab((EntityData.Prefab)context.deserialize(prefabElem,EntityData.Prefab.class));
+      }
+    }
+    JsonArray entityArray=jsonObject.getAsJsonArray("entity");
+    if (entityArray != null) {
+      for (      JsonElement entityElem : entityArray) {
+        world.addEntity((EntityData.Entity)context.deserialize(entityElem,EntityData.Entity.class));
+      }
+    }
+    JsonPrimitive nextId=jsonObject.getAsJsonPrimitive("next_entity_id");
+    if (nextId != null) {
+      world.setNextEntityId(nextId.getAsInt());
+    }
+  }
+  return world.build();
+}

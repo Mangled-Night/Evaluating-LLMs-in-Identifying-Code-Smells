@@ -1,0 +1,28 @@
+/** 
+ * Removes the specified key and its associated value from this symbol table (if the key is in this symbol table).
+ * @param key the key
+ * @throws IllegalArgumentException if {@code key} is {@code null}
+ */
+public void delete(Key key){
+  if (key == null)   throw new IllegalArgumentException("argument to delete() is null");
+  if (!contains(key))   return;
+  int i=hash(key);
+  while (!key.equals(keys[i])) {
+    i=(i + 1) % m;
+  }
+  keys[i]=null;
+  vals[i]=null;
+  i=(i + 1) % m;
+  while (keys[i] != null) {
+    Key keyToRehash=keys[i];
+    Value valToRehash=vals[i];
+    keys[i]=null;
+    vals[i]=null;
+    n--;
+    put(keyToRehash,valToRehash);
+    i=(i + 1) % m;
+  }
+  n--;
+  if (n > 0 && n <= m / 8)   resize(m / 2);
+  assert check();
+}

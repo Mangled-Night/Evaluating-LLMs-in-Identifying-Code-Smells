@@ -1,0 +1,21 @@
+boolean bind(){
+  if (TextUtils.isEmpty(mPkgName)) {
+    Intent intent=new Intent(Utils.getApp(),ServerService.class);
+    return Utils.getApp().bindService(intent,mConn,Context.BIND_AUTO_CREATE);
+  }
+  if (UtilsBridge.isAppInstalled(mPkgName)) {
+    if (UtilsBridge.isAppRunning(mPkgName)) {
+      Intent intent=new Intent(mPkgName + ".messenger");
+      intent.setPackage(mPkgName);
+      return Utils.getApp().bindService(intent,mConn,Context.BIND_AUTO_CREATE);
+    }
+ else {
+      Log.e("MessengerUtils","bind: the app is not running -> " + mPkgName);
+      return false;
+    }
+  }
+ else {
+    Log.e("MessengerUtils","bind: the app is not installed -> " + mPkgName);
+    return false;
+  }
+}

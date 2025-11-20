@@ -1,0 +1,21 @@
+/** 
+ * Initializes the reader in order to be used. The reader is initialized during the first connection and when reconnecting due to an abruptly disconnection.
+ */
+void init(){
+  done=false;
+  running=true;
+  Async.go(new Runnable(){
+    @Override public void run(){
+      LOGGER.finer(threadName + " start");
+      try {
+        parsePackets();
+      }
+  finally {
+        LOGGER.finer(threadName + " exit");
+        running=false;
+        notifyWaitingThreads();
+      }
+    }
+  }
+,threadName);
+}

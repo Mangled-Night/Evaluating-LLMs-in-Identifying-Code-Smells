@@ -1,0 +1,25 @@
+/** 
+ * A players statistic metric for blocks placed.
+ */
+@TelemetryCategory(id="blockPlaced",displayName="${engine:menu#telemetry-block-placed}",isOneMapMetric=true) public final class BlockPlacedMetric extends Metric {
+  public static final String SCHEMA_BLOCK_PLACED="iglu:org.terasology/blockPlaced/jsonschema/1-0-0";
+  @TelemetryField private Map blockPlacedMap;
+  private LocalPlayer localPlayer;
+  @Override public Optional<Unstructured> getUnstructuredMetric(){
+    createTelemetryFieldToValue();
+    return getUnstructuredMetric(SCHEMA_BLOCK_PLACED,telemetryFieldToValue);
+  }
+  @Override public Map<String,?> createTelemetryFieldToValue(){
+    localPlayer=CoreRegistry.get(LocalPlayer.class);
+    EntityRef playerEntity=localPlayer.getCharacterEntity();
+    if (playerEntity.hasComponent(GamePlayStatsComponent.class)) {
+      GamePlayStatsComponent gamePlayStatsComponent=playerEntity.getComponent(GamePlayStatsComponent.class);
+      telemetryFieldToValue.clear();
+      telemetryFieldToValue.putAll(gamePlayStatsComponent.blockPlacedMap);
+      return telemetryFieldToValue;
+    }
+ else {
+      return telemetryFieldToValue;
+    }
+  }
+}

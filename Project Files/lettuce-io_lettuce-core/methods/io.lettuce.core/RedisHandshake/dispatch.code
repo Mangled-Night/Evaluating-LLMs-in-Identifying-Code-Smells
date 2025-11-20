@@ -1,0 +1,14 @@
+private CompletableFuture<Void> dispatch(Channel channel,List<AsyncCommand<?,?,?>> commands){
+  CompletionStage<Void> writeFuture=Futures.toCompletionStage(channel.writeAndFlush(commands));
+  return CompletableFuture.allOf(Futures.allOf(commands),writeFuture.toCompletableFuture());
+}
+private <T>AsyncCommand<String,String,T> dispatch(Channel channel,Command<String,String,T> command){
+  AsyncCommand<String,String,T> future=new AsyncCommand<>(command);
+  channel.writeAndFlush(future).addListener(writeFuture -> {
+    if (!writeFuture.isSuccess()) {
+      future.completeExceptionally(writeFuture.cause());
+    }
+  }
+);
+  return future;
+}

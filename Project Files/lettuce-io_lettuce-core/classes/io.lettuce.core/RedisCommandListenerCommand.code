@@ -1,0 +1,34 @@
+private static class RedisCommandListenerCommand<K,V,T> extends CommandWrapper<K,V,T> {
+  private final Clock clock;
+  private final Map<String,Object> context;
+  private final long startedAt;
+  private final CommandListener listener;
+  public RedisCommandListenerCommand(  RedisCommand<K,V,T> command,  Clock clock,  Map<String,Object> context,  long startedAt,  CommandListener listener){
+    super(command);
+    this.clock=clock;
+    this.context=context;
+    this.startedAt=startedAt;
+    this.listener=listener;
+  }
+  @Override public void complete(){
+    super.complete();
+    if (getOutput().hasError()) {
+      CommandFailedEvent failedEvent=new CommandFailedEvent((RedisCommand<Object,Object,Object>)command,context,ExceptionFactory.createExecutionException(getOutput().getError()));
+      listener.commandFailed(failedEvent);
+    }
+ else {
+      long now=clock.millis();
+      CommandSucceededEvent succeededEvent=new CommandSucceededEvent((RedisCommand<Object,Object,Object>)command,context,startedAt,now);
+      listener.commandSucceeded(succeededEvent);
+    }
+  }
+  @Override public void cancel(){
+    super.cancel();
+  }
+  @Override public boolean completeExceptionally(  Throwable throwable){
+    boolean state=super.completeExceptionally(throwable);
+    CommandFailedEvent failedEvent=new CommandFailedEvent((RedisCommand<Object,Object,Object>)command,context,throwable);
+    listener.commandFailed(failedEvent);
+    return state;
+  }
+}

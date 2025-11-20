@@ -1,0 +1,93 @@
+/** 
+ * Receives RenderableChunks, works to make sure their Mesh is up-to-date. <p> Prioritizes work according to the given comparator function. <p> TODO: <ul> <li> How many of these do we expect to create? <li> What's its lifetime? <li> Is there anything we need to do for shutdown / cleanup? <li> Need it be public, or is it internal to engine.rendering.world? </ul>
+ */
+public final class ChunkMeshWorker {
+  private static final Logger logger=LoggerFactory.getLogger(ChunkMeshWorker.class);
+  private static final int MAX_LOADABLE_CHUNKS=ViewDistance.MEGA.getChunkDistance().x() * ViewDistance.MEGA.getChunkDistance().y() * ViewDistance.MEGA.getChunkDistance().z();
+  private final Comparator<RenderableChunk> frontToBackComparator;
+  private final Set<Vector3ic> chunkMeshProcessing=Sets.newConcurrentHashSet();
+  private final Sinks.Many<Chunk> chunkMeshPublisher=Sinks.many().unicast().onBackpressureBuffer();
+  private final List<Chunk> chunksInProximityOfCamera=Lists.newArrayListWithCapacity(MAX_LOADABLE_CHUNKS);
+  private final Flux<Tuple2<Chunk,ChunkMesh>> chunksAndNewMeshes;
+  private final Flux<Chunk> completedChunks;
+  ChunkMeshWorker(  Function<? super Chunk,Mono<Tuple2<Chunk,ChunkMesh>>> workFunction,  Comparator<RenderableChunk> frontToBackComparator,  Scheduler parallelScheduler,  Scheduler graphicsScheduler){
+    this.frontToBackComparator=frontToBackComparator;
+    chunksAndNewMeshes=chunkMeshPublisher.asFlux().distinct(Chunk::getPosition,() -> chunkMeshProcessing).parallel().runOn(parallelScheduler).flatMap(workFunction).sequential();
+    completedChunks=chunksAndNewMeshes.publishOn(graphicsScheduler).map(TupleUtils.function(ChunkMeshWorker::uploadNewMesh)).doOnNext(chunk -> chunkMeshProcessing.remove(chunk.getPosition()));
+  }
+  public static ChunkMeshWorker create(  ChunkTessellator chunkTessellator,  WorldProvider worldProvider,  Comparator<RenderableChunk> frontToBackComparator){
+    ChunkMeshWorker worker=new ChunkMeshWorker(generateMeshFunc(chunkTessellator,worldProvider),frontToBackComparator,GameScheduler.parallel(),GameScheduler.gameMain());
+    worker.completedChunks.subscribe();
+    return worker;
+  }
+  public void add(  Chunk chunk){
+    chunksInProximityOfCamera.add(chunk);
+  }
+  public void remove(  Chunk chunk){
+    chunkMeshProcessing.remove(chunk.getPosition());
+    chunksInProximityOfCamera.remove(chunk);
+    chunk.disposeMesh();
+  }
+  public void remove(  Vector3ic coord){
+    chunkMeshProcessing.remove(coord);
+    Iterator<Chunk> iterator=chunksInProximityOfCamera.iterator();
+    while (iterator.hasNext()) {
+      Chunk chunk=iterator.next();
+      if (chunk.getPosition().equals(coord)) {
+        chunk.disposeMesh();
+        iterator.remove();
+        break;
+      }
+    }
+  }
+  /** 
+ * Queue all dirty items in our collection, in priority order.
+ * @return the number of dirty chunks added to the queue
+ */
+  public int update(){
+    int statDirtyChunks=0;
+    chunksInProximityOfCamera.sort(frontToBackComparator);
+    for (    Chunk chunk : chunksInProximityOfCamera) {
+      if (!chunk.isReady()) {
+        continue;
+      }
+      if (!chunk.isDirty()) {
+        continue;
+      }
+      statDirtyChunks++;
+      Sinks.EmitResult result=chunkMeshPublisher.tryEmitNext(chunk);
+      if (result.isFailure()) {
+        logger.error("failed to process chunk {} : {}",chunk,result);
+      }
+    }
+    return statDirtyChunks;
+  }
+  public int numberChunkMeshProcessing(){
+    return chunkMeshProcessing.size();
+  }
+  public Collection<Chunk> chunks(){
+    return chunksInProximityOfCamera;
+  }
+  Flux<Chunk> getCompletedChunks(){
+    return completedChunks;
+  }
+  private static Chunk uploadNewMesh(  Chunk chunk,  ChunkMesh chunkMesh){
+    chunkMesh.updateMesh();
+    chunkMesh.discardData();
+    chunk.setMesh(chunkMesh);
+    return chunk;
+  }
+  private static Function<Chunk,Mono<Tuple2<Chunk,ChunkMesh>>> generateMeshFunc(  ChunkTessellator chunkTessellator,  WorldProvider worldProvider){
+    return (chunk -> {
+      chunk.setDirty(false);
+      ChunkView chunkView=worldProvider.getLocalView(chunk.getPosition());
+      if (chunkView != null && chunkView.isValidView()) {
+        ChunkMesh newMesh=chunkTessellator.generateMesh(chunkView);
+        ChunkMonitor.fireChunkTessellated(chunk,newMesh);
+        return Mono.just(Tuples.of(chunk,newMesh));
+      }
+      return Mono.empty();
+    }
+);
+  }
+}

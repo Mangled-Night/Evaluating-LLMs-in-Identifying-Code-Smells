@@ -1,0 +1,10 @@
+@Test void zrangebylex(){
+  setup100KeyValues(new HashSet<>());
+  assertThat(redis.zrangebylex(key,"-","+")).hasSize(100);
+  assertThat(redis.zrangebylex(key,"-","+",10,10)).hasSize(10);
+  assertThat(redis.zrangebylex(key,Range.unbounded())).hasSize(100);
+  assertThat(redis.zrangebylex(key,Range.create("value","zzz"))).hasSize(100);
+  assertThat(redis.zrangebylex(key,Range.from(including("value98"),including("value99")))).containsSequence("value98","value99");
+  assertThat(redis.zrangebylex(key,Range.from(including("value99"),Boundary.unbounded()))).hasSize(1);
+  assertThat(redis.zrangebylex(key,Range.from(Boundary.excluding("value99"),Boundary.unbounded()))).hasSize(0);
+}

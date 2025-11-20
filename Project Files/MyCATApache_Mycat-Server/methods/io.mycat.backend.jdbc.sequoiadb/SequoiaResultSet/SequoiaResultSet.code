@@ -1,0 +1,34 @@
+public SequoiaResultSet(SequoiaData mongo,String schema) throws SQLException {
+  this._cursor=mongo.getCursor();
+  this._schema=schema;
+  this._table=mongo.getTable();
+  this.isSum=mongo.getCount() > 0;
+  this._sum=mongo.getCount();
+  this.isGroupBy=mongo.getType();
+  if (this.isGroupBy) {
+    dblist=mongo.getGrouyBys();
+    this.isSum=true;
+  }
+  if (this._cursor != null) {
+    if (this._cursor.hasNext()) {
+      _cur=_cursor.getNext();
+      if (_cur != null) {
+        if (select == null) {
+          SetFields(_cur.keySet());
+        }
+        _row=1;
+      }
+    }
+    if (select == null) {
+      select=new String[]{"_id"};
+      SetFieldType(true);
+    }
+ else {
+      SetFieldType(false);
+    }
+  }
+ else {
+    SetFields(mongo.getFields().keySet());
+    SetFieldType(mongo.getFields());
+  }
+}

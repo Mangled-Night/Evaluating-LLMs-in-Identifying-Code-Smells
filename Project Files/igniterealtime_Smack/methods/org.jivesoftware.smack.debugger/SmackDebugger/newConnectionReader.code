@@ -1,0 +1,20 @@
+/** 
+ * Returns a new special Reader that wraps the new connection Reader. The connection has been secured so the connection is using a new reader and writer. The debugger needs to wrap the new reader and writer to keep being notified of the connection traffic.
+ * @param reader connection reader.
+ * @return a new special Reader that wraps the new connection Reader.
+ */
+public final Reader newConnectionReader(Reader reader){
+  XmlPrettyPrinter xmlPrettyPrinter=XmlPrettyPrinter.builder().setPrettyWriter(sb -> incomingStreamSink(sb)).build();
+  incomingStreamSplitterForPrettyPrinting=new XmppXmlSplitter(xmlPrettyPrinter);
+  ObservableReader observableReader=new ObservableReader(reader);
+  observableReader.addReaderListener(readString -> {
+    try {
+      incomingStreamSplitterForPrettyPrinting.append(readString);
+    }
+ catch (    IOException e) {
+      throw new AssertionError(e);
+    }
+  }
+);
+  return observableReader;
+}

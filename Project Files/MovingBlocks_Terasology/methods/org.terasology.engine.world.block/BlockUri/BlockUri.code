@@ -1,0 +1,57 @@
+public BlockUri(String uri) throws BlockUriParseException {
+  try {
+    String[] split=uri.split(MODULE_SEPARATOR,4);
+    if (split.length <= 1) {
+      throw new BlockUriParseException("Could not parse block uri: '" + uri + "'");
+    }
+    Name blockFamilyDefModule=new Name(split[0]);
+    if (split.length == 4) {
+      blockFamilyDefinition=new ResourceUrn(blockFamilyDefModule,new Name(split[1]));
+      Name shapeModuleName=new Name(split[2]);
+      split=split[3].split(IDENTIFIER_SEPARATOR_REGEX,2);
+      shape=Optional.of(new ResourceUrn(shapeModuleName,new Name(split[0])));
+      if (split.length > 1) {
+        blockName=new Name(split[1]);
+      }
+ else {
+        blockName=Name.EMPTY;
+      }
+    }
+ else {
+      shape=Optional.empty();
+      split=split[1].split(IDENTIFIER_SEPARATOR_REGEX,2);
+      blockFamilyDefinition=new ResourceUrn(blockFamilyDefModule,new Name(split[0]));
+      if (split.length > 1) {
+        blockName=new Name(split[1]);
+      }
+ else {
+        blockName=Name.EMPTY;
+      }
+    }
+  }
+ catch (  InvalidUrnException e) {
+    throw new BlockUriParseException("Could not parse block uri: '" + uri + "'",e);
+  }
+  this.hashCode=hashCode();
+}
+public BlockUri(ResourceUrn blockFamilyDefinition){
+  this(blockFamilyDefinition,Optional.empty(),Name.EMPTY);
+}
+public BlockUri(ResourceUrn blockFamilyDefinition,ResourceUrn shape){
+  this(blockFamilyDefinition,Optional.of(shape),Name.EMPTY);
+}
+public BlockUri(ResourceUrn blockFamilyDefinition,Name blockName){
+  this(blockFamilyDefinition,Optional.empty(),blockName);
+}
+public BlockUri(ResourceUrn blockFamilyDefinition,ResourceUrn shape,Name blockName){
+  this(blockFamilyDefinition,Optional.of(shape),blockName);
+}
+public BlockUri(BlockUri parentUri,Name blockName){
+  this(parentUri.getBlockFamilyDefinitionUrn(),parentUri.getShapeUrn(),blockName);
+}
+private BlockUri(ResourceUrn blockFamilyDefinition,Optional<ResourceUrn> shape,Name blockName){
+  this.blockFamilyDefinition=blockFamilyDefinition;
+  this.shape=shape;
+  this.blockName=blockName;
+  this.hashCode=hashCode();
+}

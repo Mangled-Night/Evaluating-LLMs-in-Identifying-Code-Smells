@@ -1,0 +1,59 @@
+private static void multiSetResponse(String stmt,ServerConnection c,int rs){
+  String charResult="null";
+  String charConnection="null";
+  String[] sqlList=SplitUtil.split(stmt,',',false);
+switch (rs & 0xff) {
+case CHARACTER_SET_RESULTS:
+    charResult=sqlList[0].substring(rs >>> 8).trim();
+  break;
+case CHARACTER_SET_CONNECTION:
+charConnection=sqlList[0].substring(rs >>> 8).trim();
+break;
+}
+for (int i=1; i < sqlList.length; i++) {
+String sql=new StringBuilder("set ").append(sqlList[i]).toString();
+if ((i + 1 == sqlList.length) && sql.endsWith(";")) {
+sql=sql.substring(0,sql.length() - 1);
+}
+int rs2=ServerParseSet.parse(sql,"set".length());
+switch (rs2 & 0xff) {
+case CHARACTER_SET_RESULTS:
+charResult=sql.substring(rs2 >>> 8).trim();
+break;
+case CHARACTER_SET_CONNECTION:
+charConnection=sql.substring(rs2 >>> 8).trim();
+break;
+case CHARACTER_SET_CLIENT:
+break;
+default :
+boolean ignore=SetIgnoreUtil.isIgnoreStmt(sql);
+if (!ignore) {
+StringBuilder s=new StringBuilder();
+logger.warn(s.append(c).append(sql).append(" is not executed").toString());
+}
+}
+}
+if (charResult.startsWith("'") || charResult.startsWith("`")) {
+charResult=charResult.substring(1,charResult.length() - 1);
+}
+if (charConnection.startsWith("'") || charConnection.startsWith("`")) {
+charConnection=charConnection.substring(1,charConnection.length() - 1);
+}
+if ("null".equalsIgnoreCase(charResult)) {
+setCharset(charConnection,c);
+return;
+}
+if ("null".equalsIgnoreCase(charConnection)) {
+setCharset(charResult,c);
+return;
+}
+if (charConnection.equalsIgnoreCase(charResult)) {
+setCharset(charConnection,c);
+}
+ else {
+StringBuilder sb=new StringBuilder();
+sb.append("charset is not consistent:[connection=").append(charConnection);
+sb.append(",results=").append(charResult).append(']');
+c.writeErrMessage(ErrorCode.ER_UNKNOWN_CHARACTER_SET,sb.toString());
+}
+}

@@ -1,0 +1,57 @@
+/** 
+ * 构造groupKey
+ */
+private UnsafeRow getGroupKey(UnsafeRow row) throws UnsupportedEncodingException {
+  UnsafeRow key=null;
+  if (this.sortColumnsByIndex == null) {
+    key=new UnsafeRow(this.groupKeyfieldCount + 1);
+    bufferHolder=new BufferHolder(key,0);
+    unsafeRowWriter=new UnsafeRowWriter(bufferHolder,this.groupKeyfieldCount + 1);
+    bufferHolder.reset();
+    unsafeRowWriter.write(0,"same".getBytes());
+    key.setTotalSize(bufferHolder.totalSize());
+    return key;
+  }
+  key=new UnsafeRow(this.groupKeyfieldCount);
+  bufferHolder=new BufferHolder(key,0);
+  unsafeRowWriter=new UnsafeRowWriter(bufferHolder,this.groupKeyfieldCount);
+  bufferHolder.reset();
+  ColMeta curColMeta=null;
+  for (int i=0; i < this.groupKeyfieldCount; i++) {
+    curColMeta=this.columToIndx.get(sortColumnsByIndex[i].toUpperCase());
+    if (!row.isNullAt(curColMeta.colIndex)) {
+switch (curColMeta.colType) {
+case ColMeta.COL_TYPE_BIT:
+        key.setByte(i,row.getByte(curColMeta.colIndex));
+case ColMeta.COL_TYPE_INT:
+case ColMeta.COL_TYPE_LONG:
+case ColMeta.COL_TYPE_INT24:
+      key.setInt(i,BytesTools.getInt(row.getBinary(curColMeta.colIndex)));
+    break;
+case ColMeta.COL_TYPE_SHORT:
+  key.setShort(i,BytesTools.getShort(row.getBinary(curColMeta.colIndex)));
+break;
+case ColMeta.COL_TYPE_FLOAT:
+key.setFloat(i,BytesTools.getFloat(row.getBinary(curColMeta.colIndex)));
+break;
+case ColMeta.COL_TYPE_DOUBLE:
+key.setDouble(i,BytesTools.getDouble(row.getBinary(curColMeta.colIndex)));
+break;
+case ColMeta.COL_TYPE_NEWDECIMAL:
+unsafeRowWriter.write(i,new BigDecimal(new String(row.getBinary(curColMeta.colIndex))));
+break;
+case ColMeta.COL_TYPE_LONGLONG:
+key.setLong(i,BytesTools.getLong(row.getBinary(curColMeta.colIndex)));
+break;
+default :
+unsafeRowWriter.write(i,row.getBinary(curColMeta.colIndex));
+break;
+}
+}
+ else {
+key.setNullAt(i);
+}
+}
+key.setTotalSize(bufferHolder.totalSize());
+return key;
+}

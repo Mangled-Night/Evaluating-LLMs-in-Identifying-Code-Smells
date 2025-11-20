@@ -1,0 +1,8 @@
+@Test void genericPoolShouldWorkWithPlainConnections() throws Exception {
+  GenericObjectPool<StatefulRedisConnection<String,String>> pool=ConnectionPoolSupport.createGenericObjectPool(() -> client.connect(),new GenericObjectPoolConfig<>(),false);
+  borrowAndReturn(pool);
+  StatefulRedisConnection<String,String> connection=pool.borrowObject();
+  assertThat(Proxy.isProxyClass(connection.getClass())).isFalse();
+  pool.returnObject(connection);
+  pool.close();
+}

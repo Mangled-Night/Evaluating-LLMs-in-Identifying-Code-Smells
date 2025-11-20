@@ -1,0 +1,19 @@
+/** 
+ * Change the UI language
+ * @param langTag String containing language code to change
+ * @return String containing language or if not recognized error message
+ */
+@Command(shortDescription="Changes the UI language") public String setLanguage(@CommandParam("language-tag") String langTag){
+  Locale locale=Locale.forLanguageTag(langTag);
+  TranslationProject proj=translationSystem.getProject(new ResourceUrn("engine:menu"));
+  if (proj.getAvailableLocales().contains(locale)) {
+    systemConfig.locale.set(locale);
+    nuiManager.invalidate();
+    String nat=translationSystem.translate("${engine:menu#this-language-native}",locale);
+    String eng=translationSystem.translate("${engine:menu#this-language-English}",locale);
+    return String.format("Language set to %s (%s)",nat,eng);
+  }
+ else {
+    return "Unrecognized locale! Try one of: " + proj.getAvailableLocales();
+  }
+}

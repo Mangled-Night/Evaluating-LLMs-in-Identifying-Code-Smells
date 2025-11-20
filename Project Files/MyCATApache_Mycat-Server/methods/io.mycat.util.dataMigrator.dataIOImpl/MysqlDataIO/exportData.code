@@ -1,0 +1,58 @@
+@Override public File exportData(TableMigrateInfo table,DataNode dn,String tableName,File export,File condition) throws IOException, InterruptedException {
+  String ip=dn.getIp();
+  int port=dn.getPort();
+  String user=dn.getUserName();
+  String pwd=dn.getPwd();
+  String db=dn.getDb();
+  String mysqlDump="?mysqldump -h? -P? -u? -p? ? ?  --compact --no-create-info --default-character-set=? --add-locks=false --where=\"? in (#)\" --result-file=\"?\" ";
+  if (gtidPurged) {
+    mysqlDump+=" --set-gtid-purged=ON ";
+  }
+ else {
+    mysqlDump+=" --set-gtid-purged=OFF ";
+  }
+  String fileName=condition.getName();
+  File exportPath=new File(export,fileName.substring(0,fileName.indexOf(".txt")));
+  if (!exportPath.exists()) {
+    exportPath.mkdirs();
+  }
+  File exportFile=new File(exportPath,tableName.toLowerCase() + ".txt");
+  mysqlDump=DataMigratorUtil.paramsAssignment(mysqlDump,"?",mysqlBin,ip,port,user,pwd,db,tableName,charset,table.getColumn(),exportFile);
+  String data="";
+  File mergedFile=new File(exportPath,tableName.toLowerCase() + ".sql");
+  if (!mergedFile.exists()) {
+    mergedFile.createNewFile();
+  }
+  int offset=0;
+  while ((data=DataMigratorUtil.readData(condition,offset,cmdLength)).length() > 0) {
+    offset+=data.getBytes().length;
+    if (data.startsWith(",")) {
+      data=data.substring(1,data.length());
+    }
+    if (data.endsWith(",")) {
+      data=data.substring(0,data.length() - 1);
+    }
+    String mysqlDumpCmd=DataMigratorUtil.paramsAssignment(mysqlDump,"#",data);
+    LOGGER.info(table.getSchemaAndTableName() + mysqlDump);
+    LOGGER.debug(table.getSchemaAndTableName() + " " + mysqlDumpCmd);
+    Process process=DataMigratorUtil.exeCmdByOs(mysqlDumpCmd);
+    InputStreamReader in=new InputStreamReader(process.getErrorStream());
+    BufferedReader br=new BufferedReader(in);
+    String errMessage=null;
+    while ((errMessage=br.readLine()) != null) {
+      if (errMessage.trim().toLowerCase().contains("err")) {
+        System.out.println(errMessage + " -> " + mysqlDump);
+        throw new DataMigratorException(errMessage + " -> " + mysqlDump);
+      }
+ else {
+        LOGGER.info(table.getSchemaAndTableName() + mysqlDump + " exe info:"+ errMessage);
+      }
+    }
+    process.waitFor();
+    DataMigratorUtil.mergeFiles(mergedFile,exportFile);
+    if (exportFile.exists()) {
+      exportFile.delete();
+    }
+  }
+  return mergedFile;
+}

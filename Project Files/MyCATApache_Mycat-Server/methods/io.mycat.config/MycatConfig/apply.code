@@ -1,0 +1,40 @@
+private void apply(Map<String,UserConfig> newUsers,Map<String,SchemaConfig> newSchemas,Map<String,PhysicalDBNode> newDataNodes,Map<String,PhysicalDBPool> newDataHosts,MycatCluster newCluster,FirewallConfig newFirewall,boolean isLoadAll){
+  final ReentrantLock lock=this.lock;
+  lock.lock();
+  try {
+    if (isLoadAll) {
+      Map<String,PhysicalDBPool> oldDataHosts=this.dataHosts;
+      if (oldDataHosts != null) {
+        for (        PhysicalDBPool oldDbPool : oldDataHosts.values()) {
+          if (oldDbPool != null) {
+            oldDbPool.stopHeartbeat();
+          }
+        }
+      }
+      this._dataNodes=this.dataNodes;
+      this._dataHosts=this.dataHosts;
+    }
+    this._users=this.users;
+    this._schemas=this.schemas;
+    this._cluster=this.cluster;
+    this._firewall=this.firewall;
+    if (isLoadAll) {
+      if (newDataHosts != null) {
+        for (        PhysicalDBPool newDbPool : newDataHosts.values()) {
+          if (newDbPool != null) {
+            newDbPool.startHeartbeat();
+          }
+        }
+      }
+      this.dataNodes=newDataNodes;
+      this.dataHosts=newDataHosts;
+    }
+    this.users=newUsers;
+    this.schemas=newSchemas;
+    this.cluster=newCluster;
+    this.firewall=newFirewall;
+  }
+  finally {
+    lock.unlock();
+  }
+}

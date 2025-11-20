@@ -1,0 +1,26 @@
+private static PrivacyItem parseItem(XmlPullParser parser) throws XmlPullParserException, IOException {
+  String actionValue=parser.getAttributeValue("","action");
+  UInt32 order=ParserUtils.getUInt32Attribute(parser,"order");
+  String type=parser.getAttributeValue("","type");
+  boolean allow;
+switch (actionValue) {
+case "allow":
+    allow=true;
+  break;
+case "deny":
+allow=false;
+break;
+default :
+throw new IOException("Unknown action value '" + actionValue + "'");
+}
+PrivacyItem item;
+if (type != null) {
+String value=parser.getAttributeValue("","value");
+item=new PrivacyItem(PrivacyItem.Type.valueOf(type),value,allow,order);
+}
+ else {
+item=new PrivacyItem(allow,order);
+}
+parseItemChildElements(parser,item);
+return item;
+}

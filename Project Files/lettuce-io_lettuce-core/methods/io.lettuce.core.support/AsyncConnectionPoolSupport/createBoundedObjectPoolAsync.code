@@ -1,0 +1,37 @@
+/** 
+ * Create and initialize asynchronously a new  {@link BoundedAsyncPool} using the {@link Supplier}. Allocated instances are wrapped and must not be returned with  {@link AsyncPool#release(Object)}.
+ * @param connectionSupplier must not be {@code null}.
+ * @param config must not be {@code null}.
+ * @param < T > connection type.
+ * @return {@link CompletionStage} emitting the connection pool upon completion.
+ * @since 5.3.3
+ */
+public static <T extends StatefulConnection<?,?>>CompletionStage<BoundedAsyncPool<T>> createBoundedObjectPoolAsync(Supplier<CompletionStage<T>> connectionSupplier,BoundedPoolConfig config){
+  return createBoundedObjectPoolAsync(connectionSupplier,config,true);
+}
+/** 
+ * Create and initialize asynchronously a new  {@link BoundedAsyncPool} using the {@link Supplier}.
+ * @param connectionSupplier must not be {@code null}.
+ * @param config must not be {@code null}.
+ * @param wrapConnections {@code false} to return direct connections that need to be returned to the pool using{@link AsyncPool#release(Object)}.  {@code true} to return wrapped connection that are returned to the pool wheninvoking  {@link StatefulConnection#close()}/ {@link StatefulConnection#closeAsync()}.
+ * @param < T > connection type.
+ * @return {@link CompletionStage} emitting the connection pool upon completion.
+ * @since 5.3.3
+ */
+public static <T extends StatefulConnection<?,?>>CompletionStage<BoundedAsyncPool<T>> createBoundedObjectPoolAsync(Supplier<CompletionStage<T>> connectionSupplier,BoundedPoolConfig config,boolean wrapConnections){
+  BoundedAsyncPool<T> pool=doCreatePool(connectionSupplier,config,wrapConnections);
+  CompletableFuture<BoundedAsyncPool<T>> future=new CompletableFuture<>();
+  pool.createIdle().whenComplete((v,throwable) -> {
+    if (throwable == null) {
+      future.complete(pool);
+    }
+ else {
+      pool.closeAsync().whenComplete((v1,throwable1) -> {
+        future.completeExceptionally(new RedisConnectionException("Could not create pool",throwable));
+      }
+);
+    }
+  }
+);
+  return future;
+}

@@ -1,0 +1,41 @@
+@Override public void channelRead(ChannelHandlerContext ctx,Object msg) throws Exception {
+  if (!securityAuthenticator.needLogin()) {
+    ctx.fireChannelRead(msg);
+    return;
+  }
+  boolean authed=false;
+  if (msg instanceof HttpRequest) {
+    HttpRequest httpRequest=(HttpRequest)msg;
+    HttpSession session=httpSessionManager.getOrCreateHttpSession(ctx,httpRequest);
+    if (session != null && session.getAttribute(ArthasConstants.SUBJECT_KEY) != null) {
+      authed=true;
+    }
+    Principal principal=null;
+    if (!authed) {
+      principal=extractBasicAuthSubject(httpRequest);
+      if (principal == null) {
+        principal=extractBasicAuthSubjectFromUrl(httpRequest);
+      }
+    }
+    if (!authed && principal == null) {
+      principal=AuthUtils.localPrincipal(ctx);
+    }
+    Subject subject=securityAuthenticator.login(principal);
+    if (subject != null) {
+      authed=true;
+      if (session != null) {
+        session.setAttribute(ArthasConstants.SUBJECT_KEY,subject);
+      }
+    }
+    if (!authed) {
+      HttpResponse response=new DefaultHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.UNAUTHORIZED);
+      response.headers().set(HttpHeaderNames.WWW_AUTHENTICATE,"Basic realm=\"arthas webconsole\"");
+      response.headers().set(HttpHeaderNames.CONTENT_TYPE,"text/plain");
+      response.headers().set(HttpHeaderNames.CONTENT_LENGTH,0);
+      ctx.writeAndFlush(response);
+      ctx.channel().close();
+      return;
+    }
+  }
+  ctx.fireChannelRead(msg);
+}

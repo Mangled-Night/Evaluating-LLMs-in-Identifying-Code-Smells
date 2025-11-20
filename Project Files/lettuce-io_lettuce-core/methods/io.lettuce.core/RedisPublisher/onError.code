@@ -1,0 +1,33 @@
+/** 
+ * Called by a listener interface to indicate that as error has occurred.
+ * @param t the error
+ */
+final void onError(Throwable t){
+  State state=state();
+  if (LOG.isErrorEnabled()) {
+    LOG.trace("{} onError(): {}",state,t.toString(),t);
+  }
+  state.onError(this,t);
+}
+@Override void onError(RedisSubscription<?> subscription,Throwable t){
+}
+void onError(RedisSubscription<?> subscription,Throwable t){
+  State state;
+  while ((state=subscription.state()) != COMPLETED && subscription.changeState(state,COMPLETED)) {
+    readData(subscription);
+    Subscriber<?> subscriber=subscription.subscriber;
+    if (subscriber != null) {
+      subscriber.onError(t);
+      return;
+    }
+  }
+}
+private void onError(Throwable throwable){
+  subscription.onError(throwable);
+}
+@Override public void onError(Throwable t){
+  delegate.onError(t);
+}
+@Override public void onError(Throwable t){
+  executor.execute(OnComplete.newInstance(t,delegate));
+}

@@ -1,0 +1,12 @@
+@Test void resubscribePatternsOnReconnect() throws Exception {
+  pubsub.psubscribe(pattern);
+  assertThat(patterns.take()).isEqualTo(pattern);
+  assertThat((long)counts.take()).isEqualTo(1);
+  pubsub.quit();
+  assertThat(patterns.take()).isEqualTo(pattern);
+  assertThat((long)counts.take()).isEqualTo(1);
+  Wait.untilTrue(pubsub::isOpen).waitOrTimeout();
+  redis.publish(channel,message);
+  assertThat(channels.take()).isEqualTo(channel);
+  assertThat(messages.take()).isEqualTo(message);
+}

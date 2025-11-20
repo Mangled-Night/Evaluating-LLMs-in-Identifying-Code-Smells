@@ -1,0 +1,44 @@
+protected void readBuffer(byte[] bytes,GLTFAccessor accessor,GLTFBufferView bufferView,TIntList target){
+  ByteBuffer byteBuffer=ByteBuffer.wrap(bytes,bufferView.getByteOffset(),accessor.getCount() * accessor.getType().getDimension() * accessor.getComponentType().getByteLength());
+  byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+switch (accessor.getComponentType()) {
+case UNSIGNED_BYTE:
+    while (byteBuffer.position() < byteBuffer.limit()) {
+      target.add(UnsignedBytes.toInt(byteBuffer.get()));
+    }
+  break;
+case UNSIGNED_SHORT:
+while (byteBuffer.position() < byteBuffer.limit()) {
+  short rawShort=byteBuffer.getShort();
+  target.add(rawShort >= 0 ? rawShort : 0x10000 + rawShort);
+}
+break;
+case UNSIGNED_INT:
+while (byteBuffer.position() < byteBuffer.limit()) {
+target.add(byteBuffer.getInt());
+}
+break;
+}
+}
+protected void readBuffer(byte[] buffer,GLTFAccessor accessor,GLTFBufferView bufferView,TFloatList floatList){
+  if (accessor.getComponentType() != GLTFComponentType.FLOAT) {
+    return;
+  }
+  ByteBuffer byteBuffer=ByteBuffer.wrap(buffer,bufferView.getByteOffset() + accessor.getByteOffset(),bufferView.getByteLength() - accessor.getByteOffset());
+  byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+  int gap=0;
+  if (bufferView.getByteStride() > 0) {
+    gap=bufferView.getByteStride() - accessor.getComponentType().getByteLength() * accessor.getType().getDimension();
+  }
+  if (byteBuffer.position() < byteBuffer.limit()) {
+    for (int i=0; i < accessor.getType().getDimension(); i++) {
+      floatList.add(byteBuffer.getFloat());
+    }
+  }
+  while (byteBuffer.position() < byteBuffer.limit() - gap) {
+    byteBuffer.position(byteBuffer.position() + gap);
+    for (int i=0; i < accessor.getType().getDimension(); i++) {
+      floatList.add(byteBuffer.getFloat());
+    }
+  }
+}

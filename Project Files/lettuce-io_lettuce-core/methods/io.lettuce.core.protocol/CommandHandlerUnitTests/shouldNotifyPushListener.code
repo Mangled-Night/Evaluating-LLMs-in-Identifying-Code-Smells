@@ -1,0 +1,12 @@
+@Test void shouldNotifyPushListener() throws Exception {
+  ChannelPromise channelPromise=new DefaultChannelPromise(channel,ImmediateEventExecutor.INSTANCE);
+  channelPromise.setSuccess();
+  sut.channelRegistered(context);
+  sut.channelActive(context);
+  sut.channelRead(context,Unpooled.wrappedBuffer(">2\r\n+caching\r\n+foo\r\n".getBytes()));
+  ArgumentCaptor<PushMessage> messageCaptor=ArgumentCaptor.forClass(PushMessage.class);
+  verify(listener).onPushMessage(messageCaptor.capture());
+  PushMessage message=messageCaptor.getValue();
+  assertThat(message.getType()).isEqualTo("caching");
+  assertThat(message.getContent()).containsExactly(ByteBuffer.wrap("caching".getBytes()),ByteBuffer.wrap("foo".getBytes()));
+}

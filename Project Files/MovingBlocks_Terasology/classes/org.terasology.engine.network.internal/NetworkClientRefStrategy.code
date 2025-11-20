@@ -1,0 +1,14 @@
+public class NetworkClientRefStrategy extends DefaultRefStrategy {
+  private NetworkSystemImpl system;
+  public NetworkClientRefStrategy(  NetworkSystemImpl system){
+    this.system=system;
+  }
+  @Override public BaseEntityRef createRefFor(  long id,  LowLevelEntityManager entityManager){
+    NetworkComponent netComp=entityManager.getComponent(id,NetworkComponent.class);
+    if (netComp != null && netComp.getNetworkId() != 0) {
+      system.registerClientNetworkEntity(netComp.getNetworkId(),id);
+      return new NetEntityRef(netComp.getNetworkId(),system,entityManager);
+    }
+    return super.createRefFor(id,entityManager);
+  }
+}

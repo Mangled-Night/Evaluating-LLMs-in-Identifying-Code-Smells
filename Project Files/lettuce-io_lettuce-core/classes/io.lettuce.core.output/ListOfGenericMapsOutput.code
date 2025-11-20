@@ -1,0 +1,45 @@
+/** 
+ * {@link List} of maps output.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @author Mikhael Sokolov
+ * @since 6.1
+ * @see GenericMapOutput
+ */
+public class ListOfGenericMapsOutput<K,V> extends CommandOutput<K,V,List<Map<K,Object>>> {
+  private final GenericMapOutput<K,V> nested;
+  private int mapCount=-1;
+  private final List<Integer> counts=new ArrayList<>();
+  public ListOfGenericMapsOutput(  RedisCodec<K,V> codec){
+    super(codec,new ArrayList<>());
+    nested=new GenericMapOutput<>(codec);
+  }
+  @Override public void set(  ByteBuffer bytes){
+    nested.set(bytes);
+  }
+  @Override public void complete(  int depth){
+    if (counts.size() > 0) {
+      int expectedSize=counts.get(0);
+      if (nested.get().size() == expectedSize) {
+        counts.remove(0);
+        output.add(new LinkedHashMap<>(nested.get()));
+        nested.get().clear();
+      }
+    }
+  }
+  @Override public void multi(  int count){
+    nested.multi(count);
+    if (mapCount == -1) {
+      mapCount=count;
+    }
+ else {
+      counts.add(count / 2);
+    }
+  }
+  @Override public void set(  long integer){
+    nested.set(integer);
+  }
+  @Override public void set(  double number){
+    nested.set(number);
+  }
+}

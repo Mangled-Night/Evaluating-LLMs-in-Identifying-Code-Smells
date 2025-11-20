@@ -1,0 +1,28 @@
+@Override protected List<SRV> lookupSrvRecords0(DnsName name,List<RemoteConnectionEndpointLookupFailure> lookupFailures,DnssecMode dnssecMode){
+  Lookup lookup;
+  try {
+    lookup=new Lookup(name.ace,Type.SRV);
+  }
+ catch (  TextParseException e) {
+    RemoteConnectionEndpointLookupFailure failure=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,e);
+    lookupFailures.add(failure);
+    return null;
+  }
+  Record[] recs=lookup.run();
+  if (recs == null) {
+    return null;
+  }
+  List<SRV> res=new ArrayList<>();
+  for (  Record record : recs) {
+    org.xbill.DNS.SRVRecord srvRecord=(org.xbill.DNS.SRVRecord)record;
+    if (srvRecord != null && srvRecord.getTarget() != null) {
+      DnsName host=DnsName.from(srvRecord.getTarget().toString());
+      int port=srvRecord.getPort();
+      int priority=srvRecord.getPriority();
+      int weight=srvRecord.getWeight();
+      SRV r=new SRV(priority,weight,port,host);
+      res.add(r);
+    }
+  }
+  return res;
+}

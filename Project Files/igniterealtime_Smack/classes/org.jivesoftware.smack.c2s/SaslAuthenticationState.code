@@ -1,0 +1,12 @@
+private final class SaslAuthenticationState extends State {
+  private SaslAuthenticationState(  StateDescriptor stateDescriptor,  ModularXmppClientToServerConnectionInternal connectionInternal){
+    super(stateDescriptor,connectionInternal);
+  }
+  @Override public StateTransitionResult.AttemptResult transitionInto(  WalkStateGraphContext walkStateGraphContext) throws IOException, SmackException, InterruptedException, XMPPException {
+    prepareToWaitForFeaturesReceived();
+    LoginContext loginContext=walkStateGraphContext.getLoginContext();
+    SASLMechanism usedSaslMechanism=authenticate(loginContext.username,loginContext.password,config.getAuthzid(),getSSLSession());
+    waitForFeaturesReceived("server stream features after SASL authentication");
+    return new SaslAuthenticationSuccessResult(usedSaslMechanism);
+  }
+}

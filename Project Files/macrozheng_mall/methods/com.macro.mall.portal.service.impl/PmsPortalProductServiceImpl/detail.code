@@ -1,0 +1,36 @@
+@Override public PmsPortalProductDetail detail(Long id){
+  PmsPortalProductDetail result=new PmsPortalProductDetail();
+  PmsProduct product=productMapper.selectByPrimaryKey(id);
+  result.setProduct(product);
+  PmsBrand brand=brandMapper.selectByPrimaryKey(product.getBrandId());
+  result.setBrand(brand);
+  PmsProductAttributeExample attributeExample=new PmsProductAttributeExample();
+  attributeExample.createCriteria().andProductAttributeCategoryIdEqualTo(product.getProductAttributeCategoryId());
+  List<PmsProductAttribute> productAttributeList=productAttributeMapper.selectByExample(attributeExample);
+  result.setProductAttributeList(productAttributeList);
+  if (CollUtil.isNotEmpty(productAttributeList)) {
+    List<Long> attributeIds=productAttributeList.stream().map(PmsProductAttribute::getId).collect(Collectors.toList());
+    PmsProductAttributeValueExample attributeValueExample=new PmsProductAttributeValueExample();
+    attributeValueExample.createCriteria().andProductIdEqualTo(product.getId()).andProductAttributeIdIn(attributeIds);
+    List<PmsProductAttributeValue> productAttributeValueList=productAttributeValueMapper.selectByExample(attributeValueExample);
+    result.setProductAttributeValueList(productAttributeValueList);
+  }
+  PmsSkuStockExample skuExample=new PmsSkuStockExample();
+  skuExample.createCriteria().andProductIdEqualTo(product.getId());
+  List<PmsSkuStock> skuStockList=skuStockMapper.selectByExample(skuExample);
+  result.setSkuStockList(skuStockList);
+  if (product.getPromotionType() == 3) {
+    PmsProductLadderExample ladderExample=new PmsProductLadderExample();
+    ladderExample.createCriteria().andProductIdEqualTo(product.getId());
+    List<PmsProductLadder> productLadderList=productLadderMapper.selectByExample(ladderExample);
+    result.setProductLadderList(productLadderList);
+  }
+  if (product.getPromotionType() == 4) {
+    PmsProductFullReductionExample fullReductionExample=new PmsProductFullReductionExample();
+    fullReductionExample.createCriteria().andProductIdEqualTo(product.getId());
+    List<PmsProductFullReduction> productFullReductionList=productFullReductionMapper.selectByExample(fullReductionExample);
+    result.setProductFullReductionList(productFullReductionList);
+  }
+  result.setCouponList(portalProductDao.getAvailableCouponList(product.getId(),product.getProductCategoryId()));
+  return result;
+}

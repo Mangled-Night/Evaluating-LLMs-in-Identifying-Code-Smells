@@ -1,0 +1,21 @@
+/** 
+ * Fills the buffer with the given data and sends it over the XMPP stream if the buffers capacity has been reached. This method is only called from this class so it is assured that the amount of data to send is <= buffer capacity
+ * @param b the data
+ * @param off the data
+ * @param len the number of bytes to write
+ * @throws IOException if an I/O error occurred while sending or if the stream is closed
+ */
+private synchronized void writeOut(byte[] b,int off,int len) throws IOException {
+  if (this.isClosed) {
+    throw new IOException("Stream is closed");
+  }
+  int available=0;
+  if (len > buffer.length - bufferPointer) {
+    available=buffer.length - bufferPointer;
+    System.arraycopy(b,off,buffer,bufferPointer,available);
+    bufferPointer+=available;
+    flushBuffer();
+  }
+  System.arraycopy(b,off + available,buffer,bufferPointer,len - available);
+  bufferPointer+=len - available;
+}

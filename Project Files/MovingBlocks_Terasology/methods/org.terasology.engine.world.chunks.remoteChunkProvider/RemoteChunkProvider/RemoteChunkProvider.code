@@ -1,0 +1,10 @@
+public RemoteChunkProvider(BlockManager blockManager,LocalPlayer localPlayer){
+  this.blockManager=blockManager;
+  loadingPipeline=new ChunkProcessingPipeline(this::getChunk,new LocalPlayerRelativeChunkComparator(localPlayer));
+  loadingPipeline.addStage(ChunkTaskProvider.create("Chunk generate internal lightning",(Consumer<Chunk>)InternalLightProcessor::generateInternalLighting)).addStage(ChunkTaskProvider.create("Chunk deflate",Chunk::deflate)).addStage(ChunkTaskProvider.createMulti("Light merging",chunks -> {
+    Chunk[] localchunks=chunks.toArray(new Chunk[0]);
+    return LightMerger.merge(localchunks);
+  }
+,LightMerger::requiredChunks)).addStage(ChunkTaskProvider.create("",readyChunks::add));
+  ChunkMonitor.fireChunkProviderInitialized(this);
+}

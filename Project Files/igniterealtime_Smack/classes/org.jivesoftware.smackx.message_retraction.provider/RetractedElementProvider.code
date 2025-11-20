@@ -1,0 +1,13 @@
+public class RetractedElementProvider extends ExtensionElementProvider<RetractedElement> {
+  @Override public RetractedElement parse(  XmlPullParser parser,  int initialDepth,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException, ParseException {
+    Date date=ParserUtils.getDateFromXep82String(parser.getAttributeValue("",RetractedElement.ATTR_STAMP));
+    OriginIdElement originIdElement=null;
+    while (originIdElement == null) {
+      XmlPullParser.TagEvent tag=parser.nextTag();
+      if (tag == XmlPullParser.TagEvent.START_ELEMENT && OriginIdElement.ELEMENT.equals(parser.getName()) && StableUniqueStanzaIdManager.NAMESPACE.equals(parser.getNamespace())) {
+        originIdElement=OriginIdProvider.INSTANCE.parse(parser);
+      }
+    }
+    return new RetractedElement(date,originIdElement);
+  }
+}

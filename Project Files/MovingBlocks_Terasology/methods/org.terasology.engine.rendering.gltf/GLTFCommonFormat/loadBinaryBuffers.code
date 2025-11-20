@@ -1,0 +1,33 @@
+protected List<byte[]> loadBinaryBuffers(ResourceUrn urn,GLTF gltf) throws IOException {
+  List<byte[]> loadedBuffers=Lists.newArrayList();
+  for (  GLTFBuffer buffer : gltf.getBuffers()) {
+    String uri=buffer.getUri();
+    if (uri.startsWith(DATA_APPLICATION_OCTET_STREAM_BASE_64)) {
+      uri=uri.substring(DATA_APPLICATION_OCTET_STREAM_BASE_64.length());
+      byte[] data=BaseEncoding.base64().decode(uri);
+      if (data.length != buffer.getByteLength()) {
+        throw new IOException("Byte buffer " + uri + " has incorrect length. "+ "Expected ("+ buffer.getByteLength()+ "), actual ("+ data.length+ ")");
+      }
+      loadedBuffers.add(data);
+    }
+ else     if (uri.startsWith(DATA_APPLICATION_GLTF_BUFFER_BASE_64)) {
+      uri=uri.substring(DATA_APPLICATION_GLTF_BUFFER_BASE_64.length());
+      byte[] data=BaseEncoding.base64().decode(uri);
+      if (data.length != buffer.getByteLength()) {
+        throw new IOException("Byte buffer " + uri + " has incorrect length. "+ "Expected ("+ buffer.getByteLength()+ "), actual ("+ data.length+ ")");
+      }
+      loadedBuffers.add(data);
+    }
+ else {
+      if (uri.endsWith(".bin")) {
+        uri=uri.substring(0,uri.length() - 4);
+      }
+      ByteBufferAsset bufferAsset=assetManager.getAsset(uri,ByteBufferAsset.class,urn.getModuleName()).orElseThrow(() -> new IOException("Failed to resolve binary uri " + buffer.getUri() + " for "+ urn));
+      if (bufferAsset.getBytes().length != buffer.getByteLength()) {
+        throw new IOException("Byte buffer " + uri + " has incorrect length. "+ "Expected ("+ buffer.getByteLength()+ "), actual ("+ bufferAsset.getBytes().length+ ")");
+      }
+      loadedBuffers.add(bufferAsset.getBytes());
+    }
+  }
+  return loadedBuffers;
+}

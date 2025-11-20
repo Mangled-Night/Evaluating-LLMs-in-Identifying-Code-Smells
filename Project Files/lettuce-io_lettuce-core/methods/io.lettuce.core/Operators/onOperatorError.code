@@ -1,0 +1,28 @@
+/** 
+ * Map an "operator" error given an operator parent  {@link Subscription}. The result error will be passed via onError to the operator downstream.  {@link Subscription} will be cancelled after checking for fatal error via{@link Exceptions#throwIfFatal(Throwable)}. Takes an additional signal, which can be added as a suppressed exception if it is a  {@link Throwable} and the default {@link Hooks#onOperatorError(BiFunction) hook} is in place.
+ * @param subscription the linked operator parent {@link Subscription}
+ * @param error the callback or operator error
+ * @param dataSignal the value (onNext or onError) signal processed during failure
+ * @param context a context that might hold a local error consumer
+ * @return mapped {@link Throwable}
+ */
+static Throwable onOperatorError(@Nullable Subscription subscription,Throwable error,@Nullable Object dataSignal,Context context){
+  Exceptions.throwIfFatal(error);
+  if (subscription != null) {
+    subscription.cancel();
+  }
+  Throwable t=Exceptions.unwrap(error);
+  BiFunction<? super Throwable,Object,? extends Throwable> hook=context.getOrDefault(KEY_ON_OPERATOR_ERROR,null);
+  if (hook == null && onOperatorErrorHook != null) {
+    hook=getOnOperatorErrorHook();
+  }
+  if (hook == null) {
+    if (dataSignal != null) {
+      if (dataSignal != t && dataSignal instanceof Throwable) {
+        t=Exceptions.addSuppressed(t,(Throwable)dataSignal);
+      }
+    }
+    return t;
+  }
+  return hook.apply(error,dataSignal);
+}

@@ -1,0 +1,19 @@
+/** 
+ * Answer every privacy list with the allowed and blocked permissions.
+ * @return an array of privacy lists.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public List<PrivacyList> getPrivacyLists() throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  Privacy privacyAnswer=getPrivacyWithListNames();
+  Set<String> names=privacyAnswer.getPrivacyListNames();
+  List<PrivacyList> lists=new ArrayList<>(names.size());
+  for (  String listName : names) {
+    boolean isActiveList=listName.equals(privacyAnswer.getActiveName());
+    boolean isDefaultList=listName.equals(privacyAnswer.getDefaultName());
+    lists.add(new PrivacyList(isActiveList,isDefaultList,listName,getPrivacyListItems(listName)));
+  }
+  return lists;
+}

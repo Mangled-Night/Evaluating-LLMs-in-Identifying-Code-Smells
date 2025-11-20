@@ -1,0 +1,20 @@
+public void importIdentities(){
+  FilePickerPopup filePicker=nuiManager.pushScreen(FilePickerPopup.ASSET_URI,FilePickerPopup.class);
+  filePicker.setTitle(importPopupTitle);
+  filePicker.setOkHandler(path -> {
+    Map<PublicIdentityCertificate,ClientIdentity> newIdentities;
+    try (BufferedReader reader=Files.newBufferedReader(path)){
+      newIdentities=GSON.fromJson(reader,MAP_TYPE);
+    }
+ catch (    IOException|JsonIOException|JsonSyntaxException ex) {
+      nuiManager.pushScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage(translationSystem.translate("${engine:menu#identity-import-failed}"),ex.toString());
+      return;
+    }
+    checkNextConflict(newIdentities.entrySet().iterator(),() -> {
+      newIdentities.forEach(securityConfig::addIdentity);
+      nuiManager.pushScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage(importPopupTitle,newIdentities.isEmpty() ? translationSystem.translate("${engine:menu#identity-import-no-new}") : String.format(translationSystem.translate("${engine:menu#identity-import-ok}"),newIdentities.size()));
+    }
+);
+  }
+);
+}

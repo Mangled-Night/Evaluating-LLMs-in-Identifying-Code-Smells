@@ -1,0 +1,35 @@
+public void processSQL(String sql,EngineCtx ctx){
+  String ssql=joinParser.getSql();
+  getRoute(ssql);
+  RouteResultsetNode[] nodes=rrs.getNodes();
+  if (nodes == null || nodes.length == 0 || nodes[0].getName() == null || nodes[0].getName().equals("")) {
+    ctx.getSession().getSource().writeErrMessage(ErrorCode.ER_NO_DB_ERROR,"No dataNode found ,please check tables defined in schema:" + ctx.getSession().getSource().getSchema());
+    return;
+  }
+  this.ctx=ctx;
+  if (joinParser.hasLimit() || joinParser.hasOrder()) {
+    ctx.setIsStreamOutputResult(false);
+  }
+  String[] dataNodes=getDataNodes();
+  maxjob=dataNodes.length;
+  ShareDBJoinHandler joinHandler=new ShareDBJoinHandler(this,joinParser.getJoinLkey(),sc.getSession2());
+  ctx.executeNativeSQLSequnceJob(dataNodes,ssql,joinHandler);
+  EngineCtx.LOGGER.info("Catlet exec:" + getDataNode(getDataNodes()) + " sql:"+ ssql);
+  final ShareJoin shareJoin=this;
+  ctx.setAllJobFinishedListener(new AllJobFinishedListener(){
+    @Override public void onAllJobFinished(    EngineCtx ctx){
+      if (!jointTableIsData) {
+        ctx.writeHeader(fields);
+      }
+      MiddlerResultHandler middlerResultHandler=sc.getSession2().getMiddlerResultHandler();
+      if (middlerResultHandler != null) {
+        middlerResultHandler.secondEexcute();
+      }
+ else {
+        shareJoin.writeEof();
+      }
+      EngineCtx.LOGGER.info("发送数据OK");
+    }
+  }
+);
+}

@@ -1,0 +1,26 @@
+/** 
+ * Run a  {@link ThrowingCallable callback function} while Redis is configured with a password.
+ * @param client
+ * @param callable
+ */
+public static void run(RedisClient client,ThrowingCallable callable){
+  StatefulRedisConnection<String,String> connection=client.connect();
+  RedisCommands<String,String> commands=connection.sync();
+  try {
+    enableAuthentication(commands);
+    commands.auth(TestSettings.password());
+    try {
+      callable.call();
+    }
+ catch (    RuntimeException e) {
+      throw e;
+    }
+catch (    Throwable e) {
+      throw new UndeclaredThrowableException(e);
+    }
+  }
+  finally {
+    disableAuthentication(commands);
+    connection.close();
+  }
+}

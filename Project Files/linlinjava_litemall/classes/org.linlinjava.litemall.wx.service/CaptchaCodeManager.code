@@ -1,0 +1,39 @@
+/** 
+ * 缓存系统中的验证码
+ */
+public class CaptchaCodeManager {
+  private static ConcurrentHashMap<String,CaptchaItem> captchaCodeCache=new ConcurrentHashMap<>();
+  /** 
+ * 添加到缓存
+ * @param phoneNumber 电话号码
+ * @param code        验证码
+ */
+  public static boolean addToCache(  String phoneNumber,  String code){
+    if (captchaCodeCache.get(phoneNumber) != null) {
+      if (captchaCodeCache.get(phoneNumber).getExpireTime().isAfter(LocalDateTime.now())) {
+        return false;
+      }
+ else {
+        captchaCodeCache.remove(phoneNumber);
+      }
+    }
+    CaptchaItem captchaItem=new CaptchaItem();
+    captchaItem.setPhoneNumber(phoneNumber);
+    captchaItem.setCode(code);
+    captchaItem.setExpireTime(LocalDateTime.now().plusMinutes(1));
+    captchaCodeCache.put(phoneNumber,captchaItem);
+    return true;
+  }
+  /** 
+ * 获取缓存的验证码
+ * @param phoneNumber 关联的电话号码
+ * @return 验证码
+ */
+  public static String getCachedCaptcha(  String phoneNumber){
+    if (captchaCodeCache.get(phoneNumber) == null)     return null;
+    if (captchaCodeCache.get(phoneNumber).getExpireTime().isBefore(LocalDateTime.now())) {
+      return null;
+    }
+    return captchaCodeCache.get(phoneNumber).getCode();
+  }
+}

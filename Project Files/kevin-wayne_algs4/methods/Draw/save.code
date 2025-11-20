@@ -1,0 +1,22 @@
+/** 
+ * Saves the drawing to using the specified filename. The supported image formats are typically JPEG, PNG, GIF, TIFF, and BMP.
+ * @param filename the name of the file with one of the required suffixes
+ * @throws IllegalArgumentException if {@code filename} is {@code null}
+ */
+public void save(String filename){
+  validateNotNull(filename,"filename");
+  if (filename.length() == 0)   throw new IllegalArgumentException("argument to save() is the empty string");
+  File file=new File(filename);
+  String suffix=filename.substring(filename.lastIndexOf('.') + 1);
+  if (!filename.contains("."))   suffix="";
+  try {
+    if (ImageIO.write(onscreenImage,suffix,file))     return;
+    BufferedImage saveImage=new BufferedImage(2 * width,2 * height,BufferedImage.TYPE_INT_RGB);
+    saveImage.createGraphics().drawImage(onscreenImage,0,0,Color.WHITE,null);
+    if (ImageIO.write(saveImage,suffix,file))     return;
+    System.out.printf("Error: the filetype '%s' is not supported\n",suffix);
+  }
+ catch (  IOException e) {
+    e.printStackTrace();
+  }
+}

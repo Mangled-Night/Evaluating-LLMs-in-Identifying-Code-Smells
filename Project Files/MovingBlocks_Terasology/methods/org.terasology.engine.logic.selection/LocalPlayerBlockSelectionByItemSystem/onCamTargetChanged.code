@@ -1,0 +1,26 @@
+@ReceiveEvent(components=LocationComponent.class) public void onCamTargetChanged(CameraTargetChangedEvent event,EntityRef entity){
+  if (null == blockSelectionComponentEntity) {
+    return;
+  }
+  BlockSelectionComponent blockSelectionComponent=blockSelectionComponentEntity.getComponent(BlockSelectionComponent.class);
+  if (blockSelectionComponent == null) {
+    return;
+  }
+  EntityRef target=event.getNewTarget();
+  LocationComponent locationComponent=target.getComponent(LocationComponent.class);
+  if (locationComponent == null) {
+    return;
+  }
+  Vector3f targetLocation=locationComponent.getWorldPosition(new Vector3f());
+  if (blockSelectionComponent.isMovable) {
+    Vector3i pos=new Vector3i(targetLocation,RoundingMode.FLOOR);
+    Vector3i size=blockSelectionComponent.currentSelection.getSize(new Vector3i());
+    blockSelectionComponent.currentSelection.set(pos,pos).expand(size.x() / 2,0,size.z() / 2);
+    blockSelectionComponentEntity.saveComponent(blockSelectionComponent);
+    return;
+  }
+  if (blockSelectionComponent.startPosition == null) {
+    return;
+  }
+  target.send(new SetBlockSelectionEndingPointEvent(blockSelectionComponentEntity));
+}

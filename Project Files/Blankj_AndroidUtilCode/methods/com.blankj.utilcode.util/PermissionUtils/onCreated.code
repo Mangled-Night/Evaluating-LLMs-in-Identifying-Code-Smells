@@ -1,0 +1,52 @@
+@Override public void onCreated(@NonNull final UtilsTransActivity activity,@Nullable Bundle savedInstanceState){
+  activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH);
+  int type=activity.getIntent().getIntExtra(TYPE,-1);
+  if (type == TYPE_RUNTIME) {
+    if (sInstance == null) {
+      Log.e("PermissionUtils","sInstance is null.");
+      activity.finish();
+      return;
+    }
+    if (sInstance.mPermissionsRequest == null) {
+      Log.e("PermissionUtils","mPermissionsRequest is null.");
+      activity.finish();
+      return;
+    }
+    if (sInstance.mPermissionsRequest.size() <= 0) {
+      Log.e("PermissionUtils","mPermissionsRequest's size is no more than 0.");
+      activity.finish();
+      return;
+    }
+    if (sInstance.mThemeCallback != null) {
+      sInstance.mThemeCallback.onActivityCreate(activity);
+    }
+    if (sInstance.mOnExplainListener != null) {
+      sInstance.mOnExplainListener.explain(activity,sInstance.mPermissionsRequest,new OnExplainListener.ShouldRequest(){
+        @Override public void start(        boolean start){
+          if (!start) {
+            activity.finish();
+          }
+ else {
+            requestPermissions(activity);
+          }
+        }
+      }
+);
+      sInstance.mOnExplainListener=null;
+      return;
+    }
+    requestPermissions(activity);
+  }
+ else   if (type == TYPE_WRITE_SETTINGS) {
+    currentRequestCode=TYPE_WRITE_SETTINGS;
+    startWriteSettingsActivity(activity,TYPE_WRITE_SETTINGS);
+  }
+ else   if (type == TYPE_DRAW_OVERLAYS) {
+    currentRequestCode=TYPE_DRAW_OVERLAYS;
+    startOverlayPermissionActivity(activity,TYPE_DRAW_OVERLAYS);
+  }
+ else {
+    activity.finish();
+    Log.e("PermissionUtils","type is wrong.");
+  }
+}

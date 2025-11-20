@@ -1,0 +1,29 @@
+private void finishing(ClassLoader loader,Advice advice){
+  TraceEntity traceEntity=threadLocalTraceEntity(loader);
+  if (traceEntity.deep >= 1) {
+    traceEntity.deep--;
+  }
+  if (traceEntity.deep == 0) {
+    double cost=threadLocalWatch.costInMillis();
+    try {
+      boolean conditionResult=isConditionMet(command.getConditionExpress(),advice,cost);
+      if (this.isVerbose()) {
+        process.write("Condition express: " + command.getConditionExpress() + " , result: "+ conditionResult+ "\n");
+      }
+      if (conditionResult) {
+        process.times().incrementAndGet();
+        process.appendResult(traceEntity.getModel());
+        if (isLimitExceeded(command.getNumberOfLimit(),process.times().get())) {
+          abortProcess(process,command.getNumberOfLimit());
+        }
+      }
+    }
+ catch (    Throwable e) {
+      logger.warn("trace failed.",e);
+      process.end(1,"trace failed, condition is: " + command.getConditionExpress() + ", "+ e.getMessage()+ ", visit "+ LogUtil.loggingFile()+ " for more details.");
+    }
+ finally {
+      threadBoundEntity.remove();
+    }
+  }
+}

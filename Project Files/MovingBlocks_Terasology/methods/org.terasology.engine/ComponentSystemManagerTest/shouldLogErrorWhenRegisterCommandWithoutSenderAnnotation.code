@@ -1,0 +1,11 @@
+@Test public void shouldLogErrorWhenRegisterCommandWithoutSenderAnnotation(){
+  Appender<ILoggingEvent> appender=mockAppender();
+  ((ch.qos.logback.classic.Logger)LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).addAppender(appender);
+  systemUnderTest.register(new SystemWithCommandMissingSenderAnnotation());
+  systemUnderTest.initialise();
+  ArgumentCaptor<LoggingEvent> loggingEventArgumentCaptor=ArgumentCaptor.forClass(LoggingEvent.class);
+  verify(appender).doAppend(loggingEventArgumentCaptor.capture());
+  List<String> allErrorLogMessages=loggingEventArgumentCaptor.getAllValues().stream().filter(e -> e.getLevel().isGreaterOrEqual(Level.ERROR)).map(LoggingEvent::getFormattedMessage).collect(toList());
+  String expectedMessage="Command commandWithoutSenderAnnotation provided by " + "SystemWithCommandMissingSenderAnnotation contains a EntityRef without @Sender annotation, " + "may cause a NullPointerException";
+  assertTrue(allErrorLogMessages.contains(expectedMessage));
+}

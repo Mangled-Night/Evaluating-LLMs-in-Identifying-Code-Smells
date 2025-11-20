@@ -1,0 +1,24 @@
+@Override public MUCOwner parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+  MUCOwner mucOwner=new MUCOwner();
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      if (parser.getName().equals("item")) {
+        mucOwner.addItem(MUCParserUtils.parseItem(parser));
+      }
+ else       if (parser.getName().equals("destroy")) {
+        mucOwner.setDestroy(MUCParserUtils.parseDestroy(parser));
+      }
+ else {
+        PacketParserUtils.addExtensionElement(mucOwner,parser,xmlEnvironment);
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getName().equals("query")) {
+        done=true;
+      }
+    }
+  }
+  return mucOwner;
+}

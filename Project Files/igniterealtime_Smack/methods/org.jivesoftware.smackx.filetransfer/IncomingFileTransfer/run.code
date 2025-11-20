@@ -1,0 +1,31 @@
+@Override public void run(){
+  try {
+    inputStream=negotiateStream();
+  }
+ catch (  Exception e) {
+    setStatus(FileTransfer.Status.error);
+    setException(e);
+    return;
+  }
+  OutputStream outputStream=null;
+  try {
+    outputStream=new FileOutputStream(file);
+    setStatus(Status.in_progress);
+    writeToStream(inputStream,outputStream);
+  }
+ catch (  FileNotFoundException e) {
+    setStatus(Status.error);
+    setError(Error.bad_file);
+    setException(e);
+  }
+catch (  IOException e) {
+    setStatus(Status.error);
+    setError(Error.stream);
+    setException(e);
+  }
+  if (getStatus().equals(Status.in_progress)) {
+    setStatus(Status.complete);
+  }
+  CloseableUtil.maybeClose(inputStream,LOGGER);
+  CloseableUtil.maybeClose(outputStream,LOGGER);
+}

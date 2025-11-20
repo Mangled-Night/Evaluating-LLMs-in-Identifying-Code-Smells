@@ -1,0 +1,74 @@
+@ExtendWith(MockitoExtension.class) public class RuntimeDelegatingTypeHandlerTest {
+  private final TypeHandlerLibrary typeHandlerLibrary;
+  private final TypeHandler<Base> baseTypeHandler;
+  private final TypeHandler<Sub> subTypeHandler;
+  private final Class<Sub> subType=Sub.class;
+  private final Class<Base> baseType=Base.class;
+  private final RuntimeDelegatingTypeHandler<Base> runtimeDelegatingTypeHandler;
+  RuntimeDelegatingTypeHandlerTest(  @Mock TypeHandler<Base> baseTypeHandler,  @Mock SubHandler subTypeHandler,  @Mock SerializationSandbox sandbox,  @Mock TypeHandlerLibrary typeHandlerLibrary){
+    this.baseTypeHandler=baseTypeHandler;
+    this.subTypeHandler=subTypeHandler;
+    configureMockSerializer(baseTypeHandler);
+    configureMockSerializer(subTypeHandler);
+    this.typeHandlerLibrary=typeHandlerLibrary;
+    when(typeHandlerLibrary.getTypeHandler((Type)baseType)).thenReturn(Optional.of(baseTypeHandler));
+    when(typeHandlerLibrary.getTypeHandler((Type)subType)).thenReturn(Optional.of(subTypeHandler));
+    when(sandbox.findSubTypeOf(subType.getName(),baseType)).thenReturn(Optional.of(subType));
+    when(sandbox.getSubTypeIdentifier(subType,baseType)).thenReturn(subType.getName());
+    TypeHandlerContext context=new TypeHandlerContext(typeHandlerLibrary,sandbox);
+    runtimeDelegatingTypeHandler=new RuntimeDelegatingTypeHandler<>(baseTypeHandler,TypeInfo.of(Base.class),context);
+  }
+  private static void configureMockSerializer(  TypeHandler<?> mocked){
+    when(mocked.serialize(any(),any())).thenReturn(new AbstractPersistedData(){
+      @Override public boolean isNull(){
+        return true;
+      }
+    }
+);
+  }
+  @Test void testSerializeBase(){
+    PersistedDataSerializer serializer=mock(PersistedDataSerializer.class);
+    Base base=new Base();
+    runtimeDelegatingTypeHandler.serialize(base,serializer);
+    verify(baseTypeHandler).serialize(any(),any());
+    verify(subTypeHandler,never()).serialize(any(),any());
+    verify(serializer,never()).serialize(argThat((ArgumentMatcher<Map<String,PersistedData>>)argument -> argument.containsKey(RuntimeDelegatingTypeHandler.TYPE_FIELD)));
+  }
+  @Test void testSerializeSub(){
+    PersistedDataSerializer serializer=mock(PersistedDataSerializer.class);
+    when(serializer.serialize(any(String.class))).then(invocation -> new PersistedString((String)invocation.getArguments()[0]));
+    Base sub=new Sub();
+    runtimeDelegatingTypeHandler.serialize(sub,serializer);
+    verify(subTypeHandler).serialize(any(),any());
+    verify(serializer).serialize(argThat((ArgumentMatcher<Map<String,PersistedData>>)argument -> argument.get(RuntimeDelegatingTypeHandler.TYPE_FIELD).getAsString().equals(subType.getName()) && argument.containsKey(RuntimeDelegatingTypeHandler.VALUE_FIELD)));
+  }
+  @Test void testDeserializeBase(){
+    PersistedData persistedBase=new PersistedMap(ImmutableMap.of());
+    runtimeDelegatingTypeHandler.deserialize(persistedBase);
+    verify(baseTypeHandler).deserialize(any());
+    verify(subTypeHandler,never()).deserialize(any());
+  }
+  @Test void testDeserializeSub(){
+    PersistedData persistedSub=new PersistedMap(ImmutableMap.of(RuntimeDelegatingTypeHandler.TYPE_FIELD,new PersistedString(subType.getName()),RuntimeDelegatingTypeHandler.VALUE_FIELD,new PersistedMap(ImmutableMap.of())));
+    runtimeDelegatingTypeHandler.deserialize(persistedSub);
+    verify(typeHandlerLibrary,never()).getTypeHandler(eq(baseType));
+    verify(typeHandlerLibrary).getTypeHandler(eq((Type)subType));
+    verify(baseTypeHandler,never()).deserialize(any());
+    verify(subTypeHandler).deserialize(any());
+  }
+  @Test void testDeserializeNonSub(){
+    PersistedData persistedData=new PersistedMap(ImmutableMap.of(RuntimeDelegatingTypeHandler.TYPE_FIELD,new PersistedString(Integer.class.getName()),RuntimeDelegatingTypeHandler.VALUE_FIELD,new PersistedMap(ImmutableMap.of())));
+    Optional<Base> deserialized=runtimeDelegatingTypeHandler.deserialize(persistedData);
+    assertFalse(deserialized.isPresent());
+    verify(subTypeHandler,never()).deserialize(any());
+    verify(baseTypeHandler).deserialize(any());
+  }
+private static class Base {
+    @SuppressWarnings("unused") int x;
+  }
+private static class Sub extends Base {
+    @SuppressWarnings("unused") float y;
+  }
+private abstract static class SubHandler extends TypeHandler<Sub> {
+  }
+}

@@ -1,0 +1,18 @@
+public ReadWriteStorageManager(Path savePath,ModuleEnvironment environment,EngineEntityManager entityManager,BlockManager blockManager,ExtraBlockDataManager extraDataManager,RecordAndReplaySerializer recordAndReplaySerializer,RecordAndReplayUtils recordAndReplayUtils,RecordAndReplayCurrentStatus recordAndReplayCurrentStatus) throws IOException {
+  this(savePath,environment,entityManager,blockManager,extraDataManager,true,recordAndReplaySerializer,recordAndReplayUtils,recordAndReplayCurrentStatus);
+}
+ReadWriteStorageManager(Path savePath,ModuleEnvironment environment,EngineEntityManager entityManager,BlockManager blockManager,ExtraBlockDataManager extraDataManager,boolean storeChunksInZips,RecordAndReplaySerializer recordAndReplaySerializer,RecordAndReplayUtils recordAndReplayUtils,RecordAndReplayCurrentStatus recordAndReplayCurrentStatus) throws IOException {
+  super(savePath,environment,entityManager,blockManager,extraDataManager,storeChunksInZips);
+  entityManager.subscribeForDestruction(this);
+  entityManager.subscribeForChanges(this);
+  this.privateEntityManager=createPrivateEntityManager(entityManager.getComponentLibrary());
+  Files.createDirectories(getStoragePathProvider().getStoragePathDirectory());
+  this.saveTransactionHelper=new SaveTransactionHelper(getStoragePathProvider());
+  this.config=CoreRegistry.get(Config.class);
+  this.systemConfig=CoreRegistry.get((SystemConfig.class));
+  this.entityRefReplacingComponentLibrary=privateEntityManager.getComponentLibrary().createCopyUsingCopyStrategy(EntityRef.class,new DelayedEntityRefCopyStrategy(this));
+  this.entitySetDeltaRecorder=new EntitySetDeltaRecorder(this.entityRefReplacingComponentLibrary);
+  this.recordAndReplaySerializer=recordAndReplaySerializer;
+  this.recordAndReplayUtils=recordAndReplayUtils;
+  this.recordAndReplayCurrentStatus=recordAndReplayCurrentStatus;
+}

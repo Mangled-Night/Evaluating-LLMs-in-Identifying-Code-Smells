@@ -1,0 +1,26 @@
+/** 
+ * If the target is not connected to the local SOCKS5 proxy an exception should be thrown.
+ * @throws Exception should not happen
+ */
+@Test public void shouldFailIfTargetIsNotConnectedToLocalSocks5Proxy() throws Exception {
+  Protocol protocol=new Protocol();
+  XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+  Socks5Proxy socks5Proxy=new Socks5Proxy();
+  socks5Proxy.start();
+  try {
+    StreamHost streamHost=new StreamHost(connection.getUser(),loopbackAddress,socks5Proxy.getPort());
+    String digest=Socks5Utils.createDigest(sessionID,initiatorJID,targetJID);
+    Socks5ClientForInitiator socks5Client=new Socks5ClientForInitiator(streamHost,digest,connection,sessionID,targetJID);
+    try {
+      socks5Client.getSocket(GET_SOCKET_TIMEOUT);
+      fail("exception should be thrown");
+    }
+ catch (    SmackException e) {
+      assertTrue(e.getMessage().contains("target is not connected to SOCKS5 proxy"));
+      protocol.verifyAll();
+    }
+  }
+  finally {
+    socks5Proxy.stop();
+  }
+}

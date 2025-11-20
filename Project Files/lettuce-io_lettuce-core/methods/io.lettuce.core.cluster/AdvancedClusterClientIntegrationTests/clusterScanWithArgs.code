@@ -1,0 +1,17 @@
+@Test void clusterScanWithArgs(){
+  RedisAdvancedClusterCommands<String,String> sync=async.getStatefulConnection().sync();
+  sync.mset(KeysAndValues.MAP);
+  Set<String> allKeys=new HashSet<>();
+  KeyScanCursor<String> scanCursor=null;
+  do {
+    if (scanCursor == null) {
+      scanCursor=sync.scan(ScanArgs.Builder.matches("a*"));
+    }
+ else {
+      scanCursor=sync.scan(scanCursor,ScanArgs.Builder.matches("a*"));
+    }
+    allKeys.addAll(scanCursor.getKeys());
+  }
+ while (!scanCursor.isFinished());
+  assertThat(allKeys).containsAll(KeysAndValues.KEYS.stream().filter(k -> k.startsWith("a")).collect(Collectors.toList()));
+}

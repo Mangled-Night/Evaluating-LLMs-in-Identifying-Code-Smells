@@ -1,0 +1,15 @@
+@Override public SetMultimap<String,V> deserialize(JsonElement json,Type typeOfT,JsonDeserializationContext context) throws JsonParseException {
+  SetMultimap<String,V> result=HashMultimap.create();
+  JsonObject obj=json.getAsJsonObject();
+  for (  Map.Entry<String,JsonElement> entry : obj.entrySet()) {
+    if (entry.getValue().isJsonArray()) {
+      for (      JsonElement item : entry.getValue().getAsJsonArray()) {
+        result.put(entry.getKey(),context.<V>deserialize(item,valueType));
+      }
+    }
+ else {
+      result.put(entry.getKey(),context.<V>deserialize(entry.getValue(),valueType));
+    }
+  }
+  return result;
+}

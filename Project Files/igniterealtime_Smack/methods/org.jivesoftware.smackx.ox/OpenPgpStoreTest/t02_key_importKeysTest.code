@@ -1,0 +1,30 @@
+@Test public void t02_key_importKeysTest() throws IOException, PGPException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, MissingUserIdOnKeyException {
+  PGPSecretKeyRing secretKeys=openPgpStoreInstance1.generateKeyRing(alice);
+  PGPPublicKeyRing publicKeys=KeyRingUtils.publicKeyRingFrom(secretKeys);
+  assertNotNull(secretKeys);
+  assertNotNull(publicKeys);
+  OpenPgpV4Fingerprint fingerprint=new OpenPgpV4Fingerprint(secretKeys);
+  OpenPgpContact cAlice=openPgpStoreInstance1.getOpenPgpContact(alice);
+  assertNull(cAlice.getAnyPublicKeys());
+  assertEquals(fingerprint,new OpenPgpV4Fingerprint(secretKeys));
+  assertNull(openPgpStoreInstance1.getPublicKeysOf(alice));
+  assertNull(openPgpStoreInstance1.getSecretKeysOf(alice));
+  openPgpStoreInstance1.importPublicKey(alice,publicKeys);
+  assertArrayEquals(publicKeys.getEncoded(),openPgpStoreInstance1.getPublicKeysOf(alice).getEncoded());
+  assertNotNull(openPgpStoreInstance1.getPublicKeyRing(alice,fingerprint));
+  assertNull(openPgpStoreInstance1.getSecretKeysOf(alice));
+  cAlice=openPgpStoreInstance1.getOpenPgpContact(alice);
+  assertNotNull(cAlice.getAnyPublicKeys());
+  openPgpStoreInstance1.importPublicKey(alice,publicKeys);
+  assertArrayEquals(publicKeys.getEncoded(),openPgpStoreInstance1.getPublicKeysOf(alice).getEncoded());
+  openPgpStoreInstance1.importSecretKey(alice,secretKeys);
+  assertArrayEquals(secretKeys.getEncoded(),openPgpStoreInstance1.getSecretKeysOf(alice).getEncoded());
+  openPgpStoreInstance1.importSecretKey(alice,secretKeys);
+  assertNotNull(openPgpStoreInstance1.getSecretKeysOf(alice));
+  assertArrayEquals(secretKeys.getEncoded(),openPgpStoreInstance1.getSecretKeysOf(alice).getEncoded());
+  assertNotNull(openPgpStoreInstance1.getSecretKeyRing(alice,fingerprint));
+  assertArrayEquals(secretKeys.getEncoded(),openPgpStoreInstance1.getSecretKeyRing(alice,fingerprint).getEncoded());
+  assertArrayEquals(publicKeys.getEncoded(),openPgpStoreInstance1.getPublicKeyRing(alice,fingerprint).getEncoded());
+  openPgpStoreInstance1.deletePublicKeyRing(alice,fingerprint);
+  openPgpStoreInstance1.deleteSecretKeyRing(alice,fingerprint);
+}

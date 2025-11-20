@@ -1,0 +1,21 @@
+/** 
+ * Receive a session-initiate packet.
+ * @param jingle TODO javadoc me please
+ * @param description TODO javadoc me please
+ * @return the iq
+ */
+private IQ receiveSessionInitiateAction(Jingle jingle,JingleDescription description){
+  IQ response=null;
+  List<PayloadType> offeredPayloads=description.getAudioPayloadTypesList();
+  bestCommonAudioPt=calculateBestCommonAudioPt(offeredPayloads);
+synchronized (remoteAudioPts) {
+    remoteAudioPts.addAll(offeredPayloads);
+  }
+  if (bestCommonAudioPt != null) {
+    setNegotiatorState(JingleNegotiatorState.PENDING);
+  }
+ else {
+    setNegotiatorState(JingleNegotiatorState.FAILED);
+  }
+  return response;
+}

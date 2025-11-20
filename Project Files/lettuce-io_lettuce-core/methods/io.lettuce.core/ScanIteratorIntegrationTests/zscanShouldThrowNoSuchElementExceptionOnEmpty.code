@@ -1,0 +1,14 @@
+@Test void zscanShouldThrowNoSuchElementExceptionOnEmpty(){
+  for (int i=0; i < KeysAndValues.COUNT; i++) {
+    redis.zadd(key,ScoredValue.just(i,KeysAndValues.KEYS.get(i)));
+  }
+  ScanIterator<ScoredValue<String>> scan=ScanIterator.zscan(redis,"none",ScanArgs.Builder.limit(50).match("key-foo"));
+  assertThat(scan.hasNext()).isFalse();
+  try {
+    scan.next();
+    fail("Missing NoSuchElementException");
+  }
+ catch (  NoSuchElementException e) {
+    assertThat(e).isInstanceOf(NoSuchElementException.class);
+  }
+}

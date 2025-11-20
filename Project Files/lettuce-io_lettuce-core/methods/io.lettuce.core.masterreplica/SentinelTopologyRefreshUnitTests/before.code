@@ -1,0 +1,10 @@
+@BeforeEach void before(){
+  when(redisClient.connectPubSubAsync(any(StringCodec.class),eq(host1))).thenReturn(ConnectionFuture.completed(null,connection));
+  when(clientResources.eventExecutorGroup()).thenReturn(eventExecutors);
+  when(redisClient.getResources()).thenReturn(clientResources);
+  when(connection.async()).thenReturn(pubSubAsyncCommands);
+  AsyncCommand<String,String,Void> command=new AsyncCommand<>(new Command<>(CommandType.PSUBSCRIBE,null));
+  command.complete();
+  when(connection.async().psubscribe(anyString())).thenReturn(command);
+  sut=new SentinelTopologyRefresh(redisClient,"mymaster",Collections.singletonList(host1));
+}

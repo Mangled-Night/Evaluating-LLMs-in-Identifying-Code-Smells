@@ -1,0 +1,40 @@
+public void autojoinBookmarkedConferences(){
+  List<BookmarkedConference> bookmarkedConferences;
+  try {
+    bookmarkedConferences=bookmarkManager.getBookmarkedConferences();
+  }
+ catch (  NotConnectedException|InterruptedException e) {
+    LOGGER.log(Level.FINER,"Could not get MUC bookmarks",e);
+    return;
+  }
+catch (  NoResponseException|XMPPErrorException e) {
+    LOGGER.log(Level.WARNING,"Could not get MUC bookmarks",e);
+    return;
+  }
+  final XMPPConnection connection=connection();
+  Resourcepart defaultNick=connection.getUser().getResourcepart();
+  for (  BookmarkedConference bookmarkedConference : bookmarkedConferences) {
+    if (!bookmarkedConference.isAutoJoin()) {
+      continue;
+    }
+    Resourcepart nick=bookmarkedConference.getNickname();
+    if (nick == null) {
+      nick=defaultNick;
+    }
+    String password=bookmarkedConference.getPassword();
+    MultiUserChat muc=multiUserChatManager.getMultiUserChat(bookmarkedConference.getJid());
+    try {
+      MucCreateConfigFormHandle handle=muc.createOrJoinIfNecessary(nick,password);
+      if (handle != null) {
+        handle.makeInstant();
+      }
+    }
+ catch (    NotConnectedException|InterruptedException e) {
+      LOGGER.log(Level.FINER,"Could not autojoin bookmarked MUC",e);
+      break;
+    }
+catch (    NotAMucServiceException|NoResponseException|XMPPErrorException e) {
+      LOGGER.log(Level.WARNING,"Could not autojoin bookmarked MUC",e);
+    }
+  }
+}

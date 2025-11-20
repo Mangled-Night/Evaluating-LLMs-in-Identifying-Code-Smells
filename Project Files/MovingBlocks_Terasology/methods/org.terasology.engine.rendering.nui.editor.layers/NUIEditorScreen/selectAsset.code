@@ -1,0 +1,27 @@
+/** 
+ * {@inheritDoc}
+ */
+@Override public void selectAsset(ResourceUrn urn){
+  boolean isLoaded=assetManager.isLoaded(urn,UIElement.class);
+  Optional<UIElement> asset=assetManager.getAsset(urn,UIElement.class);
+  if (asset.isPresent()) {
+    UIElement element=asset.get();
+    if (!isLoaded) {
+      asset.get().dispose();
+    }
+    AssetDataFile source=element.getSource();
+    String content=null;
+    try (JsonReader reader=new JsonReader(new InputStreamReader(source.openStream(),Charsets.UTF_8))){
+      reader.setLenient(true);
+      content=new JsonParser().parse(reader).toString();
+    }
+ catch (    IOException e) {
+      logger.error(String.format("Could not load asset source file for %s",urn.toString()),e);
+    }
+    if (content != null) {
+      JsonTree node=JsonTreeConverter.serialize(new JsonParser().parse(content));
+      selectedAssetPending=urn.toString();
+      resetState(node);
+    }
+  }
+}

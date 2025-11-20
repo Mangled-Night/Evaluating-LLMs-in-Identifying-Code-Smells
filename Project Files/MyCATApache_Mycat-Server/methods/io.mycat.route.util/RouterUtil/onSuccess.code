@@ -1,0 +1,29 @@
+@Override public void onSuccess(String result){
+  if (Strings.isNullOrEmpty(result)) {
+    StringBuilder s=new StringBuilder();
+    LOGGER.warn(s.append(sc.getSession2()).append(origSQL).toString() + " err:" + "can't find (root) parent sharding node for sql:"+ origSQL);
+    if (!sc.isAutocommit()) {
+      sc.setTxInterrupt("can't find (root) parent sharding node for sql:" + origSQL);
+    }
+    sc.writeErrMessage(ErrorCode.ER_PARSE_ERROR,"can't find (root) parent sharding node for sql:" + origSQL);
+    return;
+  }
+  if (LOGGER.isDebugEnabled()) {
+    LOGGER.debug("found partion node for child table to insert " + result + " sql :"+ origSQL);
+  }
+  boolean processedInsert=false;
+  if (sc != null && tc.isAutoIncrement()) {
+    try {
+      String primaryKey=tc.getPrimaryKey();
+      processedInsert=processInsert(sc,schema,ServerParse.INSERT,origSQL,tc.getName(),primaryKey);
+    }
+ catch (    SQLNonTransientException e) {
+      LOGGER.warn("sequence processInsert error,",e);
+      sc.writeErrMessage(ErrorCode.ER_PARSE_ERROR,"sequence processInsert error," + e.getMessage());
+    }
+  }
+  if (processedInsert == false) {
+    RouteResultset executeRrs=RouterUtil.routeToSingleNode(rrs,result,origSQL);
+    sc.getSession2().execute(executeRrs,ServerParse.INSERT);
+  }
+}

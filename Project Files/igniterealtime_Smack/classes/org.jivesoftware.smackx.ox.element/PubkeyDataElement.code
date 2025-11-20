@@ -1,0 +1,34 @@
+/** 
+ * Element that contains the base64 encoded public key.
+ */
+public static class PubkeyDataElement implements ExtensionElement {
+  public static final String ELEMENT="data";
+  private final String b64Data;
+  public PubkeyDataElement(  String b64Data){
+    this.b64Data=Objects.requireNonNull(b64Data);
+  }
+  /** 
+ * Base64 encoded public key.
+ * @return the base64 encoded version of the public key.
+ */
+  public String getB64Data(){
+    return b64Data;
+  }
+  private transient byte[] pubKeyBytesCache;
+  public byte[] getPubKeyBytes(){
+    if (pubKeyBytesCache == null) {
+      pubKeyBytesCache=Base64.decode(b64Data);
+    }
+    return pubKeyBytesCache.clone();
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this,enclosingNamespace).rightAngleBracket().append(b64Data).closeElement(this);
+    return xml;
+  }
+}

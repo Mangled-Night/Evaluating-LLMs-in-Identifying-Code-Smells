@@ -1,0 +1,31 @@
+@Test public void atLeastOnceForgetNodeFailover() throws Exception {
+  clusterClient.setOptions(ClusterClientOptions.builder().topologyRefreshOptions(PERIODIC_REFRESH_ENABLED).build());
+  RedisAdvancedClusterAsyncCommands<String,String> clusterConnection=clusterClient.connect().async();
+  clusterClient.setOptions(ClusterClientOptions.create());
+  ClusterSetup.setup2Masters(clusterHelper);
+  assertRoutedExecution(clusterConnection);
+  RedisClusterNode partition1=getOwnPartition(redis1);
+  RedisClusterNode partition2=getOwnPartition(redis2);
+  RedisClusterAsyncCommands<String,String> node1Connection=clusterConnection.getConnection(partition1.getUri().getHost(),partition1.getUri().getPort());
+  RedisClusterAsyncCommands<String,String> node2Connection=clusterConnection.getConnection(partition2.getUri().getHost(),partition2.getUri().getPort());
+  shiftAllSlotsToNode1();
+  suspendConnection(node2Connection);
+  List<RedisFuture<String>> futures=new ArrayList<>();
+  futures.add(clusterConnection.set("t","value"));
+  futures.add(clusterConnection.set("p","value"));
+  clusterConnection.set("A","value").get(1,TimeUnit.SECONDS);
+  for (  RedisFuture<String> future : futures) {
+    assertThat(future.isDone()).isFalse();
+    assertThat(future.isCancelled()).isFalse();
+  }
+  redis1.clusterForget(partition2.getNodeId());
+  redis2.clusterForget(partition1.getNodeId());
+  Partitions partitions=clusterClient.getPartitions();
+  partitions.remove(partition2);
+  partitions.getPartition(0).setSlots(Arrays.stream(createSlots(0,16384)).boxed().collect(Collectors.toList()));
+  partitions.updateCache();
+  clusterClient.updatePartitionsInConnections();
+  Wait.untilTrue(() -> TestFutures.areAllDone(futures)).waitOrTimeout();
+  assertRoutedExecution(clusterConnection);
+  clusterConnection.getStatefulConnection().close();
+}

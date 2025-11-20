@@ -1,0 +1,10 @@
+@Test void shouldCompleteWithChunkedResponseOutOfBand() throws Exception {
+  sut.channelRegistered(context);
+  sut.channelActive(context);
+  sut.channelRead(context,responseBytes("*3\r\n$9\r\nsubscribe\r\n$1\r\na\r\n:2\r\n*3\r\n$9\r\nsubscribe\r\n"));
+  sut.channelRead(context,responseBytes("$1\r\nb\r\n:2\r\n"));
+  ArgumentCaptor<PubSubOutput> captor=ArgumentCaptor.forClass(PubSubOutput.class);
+  verify(endpoint,times(2)).notifyMessage(captor.capture());
+  assertThat(captor.getAllValues().get(0).channel()).isEqualTo("a");
+  assertThat(captor.getAllValues().get(1).channel()).isEqualTo("b");
+}

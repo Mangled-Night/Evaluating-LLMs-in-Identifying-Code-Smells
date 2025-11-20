@@ -1,0 +1,59 @@
+private static class WildcardTypeImpl implements WildcardType {
+  private final Type[] upperBounds;
+  private final Type[] lowerBounds;
+  WildcardTypeImpl(  Type[] upperBounds,  Type[] lowerBounds){
+    this.upperBounds=upperBounds;
+    this.lowerBounds=lowerBounds;
+  }
+  public static String toString(  WildcardType wildcardType){
+    return toString(wildcardType,false);
+  }
+  public static String toString(  WildcardType wildcardType,  boolean useSimpleName){
+    Type[] lowerBounds=wildcardType.getLowerBounds();
+    Type[] bounds=lowerBounds;
+    StringBuilder stringBuilder=new StringBuilder();
+    if (lowerBounds.length > 0) {
+      stringBuilder.append("? super ");
+    }
+ else {
+      Type[] upperBounds=wildcardType.getUpperBounds();
+      if (upperBounds.length <= 0 || upperBounds[0].equals(Object.class)) {
+        return "?";
+      }
+      bounds=upperBounds;
+      stringBuilder.append("? extends ");
+    }
+    boolean isFirstBound=true;
+    for (    Type bound : bounds) {
+      if (!isFirstBound) {
+        stringBuilder.append(" & ");
+      }
+      isFirstBound=false;
+      stringBuilder.append(typeToString(bound,useSimpleName));
+    }
+    return stringBuilder.toString();
+  }
+  @Override public Type[] getUpperBounds(){
+    return upperBounds;
+  }
+  @Override public Type[] getLowerBounds(){
+    return lowerBounds;
+  }
+  public String toString(){
+    return toString(this);
+  }
+  public boolean equals(  Object var1){
+    if (!(var1 instanceof WildcardType)) {
+      return false;
+    }
+ else {
+      WildcardType var2=(WildcardType)var1;
+      return Arrays.equals(this.getLowerBounds(),var2.getLowerBounds()) && Arrays.equals(this.getUpperBounds(),var2.getUpperBounds());
+    }
+  }
+  public int hashCode(){
+    Type[] var1=this.getLowerBounds();
+    Type[] var2=this.getUpperBounds();
+    return Arrays.hashCode(var1) ^ Arrays.hashCode(var2);
+  }
+}

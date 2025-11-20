@@ -1,0 +1,19 @@
+@Override public void invalidate(){
+  assetManager.getLoadedAssets(UIElement.class).forEach(UIElement::dispose);
+  boolean hudVisible=isHUDVisible();
+  if (hudVisible) {
+    setHUDVisible(false);
+  }
+  Deque<ResourceUrn> reverseUrns=new LinkedList<>();
+  Map<UIScreenLayer,ResourceUrn> inverseLookup=screenLookup.inverse();
+  for (  UIScreenLayer screen : screens) {
+    screen.onClosed();
+    reverseUrns.addFirst(inverseLookup.get(screen));
+  }
+  screens.clear();
+  screenLookup.clear();
+  reverseUrns.forEach(this::pushScreen);
+  if (hudVisible) {
+    setHUDVisible(true);
+  }
+}

@@ -1,0 +1,118 @@
+@Override public void run(){
+  int totalTime=CANDIDATES_ACCEPT_PERIOD + TransportResolver.CHECK_TIMEOUT;
+  int tries=(int)Math.ceil(totalTime / 1000);
+  for (int i=0; i < tries - 1; i++) {
+    try {
+      Thread.sleep(1000);
+    }
+ catch (    InterruptedException e) {
+      LOGGER.log(Level.WARNING,"exception",e);
+    }
+    TransportCandidate bestRemote=getBestRemoteCandidate();
+    if (bestRemote != null && getNegotiatorState() == JingleNegotiatorState.PENDING) {
+      if (!acceptedRemoteCandidates.contains(bestRemote)) {
+        Jingle jout=new Jingle(JingleActionEnum.CONTENT_ACCEPT);
+        JingleContent content=parentNegotiator.getJingleContent();
+        content.addJingleTransport(getJingleTransport(bestRemote));
+        jout.addContent(content);
+        try {
+          js.sendFormattedJingle(jin,jout);
+        }
+ catch (        InterruptedException|NotConnectedException e) {
+          throw new IllegalStateException(e);
+        }
+        acceptedRemoteCandidates.add(bestRemote);
+      }
+      if (isEstablished() && getNegotiatorState() == JingleNegotiatorState.PENDING) {
+        setNegotiatorState(JingleNegotiatorState.SUCCEEDED);
+        try {
+          triggerTransportEstablished(getAcceptedLocalCandidate(),bestRemote);
+        }
+ catch (        InterruptedException|NotConnectedException|NoResponseException|XMPPErrorException e) {
+          throw new IllegalStateException(e);
+        }
+        break;
+      }
+    }
+  }
+  TransportCandidate bestRemote=getBestRemoteCandidate();
+  if (bestRemote == null) {
+    boolean foundRemoteRelay=false;
+    for (    TransportCandidate candidate : remoteCandidates) {
+      if (candidate instanceof ICECandidate) {
+        ICECandidate iceCandidate=(ICECandidate)candidate;
+        if (iceCandidate.getType().equals(ICECandidate.Type.relay)) {
+          addValidRemoteCandidate(iceCandidate);
+          foundRemoteRelay=true;
+        }
+      }
+    }
+    if (!foundRemoteRelay) {
+      boolean foundLocalRelay=false;
+      for (      TransportCandidate candidate : offeredCandidates) {
+        if (candidate instanceof ICECandidate) {
+          ICECandidate iceCandidate=(ICECandidate)candidate;
+          if (iceCandidate.getType().equals(ICECandidate.Type.relay)) {
+            foundLocalRelay=true;
+          }
+        }
+      }
+      if (foundLocalRelay) {
+        boolean foundRemotePublic=false;
+        for (        TransportCandidate candidate : remoteCandidates) {
+          if (candidate instanceof ICECandidate) {
+            ICECandidate iceCandidate=(ICECandidate)candidate;
+            if (iceCandidate.getType().equals(ICECandidate.Type.srflx)) {
+              addValidRemoteCandidate(iceCandidate);
+              foundRemotePublic=true;
+            }
+          }
+        }
+        if (!foundRemotePublic) {
+          for (          TransportCandidate candidate : remoteCandidates) {
+            if (candidate instanceof ICECandidate) {
+              ICECandidate iceCandidate=(ICECandidate)candidate;
+              addValidRemoteCandidate(iceCandidate);
+            }
+          }
+        }
+      }
+    }
+  }
+  for (int i=0; i < 6; i++) {
+    try {
+      Thread.sleep(500);
+    }
+ catch (    InterruptedException e) {
+      LOGGER.log(Level.WARNING,"exception",e);
+    }
+    bestRemote=getBestRemoteCandidate();
+    if (bestRemote != null && getNegotiatorState() == JingleNegotiatorState.PENDING) {
+      if (!acceptedRemoteCandidates.contains(bestRemote)) {
+        Jingle jout=new Jingle(JingleActionEnum.CONTENT_ACCEPT);
+        JingleContent content=parentNegotiator.getJingleContent();
+        content.addJingleTransport(getJingleTransport(bestRemote));
+        jout.addContent(content);
+        try {
+          js.sendFormattedJingle(jin,jout);
+        }
+ catch (        InterruptedException|NotConnectedException e) {
+          throw new IllegalStateException(e);
+        }
+        acceptedRemoteCandidates.add(bestRemote);
+      }
+      if (isEstablished()) {
+        setNegotiatorState(JingleNegotiatorState.SUCCEEDED);
+        break;
+      }
+    }
+  }
+  if (getNegotiatorState() != JingleNegotiatorState.SUCCEEDED) {
+    try {
+      session.terminate("Unable to negotiate session. This may be caused by firewall configuration problems.");
+    }
+ catch (    Exception e) {
+      LOGGER.log(Level.WARNING,"exception",e);
+    }
+  }
+}

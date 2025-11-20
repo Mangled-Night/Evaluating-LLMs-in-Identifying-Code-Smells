@@ -1,0 +1,10 @@
+@Test void runnableShouldCallPartitionRefresh(){
+  when(clusterClient.getClusterClientOptions()).thenReturn(clusterClientOptions);
+  when(eventExecutors.submit(any(Runnable.class))).then(invocation -> {
+    ((Runnable)invocation.getArguments()[0]).run();
+    return null;
+  }
+);
+  sut.run();
+  verify(clusterClient).refreshPartitionsAsync();
+}

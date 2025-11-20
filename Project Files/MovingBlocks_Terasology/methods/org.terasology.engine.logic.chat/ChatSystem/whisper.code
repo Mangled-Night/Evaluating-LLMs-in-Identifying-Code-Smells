@@ -1,0 +1,50 @@
+@Command(runOnServer=true,requiredPermission=PermissionManager.CHAT_PERMISSION,shortDescription="Sends a private message to a specified user") public String whisper(@Sender EntityRef sender,@CommandParam(value="user",suggester=OnlineUsernameSuggester.class) String username,@CommandParam("message") String[] message){
+  String messageToString=join(message," ");
+  Iterable<EntityRef> clients=entityManager.getEntitiesWith(ClientComponent.class);
+  EntityRef targetClient=null;
+  boolean unique=true;
+  for (  EntityRef client : clients) {
+    ClientComponent clientComponent=client.getComponent(ClientComponent.class);
+    DisplayNameComponent displayNameComponent=clientComponent.clientInfo.getComponent(DisplayNameComponent.class);
+    if (displayNameComponent == null) {
+      continue;
+    }
+    if (displayNameComponent.name.equalsIgnoreCase(username)) {
+      if (targetClient == null) {
+        targetClient=client;
+      }
+ else {
+        unique=false;
+        break;
+      }
+    }
+  }
+  if (!unique) {
+    targetClient=null;
+    for (    EntityRef client : clients) {
+      ClientComponent clientComponent=client.getComponent(ClientComponent.class);
+      DisplayNameComponent displayNameComponent=clientComponent.clientInfo.getComponent(DisplayNameComponent.class);
+      if (displayNameComponent == null) {
+        continue;
+      }
+      if (displayNameComponent.name.equals(username)) {
+        if (targetClient == null) {
+          targetClient=client;
+        }
+ else {
+          return FontColor.getColored("Found more users with name '" + username + "'.",ConsoleColors.ERROR);
+        }
+      }
+    }
+  }
+  if (targetClient == null) {
+    return FontColor.getColored("User with name '" + username + "' not found.",ConsoleColors.ERROR);
+  }
+  ClientComponent senderClientComponent=sender.getComponent(ClientComponent.class);
+  ClientComponent targetClientComponent=targetClient.getComponent(ClientComponent.class);
+  DisplayNameComponent targetDisplayNameComponent=targetClientComponent.clientInfo.getComponent(DisplayNameComponent.class);
+  String targetMessage=FontColor.getColored("*whispering* ",ConsoleColors.ERROR) + FontColor.getColored(messageToString,ConsoleColors.CHAT);
+  String senderMessage="You -> " + targetDisplayNameComponent.name + ": "+ FontColor.getColored(messageToString,ConsoleColors.CHAT);
+  targetClient.send(new ChatMessageEvent(targetMessage,senderClientComponent.clientInfo));
+  return senderMessage;
+}

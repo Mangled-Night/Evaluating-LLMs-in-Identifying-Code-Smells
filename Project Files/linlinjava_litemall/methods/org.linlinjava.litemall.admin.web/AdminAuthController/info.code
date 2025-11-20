@@ -1,0 +1,13 @@
+@RequiresAuthentication @GetMapping("/info") public Object info(){
+  Subject currentUser=SecurityUtils.getSubject();
+  LitemallAdmin admin=(LitemallAdmin)currentUser.getPrincipal();
+  Map<String,Object> data=new HashMap<>();
+  data.put("name",admin.getUsername());
+  data.put("avatar",admin.getAvatar());
+  Integer[] roleIds=admin.getRoleIds();
+  Set<String> roles=roleService.queryByIds(roleIds);
+  Set<String> permissions=permissionService.queryByRoleIds(roleIds);
+  data.put("roles",roles);
+  data.put("perms",toApi(permissions));
+  return ResponseUtil.ok(data);
+}

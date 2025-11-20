@@ -1,0 +1,18 @@
+protected Object nodes(Predicate<RedisClusterNode> predicate,ConnectionIntent connectionIntent,boolean dynamic){
+  NodeSelectionSupport<RedisCommands<K,V>,?> selection=null;
+  if (connection instanceof StatefulRedisClusterConnectionImpl) {
+    StatefulRedisClusterConnectionImpl<K,V> impl=(StatefulRedisClusterConnectionImpl<K,V>)connection;
+    if (dynamic) {
+      selection=new DynamicNodeSelection<RedisCommands<K,V>,Object,K,V>(impl.getClusterDistributionChannelWriter(),predicate,connectionIntent,StatefulRedisConnection::sync);
+    }
+ else {
+      selection=new StaticNodeSelection<RedisCommands<K,V>,Object,K,V>(impl.getClusterDistributionChannelWriter(),predicate,connectionIntent,StatefulRedisConnection::sync);
+    }
+  }
+  if (connection instanceof StatefulRedisClusterPubSubConnectionImpl) {
+    StatefulRedisClusterPubSubConnectionImpl<K,V> impl=(StatefulRedisClusterPubSubConnectionImpl<K,V>)connection;
+    selection=new StaticNodeSelection<RedisCommands<K,V>,Object,K,V>(impl.getClusterDistributionChannelWriter(),predicate,connectionIntent,StatefulRedisConnection::sync);
+  }
+  NodeSelectionInvocationHandler h=new NodeSelectionInvocationHandler((AbstractNodeSelection<?,?,?,?>)selection,asyncCommandsInterface,timeoutProvider);
+  return Proxy.newProxyInstance(NodeSelectionSupport.class.getClassLoader(),new Class<?>[]{nodeSelectionCommandsInterface,nodeSelectionInterface},h);
+}

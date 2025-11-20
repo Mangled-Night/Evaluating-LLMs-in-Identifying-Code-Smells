@@ -1,0 +1,112 @@
+@Override public void processStanza(Stanza packet) throws NotConnectedException, InterruptedException {
+  if (rosterState == RosterState.loading) {
+    try {
+      waitUntilLoaded();
+    }
+ catch (    InterruptedException e) {
+      LOGGER.log(Level.INFO,"Presence listener was interrupted",e);
+    }
+  }
+  if (!isLoaded() && rosterLoadedAtLogin) {
+    LOGGER.warning("Roster not loaded while processing " + packet);
+  }
+  final Presence presence=(Presence)packet;
+  final Jid from=presence.getFrom();
+  final BareJid key;
+  if (from != null) {
+    key=from.asBareJid();
+  }
+ else {
+    XMPPConnection connection=connection();
+    if (connection == null) {
+      LOGGER.finest("Connection was null while trying to handle exotic presence stanza: " + presence);
+      return;
+    }
+    EntityFullJid myJid=connection.getUser();
+    if (myJid == null) {
+      LOGGER.info("Connection had no local address in Roster's presence listener." + " Possibly we received a presence without from before being authenticated." + " Presence: "+ presence);
+      return;
+    }
+    LOGGER.info("Exotic presence stanza without from received: " + presence);
+    key=myJid.asBareJid();
+  }
+  asyncButOrdered.performAsyncButOrdered(key,new Runnable(){
+    @Override public void run(){
+      Resourcepart fromResource=Resourcepart.EMPTY;
+      BareJid bareFrom=null;
+      FullJid fullFrom=null;
+      if (from != null) {
+        fromResource=from.getResourceOrNull();
+        if (fromResource == null) {
+          fromResource=Resourcepart.EMPTY;
+          bareFrom=from.asBareJid();
+        }
+ else {
+          fullFrom=from.asFullJidIfPossible();
+          assert fullFrom != null;
+        }
+      }
+      Map<Resourcepart,Presence> userPresences;
+switch (presence.getType()) {
+case available:
+        userPresences=getOrCreatePresencesInternal(key);
+      userPresences.remove(Resourcepart.EMPTY);
+    userPresences.put(fromResource,presence);
+  if (contains(key)) {
+    fireRosterPresenceEvent(presence);
+  }
+for (PresenceEventListener presenceEventListener : presenceEventListeners) {
+  presenceEventListener.presenceAvailable(fullFrom,presence);
+}
+break;
+case unavailable:
+userPresences=getOrCreatePresencesInternal(key);
+if (from.hasNoResource()) {
+userPresences.put(Resourcepart.EMPTY,presence);
+}
+ else {
+userPresences.put(fromResource,presence);
+}
+if (contains(key)) {
+fireRosterPresenceEvent(presence);
+}
+if (fullFrom != null) {
+for (PresenceEventListener presenceEventListener : presenceEventListeners) {
+presenceEventListener.presenceUnavailable(fullFrom,presence);
+}
+}
+ else {
+LOGGER.fine("Unavailable presence from bare JID: " + presence);
+}
+break;
+case error:
+if (from == null || !from.isEntityBareJid()) {
+break;
+}
+userPresences=getOrCreatePresencesInternal(key);
+userPresences.clear();
+userPresences.put(Resourcepart.EMPTY,presence);
+if (contains(key)) {
+fireRosterPresenceEvent(presence);
+}
+for (PresenceEventListener presenceEventListener : presenceEventListeners) {
+presenceEventListener.presenceError(from,presence);
+}
+break;
+case subscribed:
+for (PresenceEventListener presenceEventListener : presenceEventListeners) {
+presenceEventListener.presenceSubscribed(bareFrom,presence);
+}
+break;
+case unsubscribed:
+for (PresenceEventListener presenceEventListener : presenceEventListeners) {
+presenceEventListener.presenceUnsubscribed(bareFrom,presence);
+}
+break;
+default :
+break;
+}
+}
+}
+);
+}

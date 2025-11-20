@@ -1,0 +1,34 @@
+private void originalSend(EntityRef entity,Event event){
+  if (Thread.currentThread() != mainThread) {
+    pendingEvents.offer(new PendingEvent(entity,event));
+  }
+ else {
+    networkReplicate(entity,event);
+    Set<EventHandlerInfo> selectedHandlersSet=selectEventHandlers(event.getClass(),entity);
+    List<EventHandlerInfo> selectedHandlers=Lists.newArrayList(selectedHandlersSet);
+    selectedHandlers.sort(priorityComparator);
+    if (event instanceof ConsumableEvent) {
+      sendConsumableEvent(entity,event,selectedHandlers);
+    }
+ else {
+      sendStandardEvent(entity,event,selectedHandlers);
+    }
+  }
+}
+private void originalSend(EntityRef entity,Event event,Component component){
+  if (Thread.currentThread() != mainThread) {
+    pendingEvents.offer(new PendingEvent(entity,event,component));
+  }
+ else {
+    SetMultimap<Class<? extends Component>,EventSystemReplayImpl.EventHandlerInfo> handlers=componentSpecificHandlers.get(event.getClass());
+    if (handlers != null) {
+      List<EventSystemReplayImpl.EventHandlerInfo> eventHandlers=Lists.newArrayList(handlers.get(component.getClass()));
+      eventHandlers.sort(priorityComparator);
+      for (      EventSystemReplayImpl.EventHandlerInfo eventHandler : eventHandlers) {
+        if (eventHandler.isValidFor(entity)) {
+          eventHandler.invoke(entity,event);
+        }
+      }
+    }
+  }
+}

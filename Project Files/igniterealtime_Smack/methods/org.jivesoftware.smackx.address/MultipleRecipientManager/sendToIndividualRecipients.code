@@ -1,0 +1,34 @@
+private static void sendToIndividualRecipients(XMPPConnection connection,StanzaView stanza,Collection<? extends Jid> to,Collection<? extends Jid> cc,Collection<? extends Jid> bcc) throws NotConnectedException, InterruptedException {
+  final StanzaFactory stanzaFactory=connection.getStanzaFactory();
+  final StanzaBuilder<?> stanzaBuilder;
+  if (stanza instanceof Message) {
+    Message message=(Message)stanza;
+    stanzaBuilder=stanzaFactory.buildMessageStanzaFrom(message);
+  }
+ else   if (stanza instanceof Presence) {
+    Presence presence=(Presence)stanza;
+    stanzaBuilder=stanzaFactory.buildPresenceStanzaFrom(presence);
+  }
+ else   if (stanza instanceof IQ) {
+    throw new IllegalArgumentException("IQ stanzas have no supported fallback in case no XEP-0033 service is available");
+  }
+ else {
+    throw new AssertionError();
+  }
+  if (to == null)   to=Collections.emptyList();
+  if (cc == null)   cc=Collections.emptyList();
+  if (bcc == null)   bcc=Collections.emptyList();
+  final int numRecipients=to.size() + cc.size() + bcc.size();
+  final List<Jid> recipients=new ArrayList<>(numRecipients);
+  recipients.addAll(to);
+  recipients.addAll(cc);
+  recipients.addAll(bcc);
+  final List<Stanza> stanzasToSend=new ArrayList<>(numRecipients);
+  for (  Jid recipient : recipients) {
+    Stanza stanzaToSend=stanzaBuilder.to(recipient).build();
+    stanzasToSend.add(stanzaToSend);
+  }
+  for (  Stanza stanzaToSend : stanzasToSend) {
+    connection.sendStanza(stanzaToSend);
+  }
+}

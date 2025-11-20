@@ -1,0 +1,13 @@
+@Override protected void doUpdate(Session session){
+  if (session instanceof ValidatingSession && !((ValidatingSession)session).isValid()) {
+    return;
+  }
+  UpmsSession upmsSession=(UpmsSession)session;
+  UpmsSession cacheUpmsSession=(UpmsSession)doReadSession(session.getId());
+  if (null != cacheUpmsSession) {
+    upmsSession.setStatus(cacheUpmsSession.getStatus());
+    upmsSession.setAttribute("FORCE_LOGOUT",cacheUpmsSession.getAttribute("FORCE_LOGOUT"));
+  }
+  RedisUtil.set(ZHENG_UPMS_SHIRO_SESSION_ID + "_" + session.getId(),SerializableUtil.serialize(session),(int)session.getTimeout() / 1000);
+  LOGGER.debug("doUpdate >>>>> sessionId={}",session.getId());
+}

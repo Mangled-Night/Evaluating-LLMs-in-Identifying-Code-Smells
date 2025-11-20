@@ -1,0 +1,39 @@
+@Override public void encodeValue(Object value,ByteBuf target){
+  ByteBuf serialized;
+  if (delegate instanceof ToByteBufEncoder) {
+    serialized=target.alloc().buffer(estimateSize(value));
+    ((ToByteBufEncoder)delegate).encodeKey(value,serialized);
+  }
+ else {
+    ByteBuffer byteBuffer=delegate.encodeValue(value);
+    serialized=target.alloc().buffer(byteBuffer.remaining());
+    serialized.writeBytes(byteBuffer);
+  }
+  try {
+    KeyDescriptor keyDescriptor=this.encrypt.encryptionKey();
+    Cipher cipher=this.encrypt.get(keyDescriptor);
+    keyDescriptor.writeTo(target);
+    doWithCipher(cipher,serialized,target);
+  }
+ catch (  GeneralSecurityException e) {
+    throw new IllegalStateException(e);
+  }
+ finally {
+    serialized.release();
+  }
+}
+@Override public ByteBuffer encodeValue(Object value){
+  try {
+    ByteBuffer serialized=delegate.encodeValue(value);
+    KeyDescriptor keyDescriptor=this.encrypt.encryptionKey();
+    Cipher cipher=this.encrypt.get(keyDescriptor);
+    ByteBuffer intermediate=ByteBuffer.allocate(cipher.getOutputSize(serialized.remaining() + 3 + keyDescriptor.name.length+ 10));
+    keyDescriptor.writeTo(intermediate);
+    intermediate.put(doWithCipher(cipher,serialized));
+    intermediate.flip();
+    return intermediate;
+  }
+ catch (  GeneralSecurityException e) {
+    throw new IllegalStateException(e);
+  }
+}

@@ -1,0 +1,34 @@
+/** 
+ * 确认收货 <p> 1. 检测当前订单是否能够确认收货； 2. 设置订单确认收货状态。
+ * @param userId 用户ID
+ * @param body   订单信息，{ orderId：xxx }
+ * @return 订单操作结果
+ */
+public Object confirm(Integer userId,String body){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  Integer orderId=JacksonUtil.parseInteger(body,"orderId");
+  if (orderId == null) {
+    return ResponseUtil.badArgument();
+  }
+  LitemallOrder order=orderService.findById(userId,orderId);
+  if (order == null) {
+    return ResponseUtil.badArgument();
+  }
+  if (!order.getUserId().equals(userId)) {
+    return ResponseUtil.badArgumentValue();
+  }
+  OrderHandleOption handleOption=OrderUtil.build(order);
+  if (!handleOption.isConfirm()) {
+    return ResponseUtil.fail(ORDER_INVALID_OPERATION,"订单不能确认收货");
+  }
+  Short comments=orderGoodsService.getComments(orderId);
+  order.setComments(comments);
+  order.setOrderStatus(OrderUtil.STATUS_CONFIRM);
+  order.setConfirmTime(LocalDateTime.now());
+  if (orderService.updateWithOptimisticLocker(order) == 0) {
+    return ResponseUtil.updatedDateExpired();
+  }
+  return ResponseUtil.ok();
+}

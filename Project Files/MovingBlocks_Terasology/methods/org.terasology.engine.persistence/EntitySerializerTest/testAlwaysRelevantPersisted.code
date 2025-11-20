@@ -1,0 +1,13 @@
+@Test public void testAlwaysRelevantPersisted() throws Exception {
+  EntityRef entity=entityManager.create(prefab);
+  boolean defaultSetting=entity.isAlwaysRelevant();
+  EntityScope newScope=defaultSetting ? CHUNK : GLOBAL;
+  entity.setScope(newScope);
+  EntityData.Entity entityData=entitySerializer.serialize(entity);
+  long nextId=entityManager.getNextId();
+  entityManager.clear();
+  entityManager.setNextId(nextId);
+  EntityRef newEntity=entitySerializer.deserialize(entityData);
+  assertEquals(newScope,newEntity.getScope());
+  assertEquals(!defaultSetting,newEntity.isAlwaysRelevant());
+}

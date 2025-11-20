@@ -1,0 +1,27 @@
+/** 
+ * {@link RedisSubscriber} dispatching subscriber signals on a {@link Executor}.
+ * @param < T >
+ */
+static class PublishOnSubscriber<T> implements RedisSubscriber<T> {
+  private final CoreSubscriber<T> delegate;
+  private final Executor executor;
+  public PublishOnSubscriber(  Subscriber<T> delegate,  Executor executor){
+    this.delegate=(CoreSubscriber)reactor.core.publisher.Operators.toCoreSubscriber(delegate);
+    this.executor=executor;
+  }
+  @Override public Context currentContext(){
+    return delegate.currentContext();
+  }
+  @Override public void onSubscribe(  Subscription s){
+    delegate.onSubscribe(s);
+  }
+  @Override public void onNext(  T t){
+    executor.execute(OnNext.newInstance(t,delegate));
+  }
+  @Override public void onError(  Throwable t){
+    executor.execute(OnComplete.newInstance(t,delegate));
+  }
+  @Override public void onComplete(){
+    executor.execute(OnComplete.newInstance(delegate));
+  }
+}

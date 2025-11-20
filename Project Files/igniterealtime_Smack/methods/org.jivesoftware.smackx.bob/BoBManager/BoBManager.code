@@ -1,0 +1,21 @@
+private BoBManager(XMPPConnection connection){
+  super(connection);
+  ServiceDiscoveryManager serviceDiscoveryManager=ServiceDiscoveryManager.getInstanceFor(connection);
+  serviceDiscoveryManager.addFeature(NAMESPACE);
+  connection.registerIQRequestHandler(new AbstractIqRequestHandler(BoBIQ.ELEMENT,BoBIQ.NAMESPACE,IQ.Type.get,Mode.async){
+    @Override public IQ handleIQRequest(    IQ iqRequest){
+      BoBIQ bobIQRequest=(BoBIQ)iqRequest;
+      ContentId contentId=bobIQRequest.getContentId();
+      BoBInfo bobInfo=bobs.get(contentId);
+      if (bobInfo == null) {
+        return null;
+      }
+      BoBData bobData=bobInfo.getData();
+      BoBIQ responseBoBIQ=new BoBIQ(contentId,bobData);
+      responseBoBIQ.setType(IQ.Type.result);
+      responseBoBIQ.setTo(bobIQRequest.getFrom());
+      return responseBoBIQ;
+    }
+  }
+);
+}

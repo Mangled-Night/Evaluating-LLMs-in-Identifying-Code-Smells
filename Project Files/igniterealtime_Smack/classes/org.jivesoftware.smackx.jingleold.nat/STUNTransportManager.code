@@ -1,0 +1,28 @@
+/** 
+ * A Jingle Transport Manager implementation to be used on NAT networks with  STUN Service NOT Blocked.
+ * @author Thiago Camargo
+ */
+public class STUNTransportManager extends JingleTransportManager {
+  private static final Logger LOGGER=Logger.getLogger(STUNTransportManager.class.getName());
+  STUNResolver stunResolver=null;
+  public STUNTransportManager(){
+    stunResolver=new STUNResolver(){
+    }
+;
+    try {
+      stunResolver.initializeAndWait();
+    }
+ catch (    Exception e) {
+      LOGGER.log(Level.WARNING,"exception",e);
+    }
+  }
+  @Override protected TransportResolver createResolver(  JingleSession session){
+    try {
+      stunResolver.resolve(session);
+    }
+ catch (    Exception e) {
+      LOGGER.log(Level.WARNING,"exception",e);
+    }
+    return stunResolver;
+  }
+}

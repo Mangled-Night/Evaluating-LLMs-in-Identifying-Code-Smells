@@ -1,0 +1,21 @@
+public void setTableStructure() throws SQLException {
+  DataNode dn=this.getOldDataNodes().get(0);
+  Connection con=null;
+  try {
+    con=DataMigratorUtil.getMysqlConnection(dn);
+    List<Map<String,Object>> list=DataMigratorUtil.executeQuery(con,"show create table " + tableName);
+    Map<String,Object> m=list.get(0);
+    String str=m.get("Create Table").toString();
+    str=str.replaceAll("CREATE TABLE","Create Table if not exists");
+    setTableStructure(str);
+  }
+ catch (  SQLException e) {
+    throw e;
+  }
+ finally {
+    JdbcUtils.close(con);
+  }
+}
+public void setTableStructure(String tableStructure){
+  this.tableStructure=tableStructure;
+}

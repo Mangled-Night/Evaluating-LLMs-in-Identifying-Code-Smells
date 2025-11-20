@@ -1,0 +1,38 @@
+@Override public void register() throws IOException {
+  if (!isClosed.get()) {
+    byte[] rand1=RandomUtil.randomBytes(8);
+    byte[] rand2=RandomUtil.randomBytes(12);
+    byte[] seed=new byte[rand1.length + rand2.length];
+    System.arraycopy(rand1,0,seed,0,rand1.length);
+    System.arraycopy(rand2,0,seed,rand1.length,rand2.length);
+    this.seed=seed;
+    boolean useHandshakeV10=MycatServer.getInstance().getConfig().getSystem().getUseHandshakeV10() == 1;
+    if (useHandshakeV10) {
+      HandshakeV10Packet hs=new HandshakeV10Packet();
+      hs.packetId=0;
+      hs.protocolVersion=Versions.PROTOCOL_VERSION;
+      hs.serverVersion=Versions.SERVER_VERSION;
+      hs.threadId=id;
+      hs.seed=rand1;
+      hs.serverCapabilities=getServerCapabilities();
+      hs.serverCharsetIndex=(byte)(charsetIndex & 0xff);
+      hs.serverStatus=2;
+      hs.restOfScrambleBuff=rand2;
+      hs.write(this);
+    }
+ else {
+      HandshakePacket hs=new HandshakePacket();
+      hs.packetId=0;
+      hs.protocolVersion=Versions.PROTOCOL_VERSION;
+      hs.serverVersion=Versions.SERVER_VERSION;
+      hs.threadId=id;
+      hs.seed=rand1;
+      hs.serverCapabilities=getServerCapabilities();
+      hs.serverCharsetIndex=(byte)(charsetIndex & 0xff);
+      hs.serverStatus=2;
+      hs.restOfScrambleBuff=rand2;
+      hs.write(this);
+    }
+    this.asynRead();
+  }
+}

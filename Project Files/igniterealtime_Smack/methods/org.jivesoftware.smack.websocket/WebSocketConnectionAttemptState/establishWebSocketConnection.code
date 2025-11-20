@@ -1,0 +1,55 @@
+/** 
+ * Establish  a websocket connection with one of the discoveredRemoteConnectionEndpoints.<br>
+ * @return {@link AbstractWebSocket} with which connection is establised
+ * @throws InterruptedException if the calling thread was interrupted
+ */
+@SuppressWarnings({"incomplete-switch","MissingCasesInEnumSwitch"}) StateTransitionResult.Failure establishWebSocketConnection() throws InterruptedException {
+  final WebSocketRemoteConnectionEndpointLookup.Result endpointLookupResult=discoveredEndpoints.result;
+  final List<Exception> failures=new ArrayList<>(endpointLookupResult.discoveredEndpointCount());
+  webSocket=null;
+  SecurityMode securityMode=connectionInternal.connection.getConfiguration().getSecurityMode();
+switch (securityMode) {
+case required:
+case ifpossible:
+    establishWebSocketConnection(endpointLookupResult.discoveredSecureEndpoints,failures);
+  if (webSocket != null) {
+    return null;
+  }
+}
+establishWebSocketConnection(endpointLookupResult.discoveredInsecureEndpoints,failures);
+if (webSocket != null) {
+return null;
+}
+StateTransitionResult.Failure failure=FailedToConnectToAnyWebSocketEndpoint.create(failures);
+return failure;
+}
+private void establishWebSocketConnection(List<? extends WebSocketRemoteConnectionEndpoint> webSocketEndpoints,List<Exception> failures) throws InterruptedException {
+  final int endpointCount=webSocketEndpoints.size();
+  List<SmackFuture<AbstractWebSocket,Exception>> futures=new ArrayList<>(endpointCount);
+{
+    List<AbstractWebSocket> webSockets=new ArrayList<>(endpointCount);
+    for (    WebSocketRemoteConnectionEndpoint endpoint : webSocketEndpoints) {
+      AbstractWebSocket webSocket=webSocketFactory.create(endpoint,connectionInternal);
+      webSockets.add(webSocket);
+    }
+    for (    AbstractWebSocket webSocket : webSockets) {
+      SmackFuture<AbstractWebSocket,Exception> future=webSocket.getFuture();
+      futures.add(future);
+    }
+  }
+  SmackFuture.await(futures,connectionInternal.connection.getReplyTimeout());
+  for (  SmackFuture<AbstractWebSocket,Exception> future : futures) {
+    AbstractWebSocket connectedWebSocket=future.getIfAvailable();
+    if (connectedWebSocket == null) {
+      Exception exception=future.getExceptionIfAvailable();
+      assert exception != null;
+      failures.add(exception);
+      continue;
+    }
+    if (webSocket == null) {
+      webSocket=connectedWebSocket;
+      continue;
+    }
+    connectedWebSocket.disconnect(1000,"Using other connection endpoint at " + webSocket.getEndpoint());
+  }
+}

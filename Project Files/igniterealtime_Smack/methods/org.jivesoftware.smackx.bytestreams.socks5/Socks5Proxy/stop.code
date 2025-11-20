@@ -1,0 +1,21 @@
+/** 
+ * Stops the local SOCKS5 proxy server. If it is not running this method does nothing.
+ */
+public synchronized void stop(){
+  if (!isRunning()) {
+    return;
+  }
+  RUNNING_PROXIES.remove(this);
+  CloseableUtil.maybeClose(this.serverSocket,LOGGER);
+  if (this.serverThread != null && this.serverThread.isAlive()) {
+    try {
+      this.serverThread.interrupt();
+      this.serverThread.join();
+    }
+ catch (    InterruptedException e) {
+      LOGGER.log(Level.WARNING,"SOCKS5 server thread termination was interrupted",e);
+    }
+  }
+  this.serverThread=null;
+  this.serverSocket=null;
+}

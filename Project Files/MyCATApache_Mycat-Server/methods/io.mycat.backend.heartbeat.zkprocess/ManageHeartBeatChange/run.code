@@ -1,0 +1,129 @@
+@Override public void run(){
+  if (!statue.compareAndSet(ENTER_SELECT,IS_SELECT) || getNodeSize() == 0) {
+    return;
+  }
+  if (future != null) {
+    future.cancel(false);
+    future=null;
+  }
+  List<ChildData> ChildDataList=manageVoteCache.getCurrentData();
+  Map<Integer,Integer> countMap=new HashMap<>();
+  Integer maxIndex=-1;
+  Integer maxCount=-1;
+  try {
+    Collection<Participant> participants=mycatLeaderLatch.getParticipants();
+    for (    ChildData childData : ChildDataList) {
+      String data=new String(childData.getData());
+      LOGGER.debug(childData.getPath() + "  " + data);
+      int index=data.indexOf("=");
+      Integer key=Integer.valueOf(data.substring(index + 1));
+      String myId=data.substring(0,index);
+      boolean checkExist=false;
+      for (      Participant participant : participants) {
+        if (participant.getId().equals(myId)) {
+          checkExist=true;
+          break;
+        }
+      }
+      if (!checkExist) {
+        continue;
+      }
+      Integer value=countMap.get(key);
+      if (value == null) {
+        value=new Integer(0);
+      }
+      value+=1;
+      countMap.put(key,value);
+      if (maxCount.compareTo(value) < 0) {
+        maxCount=value;
+        maxIndex=key;
+      }
+    }
+    statue.set(IS_CHANGING);
+    if (maxIndex != -1) {
+      LOGGER.debug("投票结果：" + dataHost + " = "+ maxIndex);
+      ZKUtils.createPath(changingResultPath,"");
+      boolean result=MycatServer.getInstance().saveDataHostIndexToZk(dataHost,maxIndex);
+      if (result) {
+        startChangingResultListen();
+      }
+ else {
+        try {
+          for (          ChildData childData : ChildDataList) {
+            client.delete().deletingChildrenIfNeeded().forPath(childData.getPath());
+          }
+        }
+ catch (        Exception e) {
+          LOGGER.error(e.getMessage());
+          e.printStackTrace();
+        }
+        ;
+      }
+    }
+ else {
+      LOGGER.debug("投票错误：" + dataHost + " = "+ maxIndex);
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.error(e.getMessage());
+    e.printStackTrace();
+  }
+}
+@Override public void run(){
+  ChildData currentData=changingResultNode.getCurrentData();
+  if (null != currentData) {
+    try {
+      byte[] data=changingResultNode.getCurrentData().getData();
+      Properties properties=new Properties();
+      properties.load(new ByteArrayInputStream(data));
+      int count=0;
+      Collection<Participant> participants=mycatLeaderLatch.getParticipants();
+      for (      Participant participant : participants) {
+        String key=participant.getId() + "_endTime";
+        String value=properties.getProperty(key);
+        if (!StringUtil.isEmpty(value)) {
+          count++;
+        }
+ else {
+          LOGGER.debug(String.format("%s 还未结束切换",participant.getId()));
+        }
+      }
+      String changingFinishKey=dataHost + "_changing_finish_time";
+      String value=properties.getProperty(changingFinishKey);
+      if (!StringUtil.isEmpty(value)) {
+        changingFinishDate=Long.valueOf(value);
+      }
+      int onLineNode=participants.size();
+      if (count == onLineNode) {
+        LOGGER.debug("所有节点切换完成 ,当前时间" + TimeUtil.currentTimeMillis());
+        Map<String,String> propertyMap=new HashMap<>();
+        propertyMap.put(changingFinishKey,TimeUtil.currentTimeMillis() + "");
+        try {
+          changingStatueLock.acquire(30,TimeUnit.SECONDS);
+          ZKUtils.writeProperty(changingResultPath,propertyMap);
+          if (changingResultFutrue != null) {
+            changingResultFutrue.cancel(false);
+            changingResultFutrue=null;
+          }
+          List<ChildData> ChildDataList=manageVoteCache.getCurrentData();
+          for (          ChildData childData : ChildDataList) {
+            client.delete().deletingChildrenIfNeeded().forPath(childData.getPath());
+          }
+          if (voteSet.isEmpty()) {
+            statue.set(NOT_SELECT);
+          }
+        }
+  finally {
+          changingStatueLock.release();
+        }
+      }
+    }
+ catch (    Exception e) {
+      LOGGER.error(e.getMessage());
+      e.printStackTrace();
+    }
+  }
+ else {
+    LOGGER.debug("集群切换结果的状态文件夹 已经被删除！！！");
+  }
+}

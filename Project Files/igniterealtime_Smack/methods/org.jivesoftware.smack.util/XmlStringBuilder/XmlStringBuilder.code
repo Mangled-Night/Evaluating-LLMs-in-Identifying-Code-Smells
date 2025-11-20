@@ -1,0 +1,31 @@
+public XmlStringBuilder(){
+  sb=new LazyStringBuilder();
+  effectiveXmlEnvironment=null;
+}
+public XmlStringBuilder(XmlElement pe){
+  this(pe,null);
+}
+public XmlStringBuilder(NamedElement e){
+  this();
+  halfOpenElement(e.getElementName());
+}
+public XmlStringBuilder(XmlElement element,XmlEnvironment enclosingXmlEnvironment){
+  this(element.getElementName(),element.getNamespace(),element.getLanguage(),enclosingXmlEnvironment);
+}
+public XmlStringBuilder(String elementName,String xmlNs,String xmlLang,XmlEnvironment enclosingXmlEnvironment){
+  sb=new LazyStringBuilder();
+  halfOpenElement(elementName);
+  if (enclosingXmlEnvironment == null) {
+    xmlnsAttribute(xmlNs);
+    xmllangAttribute(xmlLang);
+  }
+ else {
+    if (!enclosingXmlEnvironment.effectiveNamespaceEquals(xmlNs)) {
+      xmlnsAttribute(xmlNs);
+    }
+    if (!enclosingXmlEnvironment.effectiveLanguageEquals(xmlLang)) {
+      xmllangAttribute(xmlLang);
+    }
+  }
+  effectiveXmlEnvironment=XmlEnvironment.builder().withNamespace(xmlNs).withLanguage(xmlLang).withNext(enclosingXmlEnvironment).build();
+}

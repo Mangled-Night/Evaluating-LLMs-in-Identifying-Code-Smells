@@ -1,0 +1,29 @@
+/** 
+ * Invoke the given  {@link Runnable} asynchronous but ordered in respect to the given key.
+ * @param key the key deriving the order
+ * @param runnable the {@link Runnable} to run
+ * @return true if a new thread was created
+ */
+public boolean performAsyncButOrdered(K key,Runnable runnable){
+  Queue<Runnable> keyQueue;
+synchronized (pendingRunnables) {
+    keyQueue=pendingRunnables.get(key);
+    if (keyQueue == null) {
+      keyQueue=new ConcurrentLinkedQueue<>();
+      pendingRunnables.put(key,keyQueue);
+    }
+  }
+  keyQueue.add(runnable);
+  Handler newlyCreatedHandler=null;
+synchronized (threadActiveMap) {
+    if (!threadActiveMap.containsKey(key)) {
+      newlyCreatedHandler=new Handler(keyQueue,key);
+      threadActiveMap.put(key,newlyCreatedHandler);
+    }
+  }
+  if (newlyCreatedHandler != null) {
+    scheduleHandler(newlyCreatedHandler);
+    return true;
+  }
+  return false;
+}

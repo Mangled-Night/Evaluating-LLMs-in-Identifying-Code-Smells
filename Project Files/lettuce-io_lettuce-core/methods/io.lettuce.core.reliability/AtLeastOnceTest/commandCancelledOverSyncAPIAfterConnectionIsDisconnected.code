@@ -1,0 +1,27 @@
+@Test void commandCancelledOverSyncAPIAfterConnectionIsDisconnected(){
+  StatefulRedisConnection<String,String> connection=client.connect();
+  RedisCommands<String,String> sync=connection.sync();
+  RedisCommands<String,String> verificationConnection=client.connect().sync();
+  sync.set(key,"1");
+  ConnectionWatchdog connectionWatchdog=ConnectionTestUtil.getConnectionWatchdog(sync.getStatefulConnection());
+  connectionWatchdog.setListenOnChannelInactive(false);
+  sync.quit();
+  Wait.untilTrue(() -> !sync.getStatefulConnection().isOpen()).waitOrTimeout();
+  try {
+    sync.incr(key);
+  }
+ catch (  RedisException e) {
+    assertThat(e).isExactlyInstanceOf(RedisCommandTimeoutException.class);
+  }
+  assertThat(verificationConnection.get("key")).isEqualTo("1");
+  assertThat(ConnectionTestUtil.getDisconnectedBuffer(connection).size()).isGreaterThan(0);
+  assertThat(ConnectionTestUtil.getCommandBuffer(connection)).isEmpty();
+  connectionWatchdog.setListenOnChannelInactive(true);
+  connectionWatchdog.scheduleReconnect();
+  while (!ConnectionTestUtil.getCommandBuffer(connection).isEmpty() || !ConnectionTestUtil.getDisconnectedBuffer(connection).isEmpty()) {
+    Delay.delay(Duration.ofMillis(10));
+  }
+  assertThat(sync.get(key)).isEqualTo("1");
+  sync.getStatefulConnection().close();
+  verificationConnection.getStatefulConnection().close();
+}

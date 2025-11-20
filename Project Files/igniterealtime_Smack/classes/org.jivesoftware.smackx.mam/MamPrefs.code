@@ -1,0 +1,28 @@
+public static final class MamPrefs {
+  private final List<Jid> alwaysJids;
+  private final List<Jid> neverJids;
+  private final MamVersion mamVersion;
+  private DefaultBehavior defaultBehavior;
+  private MamPrefs(  MamPrefsResult mamPrefsResult){
+    MamPrefsIQ mamPrefsIq=mamPrefsResult.mamPrefs;
+    this.alwaysJids=new ArrayList<>(mamPrefsIq.getAlwaysJids());
+    this.neverJids=new ArrayList<>(mamPrefsIq.getNeverJids());
+    this.defaultBehavior=mamPrefsIq.getDefault();
+    this.mamVersion=MamVersion.fromNamespace(mamPrefsIq.getNamespace());
+  }
+  public void setDefaultBehavior(  DefaultBehavior defaultBehavior){
+    this.defaultBehavior=Objects.requireNonNull(defaultBehavior,"defaultBehavior must not be null");
+  }
+  public DefaultBehavior getDefaultBehavior(){
+    return defaultBehavior;
+  }
+  public List<Jid> getAlwaysJids(){
+    return alwaysJids;
+  }
+  public List<Jid> getNeverJids(){
+    return neverJids;
+  }
+  private MamPrefsIQ constructMamPrefsIq(){
+    return mamVersion.newElementFactory().newPrefsIQ(alwaysJids,neverJids,defaultBehavior);
+  }
+}

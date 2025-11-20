@@ -1,0 +1,19 @@
+/** 
+ * Specialization of sortAtByte() for key-prefix arrays.
+ */
+private static void sortKeyPrefixArrayAtByte(LongArray array,int numRecords,long[] counts,int byteIdx,int inIndex,int outIndex,boolean desc,boolean signed){
+  assert counts.length == 256;
+  long[] offsets=transformCountsToOffsets(counts,numRecords,array.getBaseOffset() + outIndex * 8,16,desc,signed);
+  Object baseObject=array.getBaseObject();
+  long baseOffset=array.getBaseOffset() + inIndex * 8;
+  long maxOffset=baseOffset + numRecords * 16;
+  for (long offset=baseOffset; offset < maxOffset; offset+=16) {
+    long key=Platform.getLong(baseObject,offset);
+    long prefix=Platform.getLong(baseObject,offset + 8);
+    int bucket=(int)((prefix >>> (byteIdx * 8)) & 0xff);
+    long dest=offsets[bucket];
+    Platform.putLong(baseObject,dest,key);
+    Platform.putLong(baseObject,dest + 8,prefix);
+    offsets[bucket]+=16;
+  }
+}

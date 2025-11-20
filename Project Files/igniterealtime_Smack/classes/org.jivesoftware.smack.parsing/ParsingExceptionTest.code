@@ -1,0 +1,29 @@
+public class ParsingExceptionTest {
+  private static final String EXTENSION2="<extension2 xmlns='namespace'>" + "<bar node='testNode'>" + "<i id='testid1'>"+ "text content"+ "</i>"+ "</bar>"+ "</extension2>";
+  @Before public void init(){
+    ProviderManager.addExtensionProvider(ThrowException.ELEMENT,ThrowException.NAMESPACE,new ThrowException());
+  }
+  @After public void tini(){
+    ProviderManager.removeExtensionProvider(ThrowException.ELEMENT,ThrowException.NAMESPACE);
+  }
+  @Test public void consumeUnparsedInput() throws Exception {
+    final String MESSAGE_EXCEPTION_ELEMENT="<" + ThrowException.ELEMENT + " xmlns='"+ ThrowException.NAMESPACE+ "'>"+ "<nothingInHere/>"+ "</"+ ThrowException.ELEMENT+ ">";
+    XmlPullParser parser=TestUtils.getMessageParser("<message from='user@server.example' to='francisco@denmark.lit' id='foo'>" + MESSAGE_EXCEPTION_ELEMENT + EXTENSION2+ "</message>");
+    int parserDepth=parser.getDepth();
+    CharSequence content=null;
+    try {
+      PacketParserUtils.parseMessage(parser);
+    }
+ catch (    Exception e) {
+      content=PacketParserUtils.parseContentDepth(parser,parserDepth,false);
+    }
+    assertThat(MESSAGE_EXCEPTION_ELEMENT + EXTENSION2 + "</message>",equalsCharSequence(content));
+  }
+static class ThrowException extends ExtensionElementProvider<ExtensionElement> {
+    public static final String ELEMENT="exception";
+    public static final String NAMESPACE="http://smack.jivesoftware.org/exception";
+    @Override public ExtensionElement parse(    XmlPullParser parser,    int initialDepth,    XmlEnvironment xmlEnvironment) throws IOException {
+      throw new IOException("Test Exception");
+    }
+  }
+}

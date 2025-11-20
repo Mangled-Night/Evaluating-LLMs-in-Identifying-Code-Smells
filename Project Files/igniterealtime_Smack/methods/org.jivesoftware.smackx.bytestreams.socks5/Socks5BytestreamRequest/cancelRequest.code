@@ -1,0 +1,32 @@
+/** 
+ * Cancels the SOCKS5 Bytestream request by sending an error to the initiator and building a XMPP exception.
+ * @param streamHostsExceptions the stream hosts and their exceptions.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws CouldNotConnectToAnyProvidedSocks5Host as expected result.
+ * @throws NoSocks5StreamHostsProvided if no stream host was provided.
+ */
+private void cancelRequest(Map<StreamHost,Exception> streamHostsExceptions) throws NotConnectedException, InterruptedException, CouldNotConnectToAnyProvidedSocks5Host, NoSocks5StreamHostsProvided {
+  final Socks5Exception.NoSocks5StreamHostsProvided noHostsProvidedException;
+  final Socks5Exception.CouldNotConnectToAnyProvidedSocks5Host couldNotConnectException;
+  final String errorMessage;
+  if (streamHostsExceptions.isEmpty()) {
+    noHostsProvidedException=new Socks5Exception.NoSocks5StreamHostsProvided();
+    couldNotConnectException=null;
+    errorMessage=noHostsProvidedException.getMessage();
+  }
+ else {
+    noHostsProvidedException=null;
+    couldNotConnectException=Socks5Exception.CouldNotConnectToAnyProvidedSocks5Host.construct(streamHostsExceptions);
+    errorMessage=couldNotConnectException.getMessage();
+  }
+  StanzaError error=StanzaError.from(StanzaError.Condition.item_not_found,errorMessage).build();
+  IQ errorIQ=IQ.createErrorResponse(this.bytestreamRequest,error);
+  this.manager.getConnection().sendStanza(errorIQ);
+  if (noHostsProvidedException != null) {
+    throw noHostsProvidedException;
+  }
+ else {
+    throw couldNotConnectException;
+  }
+}

@@ -1,0 +1,10 @@
+@Disabled @Test public void duplicateMessageBodiesTest() throws FactoryConfigurationError, XmlPullParserException, IOException, Exception {
+  String defaultLanguage=Stanza.getDefaultLanguage();
+  String control=XMLBuilder.create("message").namespace(StreamOpen.CLIENT_NAMESPACE).a("from","romeo@montague.lit/orchard").a("to","juliet@capulet.lit/balcony").a("id","zid615d9").a("type","chat").a("xml:lang",defaultLanguage).e("body").t(defaultLanguage).up().e("body").a("xml:lang",defaultLanguage).t(defaultLanguage + "2").asString(outputProperties);
+  Message message=PacketParserUtils.parseMessage(PacketParserUtils.getParserFor(control));
+  assertEquals(defaultLanguage,message.getBody());
+  assertEquals(defaultLanguage,message.getBody(defaultLanguage));
+  assertEquals(1,message.getBodies().size());
+  assertEquals(0,message.getBodyLanguages().size());
+  assertXmlNotSimilar(control,message.toXML().toString());
+}

@@ -1,0 +1,33 @@
+/** 
+ * Processes a stanza after it's been fully parsed by looping through the installed stanza collectors and listeners and letting them examine the stanza to see if they are a match with the filter.
+ * @param stanza the stanza to process.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+protected void processStanza(final Stanza stanza) throws InterruptedException {
+  assert stanza != null;
+  maybeNotifyDebuggerAboutIncoming(stanza);
+  lastStanzaReceived=System.currentTimeMillis();
+  invokeStanzaCollectorsAndNotifyRecvListeners(stanza);
+}
+@Override public void processStanza(Stanza stanza) throws NotConnectedException, InterruptedException {
+  boolean removed=removeAsyncStanzaListener(this);
+  if (!removed) {
+    return;
+  }
+  try {
+    XMPPErrorException.ifHasErrorThenThrow(stanza);
+    @SuppressWarnings("unchecked") S s=(S)stanza;
+    future.setResult(s);
+  }
+ catch (  XMPPErrorException exception) {
+    future.setException(exception);
+  }
+}
+@Override public void processStanza(Stanza packet) throws NotConnectedException, InterruptedException, NotLoggedInException {
+  try {
+    callback.processStanza(packet);
+  }
+  finally {
+    removeSyncStanzaListener(this);
+  }
+}

@@ -1,0 +1,19 @@
+/** 
+ * 写入集群节点的信息 方法描述
+ * @throws Exception
+ * @创建日期 2016年9月17日
+ */
+private void writeClusterNode(String basePath) throws Exception {
+  String[] zkNodes=ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_CLUSTER_NODES).split(ZkParamCfg.ZK_CFG_CLUSTER_NODES_SEPARATE.getKey());
+  if (null != zkNodes && zkNodes.length > 0) {
+    for (    String node : zkNodes) {
+      String nodePath=ZookeeperPath.ZK_LOCAL_CFG_PATH.getKey() + "server-" + node+ ".xml";
+      Server serverNode=this.parseServerXMl.parseXmlToBean(nodePath);
+      LOGGER.info("ServerxmlTozkLoader writeClusterNode to zk server Object  :" + serverNode);
+      if (null != serverNode) {
+        this.xmlTozkClusterNodeJson(basePath,node,serverNode);
+        LOGGER.info("ServerxmlTozkLoader writeClusterNode xml to zk is success");
+      }
+    }
+  }
+}

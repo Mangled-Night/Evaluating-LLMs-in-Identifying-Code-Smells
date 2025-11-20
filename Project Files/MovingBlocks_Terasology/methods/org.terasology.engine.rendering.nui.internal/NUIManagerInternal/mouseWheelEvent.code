@@ -1,0 +1,20 @@
+@Priority(EventPriority.PRIORITY_HIGH) @ReceiveEvent(components=ClientComponent.class) public void mouseWheelEvent(MouseWheelEvent event,EntityRef entity){
+  if (!mouse.isVisible()) {
+    return;
+  }
+  Vector2i mousePosition=event.getMousePosition();
+  if (focus != null) {
+    NUIMouseWheelEvent nuiEvent=new NUIMouseWheelEvent(mouse,keyboard,mousePosition,event.getWheelTurns());
+    focus.onMouseWheelEvent(nuiEvent);
+    if (nuiEvent.isConsumed()) {
+      event.consume();
+      return;
+    }
+  }
+  if (canvas.processMouseWheel(event.getWheelTurns(),mousePosition)) {
+    event.consume();
+  }
+  if (isReleasingMouse()) {
+    event.consume();
+  }
+}

@@ -1,0 +1,24 @@
+/** 
+ * Retrieves the AgentChatHistory associated with a particular agent jid.
+ * @param jid the jid of the agent.
+ * @param maxSessions the max number of sessions to retrieve.
+ * @param startDate point in time from which on history should get retrieved.
+ * @return the chat history associated with a given jid.
+ * @throws XMPPException if an error occurs while retrieving the AgentChatHistory.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws NoResponseException if there was no response from the remote entity.
+ */
+public AgentChatHistory getAgentHistory(EntityBareJid jid,int maxSessions,Date startDate) throws XMPPException, NotConnectedException, InterruptedException, NoResponseException {
+  AgentChatHistory request;
+  if (startDate != null) {
+    request=new AgentChatHistory(jid,maxSessions,startDate);
+  }
+ else {
+    request=new AgentChatHistory(jid,maxSessions);
+  }
+  request.setType(IQ.Type.get);
+  request.setTo(workgroupJID);
+  AgentChatHistory response=connection.sendIqRequestAndWaitForResponse(request);
+  return response;
+}

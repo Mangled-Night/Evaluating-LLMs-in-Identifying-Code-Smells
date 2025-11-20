@@ -1,0 +1,20 @@
+public int getActiveCountForDs(PhysicalDatasource dataSouce){
+  int total=0;
+  for (  NIOProcessor processor : MycatServer.getInstance().getProcessors()) {
+    for (    BackendConnection con : processor.getBackends().values()) {
+      if (con instanceof MySQLConnection) {
+        MySQLConnection mysqlCon=(MySQLConnection)con;
+        if (mysqlCon.getPool() == dataSouce && mysqlCon.isBorrowed() && !mysqlCon.isClosed()) {
+          total++;
+        }
+      }
+ else       if (con instanceof JDBCConnection) {
+        JDBCConnection jdbcCon=(JDBCConnection)con;
+        if (jdbcCon.getPool() == dataSouce && jdbcCon.isBorrowed() && !jdbcCon.isClosed()) {
+          total++;
+        }
+      }
+    }
+  }
+  return total;
+}

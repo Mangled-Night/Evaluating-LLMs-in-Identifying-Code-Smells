@@ -1,0 +1,40 @@
+@Override public E poll(){
+  lock.lock();
+  try {
+    if (hasNoElements()) {
+      return null;
+    }
+    E e=extract();
+    return e;
+  }
+  finally {
+    lock.unlock();
+  }
+}
+@Override public E poll(long timeout,TimeUnit unit) throws InterruptedException {
+  long nanos=unit.toNanos(timeout);
+  lock.lockInterruptibly();
+  try {
+    checkNotShutdown();
+    while (true) {
+      if (hasElements()) {
+        E e=extract();
+        return e;
+      }
+      if (nanos <= 0) {
+        return null;
+      }
+      try {
+        nanos=notEmpty.awaitNanos(nanos);
+        checkNotShutdown();
+      }
+ catch (      InterruptedException ie) {
+        notEmpty.signal();
+        throw ie;
+      }
+    }
+  }
+  finally {
+    lock.unlock();
+  }
+}

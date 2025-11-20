@@ -1,0 +1,18 @@
+public static GraphVertex<StateDescriptor> constructStateDescriptorGraph(Set<Class<? extends StateDescriptor>> backwardEdgeStateDescriptors,boolean failOnUnknownStates) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+  Map<Class<? extends StateDescriptor>,GraphVertex<StateDescriptor>> graphVertexes=new HashMap<>();
+  final Class<? extends StateDescriptor> initialStatedescriptorClass=DisconnectedStateDescriptor.class;
+  GraphVertex<StateDescriptor> initialNode=addNewStateDescriptorGraphVertex(initialStatedescriptorClass,graphVertexes);
+  MultiMap<Class<? extends StateDescriptor>,Class<? extends StateDescriptor>> inferredForwardEdges=new MultiMap<>();
+  for (  Class<? extends StateDescriptor> backwardsEdge : backwardEdgeStateDescriptors) {
+    GraphVertex<StateDescriptor> graphVertexStateDescriptor=addNewStateDescriptorGraphVertex(backwardsEdge,graphVertexes);
+    for (    Class<? extends StateDescriptor> predecessor : graphVertexStateDescriptor.getElement().getPredeccessors()) {
+      inferredForwardEdges.put(predecessor,backwardsEdge);
+    }
+  }
+  for (  Class<? extends StateDescriptor> inferredSuccessorOfInitialStateDescriptor : inferredForwardEdges.getAll(initialStatedescriptorClass)) {
+    initialNode.getElement().addSuccessor(inferredSuccessorOfInitialStateDescriptor);
+  }
+  HandleStateDescriptorGraphVertexContext context=new HandleStateDescriptorGraphVertexContext(graphVertexes,inferredForwardEdges);
+  handleStateDescriptorGraphVertex(initialNode,context,failOnUnknownStates);
+  return initialNode;
+}

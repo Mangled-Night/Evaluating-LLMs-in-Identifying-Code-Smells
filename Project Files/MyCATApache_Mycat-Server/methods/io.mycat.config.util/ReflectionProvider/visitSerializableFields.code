@@ -1,0 +1,19 @@
+public void visitSerializableFields(Object object,Visitor visitor){
+  for (Iterator<Field> iterator=fieldDictionary.serializableFieldsFor(object.getClass()); iterator.hasNext(); ) {
+    Field field=iterator.next();
+    if (!fieldModifiersSupported(field)) {
+      continue;
+    }
+    validateFieldAccess(field);
+    try {
+      Object value=field.get(object);
+      visitor.visit(field.getName(),field.getType(),field.getDeclaringClass(),value);
+    }
+ catch (    IllegalArgumentException e) {
+      throw new ObjectAccessException("Could not get field " + field.getClass() + "."+ field.getName(),e);
+    }
+catch (    IllegalAccessException e) {
+      throw new ObjectAccessException("Could not get field " + field.getClass() + "."+ field.getName(),e);
+    }
+  }
+}

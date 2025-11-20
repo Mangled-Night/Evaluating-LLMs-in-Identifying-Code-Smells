@@ -1,0 +1,16 @@
+private void testHitRequestQueueLimit(RedisAsyncCommands<String,String> connection){
+  ConnectionWatchdog watchdog=getConnectionWatchdog(connection.getStatefulConnection());
+  watchdog.setListenOnChannelInactive(false);
+  connection.quit();
+  Wait.untilTrue(() -> !connection.getStatefulConnection().isOpen()).waitOrTimeout();
+  List<RedisFuture<String>> pings=new ArrayList<>();
+  for (int i=0; i < 10; i++) {
+    pings.add(connection.ping());
+  }
+  watchdog.setListenOnChannelInactive(true);
+  watchdog.scheduleReconnect();
+  for (  RedisFuture<String> ping : pings) {
+    assertThat(TestFutures.getOrTimeout(ping)).isEqualTo("PONG");
+  }
+  connection.getStatefulConnection().close();
+}

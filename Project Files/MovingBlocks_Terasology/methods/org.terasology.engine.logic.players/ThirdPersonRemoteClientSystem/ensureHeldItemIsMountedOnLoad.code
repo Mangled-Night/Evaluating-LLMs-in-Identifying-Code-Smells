@@ -1,0 +1,16 @@
+@ReceiveEvent public void ensureHeldItemIsMountedOnLoad(OnChangedComponent event,EntityRef clientEntity,ClientComponent clientComponent){
+  if (relatesToLocalPlayer(clientEntity)) {
+    logger.debug("ensureHeldItemIsMountedOnLoad found its given clientEntity to relate to the local player, " + "ignoring: {}",clientEntity);
+    return;
+  }
+  if (clientEntity.exists() && clientComponent.character != EntityRef.NULL) {
+    logger.debug("ensureHeldItemIsMountedOnLoad says a given clientEntity exists, has a character, and isn't " + "related to the local player: {}",clientEntity);
+    CharacterHeldItemComponent characterHeldItemComponent=clientComponent.character.getComponent(CharacterHeldItemComponent.class);
+    if (characterHeldItemComponent != null && !(clientComponent.character.equals(localPlayer.getCharacterEntity()))) {
+      linkHeldItemLocationForRemotePlayer(characterHeldItemComponent.selectedItem,clientComponent.character);
+    }
+  }
+ else {
+    logger.debug("ensureHeldItemIsMountedOnLoad given a remote client, but one that didn't properly exist?");
+  }
+}

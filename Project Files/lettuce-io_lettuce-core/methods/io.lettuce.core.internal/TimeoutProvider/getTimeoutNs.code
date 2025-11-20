@@ -1,0 +1,16 @@
+/** 
+ * Returns the timeout in  {@link TimeUnit#NANOSECONDS} for {@link RedisCommand}.
+ * @param command the command.
+ * @return timeout in {@link TimeUnit#NANOSECONDS}.
+ */
+public long getTimeoutNs(RedisCommand<?,?,?> command){
+  long timeoutNs=-1;
+  State state=this.state;
+  if (state == null) {
+    state=this.state=new State(timeoutOptionsSupplier.get());
+  }
+  if (!state.applyDefaultTimeout) {
+    timeoutNs=state.timeoutSource.getTimeUnit().toNanos(state.timeoutSource.getTimeout(command));
+  }
+  return timeoutNs >= 0 ? timeoutNs : defaultTimeoutSupplier.getAsLong();
+}

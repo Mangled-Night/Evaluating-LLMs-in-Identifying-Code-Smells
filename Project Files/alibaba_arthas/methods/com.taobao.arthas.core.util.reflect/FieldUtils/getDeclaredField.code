@@ -1,0 +1,27 @@
+/** 
+ * Gets an accessible  {@link Field} by name, breaking scope if requested. Only the specified class will beconsidered.
+ * @param cls the  {@link Class} to reflect, must not be {@code null}
+ * @param fieldName the field name to obtain
+ * @param forceAccess whether to break scope restrictions using the {@link java.lang.reflect.AccessibleObject#setAccessible(boolean)} method. {@code false} will onlymatch  {@code public} fields.
+ * @return the Field object
+ * @throws IllegalArgumentException if the class is  {@code null}, or the field name is blank or empty
+ */
+public static Field getDeclaredField(final Class<?> cls,final String fieldName,final boolean forceAccess){
+  isTrue(cls != null,"The class must not be null");
+  isTrue(!StringUtils.isBlank(fieldName),"The field name must not be blank/empty");
+  try {
+    final Field field=cls.getDeclaredField(fieldName);
+    if (!isAccessible(field)) {
+      if (forceAccess) {
+        field.setAccessible(true);
+      }
+ else {
+        return null;
+      }
+    }
+    return field;
+  }
+ catch (  final NoSuchFieldException e) {
+  }
+  return null;
+}

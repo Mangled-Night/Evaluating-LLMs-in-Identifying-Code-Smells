@@ -1,0 +1,26 @@
+private int indexTile(ResourceUrn uri){
+  Optional<BlockTile> maybeTile=Assets.get(uri,BlockTile.class);
+  if (maybeTile.isPresent()) {
+    BlockTile tile=maybeTile.get();
+    if (numFrames + tile.getLength() > MAX_TILES) {
+      logger.error("Maximum tiles exceeded");
+      return 0;
+    }
+    if (checkTile(tile)) {
+      tiles.add(tile);
+      addTilePart(uri,tile.getLength(),tilesNormal,"Normal");
+      addTilePart(uri,tile.getLength(),tilesHeight,"Height");
+      addTilePart(uri,tile.getLength(),tilesGloss,"Gloss");
+      int index=numFrames;
+      numFrames+=tile.getLength();
+      tileIndexes.put(uri,index);
+      tile.subscribe(tileReloadListener);
+      return index;
+    }
+ else {
+      logger.error("Invalid tile {}, must be a square with power-of-two sides.",uri);
+      return 0;
+    }
+  }
+  return 0;
+}

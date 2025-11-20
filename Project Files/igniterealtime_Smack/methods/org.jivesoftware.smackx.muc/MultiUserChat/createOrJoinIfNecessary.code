@@ -1,0 +1,23 @@
+/** 
+ * Create or join a MUC if it is necessary, i.e. if not the MUC is not already joined.
+ * @param nickname the required nickname to use.
+ * @param password the optional password required to join
+ * @return A {@link MucCreateConfigFormHandle} if the room was created while joining, or {@code null} if the room was just joined.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws NotAMucServiceException if the entity is not a MUC serivce.
+ */
+public MucCreateConfigFormHandle createOrJoinIfNecessary(Resourcepart nickname,String password) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException, NotAMucServiceException {
+  if (isJoined()) {
+    return null;
+  }
+  MucEnterConfiguration mucEnterConfiguration=getEnterConfigurationBuilder(nickname).withPassword(password).build();
+  try {
+    return createOrJoin(mucEnterConfiguration);
+  }
+ catch (  MucAlreadyJoinedException e) {
+    return null;
+  }
+}

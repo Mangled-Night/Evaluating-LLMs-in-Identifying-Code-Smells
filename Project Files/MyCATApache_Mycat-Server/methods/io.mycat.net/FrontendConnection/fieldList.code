@@ -1,0 +1,17 @@
+/** 
+ * 用来模拟mysql协议命令中的com_field_list，方便通过发sql测试  https://dev.mysql.com/doc/internals/en/com-field-list.html
+ */
+public void fieldList(byte[] data){
+  String sql=null;
+  try {
+    MySQLMessage mm=new MySQLMessage(data);
+    mm.position(5);
+    sql=mm.readString(charset);
+    sql=ServerParse.COM_FIELD_LIST_FLAG + sql;
+  }
+ catch (  UnsupportedEncodingException e) {
+    writeErrMessage(ErrorCode.ER_UNKNOWN_CHARACTER_SET,"Unknown charset '" + charset + "'");
+    return;
+  }
+  this.query(sql);
+}

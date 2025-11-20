@@ -1,0 +1,25 @@
+@BeforeEach void before(){
+  promise=new DefaultChannelPromise(channel);
+  when(channel.writeAndFlush(any())).thenAnswer(invocation -> {
+    if (invocation.getArguments()[0] instanceof RedisCommand) {
+      queue.add((RedisCommand)invocation.getArguments()[0]);
+    }
+    if (invocation.getArguments()[0] instanceof Collection) {
+      queue.addAll((Collection)invocation.getArguments()[0]);
+    }
+    return promise;
+  }
+);
+  when(channel.write(any())).thenAnswer(invocation -> {
+    if (invocation.getArguments()[0] instanceof RedisCommand) {
+      queue.add((RedisCommand)invocation.getArguments()[0]);
+    }
+    if (invocation.getArguments()[0] instanceof Collection) {
+      queue.addAll((Collection)invocation.getArguments()[0]);
+    }
+    return promise;
+  }
+);
+  sut=new DefaultEndpoint(ClientOptions.create(),clientResources);
+  sut.setConnectionFacade(connectionFacade);
+}

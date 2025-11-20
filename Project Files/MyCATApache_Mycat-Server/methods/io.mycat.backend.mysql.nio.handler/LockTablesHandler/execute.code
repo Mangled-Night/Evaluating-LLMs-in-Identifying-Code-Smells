@@ -1,0 +1,14 @@
+public void execute() throws Exception {
+  super.reset(this.rrs.getNodes().length);
+  MycatConfig conf=MycatServer.getInstance().getConfig();
+  for (  final RouteResultsetNode node : rrs.getNodes()) {
+    BackendConnection conn=session.getTarget(node);
+    if (session.tryExistsCon(conn,node)) {
+      _execute(conn,node);
+    }
+ else {
+      PhysicalDBNode dn=conf.getDataNodes().get(node.getName());
+      dn.getConnection(dn.getDatabase(),autocommit,node,this,node);
+    }
+  }
+}

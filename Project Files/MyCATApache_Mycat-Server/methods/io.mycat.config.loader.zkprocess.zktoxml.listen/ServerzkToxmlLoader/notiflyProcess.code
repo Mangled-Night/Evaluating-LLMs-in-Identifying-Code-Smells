@@ -1,0 +1,27 @@
+@Override public boolean notiflyProcess() throws Exception {
+  DiretoryInf serverDirectory=new ZkDirectoryImpl(currZkPath,null);
+  this.getTreeDirectory(currZkPath,ZookeeperPath.FLOW_ZK_PATH_SERVER.getKey(),serverDirectory);
+  ZkDirectoryImpl zkDirectory=(ZkDirectoryImpl)serverDirectory.getSubordinateInfo().get(0);
+  Server server=this.zktoServerBean(zkDirectory);
+  Server currSer=this.zktoServerBeanByCurrNode(zkDirectory);
+  if (null != currSer) {
+    server.getSystem().setNewValue(currSer.getSystem());
+  }
+  LOGGER.info("ServerzkToxmlLoader notiflyProcess zk to object  zk server Object  :" + server);
+  String path=ServerzkToxmlLoader.class.getClassLoader().getResource(ZookeeperPath.ZK_LOCAL_WRITE_PATH.getKey()).getPath();
+  path=new File(path).getPath() + File.separator;
+  path+=WRITEPATH;
+  LOGGER.info("ServerzkToxmlLoader notiflyProcess zk to object writePath :" + path);
+  this.parseServerXMl.parseToXmlWrite(server,path,"server");
+  LOGGER.info("ServerzkToxmlLoader notiflyProcess zk to object zk server      write :" + path + " is success");
+  DataInf indexToCharSet=this.getZkData(zkDirectory,INDEX_TOCHARSET_PATH);
+  if (null != indexToCharSet) {
+    if (indexToCharSet instanceof ZkDataImpl) {
+      ZkDataImpl dataImpl=(ZkDataImpl)indexToCharSet;
+      this.writeProperties(dataImpl.getName(),dataImpl.getValue());
+    }
+    LOGGER.info("ServerzkToxmlLoader notiflyProcess zk to write index_to_charset.properties is success");
+  }
+  if (MycatServer.getInstance().getProcessors() != null)   ReloadConfig.reload();
+  return true;
+}

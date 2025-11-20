@@ -1,0 +1,70 @@
+private class MBeanTimerTask extends TimerTask {
+  private CommandProcess process;
+  public MBeanTimerTask(  CommandProcess process){
+    this.process=process;
+  }
+  @Override public void run(){
+    if (count >= getNumOfExecutions()) {
+      timer.cancel();
+      timer.purge();
+      process.end(-1,"Process ends after " + getNumOfExecutions() + " time(s).");
+      return;
+    }
+    try {
+      MBeanModel mBeanModel=new MBeanModel();
+      Map<String,List<MBeanAttributeVO>> mbeanAttributeMap=new LinkedHashMap<String,List<MBeanAttributeVO>>();
+      mBeanModel.setMbeanAttribute(mbeanAttributeMap);
+      MBeanServer platformMBeanServer=ManagementFactory.getPlatformMBeanServer();
+      Set<ObjectName> objectNames=queryObjectNames();
+      for (      ObjectName objectName : objectNames) {
+        List<MBeanAttributeVO> attributeVOs=null;
+        MBeanInfo mBeanInfo=platformMBeanServer.getMBeanInfo(objectName);
+        MBeanAttributeInfo[] attributes=mBeanInfo.getAttributes();
+        for (        MBeanAttributeInfo attribute : attributes) {
+          String attributeName=attribute.getName();
+          if (!getAttributeMatcher().matching(attributeName)) {
+            continue;
+          }
+          if (attributeVOs == null) {
+            attributeVOs=new ArrayList<MBeanAttributeVO>();
+            mbeanAttributeMap.put(objectName.toString(),attributeVOs);
+          }
+          if (!attribute.isReadable()) {
+            attributeVOs.add(new MBeanAttributeVO(attributeName,null,"Unavailable"));
+          }
+ else {
+            try {
+              Object attributeObj=platformMBeanServer.getAttribute(objectName,attributeName);
+              attributeVOs.add(createMBeanAttributeVO(attributeName,attributeObj));
+            }
+ catch (            Throwable e) {
+              logger.error("read mbean attribute failed: objectName={}, attributeName={}",objectName,attributeName,e);
+              String errorStr;
+              Throwable cause=e.getCause();
+              if (cause instanceof UnsupportedOperationException) {
+                errorStr="Unsupported";
+              }
+ else {
+                errorStr="Failure";
+              }
+              attributeVOs.add(new MBeanAttributeVO(attributeName,null,errorStr));
+            }
+          }
+        }
+      }
+      process.appendResult(mBeanModel);
+    }
+ catch (    Throwable e) {
+      logger.warn("read mbean error",e);
+      stop();
+      process.end(1,"read mbean error.");
+      return;
+    }
+    count++;
+    process.times().incrementAndGet();
+    if (getInterval() <= 0) {
+      stop();
+      process.end();
+    }
+  }
+}

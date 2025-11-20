@@ -1,0 +1,33 @@
+@SuppressWarnings("unused") static class Resp2LongProcessor implements ByteProcessor {
+  long result;
+  boolean negative;
+  boolean first;
+  public long getValue(  ByteBuf buffer,  int start,  int end){
+    this.result=0;
+    this.first=true;
+    int length=end - start;
+    buffer.forEachByte(start,length,this);
+    if (!this.negative) {
+      this.result=-this.result;
+    }
+    buffer.skipBytes(length + TERMINATOR_LENGTH);
+    return this.result;
+  }
+  @Override public boolean process(  byte value){
+    if (first) {
+      first=false;
+      if (value == '-') {
+        negative=true;
+      }
+ else {
+        negative=false;
+        int digit=value - '0';
+        result=result * 10 - digit;
+      }
+      return true;
+    }
+    int digit=value - '0';
+    result=result * 10 - digit;
+    return true;
+  }
+}

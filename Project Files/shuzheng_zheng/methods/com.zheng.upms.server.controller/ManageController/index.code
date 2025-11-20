@@ -1,0 +1,12 @@
+@ApiOperation(value="后台首页") @RequestMapping(value="/index",method=RequestMethod.GET) public String index(ModelMap modelMap){
+  UpmsSystemExample upmsSystemExample=new UpmsSystemExample();
+  upmsSystemExample.createCriteria().andStatusEqualTo((byte)1);
+  List<UpmsSystem> upmsSystems=upmsSystemService.selectByExample(upmsSystemExample);
+  modelMap.put("upmsSystems",upmsSystems);
+  Subject subject=SecurityUtils.getSubject();
+  String username=(String)subject.getPrincipal();
+  UpmsUser upmsUser=upmsApiService.selectUpmsUserByUsername(username);
+  List<UpmsPermission> upmsPermissions=upmsApiService.selectUpmsPermissionByUpmsUserId(upmsUser.getUserId());
+  modelMap.put("upmsPermissions",upmsPermissions);
+  return "/manage/index.jsp";
+}

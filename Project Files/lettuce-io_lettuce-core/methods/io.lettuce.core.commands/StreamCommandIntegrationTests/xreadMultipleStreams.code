@@ -1,0 +1,19 @@
+@Test void xreadMultipleStreams(){
+  Map<String,String> biggerBody=new LinkedHashMap<>();
+  biggerBody.put("key4","value4");
+  biggerBody.put("key5","value5");
+  String initial1=redis.xadd("{s1}stream-1",Collections.singletonMap("key1","value1"));
+  String initial2=redis.xadd("{s1}stream-2",Collections.singletonMap("key2","value2"));
+  String message1=redis.xadd("{s1}stream-1",Collections.singletonMap("key3","value3"));
+  String message2=redis.xadd("{s1}stream-2",biggerBody);
+  List<StreamMessage<String,String>> messages=redis.xread(StreamOffset.from("{s1}stream-1","0-0"),StreamOffset.from("{s1}stream-2","0-0"));
+  assertThat(messages).hasSize(4);
+  StreamMessage<String,String> firstMessage=messages.get(0);
+  assertThat(firstMessage.getId()).isEqualTo(initial1);
+  assertThat(firstMessage.getStream()).isEqualTo("{s1}stream-1");
+  assertThat(firstMessage.getBody()).hasSize(1).containsEntry("key1","value1");
+  StreamMessage<String,String> secondMessage=messages.get(3);
+  assertThat(secondMessage.getId()).isEqualTo(message2);
+  assertThat(secondMessage.getStream()).isEqualTo("{s1}stream-2");
+  assertThat(secondMessage.getBody()).hasSize(2).containsEntry("key4","value4");
+}

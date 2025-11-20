@@ -1,0 +1,73 @@
+public class WorkgroupProperties extends IQ {
+  private boolean authRequired;
+  private String email;
+  private String fullName;
+  private String jid;
+  public boolean isAuthRequired(){
+    return authRequired;
+  }
+  public void setAuthRequired(  boolean authRequired){
+    this.authRequired=authRequired;
+  }
+  public String getEmail(){
+    return email;
+  }
+  public void setEmail(  String email){
+    this.email=email;
+  }
+  public String getFullName(){
+    return fullName;
+  }
+  public void setFullName(  String fullName){
+    this.fullName=fullName;
+  }
+  public String getJid(){
+    return jid;
+  }
+  public void setJid(  String jid){
+    this.jid=jid;
+  }
+  /** 
+ * Element name of the stanza extension.
+ */
+  public static final String ELEMENT_NAME="workgroup-properties";
+  /** 
+ * Namespace of the stanza extension.
+ */
+  public static final String NAMESPACE="http://jivesoftware.com/protocol/workgroup";
+  public WorkgroupProperties(){
+    super(ELEMENT_NAME,NAMESPACE);
+  }
+  @Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(  IQChildElementXmlStringBuilder buf){
+    if (StringUtils.isNotEmpty(getJid())) {
+      buf.append("jid=\"" + getJid() + "\" ");
+    }
+    buf.setEmptyElement();
+    return buf;
+  }
+  /** 
+ * Stanza extension provider for SoundSetting Packets.
+ */
+public static class InternalProvider extends IqProvider<WorkgroupProperties> {
+    @Override public WorkgroupProperties parse(    XmlPullParser parser,    int initialDepth,    IqData iqData,    XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+      WorkgroupProperties props=new WorkgroupProperties();
+      boolean done=false;
+      while (!done) {
+        XmlPullParser.Event eventType=parser.next();
+        if (eventType == XmlPullParser.Event.START_ELEMENT && "authRequired".equals(parser.getName())) {
+          props.setAuthRequired(Boolean.valueOf(parser.nextText()).booleanValue());
+        }
+ else         if (eventType == XmlPullParser.Event.START_ELEMENT && "email".equals(parser.getName())) {
+          props.setEmail(parser.nextText());
+        }
+ else         if (eventType == XmlPullParser.Event.START_ELEMENT && "name".equals(parser.getName())) {
+          props.setFullName(parser.nextText());
+        }
+ else         if (eventType == XmlPullParser.Event.END_ELEMENT && "workgroup-properties".equals(parser.getName())) {
+          done=true;
+        }
+      }
+      return props;
+    }
+  }
+}

@@ -1,0 +1,13 @@
+/** 
+ * Acts as an interface between the console and the Nodes. All parameters passed to command are redirected to the concerned Nodes, which in turn take care of executing them. <p> Usage:  {@code dagNodeCommand <nodeUri> <command> <parameters>}<p> Example: dagNodeCommand engine:outputToScreenNode setFbo engine:fbo.ssao
+ */
+@Command(shortDescription="Debugging command for DAG.",requiredPermission=PermissionManager.NO_PERMISSION) public void dagNodeCommand(@CommandParam("nodeUri") final String nodeUri,@CommandParam("command") final String command,@CommandParam(value="arguments") final String... arguments){
+  Node node=renderGraph.findNode(nodeUri);
+  if (node == null) {
+    node=renderGraph.findAka(nodeUri);
+    if (node == null) {
+      throw new RuntimeException(("No node is associated with URI '" + nodeUri + "'"));
+    }
+  }
+  node.handleCommand(command,arguments);
+}

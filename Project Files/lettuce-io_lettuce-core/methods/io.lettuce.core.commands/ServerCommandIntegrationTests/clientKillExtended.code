@@ -1,0 +1,15 @@
+@Test void clientKillExtended(){
+  RedisCommands<String,String> connection2=client.connect().sync();
+  connection2.clientSetname("killme");
+  Pattern p=Pattern.compile("^.*[^l]addr=([^ ]+).*name=killme.*$",Pattern.MULTILINE | Pattern.DOTALL);
+  String clients=redis.clientList();
+  Matcher m=p.matcher(clients);
+  assertThat(m.find()).isTrue();
+  String addr=m.group(1);
+  assertThat(redis.clientKill(KillArgs.Builder.addr(addr).skipme())).isGreaterThan(0);
+  assertThat(redis.clientKill(KillArgs.Builder.id(4234))).isEqualTo(0);
+  assertThat(redis.clientKill(KillArgs.Builder.typeSlave().id(4234))).isEqualTo(0);
+  assertThat(redis.clientKill(KillArgs.Builder.typeNormal().id(4234))).isEqualTo(0);
+  assertThat(redis.clientKill(KillArgs.Builder.typePubsub().id(4234))).isEqualTo(0);
+  connection2.getStatefulConnection().close();
+}

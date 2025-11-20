@@ -1,0 +1,38 @@
+public List<Exception> purgeEverything() throws NotConnectedException, InterruptedException, IOException {
+  List<Exception> exceptions=new ArrayList<>(5);
+  PubSubManager pm=PubSubManager.getInstanceFor(getConnection(),getOwnJid());
+  try {
+    requestDeviceListUpdateFor(getOwnJid());
+  }
+ catch (  SmackException.NoResponseException|PubSubException.NotALeafNodeException|XMPPException.XMPPErrorException e) {
+    exceptions.add(e);
+  }
+  OmemoCachedDeviceList deviceList=OmemoService.getInstance().getOmemoStoreBackend().loadCachedDeviceList(getOwnDevice(),getOwnJid());
+  for (  int id : deviceList.getAllDevices()) {
+    try {
+      pm.getLeafNode(OmemoConstants.PEP_NODE_BUNDLE_FROM_DEVICE_ID(id)).deleteAllItems();
+    }
+ catch (    SmackException.NoResponseException|PubSubException.NotALeafNodeException|XMPPException.XMPPErrorException|PubSubException.NotAPubSubNodeException e) {
+      exceptions.add(e);
+    }
+    try {
+      pm.deleteNode(OmemoConstants.PEP_NODE_BUNDLE_FROM_DEVICE_ID(id));
+    }
+ catch (    SmackException.NoResponseException|XMPPException.XMPPErrorException e) {
+      exceptions.add(e);
+    }
+  }
+  try {
+    pm.getLeafNode(OmemoConstants.PEP_NODE_DEVICE_LIST).deleteAllItems();
+  }
+ catch (  SmackException.NoResponseException|PubSubException.NotALeafNodeException|XMPPException.XMPPErrorException|PubSubException.NotAPubSubNodeException e) {
+    exceptions.add(e);
+  }
+  try {
+    pm.deleteNode(OmemoConstants.PEP_NODE_DEVICE_LIST);
+  }
+ catch (  SmackException.NoResponseException|XMPPException.XMPPErrorException e) {
+    exceptions.add(e);
+  }
+  return exceptions;
+}

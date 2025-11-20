@@ -1,0 +1,89 @@
+/** 
+ * MAM Preferences IQ class.
+ * @see <a href="http://xmpp.org/extensions/xep-0313.html">XEP-0313: Message
+ *      Archive Management</a>
+ * @author Fernando Ramirez and Florian Schmaus
+ */
+public class MamPrefsIQ extends IQ {
+  public enum DefaultBehavior {  always,   never,   roster}
+  /** 
+ * the preferences element.
+ */
+  public static final String ELEMENT="prefs";
+  /** 
+ * list of always.
+ */
+  private final List<Jid> alwaysJids;
+  /** 
+ * list of never.
+ */
+  private final List<Jid> neverJids;
+  /** 
+ * default field.
+ */
+  private final DefaultBehavior defaultBehavior;
+  /** 
+ * Construct a new MAM  {@code <prefs/>} IQ retrieval request (IQ type 'get').
+ * @param version TODO javadoc me please     
+ */
+  public MamPrefsIQ(  MamVersion version){
+    super(ELEMENT,version.getNamespace());
+    alwaysJids=null;
+    neverJids=null;
+    defaultBehavior=null;
+  }
+  /** 
+ * MAM preferences IQ constructor.
+ * @param version TODO javadoc me please
+ * @param alwaysJids TODO javadoc me please
+ * @param neverJids TODO javadoc me please
+ * @param defaultBehavior TODO javadoc me please
+ */
+  public MamPrefsIQ(  MamVersion version,  List<Jid> alwaysJids,  List<Jid> neverJids,  DefaultBehavior defaultBehavior){
+    super(ELEMENT,version.getNamespace());
+    setType(Type.set);
+    this.alwaysJids=alwaysJids;
+    this.neverJids=neverJids;
+    this.defaultBehavior=defaultBehavior;
+  }
+  /** 
+ * Get the list of always store info JIDs.
+ * @return the always list
+ */
+  public List<Jid> getAlwaysJids(){
+    return alwaysJids;
+  }
+  /** 
+ * Get the list of never store info JIDs.
+ * @return the never list
+ */
+  public List<Jid> getNeverJids(){
+    return neverJids;
+  }
+  /** 
+ * Get the default behavior.
+ * @return the default behavior.
+ */
+  public DefaultBehavior getDefault(){
+    return defaultBehavior;
+  }
+  @Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(  IQChildElementXmlStringBuilder xml){
+    if (getType().equals(IQ.Type.set) || getType().equals(IQ.Type.result)) {
+      xml.attribute("default",defaultBehavior);
+    }
+    if (alwaysJids == null && neverJids == null) {
+      xml.setEmptyElement();
+      return xml;
+    }
+    xml.rightAngleBracket();
+    if (alwaysJids != null) {
+      MamElements.AlwaysJidListElement alwaysElement=new AlwaysJidListElement(alwaysJids);
+      xml.append(alwaysElement);
+    }
+    if (neverJids != null) {
+      MamElements.NeverJidListElement neverElement=new NeverJidListElement(neverJids);
+      xml.append(neverElement);
+    }
+    return xml;
+  }
+}

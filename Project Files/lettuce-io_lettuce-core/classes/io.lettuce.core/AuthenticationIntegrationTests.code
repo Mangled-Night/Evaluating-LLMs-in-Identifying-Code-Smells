@@ -1,0 +1,28 @@
+/** 
+ * Integration test for authentication.
+ * @author Mark Paluch
+ */
+@ExtendWith(LettuceExtension.class) @EnabledOnCommand("ACL") class AuthenticationIntegrationTests extends TestSupport {
+  @BeforeEach @Inject void setUp(  StatefulRedisConnection<String,String> connection){
+    connection.sync().dispatch(CommandType.ACL,new StatusOutput<>(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).add("SETUSER").add("john").add("on").add(">foobared").add("-@all"));
+  }
+  @Test @Inject void authAsJohn(  RedisClient client){
+    RedisURI uri=RedisURI.builder().withHost(TestSettings.host()).withPort(TestSettings.port()).withAuthentication("john","foobared").build();
+    StatefulRedisConnection<String,String> connection=client.connect(uri);
+    assertThatThrownBy(() -> connection.sync().info()).hasMessageContaining("NOPERM");
+    connection.close();
+  }
+  @Test @Inject void ownCredentialProvider(  RedisClient client){
+    RedisURI uri=RedisURI.builder().withHost(TestSettings.host()).withPort(TestSettings.port()).withAuthentication(() -> {
+      return Mono.just(RedisCredentials.just(null,TestSettings.password()));
+    }
+).build();
+    client.setOptions(ClientOptions.create());
+    WithPassword.run(client,() -> {
+      StatefulRedisConnection<String,String> connection=client.connect(uri);
+      assertThat(connection.sync().ping()).isEqualTo("PONG");
+      connection.close();
+    }
+);
+  }
+}

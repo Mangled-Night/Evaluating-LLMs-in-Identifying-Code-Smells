@@ -1,0 +1,11 @@
+@Test void getNodeSpecificViewsNode1IsFasterThanNode2() throws Exception {
+  Requests requests=createClusterNodesRequests(1,NODE_1_VIEW);
+  requests=createClusterNodesRequests(2,NODE_2_VIEW).mergeWith(requests);
+  Requests clientRequests=createClientListRequests(1,"c1\nc2\n").mergeWith(createClientListRequests(2,"c1\nc2\n"));
+  NodeTopologyViews nodeSpecificViews=sut.getNodeSpecificViews(requests,clientRequests);
+  Collection<Partitions> values=nodeSpecificViews.toMap().values();
+  assertThat(values).hasSize(2);
+  for (  Partitions value : values) {
+    assertThat(value).extracting("nodeId").containsSequence("1","2");
+  }
+}

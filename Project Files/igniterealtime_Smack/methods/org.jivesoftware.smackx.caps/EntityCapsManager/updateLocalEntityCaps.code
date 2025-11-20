@@ -1,0 +1,33 @@
+/** 
+ * Updates the local user Entity Caps information with the data provided If we are connected and there was already a presence send, another presence is send to inform others about your new Entity Caps node string.
+ */
+private void updateLocalEntityCaps(DiscoverInfo synthesizedDiscoveryInfo){
+  XMPPConnection connection=connection();
+  DiscoverInfoBuilder discoverInfoBuilder=synthesizedDiscoveryInfo.asBuilder("synthesized-disco-info-result");
+  currentCapsVersion=generateVerificationString(discoverInfoBuilder);
+  final String localNodeVer=getLocalNodeVer();
+  discoverInfoBuilder.setNode(localNodeVer);
+  final DiscoverInfo discoverInfo=discoverInfoBuilder.build();
+  addDiscoverInfoByNode(localNodeVer,discoverInfo);
+  if (lastLocalCapsVersions.size() > 10) {
+    CapsVersionAndHash oldCapsVersion=lastLocalCapsVersions.poll();
+    sdm.removeNodeInformationProvider(entityNode + '#' + oldCapsVersion.version);
+  }
+  lastLocalCapsVersions.add(currentCapsVersion);
+  if (connection != null)   JID_TO_NODEVER_CACHE.put(connection.getUser(),new NodeVerHash(entityNode,currentCapsVersion));
+  final List<Identity> identities=new LinkedList<>(ServiceDiscoveryManager.getInstanceFor(connection).getIdentities());
+  sdm.setNodeInformationProvider(localNodeVer,new AbstractNodeInformationProvider(){
+    List<String> features=sdm.getFeatures();
+    List<DataForm> packetExtensions=sdm.getExtendedInfo();
+    @Override public List<String> getNodeFeatures(){
+      return features;
+    }
+    @Override public List<Identity> getNodeIdentities(){
+      return identities;
+    }
+    @Override public List<DataForm> getNodePacketExtensions(){
+      return packetExtensions;
+    }
+  }
+);
+}

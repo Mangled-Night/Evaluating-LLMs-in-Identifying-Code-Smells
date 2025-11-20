@@ -1,0 +1,16 @@
+@Test @SuppressWarnings({"rawtypes"}) void testClusterCommandRedirection(){
+  TestCommandListener listener=new TestCommandListener();
+  clusterClient.getPartitions();
+  try {
+    clusterClient.addListener(listener);
+    RedisAdvancedClusterCommands<String,String> connection=clusterClient.connect().sync();
+    assertThat(connection.set(ClusterTestSettings.KEY_B,value)).isEqualTo("OK");
+    assertThat(connection.set(ClusterTestSettings.KEY_A,value)).isEqualTo("OK");
+    connection.getStatefulConnection().close();
+  }
+  finally {
+    client.removeListener(listener);
+  }
+  assertThat(listener.started).hasSizeGreaterThanOrEqualTo(2);
+  assertThat(listener.succeeded).hasSizeGreaterThanOrEqualTo(2);
+}

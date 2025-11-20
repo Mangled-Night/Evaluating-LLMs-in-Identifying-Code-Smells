@@ -1,0 +1,20 @@
+public CompilationUnitFactory(File templateFile,File sources,String targetPackage,String targetName,Function<String,String> typeDocFunction,Function<MethodDeclaration,Type> methodReturnTypeFunction,Predicate<MethodDeclaration> methodFilter,Supplier<List<String>> importSupplier,Consumer<ClassOrInterfaceDeclaration> typeMutator,Function<Comment,Comment> methodCommentMutator){
+  this(templateFile,sources,targetPackage,targetName,typeDocFunction,methodReturnTypeFunction,methodDeclaration -> {
+  }
+,methodFilter,importSupplier,typeMutator,(m,c) -> methodCommentMutator != null ? methodCommentMutator.apply(c) : c);
+}
+public CompilationUnitFactory(File templateFile,File sources,String targetPackage,String targetName,Function<String,String> typeDocFunction,Function<MethodDeclaration,Type> methodReturnTypeFunction,Consumer<MethodDeclaration> onMethod,Predicate<MethodDeclaration> methodFilter,Supplier<List<String>> importSupplier,Consumer<ClassOrInterfaceDeclaration> typeMutator,BiFunction<MethodDeclaration,Comment,Comment> methodCommentMutator){
+  this.templateFile=templateFile;
+  this.sources=sources;
+  this.targetPackage=targetPackage;
+  this.targetName=targetName;
+  this.typeDocFunction=typeDocFunction;
+  this.onMethod=onMethod;
+  this.methodFilter=methodFilter;
+  this.importSupplier=importSupplier;
+  this.typeMutator=typeMutator;
+  this.methodCommentMutator=methodCommentMutator;
+  this.methodReturnTypeMutation=new LinkedHashMap<>();
+  this.methodReturnTypeMutation.put(it -> true,methodReturnTypeFunction);
+  this.target=new File(sources,targetPackage.replace('.','/') + "/" + targetName+ ".java");
+}

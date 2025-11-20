@@ -1,0 +1,9 @@
+@Test void shouldExecuteOnceWithinATimeout(){
+  PubSubMessageHandler adapter=getMessageHandler();
+  sut.bind(refreshRunnable);
+  adapter.handle("*","failover-end-for-timeout","");
+  adapter.handle("*","failover-end-for-timeout","");
+  verify(eventExecutors,times(1)).schedule(captor.capture(),anyLong(),any());
+  captor.getValue().run();
+  verify(refreshRunnable,times(1)).run();
+}

@@ -1,0 +1,41 @@
+private static void deleteLogFiles(final Path rootPath,final long maxAgeInSecs) throws IOException {
+  Files.walkFileTree(rootPath,new SimpleFileVisitor<Path>(){
+    @Override public FileVisitResult preVisitDirectory(    Path path,    BasicFileAttributes attrs){
+      if (path.equals(rootPath)) {
+        return FileVisitResult.CONTINUE;
+      }
+      String relPath=rootPath.relativize(path).getName(0).toString();
+      try {
+        Date folderDate=TIMESTAMP_FORMAT.parse(relPath);
+        long ageInSecs=folderDate.toInstant().until(Instant.now(),ChronoUnit.SECONDS);
+        return ageInSecs > maxAgeInSecs ? FileVisitResult.CONTINUE : FileVisitResult.SKIP_SUBTREE;
+      }
+ catch (      ParseException e) {
+        return FileVisitResult.SKIP_SUBTREE;
+      }
+    }
+    @Override public FileVisitResult visitFile(    Path file,    BasicFileAttributes attrs){
+      if (file.toString().endsWith(".log")) {
+        try {
+          Files.delete(file);
+        }
+ catch (        IOException e) {
+          System.err.println("Could not delete log file: " + file);
+        }
+      }
+      return FileVisitResult.CONTINUE;
+    }
+    @Override public FileVisitResult postVisitDirectory(    Path path,    IOException exc){
+      if (path.toFile().list().length == 0) {
+        try {
+          Files.delete(path);
+        }
+ catch (        IOException e) {
+          System.err.println("Could not delete empty folder: " + path);
+        }
+      }
+      return FileVisitResult.CONTINUE;
+    }
+  }
+);
+}

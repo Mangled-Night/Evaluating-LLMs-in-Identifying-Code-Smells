@@ -1,0 +1,14 @@
+@ApiOperation(value="修改菜单") @RequiresPermissions("cms:menu:update") @RequestMapping(value="/update/{id}",method=RequestMethod.GET) public String update(@PathVariable("id") int id,ModelMap modelMap){
+  CmsMenu menu=cmsMenuService.selectByPrimaryKey(id);
+  modelMap.put("menu",menu);
+  return "/manage/menu/update.jsp";
+}
+@ApiOperation(value="修改菜单") @RequiresPermissions("cms:menu:update") @RequestMapping(value="/update/{id}",method=RequestMethod.POST) @ResponseBody public Object update(@PathVariable("id") int id,CmsMenu cmsMenu){
+  ComplexResult result=FluentValidator.checkAll().on(cmsMenu.getName(),new LengthValidator(1,20,"名称")).doValidate().result(ResultCollectors.toComplex());
+  if (!result.isSuccess()) {
+    return new CmsResult(CmsResultConstant.INVALID_LENGTH,result.getErrors());
+  }
+  cmsMenu.setMenuId(id);
+  int count=cmsMenuService.updateByPrimaryKeySelective(cmsMenu);
+  return new CmsResult(CmsResultConstant.SUCCESS,count);
+}

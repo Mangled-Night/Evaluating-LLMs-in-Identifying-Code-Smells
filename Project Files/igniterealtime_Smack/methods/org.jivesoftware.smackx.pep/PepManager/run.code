@@ -1,0 +1,25 @@
+@Override public void run(){
+  ItemsExtension itemsExtension=(ItemsExtension)event.getEvent();
+  String node=itemsExtension.getNode();
+  for (  PepListener listener : pepListeners) {
+    listener.eventReceived(from,event,message);
+  }
+  List<PepEventListenerCoupling<? extends ExtensionElement>> nodeListeners;
+synchronized (pepEventListeners) {
+    nodeListeners=pepEventListeners.getAll(node);
+    if (nodeListeners.isEmpty()) {
+      return;
+    }
+    nodeListeners=CollectionUtil.newListWith(nodeListeners);
+  }
+  for (  PepEventListenerCoupling<? extends ExtensionElement> listener : nodeListeners) {
+    List<? extends NamedElement> items=itemsExtension.getItems();
+    for (    NamedElement namedElementItem : items) {
+      Item item=(Item)namedElementItem;
+      String id=item.getId();
+      @SuppressWarnings("unchecked") PayloadItem<ExtensionElement> payloadItem=(PayloadItem<ExtensionElement>)item;
+      ExtensionElement payload=payloadItem.getPayload();
+      listener.invoke(from,payload,id,message);
+    }
+  }
+}

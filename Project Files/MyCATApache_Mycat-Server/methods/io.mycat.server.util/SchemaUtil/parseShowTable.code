@@ -1,0 +1,47 @@
+/** 
+ * 解析show full table from|in schema-name where table_type|tables_in_xxx like 'xxx'
+ * @param sql
+ * @return fields' array. <pre> [0] is matched, 1 is matcher , other is not matcher [1] is full, 代表当前是show full tabe ，如果为空则表示show table [2] from or in [3] schema-name [4] where [5] is 'table_type' or 'tables_in_xxxx' [6] is 'like' or '=' or ... other operator [7]  [8] is where match condition str, etc. table-name or table_type like 'BASE TABLE' </pre>
+ */
+public static String[] parseShowTable(String sql){
+  Matcher matcher=SHOW_FULL_TABLE_PATTERN.matcher(sql);
+  String[] fields=new String[9];
+  if (matcher.find()) {
+    fields[0]="1";
+    fields[1]=matcher.group(1);
+    if (fields[1] != null) {
+      fields[1]=fields[1].trim();
+    }
+    fields[2]=matcher.group(2);
+    if (fields[2] == null || fields[2].length() <= 0) {
+      fields[3]=null;
+      if (matcher.group(3) != null && "LIKE".equals(matcher.group(3))) {
+        fields[4]=null;
+      }
+ else {
+        fields[4]="WHERE";
+      }
+    }
+ else {
+      fields[2]=fields[2].trim();
+      fields[3]=matcher.group(3);
+      fields[4]=matcher.group(4);
+      if (fields[4] != null) {
+        fields[4]=fields[4].trim();
+      }
+    }
+    fields[5]=matcher.group(5);
+    if (fields[4] == null) {
+      fields[6]="LIKE";
+    }
+ else {
+      fields[6]=matcher.group(6);
+      if (fields[6] != null) {
+        fields[6]=fields[6].trim();
+      }
+    }
+    fields[7]=matcher.group(7);
+    fields[8]=matcher.group(8);
+  }
+  return fields;
+}

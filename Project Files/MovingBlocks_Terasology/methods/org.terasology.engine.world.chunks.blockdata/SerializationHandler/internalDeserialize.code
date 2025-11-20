@@ -1,0 +1,64 @@
+@Override protected TeraDenseArray16Bit internalDeserialize(int sizeX,int sizeY,int sizeZ,ByteBuffer buffer){
+  final int length=buffer.getInt();
+  if (length > 0) {
+    final short[] data=new short[length];
+    final ShortBuffer sbuffer=buffer.asShortBuffer();
+    sbuffer.get(data,0,length);
+    buffer.position(buffer.position() + length * 2);
+    return new TeraDenseArray16Bit(sizeX,sizeY,sizeZ,data);
+  }
+  return new TeraDenseArray16Bit(sizeX,sizeY,sizeZ);
+}
+@Override protected T internalDeserialize(int sizeX,int sizeY,int sizeZ,ByteBuffer buffer){
+  final int length=buffer.getInt();
+  if (length > 0) {
+    final byte[] data=new byte[length];
+    buffer.get(data,0,length);
+    return createArray(sizeX,sizeY,sizeZ,data);
+  }
+  return createArray(sizeX,sizeY,sizeZ,null);
+}
+@Override protected TeraSparseArray16Bit internalDeserialize(int sizeX,int sizeY,int sizeZ,ByteBuffer buffer){
+  final byte hasData=buffer.get();
+  final TeraSparseArray16Bit array=new TeraSparseArray16Bit(sizeX,sizeY,sizeZ);
+  if (hasData == 0) {
+    array.fill=buffer.getShort();
+    return array;
+  }
+  final int rowSize=array.getSizeXZ();
+  array.inflated=new short[sizeY][];
+  array.deflated=new short[sizeY];
+  for (int y=0; y < sizeY; y++) {
+    final byte hasRow=buffer.get();
+    if (hasRow == 0) {
+      array.deflated[y]=buffer.getShort();
+    }
+ else {
+      array.inflated[y]=new short[rowSize];
+      getRow(array.inflated[y],rowSize,buffer);
+    }
+  }
+  return array;
+}
+@Override protected T internalDeserialize(int sizeX,int sizeY,int sizeZ,ByteBuffer buffer){
+  final byte hasData=buffer.get();
+  final T array=createArray(sizeX,sizeY,sizeZ);
+  if (hasData == 0) {
+    array.fill=buffer.get();
+    return array;
+  }
+  int rowSize=array.rowSize();
+  array.inflated=new byte[sizeY][];
+  array.deflated=new byte[sizeY];
+  for (int y=0; y < sizeY; y++) {
+    final byte hasRow=buffer.get();
+    if (hasRow == 0) {
+      array.deflated[y]=buffer.get();
+    }
+ else {
+      array.inflated[y]=new byte[rowSize];
+      buffer.get(array.inflated[y],0,rowSize);
+    }
+  }
+  return array;
+}

@@ -1,0 +1,78 @@
+public class MessageFasteningElementsTest {
+  private final StanzaFactory stanzaFactory=new StanzaFactory(new StandardStanzaIdSource());
+  /** 
+ * Test XML serialization of the  {@link FasteningElement} using the example provided bythe XEP.
+ * @see <a href="https://xmpp.org/extensions/xep-0422.html#wrapped-payloads">XEP-0422 §3.1 Wrapped Payloads</a>
+ */
+  @Test public void fasteningElementSerializationTest(){
+    String xml="<apply-to xmlns='urn:xmpp:fasten:0' id='origin-id-1'>" + "    <i-like-this xmlns='urn:example:like'/>" + "</apply-to>";
+    FasteningElement applyTo=FasteningElement.builder().setOriginId("origin-id-1").addWrappedPayload(new StandardExtensionElement("i-like-this","urn:example:like")).build();
+    assertXmlSimilar(xml,applyTo.toXML().toString());
+  }
+  @ParameterizedTest @EnumSource(SmackTestUtil.XmlPullParserKind.class) public void fasteningDeserializationTest(  SmackTestUtil.XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+    String xml="<apply-to xmlns='urn:xmpp:fasten:0' id='origin-id-1'>" + "    <i-like-this xmlns='urn:example:like'/>" + "    <external name='custom' element-namespace='urn:example:custom'/>"+ "    <external name='body'/>"+ "</apply-to>";
+    FasteningElement parsed=SmackTestUtil.parse(xml,FasteningElementProvider.class,parserKind);
+    assertNotNull(parsed);
+    assertEquals(new OriginIdElement("origin-id-1"),parsed.getReferencedStanzasOriginId());
+    assertFalse(parsed.isRemovingElement());
+    assertFalse(parsed.isShellElement());
+    assertEquals(1,parsed.getWrappedPayloads().size());
+    assertEquals("i-like-this",parsed.getWrappedPayloads().get(0).getElementName());
+    assertEquals("urn:example:like",parsed.getWrappedPayloads().get(0).getNamespace());
+    assertEquals(2,parsed.getExternalPayloads().size());
+    ExternalElement custom=parsed.getExternalPayloads().get(0);
+    assertEquals("custom",custom.getName());
+    assertEquals("urn:example:custom",custom.getElementNamespace());
+    ExternalElement body=parsed.getExternalPayloads().get(1);
+    assertEquals("body",body.getName());
+    assertNull(body.getElementNamespace());
+  }
+  @Test public void fasteningDeserializationClearTest() throws XmlPullParserException, IOException, SmackParsingException {
+    String xml="<apply-to xmlns='urn:xmpp:fasten:0' id='origin-id-1' clear='true'>" + "    <i-like-this xmlns='urn:example:like'/>" + "</apply-to>";
+    FasteningElement parsed=FasteningElementProvider.TEST_INSTANCE.parse(TestUtils.getParser(xml));
+    assertTrue(parsed.isRemovingElement());
+  }
+  @Test public void fasteningElementWithExternalElementsTest(){
+    String xml="<apply-to xmlns='urn:xmpp:fasten:0' id='origin-id-2'>" + "    <external name='body'/>" + "    <external name='custom' element-namespace='urn:example:custom'/>"+ "    <edit xmlns='urn:example.edit'/>"+ "</apply-to>";
+    FasteningElement element=FasteningElement.builder().setOriginId("origin-id-2").addExternalPayloads(Arrays.asList(new ExternalElement("body"),new ExternalElement("custom","urn:example:custom"))).addWrappedPayload(new StandardExtensionElement("edit","urn:example.edit")).build();
+    assertXmlSimilar(xml,element.toXML().toString());
+  }
+  @Test public void createShellElementSharesOriginIdTest(){
+    OriginIdElement originIdElement=new OriginIdElement("sensitive-stanza-1");
+    FasteningElement sensitiveFastening=FasteningElement.builder().setOriginId(originIdElement).build();
+    FasteningElement shellElement=FasteningElement.createShellElementForSensitiveElement(sensitiveFastening);
+    assertEquals(originIdElement,shellElement.getReferencedStanzasOriginId());
+  }
+  @Test public void fasteningRemoveSerializationTest(){
+    String xml="<apply-to xmlns='urn:xmpp:fasten:0' id='origin-id-1' clear='true'>" + "      <i-like-this xmlns='urn:example:like'>Very much</i-like-this>" + "</apply-to>";
+    FasteningElement element=FasteningElement.builder().setOriginId("origin-id-1").setClear().addWrappedPayload(StandardExtensionElement.builder("i-like-this","urn:example:like").setText("Very much").build()).build();
+    assertXmlSimilar(xml,element.toXML().toString());
+  }
+  @Test public void hasFasteningElementTest(){
+    MessageBuilder messageBuilderWithFasteningElement=StanzaBuilder.buildMessage().setBody("Hi!").addExtension(FasteningElement.builder().setOriginId("origin-id-1").build());
+    MessageBuilder messageBuilderWithoutFasteningElement=StanzaBuilder.buildMessage().setBody("Ho!");
+    assertTrue(FasteningElement.hasFasteningElement(messageBuilderWithFasteningElement));
+    assertFalse(FasteningElement.hasFasteningElement(messageBuilderWithoutFasteningElement));
+  }
+  @Test public void shellElementMustNotHaveClearAttributeTest(){
+    assertThrows(IllegalArgumentException.class,() -> FasteningElement.builder().setShell().setClear().build());
+  }
+  @Test public void shellElementMustNotContainAnyPayloads(){
+    assertThrows(IllegalArgumentException.class,() -> FasteningElement.builder().setShell().addWrappedPayload(new StandardExtensionElement("edit","urn:example.edit")).build());
+    assertThrows(IllegalArgumentException.class,() -> FasteningElement.builder().setShell().addExternalPayload(new ExternalElement("body")).build());
+  }
+  @Test public void ensureAddFasteningElementToStanzaWorks(){
+    MessageBuilder message=stanzaFactory.buildMessageStanza();
+    FasteningElement fasteningElement=FasteningElement.builder().setOriginId("another-apply-to").build();
+    fasteningElement.applyTo(message);
+  }
+  /** 
+ * Ensure, that  {@link FasteningElement#applyTo(MessageBuilder)}throws when trying to add an  {@link FasteningElement} to a {@link MessageBuilder} that already contains onesuch element.
+ * @see <a href="https://xmpp.org/extensions/xep-0422.html#rules">XEP-0422: §4. Business Rules</a>
+ */
+  @Test public void ensureStanzaCanOnlyContainOneFasteningElement(){
+    MessageBuilder messageWithFastening=stanzaFactory.buildMessageStanza();
+    FasteningElement.builder().setOriginId("origin-id").build().applyTo(messageWithFastening);
+    Assertions.assertThrows(IllegalArgumentException.class,() -> FasteningElement.builder().setOriginId("another-apply-to").build().applyTo(messageWithFastening));
+  }
+}

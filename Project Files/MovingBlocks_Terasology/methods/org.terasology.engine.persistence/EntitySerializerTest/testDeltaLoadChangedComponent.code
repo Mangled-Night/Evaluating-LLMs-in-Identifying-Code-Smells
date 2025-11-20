@@ -1,0 +1,14 @@
+@Test public void testDeltaLoadChangedComponent() throws Exception {
+  EntityRef entity=entityManager.create("test:Test");
+  StringComponent comp=entity.getComponent(StringComponent.class);
+  comp.value="Delta";
+  entity.saveComponent(comp);
+  EntityData.Entity entityData=entitySerializer.serialize(entity);
+  long nextId=entityManager.getNextId();
+  entityManager.clear();
+  entityManager.setNextId(nextId);
+  EntityRef loadedEntity=entitySerializer.deserialize(entityData);
+  assertTrue(loadedEntity.exists());
+  assertTrue(loadedEntity.hasComponent(StringComponent.class));
+  assertEquals("Delta",loadedEntity.getComponent(StringComponent.class).value);
+}

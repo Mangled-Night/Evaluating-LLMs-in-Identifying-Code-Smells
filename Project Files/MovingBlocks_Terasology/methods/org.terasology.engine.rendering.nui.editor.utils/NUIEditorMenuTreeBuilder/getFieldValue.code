@@ -1,0 +1,27 @@
+private Object getFieldValue(Field field,Class clazz) throws IllegalAccessException, InstantiationException {
+  if (Enum.class.isAssignableFrom(field.getType())) {
+    return field.getType().getEnumConstants()[0].toString();
+  }
+ else {
+    Object value;
+    if (Binding.class.isAssignableFrom(field.getType())) {
+      if (AbstractWidget.class.isAssignableFrom(clazz) && Objects.equals(field.getName(),"family")) {
+        value="";
+      }
+ else {
+        Binding binding=(Binding)field.get(newInstance(clazz));
+        value=binding.get();
+      }
+    }
+ else     if (Optional.class.isAssignableFrom(field.getType())) {
+      value=newInstance((Class)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0]);
+    }
+ else {
+      value=field.get(newInstance(clazz));
+    }
+    if (value != null && value instanceof Boolean) {
+      value=!(Boolean)value;
+    }
+    return (value != null || Binding.class.isAssignableFrom(field.getType())) ? value : newInstance(field.getType());
+  }
+}

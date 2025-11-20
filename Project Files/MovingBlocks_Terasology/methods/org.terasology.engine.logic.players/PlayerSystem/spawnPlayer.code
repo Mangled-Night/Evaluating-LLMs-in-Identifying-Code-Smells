@@ -1,0 +1,11 @@
+private void spawnPlayer(EntityRef clientEntity){
+  ClientComponent client=clientEntity.getComponent(ClientComponent.class);
+  PlayerFactory playerFactory=new PlayerFactory(entityManager,worldProvider);
+  EntityRef playerCharacter=playerFactory.newInstance(clientEntity);
+  Client clientListener=networkSystem.getOwner(clientEntity);
+  Vector3ic distance=clientListener.getViewDistance().getChunkDistance();
+  updateRelevanceEntity(clientEntity,distance);
+  client.character=playerCharacter;
+  clientEntity.saveComponent(client);
+  playerCharacter.send(new OnPlayerSpawnedEvent());
+}

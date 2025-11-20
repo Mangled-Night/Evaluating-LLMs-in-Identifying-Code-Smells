@@ -1,0 +1,43 @@
+static class ConnectionTracker {
+  private final Map<RedisURI,CompletableFuture<StatefulRedisConnection<String,String>>> connections=new LinkedHashMap<>();
+  public void addConnection(  RedisURI uri,  CompletableFuture<StatefulRedisConnection<String,String>> future){
+    CompletableFuture<StatefulRedisConnection<String,String>> existing=connections.put(uri,future);
+  }
+  @SuppressWarnings("rawtypes") public CompletableFuture<Void> close(){
+    CompletableFuture[] futures=connections.values().stream().map(it -> it.thenCompose(StatefulConnection::closeAsync).exceptionally(ignore -> null)).toArray(CompletableFuture[]::new);
+    return CompletableFuture.allOf(futures);
+  }
+  public boolean contains(  RedisURI uri){
+    return connections.containsKey(uri);
+  }
+  public <T>CompletableFuture<T> whenComplete(  Function<? super Map<RedisURI,StatefulRedisConnection<String,String>>,? extends T> mappingFunction){
+    int expectedCount=connections.size();
+    AtomicInteger latch=new AtomicInteger();
+    CompletableFuture<T> continuation=new CompletableFuture<>();
+    for (    Map.Entry<RedisURI,CompletableFuture<StatefulRedisConnection<String,String>>> entry : connections.entrySet()) {
+      CompletableFuture<StatefulRedisConnection<String,String>> future=entry.getValue();
+      future.whenComplete((it,ex) -> {
+        if (latch.incrementAndGet() == expectedCount) {
+          try {
+            continuation.complete(mappingFunction.apply(collectConnections()));
+          }
+ catch (          RuntimeException e) {
+            continuation.completeExceptionally(e);
+          }
+        }
+      }
+);
+    }
+    return continuation;
+  }
+  protected Map<RedisURI,StatefulRedisConnection<String,String>> collectConnections(){
+    Map<RedisURI,StatefulRedisConnection<String,String>> activeConnections=new LinkedHashMap<>();
+    for (    Map.Entry<RedisURI,CompletableFuture<StatefulRedisConnection<String,String>>> entry : connections.entrySet()) {
+      CompletableFuture<StatefulRedisConnection<String,String>> future=entry.getValue();
+      if (future.isDone() && !future.isCompletedExceptionally()) {
+        activeConnections.put(entry.getKey(),future.join());
+      }
+    }
+    return activeConnections;
+  }
+}

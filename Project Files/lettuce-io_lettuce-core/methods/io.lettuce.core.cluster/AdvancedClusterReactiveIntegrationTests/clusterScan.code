@@ -1,0 +1,17 @@
+@Test void clusterScan(){
+  RedisAdvancedClusterCommands<String,String> sync=commands.getStatefulConnection().sync();
+  sync.mset(KeysAndValues.MAP);
+  Set<String> allKeys=new HashSet<>();
+  KeyScanCursor<String> scanCursor=null;
+  do {
+    if (scanCursor == null) {
+      scanCursor=commands.scan().block();
+    }
+ else {
+      scanCursor=commands.scan(scanCursor).block();
+    }
+    allKeys.addAll(scanCursor.getKeys());
+  }
+ while (!scanCursor.isFinished());
+  assertThat(allKeys).containsAll(KeysAndValues.KEYS);
+}

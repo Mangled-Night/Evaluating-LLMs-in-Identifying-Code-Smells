@@ -1,0 +1,13 @@
+private void fixLimit(MySqlSelectQueryBlock mysqlSelectQuery,RouteResultsetNode node){
+  if (!getCurentDbType().equalsIgnoreCase("mysql")) {
+    SQLLimit _limit=mysqlSelectQuery.getLimit();
+    if (_limit != null) {
+      SQLIntegerExpr offset=(SQLIntegerExpr)_limit.getOffset();
+      SQLIntegerExpr count=(SQLIntegerExpr)_limit.getRowCount();
+      if (offset != null && count != null) {
+        String nativeSql=PageSQLUtil.convertLimitToNativePageSql(getCurentDbType(),node.getStatement(),offset.getNumber().intValue(),count.getNumber().intValue());
+        node.setStatement(nativeSql);
+      }
+    }
+  }
+}

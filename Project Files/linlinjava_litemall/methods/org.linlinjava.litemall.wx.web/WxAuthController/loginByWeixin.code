@@ -1,0 +1,56 @@
+/** 
+ * 微信登录
+ * @param wxLoginInfo 请求内容，{ code: xxx, userInfo: xxx }
+ * @param request     请求对象
+ * @return 登录结果
+ */
+@PostMapping("login_by_weixin") public Object loginByWeixin(@RequestBody WxLoginInfo wxLoginInfo,HttpServletRequest request){
+  String code=wxLoginInfo.getCode();
+  UserInfo userInfo=wxLoginInfo.getUserInfo();
+  if (code == null || userInfo == null) {
+    return ResponseUtil.badArgument();
+  }
+  String sessionKey=null;
+  String openId=null;
+  try {
+    WxMaJscode2SessionResult result=this.wxService.getUserService().getSessionInfo(code);
+    sessionKey=result.getSessionKey();
+    openId=result.getOpenid();
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+  }
+  if (sessionKey == null || openId == null) {
+    return ResponseUtil.fail();
+  }
+  LitemallUser user=userService.queryByOid(openId);
+  if (user == null) {
+    user=new LitemallUser();
+    user.setUsername(openId);
+    user.setPassword(openId);
+    user.setWeixinOpenid(openId);
+    user.setAvatar(userInfo.getAvatarUrl());
+    user.setNickname(userInfo.getNickName());
+    user.setGender(userInfo.getGender());
+    user.setUserLevel((byte)0);
+    user.setStatus((byte)0);
+    user.setLastLoginTime(LocalDateTime.now());
+    user.setLastLoginIp(IpUtil.getIpAddr(request));
+    user.setSessionKey(sessionKey);
+    userService.add(user);
+    couponAssignService.assignForRegister(user.getId());
+  }
+ else {
+    user.setLastLoginTime(LocalDateTime.now());
+    user.setLastLoginIp(IpUtil.getIpAddr(request));
+    user.setSessionKey(sessionKey);
+    if (userService.updateById(user) == 0) {
+      return ResponseUtil.updatedDataFailed();
+    }
+  }
+  String token=UserTokenManager.generateToken(user.getId());
+  Map<Object,Object> result=new HashMap<Object,Object>();
+  result.put("token",token);
+  result.put("userInfo",userInfo);
+  return ResponseUtil.ok(result);
+}

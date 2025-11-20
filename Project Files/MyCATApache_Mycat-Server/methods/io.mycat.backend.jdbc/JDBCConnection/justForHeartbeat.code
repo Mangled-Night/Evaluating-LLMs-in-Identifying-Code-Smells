@@ -1,0 +1,28 @@
+private void justForHeartbeat(String sql){
+  Statement stmt=null;
+  try {
+    stmt=con.createStatement();
+    stmt.execute(sql);
+    if (!isAutocommit()) {
+      con.commit();
+    }
+    this.respHandler.okResponse(OkPacket.OK,this);
+  }
+ catch (  Exception e) {
+    String msg=e.getMessage();
+    ErrorPacket error=new ErrorPacket();
+    error.packetId=++packetId;
+    error.errno=ErrorCode.ER_UNKNOWN_ERROR;
+    error.message=msg.getBytes();
+    this.respHandler.errorResponse(error.writeToBytes(),this);
+  }
+ finally {
+    if (stmt != null) {
+      try {
+        stmt.close();
+      }
+ catch (      SQLException e) {
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+class ShareDBJoinHandler implements SQLJobHandler {
+  private List<byte[]> fields;
+  private final ShareJoin ctx;
+  private String joinkey;
+  private NonBlockingSession session;
+  public ShareDBJoinHandler(  ShareJoin ctx,  String joinField,  NonBlockingSession session){
+    super();
+    this.ctx=ctx;
+    this.joinkey=joinField;
+    this.session=session;
+  }
+  @Override public void onHeader(  String dataNode,  byte[] header,  List<byte[]> fields){
+    this.fields=fields;
+    ctx.putDBFields(fields);
+  }
+  @Override public boolean onRowData(  String dataNode,  byte[] rowData){
+    int fid=this.ctx.getFieldIndex(fields,joinkey);
+    String id=ResultSetUtil.getColumnValAsString(rowData,fields,0);
+    String nid=ResultSetUtil.getColumnValAsString(rowData,fields,fid);
+    ctx.putDBRow(id,nid,rowData,fid);
+    return false;
+  }
+  @Override public void finished(  String dataNode,  boolean failed,  String errorMsg){
+    if (failed) {
+      session.getSource().writeErrMessage(ErrorCode.ER_UNKNOWN_ERROR,errorMsg);
+    }
+ else {
+      ctx.endJobInput(dataNode,failed);
+    }
+  }
+}

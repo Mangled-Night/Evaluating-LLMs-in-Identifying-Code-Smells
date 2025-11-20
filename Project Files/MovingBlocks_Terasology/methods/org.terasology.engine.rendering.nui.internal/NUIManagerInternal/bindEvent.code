@@ -1,0 +1,26 @@
+@Priority(EventPriority.PRIORITY_HIGH) @ReceiveEvent(components=ClientComponent.class) public void bindEvent(BindButtonEvent event,EntityRef entity){
+  NUIBindButtonEvent nuiEvent=new NUIBindButtonEvent(mouse,keyboard,new ResourceUrn(event.getId().getModuleName(),event.getId().getObjectName()).toString(),event.getState());
+  if (focus != null) {
+    focus.onBindEvent(nuiEvent);
+  }
+  if (!event.isConsumed()) {
+    for (    UIScreenLayer layer : screens) {
+      if (layer.isReleasingMouse()) {
+        layer.onBindEvent(nuiEvent);
+        if (nuiEvent.isConsumed()) {
+          event.consume();
+          break;
+        }
+        if (!layer.isLowerLayerVisible()) {
+          break;
+        }
+      }
+    }
+  }
+  for (  UIScreenLayer screen : screens) {
+    if (screen.isModal()) {
+      event.consume();
+      return;
+    }
+  }
+}

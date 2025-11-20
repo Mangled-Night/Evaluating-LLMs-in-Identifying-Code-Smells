@@ -1,0 +1,72 @@
+public void write(int ordinal,boolean value){
+  final long offset=getFieldOffset(ordinal);
+  Platform.putLong(holder.buffer,offset,0L);
+  Platform.putBoolean(holder.buffer,offset,value);
+}
+public void write(int ordinal,byte value){
+  final long offset=getFieldOffset(ordinal);
+  Platform.putLong(holder.buffer,offset,0L);
+  Platform.putByte(holder.buffer,offset,value);
+}
+public void write(int ordinal,short value){
+  final long offset=getFieldOffset(ordinal);
+  Platform.putLong(holder.buffer,offset,0L);
+  Platform.putShort(holder.buffer,offset,value);
+}
+public void write(int ordinal,int value){
+  final long offset=getFieldOffset(ordinal);
+  Platform.putLong(holder.buffer,offset,0L);
+  Platform.putInt(holder.buffer,offset,value);
+}
+public void write(int ordinal,long value){
+  Platform.putLong(holder.buffer,getFieldOffset(ordinal),value);
+}
+public void write(int ordinal,float value){
+  if (Float.isNaN(value)) {
+    value=Float.NaN;
+  }
+  final long offset=getFieldOffset(ordinal);
+  Platform.putLong(holder.buffer,offset,0L);
+  Platform.putFloat(holder.buffer,offset,value);
+}
+public void write(int ordinal,double value){
+  if (Double.isNaN(value)) {
+    value=Double.NaN;
+  }
+  Platform.putDouble(holder.buffer,getFieldOffset(ordinal),value);
+}
+public void write(int ordinal,byte[] input){
+  if (input == null) {
+    return;
+  }
+  write(ordinal,input,0,input.length);
+}
+public void write(int ordinal,byte[] input,int offset,int numBytes){
+  final int roundedSize=ByteArrayMethods.roundNumberOfBytesToNearestWord(numBytes);
+  holder.grow(roundedSize);
+  zeroOutPaddingBytes(numBytes);
+  Platform.copyMemory(input,Platform.BYTE_ARRAY_OFFSET + offset,holder.buffer,holder.cursor,numBytes);
+  setOffsetAndSize(ordinal,numBytes);
+  holder.cursor+=roundedSize;
+}
+/** 
+ * different from Spark, we use java BigDecimal here,  and we limit the max precision to be 38 because the bytes length limit to be 16
+ * @param ordinal
+ * @param input
+ */
+public void write(int ordinal,BigDecimal input){
+  holder.grow(16);
+  Platform.putLong(holder.buffer,holder.cursor,0L);
+  Platform.putLong(holder.buffer,holder.cursor + 8,0L);
+  if (input == null) {
+    BitSetMethods.set(holder.buffer,startingOffset,ordinal);
+    setOffsetAndSize(ordinal,0L);
+  }
+ else {
+    final byte[] bytes=input.unscaledValue().toByteArray();
+    assert bytes.length <= 16;
+    Platform.copyMemory(bytes,Platform.BYTE_ARRAY_OFFSET,holder.buffer,holder.cursor,bytes.length);
+    setOffsetAndSize(ordinal,bytes.length);
+  }
+  holder.cursor+=16;
+}

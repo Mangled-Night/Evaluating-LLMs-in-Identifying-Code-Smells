@@ -1,0 +1,77 @@
+/** 
+ * Tests the service discovery functionality.
+ * @author Gaston Dombiak
+ */
+public class ServiceDiscoveryManagerTest extends SmackTestCase {
+  public ServiceDiscoveryManagerTest(  String arg0){
+    super(arg0);
+  }
+  /** 
+ * Tests info discovery of a Smack client.
+ */
+  public void testSmackInfo(){
+    ServiceDiscoveryManager discoManager=ServiceDiscoveryManager.getInstanceFor(getConnection(0));
+    try {
+      DiscoverInfo info=discoManager.discoverInfo(getFullJID(1));
+      Iterator<Identity> identities=info.getIdentities();
+      assertTrue("No identities were found",identities.hasNext());
+      Identity identity=identities.next();
+      assertEquals("Name in identity is wrong",discoManager.getIdentityName(),identity.getName());
+      assertEquals("Category in identity is wrong","client",identity.getCategory());
+      assertEquals("Type in identity is wrong",discoManager.getIdentityType(),identity.getType());
+      assertFalse("More identities were found",identities.hasNext());
+    }
+ catch (    Exception e) {
+      e.printStackTrace();
+      fail(e.getMessage());
+    }
+  }
+  /** 
+ * Tests that ensures that Smack answers a 404 error when the disco#info includes a node.
+ */
+  public void testInfoWithNode(){
+    ServiceDiscoveryManager discoManager=ServiceDiscoveryManager.getInstanceFor(getConnection(0));
+    try {
+      discoManager.discoverInfo(getFullJID(1),"some node");
+      fail("Unexpected identities were returned instead of a 404 error");
+    }
+ catch (    XMPPException e) {
+      assertEquals("Incorrect error",404,e.getStanzaError().getCode());
+    }
+catch (    Exception e) {
+      e.printStackTrace();
+      fail(e.getMessage());
+    }
+  }
+  /** 
+ * Tests service discovery of XHTML support.
+ */
+  public void testXHTMLFeature(){
+    assertTrue(XHTMLManager.isServiceEnabled(getConnection(0)));
+    assertTrue(XHTMLManager.isServiceEnabled(getConnection(1)));
+    assertFalse(XHTMLManager.isServiceEnabled(getConnection(1),getBareJID(0)));
+    assertTrue(XHTMLManager.isServiceEnabled(getConnection(1),getFullJID(0)));
+    XHTMLManager.setServiceEnabled(getConnection(0),false);
+    assertFalse(XHTMLManager.isServiceEnabled(getConnection(0)));
+    assertTrue(XHTMLManager.isServiceEnabled(getConnection(1)));
+    assertFalse(XHTMLManager.isServiceEnabled(getConnection(1),getFullJID(0)));
+  }
+  /** 
+ * Tests support for publishing items to another entity.
+ */
+  public void testDiscoverPublishItemsSupport(){
+    try {
+      boolean canPublish=ServiceDiscoveryManager.getInstanceFor(getConnection(0)).canPublishItems(getXMPPServiceDomain());
+      assertFalse("Wildfire does not support publishing...so far!!",canPublish);
+    }
+ catch (    Exception e) {
+      fail(e.getMessage());
+    }
+  }
+  /** 
+ * Tests publishing items to another entity.
+ */
+  protected int getMaxConnections(){
+    return 2;
+  }
+}

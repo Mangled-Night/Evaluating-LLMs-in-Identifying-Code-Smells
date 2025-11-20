@@ -1,0 +1,36 @@
+/** 
+ * Creates a new XMPP connection over TCP (optionally using proxies). <p> Note that XMPPTCPConnection constructors do not establish a connection to the server and you must call  {@link #connect()}. </p>
+ * @param config the connection configuration.
+ */
+public XMPPTCPConnection(XMPPTCPConnectionConfiguration config){
+  super(config);
+  this.config=config;
+  addConnectionListener(new ConnectionListener(){
+    @Override public void connectionClosedOnError(    Exception e){
+      if (e instanceof XMPPException.StreamErrorException || e instanceof StreamManagementException) {
+        dropSmState();
+      }
+    }
+  }
+);
+  buildNonzaCallback().listenFor(SaslNonza.Success.class,s -> resetParser()).install();
+}
+/** 
+ * Creates a new XMPP connection over TCP. <p> Note that  {@code jid} must be the bare JID, e.g. "user@example.org". More fine-grained control over theconnection settings is available using the  {@link #XMPPTCPConnection(XMPPTCPConnectionConfiguration)}constructor. </p>
+ * @param jid the bare JID used by the client.
+ * @param password the password or authentication token.
+ * @throws XmppStringprepException if the provided string is invalid.
+ */
+public XMPPTCPConnection(CharSequence jid,String password) throws XmppStringprepException {
+  this(XMPPTCPConnectionConfiguration.builder().setXmppAddressAndPassword(jid,password).build());
+}
+/** 
+ * Creates a new XMPP connection over TCP. <p> This is the simplest constructor for connecting to an XMPP server. Alternatively, you can get fine-grained control over connection settings using the {@link #XMPPTCPConnection(XMPPTCPConnectionConfiguration)} constructor.</p>
+ * @param username TODO javadoc me please
+ * @param password TODO javadoc me please
+ * @param serviceName TODO javadoc me please
+ * @throws XmppStringprepException if the provided string is invalid.
+ */
+public XMPPTCPConnection(CharSequence username,String password,String serviceName) throws XmppStringprepException {
+  this(XMPPTCPConnectionConfiguration.builder().setUsernameAndPassword(username,password).setXmppDomain(JidCreate.domainBareFrom(serviceName)).build());
+}

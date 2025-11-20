@@ -1,0 +1,41 @@
+/** 
+ * Attempts to receive a module from the server and push it to the client. Creates a file on the target machine and begins preparation to write to it.
+ * @param channelHandlerContext
+ * @param moduleDataHeader
+ */
+private void receiveModuleStart(ChannelHandlerContext channelHandlerContext,NetData.ModuleDataHeader moduleDataHeader){
+  if (receivingModule != null) {
+    joinStatus.setErrorMessage("Module download error");
+    channelHandlerContext.channel().close();
+    return;
+  }
+  String moduleId=moduleDataHeader.getId();
+  if (missingModules.remove(moduleId.toLowerCase(Locale.ENGLISH))) {
+    if (moduleDataHeader.hasError()) {
+      joinStatus.setErrorMessage("Module download error: " + moduleDataHeader.getError());
+      channelHandlerContext.channel().close();
+    }
+ else {
+      String sizeString=getSizeString(moduleDataHeader.getSize());
+      joinStatus.setCurrentActivity("Downloading " + moduleDataHeader.getId() + ":"+ moduleDataHeader.getVersion()+ " ("+ sizeString+ ","+ missingModules.size()+ " modules remain)");
+      logger.info("Downloading " + moduleDataHeader.getId() + ":"+ moduleDataHeader.getVersion()+ " ("+ sizeString+ ","+ missingModules.size()+ " modules remain)");
+      receivingModule=moduleDataHeader;
+      lengthReceived=0;
+      try {
+        tempModuleLocation=Files.createTempFile("terasologyDownload",".tmp");
+        tempModuleLocation.toFile().deleteOnExit();
+        downloadingModule=new BufferedOutputStream(Files.newOutputStream(tempModuleLocation,StandardOpenOption.WRITE));
+      }
+ catch (      IOException e) {
+        logger.error("Failed to write received module",e);
+        joinStatus.setErrorMessage("Module download error");
+        channelHandlerContext.channel().close();
+      }
+    }
+  }
+ else {
+    logger.error("Received unwanted module {}:{} from server",moduleDataHeader.getId(),moduleDataHeader.getVersion());
+    joinStatus.setErrorMessage("Module download error");
+    channelHandlerContext.channel().close();
+  }
+}

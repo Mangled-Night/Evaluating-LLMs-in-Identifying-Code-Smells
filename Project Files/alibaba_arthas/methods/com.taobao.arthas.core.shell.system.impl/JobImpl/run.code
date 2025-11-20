@@ -1,0 +1,20 @@
+@Override public Job run(){
+  return run(!runInBackground.get());
+}
+@Override public Job run(boolean foreground){
+  actualStatus=ExecStatus.RUNNING;
+  if (statusUpdateHandler != null) {
+    statusUpdateHandler.handle(ExecStatus.RUNNING);
+  }
+  process.setSession(this.session);
+  process.run(foreground);
+  if (this.status() == ExecStatus.RUNNING) {
+    if (foreground) {
+      jobHandler.onForeground(this);
+    }
+ else {
+      jobHandler.onBackground(this);
+    }
+  }
+  return this;
+}

@@ -1,0 +1,11 @@
+@Test @Inject void subscribeWithDisconnectedClient(RedisClient client){
+  client.setOptions(ClientOptions.builder().disconnectedBehavior(REJECT_COMMANDS).autoReconnect(false).build());
+  StatefulRedisConnection<String,String> connection=client.connect();
+  connection.async().quit();
+  Wait.untilTrue(() -> !connection.isOpen()).waitOrTimeout();
+  StepVerifier.create(connection.reactive().ping()).consumeErrorWith(throwable -> {
+    assertThat(throwable).isInstanceOf(RedisException.class).hasMessageContaining("not connected. Commands are rejected");
+  }
+).verify();
+  connection.close();
+}

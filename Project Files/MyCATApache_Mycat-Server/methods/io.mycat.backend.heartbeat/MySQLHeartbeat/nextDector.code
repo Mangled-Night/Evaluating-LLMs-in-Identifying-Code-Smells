@@ -1,0 +1,22 @@
+private void nextDector(MySQLDetector detector,int nextStatue){
+  if (isStop.get()) {
+    detector.quit();
+    writeStatusMsg(source.getDbPool().getHostName(),source.getName(),DBHeartbeat.OK_STATUS);
+    this.status=nextStatue;
+  }
+ else {
+    if (errorCount.get() < maxRetryCount) {
+      if (detector != null && !detector.isQuit()) {
+        LOGGER.error("set Error " + errorCount + "  "+ this.source.getConfig());
+      }
+    }
+ else {
+      if (detector != null) {
+        detector.quit();
+      }
+      writeStatusMsg(source.getDbPool().getHostName(),source.getName(),nextStatue);
+      this.status=nextStatue;
+      this.errorCount.set(0);
+    }
+  }
+}

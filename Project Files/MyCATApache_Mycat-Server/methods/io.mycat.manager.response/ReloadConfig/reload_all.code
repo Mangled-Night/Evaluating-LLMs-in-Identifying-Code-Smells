@@ -1,0 +1,77 @@
+public static boolean reload_all(){
+  ConfigInitializer loader=new ConfigInitializer(true);
+  Map<String,UserConfig> newUsers=loader.getUsers();
+  Map<String,SchemaConfig> newSchemas=loader.getSchemas();
+  Map<String,PhysicalDBNode> newDataNodes=loader.getDataNodes();
+  Map<String,PhysicalDBPool> newDataHosts=loader.getDataHosts();
+  MycatCluster newCluster=loader.getCluster();
+  FirewallConfig newFirewall=loader.getFirewall();
+  loader.testConnection();
+  MycatConfig config=MycatServer.getInstance().getConfig();
+  boolean isReloadStatusOK=true;
+  for (  PhysicalDBPool dbPool : newDataHosts.values()) {
+    String hostName=dbPool.getHostName();
+    ArrayList<String> dnSchemas=new ArrayList<String>(30);
+    for (    PhysicalDBNode dn : newDataNodes.values()) {
+      if (dn.getDbPool().getHostName().equals(hostName)) {
+        dnSchemas.add(dn.getDatabase());
+      }
+    }
+    dbPool.setSchemas(dnSchemas.toArray(new String[dnSchemas.size()]));
+    String dnIndex=DnPropertyUtil.loadDnIndexProps().getProperty(dbPool.getHostName(),"0");
+    if (!"0".equals(dnIndex)) {
+      LOGGER.info("init datahost: " + dbPool.getHostName() + "  to use datasource index:"+ dnIndex);
+    }
+    dbPool.init(Integer.valueOf(dnIndex));
+    if (!dbPool.isInitSuccess()) {
+      isReloadStatusOK=false;
+      break;
+    }
+  }
+  if (isReloadStatusOK) {
+    config.getSystem().setUseSqlStat(loader.getSystem().getUseSqlStat());
+    MycatServer.getInstance().ensureSqlstatRecycleFuture();
+    config.reload(newUsers,newSchemas,newDataNodes,newDataHosts,newCluster,newFirewall,true);
+    LOGGER.warn("1、clear old backend connection(size): " + NIOProcessor.backends_old.size());
+    Iterator<BackendConnection> iter=NIOProcessor.backends_old.iterator();
+    while (iter.hasNext()) {
+      BackendConnection con=iter.next();
+      con.close("clear old datasources");
+      iter.remove();
+    }
+    Map<String,PhysicalDBPool> oldDataHosts=config.getBackupDataHosts();
+    for (    PhysicalDBPool dbPool : oldDataHosts.values()) {
+      dbPool.stopHeartbeat();
+      for (      PhysicalDatasource ds : dbPool.getAllDataSources()) {
+        for (        NIOProcessor processor : MycatServer.getInstance().getProcessors()) {
+          for (          BackendConnection con : processor.getBackends().values()) {
+            if (con instanceof MySQLConnection) {
+              MySQLConnection mysqlCon=(MySQLConnection)con;
+              if (mysqlCon.getPool() == ds) {
+                NIOProcessor.backends_old.add(con);
+              }
+            }
+ else             if (con instanceof JDBCConnection) {
+              JDBCConnection jdbcCon=(JDBCConnection)con;
+              if (jdbcCon.getPool() == ds) {
+                NIOProcessor.backends_old.add(con);
+              }
+            }
+          }
+        }
+      }
+    }
+    LOGGER.warn("2、to be recycled old backend connection(size): " + NIOProcessor.backends_old.size());
+    MycatServer.getInstance().getCacheService().clearCache();
+    MycatServer.getInstance().initRuleData();
+    return true;
+  }
+ else {
+    LOGGER.warn("reload failed, clear previously created datasources ");
+    for (    PhysicalDBPool dbPool : newDataHosts.values()) {
+      dbPool.clearDataSources("reload config");
+      dbPool.stopHeartbeat();
+    }
+    return false;
+  }
+}

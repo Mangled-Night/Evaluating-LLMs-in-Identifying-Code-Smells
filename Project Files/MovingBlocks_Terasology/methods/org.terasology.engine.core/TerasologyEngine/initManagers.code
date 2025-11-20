@@ -1,0 +1,20 @@
+private void initManagers(){
+  changeStatus(TerasologyEngineStatus.INITIALIZING_MODULE_MANAGER);
+  TypeRegistry.WHITELISTED_CLASSES=ExternalApiWhitelist.CLASSES.stream().map(Class::getName).collect(Collectors.toSet());
+  TypeRegistry.WHITELISTED_PACKAGES=ExternalApiWhitelist.PACKAGES;
+  ModuleManager moduleManager=new ModuleManager(rootContext.get(Config.class),classesOnClasspathsToAddToEngine);
+  ModuleTypeRegistry typeRegistry=new ModuleTypeRegistry(moduleManager.getEnvironment());
+  rootContext.put(ModuleTypeRegistry.class,typeRegistry);
+  rootContext.put(TypeRegistry.class,typeRegistry);
+  rootContext.put(ModuleManager.class,moduleManager);
+  changeStatus(TerasologyEngineStatus.INITIALIZING_LOWLEVEL_OBJECT_MANIPULATION);
+  ReflectFactory reflectFactory=new ReflectionReflectFactory();
+  rootContext.put(ReflectFactory.class,reflectFactory);
+  CopyStrategyLibrary copyStrategyLibrary=new CopyStrategyLibrary(reflectFactory);
+  rootContext.put(CopyStrategyLibrary.class,copyStrategyLibrary);
+  rootContext.put(TypeHandlerLibrary.class,TypeHandlerLibraryImpl.forModuleEnvironment(moduleManager,typeRegistry));
+  changeStatus(TerasologyEngineStatus.INITIALIZING_ASSET_TYPES);
+  assetTypeManager=new AutoReloadAssetTypeManager();
+  rootContext.put(ModuleAwareAssetTypeManager.class,assetTypeManager);
+  rootContext.put(AssetManager.class,assetTypeManager.getAssetManager());
+}

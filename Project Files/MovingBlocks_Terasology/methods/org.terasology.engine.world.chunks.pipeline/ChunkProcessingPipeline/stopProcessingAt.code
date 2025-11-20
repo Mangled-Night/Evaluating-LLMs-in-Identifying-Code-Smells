@@ -1,0 +1,19 @@
+/** 
+ * Stop processing chunk at position.
+ * @param pos position of chunk to stop processing.
+ */
+public void stopProcessingAt(Vector3ic pos){
+  ChunkProcessingInfo removed=chunkProcessingInfoMap.remove(pos);
+  if (removed == null) {
+    return;
+  }
+  removed.getExternalFuture().cancel(true);
+  Future<Chunk> currentFuture=removed.getCurrentFuture();
+  if (currentFuture != null) {
+    currentFuture.cancel(true);
+  }
+  Chunk chunk=removed.getChunk();
+  if (chunk != null) {
+    chunk.dispose();
+  }
+}

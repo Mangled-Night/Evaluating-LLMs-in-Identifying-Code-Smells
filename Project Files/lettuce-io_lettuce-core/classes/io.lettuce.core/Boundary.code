@@ -1,0 +1,89 @@
+/** 
+ * @author Mark Paluch
+ */
+public static class Boundary<T> {
+  private static final Boundary<?> UNBOUNDED=new Boundary<>(null,true);
+  private final T value;
+  private final boolean including;
+  private Boundary(  T value,  boolean including){
+    this.value=value;
+    this.including=including;
+  }
+  /** 
+ * Creates an unbounded (infinite) boundary that marks the beginning/end of the range.
+ * @return the unbounded boundary.
+ * @param < T > inferred type.
+ */
+  @SuppressWarnings("unchecked") public static <T>Boundary<T> unbounded(){
+    return (Boundary<T>)UNBOUNDED;
+  }
+  /** 
+ * Create a  {@link Boundary} based on the {@code value} that includes the value when comparing ranges. Greater orequals, less or equals. but not Greater or equal, less or equal to  {@code value}.
+ * @param value must not be {@code null}.
+ * @param < T > value type.
+ * @return the {@link Boundary}.
+ */
+  public static <T>Boundary<T> including(  T value){
+    LettuceAssert.notNull(value,"Value must not be null");
+    return new Boundary<>(value,true);
+  }
+  /** 
+ * Create a  {@link Boundary} based on the {@code value} that excludes the value when comparing ranges. Greater or lessto  {@code value} but not greater or equal, less or equal.
+ * @param value must not be {@code null}.
+ * @param < T > value type.
+ * @return the {@link Boundary}.
+ */
+  public static <T>Boundary<T> excluding(  T value){
+    LettuceAssert.notNull(value,"Value must not be null");
+    return new Boundary<>(value,false);
+  }
+  /** 
+ * @return the value
+ */
+  public T getValue(){
+    return value;
+  }
+  /** 
+ * @return {@code true} if the boundary includes the value.
+ */
+  public boolean isIncluding(){
+    return including;
+  }
+  /** 
+ * @return {@code true} if the bound is unbounded.
+ * @since 6.0
+ */
+  public boolean isUnbounded(){
+    return this == UNBOUNDED;
+  }
+  /** 
+ * @return {@code true} if the bound is unbounded.
+ * @since 6.0
+ */
+  public boolean isBounded(){
+    return this != UNBOUNDED;
+  }
+  @Override public boolean equals(  Object o){
+    if (this == o)     return true;
+    if (!(o instanceof Boundary))     return false;
+    Boundary<?> boundary=(Boundary<?>)o;
+    return including == boundary.including && Objects.equals(value,boundary.value);
+  }
+  @Override public int hashCode(){
+    return Objects.hash(value,including);
+  }
+  @Override public String toString(){
+    if (value == null) {
+      return "[unbounded]";
+    }
+    StringBuilder sb=new StringBuilder();
+    if (including) {
+      sb.append('[');
+    }
+ else {
+      sb.append('(');
+    }
+    sb.append(value);
+    return sb.toString();
+  }
+}

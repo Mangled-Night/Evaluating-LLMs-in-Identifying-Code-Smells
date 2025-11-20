@@ -1,0 +1,22 @@
+/** 
+ * Synchronize region center to entity's position and create/load chunks in that region.
+ */
+private void updateRelevance(){
+  try (Activity activity=PerformanceMonitor.startActivity("Update relevance")){
+    for (    ChunkRelevanceRegion chunkRelevanceRegion : regions.values()) {
+      chunkRelevanceRegion.update();
+      if (chunkRelevanceRegion.isDirty()) {
+        for (        Vector3i pos : chunkRelevanceRegion.getNeededChunks()) {
+          Chunk chunk=chunkProvider.getChunk(pos);
+          if (chunk != null) {
+            chunkRelevanceRegion.checkIfChunkIsRelevant(chunk);
+          }
+ else {
+            chunkProvider.createOrLoadChunk(pos);
+          }
+        }
+        chunkRelevanceRegion.setUpToDate();
+      }
+    }
+  }
+ }

@@ -1,0 +1,56 @@
+@SuppressWarnings("deprecation") @Override protected void connectInternal() throws SmackException, InterruptedException {
+  done=false;
+  notified=false;
+  try {
+    if (client != null) {
+      client.close();
+      client=null;
+    }
+    sessionID=null;
+    BOSHClientConfig.Builder cfgBuilder=BOSHClientConfig.Builder.create(config.getURI(),config.getXMPPServiceDomain().toString());
+    if (config.isProxyEnabled()) {
+      cfgBuilder.setProxy(config.getProxyAddress(),config.getProxyPort());
+    }
+    cfgBuilder.setCompressionEnabled(config.isCompressionEnabled());
+    for (    Map.Entry<String,String> h : config.getHttpHeaders().entrySet()) {
+      cfgBuilder.addHttpHeader(h.getKey(),h.getValue());
+    }
+    client=BOSHClient.create(cfgBuilder.build());
+    client.addBOSHClientConnListener(new BOSHConnectionListener());
+    client.addBOSHClientResponseListener(new BOSHPacketReader());
+    if (debugger != null) {
+      initDebugger();
+    }
+    client.send(ComposableBody.builder().setNamespaceDefinition("xmpp",XMPP_BOSH_NS).setAttribute(BodyQName.createWithPrefix(XMPP_BOSH_NS,"version","xmpp"),"1.0").build());
+  }
+ catch (  Exception e) {
+    throw new GenericConnectionException(e);
+  }
+synchronized (this) {
+    if (!connected) {
+      final long deadline=System.currentTimeMillis() + getReplyTimeout();
+      while (!notified) {
+        final long now=System.currentTimeMillis();
+        if (now >= deadline)         break;
+        wait(deadline - now);
+      }
+    }
+  }
+  assert writerThread == null || !writerThread.isAlive();
+  outgoingQueue.start();
+  writerThread=Async.go(this::writeElements,this + " Writer");
+  if (!connected && !done) {
+    done=true;
+    String errorMessage="Timeout reached for the connection to " + getHost() + ":"+ getPort()+ ".";
+    instantShutdown();
+    throw new SmackException.SmackMessageException(errorMessage);
+  }
+  try {
+    XmlPullParser parser=PacketParserUtils.getParserFor("<stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'/>");
+    onStreamOpen(parser);
+  }
+ catch (  XmlPullParserException|IOException e) {
+    instantShutdown();
+    throw new AssertionError("Failed to setup stream environment",e);
+  }
+}

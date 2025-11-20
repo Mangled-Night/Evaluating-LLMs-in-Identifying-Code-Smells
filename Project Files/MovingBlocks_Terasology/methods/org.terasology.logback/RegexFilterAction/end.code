@@ -1,0 +1,23 @@
+@Override public void end(InterpretationContext context,String name) throws ActionException {
+  Object top=context.peekObject();
+  EvaluatorFilter<E> filter;
+  if (top instanceof EvaluatorFilter) {
+    filter=(EvaluatorFilter<E>)top;
+    context.popObject();
+  }
+ else {
+    addError("Top of stack does not have Filter, but this thing: " + top);
+    return;
+  }
+  FilterAttachable<E> filterContainer=peekFilterContainer(context);
+  if (filterContainer == null) {
+    return;
+  }
+  if (filter.getOnMatch() == FilterReply.NEUTRAL && filter.getOnMismatch() == FilterReply.NEUTRAL) {
+    addError("onMatch and onMismatch are both neutral; this filter is a no-op: " + filter);
+  }
+  filterContainer.addFilter(filter);
+  filter.getEvaluator().start();
+  filter.start();
+  addInfo(String.format("Added %s to %s",filter,filterContainer));
+}

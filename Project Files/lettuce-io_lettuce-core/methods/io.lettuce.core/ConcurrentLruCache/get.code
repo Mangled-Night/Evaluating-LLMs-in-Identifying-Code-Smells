@@ -1,0 +1,50 @@
+/** 
+ * Retrieve an entry from the cache, potentially triggering generation of the value.
+ * @param key the key to retrieve the entry for
+ * @return the cached or newly generated value
+ */
+public V get(K key){
+  if (this.sizeLimit == 0) {
+    return this.generator.apply(key);
+  }
+  V cached=this.cache.get(key);
+  if (cached != null) {
+    if (this.size < this.sizeLimit) {
+      return cached;
+    }
+    this.lock.readLock().lock();
+    try {
+      if (this.queue.removeLastOccurrence(key)) {
+        this.queue.offer(key);
+      }
+      return cached;
+    }
+  finally {
+      this.lock.readLock().unlock();
+    }
+  }
+  this.lock.writeLock().lock();
+  try {
+    cached=this.cache.get(key);
+    if (cached != null) {
+      if (this.queue.removeLastOccurrence(key)) {
+        this.queue.offer(key);
+      }
+      return cached;
+    }
+    V value=this.generator.apply(key);
+    if (this.size == this.sizeLimit) {
+      K leastUsed=this.queue.poll();
+      if (leastUsed != null) {
+        this.cache.remove(leastUsed);
+      }
+    }
+    this.queue.offer(key);
+    this.cache.put(key,value);
+    this.size=this.cache.size();
+    return value;
+  }
+  finally {
+    this.lock.writeLock().unlock();
+  }
+}

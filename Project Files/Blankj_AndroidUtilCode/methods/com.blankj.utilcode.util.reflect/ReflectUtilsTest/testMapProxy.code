@@ -1,0 +1,30 @@
+@Test public void testMapProxy(){
+class MyMap extends HashMap<String,Object> {
+    private String baz;
+    public void setBaz(    String baz){
+      this.baz="MyMap: " + baz;
+    }
+    public String getBaz(){
+      return baz;
+    }
+  }
+  Map<String,Object> map=new MyMap();
+  ReflectUtils.reflect(map).proxy(Test10.class).setFoo("abc");
+  assertEquals(1,map.size());
+  assertEquals("abc",map.get("foo"));
+  assertEquals("abc",ReflectUtils.reflect(map).proxy(Test10.class).getFoo());
+  ReflectUtils.reflect(map).proxy(Test10.class).setBar(true);
+  assertEquals(2,map.size());
+  assertEquals(true,map.get("bar"));
+  assertEquals(true,ReflectUtils.reflect(map).proxy(Test10.class).isBar());
+  ReflectUtils.reflect(map).proxy(Test10.class).setBaz("baz");
+  assertEquals(2,map.size());
+  assertEquals(null,map.get("baz"));
+  assertEquals("MyMap: baz",ReflectUtils.reflect(map).proxy(Test10.class).getBaz());
+  try {
+    ReflectUtils.reflect(map).proxy(Test10.class).testIgnore();
+    fail();
+  }
+ catch (  ReflectUtils.ReflectException ignored) {
+  }
+}

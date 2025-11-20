@@ -1,0 +1,73 @@
+/** 
+ * Parameter wrapper support for types that encapsulate one or more parameter values.
+ */
+protected static class ParameterWrappers {
+  private static final Set<Class<?>> WRAPPERS=new HashSet<>();
+  private static final Set<Class<?>> WITH_KEY_TYPE=new HashSet<>();
+  private static final Set<Class<?>> WITH_VALUE_TYPE=new HashSet<>();
+static {
+    WRAPPERS.add(io.lettuce.core.Value.class);
+    WRAPPERS.add(io.lettuce.core.KeyValue.class);
+    WRAPPERS.add(io.lettuce.core.ScoredValue.class);
+    WRAPPERS.add(io.lettuce.core.Range.class);
+    WRAPPERS.add(List.class);
+    WRAPPERS.add(Collection.class);
+    WRAPPERS.add(Set.class);
+    WRAPPERS.add(Iterable.class);
+    WRAPPERS.add(Map.class);
+    WITH_VALUE_TYPE.add(io.lettuce.core.Value.class);
+    WITH_VALUE_TYPE.add(io.lettuce.core.KeyValue.class);
+    WITH_KEY_TYPE.add(io.lettuce.core.KeyValue.class);
+    WITH_VALUE_TYPE.add(io.lettuce.core.ScoredValue.class);
+    WITH_KEY_TYPE.add(Map.class);
+    WITH_VALUE_TYPE.add(Map.class);
+  }
+  /** 
+ * @param typeInformation must not be {@code null}.
+ * @return {@code true} if {@code parameterClass} is a parameter wrapper.
+ */
+  public static boolean supports(  TypeInformation<?> typeInformation){
+    return WRAPPERS.contains(typeInformation.getType()) || (typeInformation.getType().isArray() && !(typeInformation.getType().equals(byte[].class)));
+  }
+  /** 
+ * @param typeInformation must not be {@code null}.
+ * @return {@code true} if the type has a key type variable.
+ */
+  public static boolean hasKeyType(  TypeInformation<?> typeInformation){
+    return WITH_KEY_TYPE.contains(typeInformation.getType());
+  }
+  /** 
+ * @param typeInformation must not be {@code null}.
+ * @return {@code true} if the type has a value type variable.
+ */
+  public static boolean hasValueType(  TypeInformation<?> typeInformation){
+    return WITH_VALUE_TYPE.contains(typeInformation.getType());
+  }
+  /** 
+ * @param typeInformation must not be {@code null}.
+ * @return the key type.
+ */
+  public static TypeInformation<?> getKeyType(  TypeInformation<?> typeInformation){
+    if (!supports(typeInformation) || !hasKeyType(typeInformation)) {
+      return typeInformation;
+    }
+    return typeInformation.getComponentType();
+  }
+  /** 
+ * @param typeInformation must not be {@code null}.
+ * @return the value type.
+ */
+  public static TypeInformation<?> getValueType(  TypeInformation<?> typeInformation){
+    if (!supports(typeInformation) || typeInformation.getComponentType() == null) {
+      return typeInformation;
+    }
+    if (!hasValueType(typeInformation)) {
+      return typeInformation.getComponentType();
+    }
+    List<TypeInformation<?>> typeArguments=typeInformation.getTypeArguments();
+    if (hasKeyType(typeInformation)) {
+      return typeArguments.get(1);
+    }
+    return typeArguments.get(0);
+  }
+}

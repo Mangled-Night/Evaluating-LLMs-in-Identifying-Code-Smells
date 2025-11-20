@@ -1,0 +1,24 @@
+@Override public void cancelOrder(Long orderId){
+  OmsOrderExample example=new OmsOrderExample();
+  example.createCriteria().andIdEqualTo(orderId).andStatusEqualTo(0).andDeleteStatusEqualTo(0);
+  List<OmsOrder> cancelOrderList=orderMapper.selectByExample(example);
+  if (CollectionUtils.isEmpty(cancelOrderList)) {
+    return;
+  }
+  OmsOrder cancelOrder=cancelOrderList.get(0);
+  if (cancelOrder != null) {
+    cancelOrder.setStatus(4);
+    orderMapper.updateByPrimaryKeySelective(cancelOrder);
+    OmsOrderItemExample orderItemExample=new OmsOrderItemExample();
+    orderItemExample.createCriteria().andOrderIdEqualTo(orderId);
+    List<OmsOrderItem> orderItemList=orderItemMapper.selectByExample(orderItemExample);
+    if (!CollectionUtils.isEmpty(orderItemList)) {
+      portalOrderDao.releaseSkuStockLock(orderItemList);
+    }
+    updateCouponStatus(cancelOrder.getCouponId(),cancelOrder.getMemberId(),0);
+    if (cancelOrder.getUseIntegration() != null) {
+      UmsMember member=memberService.getById(cancelOrder.getMemberId());
+      memberService.updateIntegration(cancelOrder.getMemberId(),member.getIntegration() + cancelOrder.getUseIntegration());
+    }
+  }
+}

@@ -1,0 +1,20 @@
+private static GraphVertex<State> convertToStateGraph(GraphVertex<StateDescriptor> stateDescriptorVertex,ModularXmppClientToServerConnectionInternal connectionInternal,Map<StateDescriptor,GraphVertex<State>> handledStateDescriptors){
+  StateDescriptor stateDescriptor=stateDescriptorVertex.getElement();
+  GraphVertex<State> stateVertex=handledStateDescriptors.get(stateDescriptor);
+  if (stateVertex != null) {
+    return stateVertex;
+  }
+  State state=stateDescriptor.constructState(connectionInternal);
+  stateVertex=new GraphVertex<>(state);
+  handledStateDescriptors.put(stateDescriptor,stateVertex);
+  for (  GraphVertex<StateDescriptor> successorStateDescriptorVertex : stateDescriptorVertex.getOutgoingEdges()) {
+    GraphVertex<State> successorStateVertex=convertToStateGraph(successorStateDescriptorVertex,connectionInternal,handledStateDescriptors);
+    stateVertex.addOutgoingEdge(successorStateVertex);
+  }
+  return stateVertex;
+}
+public static GraphVertex<State> convertToStateGraph(GraphVertex<StateDescriptor> initialStateDescriptor,ModularXmppClientToServerConnectionInternal connectionInternal){
+  Map<StateDescriptor,GraphVertex<State>> handledStateDescriptors=new HashMap<>();
+  GraphVertex<State> initialState=convertToStateGraph(initialStateDescriptor,connectionInternal,handledStateDescriptors);
+  return initialState;
+}

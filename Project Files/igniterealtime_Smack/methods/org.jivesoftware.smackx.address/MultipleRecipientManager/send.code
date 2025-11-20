@@ -1,0 +1,50 @@
+/** 
+ * Sends the specified stanza to the collection of specified recipients using the specified connection. If the server has support for XEP-33 then only one stanza is going to be sent to the server with the multiple recipient instructions. However, if XEP-33 is not supported by the server then the client is going to send the stanza to each recipient.
+ * @param connection the connection to use to send the packet.
+ * @param packet     the stanza to send to the list of recipients.
+ * @param to         the collection of JIDs to include in the TO list or <code>null</code> if no TOlist exists.
+ * @param cc         the collection of JIDs to include in the CC list or <code>null</code> if no CClist exists.
+ * @param bcc        the collection of JIDs to include in the BCC list or <code>null</code> if no BCClist exists.
+ * @throws FeatureNotSupportedException if special XEP-33 features where requested, but theserver does not support them.
+ * @throws XMPPErrorException if server does not support XEP-33: Extended Stanza Addressing andsome XEP-33 specific features were requested.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public static void send(XMPPConnection connection,Stanza packet,Collection<? extends Jid> to,Collection<? extends Jid> cc,Collection<? extends Jid> bcc) throws NoResponseException, XMPPErrorException, FeatureNotSupportedException, NotConnectedException, InterruptedException {
+  send(connection,packet,to,cc,bcc,null,null,false);
+}
+/** 
+ * Sends the specified stanza to the collection of specified recipients using the specified connection. If the server has support for XEP-33 then only one stanza is going to be sent to the server with the multiple recipient instructions. However, if XEP-33 is not supported by the server then the client is going to send the stanza to each recipient.
+ * @param connection the connection to use to send the packet.
+ * @param packet the stanza to send to the list of recipients.
+ * @param to the collection of JIDs to include in the TO list or <code>null</code> if no TO list exists.
+ * @param cc the collection of JIDs to include in the CC list or <code>null</code> if no CC list exists.
+ * @param bcc the collection of JIDs to include in the BCC list or <code>null</code> if no BCC listexists.
+ * @param replyTo address to which all replies are requested to be sent or <code>null</code>indicating that they can reply to any address.
+ * @param replyRoom JID of a MUC room to which responses should be sent or <code>null</code>indicating that they can reply to any address.
+ * @param noReply true means that receivers should not reply to the message.
+ * @throws XMPPErrorException if server does not support XEP-33: Extended Stanza Addressing andsome XEP-33 specific features were requested.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws FeatureNotSupportedException if special XEP-33 features where requested, but theserver does not support them.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public static void send(XMPPConnection connection,Stanza packet,Collection<? extends Jid> to,Collection<? extends Jid> cc,Collection<? extends Jid> bcc,Jid replyTo,Jid replyRoom,boolean noReply) throws NoResponseException, XMPPErrorException, FeatureNotSupportedException, NotConnectedException, InterruptedException {
+  if (to != null && to.size() == 1 && (cc == null || cc.isEmpty()) && (bcc == null || bcc.isEmpty()) && !noReply && StringUtils.isNullOrEmpty(replyTo) && StringUtils.isNullOrEmpty(replyRoom)) {
+    Jid toJid=to.iterator().next();
+    packet.setTo(toJid);
+    connection.sendStanza(packet);
+    return;
+  }
+  DomainBareJid serviceAddress=getMultipleRecipientServiceAddress(connection);
+  if (serviceAddress != null) {
+    sendThroughService(connection,packet,to,cc,bcc,replyTo,replyRoom,noReply,serviceAddress);
+  }
+ else {
+    if (noReply || replyTo != null || replyRoom != null) {
+      throw new FeatureNotSupportedException("Extended Stanza Addressing");
+    }
+    sendToIndividualRecipients(connection,packet,to,cc,bcc);
+  }
+}

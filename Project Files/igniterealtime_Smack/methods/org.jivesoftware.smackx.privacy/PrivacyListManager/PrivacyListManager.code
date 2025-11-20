@@ -1,0 +1,94 @@
+/** 
+ * Creates a new privacy manager to maintain the communication privacy. Note: no information is sent to or received from the server until you attempt to get or set the privacy communication.<p>
+ * @param connection the XMPP connection.
+ */
+private PrivacyListManager(XMPPConnection connection){
+  super(connection);
+  connection.registerIQRequestHandler(new AbstractIqRequestHandler(Privacy.ELEMENT,Privacy.NAMESPACE,IQ.Type.set,Mode.sync){
+    @Override public IQ handleIQRequest(    IQ iqRequest){
+      Privacy privacy=(Privacy)iqRequest;
+      for (      PrivacyListListener listener : listeners) {
+        for (        Map.Entry<String,List<PrivacyItem>> entry : privacy.getItemLists().entrySet()) {
+          String listName=entry.getKey();
+          List<PrivacyItem> items=entry.getValue();
+          if (items.isEmpty()) {
+            listener.updatedPrivacyList(listName);
+          }
+ else {
+            listener.setPrivacyList(listName,items);
+          }
+        }
+      }
+      return IQ.createResultIQ(privacy);
+    }
+  }
+);
+  connection.addStanzaSendingListener(new StanzaListener(){
+    @Override public void processStanza(    Stanza packet) throws NotConnectedException {
+      XMPPConnection connection=connection();
+      Privacy privacy=(Privacy)packet;
+      StanzaFilter iqResultReplyFilter=new IQResultReplyFilter(privacy,connection);
+      final String activeListName=privacy.getActiveName();
+      final boolean declinceActiveList=privacy.isDeclineActiveList();
+      connection.addOneTimeSyncCallback(new StanzaListener(){
+        @Override public void processStanza(        Stanza packet) throws NotConnectedException {
+          if (declinceActiveList) {
+            cachedActiveListName=null;
+          }
+ else {
+            cachedActiveListName=activeListName;
+          }
+          return;
+        }
+      }
+,iqResultReplyFilter);
+    }
+  }
+,SetActiveListFilter.INSTANCE);
+  connection.addStanzaSendingListener(new StanzaListener(){
+    @Override public void processStanza(    Stanza packet) throws NotConnectedException {
+      XMPPConnection connection=connection();
+      Privacy privacy=(Privacy)packet;
+      StanzaFilter iqResultReplyFilter=new IQResultReplyFilter(privacy,connection);
+      final String defaultListName=privacy.getDefaultName();
+      final boolean declinceDefaultList=privacy.isDeclineDefaultList();
+      connection.addOneTimeSyncCallback(new StanzaListener(){
+        @Override public void processStanza(        Stanza packet) throws NotConnectedException {
+          if (declinceDefaultList) {
+            cachedDefaultListName=null;
+          }
+ else {
+            cachedDefaultListName=defaultListName;
+          }
+          return;
+        }
+      }
+,iqResultReplyFilter);
+    }
+  }
+,SetDefaultListFilter.INSTANCE);
+  connection.addSyncStanzaListener(new StanzaListener(){
+    @Override public void processStanza(    Stanza packet) throws NotConnectedException {
+      Privacy privacy=(Privacy)packet;
+      String activeList=privacy.getActiveName();
+      if (activeList != null) {
+        cachedActiveListName=activeList;
+      }
+      String defaultList=privacy.getDefaultName();
+      if (defaultList != null) {
+        cachedDefaultListName=defaultList;
+      }
+    }
+  }
+,PRIVACY_RESULT);
+  connection.addConnectionListener(new ConnectionListener(){
+    @Override public void authenticated(    XMPPConnection connection,    boolean resumed){
+      if (resumed) {
+        return;
+      }
+      cachedActiveListName=cachedDefaultListName=null;
+    }
+  }
+);
+  ServiceDiscoveryManager.getInstanceFor(connection).addFeature(NAMESPACE);
+}

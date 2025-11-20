@@ -1,0 +1,32 @@
+@Override public IQ handleIQRequest(IQ iqRequest){
+  BlockContactsIQ blockContactIQ=(BlockContactsIQ)iqRequest;
+  if (blockListCached == null) {
+    blockListCached=new ArrayList<>();
+  }
+  List<Jid> blockedJids=blockContactIQ.getJids();
+  blockListCached.addAll(blockedJids);
+  for (  JidsBlockedListener listener : jidsBlockedListeners) {
+    listener.onJidsBlocked(blockedJids);
+  }
+  return IQ.createResultIQ(blockContactIQ);
+}
+@Override public IQ handleIQRequest(IQ iqRequest){
+  UnblockContactsIQ unblockContactIQ=(UnblockContactsIQ)iqRequest;
+  if (blockListCached == null) {
+    blockListCached=new ArrayList<>();
+  }
+  List<Jid> unblockedJids=unblockContactIQ.getJids();
+  if (unblockedJids == null) {
+    blockListCached.clear();
+    for (    AllJidsUnblockedListener listener : allJidsUnblockedListeners) {
+      listener.onAllJidsUnblocked();
+    }
+  }
+ else {
+    blockListCached.removeAll(unblockedJids);
+    for (    JidsUnblockedListener listener : jidsUnblockedListeners) {
+      listener.onJidsUnblocked(unblockedJids);
+    }
+  }
+  return IQ.createResultIQ(unblockContactIQ);
+}

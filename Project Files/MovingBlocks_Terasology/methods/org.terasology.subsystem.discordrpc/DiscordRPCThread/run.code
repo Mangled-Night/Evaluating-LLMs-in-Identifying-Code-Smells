@@ -1,0 +1,98 @@
+@Override public void run(){
+  while (true) {
+    logger.info("Waiting for auto-connecting...");
+    while (!autoReconnect) {
+      try {
+synchronized (thread) {
+          waiting=true;
+          thread.wait();
+          waiting=false;
+        }
+      }
+ catch (      InterruptedException ignored) {
+        return;
+      }
+    }
+    logger.info("Waiting for enabling...");
+    while (!enabled) {
+      try {
+synchronized (thread) {
+          waiting=true;
+          thread.wait();
+          waiting=false;
+        }
+      }
+ catch (      InterruptedException ignored) {
+        return;
+      }
+    }
+    logger.info("Waiting for connection...");
+    while (!connected) {
+synchronized (ipcClient) {
+        try {
+          if (!connectedBefore) {
+            logger.info("Connecting to Discord RPC...");
+          }
+ else {
+            logger.info("Re-connecting to Discord RPC...");
+          }
+          ipcClient.connect();
+          tries=0;
+          autoReconnect=true;
+        }
+ catch (        NoDiscordClientException ignored) {
+          if (tries >= MAX_RECONNECT_TRIES) {
+            autoReconnect=false;
+            tries=0;
+            break;
+          }
+ else {
+            tries++;
+            try {
+              Thread.sleep(2000L * tries);
+            }
+ catch (            InterruptedException ignored2) {
+              ipcClient.close();
+              return;
+            }
+          }
+        }
+catch (        RuntimeException e) {
+          logger.error("Could not create or connect Discord client: {}",e.getMessage());
+          return;
+        }
+      }
+    }
+    if (!autoReconnect) {
+      continue;
+    }
+    logger.info("Updating the rich presence and keep the connection alive...");
+    while (connected) {
+synchronized (this) {
+        if (enabled) {
+          if (buffer.hasChanged() && buffer.isEmpty()) {
+            lastRichPresence=null;
+            buffer.resetState();
+          }
+ else           if (buffer.hasChanged()) {
+            lastRichPresence=build();
+            buffer.resetState();
+          }
+          ipcClient.sendRichPresence(lastRichPresence);
+        }
+ else {
+          ipcClient.sendRichPresence(null);
+        }
+      }
+      try {
+        Thread.sleep(5000);
+      }
+ catch (      InterruptedException ignored) {
+synchronized (ipcClient) {
+          ipcClient.close();
+        }
+        return;
+      }
+    }
+  }
+}

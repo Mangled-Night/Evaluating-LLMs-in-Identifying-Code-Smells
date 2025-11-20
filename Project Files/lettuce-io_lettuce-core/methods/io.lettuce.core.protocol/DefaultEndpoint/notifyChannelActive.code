@@ -1,0 +1,41 @@
+@Override public void notifyChannelActive(Channel channel){
+  this.logPrefix=null;
+  this.channel=channel;
+  this.connectionError=null;
+  if (isClosed()) {
+    logger.info("{} Closing channel because endpoint is already closed",logPrefix());
+    channel.close();
+    return;
+  }
+  if (connectionWatchdog != null) {
+    connectionWatchdog.arm();
+  }
+  sharedLock.doExclusive(() -> {
+    try {
+      if (debugEnabled) {
+        logger.debug("{} activateEndpointAndExecuteBufferedCommands {} command(s) buffered",logPrefix(),disconnectedBuffer.size());
+      }
+      if (debugEnabled) {
+        logger.debug("{} activating endpoint",logPrefix());
+      }
+      try {
+        inActivation=true;
+        connectionFacade.activated();
+      }
+  finally {
+        inActivation=false;
+      }
+      flushCommands(disconnectedBuffer);
+    }
+ catch (    Exception e) {
+      if (debugEnabled) {
+        logger.debug("{} channelActive() ran into an exception",logPrefix());
+      }
+      if (clientOptions.isCancelCommandsOnReconnectFailure()) {
+        reset();
+      }
+      throw e;
+    }
+  }
+);
+}

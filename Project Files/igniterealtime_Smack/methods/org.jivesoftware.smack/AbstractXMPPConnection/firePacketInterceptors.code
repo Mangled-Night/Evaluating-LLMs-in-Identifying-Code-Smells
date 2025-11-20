@@ -1,0 +1,37 @@
+/** 
+ * Process interceptors. Interceptors may modify the stanza that is about to be sent. Since the thread that requested to send the stanza will invoke all interceptors, it is important that interceptors perform their work as soon as possible so that the thread does not remain blocked for a long period.
+ * @param packet the stanza that is going to be sent to the server.
+ * @return the, potentially modified stanza, after the interceptors are run.
+ */
+private Stanza firePacketInterceptors(Stanza packet){
+  List<StanzaListener> interceptorsToInvoke=new LinkedList<>();
+synchronized (interceptors) {
+    for (    InterceptorWrapper interceptorWrapper : interceptors.values()) {
+      if (interceptorWrapper.filterMatches(packet)) {
+        interceptorsToInvoke.add(interceptorWrapper.getInterceptor());
+      }
+    }
+  }
+  for (  StanzaListener interceptor : interceptorsToInvoke) {
+    try {
+      interceptor.processStanza(packet);
+    }
+ catch (    Exception e) {
+      LOGGER.log(Level.SEVERE,"Packet interceptor threw exception",e);
+    }
+  }
+  final Stanza stanzaAfterInterceptors;
+  if (packet instanceof Message) {
+    Message message=(Message)packet;
+    stanzaAfterInterceptors=fireMessageOrPresenceInterceptors(message,messageInterceptors);
+  }
+ else   if (packet instanceof Presence) {
+    Presence presence=(Presence)packet;
+    stanzaAfterInterceptors=fireMessageOrPresenceInterceptors(presence,presenceInterceptors);
+  }
+ else {
+    assert packet instanceof IQ;
+    stanzaAfterInterceptors=packet;
+  }
+  return stanzaAfterInterceptors;
+}

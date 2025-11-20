@@ -1,0 +1,110 @@
+/** 
+ * Manages Roster exchanges. A RosterExchangeManager provides a high level access to send rosters, roster groups and roster entries to XMPP clients. It also provides an easy way to hook up custom logic when entries are received from another XMPP client through RosterExchangeListeners.
+ * @author Gaston Dombiak
+ */
+public class RosterExchangeManager {
+  public static final String NAMESPACE="jabber:x:roster";
+  public static final String ELEMENT="x";
+  private static final Map<XMPPConnection,RosterExchangeManager> INSTANCES=new WeakHashMap<>();
+  private static final StanzaFilter PACKET_FILTER=new StanzaExtensionFilter(ELEMENT,NAMESPACE);
+  private final Set<RosterExchangeListener> rosterExchangeListeners=Collections.synchronizedSet(new HashSet<RosterExchangeListener>());
+  private final WeakReference<XMPPConnection> weakRefConnection;
+  private final StanzaListener packetListener;
+  public static synchronized RosterExchangeManager getInstanceFor(  XMPPConnection connection){
+    RosterExchangeManager rosterExchangeManager=INSTANCES.get(connection);
+    if (rosterExchangeManager == null) {
+      rosterExchangeManager=new RosterExchangeManager(connection);
+      INSTANCES.put(connection,rosterExchangeManager);
+    }
+    return rosterExchangeManager;
+  }
+  /** 
+ * Creates a new roster exchange manager.
+ * @param connection an XMPPConnection which is used to send and receive messages.
+ */
+  public RosterExchangeManager(  XMPPConnection connection){
+    weakRefConnection=new WeakReference<>(connection);
+    packetListener=new StanzaListener(){
+      @Override public void processStanza(      Stanza packet){
+        Message message=(Message)packet;
+        RosterExchange rosterExchange=(RosterExchange)message.getExtensionElement(ELEMENT,NAMESPACE);
+        fireRosterExchangeListeners(message.getFrom(),rosterExchange.getRosterEntries());
+      }
+    }
+;
+    connection.addAsyncStanzaListener(packetListener,PACKET_FILTER);
+  }
+  /** 
+ * Adds a listener to roster exchanges. The listener will be fired anytime roster entries are received from remote XMPP clients.
+ * @param rosterExchangeListener a roster exchange listener.
+ */
+  public void addRosterListener(  RosterExchangeListener rosterExchangeListener){
+    rosterExchangeListeners.add(rosterExchangeListener);
+  }
+  /** 
+ * Removes a listener from roster exchanges. The listener will be fired anytime roster entries are received from remote XMPP clients.
+ * @param rosterExchangeListener a roster exchange listener..
+ */
+  public void removeRosterListener(  RosterExchangeListener rosterExchangeListener){
+    rosterExchangeListeners.remove(rosterExchangeListener);
+  }
+  /** 
+ * Sends a roster to userID. All the entries of the roster will be sent to the target user.
+ * @param roster the roster to send
+ * @param targetUserID the user that will receive the roster entries
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  public void send(  Roster roster,  Jid targetUserID) throws NotConnectedException, InterruptedException {
+    XMPPConnection connection=weakRefConnection.get();
+    MessageBuilder messageBuilder=connection.getStanzaFactory().buildMessageStanza().to(targetUserID);
+    RosterExchange rosterExchange=new RosterExchange(roster);
+    messageBuilder.addExtension(rosterExchange);
+    connection.sendStanza(messageBuilder.build());
+  }
+  /** 
+ * Sends a roster entry to userID.
+ * @param rosterEntry the roster entry to send
+ * @param targetUserID the user that will receive the roster entries
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  public void send(  RosterEntry rosterEntry,  Jid targetUserID) throws NotConnectedException, InterruptedException {
+    XMPPConnection connection=weakRefConnection.get();
+    MessageBuilder messageBuilder=connection.getStanzaFactory().buildMessageStanza().to(targetUserID);
+    RosterExchange rosterExchange=new RosterExchange();
+    rosterExchange.addRosterEntry(rosterEntry);
+    messageBuilder.addExtension(rosterExchange);
+    connection.sendStanza(messageBuilder.build());
+  }
+  /** 
+ * Sends a roster group to userID. All the entries of the group will be sent to the target user.
+ * @param rosterGroup the roster group to send
+ * @param targetUserID the user that will receive the roster entries
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  public void send(  RosterGroup rosterGroup,  Jid targetUserID) throws NotConnectedException, InterruptedException {
+    XMPPConnection connection=weakRefConnection.get();
+    MessageBuilder msg=connection.getStanzaFactory().buildMessageStanza().to(targetUserID);
+    RosterExchange rosterExchange=new RosterExchange();
+    for (    RosterEntry entry : rosterGroup.getEntries()) {
+      rosterExchange.addRosterEntry(entry);
+    }
+    msg.addExtension(rosterExchange);
+    connection.sendStanza(msg.build());
+  }
+  /** 
+ * Fires roster exchange listeners.
+ */
+  private void fireRosterExchangeListeners(  Jid from,  Iterator<RemoteRosterEntry> remoteRosterEntries){
+    RosterExchangeListener[] listeners;
+synchronized (rosterExchangeListeners) {
+      listeners=new RosterExchangeListener[rosterExchangeListeners.size()];
+      rosterExchangeListeners.toArray(listeners);
+    }
+    for (    RosterExchangeListener listener : listeners) {
+      listener.entriesReceived(from,remoteRosterEntries);
+    }
+  }
+}

@@ -1,0 +1,38 @@
+/** 
+ * Check if the certificate allows use of the given IP address. <p> From RFC2818 § 3.1: "In some cases, the URI is specified as an IP address rather than a hostname. In this case, the iPAddress subjectAltName must be present in the certificate and must exactly match the IP in the URI." <p>
+ * @param expectedIP TODO javadoc me please
+ * @param cert TODO javadoc me please
+ * @throws CertificateException in case of a certificate issue.
+ */
+private static void matchIp(String expectedIP,X509Certificate cert) throws CertificateException {
+  Collection<List<?>> subjectAlternativeNames=cert.getSubjectAlternativeNames();
+  if (subjectAlternativeNames == null) {
+    throw new CertificateException("No subject alternative names present");
+  }
+  List<String> nonMatchingIpAltnames=new LinkedList<>();
+  for (  List<?> san : subjectAlternativeNames) {
+    if (((Integer)san.get(0)).intValue() != ALTNAME_IP) {
+      continue;
+    }
+    String ipAddress=(String)san.get(1);
+    if (expectedIP.equalsIgnoreCase(ipAddress)) {
+      return;
+    }
+ else {
+      try {
+        if (InetAddress.getByName(expectedIP).equals(InetAddress.getByName(ipAddress))) {
+          return;
+        }
+      }
+ catch (      UnknownHostException|SecurityException e) {
+        LOGGER.log(Level.FINE,"Comparing IP strings failed",e);
+      }
+    }
+    nonMatchingIpAltnames.add(ipAddress);
+  }
+  StringBuilder sb=new StringBuilder("No subject alternative names matching IP address " + expectedIP + " found. Tried: ");
+  for (  String s : nonMatchingIpAltnames) {
+    sb.append(s).append(',');
+  }
+  throw new CertificateException(sb.toString());
+}

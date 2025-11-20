@@ -1,0 +1,17 @@
+private <T>Map<Class<? extends T>,Integer> generateIds(ClassLibrary<T> classLibrary){
+  Map<Class<? extends T>,Integer> result=Maps.newHashMap();
+  for (  ClassMetadata<? extends T,?> metadata : classLibrary) {
+    int index=result.size();
+    result.put(metadata.getType(),index);
+    int fieldId=0;
+    for (    FieldMetadata<?,?> field : metadata.getFields()) {
+      if (fieldId >= 256) {
+        logger.error("Class {} has too many fields (>255), serialization will be incomplete",metadata.getId());
+        break;
+      }
+      field.setId((byte)fieldId);
+      fieldId++;
+    }
+  }
+  return result;
+}

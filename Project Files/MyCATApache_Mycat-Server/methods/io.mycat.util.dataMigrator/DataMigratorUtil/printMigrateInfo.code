@@ -1,0 +1,99 @@
+/** 
+ * 格式化数据迁移信息 +---------title-------+ |key1 = value1     | |key2 = value2     | |...                        | +---------------------+
+ * @param title
+ * @param map
+ * @param mark
+ * @return
+ */
+public static String printMigrateInfo(String title,Map<String,String> map,String mark){
+  StringBuilder result=new StringBuilder(" ");
+  List<String> mergeList=new ArrayList<>();
+  Iterator<Entry<String,String>> itor=map.entrySet().iterator();
+  int maxKeyLength=0;
+  int maxValueLength=0;
+  while (itor.hasNext()) {
+    Entry<String,String> entry=itor.next();
+    String key=entry.getKey();
+    String value=entry.getValue();
+    maxKeyLength=(key.length() > maxKeyLength) ? key.length() : maxKeyLength;
+    maxValueLength=(value.length() > maxValueLength) ? value.length() : maxValueLength;
+  }
+  int maxLength=maxKeyLength + maxValueLength + 2+ mark.length();
+  if (maxLength <= title.length()) {
+    maxLength=title.length() + 8;
+  }
+  itor=map.entrySet().iterator();
+  while (itor.hasNext()) {
+    Entry<String,String> entry=itor.next();
+    String key=entry.getKey();
+    String value=entry.getValue();
+    int keyLength=maxKeyLength - key.length();
+    StringBuilder keySb=new StringBuilder(key);
+    for (int i=0; i < keyLength; i++) {
+      keySb.append(" ");
+    }
+    key=keySb.toString();
+    String merge=key + " " + mark+ " "+ value;
+    mergeList.add(merge);
+  }
+  int maxLineLength=300;
+  if (maxLength > maxLineLength) {
+    maxLength=maxLineLength;
+  }
+  StringBuilder titleSb=new StringBuilder("+");
+  int halfLength=(maxLength - title.length()) / 2;
+  for (int i=0; i < halfLength; i++) {
+    titleSb.append("-");
+  }
+  titleSb.append(title);
+  for (int i=0; i < (maxLength - halfLength - title.length()); i++) {
+    titleSb.append("-");
+  }
+  titleSb.append("+\n");
+  result.append(titleSb);
+  List<String> changeList=new ArrayList<>();
+  for (int i=0; i < mergeList.size(); i++) {
+    String content=mergeList.get(i);
+    if (content.trim().length() >= maxLength) {
+      String[] str=content.split(mark);
+      String key=str[0];
+      String value=str[1];
+      String[] values=getValues(value,maxLength - maxKeyLength - 1- mark.length());
+      for (int j=0; j < values.length; j++) {
+        String s="";
+        if (j > 0) {
+          StringBuilder keySb=new StringBuilder();
+          for (int k=0; k < key.length() + 1; k++) {
+            keySb.append(" ");
+          }
+          s=keySb.toString() + values[j];
+        }
+ else {
+          s=key + mark + values[j];
+        }
+        changeList.add(s);
+      }
+    }
+ else {
+      changeList.add(content);
+    }
+  }
+  for (int i=0; i < changeList.size(); i++) {
+    StringBuilder contentSb=new StringBuilder(" |");
+    String content=changeList.get(i);
+    contentSb.append(content);
+    int length=maxLength - content.length();
+    for (int j=0; j < length; j++) {
+      contentSb.append(" ");
+    }
+    contentSb.append("|\n");
+    result.append(contentSb);
+  }
+  StringBuilder endSb=new StringBuilder(" +");
+  for (int i=0; i < maxLength; i++) {
+    endSb.append("-");
+  }
+  endSb.append("+\n");
+  result.append(endSb);
+  return result.toString();
+}

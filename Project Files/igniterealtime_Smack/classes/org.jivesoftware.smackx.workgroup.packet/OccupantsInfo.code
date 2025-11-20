@@ -1,0 +1,117 @@
+/** 
+ * Stanza used for requesting information about occupants of a room or for retrieving information such information.
+ * @author Gaston Dombiak
+ */
+public class OccupantsInfo extends IQ {
+  @SuppressWarnings("DateFormatConstant") private static final SimpleDateFormat UTC_FORMAT=new SimpleDateFormat("yyyyMMdd'T'HH:mm:ss");
+static {
+    UTC_FORMAT.setTimeZone(TimeZone.getTimeZone("GMT+0"));
+  }
+  /** 
+ * Element name of the stanza extension.
+ */
+  public static final String ELEMENT_NAME="occupants-info";
+  /** 
+ * Namespace of the stanza extension.
+ */
+  public static final String NAMESPACE="http://jivesoftware.com/protocol/workgroup";
+  private final String roomID;
+  private final Set<OccupantInfo> occupants;
+  public OccupantsInfo(  String roomID){
+    super(ELEMENT_NAME,NAMESPACE);
+    this.roomID=roomID;
+    this.occupants=new HashSet<>();
+  }
+  public String getRoomID(){
+    return roomID;
+  }
+  public int getOccupantsCount(){
+    return occupants.size();
+  }
+  public Set<OccupantInfo> getOccupants(){
+    return Collections.unmodifiableSet(occupants);
+  }
+  @Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(  IQChildElementXmlStringBuilder buf){
+    buf.append(" roomID=\"").append(roomID).append("\">");
+synchronized (occupants) {
+      for (      OccupantInfo occupant : occupants) {
+        buf.append("<occupant>");
+        buf.append("<jid>");
+        buf.append(occupant.getJID());
+        buf.append("</jid>");
+        buf.append("<name>");
+        buf.append(occupant.getNickname());
+        buf.append("</name>");
+        buf.append("<joined>");
+synchronized (UTC_FORMAT) {
+          buf.append(UTC_FORMAT.format(occupant.getJoined()));
+        }
+        buf.append("</joined>");
+        buf.append("</occupant>");
+      }
+    }
+    return buf;
+  }
+public static class OccupantInfo {
+    private final String jid;
+    private final String nickname;
+    private final Date joined;
+    public OccupantInfo(    String jid,    String nickname,    Date joined){
+      this.jid=jid;
+      this.nickname=nickname;
+      this.joined=joined;
+    }
+    public String getJID(){
+      return jid;
+    }
+    public String getNickname(){
+      return nickname;
+    }
+    public Date getJoined(){
+      return joined;
+    }
+  }
+  /** 
+ * Stanza extension provider for AgentStatusRequest packets.
+ */
+public static class Provider extends IqProvider<OccupantsInfo> {
+    @Override public OccupantsInfo parse(    XmlPullParser parser,    int initialDepth,    IqData iqData,    XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, ParseException {
+      OccupantsInfo occupantsInfo=new OccupantsInfo(parser.getAttributeValue("","roomID"));
+      boolean done=false;
+      while (!done) {
+        XmlPullParser.Event eventType=parser.next();
+        if (eventType == XmlPullParser.Event.START_ELEMENT && "occupant".equals(parser.getName())) {
+          occupantsInfo.occupants.add(parseOccupantInfo(parser));
+        }
+ else         if (eventType == XmlPullParser.Event.END_ELEMENT && ELEMENT_NAME.equals(parser.getName())) {
+          done=true;
+        }
+      }
+      return occupantsInfo;
+    }
+    private static OccupantInfo parseOccupantInfo(    XmlPullParser parser) throws XmlPullParserException, IOException, ParseException {
+      boolean done=false;
+      String jid=null;
+      String nickname=null;
+      Date joined=null;
+      while (!done) {
+        XmlPullParser.Event eventType=parser.next();
+        if (eventType == XmlPullParser.Event.START_ELEMENT && "jid".equals(parser.getName())) {
+          jid=parser.nextText();
+        }
+ else         if (eventType == XmlPullParser.Event.START_ELEMENT && "nickname".equals(parser.getName())) {
+          nickname=parser.nextText();
+        }
+ else         if (eventType == XmlPullParser.Event.START_ELEMENT && "joined".equals(parser.getName())) {
+synchronized (UTC_FORMAT) {
+            joined=UTC_FORMAT.parse(parser.nextText());
+          }
+        }
+ else         if (eventType == XmlPullParser.Event.END_ELEMENT && "occupant".equals(parser.getName())) {
+          done=true;
+        }
+      }
+      return new OccupantInfo(jid,nickname,joined);
+    }
+  }
+}

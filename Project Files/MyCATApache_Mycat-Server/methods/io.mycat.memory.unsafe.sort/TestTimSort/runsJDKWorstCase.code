@@ -1,0 +1,21 @@
+/** 
+ * Fills <code>runs</code> with a sequence of run lengths of the form<br> Y_n     x_{n,1}   x_{n,2}   ... x_{n,l_n} <br> Y_{n-1} x_{n-1,1} x_{n-1,2} ... x_{n-1,l_{n-1}} <br> ... <br> Y_1     x_{1,1}   x_{1,2}   ... x_{1,l_1}<br> The Y_i's are chosen to satisfy the invariant throughout execution, but the x_{i,j}'s are merged (by <code>TimSort.mergeCollapse</code>) into an X_i that violates the invariant.
+ * @param length The sum of all run lengths that will be added to <code>runs</code>.
+ */
+private static List<Long> runsJDKWorstCase(int minRun,int length){
+  List<Long> runs=new ArrayList<>();
+  long runningTotal=0, Y=minRun + 4, X=minRun;
+  while (runningTotal + Y + X <= length) {
+    runningTotal+=X + Y;
+    generateJDKWrongElem(runs,minRun,X);
+    runs.add(0,Y);
+    X=Y + runs.get(1) + 1;
+    Y+=X + 1;
+  }
+  if (runningTotal + X <= length) {
+    runningTotal+=X;
+    generateJDKWrongElem(runs,minRun,X);
+  }
+  runs.add(length - runningTotal);
+  return runs;
+}

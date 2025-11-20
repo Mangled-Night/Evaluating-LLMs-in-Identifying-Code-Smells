@@ -1,0 +1,14 @@
+/** 
+ * Make the Linux Out-of-Memory killer more likely to pick Terasology. <p> When a Linux system runs out of available memory, it invokes the Out of Memory killer (aka <i>OOM killer</i>) to choose a process to terminate to free up some memory. <p> Add to this score if you want to make Terasology a bigger target. Why? If you'd rather the game process be the thing that gets killed instead of some other memory-hungry program, like your browser or IDE. A score of 1000 is equivalent to saying “this process is taking <em>all</em> the memory.” <p> This out-of-memory score is a Linux-specific mechanism.
+ * @param adjustment how much worse to make the score, 0–1000
+ * @see <a href="https://man7.org/linux/man-pages/man5/proc.5.html#:~:text=/proc/%5Bpid%5D/-,oom_score_adj,-(since">proc(5)</a>
+ */
+private static void adjustOutOfMemoryScore(int adjustment){
+  Path procFile=Paths.get("/proc","self","oom_score_adj");
+  try {
+    Files.write(procFile,String.valueOf(adjustment).getBytes(),StandardOpenOption.WRITE,StandardOpenOption.TRUNCATE_EXISTING);
+  }
+ catch (  IOException e) {
+    logger.error("Failed to adjust out-of-memory score.",e);
+  }
+}

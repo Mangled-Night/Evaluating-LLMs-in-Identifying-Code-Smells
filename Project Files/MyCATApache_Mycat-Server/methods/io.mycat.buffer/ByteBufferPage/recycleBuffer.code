@@ -1,0 +1,28 @@
+/** 
+ * 回收buffer
+ * @param parent      当前要释放的buf的parent 
+ * @param recycleBuf  当前要释放的recycleBuf
+ * @param startChunk
+ * @param chunkCount
+ * @param relatedThreadId  用于返回当前要释放的recycleBuf关联的线程id
+ * @return
+ */
+public boolean recycleBuffer(ByteBuffer parent,ByteBuffer recycleBuf,int startChunk,int chunkCount,StringBuilder relatedThreadId){
+  if (parent == this.buf) {
+    while (!this.allocLockStatus.compareAndSet(false,true)) {
+      Thread.yield();
+    }
+    try {
+      markChunksUnused(startChunk,chunkCount);
+      Long threadId=relationBufferThreadId.remove(((DirectBuffer)recycleBuf).address());
+      if (threadId != null) {
+        relatedThreadId.append(threadId);
+      }
+    }
+  finally {
+      allocLockStatus.set(false);
+    }
+    return true;
+  }
+  return false;
+}

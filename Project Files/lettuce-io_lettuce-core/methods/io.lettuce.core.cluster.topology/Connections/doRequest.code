@@ -1,0 +1,20 @@
+private Requests doRequest(Supplier<TimedAsyncCommand<String,String,String>> commandFactory,long timeout,TimeUnit timeUnit){
+  Requests requests=new Requests();
+  Duration timeoutDuration=Duration.ofNanos(timeUnit.toNanos(timeout));
+  try {
+    lock.lock();
+    for (    Map.Entry<RedisURI,StatefulRedisConnection<String,String>> entry : this.connections.entrySet()) {
+      TimedAsyncCommand<String,String,String> timedCommand=commandFactory.get();
+      clientResources.timer().newTimeout(it -> {
+        timedCommand.completeExceptionally(ExceptionFactory.createTimeoutException(timeoutDuration));
+      }
+,timeout,timeUnit);
+      entry.getValue().dispatch(timedCommand);
+      requests.addRequest(entry.getKey(),timedCommand);
+    }
+  }
+  finally {
+    lock.unlock();
+  }
+  return requests;
+}

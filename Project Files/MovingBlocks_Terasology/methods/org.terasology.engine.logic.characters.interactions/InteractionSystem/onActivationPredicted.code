@@ -1,0 +1,16 @@
+@ReceiveEvent(components=InteractionTargetComponent.class) public void onActivationPredicted(ActivationPredicted event,EntityRef target){
+  EntityRef character=event.getInstigator();
+  CharacterComponent characterComponent=character.getComponent(CharacterComponent.class);
+  if (characterComponent == null) {
+    return;
+  }
+  if (characterComponent.predictedInteractionTarget.exists()) {
+    InteractionUtil.cancelInteractionAsClient(character);
+  }
+  if (target.exists()) {
+    characterComponent.predictedInteractionTarget=target;
+    characterComponent.predictedInteractionId=event.getActivationId();
+    character.saveComponent(characterComponent);
+    target.send(new InteractionStartPredicted(character));
+  }
+}

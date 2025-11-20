@@ -1,0 +1,28 @@
+public static void readColor4FBuffer(byte[] buffer,GLTFAccessor accessor,GLTFBufferView bufferView,VertexAttributeBinding<Colorc,Color> mapping){
+  if (accessor.getComponentType() != GLTFComponentType.FLOAT) {
+    return;
+  }
+  ByteBuffer byteBuffer=ByteBuffer.wrap(buffer,bufferView.getByteOffset() + accessor.getByteOffset(),bufferView.getByteLength() - accessor.getByteOffset());
+  byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+  int gap=0;
+  if (bufferView.getByteStride() > 0) {
+    gap=bufferView.getByteStride() - accessor.getComponentType().getByteLength() * accessor.getType().getDimension();
+  }
+  Vector4f value=new Vector4f();
+  Color c=new Color();
+  if (byteBuffer.position() < byteBuffer.limit()) {
+    for (int i=0; i < accessor.getType().getDimension(); i++) {
+      value.setComponent(i,byteBuffer.getFloat());
+    }
+    c.set(value);
+    mapping.put(c);
+  }
+  while (byteBuffer.position() < byteBuffer.limit() - gap) {
+    byteBuffer.position(byteBuffer.position() + gap);
+    for (int i=0; i < accessor.getType().getDimension(); i++) {
+      value.setComponent(i,byteBuffer.getFloat());
+    }
+    c.set(value);
+    mapping.put(c);
+  }
+}

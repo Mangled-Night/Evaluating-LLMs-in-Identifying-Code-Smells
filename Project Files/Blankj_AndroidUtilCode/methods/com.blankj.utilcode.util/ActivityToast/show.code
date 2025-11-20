@@ -1,0 +1,33 @@
+@Override public void show(int duration){
+  if (mToast == null)   return;
+  if (!UtilsBridge.isAppForeground()) {
+    iToast=showSystemToast(duration);
+    return;
+  }
+  boolean hasAliveActivity=false;
+  for (  final Activity activity : UtilsBridge.getActivityList()) {
+    if (!UtilsBridge.isActivityAlive(activity)) {
+      continue;
+    }
+    if (!hasAliveActivity) {
+      hasAliveActivity=true;
+      iToast=showWithActivityWindow(activity,duration);
+    }
+ else {
+      showWithActivityView(activity,sShowingIndex,true);
+    }
+  }
+  if (hasAliveActivity) {
+    registerLifecycleCallback();
+    UtilsBridge.runOnUiThreadDelayed(new Runnable(){
+      @Override public void run(){
+        cancel();
+      }
+    }
+,duration == Toast.LENGTH_SHORT ? 2000 : 3500);
+    ++sShowingIndex;
+  }
+ else {
+    iToast=showSystemToast(duration);
+  }
+}

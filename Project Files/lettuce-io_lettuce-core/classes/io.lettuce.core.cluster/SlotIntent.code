@@ -1,0 +1,37 @@
+static class SlotIntent {
+  final int slotHash;
+  final ConnectionIntent connectionIntent;
+  private static final SlotIntent[] READ;
+  private static final SlotIntent[] WRITE;
+static {
+    READ=new SlotIntent[SlotHash.SLOT_COUNT];
+    WRITE=new SlotIntent[SlotHash.SLOT_COUNT];
+    IntStream.range(0,SlotHash.SLOT_COUNT).forEach(i -> {
+      READ[i]=new SlotIntent(i,ConnectionIntent.READ);
+      WRITE[i]=new SlotIntent(i,ConnectionIntent.WRITE);
+    }
+);
+  }
+  private SlotIntent(  int slotHash,  ConnectionIntent connectionIntent){
+    this.slotHash=slotHash;
+    this.connectionIntent=connectionIntent;
+  }
+  public static SlotIntent of(  ConnectionIntent connectionIntent,  int slot){
+    if (connectionIntent == ConnectionIntent.READ) {
+      return READ[slot];
+    }
+    return WRITE[slot];
+  }
+  @Override public boolean equals(  Object o){
+    if (this == o)     return true;
+    if (!(o instanceof SlotIntent))     return false;
+    SlotIntent that=(SlotIntent)o;
+    if (slotHash != that.slotHash)     return false;
+    return connectionIntent == that.connectionIntent;
+  }
+  @Override public int hashCode(){
+    int result=slotHash;
+    result=31 * result + connectionIntent.hashCode();
+    return result;
+  }
+}

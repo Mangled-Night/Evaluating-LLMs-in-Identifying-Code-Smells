@@ -1,0 +1,15 @@
+@Test void wrappedObjectClosedAfterReturn() throws Exception {
+  GenericObjectPool<StatefulRedisConnection<String,String>> pool=ConnectionPoolSupport.createGenericObjectPool(() -> client.connect(),new GenericObjectPoolConfig<>(),true);
+  StatefulRedisConnection<String,String> connection=pool.borrowObject();
+  RedisCommands<String,String> sync=connection.sync();
+  sync.ping();
+  connection.close();
+  try {
+    connection.isMulti();
+    fail("Missing RedisException");
+  }
+ catch (  RedisException e) {
+    assertThat(e).hasMessageContaining("deallocated");
+  }
+  pool.close();
+}

@@ -1,0 +1,20 @@
+private static Pair<List<String>,List<String>> getRequestAndDeniedPermissions(final String... permissionsParam){
+  List<String> requestPermissions=new ArrayList<>();
+  List<String> deniedPermissions=new ArrayList<>();
+  List<String> appPermissions=getPermissions();
+  for (  String param : permissionsParam) {
+    boolean isIncludeInManifest=false;
+    String[] permissions=PermissionConstants.getPermissions(param);
+    for (    String permission : permissions) {
+      if (appPermissions.contains(permission)) {
+        requestPermissions.add(permission);
+        isIncludeInManifest=true;
+      }
+    }
+    if (!isIncludeInManifest) {
+      deniedPermissions.add(param);
+      Log.e("PermissionUtils","U should add the permission of " + param + " in manifest.");
+    }
+  }
+  return Pair.create(requestPermissions,deniedPermissions);
+}

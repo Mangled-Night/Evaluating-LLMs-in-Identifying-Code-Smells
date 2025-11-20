@@ -1,0 +1,32 @@
+public void handleSwitchToGameEnvironment(Context context){
+  ModuleManager moduleManager=context.get(ModuleManager.class);
+  ModuleEnvironment environment=moduleManager.getEnvironment();
+  ModuleTypeRegistry typeRegistry=context.get(ModuleTypeRegistry.class);
+  typeRegistry.reload(environment);
+  CopyStrategyLibrary copyStrategyLibrary=context.get(CopyStrategyLibrary.class);
+  copyStrategyLibrary.clear();
+  for (  CopyStrategyEntry<?> entry : typesWithCopyConstructors) {
+    entry.registerWith(copyStrategyLibrary);
+  }
+  TypeHandlerLibrary typeHandlerLibrary=TypeHandlerLibraryImpl.forModuleEnvironment(moduleManager,typeRegistry);
+  typeHandlerLibrary.addTypeHandler(CollisionGroup.class,new CollisionGroupTypeHandler(context.get(CollisionGroupManager.class)));
+  context.put(TypeHandlerLibrary.class,typeHandlerLibrary);
+  EntitySystemLibrary library=new EntitySystemLibrary(context,typeHandlerLibrary);
+  context.put(EntitySystemLibrary.class,library);
+  ComponentLibrary componentLibrary=library.getComponentLibrary();
+  context.put(ComponentLibrary.class,componentLibrary);
+  context.put(EventLibrary.class,library.getEventLibrary());
+  context.put(ClassMetaLibrary.class,new ClassMetaLibraryImpl(context));
+  registerComponents(componentLibrary,environment);
+  registerTypeHandlers(context,typeHandlerLibrary,environment);
+  AutoConfigManager autoConfigManager=context.get(AutoConfigManager.class);
+  autoConfigManager.loadConfigsIn(context);
+  ModuleAwareAssetTypeManager assetTypeManager=context.get(ModuleAwareAssetTypeManager.class);
+  unregisterPrefabFormats(assetTypeManager);
+  registeredPrefabFormat=new PrefabFormat(componentLibrary,typeHandlerLibrary);
+  assetTypeManager.getAssetFileDataProducer(assetTypeManager.getAssetType(Prefab.class).orElseThrow(() -> new RuntimeException("Cannot get Prefab Asset typee"))).addAssetFormat(registeredPrefabFormat);
+  registeredPrefabDeltaFormat=new PrefabDeltaFormat(componentLibrary,typeHandlerLibrary);
+  assetTypeManager.getAssetFileDataProducer(assetTypeManager.getAssetType(Prefab.class).orElseThrow(() -> new RuntimeException("Cannot get Prefab Asset type"))).addDeltaFormat(registeredPrefabDeltaFormat);
+  assetTypeManager.switchEnvironment(environment);
+  assetTypeManager.reloadAssets();
+}

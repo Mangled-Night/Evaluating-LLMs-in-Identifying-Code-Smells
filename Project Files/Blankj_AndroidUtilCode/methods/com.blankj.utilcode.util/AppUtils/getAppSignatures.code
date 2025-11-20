@@ -1,0 +1,63 @@
+/** 
+ * Return the application's signature.
+ * @return the application's signature
+ */
+@Nullable public static Signature[] getAppSignatures(){
+  return getAppSignatures(Utils.getApp().getPackageName());
+}
+/** 
+ * Return the application's signature.
+ * @param packageName The name of the package.
+ * @return the application's signature
+ */
+@Nullable public static Signature[] getAppSignatures(final String packageName){
+  if (UtilsBridge.isSpace(packageName))   return null;
+  try {
+    PackageManager pm=Utils.getApp().getPackageManager();
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+      PackageInfo pi=pm.getPackageInfo(packageName,PackageManager.GET_SIGNING_CERTIFICATES);
+      if (pi == null)       return null;
+      SigningInfo signingInfo=pi.signingInfo;
+      if (signingInfo.hasMultipleSigners()) {
+        return signingInfo.getApkContentsSigners();
+      }
+ else {
+        return signingInfo.getSigningCertificateHistory();
+      }
+    }
+ else {
+      PackageInfo pi=pm.getPackageInfo(packageName,PackageManager.GET_SIGNATURES);
+      if (pi == null)       return null;
+      return pi.signatures;
+    }
+  }
+ catch (  PackageManager.NameNotFoundException e) {
+    e.printStackTrace();
+    return null;
+  }
+}
+/** 
+ * Return the application's signature.
+ * @param file The file.
+ * @return the application's signature
+ */
+@Nullable public static Signature[] getAppSignatures(final File file){
+  if (file == null)   return null;
+  PackageManager pm=Utils.getApp().getPackageManager();
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+    PackageInfo pi=pm.getPackageArchiveInfo(file.getAbsolutePath(),PackageManager.GET_SIGNING_CERTIFICATES);
+    if (pi == null)     return null;
+    SigningInfo signingInfo=pi.signingInfo;
+    if (signingInfo.hasMultipleSigners()) {
+      return signingInfo.getApkContentsSigners();
+    }
+ else {
+      return signingInfo.getSigningCertificateHistory();
+    }
+  }
+ else {
+    PackageInfo pi=pm.getPackageArchiveInfo(file.getAbsolutePath(),PackageManager.GET_SIGNATURES);
+    if (pi == null)     return null;
+    return pi.signatures;
+  }
+}

@@ -1,0 +1,46 @@
+@Override public void authenticated(XMPPConnection connection,boolean resumed){
+  if (resumed)   return;
+  if (!autoJoinOnReconnect)   return;
+  final Set<EntityBareJid> mucs=getJoinedRooms();
+  if (mucs.isEmpty())   return;
+  Async.go(new Runnable(){
+    @Override public void run(){
+      final AutoJoinFailedCallback failedCallback=autoJoinFailedCallback;
+      final AutoJoinSuccessCallback successCallback=autoJoinSuccessCallback;
+      for (      EntityBareJid mucJid : mucs) {
+        MultiUserChat muc=getMultiUserChat(mucJid);
+        if (!muc.isJoined())         return;
+        Resourcepart nickname=muc.getNickname();
+        if (nickname == null)         return;
+        try {
+          muc.leave();
+        }
+ catch (        NotConnectedException|InterruptedException|MucNotJoinedException|NoResponseException|XMPPErrorException e) {
+          if (failedCallback != null) {
+            failedCallback.autoJoinFailed(muc,e);
+          }
+ else {
+            LOGGER.log(Level.WARNING,"Could not leave room",e);
+          }
+          return;
+        }
+        try {
+          muc.join(nickname);
+          if (successCallback != null) {
+            successCallback.autoJoinSuccess(muc,nickname);
+          }
+        }
+ catch (        NotAMucServiceException|NoResponseException|XMPPErrorException|NotConnectedException|InterruptedException e) {
+          if (failedCallback != null) {
+            failedCallback.autoJoinFailed(muc,e);
+          }
+ else {
+            LOGGER.log(Level.WARNING,"Could not leave room",e);
+          }
+          return;
+        }
+      }
+    }
+  }
+);
+}

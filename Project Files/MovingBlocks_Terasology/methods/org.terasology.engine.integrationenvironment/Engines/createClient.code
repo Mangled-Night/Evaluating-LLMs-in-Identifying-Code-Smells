@@ -1,0 +1,15 @@
+/** 
+ * Creates a new client and connects it to the host. <p> Requires the host to have a  {@link NetworkMode} that accepts connections.Configure the host's network mode using {@link IntegrationEnvironment#networkMode @IntegrationEnvironment#networkmode}on your test class.
+ * @return the created client's context object
+ */
+public Context createClient(MainLoop mainLoop) throws IOException {
+  TerasologyEngine client=createHeadlessEngine();
+  client.changeState(new StateMainMenu());
+  if (!connectToHost(client,mainLoop)) {
+    throw new RuntimeException(String.format("Could not connect client %s to local host - timeout.",client));
+  }
+  Context context=client.getState().getContext();
+  context.put(ScreenGrabber.class,hostContext.get(ScreenGrabber.class));
+  logger.info("Created client: {}",client);
+  return client.getState().getContext();
+}

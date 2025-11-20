@@ -1,0 +1,27 @@
+protected final synchronized void maybeInvokeCallbacks(){
+  if (cancelled || callbacksInvoked) {
+    return;
+  }
+  if ((result != null || exception != null) && completionCallback != null) {
+    callbacksInvoked=true;
+    completionCallback.accept(this);
+  }
+  if (result != null && successCallback != null) {
+    callbacksInvoked=true;
+    AbstractXMPPConnection.asyncGo(new Runnable(){
+      @Override public void run(){
+        successCallback.onSuccess(result);
+      }
+    }
+);
+  }
+ else   if (exception != null && exceptionCallback != null) {
+    callbacksInvoked=true;
+    AbstractXMPPConnection.asyncGo(new Runnable(){
+      @Override public void run(){
+        exceptionCallback.processException(exception);
+      }
+    }
+);
+  }
+}

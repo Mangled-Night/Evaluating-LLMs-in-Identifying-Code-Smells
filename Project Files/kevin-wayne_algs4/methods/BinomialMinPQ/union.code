@@ -1,0 +1,34 @@
+/** 
+ * Merges two Binomial heaps together This operation is destructive Worst case is O(log(n))
+ * @param heap a Binomial Heap to be merged with the current heap
+ * @throws java.lang.IllegalArgumentException if the heap in parameter is null
+ * @return the union of two heaps
+ */
+public BinomialMinPQ<Key> union(BinomialMinPQ<Key> heap){
+  if (heap == null)   throw new IllegalArgumentException("Cannot merge a Binomial Heap with null");
+  this.head=merge(new Node(),this.head,heap.head).sibling;
+  Node x=this.head;
+  Node prevx=null, nextx=x.sibling;
+  while (nextx != null) {
+    if (x.order < nextx.order || (nextx.sibling != null && nextx.sibling.order == x.order)) {
+      prevx=x;
+      x=nextx;
+    }
+ else     if (greater(nextx.key,x.key)) {
+      x.sibling=nextx.sibling;
+      link(nextx,x);
+    }
+ else {
+      if (prevx == null) {
+        this.head=nextx;
+      }
+ else {
+        prevx.sibling=nextx;
+      }
+      link(x,nextx);
+      x=nextx;
+    }
+    nextx=x.sibling;
+  }
+  return this;
+}

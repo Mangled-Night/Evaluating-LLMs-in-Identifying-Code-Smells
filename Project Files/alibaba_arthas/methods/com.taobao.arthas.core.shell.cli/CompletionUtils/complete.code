@@ -1,0 +1,61 @@
+public static void complete(Completion completion,Class<?> clazz){
+  List<CliToken> tokens=completion.lineTokens();
+  CliToken lastToken=tokens.get(tokens.size() - 1);
+  CLI cli=CLIConfigurator.define(clazz);
+  List<com.taobao.middleware.cli.Option> options=cli.getOptions();
+  if (lastToken == null || lastToken.isBlank()) {
+    completeUsage(completion,cli);
+  }
+ else   if (lastToken.value().startsWith("--")) {
+    completeLongOption(completion,lastToken,options);
+  }
+ else   if (lastToken.value().startsWith("-")) {
+    completeShortOption(completion,lastToken,options);
+  }
+ else {
+    completion.complete(Collections.<String>emptyList());
+  }
+}
+/** 
+ * 从给定的查询数组中查询匹配的对象，并进行自动补全
+ */
+public static boolean complete(Completion completion,Collection<String> searchScope){
+  List<CliToken> tokens=completion.lineTokens();
+  String lastToken=tokens.get(tokens.size() - 1).value();
+  List<String> candidates=new ArrayList<String>();
+  if (StringUtils.isBlank(lastToken)) {
+    lastToken="";
+  }
+  for (  String name : searchScope) {
+    if (name.startsWith(lastToken)) {
+      candidates.add(name);
+    }
+  }
+  if (candidates.size() == 1) {
+    completion.complete(candidates.get(0).substring(lastToken.length()),true);
+    return true;
+  }
+ else {
+    completion.complete(candidates);
+    return true;
+  }
+}
+private static void complete(Completion completion,String prefix,List<String> candidates){
+  if (candidates.size() == 1) {
+    completion.complete(candidates.get(0).substring(prefix.length()),true);
+  }
+ else {
+    String commonPrefix=CompletionUtils.findLongestCommonPrefix(candidates);
+    if (commonPrefix.length() > 0) {
+      if (commonPrefix.length() == prefix.length()) {
+        completion.complete(candidates);
+      }
+ else {
+        completion.complete(commonPrefix.substring(prefix.length()),false);
+      }
+    }
+ else {
+      completion.complete(candidates);
+    }
+  }
+}

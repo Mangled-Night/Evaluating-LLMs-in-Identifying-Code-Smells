@@ -1,0 +1,19 @@
+class DefaultConnectionFactory implements Function<ConnectionKey,CompletionStage<StatefulRedisConnection<K,V>>> {
+  private final RedisClient redisClient;
+  private final RedisCodec<K,V> redisCodec;
+  DefaultConnectionFactory(  RedisClient redisClient,  RedisCodec<K,V> redisCodec){
+    this.redisClient=redisClient;
+    this.redisCodec=redisCodec;
+  }
+  @Override public ConnectionFuture<StatefulRedisConnection<K,V>> apply(  ConnectionKey key){
+    RedisURI.Builder builder=RedisURI.builder(initialRedisUri).withHost(key.host).withPort(key.port);
+    ConnectionFuture<StatefulRedisConnection<K,V>> connectionFuture=redisClient.connectAsync(redisCodec,builder.build());
+    connectionFuture.thenAccept(connection -> {
+synchronized (stateLock) {
+        connection.setAutoFlushCommands(autoFlushCommands);
+      }
+    }
+);
+    return connectionFuture;
+  }
+}

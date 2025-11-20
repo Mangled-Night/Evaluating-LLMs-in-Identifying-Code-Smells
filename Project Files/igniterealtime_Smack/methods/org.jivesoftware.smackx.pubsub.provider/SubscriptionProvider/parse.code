@@ -1,0 +1,15 @@
+@Override public Subscription parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  Jid jid=ParserUtils.getJidAttribute(parser);
+  String nodeId=parser.getAttributeValue(null,"node");
+  String subId=parser.getAttributeValue(null,"subid");
+  String state=parser.getAttributeValue(null,"subscription");
+  boolean isRequired=false;
+  XmlPullParser.Event tag=parser.next();
+  if ((tag == XmlPullParser.Event.START_ELEMENT) && parser.getName().equals("subscribe-options")) {
+    tag=parser.next();
+    if ((tag == XmlPullParser.Event.START_ELEMENT) && parser.getName().equals("required"))     isRequired=true;
+    while (tag != XmlPullParser.Event.END_ELEMENT && !parser.getName().equals("subscribe-options"))     tag=parser.next();
+  }
+  while (parser.getEventType() != XmlPullParser.Event.END_ELEMENT)   parser.next();
+  return new Subscription(jid,nodeId,subId,state == null ? null : Subscription.State.valueOf(state),isRequired);
+}

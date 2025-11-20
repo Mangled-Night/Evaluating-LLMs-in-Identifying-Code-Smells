@@ -1,0 +1,29 @@
+/** 
+ * @param name       传入的测试函数名
+ * @param sampleSize 样本的数量
+ * @param times      每次执行的次数
+ * @param callback   比较的回调函数
+ */
+private void compareWithEventBus(String name,int sampleSize,int times,CompareCallback callback){
+  long[][] dur=new long[2][sampleSize];
+  for (int i=0; i < sampleSize; i++) {
+    long cur=System.currentTimeMillis();
+    for (int j=0; j < times; j++) {
+      callback.runEventBus();
+    }
+    dur[0][i]=System.currentTimeMillis() - cur;
+    cur=System.currentTimeMillis();
+    for (int j=0; j < times; j++) {
+      callback.runBusUtils();
+    }
+    dur[1][i]=System.currentTimeMillis() - cur;
+    callback.restState();
+  }
+  long eventBusAverageTime=0;
+  long busUtilsAverageTime=0;
+  for (int i=0; i < sampleSize; i++) {
+    eventBusAverageTime+=dur[0][i];
+    busUtilsAverageTime+=dur[1][i];
+  }
+  System.out.println(name + "\nEventBusCostTime: " + eventBusAverageTime / sampleSize + "\nBusUtilsCostTime: " + busUtilsAverageTime / sampleSize);
+}

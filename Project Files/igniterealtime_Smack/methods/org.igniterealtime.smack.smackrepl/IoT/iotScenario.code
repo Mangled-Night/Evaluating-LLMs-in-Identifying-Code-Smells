@@ -1,0 +1,82 @@
+void iotScenario(XMPPTCPConnection dataThingConnection,XMPPTCPConnection readingThingConnection) throws Exception ;
+public static void iotScenario(String dataThingJidString,String dataThingPassword,String readingThingJidString,String readingThingPassword,IotScenario scenario) throws Exception {
+  final EntityBareJid dataThingJid=JidCreate.entityBareFrom(dataThingJidString);
+  final EntityBareJid readingThingJid=JidCreate.entityBareFrom(readingThingJidString);
+  final XMPPTCPConnectionConfiguration dataThingConnectionConfiguration=XMPPTCPConnectionConfiguration.builder().setUsernameAndPassword(dataThingJid.getLocalpart(),dataThingPassword).setXmppDomain(dataThingJid.asDomainBareJid()).setSecurityMode(SecurityMode.disabled).enableDefaultDebugger().build();
+  final XMPPTCPConnectionConfiguration readingThingConnectionConfiguration=XMPPTCPConnectionConfiguration.builder().setUsernameAndPassword(readingThingJid.getLocalpart(),readingThingPassword).setXmppDomain(readingThingJid.asDomainBareJid()).setSecurityMode(SecurityMode.disabled).enableDefaultDebugger().build();
+  final XMPPTCPConnection dataThingConnection=new XMPPTCPConnection(dataThingConnectionConfiguration);
+  final XMPPTCPConnection readingThingConnection=new XMPPTCPConnection(readingThingConnectionConfiguration);
+  dataThingConnection.setReplyTimeout(TIMEOUT);
+  readingThingConnection.setReplyTimeout(TIMEOUT);
+  dataThingConnection.setUseStreamManagement(false);
+  readingThingConnection.setUseStreamManagement(false);
+  try {
+    dataThingConnection.connect().login();
+    readingThingConnection.connect().login();
+    scenario.iotScenario(dataThingConnection,readingThingConnection);
+  }
+  finally {
+    dataThingConnection.disconnect();
+    readingThingConnection.disconnect();
+  }
+}
+@Override public void iotScenario(XMPPTCPConnection dataThingConnection,XMPPTCPConnection readingThingConnection) throws TimeoutException, Exception {
+  ThingState dataThingState=actAsDataThing(dataThingConnection);
+  final SimpleResultSyncPoint syncPoint=new SimpleResultSyncPoint();
+  dataThingState.setThingStateChangeListener(new AbstractThingStateChangeListener(){
+    @Override public void owned(    BareJid jid){
+      syncPoint.signal();
+    }
+  }
+);
+  syncPoint.waitForResult(TIMEOUT);
+  printStatus("OWNED - Thing now owned by " + dataThingState.getOwner());
+  IoTProvisioningManager readingThingProvisioningManager=IoTProvisioningManager.getInstanceFor(readingThingConnection);
+  readingThingProvisioningManager.sendFriendshipRequestIfRequired(dataThingConnection.getUser().asBareJid());
+  Roster dataThingRoster=Roster.getInstanceFor(dataThingConnection);
+  RosterUtil.waitUntilOtherEntityIsSubscribed(dataThingRoster,readingThingConnection.getUser().asBareJid(),TIMEOUT);
+  printStatus("FRIENDSHIP ACCEPTED - Trying to read out data");
+  IoTDataManager readingThingDataManager=IoTDataManager.getInstanceFor(readingThingConnection);
+  List<IoTFieldsExtension> values=readingThingDataManager.requestMomentaryValuesReadOut(dataThingConnection.getUser());
+  if (values.size() != 1) {
+    throw new IllegalStateException("Unexpected number of values returned: " + values.size());
+  }
+  IoTFieldsExtension field=values.get(0);
+  printStatus("DATA READ-OUT SUCCESS: " + field.toXML());
+  printStatus("IoT SCENARIO FINISHED SUCCESSFULLY");
+}
+@Override public void iotScenario(XMPPTCPConnection dataThingConnection,XMPPTCPConnection readingThingConnection) throws TimeoutException, Exception {
+  RosterUtil.ensureNotSubscribedToEachOther(dataThingConnection,readingThingConnection);
+  final BareJid dataThingBareJid=dataThingConnection.getUser().asBareJid();
+  final BareJid readingThingBareJid=readingThingConnection.getUser().asBareJid();
+  final ThingState dataThingState=actAsDataThing(dataThingConnection);
+  printStatus("WAITING for 'claimed' notification. Please claim thing now");
+  final SimpleResultSyncPoint syncPoint=new SimpleResultSyncPoint();
+  dataThingState.setThingStateChangeListener(new AbstractThingStateChangeListener(){
+    @Override public void owned(    BareJid jid){
+      syncPoint.signal();
+    }
+  }
+);
+  syncPoint.waitForResult(TIMEOUT);
+  printStatus("OWNED - Thing now owned by " + dataThingState.getOwner());
+  final SimpleResultSyncPoint friendshipApprovedSyncPoint=new SimpleResultSyncPoint();
+  final IoTProvisioningManager readingThingProvisioningManager=IoTProvisioningManager.getInstanceFor(readingThingConnection);
+  final BecameFriendListener becameFriendListener=new BecameFriendListener(){
+    @Override public void becameFriend(    BareJid jid,    Presence presence){
+      if (jid.equals(dataThingBareJid)) {
+        friendshipApprovedSyncPoint.signal();
+      }
+    }
+  }
+;
+  readingThingProvisioningManager.addBecameFriendListener(becameFriendListener);
+  try {
+    readingThingProvisioningManager.sendFriendshipRequestIfRequired(dataThingConnection.getUser().asBareJid());
+    friendshipApprovedSyncPoint.waitForResult(TIMEOUT);
+  }
+  finally {
+    readingThingProvisioningManager.removeBecameFriendListener(becameFriendListener);
+  }
+  printStatus("FRIENDSHIP APPROVED - ReadingThing " + readingThingBareJid + " is now a friend of DataThing "+ dataThingBareJid);
+}

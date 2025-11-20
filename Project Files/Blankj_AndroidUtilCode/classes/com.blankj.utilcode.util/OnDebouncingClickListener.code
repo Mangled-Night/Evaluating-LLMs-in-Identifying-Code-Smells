@@ -1,0 +1,42 @@
+public static abstract class OnDebouncingClickListener implements View.OnClickListener {
+  private static boolean mEnabled=true;
+  private static final Runnable ENABLE_AGAIN=new Runnable(){
+    @Override public void run(){
+      mEnabled=true;
+    }
+  }
+;
+  private static boolean isValid(  @NonNull final View view,  final long duration){
+    return UtilsBridge.isValid(view,duration);
+  }
+  private long mDuration;
+  private boolean mIsGlobal;
+  public OnDebouncingClickListener(){
+    this(true,DEBOUNCING_DEFAULT_VALUE);
+  }
+  public OnDebouncingClickListener(  final boolean isGlobal){
+    this(isGlobal,DEBOUNCING_DEFAULT_VALUE);
+  }
+  public OnDebouncingClickListener(  final long duration){
+    this(true,duration);
+  }
+  public OnDebouncingClickListener(  final boolean isGlobal,  final long duration){
+    mIsGlobal=isGlobal;
+    mDuration=duration;
+  }
+  public abstract void onDebouncingClick(  View v);
+  @Override public final void onClick(  View v){
+    if (mIsGlobal) {
+      if (mEnabled) {
+        mEnabled=false;
+        v.postDelayed(ENABLE_AGAIN,mDuration);
+        onDebouncingClick(v);
+      }
+    }
+ else {
+      if (isValid(v,mDuration)) {
+        onDebouncingClick(v);
+      }
+    }
+  }
+}

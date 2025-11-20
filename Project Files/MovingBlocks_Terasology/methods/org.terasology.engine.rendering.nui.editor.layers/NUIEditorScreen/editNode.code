@@ -1,0 +1,53 @@
+/** 
+ * {@inheritDoc}
+ */
+@Override protected void editNode(JsonTree node){
+  Class nodeClass=null;
+  try {
+    Class parentClass=NUIEditorNodeUtils.getNodeInfo((JsonTree)node.getParent(),getManager()).getNodeClass();
+    if (parentClass != null) {
+      nodeClass=parentClass.getDeclaredField(node.getValue().getKey()).getType();
+    }
+  }
+ catch (  NullPointerException|NoSuchFieldException ignored) {
+  }
+  if (nodeClass != null && Enum.class.isAssignableFrom(nodeClass)) {
+    getManager().pushScreen(EnumEditorScreen.ASSET_URI,EnumEditorScreen.class);
+    EnumEditorScreen enumEditorScreen=(EnumEditorScreen)getManager().getScreen(EnumEditorScreen.ASSET_URI);
+    enumEditorScreen.setNode(node);
+    enumEditorScreen.setEnumClass(nodeClass);
+    enumEditorScreen.subscribeClose(() -> getEditor().fireUpdateListeners());
+  }
+ else {
+    JsonTreeValue.Type type=node.getValue().getType();
+    inlineEditorEntry=null;
+    if (type == JsonTreeValue.Type.VALUE) {
+      inlineEditorEntry=NUIEditorTextEntryBuilder.createValueEditor();
+    }
+ else     if (type == JsonTreeValue.Type.KEY_VALUE_PAIR) {
+      inlineEditorEntry=NUIEditorTextEntryBuilder.createKeyValueEditor();
+    }
+ else     if (type == JsonTreeValue.Type.OBJECT && !(!node.isRoot() && node.getParent().getValue().getType() == JsonTreeValue.Type.ARRAY)) {
+      inlineEditorEntry=NUIEditorTextEntryBuilder.createObjectEditor();
+    }
+ else     if (type == JsonTreeValue.Type.ARRAY) {
+      inlineEditorEntry=NUIEditorTextEntryBuilder.createArrayEditor();
+    }
+    if (inlineEditorEntry != null) {
+      inlineEditorEntry.bindValue(new Binding<JsonTree>(){
+        @Override public JsonTree get(){
+          return node;
+        }
+        @Override public void set(        JsonTree value){
+          if (value != null) {
+            node.setValue(value.getValue());
+            getEditor().fireUpdateListeners();
+          }
+        }
+      }
+);
+      getEditor().setAlternativeWidget(inlineEditorEntry);
+      focusInlineEditor(node,inlineEditorEntry);
+    }
+  }
+}

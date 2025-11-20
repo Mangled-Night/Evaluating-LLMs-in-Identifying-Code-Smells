@@ -1,0 +1,13 @@
+private static class Resources {
+  private static final EventLoopGroup bossGroup;
+  private static final EventLoopGroup workerGroup;
+static {
+    bossGroup=new NioEventLoopGroup(1,new DefaultThreadFactory(NioEventLoopGroup.class,true));
+    workerGroup=new NioEventLoopGroup(5,new DefaultThreadFactory(NioEventLoopGroup.class,true));
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      bossGroup.shutdownGracefully(0,0,TimeUnit.MILLISECONDS);
+      workerGroup.shutdownGracefully(0,0,TimeUnit.MILLISECONDS);
+    }
+,"MockRedisServer-shutdown"));
+  }
+}

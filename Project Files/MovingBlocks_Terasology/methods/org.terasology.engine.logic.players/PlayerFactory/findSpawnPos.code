@@ -1,0 +1,14 @@
+private Optional<Vector3f> findSpawnPos(Vector3fc targetPos,float entityHeight){
+  int targetBlockX=TeraMath.floorToInt(targetPos.x());
+  int targetBlockY=TeraMath.floorToInt(targetPos.y());
+  int targetBlockZ=TeraMath.floorToInt(targetPos.z());
+  Vector2i center=new Vector2i(targetBlockX,targetBlockZ);
+  for (  Vector2ic pos : SpiralIterable.clockwise(center).maxRadius(32).scale(2).build()) {
+    Vector3i testPos=new Vector3i(pos.x(),targetBlockY,pos.y());
+    Vector3i spawnPos=findOpenVerticalPosition(testPos,entityHeight);
+    if (spawnPos != null) {
+      return Optional.of(new Vector3f(spawnPos.x(),spawnPos.y() + entityHeight,spawnPos.z()));
+    }
+  }
+  return Optional.empty();
+}

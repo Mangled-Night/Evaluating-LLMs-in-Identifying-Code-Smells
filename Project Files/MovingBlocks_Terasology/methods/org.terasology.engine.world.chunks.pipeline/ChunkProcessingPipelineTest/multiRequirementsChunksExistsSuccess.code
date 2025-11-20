@@ -1,0 +1,13 @@
+/** 
+ * Imagine that we have task, which requires neighbors with same Z level. neighbors chunk already in chunk cache.
+ */
+@Test void multiRequirementsChunksExistsSuccess() throws ExecutionException, InterruptedException, TimeoutException {
+  Vector3i positionToGenerate=new Vector3i(0,0,0);
+  Map<Vector3ic,Chunk> chunkCache=getNearChunkPositions(positionToGenerate).stream().filter((p) -> !p.equals(positionToGenerate)).map(this::createChunkAt).collect(Collectors.toMap(ChunkImpl::getPosition,Function.identity()));
+  pipeline=new ChunkProcessingPipeline(chunkCache::get,(o1,o2) -> 0);
+  pipeline.addStage(ChunkTaskProvider.createMulti("flat merging task",(chunks) -> chunks.stream().filter((c) -> c.getPosition().equals(positionToGenerate)).findFirst().get(),this::getNearChunkPositions));
+  Chunk chunk=createChunkAt(positionToGenerate);
+  Future<Chunk> chunkFuture=pipeline.invokeGeneratorTask(new Vector3i(0,0,0),() -> chunk);
+  Chunk chunkAfterProcessing=chunkFuture.get(1,TimeUnit.SECONDS);
+  Assertions.assertEquals(chunkAfterProcessing.getPosition(),chunk.getPosition(),"Chunk after processing must have equals position, probably pipeline lost you chunk");
+}

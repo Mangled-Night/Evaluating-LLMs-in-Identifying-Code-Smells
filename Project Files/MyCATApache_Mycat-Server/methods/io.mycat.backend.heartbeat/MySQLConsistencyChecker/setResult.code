@@ -1,0 +1,25 @@
+public void setResult(SQLQueryResult<Map<String,String>> result){
+  lock.lock();
+  try {
+    this.jobCount.decrementAndGet();
+    if (result != null && result.isSuccess()) {
+      result.setTableName(tableName);
+      list.add(result);
+    }
+ else {
+      if (result != null && result.getResult() != null) {
+        String sql=null;
+        if (result.getResult().containsKey(GlobalTableUtil.COUNT_COLUMN))         sql=this.getCountSQL();
+        if (result.getResult().containsKey(GlobalTableUtil.MAX_COLUMN))         sql=this.getMaxSQL();
+        if (result.getResult().containsKey(GlobalTableUtil.INNER_COLUMN))         sql=this.getColumnExistSQL();
+        LOGGER.warn(sql + " execute failed in db: " + result.getDataNode()+ " during global table consistency check task.");
+      }
+    }
+    if (this.jobCount.get() <= 0 || isTimeOut()) {
+      GlobalTableUtil.finished(list);
+    }
+  }
+  finally {
+    lock.unlock();
+  }
+}

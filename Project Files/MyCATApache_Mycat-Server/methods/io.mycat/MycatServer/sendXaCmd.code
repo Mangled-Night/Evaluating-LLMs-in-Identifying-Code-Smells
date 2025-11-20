@@ -1,0 +1,15 @@
+private void sendXaCmd(ParticipantLogEntry participantLogEntry,String xacmd,OneRawSQLQueryResultHandler resultHandler){
+  for (  SchemaConfig schema : MycatServer.getInstance().getConfig().getSchemas().values()) {
+    for (    TableConfig table : schema.getTables().values()) {
+      for (      String dataNode : table.getDataNodes()) {
+        PhysicalDBNode dn=MycatServer.getInstance().getConfig().getDataNodes().get(dataNode);
+        if (dn.getDbPool().getSource().getConfig().getIp().equals(participantLogEntry.uri) && dn.getDatabase().equals(participantLogEntry.resourceName)) {
+          SQLJob sqlJob=new SQLJob(xacmd,dn.getDatabase(),resultHandler,dn.getDbPool().getSource());
+          sqlJob.run();
+          LOGGER.debug(String.format("[XA cmd] [%s] Host:[%s] schema:[%s]",xacmd,dn.getName(),dn.getDatabase()));
+          return;
+        }
+      }
+    }
+  }
+}

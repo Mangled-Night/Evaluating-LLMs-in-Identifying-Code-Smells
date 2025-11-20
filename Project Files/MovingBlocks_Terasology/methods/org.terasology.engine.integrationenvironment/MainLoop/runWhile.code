@@ -1,0 +1,37 @@
+/** 
+ * Runs tick() on the engine while f evaluates to true or until DEFAULT_GAME_TIME_TIMEOUT milliseconds have passed
+ * @return true if execution timed out
+ */
+public boolean runWhile(Supplier<Boolean> f){
+  return runWhile(ModuleTestingEnvironment.DEFAULT_GAME_TIME_TIMEOUT,f);
+}
+/** 
+ * Runs tick() on the engine while f evaluates to true or until gameTimeTimeoutMs has passed in game time.
+ * @return true if execution timed out
+ */
+public boolean runWhile(long gameTimeTimeoutMs,Supplier<Boolean> f){
+  boolean timedOut=false;
+  Time hostTime=engines.getHostContext().get(Time.class);
+  long startRealTime=System.currentTimeMillis();
+  long startGameTime=hostTime.getGameTimeInMs();
+  while (f.get() && !timedOut) {
+    Thread.yield();
+    if (Thread.currentThread().isInterrupted()) {
+      throw new RuntimeException(String.format("Thread %s interrupted while waiting for %s.",Thread.currentThread(),f));
+    }
+    for (    TerasologyEngine terasologyEngine : engines.getEngines()) {
+      boolean keepRunning=terasologyEngine.tick();
+      if (!keepRunning && terasologyEngine == engines.host) {
+        throw new RuntimeException("Host has shut down: " + engines.host.getStatus());
+      }
+    }
+    if (System.currentTimeMillis() - startRealTime > safetyTimeoutMs) {
+      timedOut=true;
+      throw new UncheckedTimeoutException("MTE Safety timeout exceeded. See setSafetyTimeoutMs()");
+    }
+    if (hostTime.getGameTimeInMs() - startGameTime > gameTimeTimeoutMs) {
+      timedOut=true;
+    }
+  }
+  return timedOut;
+}

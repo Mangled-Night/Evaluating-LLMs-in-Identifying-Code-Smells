@@ -1,0 +1,20 @@
+/** 
+ * @see io.netty.channel.ChannelInboundHandlerAdapter#channelRegistered(io.netty.channel.ChannelHandlerContext)
+ */
+@Override public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+  if (isClosed()) {
+    logger.debug("{} Dropping register for a closed channel",logPrefix());
+  }
+  channel=ctx.channel();
+  if (debugEnabled) {
+    logPrefix=null;
+    logger.debug("{} channelRegistered()",logPrefix());
+  }
+  logPrefix=null;
+  pristine=true;
+  fallbackCommand=null;
+  setState(LifecycleState.REGISTERED);
+  buffer=ctx.alloc().buffer(8192 * 8);
+  rsm=new RedisStateMachine();
+  ctx.fireChannelRegistered();
+}

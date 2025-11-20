@@ -1,0 +1,25 @@
+/** 
+ * Get the color table index for a color.
+ * @param rgb the color
+ * @return the index
+ */
+@Override public int getIndexForColor(int rgb){
+  int red=(rgb >> 16) & 0xff;
+  int green=(rgb >> 8) & 0xff;
+  int blue=rgb & 0xff;
+  OctTreeNode node=root;
+  for (int level=0; level <= MAX_LEVEL; level++) {
+    OctTreeNode child;
+    int bit=0x80 >> level;
+    int index=0;
+    if ((red & bit) != 0)     index+=4;
+    if ((green & bit) != 0)     index+=2;
+    if ((blue & bit) != 0)     index+=1;
+    child=node.leaf[index];
+    if (child == null)     return node.index;
+ else     if (child.isLeaf)     return child.index;
+ else     node=child;
+  }
+  LOGGER.fine("getIndexForColor failed");
+  return 0;
+}

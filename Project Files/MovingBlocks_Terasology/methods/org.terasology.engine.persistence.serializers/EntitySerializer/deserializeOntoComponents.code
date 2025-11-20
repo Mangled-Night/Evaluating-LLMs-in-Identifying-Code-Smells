@@ -1,0 +1,43 @@
+/** 
+ * Deserializes the components from an EntityData onto a map of components
+ * @param entityData
+ * @param componentMap
+ */
+private void deserializeOntoComponents(EntityData.Entity entityData,Map<Class<? extends Component>,Component> componentMap){
+  EntityInfoComponent entityInfo=(EntityInfoComponent)componentMap.get(EntityInfoComponent.class);
+  if (entityInfo == null) {
+    entityInfo=new EntityInfoComponent();
+    componentMap.put(EntityInfoComponent.class,entityInfo);
+  }
+  if (entityData.hasOwner()) {
+    entityInfo.owner=entityManager.getEntity(entityData.getOwner());
+  }
+  if (entityData.hasAlwaysRelevant()) {
+    entityInfo.alwaysRelevant=entityData.getAlwaysRelevant();
+  }
+switch (entityData.getScope()) {
+case GLOBAL:
+    entityInfo.scope=EntityScope.GLOBAL;
+  break;
+case SECTOR:
+entityInfo.scope=EntityScope.SECTOR;
+break;
+case CHUNK:
+entityInfo.scope=EntityScope.CHUNK;
+break;
+}
+for (EntityData.Component componentData : entityData.getComponentList()) {
+ComponentMetadata<? extends Component> metadata=componentSerializer.getComponentMetadata(componentData);
+if (metadata == null || !componentSerializeCheck.serialize(metadata)) {
+continue;
+}
+Component existingComponent=componentMap.get(metadata.getType());
+if (existingComponent == null) {
+Component newComponent=componentSerializer.deserialize(componentData);
+componentMap.put(metadata.getType(),newComponent);
+}
+ else {
+componentSerializer.deserializeOnto(existingComponent,componentData,FieldSerializeCheck.NullCheck.<Component>newInstance());
+}
+}
+}

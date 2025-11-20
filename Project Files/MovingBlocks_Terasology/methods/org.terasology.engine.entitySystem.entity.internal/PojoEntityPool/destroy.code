@@ -1,0 +1,24 @@
+/** 
+ * Destroys this entity, sending event
+ * @param entityId the id of the entity to destroy
+ */
+@Override public void destroy(long entityId){
+  if (!entityManager.idLoaded(entityId)) {
+    return;
+  }
+  EntityRef ref=getEntity(entityId);
+  EventSystem eventSystem=entityManager.getEventSystem();
+  if (eventSystem != null) {
+    eventSystem.send(ref,BeforeDeactivateComponent.newInstance());
+    eventSystem.send(ref,BeforeRemoveComponent.newInstance());
+  }
+  entityManager.notifyComponentRemovalAndEntityDestruction(entityId,ref);
+  destroy(ref);
+}
+private void destroy(EntityRef ref){
+  long entityId=ref.getId();
+  entityStore.remove(entityId);
+  entityManager.unregister(entityId);
+  ref.invalidate();
+  componentStore.remove(entityId);
+}

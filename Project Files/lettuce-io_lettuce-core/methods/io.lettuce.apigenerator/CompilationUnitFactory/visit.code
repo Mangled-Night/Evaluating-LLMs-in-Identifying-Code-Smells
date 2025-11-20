@@ -1,0 +1,15 @@
+@Override public void visit(MethodDeclaration parsedDeclaration,Object arg){
+  if (!methodFilter.test(parsedDeclaration)) {
+    return;
+  }
+  Type returnType=getMethodReturnType(parsedDeclaration);
+  MethodDeclaration method=new MethodDeclaration(parsedDeclaration.getModifiers(),parsedDeclaration.getAnnotations(),parsedDeclaration.getTypeParameters(),returnType,parsedDeclaration.getName(),parsedDeclaration.getParameters(),parsedDeclaration.getThrownExceptions(),null);
+  if (methodCommentMutator != null) {
+    method.setComment(methodCommentMutator.apply(method,parsedDeclaration.getComment().orElse(null)));
+  }
+ else {
+    method.setComment(parsedDeclaration.getComment().orElse(null));
+  }
+  onMethod.accept(method);
+  resultType.addMember(method);
+}

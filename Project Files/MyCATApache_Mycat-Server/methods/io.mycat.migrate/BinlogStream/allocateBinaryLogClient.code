@@ -1,0 +1,11 @@
+private synchronized BinaryLogClient allocateBinaryLogClient(){
+  if (isConnected()) {
+    throw new IllegalStateException("MySQL replication stream is already open");
+  }
+  binaryLogClient=new BinaryLogClient(hostname,port,username,password);
+  binaryLogClient.setBinlogFilename(getBinglogFile());
+  binaryLogClient.setBinlogPosition(getBinlogPos());
+  binaryLogClient.setServerId(getSlaveID());
+  binaryLogClient.registerEventListener(new DelegatingEventListener());
+  return binaryLogClient;
+}

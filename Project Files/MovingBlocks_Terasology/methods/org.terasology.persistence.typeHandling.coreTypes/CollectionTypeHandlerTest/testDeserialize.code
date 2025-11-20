@@ -1,0 +1,13 @@
+@Test void testDeserialize(){
+  IntTypeHandler elementTypeHandler=mock(IntTypeHandler.class);
+  CollectionCopyConstructor<Collection<Integer>,Integer> constructor=mock(CollectionCopyConstructor.class);
+  when(constructor.construct(Lists.newArrayList())).then((Answer<Collection<Integer>>)invocation -> Queues.newArrayDeque());
+  CollectionTypeHandler<Integer> typeHandler=new CollectionTypeHandler<>(elementTypeHandler,constructor);
+  TIntList intList=new TIntArrayList();
+  for (  Integer i : Collections.nCopies(500,-1)) {
+    intList.add(i);
+  }
+  typeHandler.deserialize(new PersistedIntegerArray(intList));
+  verify(constructor).construct(Lists.newArrayList());
+  verify(elementTypeHandler,times(intList.size())).deserialize(any());
+}

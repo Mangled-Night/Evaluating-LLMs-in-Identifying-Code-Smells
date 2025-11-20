@@ -1,0 +1,48 @@
+public static JingleReason parseJingleReason(XmlPullParser parser) throws XmlPullParserException, IOException, SmackParsingException {
+  ParserUtils.assertAtStartTag(parser);
+  final int initialDepth=parser.getDepth();
+  final String jingleNamespace=parser.getNamespace();
+  JingleReason.Reason reason=null;
+  XmlElement element=null;
+  String text=null;
+  String sid=null;
+  outerloop:   while (true) {
+    XmlPullParser.TagEvent event=parser.nextTag();
+switch (event) {
+case START_ELEMENT:
+      String elementName=parser.getName();
+    String namespace=parser.getNamespace();
+  if (namespace.equals(jingleNamespace)) {
+switch (elementName) {
+case "text":
+      text=parser.nextText();
+    break;
+case "alternative-session":
+  parser.next();
+sid=parser.nextText();
+break;
+default :
+reason=Reason.fromString(elementName);
+break;
+}
+}
+ else {
+element=PacketParserUtils.parseExtensionElement(elementName,namespace,parser,null);
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+}
+}
+JingleReason res;
+if (sid != null) {
+res=new JingleReason.AlternativeSession(sid,text,element);
+}
+ else {
+res=new JingleReason(reason,text,element);
+}
+return res;
+}

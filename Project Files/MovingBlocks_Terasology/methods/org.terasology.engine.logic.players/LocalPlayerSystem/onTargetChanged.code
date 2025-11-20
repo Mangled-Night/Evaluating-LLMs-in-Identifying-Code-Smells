@@ -1,0 +1,23 @@
+@ReceiveEvent public void onTargetChanged(PlayerTargetChangedEvent event,EntityRef entity){
+  EntityRef target=event.getNewTarget();
+  hasTarget=target.exists();
+  if (hasTarget) {
+    LocationComponent location=target.getComponent(LocationComponent.class);
+    if (location != null) {
+      BlockComponent blockComp=target.getComponent(BlockComponent.class);
+      BlockRegionComponent blockRegion=target.getComponent(BlockRegionComponent.class);
+      if (blockComp != null || blockRegion != null) {
+        Vector3f blockPos=location.getWorldPosition(new Vector3f());
+        Block block=worldProvider.getBlock(blockPos);
+        aabb.set(block.getBounds(blockPos));
+      }
+ else {
+        MeshComponent mesh=target.getComponent(MeshComponent.class);
+        if (mesh != null && mesh.mesh != null) {
+          aabb.set(mesh.mesh.getAABB());
+          aabb.transform(new Matrix4f().translationRotateScale(location.getWorldPosition(new Vector3f()),location.getWorldRotation(new Quaternionf()),location.getWorldScale()));
+        }
+      }
+    }
+  }
+}

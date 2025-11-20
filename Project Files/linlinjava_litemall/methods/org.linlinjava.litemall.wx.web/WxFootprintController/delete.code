@@ -1,0 +1,27 @@
+/** 
+ * 删除用户足迹
+ * @param userId 用户ID
+ * @param body   请求内容， { id: xxx }
+ * @return 删除操作结果
+ */
+@PostMapping("delete") public Object delete(@LoginUser Integer userId,@RequestBody String body){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  if (body == null) {
+    return ResponseUtil.badArgument();
+  }
+  Integer footprintId=JacksonUtil.parseInteger(body,"id");
+  if (footprintId == null) {
+    return ResponseUtil.badArgument();
+  }
+  LitemallFootprint footprint=footprintService.findById(userId,footprintId);
+  if (footprint == null) {
+    return ResponseUtil.badArgumentValue();
+  }
+  if (!footprint.getUserId().equals(userId)) {
+    return ResponseUtil.badArgumentValue();
+  }
+  footprintService.deleteById(footprintId);
+  return ResponseUtil.ok();
+}

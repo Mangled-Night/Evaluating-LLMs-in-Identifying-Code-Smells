@@ -1,0 +1,18 @@
+private Stanza preSendStanza(Stanza stanza) throws NotConnectedException {
+  Objects.requireNonNull(stanza,"Stanza must not be null");
+  assert stanza instanceof Message || stanza instanceof Presence || stanza instanceof IQ;
+  throwNotConnectedExceptionIfAppropriate();
+switch (fromMode) {
+case OMITTED:
+    stanza.setFrom((Jid)null);
+  break;
+case USER:
+stanza.setFrom(getUser());
+break;
+case UNCHANGED:
+default :
+break;
+}
+Stanza stanzaAfterInterceptors=firePacketInterceptors(stanza);
+return stanzaAfterInterceptors;
+}

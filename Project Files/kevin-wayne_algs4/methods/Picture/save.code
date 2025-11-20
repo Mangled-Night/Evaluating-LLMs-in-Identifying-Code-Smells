@@ -1,0 +1,33 @@
+/** 
+ * Saves the picture to a file in a supported file format (typically JPEG, PNG, GIF TIFF, and BMP). If the file format does not support transparency (such as JPEG or BMP), it will be converted to be opaque (with purely transparent pixels converted to black).
+ * @param filename the name of the file
+ * @throws IllegalArgumentException if {@code filename} is {@code null}
+ * @throws IllegalArgumentException if {@code filename} is the empty string
+ */
+public void save(String filename){
+  if (filename == null)   throw new IllegalArgumentException("argument to save() is null");
+  if (filename.length() == 0)   throw new IllegalArgumentException("argument to save() is the empty string");
+  File file=new File(filename);
+  save(file);
+}
+/** 
+ * Saves the picture to a file in a supported format (typically JPEG, PNG, GIF TIFF, and BMP).
+ * @param file the file
+ * @throws IllegalArgumentException if {@code file} is {@code null}
+ */
+public void save(File file){
+  if (file == null)   throw new IllegalArgumentException("argument to save() is null");
+  title=file.getName();
+  String suffix=title.substring(title.lastIndexOf('.') + 1);
+  if (!title.contains("."))   suffix="";
+  try {
+    if (ImageIO.write(image,suffix,file))     return;
+    BufferedImage imageRGB=new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
+    imageRGB.createGraphics().drawImage(image,0,0,Color.WHITE,null);
+    if (ImageIO.write(imageRGB,suffix,file))     return;
+    System.out.printf("Error: the filetype '%s' is not supported\n",suffix);
+  }
+ catch (  IOException e) {
+    e.printStackTrace();
+  }
+}

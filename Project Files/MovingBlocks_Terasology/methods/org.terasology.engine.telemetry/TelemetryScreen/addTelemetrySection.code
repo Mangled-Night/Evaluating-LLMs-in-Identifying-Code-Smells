@@ -1,0 +1,34 @@
+/** 
+ * Add a new section with represents a new metrics type.
+ * @param telemetryCategory the annotation of the new metric
+ * @param layout the layout where the new section will be added
+ * @param map the map which includes the telemetry field name and value
+ */
+private void addTelemetrySection(TelemetryCategory telemetryCategory,ColumnLayout layout,Map<String,?> map){
+  UILabel categoryHeader=new UILabel(translationSystem.translate(telemetryCategory.displayName()));
+  categoryHeader.setFamily("subheading");
+  UICheckbox uiCheckbox=new UICheckbox(telemetryCategory.id());
+  Map<String,Boolean> bindingMap=config.getTelemetryConfig().getMetricsUserPermissionConfig().getBindingMap();
+  if (!bindingMap.containsKey(telemetryCategory.id())) {
+    bindingMap.put(telemetryCategory.id(),config.getTelemetryConfig().isTelemetryEnabled());
+  }
+  Binding<Boolean> binding=getBindingFromBooleanMap(bindingMap,telemetryCategory.id());
+  uiCheckbox.bindChecked(binding);
+  RowLayout newRow=new RowLayout(categoryHeader,new UISpace(),uiCheckbox).setColumnRatios(0.4f,0.5f,0.1f).setHorizontalSpacing(horizontalSpacing);
+  layout.addWidget(newRow);
+  List<Map.Entry<String,?>> telemetryFields=sortFields(map);
+  for (  Map.Entry entry : telemetryFields) {
+    Object value=entry.getValue();
+    if (value == null) {
+      value="Value unknown yet";
+    }
+    boolean isWithCheckbox=!telemetryCategory.isOneMapMetric();
+    if (value instanceof List) {
+      List list=(List)value;
+      addTelemetryField(entry.getKey().toString(),list,layout,isWithCheckbox,telemetryCategory);
+    }
+ else {
+      addTelemetryField(entry.getKey().toString(),value,layout,isWithCheckbox,telemetryCategory);
+    }
+  }
+}

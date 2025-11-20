@@ -1,0 +1,20 @@
+public synchronized ByteBuffer allocateRun(int normCapacity){
+  if (normCapacity > chunkSize) {
+    LOGGER.warn("try to acquire a buffer with larger size than chunkSize!");
+    return null;
+  }
+  int d=this.maxOrder - 2 - (log2(normCapacity) - this.log2PageSize);
+  if (d > this.maxOrder - 1) {
+    d=maxOrder - 1;
+  }
+  int id=allocateNode(d);
+  if (id < 0) {
+    return null;
+  }
+  freeBytes-=runLength(id);
+  int start=calculateStart(id);
+  int end=start + runLength(id);
+  buf.limit(end);
+  buf.position(start);
+  return buf.slice();
+}

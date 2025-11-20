@@ -1,0 +1,85 @@
+/** 
+ * Determine, which candidate (ours/theirs) is the nominated one. Connect to this candidate. If it is a proxy and it is ours, activate it and connect. If its a proxy and it is theirs, wait for activation. If it is not a proxy, just connect.
+ */
+private void connectIfReady(){
+  JingleContent content=jingleSession.getContents().get(0);
+  if (ourChoice == null || theirChoice == null) {
+    LOGGER.log(Level.INFO,"Not ready.");
+    return;
+  }
+  if (ourChoice == CANDIDATE_FAILURE && theirChoice == CANDIDATE_FAILURE) {
+    LOGGER.log(Level.INFO,"Failure.");
+    jingleSession.onTransportMethodFailed(getNamespace());
+    return;
+  }
+  LOGGER.log(Level.INFO,"Ready.");
+  UsedCandidate nominated;
+  if (ourChoice != CANDIDATE_FAILURE && theirChoice != CANDIDATE_FAILURE) {
+    if (ourChoice.candidate.getPriority() > theirChoice.candidate.getPriority()) {
+      nominated=ourChoice;
+    }
+ else     if (ourChoice.candidate.getPriority() < theirChoice.candidate.getPriority()) {
+      nominated=theirChoice;
+    }
+ else {
+      nominated=jingleSession.isInitiator() ? ourChoice : theirChoice;
+    }
+  }
+ else   if (ourChoice != CANDIDATE_FAILURE) {
+    nominated=ourChoice;
+  }
+ else {
+    nominated=theirChoice;
+  }
+  if (nominated == theirChoice) {
+    LOGGER.log(Level.INFO,"Their choice, so our proposed candidate is used.");
+    boolean isProxy=nominated.candidate.getType() == JingleS5BTransportCandidate.Type.proxy;
+    try {
+      nominated=connectToOurCandidate(nominated.candidate);
+    }
+ catch (    InterruptedException|IOException|XMPPException|SmackException|TimeoutException e) {
+      LOGGER.log(Level.INFO,"Could not connect to our candidate.",e);
+      return;
+    }
+    if (isProxy) {
+      LOGGER.log(Level.INFO,"Is external proxy. Activate it.");
+      Bytestream activate=new Bytestream(ourProposal.getStreamId());
+      activate.setMode(null);
+      activate.setType(IQ.Type.set);
+      activate.setTo(nominated.candidate.getJid());
+      activate.setToActivate(jingleSession.getRemote());
+      activate.setFrom(jingleSession.getLocal());
+      try {
+        jingleSession.getConnection().sendIqRequestAndWaitForResponse(activate);
+      }
+ catch (      InterruptedException|XMPPException.XMPPErrorException|SmackException.NotConnectedException|SmackException.NoResponseException e) {
+        LOGGER.log(Level.WARNING,"Could not activate proxy.",e);
+        return;
+      }
+      LOGGER.log(Level.INFO,"Send candidate-activate.");
+      Jingle candidateActivate=transportManager().createCandidateActivated(jingleSession.getRemote(),jingleSession.getInitiator(),jingleSession.getSessionId(),content.getSenders(),content.getCreator(),content.getName(),nominated.transport.getStreamId(),nominated.candidate.getCandidateId());
+      try {
+        jingleSession.getConnection().sendIqRequestAndWaitForResponse(candidateActivate);
+      }
+ catch (      InterruptedException|XMPPException.XMPPErrorException|SmackException.NotConnectedException|SmackException.NoResponseException e) {
+        LOGGER.log(Level.WARNING,"Could not send candidate-activated",e);
+        return;
+      }
+    }
+    LOGGER.log(Level.INFO,"Start transmission.");
+    Socks5BytestreamSession bs=new Socks5BytestreamSession(nominated.socket,!isProxy);
+    callback.onSessionInitiated(bs);
+  }
+ else {
+    LOGGER.log(Level.INFO,"Our choice, so their candidate was used.");
+    boolean isProxy=nominated.candidate.getType() == JingleS5BTransportCandidate.Type.proxy;
+    if (!isProxy) {
+      LOGGER.log(Level.INFO,"Direct connection.");
+      Socks5BytestreamSession bs=new Socks5BytestreamSession(nominated.socket,true);
+      callback.onSessionInitiated(bs);
+    }
+ else {
+      LOGGER.log(Level.INFO,"Our choice was their external proxy. wait for candidate-activate.");
+    }
+  }
+}

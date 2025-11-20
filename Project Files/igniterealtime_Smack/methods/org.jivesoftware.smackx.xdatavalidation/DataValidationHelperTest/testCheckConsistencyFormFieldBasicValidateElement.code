@@ -1,0 +1,12 @@
+@Test public void testCheckConsistencyFormFieldBasicValidateElement(){
+  JidSingleFormField.Builder field=FormField.jidSingleBuilder("var");
+  BasicValidateElement element=new BasicValidateElement(null);
+  ValidationConsistencyException vce=assertThrows(ValidationConsistencyException.class,() -> element.checkConsistency(field));
+  assertEquals("Field type 'jid-single' is not consistent with validation method 'basic'.",vce.getMessage());
+  assertThrows(IllegalArgumentException.class,() -> new ListRange(-1L,1L));
+  element.setListRange(new ListRange(10L,100L));
+  vce=assertThrows(ValidationConsistencyException.class,() -> element.checkConsistency(field));
+  assertEquals("Field type is not of type 'list-multi' while a 'list-range' is defined.",vce.getMessage());
+  FormField.Builder<?,?> fieldListMulti=FormField.listMultiBuilder("var");
+  element.checkConsistency(fieldListMulti);
+}

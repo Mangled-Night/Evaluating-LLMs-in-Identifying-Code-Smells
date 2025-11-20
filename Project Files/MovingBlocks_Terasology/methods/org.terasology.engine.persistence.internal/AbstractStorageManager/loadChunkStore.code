@@ -1,0 +1,15 @@
+@Override public ChunkStore loadChunkStore(Vector3ic chunkPos){
+  byte[] chunkData=loadCompressedChunk(chunkPos);
+  ChunkStore store=null;
+  if (chunkData != null) {
+    ByteArrayInputStream bais=new ByteArrayInputStream(chunkData);
+    try (GZIPInputStream gzipIn=new GZIPInputStream(bais)){
+      EntityData.ChunkStore storeData=EntityData.ChunkStore.parseFrom(gzipIn);
+      store=new ChunkStoreInternal(storeData,entityManager,blockManager,extraDataManager);
+    }
+ catch (    IOException e) {
+      logger.error("Failed to read existing saved chunk {}",chunkPos);
+    }
+  }
+  return store;
+}

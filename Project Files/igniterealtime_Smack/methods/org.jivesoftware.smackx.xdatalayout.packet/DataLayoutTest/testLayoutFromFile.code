@@ -1,0 +1,22 @@
+@Test public void testLayoutFromFile() throws Exception {
+  DataFormProvider pr=new DataFormProvider();
+  InputStreamReader inputStreamReader=new InputStreamReader(this.getClass().getResourceAsStream(TEST_INPUT_1),"UTF-8");
+  XmlPullParser parser=PacketParserUtils.getParserFor(inputStreamReader);
+  DataForm form=pr.parse(parser);
+  assertNotNull(form);
+  assertEquals(1,form.getExtensionElements().size());
+  DataLayout layout=(DataLayout)form.getExtensionElements().get(0);
+  assertEquals(5,layout.getPageLayout().size());
+  assertEquals("Label - & \u00E9 \u00E1 ",layout.getLabel());
+  Section section=(Section)layout.getPageLayout().get(1);
+  assertEquals("section Label - & \u00E9 \u00E1 ",section.getLabel());
+  Text text=(Text)layout.getPageLayout().get(2);
+  assertEquals("PageText - & \u00E9 \u00E1 ",text.getText());
+  section=(Section)layout.getPageLayout().get(3);
+  assertEquals("<html>Number of Persons by<br/> Nationality and Status</html>",section.getLabel());
+  text=(Text)layout.getPageLayout().get(4);
+  assertEquals("<html><font color='red'><em>DO NOT DELAY</em></font><br/>supply further information</html>",text.getText());
+  assertNotNull(layout.toXML());
+  String output=layout.toXML().toString();
+  assertEquals(TEST_OUTPUT_SPECIAL,output);
+}

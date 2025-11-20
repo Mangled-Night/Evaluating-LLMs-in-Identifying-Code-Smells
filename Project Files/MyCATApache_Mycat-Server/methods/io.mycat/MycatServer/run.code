@@ -1,0 +1,206 @@
+@Override public void run(){
+  try {
+    catletClassLoader.clearUnUsedClass();
+  }
+ catch (  Exception e) {
+    LOGGER.warn("catletClassClear err " + e);
+  }
+}
+@Override public void run(){
+  timerExecutor.execute(new Runnable(){
+    @Override public void run(){
+      long sqlTimeout=MycatServer.getInstance().getConfig().getSystem().getSqlExecuteTimeout() * 1000L;
+      long currentTime=TimeUtil.currentTimeMillis();
+      Iterator<BackendConnection> iter=NIOProcessor.backends_old.iterator();
+      while (iter.hasNext()) {
+        BackendConnection con=iter.next();
+        long lastTime=con.getLastTime();
+        if (currentTime - lastTime > sqlTimeout) {
+          con.close("clear old backend connection ...");
+          iter.remove();
+        }
+      }
+    }
+  }
+);
+}
+@Override public void run(){
+  long sqlTimeout=MycatServer.getInstance().getConfig().getSystem().getSqlExecuteTimeout() * 1000L;
+  long currentTime=TimeUtil.currentTimeMillis();
+  Iterator<BackendConnection> iter=NIOProcessor.backends_old.iterator();
+  while (iter.hasNext()) {
+    BackendConnection con=iter.next();
+    long lastTime=con.getLastTime();
+    if (currentTime - lastTime > sqlTimeout) {
+      con.close("clear old backend connection ...");
+      iter.remove();
+    }
+  }
+}
+@Override public void run(){
+  try {
+    BufferPool bufferPool=getBufferPool();
+    long bufferSize=bufferPool.size();
+    long bufferCapacity=bufferPool.capacity();
+    long bufferUsagePercent=(bufferCapacity - bufferSize) * 100 / bufferCapacity;
+    if (bufferUsagePercent < config.getSystem().getBufferUsagePercent()) {
+      Map<String,UserStat> map=UserStatAnalyzer.getInstance().getUserStatMap();
+      Set<String> userSet=config.getUsers().keySet();
+      for (      String user : userSet) {
+        UserStat userStat=map.get(user);
+        if (userStat != null) {
+          SqlResultSizeRecorder recorder=userStat.getSqlResultSizeRecorder();
+          recorder.clearSqlResultSet();
+        }
+      }
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.warn("resultSetMapClear err " + e);
+  }
+}
+@Override public void run(){
+  TimeUtil.update();
+}
+@Override public void run(){
+  timerExecutor.execute(new Runnable(){
+    @Override public void run(){
+      try {
+        for (        NIOProcessor p : processors) {
+          p.checkBackendCons();
+        }
+      }
+ catch (      Exception e) {
+        LOGGER.warn("checkBackendCons caught err:" + e);
+      }
+    }
+  }
+);
+  timerExecutor.execute(new Runnable(){
+    @Override public void run(){
+      try {
+        for (        NIOProcessor p : processors) {
+          p.checkFrontCons();
+        }
+      }
+ catch (      Exception e) {
+        LOGGER.warn("checkFrontCons caught err:" + e);
+      }
+    }
+  }
+);
+}
+@Override public void run(){
+  try {
+    for (    NIOProcessor p : processors) {
+      p.checkBackendCons();
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.warn("checkBackendCons caught err:" + e);
+  }
+}
+@Override public void run(){
+  try {
+    for (    NIOProcessor p : processors) {
+      p.checkFrontCons();
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.warn("checkFrontCons caught err:" + e);
+  }
+}
+@Override public void run(){
+  timerExecutor.execute(new Runnable(){
+    @Override public void run(){
+      Map<String,PhysicalDBPool> nodes=config.getDataHosts();
+      for (      PhysicalDBPool node : nodes.values()) {
+        node.heartbeatCheck(heartPeriod);
+      }
+    }
+  }
+);
+}
+@Override public void run(){
+  Map<String,PhysicalDBPool> nodes=config.getDataHosts();
+  for (  PhysicalDBPool node : nodes.values()) {
+    node.heartbeatCheck(heartPeriod);
+  }
+}
+@Override public void run(){
+  timerExecutor.execute(new Runnable(){
+    @Override public void run(){
+      Map<String,PhysicalDBPool> nodes=config.getDataHosts();
+      for (      PhysicalDBPool node : nodes.values()) {
+        node.doHeartbeat();
+      }
+    }
+  }
+);
+}
+@Override public void run(){
+  Map<String,PhysicalDBPool> nodes=config.getDataHosts();
+  for (  PhysicalDBPool node : nodes.values()) {
+    node.doHeartbeat();
+  }
+}
+@Override public void run(){
+  timerExecutor.execute(new Runnable(){
+    @Override public void run(){
+      Map<String,PhysicalDBPool> nodes=config.getDataHosts();
+      for (      PhysicalDBPool node : nodes.values()) {
+        Collection<PhysicalDatasource> dataSources=node.getAllDataSources();
+        for (        PhysicalDatasource ds : dataSources) {
+          ds.calcTotalCount();
+        }
+      }
+    }
+  }
+);
+}
+@Override public void run(){
+  Map<String,PhysicalDBPool> nodes=config.getDataHosts();
+  for (  PhysicalDBPool node : nodes.values()) {
+    Collection<PhysicalDatasource> dataSources=node.getAllDataSources();
+    for (    PhysicalDatasource ds : dataSources) {
+      ds.calcTotalCount();
+    }
+  }
+}
+@Override public void run(){
+  Map<String,UserStat> statMap=UserStatAnalyzer.getInstance().getUserStatMap();
+  for (  UserStat userStat : statMap.values()) {
+    userStat.getSqlLastStat().recycle();
+    userStat.getSqlRecorder().recycle();
+    userStat.getSqlHigh().recycle();
+    userStat.getSqlLargeRowStat().recycle();
+  }
+}
+@Override public void run(){
+  Collection<CoordinatorLogEntry> coordinatorLogEntries=MultiNodeCoordinator.inMemoryRepository.getAllCoordinatorLogEntries();
+  long sqlTimeout=MycatServer.getInstance().getConfig().getSystem().getSqlExecuteTimeout() * 1000L;
+  List<CoordinatorLogEntry> CoordinatorLogEntryList=null;
+  long currentTime=TimeUtil.currentTimeMillis();
+  for (  CoordinatorLogEntry coordinatorLogEntry : coordinatorLogEntries) {
+    if (currentTime > sqlTimeout + 20 * 1000 + coordinatorLogEntry.createTime) {
+      if (CoordinatorLogEntryList == null) {
+        CoordinatorLogEntryList=new ArrayList<CoordinatorLogEntry>();
+      }
+      CoordinatorLogEntryList.add(coordinatorLogEntry);
+    }
+  }
+  if (CoordinatorLogEntryList != null) {
+    performXARecoveryLog((CoordinatorLogEntry[])CoordinatorLogEntryList.toArray());
+  }
+}
+@Override public void run(){
+  timerExecutor.execute(new Runnable(){
+    @Override public void run(){
+      GlobalTableUtil.consistencyCheck();
+    }
+  }
+);
+}
+@Override public void run(){
+  GlobalTableUtil.consistencyCheck();
+}

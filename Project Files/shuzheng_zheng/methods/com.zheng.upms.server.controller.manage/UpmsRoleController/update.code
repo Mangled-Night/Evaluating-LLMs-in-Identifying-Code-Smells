@@ -1,0 +1,14 @@
+@ApiOperation(value="修改角色") @RequiresPermissions("upms:role:update") @RequestMapping(value="/update/{id}",method=RequestMethod.GET) public String update(@PathVariable("id") int id,ModelMap modelMap){
+  UpmsRole role=upmsRoleService.selectByPrimaryKey(id);
+  modelMap.put("role",role);
+  return "/manage/role/update.jsp";
+}
+@ApiOperation(value="修改角色") @RequiresPermissions("upms:role:update") @RequestMapping(value="/update/{id}",method=RequestMethod.POST) @ResponseBody public Object update(@PathVariable("id") int id,UpmsRole upmsRole){
+  ComplexResult result=FluentValidator.checkAll().on(upmsRole.getName(),new LengthValidator(1,20,"名称")).on(upmsRole.getTitle(),new LengthValidator(1,20,"标题")).doValidate().result(ResultCollectors.toComplex());
+  if (!result.isSuccess()) {
+    return new UpmsResult(UpmsResultConstant.INVALID_LENGTH,result.getErrors());
+  }
+  upmsRole.setRoleId(id);
+  int count=upmsRoleService.updateByPrimaryKeySelective(upmsRole);
+  return new UpmsResult(UpmsResultConstant.SUCCESS,count);
+}

@@ -1,0 +1,14 @@
+private AbstractRedisReactiveCommands getReactiveCommands(){
+  Object reactive=null;
+  if (connection instanceof StatefulRedisConnection) {
+    reactive=((StatefulRedisConnection)connection).reactive();
+  }
+  if (connection instanceof StatefulRedisClusterConnection) {
+    reactive=((StatefulRedisClusterConnection)connection).reactive();
+  }
+  if (reactive != null && Proxy.isProxyClass(reactive.getClass())) {
+    InvocationHandler invocationHandler=Proxy.getInvocationHandler(reactive);
+    reactive=ConnectionWrapping.unwrap(invocationHandler);
+  }
+  return (AbstractRedisReactiveCommands)reactive;
+}

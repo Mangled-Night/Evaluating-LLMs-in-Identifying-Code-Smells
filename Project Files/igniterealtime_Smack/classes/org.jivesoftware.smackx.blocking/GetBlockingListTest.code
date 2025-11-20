@@ -1,0 +1,21 @@
+public class GetBlockingListTest {
+  private static final String getBlockingListIQExample="<iq id='blocklist1' type='get'>" + "<blocklist xmlns='urn:xmpp:blocking'/>" + "</iq>";
+  private static final String blockListIQExample="<iq type='result' id='blocklist1'>" + "<blocklist xmlns='urn:xmpp:blocking'>" + "<item jid='romeo@montague.net'/>"+ "<item jid='iago@shakespeare.lit'/>"+ "</blocklist>"+ "</iq>";
+  private static final String emptyBlockListIQExample="<iq type='result' id='blocklist1'>" + "<blocklist xmlns='urn:xmpp:blocking'/>" + "</iq>";
+  @Test public void checkGetBlockingListIQStanza() throws Exception {
+    BlockListIQ getBlockListIQ=new BlockListIQ(null);
+    getBlockListIQ.setType(IQ.Type.get);
+    getBlockListIQ.setStanzaId("blocklist1");
+    assertEquals(getBlockingListIQExample,getBlockListIQ.toXML(StreamOpen.CLIENT_NAMESPACE).toString());
+  }
+  @Test public void checkBlockListIQ() throws Exception {
+    IQ iq=PacketParserUtils.parseStanza(blockListIQExample);
+    BlockListIQ blockListIQ=(BlockListIQ)iq;
+    assertEquals(2,blockListIQ.getBlockedJids().size());
+    assertEquals(JidCreate.from("romeo@montague.net"),blockListIQ.getBlockedJids().get(0));
+    assertEquals(JidCreate.from("iago@shakespeare.lit"),blockListIQ.getBlockedJids().get(1));
+    IQ iq2=PacketParserUtils.parseStanza(emptyBlockListIQExample);
+    BlockListIQ emptyBlockListIQ=(BlockListIQ)iq2;
+    assertEquals(0,emptyBlockListIQ.getBlockedJids().size());
+  }
+}

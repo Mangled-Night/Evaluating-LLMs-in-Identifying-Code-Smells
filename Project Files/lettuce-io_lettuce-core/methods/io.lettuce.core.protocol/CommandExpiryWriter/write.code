@@ -1,0 +1,11 @@
+@Override public <K,V,T>RedisCommand<K,V,T> write(RedisCommand<K,V,T> command){
+  potentiallyExpire(command,getExecutorService());
+  return delegate.write(command);
+}
+@Override public <K,V>Collection<RedisCommand<K,V,?>> write(Collection<? extends RedisCommand<K,V,?>> redisCommands){
+  ScheduledExecutorService executorService=getExecutorService();
+  for (  RedisCommand<K,V,?> command : redisCommands) {
+    potentiallyExpire(command,executorService);
+  }
+  return delegate.write(redisCommands);
+}

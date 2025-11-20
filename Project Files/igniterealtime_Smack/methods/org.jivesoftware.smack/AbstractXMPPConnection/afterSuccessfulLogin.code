@@ -1,0 +1,14 @@
+protected void afterSuccessfulLogin(final boolean resumed) throws NotConnectedException, InterruptedException {
+  if (!resumed) {
+    authenticatedConnectionInitiallyEstablishedTimestamp=System.currentTimeMillis();
+  }
+  this.authenticated=true;
+  if (debugger != null) {
+    debugger.userHasLogged(user);
+  }
+  callConnectionAuthenticatedListener(resumed);
+  if (config.isSendPresence() && !resumed) {
+    Presence availablePresence=getStanzaFactory().buildPresenceStanza().ofType(Presence.Type.available).build();
+    sendStanza(availablePresence);
+  }
+}

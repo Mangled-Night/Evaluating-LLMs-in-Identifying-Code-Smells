@@ -1,0 +1,42 @@
+/** 
+ * 单条insert（非批量）
+ * @param schema
+ * @param rrs
+ * @param partitionColumn
+ * @param tableName
+ * @param insertStmt
+ * @throws SQLNonTransientException
+ */
+private void parserSingleInsert(SchemaConfig schema,RouteResultset rrs,String partitionColumn,String tableName,MySqlInsertStatement insertStmt) throws SQLNonTransientException {
+  boolean isFound=false;
+  for (int i=0; i < insertStmt.getColumns().size(); i++) {
+    if (partitionColumn.equalsIgnoreCase(StringUtil.removeBackquote(insertStmt.getColumns().get(i).toString()))) {
+      isFound=true;
+      String column=StringUtil.removeBackquote(insertStmt.getColumns().get(i).toString());
+      String shardingValue=StringUtil.removeBackquote(getShardingValue(insertStmt.getValues().getValues().get(i)));
+      insertStmt.getValues().getValues().set(i,new SQLCharExpr(shardingValue));
+      ctx.setSql(insertStmt.toString());
+      RouteCalculateUnit routeCalculateUnit=new RouteCalculateUnit();
+      routeCalculateUnit.addShardingExpr(tableName,column,shardingValue);
+      ctx.addRouteCalculateUnit(routeCalculateUnit);
+      break;
+    }
+  }
+  if (!isFound) {
+    String msg="bad insert sql (sharding column:" + partitionColumn + " not provided,"+ insertStmt;
+    LOGGER.warn(msg);
+    throw new SQLNonTransientException(msg);
+  }
+  if (insertStmt.getDuplicateKeyUpdate() != null) {
+    List<SQLExpr> updateList=insertStmt.getDuplicateKeyUpdate();
+    for (    SQLExpr expr : updateList) {
+      SQLBinaryOpExpr opExpr=(SQLBinaryOpExpr)expr;
+      String column=StringUtil.removeBackquote(opExpr.getLeft().toString().toUpperCase());
+      if (column.equals(partitionColumn)) {
+        String msg="Sharding column can't be updated: " + tableName + " -> "+ partitionColumn;
+        LOGGER.warn(msg);
+        throw new SQLNonTransientException(msg);
+      }
+    }
+  }
+}

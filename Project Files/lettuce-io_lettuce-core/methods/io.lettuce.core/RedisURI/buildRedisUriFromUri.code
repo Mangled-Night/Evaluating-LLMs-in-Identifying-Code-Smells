@@ -1,0 +1,69 @@
+private static RedisURI buildRedisUriFromUri(URI uri){
+  LettuceAssert.notNull(uri,"URI must not be null");
+  LettuceAssert.notNull(uri.getScheme(),"URI scheme must not be null");
+  Builder builder;
+  if (isSentinel(uri.getScheme())) {
+    builder=configureSentinel(uri);
+  }
+ else {
+    builder=configureStandalone(uri);
+  }
+  String userInfo=uri.getUserInfo();
+  if (isEmpty(userInfo) && isNotEmpty(uri.getAuthority()) && uri.getAuthority().lastIndexOf('@') > 0) {
+    userInfo=uri.getAuthority().substring(0,uri.getAuthority().lastIndexOf('@'));
+  }
+  if (isNotEmpty(userInfo)) {
+    String password=userInfo;
+    String username=null;
+    if (password.startsWith(":")) {
+      password=password.substring(1);
+    }
+ else {
+      int index=password.indexOf(':');
+      if (index > 0) {
+        username=password.substring(0,index);
+        password=password.substring(index + 1);
+      }
+    }
+    if (LettuceStrings.isNotEmpty(password)) {
+      if (username == null) {
+        builder.withPassword(password);
+      }
+ else {
+        builder.withAuthentication(username,password);
+      }
+    }
+  }
+  if (isNotEmpty(uri.getPath()) && builder.socket == null) {
+    String pathSuffix=uri.getPath().substring(1);
+    if (isNotEmpty(pathSuffix)) {
+      builder.withDatabase(Integer.parseInt(pathSuffix));
+    }
+  }
+  if (isNotEmpty(uri.getQuery())) {
+    StringTokenizer st=new StringTokenizer(uri.getQuery(),"&;");
+    while (st.hasMoreTokens()) {
+      String queryParam=st.nextToken();
+      String forStartWith=queryParam.toLowerCase();
+      if (forStartWith.startsWith(PARAMETER_NAME_TIMEOUT + "=")) {
+        parseTimeout(builder,queryParam.toLowerCase());
+      }
+      if (forStartWith.startsWith(PARAMETER_NAME_DATABASE + "=") || queryParam.startsWith(PARAMETER_NAME_DATABASE_ALT + "=")) {
+        parseDatabase(builder,queryParam);
+      }
+      if (forStartWith.startsWith(PARAMETER_NAME_CLIENT_NAME.toLowerCase() + "=")) {
+        parseClientName(builder,queryParam);
+      }
+      if (forStartWith.startsWith(PARAMETER_NAME_VERIFY_PEER.toLowerCase() + "=")) {
+        parseVerifyPeer(builder,queryParam);
+      }
+      if (forStartWith.startsWith(PARAMETER_NAME_SENTINEL_MASTER_ID.toLowerCase() + "=")) {
+        parseSentinelMasterId(builder,queryParam);
+      }
+    }
+  }
+  if (isSentinel(uri.getScheme())) {
+    LettuceAssert.notEmpty(builder.sentinelMasterId,"URI must contain the sentinelMasterId");
+  }
+  return builder.build();
+}

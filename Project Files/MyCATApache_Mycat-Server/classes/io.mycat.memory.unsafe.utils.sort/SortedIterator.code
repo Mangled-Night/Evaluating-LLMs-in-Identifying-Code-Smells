@@ -1,0 +1,52 @@
+public final class SortedIterator extends UnsafeSorterIterator implements Cloneable {
+  private final int numRecords;
+  private int position;
+  private int offset;
+  private Object baseObject;
+  private long baseOffset;
+  private long keyPrefix;
+  private int recordLength;
+  private SortedIterator(  int numRecords,  int offset){
+    this.numRecords=numRecords;
+    this.position=0;
+    this.offset=offset;
+  }
+  public SortedIterator clone(){
+    SortedIterator iter=new SortedIterator(numRecords,offset);
+    iter.position=position;
+    iter.baseObject=baseObject;
+    iter.baseOffset=baseOffset;
+    iter.keyPrefix=keyPrefix;
+    iter.recordLength=recordLength;
+    return iter;
+  }
+  @Override public int getNumRecords(){
+    return numRecords;
+  }
+  @Override public boolean hasNext(){
+    return position / 2 < numRecords;
+  }
+  /** 
+ * 更新迭代器相关指针信息，和当前记录内容的大小
+ */
+  @Override public void loadNext(){
+    final long recordPointer=array.get(offset + position);
+    baseObject=memoryManager.getPage(recordPointer);
+    baseOffset=memoryManager.getOffsetInPage(recordPointer) + 4;
+    recordLength=Platform.getInt(baseObject,baseOffset - 4);
+    keyPrefix=array.get(offset + position + 1);
+    position+=2;
+  }
+  @Override public Object getBaseObject(){
+    return baseObject;
+  }
+  @Override public long getBaseOffset(){
+    return baseOffset;
+  }
+  @Override public int getRecordLength(){
+    return recordLength;
+  }
+  @Override public long getKeyPrefix(){
+    return keyPrefix;
+  }
+}

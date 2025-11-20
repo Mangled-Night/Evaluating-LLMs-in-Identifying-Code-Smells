@@ -1,0 +1,25 @@
+@Test void pingOnConnectFailureShouldCloseConnection() throws Exception {
+  AtomicReference<Channel> ref=new AtomicReference<>();
+  ClientResources clientResources=ClientResources.builder().nettyCustomizer(new NettyCustomizer(){
+    @Override public void afterChannelInitialized(    Channel channel){
+      ref.set(channel);
+    }
+  }
+).build();
+  RedisURI redisUri=RedisURI.create(TestSettings.host(),7385);
+  RedisClient client=RedisClient.create(clientResources);
+  client.setOptions(ClientOptions.builder().pingBeforeActivateConnection(true).build());
+  try {
+    client.connect(redisUri);
+    fail("Missing Exception");
+  }
+ catch (  Exception e) {
+    Wait.untilEquals(false,ref.get()::isRegistered).waitOrTimeout();
+    assertThat(ref.get().isOpen()).isFalse();
+    Wait.untilEquals(false,() -> ref.get().isRegistered()).waitOrTimeout();
+  }
+ finally {
+    FastShutdown.shutdown(client);
+    FastShutdown.shutdown(clientResources);
+  }
+}

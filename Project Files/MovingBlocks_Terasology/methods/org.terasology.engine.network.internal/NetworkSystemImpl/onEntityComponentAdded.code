@@ -1,0 +1,15 @@
+@Override public void onEntityComponentAdded(EntityRef entity,Class<? extends Component> component){
+  ComponentMetadata<? extends Component> metadata=componentLibrary.getMetadata(component);
+  NetworkComponent netComp=entity.getComponent(NetworkComponent.class);
+  if (netComp != null && netComp.getNetworkId() != NULL_NET_ID) {
+    if (mode.isServer()) {
+      if (metadata.isReplicated()) {
+        for (        NetClient client : netClientList) {
+          logger.debug("Component {} added to {}",component,entity);
+          client.setComponentAdded(netComp.getNetworkId(),component);
+        }
+      }
+    }
+  }
+  updatedOwnedEntities(entity,component,metadata);
+}

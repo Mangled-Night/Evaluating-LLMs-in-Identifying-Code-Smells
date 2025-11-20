@@ -1,0 +1,13 @@
+/** 
+ * Perform an in-place update or add (insert) a component to this container. <p> If this container contains a component of given class the transformation function 'f' is applied to an Optional with the current component. Otherwise, 'f' is called with an empty Optional. <p> This is a functional convenience method to abstract over retrieving/creating and saving a component for modification. It can be used to conditionally create and modify components of this container. Given an update function  {@code ItemComponent updateItem(ItemComponent component)} that takes a component and returns themodified component the following ensures that the container  {@code item} has an {@code ItemComponent} in thedesired configuration. <pre> {@code EntityRef item = entityManager.create("CoreAdvancedAssets:door"); item.upsertComponent(ItemComponent.class, maybeComponent -> updateItem(maybeComponent.orElse(new ItemComponent())));}</pre> The same effect can achieved by extracting, creating the component if necessary, and saving it manually: <pre> {@code EntityRef item = entityManager.create("CoreAdvancedAssets:door"); ItemComponent doorItemComp = item.getComponent(ItemComponent.class);}if (doorItemComp == null)  doorItemComp = new ItemComponent(); } updateItem(doorItemComp); item.saveComponent(doorItemComp); } </pre> <p> If the transformation function  {@code f} returns {@code null} no component will be added to this container.<p> To perform an in-place update only if the component is present, see {@link MutableComponentContainer#updateComponent(Class,Function)}
+ * @param componentClass component class to update or insert
+ * @param f transformation function used to compute the new or updated component; may return {@code null}
+ * @param < T > type of the component to insert or update
+ * @see MutableComponentContainer#updateComponent(Class,Function)
+ */
+default <T extends Component>void upsertComponent(Class<T> componentClass,Function<Optional<T>,T> f){
+  T component=f.apply(Optional.ofNullable(getComponent(componentClass)));
+  if (component != null) {
+    addOrSaveComponent(component);
+  }
+}

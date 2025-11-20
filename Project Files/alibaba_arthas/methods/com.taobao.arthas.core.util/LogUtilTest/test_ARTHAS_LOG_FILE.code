@@ -1,0 +1,23 @@
+@Test public void test_ARTHAS_LOG_FILE() throws URISyntaxException, IOException {
+  Properties properties1=new Properties();
+  properties1.put("arthas.home",testResourcesDir);
+  String logFile=new File(tempFolder.getRoot().getAbsoluteFile(),"test.log").getCanonicalPath();
+  properties1.put(LogUtil.FILE_NAME_PROPERTY,logFile);
+  arthasEnvironment.addLast(new PropertiesPropertySource("test1",properties1));
+  LoggerContext loggerContext=LogUtil.initLogger(arthasEnvironment);
+  Logger logger=loggerContext.getLogger("root");
+  Level level=logger.getLevel();
+  Assertions.assertThat(level).isEqualTo(Level.ERROR);
+  Iterator<Appender<ILoggingEvent>> appenders=logger.iteratorForAppenders();
+  boolean foundFileAppender=false;
+  while (appenders.hasNext()) {
+    Appender<ILoggingEvent> appender=appenders.next();
+    if (appender instanceof RollingFileAppender) {
+      RollingFileAppender fileAppender=(RollingFileAppender)appender;
+      String file=fileAppender.getFile();
+      Assertions.assertThat(new File(file).getCanonicalPath()).isEqualTo(logFile);
+      foundFileAppender=true;
+    }
+  }
+  Assertions.assertThat(foundFileAppender).isEqualTo(true);
+}

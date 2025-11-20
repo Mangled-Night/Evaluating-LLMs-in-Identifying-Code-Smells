@@ -1,0 +1,29 @@
+private boolean __processChar(int ch) throws InterruptedException {
+  boolean bufferWasEmpty;
+synchronized (__queue) {
+    bufferWasEmpty=(__bytesAvailable == 0);
+    while (__bytesAvailable >= __queue.length - 1) {
+      if (__threaded) {
+        __queue.notify();
+        try {
+          __queue.wait();
+        }
+ catch (        InterruptedException e) {
+          throw e;
+        }
+      }
+ else {
+        throw new IllegalStateException("Queue is full! Cannot process another character.");
+      }
+    }
+    if (__readIsWaiting && __threaded) {
+      __queue.notify();
+    }
+    __queue[__queueTail]=ch;
+    ++__bytesAvailable;
+    if (++__queueTail >= __queue.length) {
+      __queueTail=0;
+    }
+  }
+  return bufferWasEmpty;
+}

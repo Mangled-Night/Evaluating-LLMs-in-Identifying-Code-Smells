@@ -1,0 +1,72 @@
+private static class ImageBuffer {
+  private final ReadWriteLock lock=new ReentrantReadWriteLock();
+  private int width;
+  private int height;
+  private BufferedImage imageA;
+  private BufferedImage imageB;
+  ImageBuffer(){
+  }
+  public int getWidth(){
+    return width;
+  }
+  public int getHeight(){
+    return height;
+  }
+  public Graphics2D getGraphics(){
+    lock.readLock().lock();
+    try {
+      if (imageB != null) {
+        return (Graphics2D)imageB.getGraphics();
+      }
+    }
+  finally {
+      lock.readLock().unlock();
+    }
+    return null;
+  }
+  public void resize(  int newWidth,  int hewHeight){
+    lock.writeLock().lock();
+    try {
+      this.width=newWidth;
+      this.height=hewHeight;
+      if (newWidth < 1 || hewHeight < 1) {
+        imageB=null;
+      }
+ else       if (imageB == null || newWidth != imageB.getWidth() || hewHeight != imageB.getHeight()) {
+        imageB=new BufferedImage(newWidth,hewHeight,BufferedImage.TYPE_INT_ARGB);
+      }
+    }
+ catch (    Exception e) {
+      imageB=null;
+      logger.error("Error allocating background buffer for chunk monitor display",e);
+    }
+ finally {
+      lock.writeLock().unlock();
+    }
+  }
+  public void swap(){
+    lock.writeLock().lock();
+    try {
+      final BufferedImage tmp=imageA;
+      imageA=imageB;
+      imageB=tmp;
+      resize(width,height);
+    }
+  finally {
+      lock.writeLock().unlock();
+    }
+  }
+  public boolean render(  Graphics g,  int x,  int y){
+    lock.readLock().lock();
+    try {
+      if (imageA != null) {
+        g.drawImage(imageA,x,y,null);
+        return true;
+      }
+    }
+  finally {
+      lock.readLock().unlock();
+    }
+    return false;
+  }
+}

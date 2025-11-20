@@ -1,0 +1,9 @@
+@Test void simpleProcessingSuccess() throws ExecutionException, InterruptedException, TimeoutException {
+  pipeline=new ChunkProcessingPipeline((p) -> null,(o1,o2) -> 0);
+  Vector3i chunkPos=new Vector3i(0,0,0);
+  Chunk chunk=createChunkAt(chunkPos);
+  pipeline.addStage(ChunkTaskProvider.create("dummy task",(c) -> c));
+  Future<Chunk> chunkFuture=pipeline.invokeGeneratorTask(new Vector3i(0,0,0),() -> chunk);
+  Chunk chunkAfterProcessing=chunkFuture.get(1,TimeUnit.SECONDS);
+  Assertions.assertEquals(chunkAfterProcessing.getPosition(),chunk.getPosition(),"Chunk after processing must have equals position, probably pipeline lost you chunk");
+}

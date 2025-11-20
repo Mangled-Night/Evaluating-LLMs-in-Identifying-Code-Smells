@@ -1,0 +1,41 @@
+public class SessionRenegotiationIntegrationTest extends AbstractTwoUsersOmemoIntegrationTest {
+  public SessionRenegotiationIntegrationTest(  SmackIntegrationTestEnvironment environment) throws XMPPException.XMPPErrorException, SmackException.NotConnectedException, InterruptedException, SmackException.NoResponseException, TestNotPossibleException {
+    super(environment);
+  }
+  @SuppressWarnings("SynchronizeOnNonFinalField") @SmackIntegrationTest public void sessionRenegotiationTest() throws Exception {
+    boolean prevRepairProperty=OmemoConfiguration.getRepairBrokenSessionsWithPreKeyMessages();
+    OmemoConfiguration.setRepairBrokenSessionsWithPrekeyMessages(true);
+    boolean prevCompleteSessionProperty=OmemoConfiguration.getCompleteSessionWithEmptyMessage();
+    OmemoConfiguration.setCompleteSessionWithEmptyMessage(false);
+    final String body1="P = NP is true for all N,P from the set of complex numbers, where P is equal to 0";
+    AbstractOmemoMessageListener.PreKeyMessageListener listener1=new AbstractOmemoMessageListener.PreKeyMessageListener(body1);
+    OmemoMessage.Sent e1=alice.encrypt(bob.getOwnJid(),body1);
+    bob.addOmemoMessageListener(listener1);
+    XMPPConnection alicesConnection=alice.getConnection();
+    MessageBuilder messageBuilder=alicesConnection.getStanzaFactory().buildMessageStanza();
+    alicesConnection.sendStanza(e1.buildMessage(messageBuilder,bob.getOwnJid()));
+    listener1.getSyncPoint().waitForResult(10 * 1000);
+    bob.removeOmemoMessageListener(listener1);
+synchronized (bob) {
+      bob.getOmemoService().getOmemoStoreBackend().removeRawSession(bob.getOwnDevice(),alice.getOwnDevice());
+    }
+    final String body2="P = NP is also true for all N,P from the set of complex numbers, where N is equal to 1.";
+    AbstractOmemoMessageListener.PreKeyKeyTransportListener listener2=new AbstractOmemoMessageListener.PreKeyKeyTransportListener();
+    OmemoMessage.Sent e2=alice.encrypt(bob.getOwnJid(),body2);
+    alice.addOmemoMessageListener(listener2);
+    messageBuilder=alicesConnection.getStanzaFactory().buildMessageStanza();
+    alicesConnection.sendStanza(e2.buildMessage(messageBuilder,bob.getOwnJid()));
+    listener2.getSyncPoint().waitForResult(10 * 1000);
+    alice.removeOmemoMessageListener(listener2);
+    final String body3="P = NP would be a disaster for the world of cryptography.";
+    AbstractOmemoMessageListener.MessageListener listener3=new AbstractOmemoMessageListener.MessageListener(body3);
+    OmemoMessage.Sent e3=alice.encrypt(bob.getOwnJid(),body3);
+    bob.addOmemoMessageListener(listener3);
+    messageBuilder=alicesConnection.getStanzaFactory().buildMessageStanza();
+    alicesConnection.sendStanza(e3.buildMessage(messageBuilder,bob.getOwnJid()));
+    listener3.getSyncPoint().waitForResult(10 * 1000);
+    bob.removeOmemoMessageListener(listener3);
+    OmemoConfiguration.setRepairBrokenSessionsWithPrekeyMessages(prevRepairProperty);
+    OmemoConfiguration.setCompleteSessionWithEmptyMessage(prevCompleteSessionProperty);
+  }
+}

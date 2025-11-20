@@ -1,0 +1,21 @@
+/** 
+ * Sends out a notification that there was an error with the connection and closes the connection.
+ * @param exception the exception that causes the connection close event.
+ */
+protected final void notifyConnectionError(final Exception exception){
+synchronized (notifyConnectionErrorMonitor) {
+    if (!isConnected()) {
+      LOGGER.log(Level.INFO,"Connection was already disconnected when attempting to handle " + exception,exception);
+      return;
+    }
+    setCurrentConnectionExceptionAndNotify(exception);
+    instantShutdown();
+    for (    StanzaCollector collector : collectors) {
+      collector.notifyConnectionError(exception);
+    }
+    Async.go(() -> {
+      callConnectionClosedOnErrorListener(exception);
+    }
+,AbstractXMPPConnection.this + " callConnectionClosedOnErrorListener()");
+  }
+}

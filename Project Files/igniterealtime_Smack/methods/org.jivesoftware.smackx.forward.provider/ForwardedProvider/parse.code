@@ -1,0 +1,39 @@
+@Override public Forwarded<?> parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException, ParseException {
+  DelayInformation di=null;
+  Stanza packet=null;
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String name=parser.getName();
+    String namespace=parser.getNamespace();
+switch (name) {
+case DelayInformation.ELEMENT:
+    if (DelayInformation.NAMESPACE.equals(namespace)) {
+      di=DelayInformationProvider.INSTANCE.parse(parser,parser.getDepth(),null);
+    }
+ else {
+      LOGGER.warning("Namespace '" + namespace + "' does not match expected namespace '"+ DelayInformation.NAMESPACE+ "'");
+    }
+  break;
+case Message.ELEMENT:
+packet=PacketParserUtils.parseMessage(parser);
+break;
+default :
+LOGGER.warning("Unsupported forwarded packet type: " + name);
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+if (packet == null) {
+throw new IOException("forwarded extension must contain a packet");
+}
+return new Forwarded<>(packet,di);
+}

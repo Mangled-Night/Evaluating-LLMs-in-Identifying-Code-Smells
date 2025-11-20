@@ -1,0 +1,39 @@
+@Override public void run(){
+  Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
+  final List<Request> requests=new LinkedList<>();
+  try {
+    while (!stopThread) {
+      final long slept=poll(requests);
+      boolean needsRendering=false;
+      boolean fastResume=false;
+      for (      Request r : requests) {
+        try (ThreadActivity ignored=ThreadMonitor.startThreadActivity(r.getName())){
+          r.execute();
+        }
+ catch (        Exception e) {
+          ThreadMonitor.addError(e);
+          logger.error("Error executing chunk monitor update",e);
+        }
+ finally {
+          needsRendering|=r.needsRendering();
+          fastResume|=r.fastResume();
+        }
+      }
+      requests.clear();
+      if (followPlayer) {
+        doFollowPlayer();
+      }
+      if (needsRendering) {
+        render();
+      }
+      if (!fastResume && (slept <= 400)) {
+        Thread.sleep(refreshInterval - slept);
+      }
+    }
+  }
+ catch (  Exception e) {
+    ThreadMonitor.addError(e);
+    logger.error("Error executing chunk monitor update",e);
+  }
+  executor.shutdownNow();
+}

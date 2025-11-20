@@ -1,0 +1,45 @@
+/** 
+ * A jingle transport extension.
+ */
+public abstract class JingleContentTransport implements XmlElement {
+  public static final String ELEMENT="transport";
+  protected final List<JingleContentTransportCandidate> candidates;
+  protected final JingleContentTransportInfo info;
+  protected JingleContentTransport(  List<JingleContentTransportCandidate> candidates){
+    this(candidates,null);
+  }
+  protected JingleContentTransport(  List<JingleContentTransportCandidate> candidates,  JingleContentTransportInfo info){
+    if (candidates != null) {
+      this.candidates=Collections.unmodifiableList(candidates);
+    }
+ else {
+      this.candidates=Collections.emptyList();
+    }
+    this.info=info;
+  }
+  public List<JingleContentTransportCandidate> getCandidates(){
+    return candidates;
+  }
+  public JingleContentTransportInfo getInfo(){
+    return info;
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  protected void addExtraAttributes(  XmlStringBuilder xml){
+  }
+  @Override public XmlStringBuilder toXML(  XmlEnvironment xmlEnvironment){
+    XmlStringBuilder xml=new XmlStringBuilder(this,xmlEnvironment);
+    addExtraAttributes(xml);
+    if (candidates.isEmpty() && info == null) {
+      xml.closeEmptyElement();
+    }
+ else {
+      xml.rightAngleBracket();
+      xml.append(candidates);
+      xml.optElement(info);
+      xml.closeElement(this);
+    }
+    return xml;
+  }
+}

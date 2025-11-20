@@ -1,0 +1,12 @@
+/** 
+ * Setup the jingle system to let the remote clients know we support Jingle. (This used to be a static part of construction.  The problem is a remote client might attempt a Jingle connection to us after we've created an XMPPConnection, but before we've setup an instance of a JingleManager.  We will appear to not support Jingle.  With the new method you just call it once and all new connections will report Jingle support.)
+ */
+public static void setJingleServiceEnabled(){
+  ProviderManager.addIQProvider("jingle","urn:xmpp:tmp:jingle",new JingleProvider());
+  XMPPConnectionRegistry.addConnectionCreationListener(new ConnectionCreationListener(){
+    @Override public void connectionCreated(    XMPPConnection connection){
+      JingleManager.setServiceEnabled(connection,true);
+    }
+  }
+);
+}

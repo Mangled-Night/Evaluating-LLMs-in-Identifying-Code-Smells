@@ -1,0 +1,14 @@
+@Override public Mono<Long> unlink(K... keys){
+  return unlink(Arrays.asList(keys));
+}
+@Override public Mono<Long> unlink(Iterable<K> keys){
+  Map<Integer,List<K>> partitioned=SlotHash.partition(codec,keys);
+  if (partitioned.size() < 2) {
+    return super.unlink(keys);
+  }
+  List<Publisher<Long>> publishers=new ArrayList<>();
+  for (  Map.Entry<Integer,List<K>> entry : partitioned.entrySet()) {
+    publishers.add(super.unlink(entry.getValue()));
+  }
+  return Flux.merge(publishers).reduce((accu,next) -> accu + next);
+}

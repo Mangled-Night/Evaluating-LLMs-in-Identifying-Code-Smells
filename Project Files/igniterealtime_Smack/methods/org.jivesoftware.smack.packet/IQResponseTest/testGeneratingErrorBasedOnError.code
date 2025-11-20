@@ -1,0 +1,19 @@
+/** 
+ * According to <a href="http://xmpp.org/rfcs/rfc3920.html#stanzas-semantics-iq" >RFC3920: IQ Semantics</a> we shouldn't respond to an IQ of type error.
+ * @throws XmppStringprepException if the provided string is invalid.
+ */
+@Test public void testGeneratingErrorBasedOnError() throws XmppStringprepException {
+  final StanzaError error=StanzaError.getBuilder(StanzaError.Condition.bad_request).build();
+  final IQ request=new TestIQ(ELEMENT,NAMESPACE);
+  request.setType(IQ.Type.error);
+  request.setFrom(JidCreate.from("sender@test/Smack"));
+  request.setTo(JidCreate.from("receiver@test/Smack"));
+  request.setError(error);
+  try {
+    IQ.createErrorResponse(request,error);
+  }
+ catch (  IllegalArgumentException e) {
+    return;
+  }
+  fail("It shouldn't be possible to generate a response for a error IQ!");
+}

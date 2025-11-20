@@ -1,0 +1,115 @@
+public class ExplicitMessageEncryptionElement implements ExtensionElement {
+  private static final Map<String,ExplicitMessageEncryptionProtocol> PROTOCOL_LUT=new HashMap<>();
+  public static final String ELEMENT="encryption";
+  public static final String NAMESPACE="urn:xmpp:eme:0";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  public enum ExplicitMessageEncryptionProtocol {  /** 
+ * The encryption method specified in <a href="https://xmpp.org/extensions/xep-0373.html">XEP-0373: OpenPGP for XMPP</a>.
+ */
+  openpgpV0("urn:xmpp:openpgp:0","OpenPGP for XMPP (XEP-0373)"),   otrV0("urn:xmpp:otr:0","Off-the-Record Messaging (XEP-0364)"),   omemoVAxolotl("eu.siacs.conversations.axolotl","OMEMO Multi End Message and Object Encryption (XEP-0384)"),   legacyOpenPGP("jabber:x:encrypted","Legacy OpenPGP for XMPP [DANGEROUS, DO NOT USE!]");   private final String namespace;
+  private final String name;
+  ExplicitMessageEncryptionProtocol(  String namespace,  String name){
+    this.namespace=namespace;
+    this.name=name;
+    PROTOCOL_LUT.put(namespace,this);
+  }
+  public String getNamespace(){
+    return namespace;
+  }
+  public String getName(){
+    return name;
+  }
+  public static ExplicitMessageEncryptionProtocol from(  String namespace){
+    return PROTOCOL_LUT.get(namespace);
+  }
+}
+  private final String encryptionNamespace;
+  private final String name;
+  private boolean isUnknownProtocol;
+  private ExplicitMessageEncryptionProtocol protocolCache;
+  public ExplicitMessageEncryptionElement(  ExplicitMessageEncryptionProtocol protocol){
+    this(protocol.getNamespace(),protocol.getName());
+  }
+  public ExplicitMessageEncryptionElement(  String encryptionNamespace){
+    this(encryptionNamespace,null);
+  }
+  public ExplicitMessageEncryptionElement(  String encryptionNamespace,  String name){
+    this.encryptionNamespace=StringUtils.requireNotNullNorEmpty(encryptionNamespace,"encryptionNamespace must not be null");
+    this.name=name;
+  }
+  public ExplicitMessageEncryptionProtocol getProtocol(){
+    if (protocolCache != null) {
+      return protocolCache;
+    }
+    if (isUnknownProtocol) {
+      return null;
+    }
+    ExplicitMessageEncryptionProtocol protocol=PROTOCOL_LUT.get(encryptionNamespace);
+    if (protocol == null) {
+      isUnknownProtocol=true;
+      return null;
+    }
+    protocolCache=protocol;
+    return protocol;
+  }
+  public String getEncryptionNamespace(){
+    return encryptionNamespace;
+  }
+  /** 
+ * Get the optional name of the encryption method.
+ * @return the name of the encryption method or <code>null</code>.
+ */
+  public String getName(){
+    return name;
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this);
+    xml.attribute("namespace",getEncryptionNamespace());
+    xml.optAttribute("name",getName());
+    xml.closeEmptyElement();
+    return xml;
+  }
+  public static ExplicitMessageEncryptionElement from(  Message message){
+    return message.getExtension(ExplicitMessageEncryptionElement.class);
+  }
+  /** 
+ * Return true, if the  {@code message} already contains an EME element with the specified {@code protocolNamespace}.
+ * @param message message
+ * @param protocolNamespace namespace
+ * @return true if message has EME element for that namespace, otherwise false
+ */
+  public static boolean hasProtocol(  MessageView message,  String protocolNamespace){
+    List<ExplicitMessageEncryptionElement> emeElements=message.getExtensions(ExplicitMessageEncryptionElement.class);
+    for (    ExplicitMessageEncryptionElement emeElement : emeElements) {
+      if (emeElement.getEncryptionNamespace().equals(protocolNamespace)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  /** 
+ * Return true, if the  {@code message} already contains an EME element with the specified protocol namespace.
+ * @param message message
+ * @param protocol protocol
+ * @return true if message has EME element for that namespace, otherwise false
+ */
+  public static boolean hasProtocol(  MessageView message,  ExplicitMessageEncryptionProtocol protocol){
+    return hasProtocol(message,protocol.namespace);
+  }
+  /** 
+ * Add an EME element containing the specified  {@code protocol} namespace to the message.In case there is already an element with that protocol, we do nothing.
+ * @param message a message builder.
+ * @param protocol encryption protocol
+ */
+  public static void set(  MessageBuilder message,  ExplicitMessageEncryptionProtocol protocol){
+    if (!hasProtocol(message,protocol.namespace)) {
+      message.addExtension(new ExplicitMessageEncryptionElement(protocol));
+    }
+  }
+}

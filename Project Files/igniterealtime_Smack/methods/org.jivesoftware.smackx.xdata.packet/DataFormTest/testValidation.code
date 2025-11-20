@@ -1,0 +1,22 @@
+@Test public void testValidation() throws Exception {
+  DataForm.Builder df=DataForm.builder(DataForm.Type.form);
+  String instruction="InstructionTest1";
+  df.addInstruction(instruction);
+  FormField.Builder<?,?> fieldBuilder=FormField.builder("testField1");
+  ValidateElement dv=new RangeValidateElement("xs:integer","1111","9999");
+  fieldBuilder.addFormFieldChildElement(dv);
+  df.addField(fieldBuilder.build());
+  DataForm dataForm=df.build();
+  String output=dataForm.toXML().toString();
+  assertEquals(TEST_OUTPUT_3,output);
+  XmlPullParser parser=PacketParserUtils.getParserFor(output);
+  dataForm=pr.parse(parser);
+  assertNotNull(dataForm.getFields());
+  assertEquals(1,dataForm.getFields().size());
+  Element element=ValidateElement.from(dataForm.getFields().get(0));
+  assertNotNull(element);
+  dv=(ValidateElement)element;
+  assertEquals("xs:integer",dv.getDatatype());
+  output=dataForm.toXML().toString();
+  assertEquals(TEST_OUTPUT_3,output);
+}

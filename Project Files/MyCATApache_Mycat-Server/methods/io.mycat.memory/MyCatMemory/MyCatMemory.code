@@ -1,0 +1,65 @@
+public MyCatMemory(SystemConfig system,long totalNetWorkBufferSize) throws NoSuchFieldException, IllegalAccessException {
+  this.system=system;
+  LOGGER.info("useOffHeapForMerge = " + system.getUseOffHeapForMerge());
+  LOGGER.info("memoryPageSize = " + system.getMemoryPageSize());
+  LOGGER.info("spillsFileBufferSize = " + system.getSpillsFileBufferSize());
+  LOGGER.info("useStreamOutput = " + system.getUseStreamOutput());
+  LOGGER.info("systemReserveMemorySize = " + system.getSystemReserveMemorySize());
+  LOGGER.info("totalNetWorkBufferSize = " + JavaUtils.bytesToString2(totalNetWorkBufferSize));
+  LOGGER.info("dataNodeSortedTempDir = " + system.getDataNodeSortedTempDir());
+  this.conf=new MycatPropertyConf();
+  numCores=Runtime.getRuntime().availableProcessors();
+  this.systemReserveBufferSize=JavaUtils.byteStringAsBytes(system.getSystemReserveMemorySize());
+  this.memoryPageSize=JavaUtils.byteStringAsBytes(system.getMemoryPageSize());
+  this.spillsFileBufferSize=JavaUtils.byteStringAsBytes(system.getSpillsFileBufferSize());
+  long maxOnHeapMemory=(Platform.getMaxHeapMemory() - systemReserveBufferSize);
+  assert maxOnHeapMemory > 0;
+  resultSetBufferSize=(long)((Platform.getMaxDirectMemory() - 2 * totalNetWorkBufferSize) * DIRECT_SAFETY_FRACTION);
+  assert resultSetBufferSize > 0;
+  if (system.getUseOffHeapForMerge() == 1) {
+    conf.set("mycat.memory.offHeap.enabled","true");
+  }
+ else {
+    conf.set("mycat.memory.offHeap.enabled","false");
+  }
+  if (system.getUseStreamOutput() == 1) {
+    conf.set("mycat.stream.output.result","true");
+  }
+ else {
+    conf.set("mycat.stream.output.result","false");
+  }
+  if (system.getMemoryPageSize() != null) {
+    conf.set("mycat.buffer.pageSize",system.getMemoryPageSize());
+  }
+ else {
+    conf.set("mycat.buffer.pageSize","32k");
+  }
+  if (system.getSpillsFileBufferSize() != null) {
+    conf.set("mycat.merge.file.buffer",system.getSpillsFileBufferSize());
+  }
+ else {
+    conf.set("mycat.merge.file.buffer","32k");
+  }
+  conf.set("mycat.pointer.array.len","1k").set("mycat.memory.offHeap.size",JavaUtils.bytesToString2(resultSetBufferSize));
+  LOGGER.info("mycat.memory.offHeap.size: " + JavaUtils.bytesToString2(resultSetBufferSize));
+  resultMergeMemoryManager=new ResultMergeMemoryManager(conf,numCores,maxOnHeapMemory);
+  serializerManager=new SerializerManager();
+  blockManager=new DataNodeDiskManager(conf,true,serializerManager);
+}
+@VisibleForTesting public MyCatMemory() throws NoSuchFieldException, IllegalAccessException {
+  this.system=null;
+  this.systemReserveBufferSize=0;
+  this.memoryPageSize=0;
+  this.spillsFileBufferSize=0;
+  conf=new MycatPropertyConf();
+  numCores=Runtime.getRuntime().availableProcessors();
+  long maxOnHeapMemory=(Platform.getMaxHeapMemory());
+  assert maxOnHeapMemory > 0;
+  resultSetBufferSize=(long)((Platform.getMaxDirectMemory()) * DIRECT_SAFETY_FRACTION);
+  assert resultSetBufferSize > 0;
+  conf.set("mycat.memory.offHeap.enabled","true").set("mycat.pointer.array.len","8K").set("mycat.buffer.pageSize","1m").set("mycat.memory.offHeap.size",JavaUtils.bytesToString2(resultSetBufferSize)).set("mycat.stream.output.result","false");
+  LOGGER.info("mycat.memory.offHeap.size: " + JavaUtils.bytesToString2(resultSetBufferSize));
+  resultMergeMemoryManager=new ResultMergeMemoryManager(conf,numCores,maxOnHeapMemory);
+  serializerManager=new SerializerManager();
+  blockManager=new DataNodeDiskManager(conf,true,serializerManager);
+}

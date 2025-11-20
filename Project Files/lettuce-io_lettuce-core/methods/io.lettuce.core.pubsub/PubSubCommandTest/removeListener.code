@@ -1,0 +1,11 @@
+@Test void removeListener() throws Exception {
+  pubsub.subscribe(channel);
+  assertThat(channels.take()).isEqualTo(channel);
+  redis.publish(channel,message);
+  assertThat(channels.take()).isEqualTo(channel);
+  assertThat(messages.take()).isEqualTo(message);
+  pubsub.getStatefulConnection().removeListener(this);
+  redis.publish(channel,message);
+  assertThat(channels.poll(10,TimeUnit.MILLISECONDS)).isNull();
+  assertThat(messages.poll(10,TimeUnit.MILLISECONDS)).isNull();
+}

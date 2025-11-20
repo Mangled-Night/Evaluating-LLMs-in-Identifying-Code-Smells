@@ -1,0 +1,55 @@
+/** 
+ * @return A {@link UITextEntry} to be used to edit a JSON key/value node.
+ */
+public static UITextEntry<JsonTree> createKeyValueEditor(){
+  UITextEntry.Formatter<JsonTree> formatter=value -> {
+    JsonObject jsonObject=new JsonObject();
+    String jsonKey=value.getValue().getKey();
+    Object jsonValue=value.getValue().getValue();
+    if (jsonValue instanceof Boolean) {
+      jsonObject.addProperty(jsonKey,(Boolean)jsonValue);
+    }
+ else     if (jsonValue instanceof Number) {
+      jsonObject.addProperty(jsonKey,(Number)jsonValue);
+    }
+ else     if (jsonValue instanceof String) {
+      jsonObject.addProperty(jsonKey,(String)jsonValue);
+    }
+ else {
+      jsonObject.addProperty(jsonKey,(Character)jsonValue);
+    }
+    String jsonString=new Gson().toJson(jsonObject);
+    return jsonString.substring(1,jsonString.length() - 1);
+  }
+;
+  UITextEntry.Parser<JsonTree> parser=value -> {
+    String jsonString=String.format("{%s}",value);
+    try {
+      JsonElement jsonElement=new JsonParser().parse(jsonString);
+      Map.Entry keyValuePair=jsonElement.getAsJsonObject().entrySet().iterator().next();
+      String jsonKey=(String)keyValuePair.getKey();
+      JsonTreeValue parsedNode;
+      if (keyValuePair.getValue() == null) {
+        parsedNode=new JsonTreeValue(jsonKey,null,JsonTreeValue.Type.KEY_VALUE_PAIR);
+      }
+ else {
+        JsonPrimitive jsonValue=(JsonPrimitive)keyValuePair.getValue();
+        if (jsonValue.isBoolean()) {
+          parsedNode=new JsonTreeValue(jsonKey,jsonValue.getAsBoolean(),JsonTreeValue.Type.KEY_VALUE_PAIR);
+        }
+ else         if (jsonValue.isNumber()) {
+          parsedNode=new JsonTreeValue(jsonKey,jsonValue.getAsNumber(),JsonTreeValue.Type.KEY_VALUE_PAIR);
+        }
+ else {
+          parsedNode=new JsonTreeValue(jsonKey,jsonValue.getAsString(),JsonTreeValue.Type.KEY_VALUE_PAIR);
+        }
+      }
+      return new JsonTree(parsedNode);
+    }
+ catch (    JsonSyntaxException e) {
+      return null;
+    }
+  }
+;
+  return createEditorEntry(formatter,parser);
+}

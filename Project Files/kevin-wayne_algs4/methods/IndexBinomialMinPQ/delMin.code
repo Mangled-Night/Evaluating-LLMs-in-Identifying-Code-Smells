@@ -1,0 +1,27 @@
+/** 
+ * Deletes the minimum key Worst case is O(log(n))
+ * @throws java.util.NoSuchElementException if the priority queue is empty
+ * @return the index associated with the minimum key
+ */
+public int delMin(){
+  if (isEmpty())   throw new NoSuchElementException("Priority queue is empty");
+  Node<Key> min=eraseMin();
+  Node<Key> x=(min.child == null) ? min : min.child;
+  if (min.child != null) {
+    min.child=null;
+    Node<Key> prevx=null, nextx=x.sibling;
+    while (nextx != null) {
+      x.parent=null;
+      x.sibling=prevx;
+      prevx=x;
+      x=nextx;
+      nextx=nextx.sibling;
+    }
+    x.parent=null;
+    x.sibling=prevx;
+    IndexBinomialMinPQ<Key> H=new IndexBinomialMinPQ<Key>();
+    H.head=x;
+    head=union(H).head;
+  }
+  return min.index;
+}

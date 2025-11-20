@@ -1,0 +1,16 @@
+class CharacterTypeHandlerTest {
+  CharacterTypeHandler typeHandler=new CharacterTypeHandler();
+  @Test void testSerialize(){
+    PersistedDataSerializer serializer=new InMemoryPersistedDataSerializer();
+    char linefeedChar='\n';
+    PersistedData data=typeHandler.serializeNonNull(linefeedChar,serializer);
+    Assertions.assertEquals("\n",data.getAsString());
+  }
+  @Test void testDeserialize(){
+    Optional<Character> deserializedLinefeed=typeHandler.deserialize(new PersistedString("\n"));
+    assertTrue(deserializedLinefeed.isPresent());
+    assertEquals('\n',(char)deserializedLinefeed.get());
+    Optional<Character> deserializedInteger=typeHandler.deserialize(new PersistedInteger((int)'\n'));
+    assertFalse(deserializedInteger.isPresent());
+  }
+}

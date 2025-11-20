@@ -1,0 +1,59 @@
+/** 
+ * Invoking  {@link Socks5BytestreamManager#establishSession(org.jxmpp.jid.Jid,String)} should successfullynegotiate and return a SOCKS5 Bytestream connection.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws IOException if an I/O error occurred.
+ */
+@Test public void shouldNegotiateSocks5BytestreamAndTransferData() throws SmackException, InterruptedException, IOException, XMPPException {
+  final Protocol protocol=new Protocol();
+  final XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+  final String sessionID="session_id_shouldNegotiateSocks5BytestreamAndTransferData";
+  Socks5BytestreamManager byteStreamManager=Socks5BytestreamManager.getBytestreamManager(connection);
+  byteStreamManager.setAnnounceLocalStreamHost(false);
+  DiscoverInfoBuilder discoverInfo=Socks5PacketUtils.createDiscoverInfo(targetJID,initiatorJID);
+  discoverInfo.addFeature(Bytestream.NAMESPACE);
+  protocol.addResponse(discoverInfo.build(),Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  DiscoverItems discoverItems=Socks5PacketUtils.createDiscoverItems(xmppServer,initiatorJID);
+  Item item=new Item(proxyJID);
+  discoverItems.addItem(item);
+  protocol.addResponse(discoverItems,Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  DiscoverInfoBuilder proxyInfo=Socks5PacketUtils.createDiscoverInfo(proxyJID,initiatorJID);
+  Identity identity=new Identity("proxy",proxyJID.toString(),"bytestreams");
+  proxyInfo.addIdentity(identity);
+  protocol.addResponse(proxyInfo.build(),Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  ServerSocket proxyServerSocket=NetworkUtil.getSocketOnLoopback();
+  Bytestream streamHostInfo=Socks5PacketUtils.createBytestreamResponse(proxyJID,initiatorJID);
+  streamHostInfo.addStreamHost(proxyJID,proxyAddress,proxyServerSocket.getLocalPort());
+  protocol.addResponse(streamHostInfo,Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  Bytestream streamHostUsedPacket=Socks5PacketUtils.createBytestreamResponse(targetJID,initiatorJID);
+  streamHostUsedPacket.setSessionID(sessionID);
+  streamHostUsedPacket.setUsedHost(proxyJID);
+  protocol.addResponse(streamHostUsedPacket,new Verification<Bytestream,Bytestream>(){
+    @Override public void verify(    Bytestream request,    Bytestream response){
+      assertEquals(response.getSessionID(),request.getSessionID());
+      assertEquals(1,request.getStreamHosts().size());
+      StreamHost streamHost=(StreamHost)request.getStreamHosts().toArray()[0];
+      assertEquals(response.getUsedHost().getJID(),streamHost.getJID());
+    }
+  }
+,Verification.correspondingSenderReceiver,Verification.requestTypeSET);
+  IQ activationResponse=Socks5PacketUtils.createActivationConfirmation(proxyJID,initiatorJID);
+  protocol.addResponse(activationResponse,new Verification<Bytestream,IQ>(){
+    @Override public void verify(    Bytestream request,    IQ response){
+      assertEquals(targetJID,request.getToActivate().getTarget());
+    }
+  }
+,Verification.correspondingSenderReceiver,Verification.requestTypeSET);
+  try (Socks5TestProxy socks5Proxy=new Socks5TestProxy(proxyServerSocket)){
+    String digest=Socks5Utils.createDigest(sessionID,initiatorJID,targetJID);
+    OutputStream outputStream=byteStreamManager.establishSession(targetJID,sessionID).getOutputStream();
+    InputStream inputStream=socks5Proxy.getSocket(digest).getInputStream();
+    byte[] data=new byte[]{1,2,3};
+    outputStream.write(data);
+    byte[] result=new byte[3];
+    inputStream.read(result);
+    assertArrayEquals(data,result);
+  }
+   protocol.verifyAll();
+}

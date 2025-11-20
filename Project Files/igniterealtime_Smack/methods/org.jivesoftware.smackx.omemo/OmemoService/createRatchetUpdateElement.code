@@ -1,0 +1,42 @@
+/** 
+ * Create an empty OMEMO message, which is used to forward the ratchet of the recipient. This message type is typically used to create stable sessions. Note that trust decisions are ignored for the creation of this message.
+ * @param managerGuard Logged in OmemoManager
+ * @param contactsDevice OmemoDevice of the contact
+ * @return ratchet update message
+ * @throws NoSuchAlgorithmException if AES algorithms are not supported on this system.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws SmackException.NoResponseException if there was no response from the remote entity.
+ * @throws CorruptedOmemoKeyException if our IdentityKeyPair is corrupted.
+ * @throws SmackException.NotConnectedException if the XMPP connection is not connected.
+ * @throws CannotEstablishOmemoSessionException if session negotiation fails.
+ * @throws IOException if an I/O error occurred.
+ */
+OmemoElement createRatchetUpdateElement(OmemoManager.LoggedInOmemoManager managerGuard,OmemoDevice contactsDevice) throws InterruptedException, SmackException.NoResponseException, CorruptedOmemoKeyException, SmackException.NotConnectedException, CannotEstablishOmemoSessionException, NoSuchAlgorithmException, CryptoFailedException, IOException {
+  OmemoManager manager=managerGuard.get();
+  OmemoDevice userDevice=manager.getOwnDevice();
+  if (contactsDevice.equals(userDevice)) {
+    throw new IllegalArgumentException("\"Thou shall not update thy own ratchet!\" - William Shakespeare");
+  }
+  if (!hasSession(userDevice,contactsDevice)) {
+    buildFreshSessionWithDevice(manager.getConnection(),userDevice,contactsDevice);
+  }
+  byte[] messageKey=OmemoMessageBuilder.generateKey(KEYTYPE,KEYLENGTH);
+  byte[] iv=OmemoMessageBuilder.generateIv();
+  OmemoMessageBuilder<T_IdKeyPair,T_IdKey,T_PreKey,T_SigPreKey,T_Sess,T_Addr,T_ECPub,T_Bundle,T_Ciph> builder;
+  try {
+    builder=new OmemoMessageBuilder<>(userDevice,gullibleTrustCallback,getOmemoRatchet(manager),messageKey,iv,null);
+  }
+ catch (  InvalidKeyException|InvalidAlgorithmParameterException|NoSuchPaddingException|BadPaddingException|IllegalBlockSizeException e) {
+    throw new CryptoFailedException(e);
+  }
+  try {
+    builder.addRecipient(contactsDevice);
+  }
+ catch (  UndecidedOmemoIdentityException|UntrustedOmemoIdentityException e) {
+    throw new AssertionError("Gullible Trust Callback reported undecided or untrusted device, " + "even though it MUST NOT do that.");
+  }
+catch (  NoIdentityKeyException e) {
+    throw new AssertionError("We MUST have an identityKey for " + contactsDevice + " since we built a session."+ e);
+  }
+  return builder.finish();
+}

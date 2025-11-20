@@ -1,0 +1,38 @@
+/** 
+ * Process all stanza listeners for sending stanzas. <p> Compared to  {@link #firePacketInterceptors(Stanza)}, the listeners will be invoked in a new thread. </p>
+ * @param sendTopLevelStreamElement the top level stream element which just got send.
+ */
+@SuppressWarnings("javadoc") protected void firePacketSendingListeners(final TopLevelStreamElement sendTopLevelStreamElement){
+  if (debugger != null) {
+    debugger.onOutgoingStreamElement(sendTopLevelStreamElement);
+  }
+  if (!(sendTopLevelStreamElement instanceof Stanza)) {
+    return;
+  }
+  Stanza packet=(Stanza)sendTopLevelStreamElement;
+  final List<StanzaListener> listenersToNotify=new LinkedList<>();
+synchronized (sendListeners) {
+    for (    ListenerWrapper listenerWrapper : sendListeners.values()) {
+      if (listenerWrapper.filterMatches(packet)) {
+        listenersToNotify.add(listenerWrapper.getListener());
+      }
+    }
+  }
+  if (listenersToNotify.isEmpty()) {
+    return;
+  }
+  asyncGo(new Runnable(){
+    @Override public void run(){
+      for (      StanzaListener listener : listenersToNotify) {
+        try {
+          listener.processStanza(packet);
+        }
+ catch (        Exception e) {
+          LOGGER.log(Level.WARNING,"Sending listener threw exception",e);
+          continue;
+        }
+      }
+    }
+  }
+);
+}

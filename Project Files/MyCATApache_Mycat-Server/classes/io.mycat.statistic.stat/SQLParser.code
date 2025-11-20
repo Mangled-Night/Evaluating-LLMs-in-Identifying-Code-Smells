@@ -1,0 +1,167 @@
+class SQLParser {
+  /** 
+ * 去掉库名、去掉``
+ * @param tableName
+ * @return
+ */
+  private String fixName(  String tableName){
+    if (tableName != null) {
+      tableName=tableName.replace("`","");
+      int dotIdx=tableName.indexOf(".");
+      if (dotIdx > 0) {
+        tableName=tableName.substring(1 + dotIdx).trim();
+      }
+    }
+    return tableName;
+  }
+  /** 
+ * 解析 SQL 获取指定表及条件列的值
+ * @param sql
+ * @param tableName
+ * @param colnumName
+ * @return
+ */
+  public List<Object> parseConditionValues(  String sql,  String tableName,  String colnumName){
+    List<Object> values=null;
+    if (sql != null && tableName != null && columnName != null) {
+      values=new ArrayList<Object>();
+      MySqlStatementParser parser=new MySqlStatementParser(sql);
+      SQLStatement stmt=parser.parseStatement();
+      MycatSchemaStatVisitor visitor=new MycatSchemaStatVisitor();
+      stmt.accept(visitor);
+      String currentTable=visitor.getCurrentTable();
+      if (tableName.equalsIgnoreCase(currentTable)) {
+        List<Condition> conditions=visitor.getConditions();
+        for (        Condition condition : conditions) {
+          String ccN=condition.getColumn().getName();
+          ccN=fixName(ccN);
+          if (colnumName.equalsIgnoreCase(ccN)) {
+            List<Object> ccVL=condition.getValues();
+            values.addAll(ccVL);
+          }
+        }
+      }
+    }
+    return values;
+  }
+}
+class SqlParser {
+  public String fixSql(  String sql){
+    if (sql != null)     return sql.replace("\n"," ");
+    return sql;
+  }
+  public String mergeSql(  String sql){
+    String newSql=ParameterizedOutputVisitorUtils.parameterize(sql,DbType.mysql);
+    return fixSql(newSql);
+  }
+}
+/** 
+ * 解析 table name
+ */
+private static class SQLParser {
+  private SQLStatement parseStmt(  String sql){
+    SQLStatementParser statParser=SQLParserUtils.createSQLStatementParser(sql,"mysql");
+    SQLStatement stmt=statParser.parseStatement();
+    return stmt;
+  }
+  /** 
+ * 去掉库名、去掉``
+ * @param tableName
+ * @return
+ */
+  private String fixName(  String tableName){
+    if (tableName != null) {
+      tableName=tableName.replace("`","");
+      int dotIdx=tableName.indexOf(".");
+      if (dotIdx > 0) {
+        tableName=tableName.substring(1 + dotIdx).trim();
+      }
+    }
+    return tableName;
+  }
+  /** 
+ * 解析 SQL table name
+ */
+  public List<String> parseTableNames(  String sql){
+    final List<String> tables=new ArrayList<String>();
+    try {
+      SQLStatement stmt=parseStmt(sql);
+      if (stmt instanceof SQLReplaceStatement) {
+        String table=((SQLReplaceStatement)stmt).getTableName().getSimpleName();
+        tables.add(fixName(table));
+      }
+ else       if (stmt instanceof SQLInsertStatement) {
+        String table=((SQLInsertStatement)stmt).getTableName().getSimpleName();
+        tables.add(fixName(table));
+      }
+ else       if (stmt instanceof SQLUpdateStatement) {
+        String table=((SQLUpdateStatement)stmt).getTableName().getSimpleName();
+        tables.add(fixName(table));
+      }
+ else       if (stmt instanceof SQLDeleteStatement) {
+        ((SQLDeleteStatement)stmt).getTableSource().accept(new SQLASTVisitorAdapter(){
+          public boolean visit(          SQLExprTableSource x){
+            tables.add(fixName(x.toString()));
+            return super.visit(x);
+          }
+        }
+);
+        if (((SQLDeleteStatement)stmt).getFrom() != null) {
+          ((SQLDeleteStatement)stmt).getFrom().accept(new SQLASTVisitorAdapter(){
+            public boolean visit(            SQLExprTableSource x){
+              if (tables.contains(x.getAlias())) {
+                tables.remove(x.getAlias());
+                tables.add(fixName(x.toString()));
+              }
+              return super.visit(x);
+            }
+          }
+);
+        }
+      }
+ else       if (stmt instanceof SQLSelectStatement) {
+        DbType dbType=((SQLSelectStatement)stmt).getDbType();
+        if (DbType.mysql.equals(dbType)) {
+          stmt.accept(new MySqlASTVisitorAdapter(){
+            public boolean visit(            SQLExprTableSource x){
+              tables.add(fixName(x.toString()));
+              return super.visit(x);
+            }
+          }
+);
+        }
+ else {
+          stmt.accept(new SQLASTVisitorAdapter(){
+            public boolean visit(            SQLExprTableSource x){
+              tables.add(fixName(x.toString()));
+              return super.visit(x);
+            }
+          }
+);
+        }
+      }
+    }
+ catch (    Exception e) {
+      LOGGER.error("TableStatAnalyzer err:" + sql,e);
+    }
+    return tables;
+  }
+}
+private static class SqlParser {
+  public String fixSql(  String sql){
+    if (sql != null) {
+      return sql.replace("\n"," ");
+    }
+    return sql;
+  }
+  public String mergeSql(  String sql){
+    try {
+      String newSql=ParameterizedOutputVisitorUtils.parameterize(sql,DbType.mysql);
+      return fixSql(newSql);
+    }
+ catch (    Exception e) {
+      LOGGER.warn("user sql high parse:{} error",sql,e);
+      return null;
+    }
+  }
+}

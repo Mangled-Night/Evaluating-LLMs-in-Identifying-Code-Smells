@@ -1,0 +1,29 @@
+/** 
+ * Synchronous  {@link ScanIterator} implementation.
+ * @param < T >
+ */
+private static abstract class SyncScanIterator<T> extends ScanIterator<T> {
+  private ScanCursor scanCursor;
+  protected Iterator<T> chunk=null;
+  @Override public boolean hasNext(){
+    while (scanCursor == null || !scanCursor.isFinished()) {
+      if (scanCursor == null || !hasChunkElements()) {
+        scanCursor=nextScanCursor(scanCursor);
+      }
+      if (hasChunkElements()) {
+        return true;
+      }
+    }
+    return hasChunkElements();
+  }
+  private boolean hasChunkElements(){
+    return chunk.hasNext();
+  }
+  @Override public T next(){
+    if (!hasNext()) {
+      throw new NoSuchElementException();
+    }
+    return chunk.next();
+  }
+  protected abstract ScanCursor nextScanCursor(  ScanCursor scanCursor);
+}

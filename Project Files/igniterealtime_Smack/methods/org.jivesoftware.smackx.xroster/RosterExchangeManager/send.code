@@ -1,0 +1,46 @@
+/** 
+ * Sends a roster to userID. All the entries of the roster will be sent to the target user.
+ * @param roster the roster to send
+ * @param targetUserID the user that will receive the roster entries
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void send(Roster roster,Jid targetUserID) throws NotConnectedException, InterruptedException {
+  XMPPConnection connection=weakRefConnection.get();
+  MessageBuilder messageBuilder=connection.getStanzaFactory().buildMessageStanza().to(targetUserID);
+  RosterExchange rosterExchange=new RosterExchange(roster);
+  messageBuilder.addExtension(rosterExchange);
+  connection.sendStanza(messageBuilder.build());
+}
+/** 
+ * Sends a roster entry to userID.
+ * @param rosterEntry the roster entry to send
+ * @param targetUserID the user that will receive the roster entries
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void send(RosterEntry rosterEntry,Jid targetUserID) throws NotConnectedException, InterruptedException {
+  XMPPConnection connection=weakRefConnection.get();
+  MessageBuilder messageBuilder=connection.getStanzaFactory().buildMessageStanza().to(targetUserID);
+  RosterExchange rosterExchange=new RosterExchange();
+  rosterExchange.addRosterEntry(rosterEntry);
+  messageBuilder.addExtension(rosterExchange);
+  connection.sendStanza(messageBuilder.build());
+}
+/** 
+ * Sends a roster group to userID. All the entries of the group will be sent to the target user.
+ * @param rosterGroup the roster group to send
+ * @param targetUserID the user that will receive the roster entries
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void send(RosterGroup rosterGroup,Jid targetUserID) throws NotConnectedException, InterruptedException {
+  XMPPConnection connection=weakRefConnection.get();
+  MessageBuilder msg=connection.getStanzaFactory().buildMessageStanza().to(targetUserID);
+  RosterExchange rosterExchange=new RosterExchange();
+  for (  RosterEntry entry : rosterGroup.getEntries()) {
+    rosterExchange.addRosterEntry(entry);
+  }
+  msg.addExtension(rosterExchange);
+  connection.sendStanza(msg.build());
+}

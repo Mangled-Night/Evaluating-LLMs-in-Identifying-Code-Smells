@@ -1,0 +1,11 @@
+@Test void managedClientResources() throws Exception {
+  RedisClient redisClient1=RedisClient.create(RedisURI.create(TestSettings.host(),TestSettings.port()));
+  ClientResources clientResources=redisClient1.getResources();
+  Map<Class<? extends EventExecutorGroup>,EventExecutorGroup> eventLoopGroups=getExecutors(clientResources);
+  connectAndClose(redisClient1);
+  EventExecutorGroup executor=eventLoopGroups.values().iterator().next();
+  redisClient1.shutdown(0,0,TimeUnit.MILLISECONDS);
+  assertThat(eventLoopGroups).isEmpty();
+  assertThat(executor.isShuttingDown()).isTrue();
+  assertThat(clientResources.eventExecutorGroup().isShuttingDown()).isTrue();
+}

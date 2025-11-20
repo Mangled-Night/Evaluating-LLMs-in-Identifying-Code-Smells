@@ -1,0 +1,15 @@
+@Override public T_Sess loadRawSession(OmemoDevice userDevice,OmemoDevice contactsDevice) throws IOException {
+  HashMap<Integer,T_Sess> contactSessions=getCache(userDevice).sessions.get(contactsDevice.getJid());
+  if (contactSessions == null) {
+    contactSessions=new HashMap<>();
+    getCache(userDevice).sessions.put(contactsDevice.getJid(),contactSessions);
+  }
+  T_Sess session=contactSessions.get(contactsDevice.getDeviceId());
+  if (session == null && persistent != null) {
+    session=persistent.loadRawSession(userDevice,contactsDevice);
+    if (session != null) {
+      contactSessions.put(contactsDevice.getDeviceId(),session);
+    }
+  }
+  return session;
+}

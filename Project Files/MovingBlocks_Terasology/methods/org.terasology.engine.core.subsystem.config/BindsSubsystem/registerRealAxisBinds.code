@@ -1,0 +1,25 @@
+private void registerRealAxisBinds(ModuleEnvironment environment){
+  Iterable<Class<?>> classes=environment.getTypesAnnotatedWith(RegisterRealBindAxis.class);
+  for (  Class<?> registerBindClass : classes) {
+    RegisterRealBindAxis info=registerBindClass.getAnnotation(RegisterRealBindAxis.class);
+    Name moduleId=environment.getModuleProviding(registerBindClass);
+    SimpleUri id=new SimpleUri(moduleId,info.id());
+    if (BindAxisEvent.class.isAssignableFrom(registerBindClass)) {
+      try {
+        BindAxisEvent instance=(BindAxisEvent)registerBindClass.newInstance();
+        BindableAxis bindAxis=registerRealBindAxis(id.toString(),instance);
+        bindAxis.setSendEventMode(info.eventMode());
+        for (        Input input : bindsConfiguration.getBinds(id)) {
+          linkAxisToInput(input,id);
+        }
+        logger.debug("Registered axis bind: {}",id);
+      }
+ catch (      InstantiationException|IllegalAccessException e) {
+        logger.error("Failed to register axis bind \"{}\"",id,e);
+      }
+    }
+ else {
+      logger.error("Failed to register axis bind \"{}\", does not extend BindAxisEvent",id);
+    }
+  }
+}

@@ -1,0 +1,26 @@
+@Override public void execute(byte[] data){
+  long pstmtId=ByteUtil.readUB4(data,5);
+  PreparedStatement pstmt=null;
+  LOGGER.info("preparestatement  execute id:{}",pstmtId);
+  if ((pstmt=pstmtForId.get(pstmtId)) == null) {
+    source.writeErrMessage(ErrorCode.ER_ERROR_WHEN_EXECUTING_COMMAND,"Unknown pstmtId when executing.");
+  }
+ else {
+    ExecutePacket packet=new ExecutePacket(pstmt);
+    try {
+      packet.read(data,source.getCharset());
+    }
+ catch (    UnsupportedEncodingException e) {
+      source.writeErrMessage(ErrorCode.ER_ERROR_WHEN_EXECUTING_COMMAND,e.getMessage());
+      return;
+    }
+    BindValue[] bindValues=packet.values;
+    String sql=prepareStmtBindValue(pstmt,bindValues);
+    source.getSession2().setPrepared(true);
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("execute prepare sql: " + sql);
+    }
+    pstmt.resetLongData();
+    source.query(sql);
+  }
+}

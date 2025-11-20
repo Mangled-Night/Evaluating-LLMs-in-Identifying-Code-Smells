@@ -1,0 +1,26 @@
+/** 
+ * Sets whether the agent is online with the workgroup. If the user tries to go online with the workgroup but is not allowed to be an agent, an XMPPError with error code 401 will be thrown.
+ * @param online true to set the agent as online with the workgroup.
+ * @throws XMPPException if an error occurs setting the online status.
+ * @throws SmackException             assertEquals(SmackException.Type.NO_RESPONSE_FROM_SERVER, e.getType());return;
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void setOnline(boolean online) throws XMPPException, SmackException, InterruptedException {
+  if (this.online == online) {
+    return;
+  }
+  Presence presence;
+  if (online) {
+    presence=connection.getStanzaFactory().buildPresenceStanza().ofType(Presence.Type.available).to(workgroupJID).build();
+    presence.addExtension(new StandardExtensionElement(AgentStatus.ELEMENT_NAME,AgentStatus.NAMESPACE));
+    StanzaCollector collector=this.connection.createStanzaCollectorAndSend(new AndFilter(new StanzaTypeFilter(Presence.class),FromMatchesFilter.create(workgroupJID)),presence);
+    presence=collector.nextResultOrThrow();
+    this.online=online;
+  }
+ else {
+    this.online=online;
+    presence=connection.getStanzaFactory().buildPresenceStanza().ofType(Presence.Type.unavailable).to(workgroupJID).build();
+    presence.addExtension(new StandardExtensionElement(AgentStatus.ELEMENT_NAME,AgentStatus.NAMESPACE));
+    connection.sendStanza(presence);
+  }
+}

@@ -1,0 +1,27 @@
+/** 
+ * Try to get a  {@link LeafNode} the traditional way (first query information using disco#info), then query the node.If that fails, query the node directly.
+ * @param pm PubSubManager
+ * @param nodeName name of the node
+ * @return node TODO javadoc me please
+ * @throws XMPPException.XMPPErrorException in case of an XMPP protocol error.
+ * @throws PubSubException.NotALeafNodeException if the queried node is not a {@link LeafNode}.
+ * @throws InterruptedException in case the thread gets interrupted
+ * @throws PubSubException.NotAPubSubNodeException in case the queried entity is not a PubSub node.
+ * @throws SmackException.NotConnectedException in case the connection is not connected.
+ * @throws SmackException.NoResponseException in case the server doesn't respond.
+ */
+static LeafNode getLeafNode(PubSubManager pm,String nodeName) throws XMPPException.XMPPErrorException, PubSubException.NotALeafNodeException, InterruptedException, PubSubException.NotAPubSubNodeException, SmackException.NotConnectedException, SmackException.NoResponseException {
+  LeafNode node;
+  try {
+    node=pm.getLeafNode(nodeName);
+  }
+ catch (  XMPPException.XMPPErrorException e) {
+    if (e.getStanzaError().getCondition() == StanzaError.Condition.subscription_required) {
+      node=getOpenLeafNode(pm,nodeName);
+    }
+ else {
+      throw e;
+    }
+  }
+  return node;
+}

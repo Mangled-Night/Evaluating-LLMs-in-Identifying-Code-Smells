@@ -1,0 +1,39 @@
+/** 
+ * Wait until future is complete or the supplied timeout is reached.
+ * @param timeout Maximum time to wait for futures to complete.
+ * @param future Future to wait for.
+ * @return {@code true} if future completes in time, otherwise {@code false}
+ * @since 6.0
+ */
+public static boolean await(Duration timeout,Future<?> future){
+  return await(timeout.toNanos(),TimeUnit.NANOSECONDS,future);
+}
+/** 
+ * Wait until future is complete or the supplied timeout is reached.
+ * @param timeout Maximum time to wait for futures to complete.
+ * @param unit Unit of time for the timeout.
+ * @param future Future to wait for.
+ * @return {@code true} if future completes in time, otherwise {@code false}
+ * @since 6.0
+ */
+public static boolean await(long timeout,TimeUnit unit,Future<?> future){
+  try {
+    long nanos=unit.toNanos(timeout);
+    if (nanos < 0) {
+      return false;
+    }
+    if (nanos == 0) {
+      future.get();
+    }
+ else {
+      future.get(nanos,TimeUnit.NANOSECONDS);
+    }
+    return true;
+  }
+ catch (  TimeoutException e) {
+    return false;
+  }
+catch (  Exception e) {
+    throw Exceptions.fromSynchronization(e);
+  }
+}

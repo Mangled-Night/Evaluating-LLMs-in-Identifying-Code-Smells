@@ -1,0 +1,12 @@
+/** 
+ * Adds a new  {@link StanzaListener} that will be invoked every time a new presenceis going to be sent by this MultiUserChat to the server. Stanza interceptors may add new extensions to the presence that is going to be sent to the MUC service.
+ * @param presenceInterceptor the new stanza interceptor that will intercept presence packets.
+ */
+public void addPresenceInterceptor(Consumer<PresenceBuilder> presenceInterceptor){
+  boolean added=presenceInterceptors.add(presenceInterceptor);
+  if (!added)   return;
+  int currentCount=presenceInterceptorCount.incrementAndGet();
+  if (currentCount == 1) {
+    connection.addPresenceInterceptor(this.presenceInterceptor,ToMatchesFilter.create(room).asPredicate(Presence.class));
+  }
+}

@@ -1,0 +1,15 @@
+@Test void operateOnPartiallyDownCluster(){
+  List<RedisURI> seed=LettuceLists.unmodifiableList(URI_1,URI_2,URI_3,URI_4);
+  redisClusterClient=RedisClusterClient.create(clientResources,seed);
+  StatefulRedisClusterConnection<String,String> connection=redisClusterClient.connect();
+  String key_10439="aaa";
+  assertThat(SlotHash.getSlot(key_10439)).isEqualTo(10439);
+  try {
+    connection.sync().get(key_10439);
+    fail("Missing RedisException");
+  }
+ catch (  RedisException e) {
+    assertThat(e).hasRootCauseInstanceOf(IOException.class);
+  }
+  connection.close();
+}

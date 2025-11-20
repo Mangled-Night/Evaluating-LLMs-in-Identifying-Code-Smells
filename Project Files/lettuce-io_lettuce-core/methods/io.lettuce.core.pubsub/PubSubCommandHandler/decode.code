@@ -1,0 +1,30 @@
+@SuppressWarnings("unchecked") @Override protected void decode(ChannelHandlerContext ctx,ByteBuf buffer) throws InterruptedException {
+  if (output.type() != null && !output.isCompleted()) {
+    if (!super.decode(buffer,output)) {
+      decodeBufferPolicy.afterPartialDecode(buffer);
+      return;
+    }
+    RedisCommand<?,?,?> peek=getStack().peek();
+    canComplete(peek);
+    doNotifyMessage(output);
+    output=new PubSubOutput<>(codec);
+  }
+  if (!getStack().isEmpty() || isPushDecode(buffer)) {
+    super.decode(ctx,buffer);
+  }
+  ReplayOutput<K,V> replay;
+  while ((replay=queue.poll()) != null) {
+    replay.replay(output);
+    doNotifyMessage(output);
+    output=new PubSubOutput<>(codec);
+  }
+  while (super.getStack().isEmpty() && buffer.isReadable()) {
+    if (!super.decode(buffer,output)) {
+      decodeBufferPolicy.afterPartialDecode(buffer);
+      return;
+    }
+    doNotifyMessage(output);
+    output=new PubSubOutput<>(codec);
+  }
+  decodeBufferPolicy.afterDecoding(buffer);
+}

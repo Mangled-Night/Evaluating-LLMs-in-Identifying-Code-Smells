@@ -1,0 +1,32 @@
+/** 
+ * Class containing static factory methods for generating  {@link GsonBuilder} objects that follow Terasologyserialization rules and support Terasology TypeHandlers.
+ */
+public final class GsonBuilderFactory {
+  private GsonBuilderFactory(){
+  }
+  /** 
+ * Create a  {@link GsonBuilder} with options set to comply with Terasology JSON serialization rules.
+ */
+  public static GsonBuilder createDefaultGsonBuilder(){
+    return new GsonBuilder().setExclusionStrategies(new GsonMapExclusionStrategy());
+  }
+  /** 
+ * Create a  {@link GsonBuilder} which uses type handlers loaded from the given{@link TypeHandlerLibrary} and complies with Terasology JSON serialization rules.
+ * @param typeHandlerLibrary The {@link TypeHandlerLibrary} to load type handlerdefinitions from
+ */
+  public static GsonBuilder createGsonBuilderWithTypeSerializationLibrary(  TypeHandlerLibrary typeHandlerLibrary){
+    TypeAdapterFactory typeAdapterFactory=new GsonTypeSerializationLibraryAdapterFactory(typeHandlerLibrary);
+    return createDefaultGsonBuilder().registerTypeAdapterFactory(typeAdapterFactory);
+  }
+  /** 
+ * Create a  {@link GsonBuilder} which uses the given type handlers and complies with TerasologyJSON serialization rules.
+ * @param typeHandlerEntries The type handlers to use during serialization.
+ */
+  @SuppressWarnings("unchecked") public static GsonBuilder createGsonBuilderWithTypeHandlers(  TypeHandlerEntry<?>... typeHandlerEntries){
+    GsonTypeHandlerAdapterFactory typeAdapterFactory=new GsonTypeHandlerAdapterFactory();
+    for (    TypeHandlerEntry typeHandlerEntry : typeHandlerEntries) {
+      typeAdapterFactory.addTypeHandler(typeHandlerEntry);
+    }
+    return createDefaultGsonBuilder().registerTypeAdapterFactory(typeAdapterFactory);
+  }
+}

@@ -1,0 +1,24 @@
+public class LoadPrefabs extends StepBasedLoadProcess {
+  private final AssetManager assetManager;
+  private Iterator<ResourceUrn> prefabs;
+  public LoadPrefabs(  Context context){
+    this.assetManager=context.get(AssetManager.class);
+  }
+  @Override public String getMessage(){
+    return "${engine:menu#loading-prefabs}";
+  }
+  @Override public boolean step(){
+    if (prefabs.hasNext()) {
+      assetManager.getAsset(prefabs.next(),Prefab.class);
+      stepDone();
+    }
+    return !prefabs.hasNext();
+  }
+  @Override public void begin(){
+    prefabs=assetManager.getAvailableAssets(Prefab.class).iterator();
+    setTotalSteps(assetManager.getAvailableAssets(Prefab.class).size());
+  }
+  @Override public int getExpectedCost(){
+    return 1;
+  }
+}

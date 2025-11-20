@@ -1,0 +1,19 @@
+public class TypeRegistryTest extends ModuleEnvironmentTest {
+static {
+    Reflections.log=null;
+  }
+  @Disabled("Seems to intermittently stall, at least on Win10") @Test public void testNonModuleTypes(){
+    assumeTrue(typeRegistry.getSubtypesOf(Collection.class).contains(TreeSet.class));
+    assertTrue(typeRegistry.getSubtypesOf(Map.class).contains(LinkedHashMap.class));
+  }
+  @Disabled("Seems to intermittently stall, at least on Win10") @Test public void testModuleTypes(){
+    Set<Name> modulesDeclaringComponents=typeRegistry.getSubtypesOf(Component.class).stream().map(componentClass -> moduleManager.getEnvironment().getModuleProviding(componentClass)).collect(Collectors.toSet());
+    assertTrue(modulesDeclaringComponents.contains(new Name("engine")),modulesDeclaringComponents::toString);
+  }
+  @Disabled("Seems to intermittently stall, at least on Win10") @Test public void testWhitelistedTypes(){
+    Set<Class<?>> allTypes=typeRegistry.getSubtypesOf(Object.class);
+    for (    Class<?> whitelisted : ExternalApiWhitelist.CLASSES) {
+      assumeTrue(allTypes.contains(whitelisted),() -> allTypes.toString() + " should contain " + whitelisted.getName());
+    }
+  }
+}

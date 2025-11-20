@@ -1,0 +1,21 @@
+@Test public void testPartitionByPrefixPattern(){
+  PartitionByPrefixPattern partition=new PartitionByPrefixPattern();
+  partition.setMapFile("partition_prefix_pattern.txt");
+  partition.init();
+  Assert.assertEquals(8,partition.getPartitionNum());
+  RuleConfig rule=new RuleConfig("id","partition-prefix-pattern");
+  rule.setRuleAlgorithm(partition);
+  TableConfig tableConf=new TableConfig("test","id",true,false,-1,"dn1,dn2",null,rule,true,null,false,null,null,null,false);
+  int suit1=partition.suitableFor(tableConf);
+  Assert.assertEquals(-1,suit1);
+  tableConf.getDataNodes().clear();
+  String[] dataNodes=SplitUtil.split("dn$1-8",',','$','-');
+  tableConf.getDataNodes().addAll(Arrays.asList(dataNodes));
+  int suit2=partition.suitableFor(tableConf);
+  Assert.assertEquals(0,suit2);
+  tableConf.getDataNodes().clear();
+  dataNodes=SplitUtil.split("dn$1-10",',','$','-');
+  tableConf.getDataNodes().addAll(Arrays.asList(dataNodes));
+  int suit3=partition.suitableFor(tableConf);
+  Assert.assertEquals(1,suit3);
+}

@@ -1,0 +1,32 @@
+private void loadGame(GameInfo item){
+  if (isLoadingAsServer()) {
+    Path blacklistPath=PathManager.getInstance().getHomePath().resolve("blacklist.json");
+    Path whitelistPath=PathManager.getInstance().getHomePath().resolve("whitelist.json");
+    if (!Files.exists(blacklistPath)) {
+      try {
+        Files.createFile(blacklistPath);
+      }
+ catch (      IOException e) {
+        logger.error("IO Exception on blacklist generation",e);
+      }
+    }
+    if (!Files.exists(whitelistPath)) {
+      try {
+        Files.createFile(whitelistPath);
+      }
+ catch (      IOException e) {
+        logger.error("IO Exception on whitelist generation",e);
+      }
+    }
+  }
+  try {
+    final GameManifest manifest=item.getManifest();
+    config.getWorldGeneration().setDefaultSeed(manifest.getSeed());
+    config.getWorldGeneration().setWorldTitle(manifest.getTitle());
+    Optional.ofNullable(CoreRegistry.get(GameEngine.class)).orElseThrow(() -> new IllegalStateException("Failed to get game engine from CoreRegistry")).changeState(new StateLoading(manifest,(isLoadingAsServer()) ? NetworkMode.DEDICATED_SERVER : NetworkMode.NONE));
+  }
+ catch (  Exception e) {
+    logger.error("Failed to load saved game",e);
+    getManager().pushScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage("Error Loading Game",e.getMessage());
+  }
+}

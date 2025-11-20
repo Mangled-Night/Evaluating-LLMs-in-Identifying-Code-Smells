@@ -1,0 +1,13 @@
+@Test void pipelinedMessage() throws Exception {
+  pubsub.subscribe(channel);
+  assertThat(channels.take()).isEqualTo(channel);
+  RedisAsyncCommands<String,String> connection=client.connect().async();
+  connection.setAutoFlushCommands(false);
+  connection.publish(channel,message);
+  Delay.delay(Duration.ofMillis(100));
+  assertThat(channels).isEmpty();
+  connection.flushCommands();
+  assertThat(channels.take()).isEqualTo(channel);
+  assertThat(messages.take()).isEqualTo(message);
+  connection.getStatefulConnection().close();
+}

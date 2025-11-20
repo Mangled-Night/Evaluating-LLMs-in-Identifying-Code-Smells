@@ -1,0 +1,9 @@
+private static <K,V>CompletableFuture<StatefulRedisMasterReplicaConnection<K,V>> connectAsyncSentinelOrAutodiscovery(RedisClient redisClient,RedisCodec<K,V> codec,RedisURI redisURI){
+  LettuceAssert.notNull(redisClient,"RedisClient must not be null");
+  LettuceAssert.notNull(codec,"RedisCodec must not be null");
+  LettuceAssert.notNull(redisURI,"RedisURI must not be null");
+  if (isSentinel(redisURI)) {
+    return new SentinelConnector<>(redisClient,codec,redisURI).connectAsync();
+  }
+  return new AutodiscoveryConnector<>(redisClient,codec,redisURI).connectAsync();
+}

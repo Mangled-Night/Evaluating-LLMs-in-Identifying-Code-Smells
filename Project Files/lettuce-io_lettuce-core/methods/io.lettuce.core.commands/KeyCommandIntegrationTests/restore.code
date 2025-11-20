@@ -1,0 +1,13 @@
+@Test void restore(){
+  redis.set(key,value);
+  byte[] bytes=redis.dump(key);
+  redis.del(key);
+  assertThat(redis.restore(key,0,bytes)).isEqualTo("OK");
+  assertThat(redis.get(key)).isEqualTo(value);
+  assertThat(redis.pttl(key).longValue()).isEqualTo(-1);
+  redis.del(key);
+  assertThat(redis.restore(key,1000,bytes)).isEqualTo("OK");
+  assertThat(redis.get(key)).isEqualTo(value);
+  assertThat(redis.pttl(key)).isGreaterThan(0).isLessThanOrEqualTo(1000);
+  assertThatThrownBy(() -> redis.restore(key,0,bytes)).isInstanceOf(RedisException.class);
+}

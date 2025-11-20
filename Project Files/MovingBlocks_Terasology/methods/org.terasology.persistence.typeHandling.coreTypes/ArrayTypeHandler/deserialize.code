@@ -1,0 +1,11 @@
+@Override public Optional<Object> deserialize(PersistedData data){
+  if (!data.isArray()) {
+    return Optional.empty();
+  }
+  @SuppressWarnings("unchecked") List<E> items=data.getAsArray().getAsValueArray().stream().map(itemData -> elementTypeHandler.deserialize(itemData)).filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList());
+  Object array=Array.newInstance(elementType.getRawType(),items.size());
+  for (int i=0; i < items.size(); i++) {
+    Array.set(array,i,items.get(i));
+  }
+  return Optional.of(array);
+}

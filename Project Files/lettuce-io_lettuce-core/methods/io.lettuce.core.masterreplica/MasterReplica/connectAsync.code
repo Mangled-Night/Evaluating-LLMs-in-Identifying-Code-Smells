@@ -1,0 +1,26 @@
+/** 
+ * Open asynchronously a new connection to a Redis Master-Replica server/servers using the supplied  {@link RedisURI} and thesupplied  {@link RedisCodec codec} to encode/decode keys.<p> This  {@link MasterReplica} performs auto-discovery of nodes using either Redis Sentinel or Master/Replica. A{@link RedisURI} can point to either a master or a replica host.</p>
+ * @param redisClient the Redis client.
+ * @param codec Use this codec to encode/decode keys and values, must not be {@code null}.
+ * @param redisURI the Redis server to connect to, must not be {@code null}.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @return {@link CompletableFuture} that is notified once the connect is finished.
+ * @since 6.0
+ */
+public static <K,V>CompletableFuture<StatefulRedisMasterReplicaConnection<K,V>> connectAsync(RedisClient redisClient,RedisCodec<K,V> codec,RedisURI redisURI){
+  return transformAsyncConnectionException(connectAsyncSentinelOrAutodiscovery(redisClient,codec,redisURI),redisURI);
+}
+/** 
+ * Open asynchronously a new connection to a Redis Master-Replica server/servers using the supplied  {@link RedisURI} and thesupplied  {@link RedisCodec codec} to encode/decode keys.<p> This  {@link MasterReplica} performs auto-discovery of nodes if the URI is a Redis Sentinel URI. Master/Replica URIs willbe treated as static topology and no additional hosts are discovered in such case. Redis Standalone Master/Replica will discover the roles of the supplied  {@link RedisURI URIs} and issue commands to the appropriate node.</p> <p> When using Redis Sentinel, ensure that  {@link Iterable redisURIs} contains only a single entry as only the first URI isconsidered.  {@link RedisURI} pointing to multiple Sentinels can be configured through{@link RedisURI.Builder#withSentinel}. </p>
+ * @param redisClient the Redis client.
+ * @param codec Use this codec to encode/decode keys and values, must not be {@code null}.
+ * @param redisURIs the Redis server(s) to connect to, must not be {@code null}.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @return {@link CompletableFuture} that is notified once the connect is finished.
+ * @since 6.0
+ */
+public static <K,V>CompletableFuture<StatefulRedisMasterReplicaConnection<K,V>> connectAsync(RedisClient redisClient,RedisCodec<K,V> codec,Iterable<RedisURI> redisURIs){
+  return transformAsyncConnectionException(connectAsyncSentinelOrStaticSetup(redisClient,codec,redisURIs),redisURIs);
+}

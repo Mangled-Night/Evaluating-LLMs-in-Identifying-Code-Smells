@@ -1,0 +1,49 @@
+NodeTopologyViews getNodeSpecificViews(Requests requestedTopology,Requests requestedInfo){
+  List<RedisClusterNodeSnapshot> allNodes=new ArrayList<>();
+  Map<String,NodeTopologyView> self=new HashMap<>();
+  Set<RedisURI> nodes=requestedTopology.nodes();
+  List<NodeTopologyView> views=new ArrayList<>();
+  for (  RedisURI nodeUri : nodes) {
+    try {
+      NodeTopologyView nodeTopologyView=NodeTopologyView.from(nodeUri,requestedTopology,requestedInfo);
+      if (!nodeTopologyView.isAvailable()) {
+        continue;
+      }
+      RedisClusterNode node=nodeTopologyView.getOwnPartition();
+      if (node.getUri() == null) {
+        node.setUri(nodeUri);
+      }
+ else {
+        node.addAlias(nodeUri);
+      }
+      self.put(node.getNodeId(),nodeTopologyView);
+      List<RedisClusterNodeSnapshot> nodeWithStats=new ArrayList<>(nodeTopologyView.getPartitions().size());
+      for (      RedisClusterNode partition : nodeTopologyView.getPartitions()) {
+        if (validNode(partition)) {
+          nodeWithStats.add(new RedisClusterNodeSnapshot(partition));
+        }
+      }
+      allNodes.addAll(nodeWithStats);
+      Partitions partitions=new Partitions();
+      partitions.addAll(nodeWithStats);
+      nodeTopologyView.setPartitions(partitions);
+      views.add(nodeTopologyView);
+    }
+ catch (    CompletionException e) {
+      logger.warn(String.format("Cannot retrieve partition view from %s, error: %s",nodeUri,e));
+    }
+  }
+  for (  RedisClusterNodeSnapshot node : allNodes) {
+    if (!self.containsKey(node.getNodeId())) {
+      continue;
+    }
+    NodeTopologyView view=self.get(node.getNodeId());
+    node.setConnectedClients(view.getConnectedClients());
+    node.setReplOffset(view.getReplicationOffset());
+    node.setLatencyNs(view.getLatency());
+  }
+  for (  NodeTopologyView view : views) {
+    view.postProcessPartitions();
+  }
+  return new NodeTopologyViews(views);
+}

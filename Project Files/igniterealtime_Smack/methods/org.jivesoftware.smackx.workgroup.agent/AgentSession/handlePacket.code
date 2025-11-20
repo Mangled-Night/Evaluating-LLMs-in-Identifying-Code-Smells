@@ -1,0 +1,56 @@
+private void handlePacket(Stanza packet){
+  if (packet instanceof Presence) {
+    Presence presence=(Presence)packet;
+    Resourcepart queueName=presence.getFrom().getResourceOrNull();
+    WorkgroupQueue queue=queues.get(queueName);
+    if (queue == null) {
+      queue=new WorkgroupQueue(queueName);
+      queues.put(queueName,queue);
+    }
+    QueueOverview queueOverview=(QueueOverview)presence.getExtensionElement(QueueOverview.ELEMENT_NAME,QueueOverview.NAMESPACE);
+    if (queueOverview != null) {
+      if (queueOverview.getStatus() == null) {
+        queue.setStatus(WorkgroupQueue.Status.CLOSED);
+      }
+ else {
+        queue.setStatus(queueOverview.getStatus());
+      }
+      queue.setAverageWaitTime(queueOverview.getAverageWaitTime());
+      queue.setOldestEntry(queueOverview.getOldestEntry());
+      fireQueueUsersEvent(queue,queueOverview.getStatus(),queueOverview.getAverageWaitTime(),queueOverview.getOldestEntry(),null);
+      return;
+    }
+    QueueDetails queueDetails=(QueueDetails)packet.getExtensionElement(QueueDetails.ELEMENT_NAME,QueueDetails.NAMESPACE);
+    if (queueDetails != null) {
+      queue.setUsers(queueDetails.getUsers());
+      fireQueueUsersEvent(queue,null,-1,null,queueDetails.getUsers());
+      return;
+    }
+    StandardExtensionElement notifyAgents=(StandardExtensionElement)presence.getExtensionElement("notify-agents","http://jabber.org/protocol/workgroup");
+    if (notifyAgents != null) {
+      int currentChats=Integer.parseInt(notifyAgents.getFirstElement("current-chats","http://jabber.org/protocol/workgroup").getText());
+      int maxChats=Integer.parseInt(notifyAgents.getFirstElement("max-chats","http://jabber.org/protocol/workgroup").getText());
+      queue.setCurrentChats(currentChats);
+      queue.setMaxChats(maxChats);
+      return;
+    }
+  }
+ else   if (packet instanceof Message) {
+    Message message=(Message)packet;
+    MUCUser mucUser=MUCUser.from(message);
+    MUCUser.Invite invite=mucUser != null ? mucUser.getInvite() : null;
+    if (invite != null && workgroupJID.equals(invite.getFrom())) {
+      String sessionID=null;
+      Map<String,List<String>> metaData=null;
+      SessionID sessionIDExt=(SessionID)message.getExtensionElement(SessionID.ELEMENT_NAME,SessionID.NAMESPACE);
+      if (sessionIDExt != null) {
+        sessionID=sessionIDExt.getSessionID();
+      }
+      MetaData metaDataExt=(MetaData)message.getExtensionElement(MetaData.ELEMENT_NAME,MetaData.NAMESPACE);
+      if (metaDataExt != null) {
+        metaData=metaDataExt.getMetaData();
+      }
+      this.fireInvitationEvent(message.getFrom(),sessionID,message.getBody(),message.getFrom(),metaData);
+    }
+  }
+}

@@ -1,0 +1,19 @@
+private Method findMethod(Class<?> type,Method method,Map<Method,Method> cache){
+  Method result=cache.get(method);
+  if (result != null && result != NULL_MARKER_METHOD) {
+    return result;
+  }
+  Class<?>[] parameterTypes=method.getParameterTypes();
+  if (method.getName().equals("dispatch")) {
+    parameterTypes[1]=CommandOutput.class;
+  }
+  for (  Method typeMethod : type.getMethods()) {
+    if (!typeMethod.getName().equals(method.getName()) || !Arrays.equals(typeMethod.getParameterTypes(),parameterTypes)) {
+      continue;
+    }
+    cache.put(method,typeMethod);
+    return typeMethod;
+  }
+  cache.put(method,NULL_MARKER_METHOD);
+  return null;
+}

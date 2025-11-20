@@ -1,0 +1,45 @@
+/** 
+ * Increments time
+ * @return The number of update cycles to run
+ */
+@Override public Iterator<Float> tick(){
+  long now=getRawTimeInMs();
+  long newDelta=now - last.get();
+  if (0 == newDelta) {
+    try {
+      Thread.sleep(0,1000);
+    }
+ catch (    InterruptedException e) {
+      logger.debug("Tick sleep interrupted",e);
+    }
+    now=getRawTimeInMs();
+    newDelta=now - last.get();
+  }
+  last.set(now);
+  realDelta.set(newDelta);
+  frameDelta=frameDelta * DECAY_RATE + newDelta * ONE_MINUS_DECAY_RATE;
+  newDelta=(long)(newDelta * getGameTimeDilation());
+  if (newDelta >= UPDATE_CAP) {
+    logger.warn("Delta too great ({}), capping to {}",newDelta,UPDATE_CAP);
+    newDelta=UPDATE_CAP;
+  }
+  int updateCycles=(int)((newDelta - 1) / MAX_UPDATE_CYCLE_LENGTH) + 1;
+  if (desynch != 0) {
+    long diff=(long)Math.ceil(desynch * (double)RESYNC_TIME_RATE);
+    if (diff == 0) {
+      diff=(long)Math.signum(desynch);
+    }
+    gameTime.getAndAdd(diff);
+    desynch-=diff;
+  }
+  if (paused) {
+    gameDelta.set(0);
+    return new TimeStepper(1,0);
+  }
+ else {
+    if (updateCycles > 0) {
+      gameDelta.set(newDelta / updateCycles);
+    }
+    return new TimeStepper(updateCycles,newDelta / updateCycles);
+  }
+}

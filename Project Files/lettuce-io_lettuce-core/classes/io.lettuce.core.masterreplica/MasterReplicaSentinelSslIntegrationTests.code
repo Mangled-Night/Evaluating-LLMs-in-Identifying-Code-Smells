@@ -1,0 +1,25 @@
+/** 
+ * Integration test for Master/Replica using Redis Sentinel over SSL.
+ * @author Mark Paluch
+ */
+@ExtendWith(LettuceExtension.class) class MasterReplicaSentinelSslIntegrationTests extends TestSupport {
+  private final ClientResources clientResources;
+  @Inject MasterReplicaSentinelSslIntegrationTests(  ClientResources clientResources){
+    this.clientResources=clientResources.mutate().socketAddressResolver(MappingSocketAddressResolver.create(DnsResolver.jvmDefault(),hostAndPort -> {
+      return HostAndPort.of(hostAndPort.getHostText(),hostAndPort.getPort() + 443);
+    }
+)).build();
+  }
+  @Test void testMasterReplicaSentinelBasic(){
+    RedisClient client=RedisClient.create(clientResources);
+    RedisURI redisURI=RedisURI.create("rediss-sentinel://" + TestSettings.host() + ":26379?sentinelMasterId=mymaster");
+    redisURI.setVerifyPeer(false);
+    StatefulRedisMasterReplicaConnection<String,String> connection=MasterReplica.connect(client,StringCodec.UTF8,redisURI);
+    connection.setReadFrom(ReadFrom.REPLICA);
+    connection.sync().set(key,value);
+    connection.sync().set(key,value);
+    connection.sync().get(key);
+    connection.close();
+    FastShutdown.shutdown(client);
+  }
+}

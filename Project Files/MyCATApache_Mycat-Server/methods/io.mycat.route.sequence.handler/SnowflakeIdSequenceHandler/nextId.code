@@ -1,0 +1,18 @@
+@Override public synchronized long nextId(String prefixName){
+  long timestamp=this.timeGen();
+  if (timestamp < this.lastTimestamp) {
+    logger.error("clock is moving backwards.  Rejecting requests until %d.",lastTimestamp);
+    throw new RuntimeException(String.format("Clock moved backwards.  Refusing to generate id for %d milliseconds",(this.lastTimestamp - timestamp)));
+  }
+  if (this.lastTimestamp == timestamp) {
+    this.sequence=this.sequence + 1 & this.sequenceMask;
+    if (this.sequence == 0) {
+      timestamp=this.tilNextMillis(this.lastTimestamp);
+    }
+  }
+ else {
+    this.sequence=0;
+  }
+  this.lastTimestamp=timestamp;
+  return timestamp - this.twepoch << this.timestampLeftShift | this.datacenterId << this.datacenterIdShift | this.workerId << this.workerIdShift | this.sequence;
+}

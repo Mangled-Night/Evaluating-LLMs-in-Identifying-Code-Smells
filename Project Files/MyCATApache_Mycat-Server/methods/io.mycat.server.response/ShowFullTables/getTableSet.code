@@ -1,0 +1,33 @@
+public static Set<String> getTableSet(ServerConnection c,String stmt){
+  Map<String,String> parm=buildFields(c,stmt);
+  return getTableSet(c,parm);
+}
+private static Set<String> getTableSet(ServerConnection c,Map<String,String> parm){
+  TreeSet<String> tableSet=new TreeSet<String>();
+  MycatConfig conf=MycatServer.getInstance().getConfig();
+  Map<String,UserConfig> users=conf.getUsers();
+  UserConfig user=users == null ? null : users.get(c.getUser());
+  if (user != null) {
+    Map<String,SchemaConfig> schemas=conf.getSchemas();
+    for (    String name : schemas.keySet()) {
+      if (null != parm.get(SCHEMA_KEY) && parm.get(SCHEMA_KEY).toUpperCase().equals(name.toUpperCase())) {
+        if (null == parm.get("LIKE_KEY")) {
+          tableSet.addAll(schemas.get(name).getTables().keySet());
+        }
+ else {
+          String p="^" + parm.get("LIKE_KEY").replaceAll("%",".*");
+          Pattern pattern=Pattern.compile(p,Pattern.CASE_INSENSITIVE);
+          Matcher ma;
+          for (          String tname : schemas.get(name).getTables().keySet()) {
+            ma=pattern.matcher(tname);
+            if (ma.matches()) {
+              tableSet.add(tname);
+            }
+          }
+        }
+      }
+    }
+    ;
+  }
+  return tableSet;
+}

@@ -1,0 +1,21 @@
+/** 
+ * Encrypt the message with the aes key. Move the AuthTag from the end of the cipherText to the end of the messageKey afterwards. This prevents an attacker which compromised one recipient device to switch out the cipherText for other recipients.
+ * @see <a href="https://conversations.im/omemo/audit.pdf">OMEMO security audit</a>.
+ * @param message plaintext message
+ * @throws NoSuchPaddingException if the requested padding mechanism is not availble.
+ * @throws InvalidAlgorithmParameterException if the provided arguments are invalid.
+ * @throws InvalidKeyException if the key is invalid.
+ * @throws BadPaddingException if the input data is not padded properly.
+ * @throws IllegalBlockSizeException if the input data length is incorrect.
+ */
+private void setMessage(String message) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+  if (message == null) {
+    return;
+  }
+  byte[] ciphertext=OmemoAesCipher.encryptAesGcmNoPadding(message,messageKey,initializationVector);
+  byte[] clearKeyWithAuthTag=new byte[messageKey.length + 16];
+  byte[] cipherTextWithoutAuthTag=new byte[ciphertext.length - 16];
+  moveAuthTag(messageKey,ciphertext,clearKeyWithAuthTag,cipherTextWithoutAuthTag);
+  ciphertextMessage=cipherTextWithoutAuthTag;
+  messageKey=clearKeyWithAuthTag;
+}

@@ -1,0 +1,70 @@
+/** 
+ * 分析 SHOW SQL
+ */
+@Override public RouteResultset analyseShowSQL(SchemaConfig schema,RouteResultset rrs,String stmt) throws SQLSyntaxErrorException {
+  String[] fields=SchemaUtil.parseShowTable(stmt);
+  if ("1".equals(fields[0])) {
+    String relSchema=fields[3];
+    String tableName=fields[8];
+    if (relSchema != null && !relSchema.equalsIgnoreCase(schema.getName())) {
+      schema=MycatServer.getInstance().getConfig().getSchemas().get(relSchema);
+      if (schema == null) {
+        throw new SQLSyntaxErrorException("not found schema : " + relSchema);
+      }
+    }
+    if (StringUtils.isNotBlank(tableName) && tableName.indexOf("%") < 0 && !schema.getTables().isEmpty()) {
+      TableConfig tableConfig=schema.getTables().get(tableName.toUpperCase());
+      if (tableConfig != null) {
+        String dataNode=RouterUtil.getAliveRandomDataNode(tableConfig);
+        PhysicalDBNode dataNodeObj=MycatServer.getInstance().getConfig().getDataNodes().get(dataNode);
+        if (StringUtils.isNotBlank(dataNodeObj.getDatabase())) {
+          stmt=stmt.replaceAll(relSchema,dataNodeObj.getDatabase());
+        }
+        return RouterUtil.routeToSingleNode(rrs,dataNode,stmt);
+      }
+    }
+    if (StringUtils.isNotBlank(relSchema)) {
+      if (schema.getDataNode() != null) {
+        PhysicalDBNode dataNode=MycatServer.getInstance().getConfig().getDataNodes().get(schema.getDataNode());
+        stmt=stmt.replaceAll(relSchema,dataNode.getDatabase());
+      }
+ else {
+        if (fields[2] != null) {
+          stmt=stmt.replaceAll(fields[2] + "\\s*" + relSchema,"");
+        }
+      }
+    }
+    String defaultNode=schema.getDataNode();
+    if (!Strings.isNullOrEmpty(defaultNode)) {
+      return RouterUtil.routeToSingleNode(rrs,defaultNode,stmt);
+    }
+    return RouterUtil.routeToMultiNode(false,rrs,schema.getMetaDataNodes(),stmt);
+  }
+  String upStmt=stmt.toUpperCase();
+  int[] indx=RouterUtil.getSpecPos(upStmt,0);
+  if (indx[0] > 0) {
+    int[] repPos={indx[0] + indx[1],0};
+    String tableName=RouterUtil.getShowTableName(schema,stmt,repPos);
+    int[] indx2=RouterUtil.getSpecPos(upStmt,indx[0] + indx[1] + 1);
+    if (indx2[0] > 0) {
+      repPos[1]=RouterUtil.getSpecEndPos(upStmt,indx2[0] + indx2[1]);
+    }
+    stmt=stmt.substring(0,indx[0]) + " FROM " + tableName+ stmt.substring(repPos[1]);
+    RouterUtil.routeForTableMeta(rrs,schema,tableName,stmt);
+    return rrs;
+  }
+  int[] createTabInd=RouterUtil.getCreateTablePos(upStmt,0);
+  if (createTabInd[0] > 0) {
+    int tableNameIndex=createTabInd[0] + createTabInd[1];
+    if (upStmt.length() > tableNameIndex) {
+      String tableName=stmt.substring(tableNameIndex).trim();
+      int ind2=tableName.indexOf('.');
+      if (ind2 > 0) {
+        tableName=tableName.substring(ind2 + 1);
+      }
+      RouterUtil.routeForTableMeta(rrs,schema,tableName,stmt);
+      return rrs;
+    }
+  }
+  return RouterUtil.routeToSingleNode(rrs,schema.getRandomDataNode(),stmt);
+}

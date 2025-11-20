@@ -1,0 +1,151 @@
+/** 
+ * Invoke  {@link StanzaCollector#processStanza(Stanza)} for everyStanzaCollector with the given packet. Also notify the receive listeners with a matching stanza filter about the packet. <p> This method will be invoked by the connections incoming processing thread which may be shared across multiple connections and thus it is important that no user code, e.g. in form of a callback, is invoked by this method. For the same reason, this method must not block for an extended period of time. </p>
+ * @param packet the stanza to notify the StanzaCollectors and receive listeners about.
+ */
+protected void invokeStanzaCollectorsAndNotifyRecvListeners(final Stanza packet){
+  if (packet instanceof IQ) {
+    final IQ iq=(IQ)packet;
+    if (iq.isRequestIQ()) {
+      final IQ iqRequest=iq;
+      final QName key=iqRequest.getChildElementQName();
+      IQRequestHandler iqRequestHandler;
+      final IQ.Type type=iq.getType();
+switch (type) {
+case set:
+synchronized (setIqRequestHandler) {
+          iqRequestHandler=setIqRequestHandler.get(key);
+        }
+      break;
+case get:
+synchronized (getIqRequestHandler) {
+      iqRequestHandler=getIqRequestHandler.get(key);
+    }
+  break;
+default :
+throw new IllegalStateException("Should only encounter IQ type 'get' or 'set'");
+}
+if (iqRequestHandler == null) {
+final String iqNamespace=key.getNamespaceURI();
+StanzaError.Condition replyCondition;
+switch (unknownIqRequestReplyMode) {
+case doNotReply:
+return;
+case reply:
+boolean isKnownNamespace=iqRequestHandlerNamespaces.contains(iqNamespace);
+if (isKnownNamespace) {
+replyCondition=StanzaError.Condition.feature_not_implemented;
+}
+ else {
+replyCondition=StanzaError.Condition.service_unavailable;
+}
+break;
+default :
+throw new AssertionError();
+}
+final ErrorIQ errorIQ=IQ.createErrorResponse(iq,StanzaError.getBuilder(replyCondition).build());
+asyncGo(() -> {
+try {
+sendStanza(errorIQ);
+}
+ catch (InterruptedException|NotConnectedException e) {
+LOGGER.log(Level.WARNING,"Exception while sending error IQ to unkown IQ request",e);
+}
+}
+);
+}
+ else {
+Executor executorService=null;
+switch (iqRequestHandler.getMode()) {
+case sync:
+executorService=ASYNC_BUT_ORDERED.asExecutorFor(this);
+break;
+case async:
+executorService=this::asyncGoLimited;
+break;
+}
+final IQRequestHandler finalIqRequestHandler=iqRequestHandler;
+executorService.execute(new Runnable(){
+@Override public void run(){
+IQ response=finalIqRequestHandler.handleIQRequest(iq);
+if (response == null) {
+return;
+}
+assert response.isResponseIQ();
+response.setTo(iqRequest.getFrom());
+response.setStanzaId(iqRequest.getStanzaId());
+try {
+sendStanza(response);
+}
+ catch (InterruptedException|NotConnectedException e) {
+LOGGER.log(Level.WARNING,"Exception while sending response to IQ request",e);
+}
+}
+}
+);
+}
+return;
+}
+}
+final Collection<StanzaListener> listenersToNotify=new LinkedList<>();
+extractMatchingListeners(packet,asyncRecvListeners,listenersToNotify);
+for (final StanzaListener listener : listenersToNotify) {
+asyncGoLimited(new Runnable(){
+@Override public void run(){
+try {
+listener.processStanza(packet);
+}
+ catch (Exception e) {
+LOGGER.log(Level.SEVERE,"Exception in async packet listener",e);
+}
+}
+}
+);
+}
+for (StanzaCollector collector : collectors) {
+collector.processStanza(packet);
+}
+listenersToNotify.clear();
+extractMatchingListeners(packet,recvListeners,listenersToNotify);
+for (StanzaListener stanzaListener : listenersToNotify) {
+inOrderListeners.performAsyncButOrdered(stanzaListener,() -> {
+try {
+stanzaListener.processStanza(packet);
+}
+ catch (NotConnectedException e) {
+LOGGER.log(Level.WARNING,"Got not connected exception, aborting",e);
+}
+catch (Exception e) {
+LOGGER.log(Level.SEVERE,"Exception in packet listener",e);
+}
+}
+);
+}
+listenersToNotify.clear();
+extractMatchingListeners(packet,syncRecvListeners,listenersToNotify);
+ASYNC_BUT_ORDERED.performAsyncButOrdered(this,new Runnable(){
+@Override public void run(){
+Iterator<StanzaListener> it=listenersToNotify.iterator();
+synchronized (syncRecvListeners) {
+while (it.hasNext()) {
+StanzaListener stanzaListener=it.next();
+if (!syncRecvListeners.containsKey(stanzaListener)) {
+it.remove();
+}
+}
+}
+for (StanzaListener listener : listenersToNotify) {
+try {
+listener.processStanza(packet);
+}
+ catch (NotConnectedException e) {
+LOGGER.log(Level.WARNING,"Got not connected exception, aborting",e);
+break;
+}
+catch (Exception e) {
+LOGGER.log(Level.SEVERE,"Exception in packet listener",e);
+}
+}
+}
+}
+);
+}

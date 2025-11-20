@@ -1,0 +1,44 @@
+/** 
+ * Chain multiple UnsafeSorterIterator together as single one.
+ */
+static class ChainedIterator extends UnsafeSorterIterator {
+  private final Queue<UnsafeSorterIterator> iterators;
+  private UnsafeSorterIterator current;
+  private int numRecords;
+  ChainedIterator(  Queue<UnsafeSorterIterator> iterators){
+    assert iterators.size() > 0;
+    this.numRecords=0;
+    for (    UnsafeSorterIterator iter : iterators) {
+      this.numRecords+=iter.getNumRecords();
+    }
+    this.iterators=iterators;
+    this.current=iterators.remove();
+  }
+  @Override public int getNumRecords(){
+    return numRecords;
+  }
+  @Override public boolean hasNext(){
+    while (!current.hasNext() && !iterators.isEmpty()) {
+      current=iterators.remove();
+    }
+    return current.hasNext();
+  }
+  @Override public void loadNext() throws IOException {
+    while (!current.hasNext() && !iterators.isEmpty()) {
+      current=iterators.remove();
+    }
+    current.loadNext();
+  }
+  @Override public Object getBaseObject(){
+    return current.getBaseObject();
+  }
+  @Override public long getBaseOffset(){
+    return current.getBaseOffset();
+  }
+  @Override public int getRecordLength(){
+    return current.getRecordLength();
+  }
+  @Override public long getKeyPrefix(){
+    return current.getKeyPrefix();
+  }
+}

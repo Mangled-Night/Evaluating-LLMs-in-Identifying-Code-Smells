@@ -1,0 +1,17 @@
+@Nested class SetValue {
+  private Setting<Integer> setting;
+  private int eventResult;
+  @BeforeEach public void setUp(){
+    setting=new SettingImpl<>(TypeInfo.of(Integer.class),50,new NumberRangeConstraint<>(0,100,false,false),"","",Optional::empty);
+    eventResult=-1;
+    setting.subscribe((setting1,oldValue) -> eventResult=setting1.get());
+  }
+  @Test void testSetsValue(){
+    assertTrue(setting.set(25));
+    assertEquals(25,eventResult);
+  }
+  @Test void testDoesNotSetValue(){
+    assertFalse(setting.set(101));
+    assertEquals(-1,eventResult);
+  }
+}

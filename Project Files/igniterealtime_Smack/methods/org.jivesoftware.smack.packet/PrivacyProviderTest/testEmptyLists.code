@@ -1,0 +1,23 @@
+/** 
+ * Check the parser with an xml with empty lists. It includes the active, default and special list. To create the xml string based from an xml file, replace:\n with:	"\n  + "
+ */
+public void testEmptyLists(){
+  String xml="" + "  <iq type='result' id='getlist1' to='romeo@example.net/orchard'>	" + "  <query xmlns='jabber:iq:privacy'>	"+ "    <active/>	"+ "    <default name='public'/>	"+ "    <list name='public'/>	"+ "    <list name='private'/>	"+ "    <list name='special'/>	"+ "  </query>	"+ " </iq>	";
+  try {
+    XmlPullParser parser=getParserFromXML(xml);
+    Privacy packet=(Privacy)(new PrivacyProvider()).parse(parser);
+    assertNotNull(packet);
+    assertNotNull(packet.getChildElementXML());
+    assertEquals("public",packet.getDefaultName());
+    assertEquals(null,packet.getActiveName());
+    assertEquals(0,packet.getPrivacyList("public").size());
+    assertEquals(0,packet.getPrivacyList("private").size());
+    assertEquals(0,packet.getPrivacyList("special").size());
+    assertEquals(true,packet.isDeclineActiveList());
+    assertEquals(false,packet.isDeclineDefaultList());
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

@@ -1,0 +1,16 @@
+public void doHeartBeat(BackendConnection conn,String sql){
+  if (LOGGER.isDebugEnabled()) {
+    LOGGER.debug("do heartbeat for con " + conn);
+  }
+  try {
+    HeartBeatCon hbCon=new HeartBeatCon(conn);
+    boolean notExist=(allCons.putIfAbsent(hbCon.conn.getId(),hbCon) == null);
+    if (notExist) {
+      conn.setResponseHandler(this);
+      conn.query(sql);
+    }
+  }
+ catch (  Exception e) {
+    executeException(conn,e);
+  }
+}

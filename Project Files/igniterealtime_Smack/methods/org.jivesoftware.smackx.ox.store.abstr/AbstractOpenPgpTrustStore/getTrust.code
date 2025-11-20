@@ -1,0 +1,17 @@
+@Override public Trust getTrust(BareJid owner,OpenPgpV4Fingerprint fingerprint) throws IOException {
+  Trust trust;
+  Map<OpenPgpV4Fingerprint,Trust> trustMap=trustCache.get(owner);
+  if (trustMap != null) {
+    trust=trustMap.get(fingerprint);
+    if (trust != null) {
+      return trust;
+    }
+  }
+ else {
+    trustMap=new HashMap<>();
+    trustCache.put(owner,trustMap);
+  }
+  trust=readTrust(owner,fingerprint);
+  trustMap.put(fingerprint,trust);
+  return trust;
+}

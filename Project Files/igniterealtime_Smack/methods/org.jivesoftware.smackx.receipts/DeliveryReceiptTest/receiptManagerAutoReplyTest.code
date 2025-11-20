@@ -1,0 +1,14 @@
+@Test public void receiptManagerAutoReplyTest() throws Exception {
+  DummyConnection c=new DummyConnection();
+  c.connect();
+  DeliveryReceiptManager drm=DeliveryReceiptManager.getInstanceFor(c);
+  drm.setAutoReceiptMode(AutoReceiptMode.always);
+  assertEquals(AutoReceiptMode.always,drm.getAutoReceiptMode());
+  MessageBuilder messageBuilder=StanzaBuilder.buildMessage("test-receipt-request").to("julia@capulet.com").from("romeo@montague.com").ofType(Message.Type.normal);
+  DeliveryReceiptRequest.addTo(messageBuilder);
+  c.processStanza(messageBuilder.build());
+  Stanza reply=c.getSentPacket();
+  DeliveryReceipt r=DeliveryReceipt.from((Message)reply);
+  assertThat("romeo@montague.com",equalsCharSequence(reply.getTo()));
+  assertEquals("test-receipt-request",r.getId());
+}

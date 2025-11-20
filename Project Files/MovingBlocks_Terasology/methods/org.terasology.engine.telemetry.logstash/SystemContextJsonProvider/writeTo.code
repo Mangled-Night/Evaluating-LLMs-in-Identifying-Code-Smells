@@ -1,0 +1,14 @@
+public void writeTo(JsonGenerator generator,ILoggingEvent event) throws IOException {
+  TelemetryLogstashAppender appender=TelemetryUtils.fetchTelemetryLogstashAppender();
+  Context context=appender.getGameContext();
+  if (context != null) {
+    Metrics metrics=context.get(Metrics.class);
+    Optional<Metric> optional=metrics.getMetric(SystemContextMetric.class);
+    if (optional.isPresent()) {
+      Metric systemContextMetric=optional.get();
+      Map<String,?> map=systemContextMetric.createTelemetryFieldToValue();
+      Map<String,String> stringMap=TelemetryUtils.toStringMap(map);
+      JsonWritingUtils.writeMapStringFields(generator,getFieldName(),stringMap);
+    }
+  }
+}

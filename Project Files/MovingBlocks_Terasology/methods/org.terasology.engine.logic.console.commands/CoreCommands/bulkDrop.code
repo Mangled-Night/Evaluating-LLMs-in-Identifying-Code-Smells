@@ -1,0 +1,21 @@
+@Command(shortDescription="Mass-drops the desired block however many times the player indicates",helpText="First parameter indicates which block to drop, second parameter how many",runOnServer=true,requiredPermission=PermissionManager.CHEAT_PERMISSION) public String bulkDrop(@Sender EntityRef sender,@CommandParam("blockName") String blockName,@CommandParam("value") int value){
+  ClientComponent clientComponent=sender.getComponent(ClientComponent.class);
+  LocationComponent characterLocation=clientComponent.character.getComponent(LocationComponent.class);
+  Vector3f spawnPos=characterLocation.getWorldPosition(new Vector3f());
+  Vector3f offset=characterLocation.getWorldDirection(new Vector3f());
+  offset.mul(3);
+  spawnPos.add(5,10,0);
+  BlockFamily block=blockManager.getBlockFamily(blockName);
+  if (block == null) {
+    return "Sorry, your block is not found";
+  }
+  BlockItemFactory blockItemFactory=new BlockItemFactory(entityManager);
+  if (value > 5000) {
+    return "Value exceeds the maximum limit of 5000 blocks. your value: " + value + " blocks";
+  }
+  for (int i=0; i < value; i++) {
+    EntityRef blockItem=blockItemFactory.newInstance(block);
+    blockItem.send(new DropItemEvent(spawnPos));
+  }
+  return "Dropped " + value + " "+ blockName+ " Blocks :)";
+}

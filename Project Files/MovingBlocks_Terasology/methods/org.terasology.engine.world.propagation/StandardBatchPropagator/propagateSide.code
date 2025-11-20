@@ -1,0 +1,28 @@
+private void propagateSide(Chunk chunk,Chunk adjChunk,Side side,Function<Vector3ic,Integer> indexProvider,BlockRegionc edgeRegion,int[] depths){
+  Vector3i adjPos=new Vector3i();
+  for (  Vector3ic pos : edgeRegion) {
+    byte expectedValue=(byte)(rules.getValue(chunk,pos) - 1);
+    if (expectedValue < 1) {
+      continue;
+    }
+    pos.add(chunkEdgeDeltas.get(side),adjPos);
+    int depthIndex=indexProvider.apply(pos);
+    int depth=0;
+    Block lastBlock=chunk.getBlock(pos);
+    byte adjValue=rules.getValue(adjChunk,adjPos);
+    while (expectedValue > adjValue && adjValue != PropagatorWorldView.UNAVAILABLE && rules.canSpreadOutOf(lastBlock,side)) {
+      lastBlock=adjChunk.getBlock(adjPos);
+      if (rules.canSpreadInto(lastBlock,side.reverse())) {
+        rules.setValue(adjChunk,adjPos,expectedValue);
+        adjPos.add(side.direction());
+        depth++;
+        expectedValue--;
+        adjValue=rules.getValue(adjChunk,adjPos);
+      }
+ else {
+        break;
+      }
+    }
+    depths[depthIndex]=depth;
+  }
+}

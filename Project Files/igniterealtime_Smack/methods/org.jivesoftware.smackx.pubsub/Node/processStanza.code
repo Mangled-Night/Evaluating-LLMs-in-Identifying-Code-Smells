@@ -1,0 +1,28 @@
+@Override @SuppressWarnings({"rawtypes","unchecked"}) public void processStanza(Stanza packet){
+  EventElement event=(EventElement)packet.getExtensionElement("event",PubSubNamespace.event.getXmlns());
+  ItemsExtension itemsElem=(ItemsExtension)event.getEvent();
+  ItemPublishEvent eventItems=new ItemPublishEvent(itemsElem.getNode(),itemsElem.getItems(),getSubscriptionIds(packet),DelayInformationManager.getDelayTimestamp(packet));
+  listener.handlePublishedItems(eventItems);
+}
+@Override public void processStanza(Stanza packet){
+  EventElement event=(EventElement)packet.getExtensionElement("event",PubSubNamespace.event.getXmlns());
+  List<XmlElement> extList=event.getExtensions();
+  if (extList.get(0).getElementName().equals(PubSubElementType.PURGE_EVENT.getElementName())) {
+    listener.handlePurge();
+  }
+ else {
+    ItemsExtension itemsElem=(ItemsExtension)event.getEvent();
+    @SuppressWarnings("unchecked") Collection<RetractItem> pubItems=(Collection<RetractItem>)itemsElem.getItems();
+    List<String> items=new ArrayList<>(pubItems.size());
+    for (    RetractItem item : pubItems) {
+      items.add(item.getId());
+    }
+    ItemDeleteEvent eventItems=new ItemDeleteEvent(itemsElem.getNode(),items,getSubscriptionIds(packet));
+    listener.handleDeletedItems(eventItems);
+  }
+}
+@Override public void processStanza(Stanza packet){
+  EventElement event=(EventElement)packet.getExtensionElement("event",PubSubNamespace.event.getXmlns());
+  ConfigurationEvent config=(ConfigurationEvent)event.getEvent();
+  listener.handleNodeConfiguration(config);
+}

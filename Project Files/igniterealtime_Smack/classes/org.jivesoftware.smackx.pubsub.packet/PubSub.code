@@ -1,0 +1,34 @@
+/** 
+ * The standard PubSub extension of an  {@link IQ} packet.  This is the topmostelement of all pubsub requests and replies as defined in the <a href="http://xmpp.org/extensions/xep-0060">Publish-Subscribe</a> specification.
+ * @author Robin Collier
+ */
+public class PubSub extends IQ {
+  public static final String ELEMENT="pubsub";
+  public static final String NAMESPACE="http://jabber.org/protocol/pubsub";
+  public PubSub(){
+    super(ELEMENT,NAMESPACE);
+  }
+  public PubSub(  PubSubNamespace ns){
+    super(ELEMENT,ns.getXmlns());
+  }
+  public PubSub(  Jid to,  Type type,  PubSubNamespace ns){
+    super(ELEMENT,(ns == null ? PubSubNamespace.basic : ns).getXmlns());
+    setTo(to);
+    setType(type);
+  }
+  @SuppressWarnings("unchecked") public <PE extends XmlElement>PE getExtension(  PubSubElementType elem){
+    return (PE)getExtensionElement(elem.getElementName(),elem.getNamespace().getXmlns());
+  }
+  /** 
+ * Returns the XML representation of a pubsub element according the specification. The XML representation will be inside of an iq stanza like in the following example: <pre> &lt;iq type='set' id="MlIpV-4" to="pubsub.gato.home" from="gato3@gato.home/Smack"&gt; &lt;pubsub xmlns="http://jabber.org/protocol/pubsub"&gt; : Specific request extension : &lt;/pubsub&gt; &lt;/iq&gt; </pre>
+ */
+  @Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(  IQChildElementXmlStringBuilder xml){
+    xml.rightAngleBracket();
+    return xml;
+  }
+  public static PubSub createPubsubPacket(  Jid to,  Type type,  NodeExtension extension){
+    PubSub pubSub=new PubSub(to,type,extension.getPubSubNamespace());
+    pubSub.addExtension(extension);
+    return pubSub;
+  }
+}

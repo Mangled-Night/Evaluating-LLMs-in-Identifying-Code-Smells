@@ -1,0 +1,23 @@
+/** 
+ * Specialization of sort() for key-prefix arrays. In this type of array, each record consists of two longs, only the second of which is sorted on.
+ */
+public static int sortKeyPrefixArray(LongArray array,int numRecords,int startByteIndex,int endByteIndex,boolean desc,boolean signed){
+  assert startByteIndex >= 0 : "startByteIndex (" + startByteIndex + ") should >= 0";
+  assert endByteIndex <= 7 : "endByteIndex (" + endByteIndex + ") should <= 7";
+  assert endByteIndex > startByteIndex;
+  assert numRecords * 4 <= array.size();
+  int inIndex=0;
+  int outIndex=numRecords * 2;
+  if (numRecords > 0) {
+    long[][] counts=getKeyPrefixArrayCounts(array,numRecords,startByteIndex,endByteIndex);
+    for (int i=startByteIndex; i <= endByteIndex; i++) {
+      if (counts[i] != null) {
+        sortKeyPrefixArrayAtByte(array,numRecords,counts[i],i,inIndex,outIndex,desc,signed && i == endByteIndex);
+        int tmp=inIndex;
+        inIndex=outIndex;
+        outIndex=tmp;
+      }
+    }
+  }
+  return inIndex;
+}

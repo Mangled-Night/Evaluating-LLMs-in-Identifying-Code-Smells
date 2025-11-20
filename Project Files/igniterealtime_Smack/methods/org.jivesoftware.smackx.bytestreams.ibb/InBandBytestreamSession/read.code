@@ -1,0 +1,36 @@
+@Override public synchronized int read() throws IOException {
+  checkClosed();
+  if (bufferPointer == -1 || bufferPointer >= buffer.length) {
+    if (!loadBuffer()) {
+      return -1;
+    }
+  }
+  return buffer[bufferPointer++] & 0xff;
+}
+@Override public synchronized int read(byte[] b,int off,int len) throws IOException {
+  if (b == null) {
+    throw new NullPointerException();
+  }
+ else   if ((off < 0) || (off > b.length) || (len < 0)|| ((off + len) > b.length)|| ((off + len) < 0)) {
+    throw new IndexOutOfBoundsException();
+  }
+ else   if (len == 0) {
+    return 0;
+  }
+  checkClosed();
+  if (bufferPointer == -1 || bufferPointer >= buffer.length) {
+    if (!loadBuffer()) {
+      return -1;
+    }
+  }
+  int bytesAvailable=buffer.length - bufferPointer;
+  if (len > bytesAvailable) {
+    len=bytesAvailable;
+  }
+  System.arraycopy(buffer,bufferPointer,b,off,len);
+  bufferPointer+=len;
+  return len;
+}
+@Override public synchronized int read(byte[] b) throws IOException {
+  return read(b,0,b.length);
+}

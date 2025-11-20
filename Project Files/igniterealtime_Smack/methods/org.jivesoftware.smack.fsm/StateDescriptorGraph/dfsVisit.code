@@ -1,0 +1,18 @@
+private static <E>void dfsVisit(GraphVertex<E> vertex,Consumer<GraphVertex<E>> dfsFinishedVertex,DfsEdgeFound<E> dfsEdgeFound){
+  vertex.color=GraphVertex.VertexColor.grey;
+  final int totalEdgeCount=vertex.getOutgoingEdges().size();
+  int edgeCount=0;
+  for (  GraphVertex<E> successorVertex : vertex.getOutgoingEdges()) {
+    edgeCount++;
+    if (dfsEdgeFound != null) {
+      dfsEdgeFound.onEdgeFound(vertex,successorVertex,edgeCount,totalEdgeCount);
+    }
+    if (successorVertex.color == GraphVertex.VertexColor.white) {
+      dfsVisit(successorVertex,dfsFinishedVertex,dfsEdgeFound);
+    }
+  }
+  vertex.color=GraphVertex.VertexColor.black;
+  if (dfsFinishedVertex != null) {
+    dfsFinishedVertex.accept(vertex);
+  }
+}

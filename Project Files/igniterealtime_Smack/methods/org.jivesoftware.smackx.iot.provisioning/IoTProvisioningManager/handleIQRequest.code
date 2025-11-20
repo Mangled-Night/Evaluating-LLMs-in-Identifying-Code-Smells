@@ -1,0 +1,12 @@
+@Override public IQ handleIQRequest(IQ iqRequest){
+  if (!isFromProvisioningService(iqRequest,true)) {
+    return null;
+  }
+  ClearCache clearCache=(ClearCache)iqRequest;
+  Jid from=iqRequest.getFrom();
+  LruCache<BareJid,Void> cache=negativeFriendshipRequestCache.lookup(from);
+  if (cache != null) {
+    cache.clear();
+  }
+  return new ClearCacheResponse(clearCache);
+}

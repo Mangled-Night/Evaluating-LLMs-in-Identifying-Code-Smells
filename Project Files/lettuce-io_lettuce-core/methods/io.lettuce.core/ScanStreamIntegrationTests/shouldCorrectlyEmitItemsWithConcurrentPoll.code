@@ -1,0 +1,9 @@
+@Test void shouldCorrectlyEmitItemsWithConcurrentPoll(){
+  RedisReactiveCommands<String,String> commands=connection.reactive();
+  String sourceKey="source";
+  String targetKey="target";
+  IntStream.range(0,10_000).forEach(num -> connection.async().hset(sourceKey,String.valueOf(num),String.valueOf(num)));
+  redis.del(targetKey);
+  ScanStream.hscan(commands,sourceKey).map(KeyValue::getValue).map(Integer::parseInt).filter(num -> num % 2 == 0).concatMap(item -> commands.sadd(targetKey,String.valueOf(item))).as(StepVerifier::create).expectNextCount(5000).verifyComplete();
+  assertThat(redis.scard(targetKey)).isEqualTo(5_000);
+}

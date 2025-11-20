@@ -1,0 +1,25 @@
+/** 
+ * 购物车商品货品勾选状态 <p> 如果原来没有勾选，则设置勾选状态；如果商品已经勾选，则设置非勾选状态。
+ * @param userId 用户ID
+ * @param body   购物车商品信息， { productIds: xxx, isChecked: 1/0 }
+ * @return 购物车信息
+ */
+@PostMapping("checked") public Object checked(@LoginUser Integer userId,@RequestBody String body){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  if (body == null) {
+    return ResponseUtil.badArgument();
+  }
+  List<Integer> productIds=JacksonUtil.parseIntegerList(body,"productIds");
+  if (productIds == null) {
+    return ResponseUtil.badArgument();
+  }
+  Integer checkValue=JacksonUtil.parseInteger(body,"isChecked");
+  if (checkValue == null) {
+    return ResponseUtil.badArgument();
+  }
+  Boolean isChecked=(checkValue == 1);
+  cartService.updateCheck(userId,productIds,isChecked);
+  return index(userId);
+}

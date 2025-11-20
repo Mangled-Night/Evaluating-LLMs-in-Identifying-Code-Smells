@@ -1,0 +1,13 @@
+@Test void wrappedMasterSlaveConnectionShouldUseWrappers() throws Exception {
+  GenericObjectPool<StatefulRedisMasterReplicaConnection<String,String>> pool=ConnectionPoolSupport.createGenericObjectPool(() -> MasterReplica.connect(client,new StringCodec(),RedisURI.create(host,port)),new GenericObjectPoolConfig<>());
+  StatefulRedisMasterReplicaConnection<String,String> connection=pool.borrowObject();
+  RedisCommands<String,String> sync=connection.sync();
+  assertThat(connection).isInstanceOf(StatefulRedisMasterReplicaConnection.class);
+  assertThat(Proxy.isProxyClass(connection.getClass())).isTrue();
+  assertThat(sync).isInstanceOf(RedisCommands.class);
+  assertThat(connection.async()).isInstanceOf(RedisAsyncCommands.class).isNotInstanceOf(RedisAsyncCommandsImpl.class);
+  assertThat(connection.reactive()).isInstanceOf(RedisReactiveCommands.class).isNotInstanceOf(RedisReactiveCommandsImpl.class);
+  assertThat(sync.getStatefulConnection()).isInstanceOf(StatefulRedisConnection.class).isNotInstanceOf(StatefulRedisConnectionImpl.class).isSameAs(connection);
+  connection.close();
+  pool.close();
+}

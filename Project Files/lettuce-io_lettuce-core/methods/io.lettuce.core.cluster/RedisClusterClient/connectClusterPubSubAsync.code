@@ -1,0 +1,34 @@
+/** 
+ * Create a clustered connection with command distributor.
+ * @param codec Use this codec to encode/decode keys and values, must not be {@code null}
+ * @param < K > Key type
+ * @param < V > Value type
+ * @return a new connection
+ */
+private <K,V>CompletableFuture<StatefulRedisClusterPubSubConnection<K,V>> connectClusterPubSubAsync(RedisCodec<K,V> codec){
+  if (partitions == null) {
+    return Futures.failed(new IllegalStateException("Partitions not initialized. Initialize via RedisClusterClient.getPartitions()."));
+  }
+  topologyRefreshScheduler.activateTopologyRefreshIfNeeded();
+  logger.debug("connectClusterPubSub(" + initialUris + ")");
+  PubSubClusterEndpoint<K,V> endpoint=new PubSubClusterEndpoint<>(getClusterClientOptions(),getResources());
+  RedisChannelWriter writer=endpoint;
+  if (CommandExpiryWriter.isSupported(getClusterClientOptions())) {
+    writer=new CommandExpiryWriter(writer,getClusterClientOptions(),getResources());
+  }
+  if (CommandListenerWriter.isSupported(getCommandListeners())) {
+    writer=new CommandListenerWriter(writer,getCommandListeners());
+  }
+  ClusterDistributionChannelWriter clusterWriter=new ClusterDistributionChannelWriter(writer,getClusterClientOptions(),topologyRefreshScheduler);
+  ClusterPubSubConnectionProvider<K,V> pooledClusterConnectionProvider=new ClusterPubSubConnectionProvider<>(this,clusterWriter,codec,endpoint.getUpstreamListener(),topologyRefreshScheduler);
+  StatefulRedisClusterPubSubConnectionImpl<K,V> connection=new StatefulRedisClusterPubSubConnectionImpl<>(endpoint,pooledClusterConnectionProvider,clusterWriter,codec,getFirstUri().getTimeout());
+  clusterWriter.setClusterConnectionProvider(pooledClusterConnectionProvider);
+  connection.setPartitions(partitions);
+  Supplier<CommandHandler> commandHandlerSupplier=() -> new PubSubCommandHandler<>(getClusterClientOptions(),getResources(),codec,endpoint);
+  Mono<SocketAddress> socketAddressSupplier=getSocketAddressSupplier(connection::getPartitions,TopologyComparators::sortByClientCount);
+  Mono<StatefulRedisClusterPubSubConnectionImpl<K,V>> connectionMono=Mono.defer(() -> connect(socketAddressSupplier,endpoint,connection,commandHandlerSupplier));
+  for (int i=1; i < getConnectionAttempts(); i++) {
+    connectionMono=connectionMono.onErrorResume(t -> connect(socketAddressSupplier,endpoint,connection,commandHandlerSupplier));
+  }
+  return connectionMono.doOnNext(c -> connection.registerCloseables(closeableResources,clusterWriter,pooledClusterConnectionProvider)).map(it -> (StatefulRedisClusterPubSubConnection<K,V>)it).toFuture();
+}

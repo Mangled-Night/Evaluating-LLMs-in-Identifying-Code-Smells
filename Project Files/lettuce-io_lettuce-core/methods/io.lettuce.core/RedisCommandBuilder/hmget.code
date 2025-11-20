@@ -1,0 +1,23 @@
+Command<K,V,List<V>> hmget(K key,K... fields){
+  notNullKey(key);
+  LettuceAssert.notNull(fields,"Fields " + MUST_NOT_BE_NULL);
+  LettuceAssert.notEmpty(fields,"Fields " + MUST_NOT_BE_EMPTY);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key).addKeys(fields);
+  return createCommand(HMGET,new ValueListOutput<>(codec),args);
+}
+Command<K,V,Long> hmget(ValueStreamingChannel<V> channel,K key,K... fields){
+  notNullKey(key);
+  LettuceAssert.notNull(fields,"Fields " + MUST_NOT_BE_NULL);
+  LettuceAssert.notEmpty(fields,"Fields " + MUST_NOT_BE_EMPTY);
+  notNull(channel);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key).addKeys(fields);
+  return createCommand(HMGET,new ValueStreamingOutput<>(codec,channel),args);
+}
+Command<K,V,Long> hmget(KeyValueStreamingChannel<K,V> channel,K key,K... fields){
+  notNullKey(key);
+  LettuceAssert.notNull(fields,"Fields " + MUST_NOT_BE_NULL);
+  LettuceAssert.notEmpty(fields,"Fields " + MUST_NOT_BE_EMPTY);
+  notNull(channel);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key).addKeys(fields);
+  return createCommand(HMGET,new KeyValueStreamingOutput<>(codec,channel,Arrays.asList(fields)),args);
+}

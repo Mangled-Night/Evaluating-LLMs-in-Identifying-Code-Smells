@@ -1,0 +1,18 @@
+public class BlockContactsIQTest {
+  private static final String blockContactIQExample="<iq xmlns='jabber:client' id='block1' type='set'>" + "<block xmlns='urn:xmpp:blocking'>" + "<item jid='romeo@montague.net'/>"+ "<item jid='pepe@montague.net'/>"+ "</block>"+ "</iq>";
+  private static final String blockContactPushIQExample="<iq xmlns='jabber:client' to='juliet@capulet.com/chamber' type='set' id='push1'>" + "<block xmlns='urn:xmpp:blocking'>" + "<item jid='romeo@montague.net'/>"+ "<item jid='pepe@montague.net'/>"+ "</block>"+ "</iq>";
+  @Test public void checkBlockContactIQStanza() throws Exception {
+    List<Jid> jids=new ArrayList<>();
+    jids.add(JidCreate.from("romeo@montague.net"));
+    jids.add(JidCreate.from("pepe@montague.net"));
+    BlockContactsIQ blockContactIQ=new BlockContactsIQ(jids);
+    blockContactIQ.setStanzaId("block1");
+    assertEquals(blockContactIQExample,blockContactIQ.toXML().toString());
+  }
+  @Test public void checkBlockContactPushIQ() throws Exception {
+    IQ iq=PacketParserUtils.parseStanza(blockContactPushIQExample);
+    BlockContactsIQ blockContactIQ=(BlockContactsIQ)iq;
+    assertEquals(JidCreate.from("romeo@montague.net"),blockContactIQ.getJids().get(0));
+    assertEquals(JidCreate.from("pepe@montague.net"),blockContactIQ.getJids().get(1));
+  }
+}

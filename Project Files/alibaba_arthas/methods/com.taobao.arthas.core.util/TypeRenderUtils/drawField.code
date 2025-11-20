@@ -1,0 +1,23 @@
+public static Element drawField(ClassDetailVO clazz){
+  TableElement fieldsTable=new TableElement(1).leftCellPadding(0).rightCellPadding(0);
+  FieldVO[] fields=clazz.getFields();
+  if (fields == null || fields.length == 0) {
+    return fieldsTable;
+  }
+  for (  FieldVO field : fields) {
+    TableElement fieldTable=new TableElement().leftCellPadding(0).rightCellPadding(1);
+    fieldTable.row("name",field.getName()).row("type",field.getType()).row("modifier",field.getModifier());
+    String[] annotations=field.getAnnotations();
+    if (annotations != null && annotations.length > 0) {
+      fieldTable.row("annotation",drawAnnotation(annotations));
+    }
+    if (field.isStatic()) {
+      ObjectVO objectVO=field.getValue();
+      Object o=objectVO.needExpand() ? new ObjectView(objectVO).draw() : objectVO.getObject();
+      fieldTable.row("value",StringUtils.objectToString(o));
+    }
+    fieldTable.row(label(""));
+    fieldsTable.row(fieldTable);
+  }
+  return fieldsTable;
+}

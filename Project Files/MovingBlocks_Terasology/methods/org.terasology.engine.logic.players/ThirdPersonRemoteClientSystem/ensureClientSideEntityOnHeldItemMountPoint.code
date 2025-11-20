@@ -1,0 +1,20 @@
+/** 
+ * Ensures held item mount point entity exists, attaches it to the character and sets its transform.
+ * @param event the activation that triggered the need to consider changing a held item
+ * @param character the character for which we need to consider the held item
+ * @param remotePersonHeldItemMountPointComponent data for the mount point on the remote character
+ */
+@ReceiveEvent public void ensureClientSideEntityOnHeldItemMountPoint(OnActivatedComponent event,EntityRef character,RemotePersonHeldItemMountPointComponent remotePersonHeldItemMountPointComponent){
+  if (relatesToLocalPlayer(character)) {
+    logger.debug("ensureClientSideEntityOnHeldItemMountPoint found its given character to relate to the local" + " player, ignoring: {}",character);
+    return;
+  }
+  if (!remotePersonHeldItemMountPointComponent.mountPointEntity.exists()) {
+    EntityBuilder builder=entityManager.newBuilder("engine:RemotePersonHeldItemMountPoint");
+    builder.setPersistent(false);
+    remotePersonHeldItemMountPointComponent.mountPointEntity=builder.build();
+    character.saveComponent(remotePersonHeldItemMountPointComponent);
+  }
+  Location.removeChild(character,remotePersonHeldItemMountPointComponent.mountPointEntity);
+  Location.attachChild(character,remotePersonHeldItemMountPointComponent.mountPointEntity,remotePersonHeldItemMountPointComponent.translate,new Quaternionf().rotationYXZ(Math.toRadians(remotePersonHeldItemMountPointComponent.rotateDegrees.y),Math.toRadians(remotePersonHeldItemMountPointComponent.rotateDegrees.x),Math.toRadians(remotePersonHeldItemMountPointComponent.rotateDegrees.z)),remotePersonHeldItemMountPointComponent.scale);
+}

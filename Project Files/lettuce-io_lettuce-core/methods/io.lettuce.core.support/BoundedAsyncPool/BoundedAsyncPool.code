@@ -1,0 +1,28 @@
+/** 
+ * Create a new  {@link BoundedAsyncPool} given {@link BasePoolConfig} and {@link AsyncObjectFactory}. The factory creates idle objects upon construction and requires  {@link #closeAsync() termination} once it's no longer in use.<p> Please note that pre-initialization cannot be awaited when using this constructor. Please use {@link #create(AsyncObjectFactory,BoundedPoolConfig)} instead.
+ * @param factory must not be {@code null}.
+ * @param poolConfig must not be {@code null}.
+ */
+public BoundedAsyncPool(AsyncObjectFactory<T> factory,BoundedPoolConfig poolConfig){
+  this(factory,poolConfig,true);
+}
+/** 
+ * Create a new  {@link BoundedAsyncPool} given {@link BasePoolConfig} and {@link AsyncObjectFactory}.
+ * @param factory must not be {@code null}.
+ * @param poolConfig must not be {@code null}.
+ * @param createIdle whether to pre-initialize the pool.
+ * @since 5.3.2
+ */
+BoundedAsyncPool(AsyncObjectFactory<T> factory,BoundedPoolConfig poolConfig,boolean createIdle){
+  super(poolConfig);
+  LettuceAssert.notNull(factory,"AsyncObjectFactory must not be null");
+  this.maxTotal=poolConfig.getMaxTotal();
+  this.maxIdle=poolConfig.getMaxIdle();
+  this.minIdle=poolConfig.getMinIdle();
+  this.factory=factory;
+  this.cache=new ConcurrentLinkedQueue<>();
+  this.all=new ConcurrentLinkedQueue<>();
+  if (createIdle) {
+    createIdle();
+  }
+}

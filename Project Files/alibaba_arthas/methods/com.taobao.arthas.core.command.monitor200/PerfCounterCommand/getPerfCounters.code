@@ -1,0 +1,23 @@
+private static List<Counter> getPerfCounters(){
+  try {
+    if (perfObject == null) {
+      String perfClassName="sun.misc.Perf";
+      if (!JavaVersionUtils.isLessThanJava9()) {
+        perfClassName="jdk.internal.perf.Perf";
+      }
+      Class<?> perfClass=ClassLoader.getSystemClassLoader().loadClass(perfClassName);
+      Method getPerfMethod=perfClass.getDeclaredMethod("getPerf");
+      perfObject=getPerfMethod.invoke(null);
+    }
+    if (attachMethod == null) {
+      attachMethod=perfObject.getClass().getDeclaredMethod("attach",new Class<?>[]{int.class,String.class});
+    }
+    ByteBuffer buffer=(ByteBuffer)attachMethod.invoke(perfObject,new Object[]{(int)PidUtils.currentLongPid(),"r"});
+    PerfInstrumentation perfInstrumentation=new PerfInstrumentation(buffer);
+    return perfInstrumentation.getAllCounters();
+  }
+ catch (  Throwable e) {
+    logger.error("get perf counter error",e);
+  }
+  return Collections.emptyList();
+}

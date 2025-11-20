@@ -1,0 +1,18 @@
+@Test @EnabledOnCommand("ACL") void authReconnectRedis6(){
+  WithPassword.run(client,() -> {
+    client.setOptions(ClientOptions.builder().protocolVersion(ProtocolVersion.RESP2).pingBeforeActivateConnection(false).build());
+    RedisCommands<String,String> connection=client.connect().sync();
+    assertThat(connection.auth(passwd)).isEqualTo("OK");
+    assertThat(connection.set(key,value)).isEqualTo("OK");
+    connection.quit();
+    Delay.delay(Duration.ofMillis(100));
+    assertThat(connection.get(key)).isEqualTo(value);
+    assertThat(connection.auth(username,passwd)).isEqualTo("OK");
+    assertThat(connection.set(key,value)).isEqualTo("OK");
+    connection.quit();
+    Delay.delay(Duration.ofMillis(100));
+    assertThat(connection.get(key)).isEqualTo(value);
+    connection.getStatefulConnection().close();
+  }
+);
+}

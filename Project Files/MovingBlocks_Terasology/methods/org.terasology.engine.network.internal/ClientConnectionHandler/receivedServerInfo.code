@@ -1,0 +1,28 @@
+/** 
+ * Gets the server information and passes it to the client, while also checking if all required modules have been downloaded.
+ * @param channelHandlerContext
+ * @param message Passes the server information message to the function.
+ */
+private void receivedServerInfo(ChannelHandlerContext channelHandlerContext,NetData.ServerInfoMessage message){
+  logger.info("Received server info");
+  time.setGameTime(message.getTime());
+  this.server=createWithConstructorInjection(ServerImpl.class,context);
+  server.setServerInfo(message);
+  for (  NetData.ModuleInfo info : message.getModuleList()) {
+    if (null == moduleManager.getRegistry().getModule(new Name(info.getModuleId()),new Version(info.getModuleVersion()))) {
+      missingModules.add(info.getModuleId().toLowerCase(Locale.ENGLISH));
+    }
+  }
+  if (missingModules.isEmpty()) {
+    joinStatus.setCurrentActivity("Finalizing join");
+    sendJoin(channelHandlerContext);
+  }
+ else {
+    joinStatus.setCurrentActivity("Requesting missing modules");
+    NetData.NetMessage.Builder builder=NetData.NetMessage.newBuilder();
+    for (    String module : missingModules) {
+      builder.addModuleRequest(NetData.ModuleRequest.newBuilder().setModuleId(module));
+    }
+    channelHandlerContext.channel().writeAndFlush(builder.build());
+  }
+}

@@ -1,0 +1,69 @@
+public static class ServerService extends Service {
+  private final ConcurrentHashMap<Integer,Messenger> mClientMap=new ConcurrentHashMap<>();
+  @SuppressLint("HandlerLeak") private final Handler mReceiveClientMsgHandler=new Handler(){
+    @Override public void handleMessage(    Message msg){
+switch (msg.what) {
+case WHAT_SUBSCRIBE:
+        mClientMap.put(msg.arg1,msg.replyTo);
+      break;
+case WHAT_SEND:
+    sendMsg2Client(msg);
+  consumeServerProcessCallback(msg);
+break;
+case WHAT_UNSUBSCRIBE:
+mClientMap.remove(msg.arg1);
+break;
+default :
+super.handleMessage(msg);
+}
+}
+}
+;
+private final Messenger messenger=new Messenger(mReceiveClientMsgHandler);
+@Nullable @Override public IBinder onBind(Intent intent){
+return messenger.getBinder();
+}
+@Override public int onStartCommand(Intent intent,int flags,int startId){
+if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+Notification notification=UtilsBridge.getNotification(NotificationUtils.ChannelConfig.DEFAULT_CHANNEL_CONFIG,null);
+startForeground(1,notification);
+}
+if (intent != null) {
+Bundle extras=intent.getExtras();
+if (extras != null) {
+Message msg=Message.obtain(mReceiveClientMsgHandler,WHAT_SEND);
+msg.replyTo=messenger;
+msg.setData(extras);
+sendMsg2Client(msg);
+consumeServerProcessCallback(msg);
+}
+}
+return START_NOT_STICKY;
+}
+private void sendMsg2Client(final Message msg){
+final Message obtain=Message.obtain(msg);
+for (Messenger client : mClientMap.values()) {
+try {
+if (client != null) {
+client.send(Message.obtain(obtain));
+}
+}
+ catch (RemoteException e) {
+e.printStackTrace();
+}
+}
+obtain.recycle();
+}
+private void consumeServerProcessCallback(final Message msg){
+Bundle data=msg.getData();
+if (data != null) {
+String key=data.getString(KEY_STRING);
+if (key != null) {
+MessageCallback callback=subscribers.get(key);
+if (callback != null) {
+callback.messageCall(data);
+}
+}
+}
+}
+}

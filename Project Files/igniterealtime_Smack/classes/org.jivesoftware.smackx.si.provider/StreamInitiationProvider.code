@@ -1,0 +1,76 @@
+/** 
+ * The StreamInitiationProvider parses StreamInitiation packets.
+ * @author Alexander Wenckus
+ */
+public class StreamInitiationProvider extends IqProvider<StreamInitiation> {
+  private static final Logger LOGGER=Logger.getLogger(StreamInitiationProvider.class.getName());
+  @Override public StreamInitiation parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+    String id=parser.getAttributeValue("","id");
+    String mimeType=parser.getAttributeValue("","mime-type");
+    StreamInitiation initiation=new StreamInitiation();
+    String name=null;
+    String size=null;
+    String hash=null;
+    String date=null;
+    String desc=null;
+    boolean isRanged=false;
+    DataForm form=null;
+    DataFormProvider dataFormProvider=new DataFormProvider();
+    outerloop:     while (true) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT) {
+        String elementName=parser.getName();
+        String namespace=parser.getNamespace();
+        if (elementName.equals("file")) {
+          name=parser.getAttributeValue("","name");
+          size=parser.getAttributeValue("","size");
+          hash=parser.getAttributeValue("","hash");
+          date=parser.getAttributeValue("","date");
+        }
+ else         if (elementName.equals("desc")) {
+          desc=parser.nextText();
+        }
+ else         if (elementName.equals("range")) {
+          isRanged=true;
+        }
+ else         if (elementName.equals("x") && namespace.equals("jabber:x:data")) {
+          form=dataFormProvider.parse(parser);
+        }
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT) {
+        if (parser.getDepth() == initialDepth) {
+          break outerloop;
+        }
+        if (parser.getName().equals("file")) {
+          long fileSize=0;
+          if (size != null && size.trim().length() != 0) {
+            try {
+              fileSize=Long.parseLong(size);
+            }
+ catch (            NumberFormatException e) {
+              LOGGER.log(Level.SEVERE,"Failed to parse file size from " + fileSize,e);
+            }
+          }
+          Date fileDate=new Date();
+          if (date != null) {
+            try {
+              fileDate=XmppDateTime.parseDate(date);
+            }
+ catch (            ParseException e) {
+            }
+          }
+          File file=new File(name,fileSize);
+          file.setHash(hash);
+          file.setDate(fileDate);
+          file.setDesc(desc);
+          file.setRanged(isRanged);
+          initiation.setFile(file);
+        }
+      }
+    }
+    initiation.setSessionID(id);
+    initiation.setMimeType(mimeType);
+    initiation.setFeatureNegotiationForm(form);
+    return initiation;
+  }
+}

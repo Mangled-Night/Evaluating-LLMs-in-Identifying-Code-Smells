@@ -1,0 +1,15 @@
+/** 
+ * Disable periodic topology refresh.
+ */
+public void shutdown(){
+  if (clusterTopologyRefreshActivated.compareAndSet(true,false)) {
+    ScheduledFuture<?> scheduledFuture=clusterTopologyRefreshFuture.get();
+    try {
+      scheduledFuture.cancel(false);
+      clusterTopologyRefreshFuture.set(null);
+    }
+ catch (    Exception e) {
+      logger.debug("Could not cancel Cluster topology refresh",e);
+    }
+  }
+}

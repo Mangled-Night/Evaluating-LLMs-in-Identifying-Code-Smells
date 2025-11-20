@@ -1,0 +1,21 @@
+private static void writePackToClient(ServerConnection c,String taskID){
+  ByteBuffer buffer=c.allocate();
+  ResultSetHeaderPacket header=PacketUtil.getHeader(FIELD_COUNT);
+  byte packetId=header.packetId;
+  buffer=header.write(buffer,c,true);
+  for (  FieldPacket field : fields) {
+    field.packetId=++packetId;
+    buffer=field.write(buffer,c,true);
+  }
+  EOFPacket eof=new EOFPacket();
+  eof.packetId=++packetId;
+  buffer=eof.write(buffer,c,true);
+  RowDataPacket row=new RowDataPacket(FIELD_COUNT);
+  row.add(StringUtil.encode(taskID,c.getCharset()));
+  row.packetId=++packetId;
+  buffer=row.write(buffer,c,true);
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

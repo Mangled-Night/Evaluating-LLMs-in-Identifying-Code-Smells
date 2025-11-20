@@ -1,0 +1,15 @@
+@Test void timeoutParsingTest(){
+  checkUriTimeout("redis://auth@localhost:1234/5?timeout=5000",5000,TimeUnit.MILLISECONDS);
+  checkUriTimeout("redis://auth@localhost:1234/5?timeout=5000ms",5000,TimeUnit.MILLISECONDS);
+  checkUriTimeout("redis://auth@localhost:1234/5?timeout=5s",5,TimeUnit.SECONDS);
+  checkUriTimeout("redis://auth@localhost:1234/5?timeout=100us",100,TimeUnit.MICROSECONDS);
+  checkUriTimeout("redis://auth@localhost:1234/5?TIMEOUT=1000000NS",1000000,TimeUnit.NANOSECONDS);
+  checkUriTimeout("redis://auth@localhost:1234/5?timeout=60m",60,TimeUnit.MINUTES);
+  checkUriTimeout("redis://auth@localhost:1234/5?timeout=24h",24,TimeUnit.HOURS);
+  checkUriTimeout("redis://auth@localhost:1234/5?timeout=1d",1,TimeUnit.DAYS);
+  checkUriTimeout("redis://auth@localhost:1234/5?timeout=-1",0,TimeUnit.MILLISECONDS);
+  RedisURI defaultUri=new RedisURI();
+  checkUriTimeout("redis://auth@localhost:1234/5?timeout=junk",defaultUri.getTimeout().getSeconds(),TimeUnit.SECONDS);
+  assertThat(RedisURI.create("redis://auth@localhost:1234/5?timeout=5000ms")).hasToString("redis://****@localhost:1234/5?timeout=5s");
+  assertThat(RedisURI.create("redis://auth@localhost:1234/5?timeout=123ms")).hasToString("redis://****@localhost:1234/5?timeout=123000000ns");
+}

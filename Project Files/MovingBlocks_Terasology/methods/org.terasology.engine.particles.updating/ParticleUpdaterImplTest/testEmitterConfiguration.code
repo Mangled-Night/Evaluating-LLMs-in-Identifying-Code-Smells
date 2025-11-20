@@ -1,0 +1,18 @@
+@Test public void testEmitterConfiguration(){
+  EntityRef emitterEntity=mock(EntityRef.class);
+  Iterator<Component> componentIterator=getTestGeneratorsAndAffectors();
+  when(emitterEntity.iterateComponents()).thenReturn(() -> componentIterator);
+  ParticleEmitterComponent particleEmitterComponent=new ParticleEmitterComponent();
+  particleEmitterComponent.ownerEntity=emitterEntity;
+  when(emitterEntity.getComponent(ParticleEmitterComponent.class)).thenReturn(particleEmitterComponent);
+  particleUpdater.addEmitter(emitterEntity);
+  particleUpdater.configureEmitter(particleEmitterComponent);
+  for (  Component component : (Iterable<Component>)() -> componentIterator) {
+    if (component.getClass() == EnergyRangeGeneratorComponent.class) {
+      assertTrue(particleEmitterComponent.generatorFunctionMap.containsKey(component));
+    }
+ else     if (component.getClass() == VelocityAffectorComponent.class) {
+      assertTrue(particleEmitterComponent.affectorFunctionMap.containsKey(component));
+    }
+  }
+}

@@ -1,0 +1,61 @@
+private static class SharingResultConsumerImpl implements ResultConsumer {
+  private BlockingQueue<ResultModel> resultQueue=new ArrayBlockingQueue<ResultModel>(DistributorOptions.resultQueueSize);
+  private ReentrantLock queueLock=new ReentrantLock();
+  private InputStatusModel lastInputStatus;
+  @Override public boolean appendResult(  ResultModel result){
+    queueLock.lock();
+    try {
+      if (result instanceof InputStatusModel) {
+        lastInputStatus=(InputStatusModel)result;
+        return true;
+      }
+      while (!resultQueue.offer(result)) {
+        ResultModel discardResult=resultQueue.poll();
+      }
+    }
+  finally {
+      if (queueLock.isHeldByCurrentThread()) {
+        queueLock.unlock();
+      }
+    }
+    return true;
+  }
+  public void copyTo(  ResultConsumer consumer){
+    queueLock.lock();
+    try {
+      for (      ResultModel result : resultQueue) {
+        consumer.appendResult(result);
+      }
+      if (lastInputStatus != null) {
+        consumer.appendResult(lastInputStatus);
+      }
+    }
+  finally {
+      if (queueLock.isHeldByCurrentThread()) {
+        queueLock.unlock();
+      }
+    }
+  }
+  @Override public List<ResultModel> pollResults(){
+    return null;
+  }
+  @Override public long getLastAccessTime(){
+    return 0;
+  }
+  @Override public void close(){
+  }
+  @Override public boolean isClosed(){
+    return false;
+  }
+  @Override public boolean isPolling(){
+    return false;
+  }
+  @Override public String getConsumerId(){
+    return "shared-consumer";
+  }
+  @Override public void setConsumerId(  String consumerId){
+  }
+  @Override public boolean isHealthy(){
+    return true;
+  }
+}

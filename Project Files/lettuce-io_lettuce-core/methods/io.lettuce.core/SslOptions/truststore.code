@@ -1,0 +1,57 @@
+/** 
+ * Sets the Truststore file to load trusted certificates. The truststore file must be supported by {@link java.security.KeyStore} which is {@link KeyStore#getDefaultType()} by default. The truststore is reloaded oneach connection attempt that allows to replace certificates during runtime.
+ * @param truststore the truststore file, must not be {@code null}.
+ * @return {@code this}
+ */
+public Builder truststore(File truststore){
+  return truststore(truststore,null);
+}
+/** 
+ * Sets the Truststore file to load trusted certificates. The truststore file must be supported by {@link java.security.KeyStore} which is {@link KeyStore#getDefaultType()} by default. The truststore is reloaded oneach connection attempt that allows to replace certificates during runtime.
+ * @param truststore the truststore file, must not be {@code null}.
+ * @param truststorePassword the truststore password. May be empty to omit password and the truststore integrity check.
+ * @return {@code this}
+ */
+public Builder truststore(File truststore,String truststorePassword){
+  LettuceAssert.notNull(truststore,"Truststore must not be null");
+  LettuceAssert.isTrue(truststore.exists(),() -> String.format("Truststore file %s does not exist",truststore));
+  LettuceAssert.isTrue(truststore.isFile(),() -> String.format("Truststore file %s is not a file",truststore));
+  return truststore(Resource.from(truststore),getPassword(truststorePassword));
+}
+/** 
+ * Sets the Truststore resource to load trusted certificates. The truststore resource must be supported by {@link java.security.KeyStore} which is {@link KeyStore#getDefaultType()} by default. The truststore is reloaded oneach connection attempt that allows to replace certificates during runtime.
+ * @param truststore the truststore file, must not be {@code null}.
+ * @return {@code this}
+ */
+public Builder truststore(URL truststore){
+  return truststore(truststore,null);
+}
+/** 
+ * Sets the Truststore resource to load trusted certificates. The truststore resource must be supported by {@link java.security.KeyStore} which is {@link KeyStore#getDefaultType()} by default. The truststore is reloaded oneach connection attempt that allows to replace certificates during runtime.
+ * @param truststore the truststore file, must not be {@code null}.
+ * @param truststorePassword the truststore password. May be empty to omit password and the truststore integrity check.
+ * @return {@code this}
+ */
+public Builder truststore(URL truststore,String truststorePassword){
+  LettuceAssert.notNull(truststore,"Truststore must not be null");
+  this.truststore=truststore;
+  return truststore(Resource.from(truststore),getPassword(truststorePassword));
+}
+/** 
+ * Sets the Truststore resource to load trusted certificates. The truststore resource must be supported by {@link java.security.KeyStore} which is {@link KeyStore#getDefaultType()} by default. The truststore is reloaded oneach connection attempt that allows to replace certificates during runtime.
+ * @param resource the provider that opens a {@link InputStream} to the keystore file, must not be {@code null}.
+ * @param truststorePassword the truststore password. May be empty to omit password and the truststore integrity check.
+ * @return {@code this}
+ */
+public Builder truststore(Resource resource,char[] truststorePassword){
+  LettuceAssert.notNull(resource,"Truststore InputStreamProvider must not be null");
+  char[] passwordToUse=getPassword(truststorePassword);
+  this.truststorePassword=passwordToUse;
+  this.trustmanager=(builder,keyStoreType) -> {
+    try (InputStream is=resource.get()){
+      builder.trustManager(createTrustManagerFactory(is,passwordToUse,keyStoreType));
+    }
+   }
+;
+  return this;
+}

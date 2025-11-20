@@ -1,0 +1,17 @@
+private void recursiveUpdateOwnership(EntityRef entity,NetClient lastOwner,NetClient newOwner){
+  NetworkComponent networkComponent=entity.getComponent(NetworkComponent.class);
+  if (networkComponent != null) {
+    if (networkComponent.replicateMode == NetworkComponent.ReplicateMode.OWNER) {
+      logger.debug("{}'s owner changed from {} to {}, so replicating.",entity,lastOwner,newOwner);
+      if (lastOwner != null) {
+        lastOwner.setNetRemoved(networkComponent.getNetworkId());
+      }
+      if (newOwner != null) {
+        newOwner.setNetInitial(networkComponent.getNetworkId());
+      }
+    }
+    for (    EntityRef owned : ownedLookup.get(entity)) {
+      recursiveUpdateOwnership(owned,lastOwner,newOwner);
+    }
+  }
+}

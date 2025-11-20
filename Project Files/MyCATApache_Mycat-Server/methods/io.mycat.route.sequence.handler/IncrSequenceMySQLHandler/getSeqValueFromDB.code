@@ -1,0 +1,41 @@
+private long getSeqValueFromDB(SequenceVal seqVal){
+  if (LOGGER.isDebugEnabled()) {
+    LOGGER.debug("get next segement of sequence from db for sequnce:" + seqVal.seqName + " curVal "+ seqVal.curVal);
+  }
+  boolean isLock=seqVal.fetching.compareAndSet(false,true);
+  if (isLock) {
+    if (seqVal.successFetched == true) {
+      Long nexVal=seqVal.nextValue();
+      if (seqVal.isNexValValid(nexVal)) {
+        seqVal.fetching.compareAndSet(true,false);
+        return nexVal;
+      }
+    }
+    Long[] values=seqVal.fetchSequenceFromDB(mysqlSeqFetcher,1,true);
+    if (values == null) {
+      throw new RuntimeException("can't fetch sequnce in db,sequnce :" + seqVal.seqName + " detail:"+ mysqlSeqFetcher.getLastestError(seqVal.seqName));
+    }
+ else {
+      seqVal.setCurValue(values[0]);
+      seqVal.maxSegValue=values[1];
+      seqVal.successFetched=true;
+      return values[0];
+    }
+  }
+ else {
+    long count=0;
+    while (seqVal.fetching.get() || seqVal.successFetched == false) {
+      try {
+        Thread.sleep(10);
+        if (++count > 10000L) {
+          return this.getSeqValueFromDB(seqVal);
+        }
+      }
+ catch (      InterruptedException e) {
+        e.printStackTrace();
+        return this.getSeqValueFromDB(seqVal);
+      }
+    }
+    return this.getNextValidSeqVal(seqVal);
+  }
+}

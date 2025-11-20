@@ -1,0 +1,62 @@
+public class ModuleEnvironmentSandbox implements SerializationSandbox {
+  private final TypeRegistry typeRegistry;
+  private final ModuleManager moduleManager;
+  public ModuleEnvironmentSandbox(  ModuleManager moduleManager,  TypeRegistry typeRegistry){
+    this.moduleManager=moduleManager;
+    this.typeRegistry=typeRegistry;
+  }
+  private ModuleEnvironment getEnvironment(){
+    return moduleManager.getEnvironment();
+  }
+  @Override public <T>Optional<Class<? extends T>> findSubTypeOf(  String subTypeIdentifier,  Class<T> clazz){
+    if (getModuleProviding(clazz) == null) {
+      return typeRegistry.load(subTypeIdentifier).filter(clazz::isAssignableFrom).map(sub -> (Class<? extends T>)sub);
+    }
+    Iterator<Class<? extends T>> possibilities=typeRegistry.getSubtypesOf(clazz).stream().filter(subclass -> doesSubclassMatch(subclass,subTypeIdentifier)).iterator();
+    if (possibilities.hasNext()) {
+      Class<? extends T> possibility=possibilities.next();
+      if (possibilities.hasNext()) {
+        return Optional.empty();
+      }
+      return Optional.of(possibility);
+    }
+    return Optional.empty();
+  }
+  private boolean doesSubclassMatch(  Class<?> subclass,  String subTypeIdentifier){
+    if (subclass == null) {
+      return false;
+    }
+    SimpleUri subTypeUri=new SimpleUri(subTypeIdentifier);
+    Name subTypeName=subTypeUri.isValid() ? subTypeUri.getObjectName() : new Name(subTypeIdentifier);
+    boolean fullNameEquals=subTypeName.toString().equals((subclass.getName()));
+    if (fullNameEquals) {
+      return true;
+    }
+    Name providingModule=getModuleProviding(subclass);
+    Name givenModuleName;
+    if (subTypeUri.isValid()) {
+      givenModuleName=subTypeUri.getModuleName();
+    }
+ else {
+      givenModuleName=ModuleContext.getContext() != null ? ModuleContext.getContext().getId() : null;
+    }
+    return Objects.equals(givenModuleName,providingModule) && subTypeName.toString().equals(subclass.getSimpleName());
+  }
+  @Override public <T>boolean isValidTypeHandlerDeclaration(  TypeInfo<T> type,  TypeHandler<T> typeHandler){
+    Name moduleDeclaringHandler=getModuleProviding(typeHandler.getClass());
+    if (moduleDeclaringHandler == null || moduleDeclaringHandler.equals(new Name("engine"))) {
+      return true;
+    }
+    if (type.getRawType().getClassLoader() == null) {
+      return false;
+    }
+    Name moduleDeclaringType=getModuleProviding(type.getRawType());
+    return Objects.equals(moduleDeclaringType,moduleDeclaringHandler);
+  }
+  private Name getModuleProviding(  Class<?> type){
+    if (type.getClassLoader() == null) {
+      return null;
+    }
+    return getEnvironment().getModuleProviding(type);
+  }
+}

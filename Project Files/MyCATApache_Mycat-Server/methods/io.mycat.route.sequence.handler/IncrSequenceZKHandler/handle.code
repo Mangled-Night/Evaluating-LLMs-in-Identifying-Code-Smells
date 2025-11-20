@@ -1,0 +1,33 @@
+private void handle(String key) throws Exception {
+  String table=key.substring(0,key.indexOf(KEY_MIN_NAME));
+  InterProcessSemaphoreMutex interProcessSemaphoreMutex=interProcessSemaphoreMutexThreadLocal.get();
+  if (interProcessSemaphoreMutex == null) {
+    interProcessSemaphoreMutex=new InterProcessSemaphoreMutex(client,PATH + "/" + table+ SEQ+ LOCK);
+    interProcessSemaphoreMutexThreadLocal.set(interProcessSemaphoreMutex);
+  }
+  Map<String,Map<String,String>> tableParaValMap=tableParaValMapThreadLocal.get();
+  if (tableParaValMap == null) {
+    tableParaValMap=new HashMap<>();
+    tableParaValMapThreadLocal.set(tableParaValMap);
+  }
+  Map<String,String> paraValMap=tableParaValMap.get(table);
+  if (paraValMap == null) {
+    paraValMap=new ConcurrentHashMap<>();
+    tableParaValMap.put(table,paraValMap);
+    String seqPath=PATH + ZookeeperPath.ZK_SEPARATOR.getKey() + table+ SEQ;
+    Stat stat=this.client.checkExists().forPath(seqPath);
+    if (stat == null || (stat.getDataLength() == 0)) {
+      paraValMap.put(table + KEY_MIN_NAME,props.getProperty(key));
+      paraValMap.put(table + KEY_MAX_NAME,props.getProperty(table + KEY_MAX_NAME));
+      paraValMap.put(table + KEY_CUR_NAME,props.getProperty(table + KEY_CUR_NAME));
+      try {
+        String val=props.getProperty(table + KEY_MIN_NAME);
+        client.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT).forPath(PATH + "/" + table+ SEQ,val.getBytes());
+      }
+ catch (      Exception e) {
+        LOGGER.debug("Node exists! Maybe other instance is initializing!");
+      }
+    }
+    fetchNextPeriod(table);
+  }
+}

@@ -1,0 +1,29 @@
+public final class ReferenceManager extends Manager {
+  public static final String NAMESPACE="urn:xmpp:reference:0";
+  private static final Map<XMPPConnection,ReferenceManager> INSTANCES=new WeakHashMap<>();
+static {
+    XMPPConnectionRegistry.addConnectionCreationListener(new ConnectionCreationListener(){
+      @Override public void connectionCreated(      XMPPConnection connection){
+        getInstanceFor(connection);
+      }
+    }
+);
+  }
+  private ReferenceManager(  XMPPConnection connection){
+    super(connection);
+    ServiceDiscoveryManager.getInstanceFor(connection).addFeature(NAMESPACE);
+  }
+  /** 
+ * Return a new instance of the ReferenceManager for the given connection.
+ * @param connection xmpp connection
+ * @return reference manager instance
+ */
+  public static synchronized ReferenceManager getInstanceFor(  XMPPConnection connection){
+    ReferenceManager manager=INSTANCES.get(connection);
+    if (manager == null) {
+      manager=new ReferenceManager(connection);
+      INSTANCES.put(connection,manager);
+    }
+    return manager;
+  }
+}

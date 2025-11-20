@@ -1,0 +1,16 @@
+private void pushMsgToZK(String rootZkPath,String child,int status,String msg,String binlogFile,String pos) throws Exception {
+  LOGGER.error(msg);
+  String path=rootZkPath + "/" + child;
+  TaskStatus taskStatus=new TaskStatus();
+  taskStatus.setMsg(msg);
+  taskStatus.setStatus(status);
+  task.setStatus(status);
+  taskStatus.setBinlogFile(binlogFile);
+  taskStatus.setPos(Long.parseLong(pos));
+  if (ZKUtils.getConnection().checkExists().forPath(path) == null) {
+    ZKUtils.getConnection().create().forPath(path,JSON.toJSONBytes(taskStatus));
+  }
+ else {
+    ZKUtils.getConnection().setData().forPath(path,JSON.toJSONBytes(taskStatus));
+  }
+}

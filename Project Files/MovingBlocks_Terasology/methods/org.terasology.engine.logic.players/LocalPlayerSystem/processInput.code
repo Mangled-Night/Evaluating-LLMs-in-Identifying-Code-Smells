@@ -1,0 +1,34 @@
+private void processInput(EntityRef entity,CharacterMovementComponent characterMovementComponent){
+  lookYaw=(float)((lookYaw - lookYawDelta) % 360);
+  lookYawDelta=0f;
+  lookPitch=(float)Math.clamp(-89,89,lookPitch + lookPitchDelta);
+  lookPitchDelta=0f;
+  Vector3f relMove=new Vector3f(relativeMovement);
+  relMove.y=0;
+  Quaternionf viewRotation=new Quaternionf();
+switch (characterMovementComponent.mode) {
+case CROUCHING:
+case WALKING:
+    if (!config.getRendering().isVrSupport()) {
+      viewRotation.rotationYXZ(Math.toRadians(lookYaw),0,0);
+      playerCamera.setOrientation(viewRotation);
+    }
+  playerCamera.getOrientation(new Quaternionf()).transform(relMove);
+break;
+case CLIMBING:
+relMove.y+=relativeMovement.y;
+break;
+default :
+if (!config.getRendering().isVrSupport()) {
+viewRotation.rotationYXZ(Math.toRadians(lookYaw),Math.toRadians(lookPitch),0);
+playerCamera.setOrientation(viewRotation);
+}
+playerCamera.getOrientation(new Quaternionf()).transform(relMove);
+relMove.y+=relativeMovement.y;
+break;
+}
+if (relMove.isFinite()) {
+entity.send(new CharacterMoveInputEvent(inputSequenceNumber++,lookPitch,lookYaw,relMove,run,crouch,jump,time.getGameDeltaInMs()));
+}
+jump=false;
+}

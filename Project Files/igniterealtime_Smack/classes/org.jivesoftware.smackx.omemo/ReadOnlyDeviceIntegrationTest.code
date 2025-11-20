@@ -1,0 +1,24 @@
+public class ReadOnlyDeviceIntegrationTest extends AbstractTwoUsersOmemoIntegrationTest {
+  public ReadOnlyDeviceIntegrationTest(  SmackIntegrationTestEnvironment environment) throws XMPPException.XMPPErrorException, SmackException.NotConnectedException, InterruptedException, SmackException.NoResponseException, TestNotPossibleException {
+    super(environment);
+  }
+  @SmackIntegrationTest public void test() throws InterruptedException, SmackException.NoResponseException, SmackException.NotLoggedInException, SmackException.NotConnectedException, CryptoFailedException, UndecidedOmemoIdentityException, IOException {
+    boolean prevIgnoreReadOnlyConf=OmemoConfiguration.getIgnoreReadOnlyDevices();
+    int prevMaxMessageCounter=OmemoConfiguration.getMaxReadOnlyMessageCount();
+    OmemoConfiguration.setIgnoreReadOnlyDevices(true);
+    OmemoConfiguration.setMaxReadOnlyMessageCount(5);
+    alice.getOmemoService().getOmemoStoreBackend().storeOmemoMessageCounter(alice.getOwnDevice(),bob.getOwnDevice(),0);
+    for (int i=0; i < 5; i++) {
+      assertEquals(i,alice.getOmemoService().getOmemoStoreBackend().loadOmemoMessageCounter(alice.getOwnDevice(),bob.getOwnDevice()));
+      OmemoMessage.Sent message=alice.encrypt(bob.getOwnJid(),"Hello World!");
+      assertFalse(message.getSkippedDevices().containsKey(bob.getOwnDevice()));
+    }
+    OmemoMessage.Sent message=alice.encrypt(bob.getOwnJid(),"Hello World!");
+    Throwable exception=message.getSkippedDevices().get(bob.getOwnDevice());
+    assertTrue(exception instanceof ReadOnlyDeviceException);
+    assertEquals(bob.getOwnDevice(),((ReadOnlyDeviceException)exception).getDevice());
+    alice.getOmemoService().getOmemoStoreBackend().storeOmemoMessageCounter(alice.getOwnDevice(),bob.getOwnDevice(),0);
+    OmemoConfiguration.setMaxReadOnlyMessageCount(prevMaxMessageCounter);
+    OmemoConfiguration.setIgnoreReadOnlyDevices(prevIgnoreReadOnlyConf);
+  }
+}

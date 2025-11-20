@@ -1,0 +1,19 @@
+public synchronized boolean saveDataHostIndexToZk(String dataHost,int curIndex){
+  boolean result=false;
+  try {
+    try {
+      dnindexLock.acquire(30,TimeUnit.SECONDS);
+      String path=ZKUtils.getZKBasePath() + "bindata/dnindex.properties";
+      Map<String,String> propertyMap=new HashMap<>();
+      propertyMap.put(dataHost,String.valueOf(curIndex));
+      result=ZKUtils.writeProperty(path,propertyMap);
+    }
+  finally {
+      dnindexLock.release();
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.warn("saveDataHostIndexToZk err:",e);
+  }
+  return result;
+}

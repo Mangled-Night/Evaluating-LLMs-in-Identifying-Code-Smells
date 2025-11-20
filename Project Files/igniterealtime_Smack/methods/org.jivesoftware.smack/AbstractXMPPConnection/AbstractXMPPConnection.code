@@ -1,0 +1,37 @@
+/** 
+ * Create a new XMPPConnection to an XMPP server.
+ * @param configuration The configuration which is used to establish the connection.
+ */
+protected AbstractXMPPConnection(ConnectionConfiguration configuration){
+  saslAuthentication=new SASLAuthentication(this,configuration);
+  config=configuration;
+  buildNonzaCallback().listenFor(SaslNonza.Challenge.class,c -> {
+    try {
+      saslAuthentication.challengeReceived(c);
+    }
+ catch (    SmackException|InterruptedException e) {
+      saslAuthentication.authenticationFailed(e);
+    }
+  }
+).listenFor(SaslNonza.Success.class,s -> {
+    try {
+      saslAuthentication.authenticated(s);
+    }
+ catch (    SmackSaslException|NotConnectedException|InterruptedException e) {
+      saslAuthentication.authenticationFailed(e);
+    }
+  }
+).listenFor(SaslNonza.SASLFailure.class,f -> saslAuthentication.authenticationFailed(f)).install();
+  SmackDebuggerFactory debuggerFactory=configuration.getDebuggerFactory();
+  if (debuggerFactory != null) {
+    debugger=debuggerFactory.create(this);
+  }
+ else {
+    debugger=null;
+  }
+  for (  ConnectionCreationListener listener : XMPPConnectionRegistry.getConnectionCreationListeners()) {
+    listener.connectionCreated(this);
+  }
+  StanzaIdSource stanzaIdSource=configuration.constructStanzaIdSource();
+  stanzaFactory=new StanzaFactory(stanzaIdSource);
+}

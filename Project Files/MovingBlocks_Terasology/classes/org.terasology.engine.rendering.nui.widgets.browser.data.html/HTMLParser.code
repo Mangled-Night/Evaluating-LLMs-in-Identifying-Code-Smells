@@ -1,0 +1,24 @@
+public class HTMLParser {
+  private HTMLDocumentBuilderFactory htmlDocumentBuilderFactory;
+  public HTMLParser(  HTMLFontResolver htmlFontResolver){
+    this(new DefaultHTMLDocumentBuilderFactory(htmlFontResolver));
+  }
+  public HTMLParser(  HTMLDocumentBuilderFactory htmlDocumentBuilderFactory){
+    this.htmlDocumentBuilderFactory=htmlDocumentBuilderFactory;
+  }
+  public DocumentData parseHTMLDocument(  String document) throws HTMLParseException {
+    try {
+      SAXParserFactory saxParserFactory=SAXParserFactory.newInstance();
+      saxParserFactory.setNamespaceAware(false);
+      saxParserFactory.setValidating(false);
+      saxParserFactory.setXIncludeAware(false);
+      SAXParser saxParser=saxParserFactory.newSAXParser();
+      HTMLDocumentHandler dh=new HTMLDocumentHandler(htmlDocumentBuilderFactory);
+      saxParser.parse(new ByteArrayInputStream(document.getBytes("UTF-8")),dh);
+      return dh.getDocument();
+    }
+ catch (    ParserConfigurationException|SAXException|IOException exp) {
+      throw new HTMLParseException(exp);
+    }
+  }
+}

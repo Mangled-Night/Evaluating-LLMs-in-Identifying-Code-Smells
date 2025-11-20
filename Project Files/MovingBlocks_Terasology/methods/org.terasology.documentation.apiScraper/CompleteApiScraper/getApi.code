@@ -1,0 +1,69 @@
+/** 
+ * @return Project's Packages, Interfaces, Classes and Methods
+ * @throws Exception if the module environment cannot be loaded
+ */
+static StringBuffer getApi() throws Exception {
+  ModuleManager moduleManager=ModuleManagerFactory.create();
+  ModuleEnvironment environment=moduleManager.getEnvironment();
+  ClassLoader classLoader=Thread.currentThread().getContextClassLoader();
+  Multimap<String,String> api=Multimaps.newMultimap(new HashMap<String,Collection<String>>(),ArrayList::new);
+  for (  Class<?> apiClass : environment.getTypesAnnotatedWith(API.class)) {
+    boolean isPackage=apiClass.isSynthetic();
+    URL location;
+    String category;
+    String apiPackage="";
+    if (isPackage) {
+      apiPackage=apiClass.getPackage().getName();
+      location=classLoader.getResource(apiPackage.replace('.','/'));
+    }
+ else {
+      location=apiClass.getResource('/' + apiClass.getName().replace('.','/') + ".class");
+    }
+    if (location == null) {
+      logger.error("Failed to get a class/package location, skipping " + apiClass);
+      continue;
+    }
+switch (location.getProtocol()) {
+case "jar":
+      String categoryFragment=location.getPath();
+    int bang=categoryFragment.lastIndexOf("!");
+  int hyphen=categoryFragment.lastIndexOf("-",bang);
+int slash=categoryFragment.lastIndexOf("/",hyphen);
+category=categoryFragment.substring(slash + 1,hyphen);
+if (isPackage) {
+api.put(category,apiPackage + " (PACKAGE)");
+}
+ else {
+addToApi(category,apiClass,api);
+}
+break;
+case "file":
+category=TERASOLOGY_API_CLASS_CATEGORY;
+if (isPackage) {
+api.put(category,apiPackage + " (PACKAGE)");
+}
+ else {
+addToApi(category,apiClass,api);
+}
+break;
+default :
+logger.error("Unknown protocol for: " + apiClass + ", came from "+ location);
+}
+}
+api.putAll(EXTERNAL,ExternalApiWhitelist.CLASSES.stream().map(clazz -> clazz.getName() + " (CLASS)").collect(Collectors.toSet()));
+api.putAll(EXTERNAL,ExternalApiWhitelist.PACKAGES.stream().map(packagee -> packagee + " (PACKAGE)").collect(Collectors.toSet()));
+StringBuffer stringApi=new StringBuffer();
+stringApi.append("# Modding API:\n");
+for (String key : api.keySet()) {
+stringApi.append("## ");
+stringApi.append(key);
+stringApi.append("\n");
+for (String value : api.get(key)) {
+stringApi.append("* ");
+stringApi.append(value);
+stringApi.append("\n");
+}
+stringApi.append("\n");
+}
+return stringApi;
+}

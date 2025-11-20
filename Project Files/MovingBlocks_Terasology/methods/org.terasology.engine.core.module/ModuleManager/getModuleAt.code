@@ -1,0 +1,23 @@
+/** 
+ * Look up the module registered with this path. <p> This queries modules that have already been registered. It does <em>not</em> register anything new for the path or make any addition to the current module search path.
+ * @return empty if no modules match the path
+ * @throws VerifyException if more than one module matches
+ */
+public Optional<Module> getModuleAt(Path path){
+  final var matchingModules=new HashSet<Module>();
+  final var absolutePath=path.toAbsolutePath().normalize();
+  for (  Module module : registry) {
+    for (    Path modulePath : module.getResources().getRootPaths()) {
+      if (modulePath.toAbsolutePath().normalize().equals(absolutePath)) {
+        matchingModules.add(module);
+      }
+    }
+  }
+  if (matchingModules.isEmpty()) {
+    return Optional.empty();
+  }
+ else {
+    verify(matchingModules.size() == 1,"Path {} matched multiple modules: {}",path,matchingModules);
+    return Optional.of(matchingModules.iterator().next());
+  }
+}

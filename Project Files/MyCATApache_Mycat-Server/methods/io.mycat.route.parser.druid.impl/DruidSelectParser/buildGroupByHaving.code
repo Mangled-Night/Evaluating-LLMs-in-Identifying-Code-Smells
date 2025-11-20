@@ -1,0 +1,30 @@
+private HavingCols buildGroupByHaving(SQLExpr having,Map<String,String> aliaColumns){
+  if (having == null) {
+    return null;
+  }
+  SQLBinaryOpExpr expr=((SQLBinaryOpExpr)having);
+  SQLExpr left=expr.getLeft();
+  SQLBinaryOperator operator=expr.getOperator();
+  SQLExpr right=expr.getRight();
+  String leftValue=null;
+  ;
+  if (left instanceof SQLAggregateExpr) {
+    leftValue=((SQLAggregateExpr)left).getMethodName() + "(" + ((SQLAggregateExpr)left).getArguments().get(0)+ ")";
+    String aggrColumnAlias=getAliaColumn(aliaColumns,leftValue);
+    if (aggrColumnAlias != null) {
+      expr.setLeft(new SQLIdentifierExpr(aggrColumnAlias));
+      leftValue=aggrColumnAlias;
+    }
+  }
+ else   if (left instanceof SQLIdentifierExpr) {
+    leftValue=((SQLIdentifierExpr)left).getName();
+  }
+  String rightValue=null;
+  if (right instanceof SQLNumericLiteralExpr) {
+    rightValue=right.toString();
+  }
+ else   if (right instanceof SQLTextLiteralExpr) {
+    rightValue=StringUtil.removeBackquote(right.toString());
+  }
+  return new HavingCols(leftValue,rightValue,operator.getName());
+}

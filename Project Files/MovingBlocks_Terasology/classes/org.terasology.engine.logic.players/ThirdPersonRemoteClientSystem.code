@@ -1,0 +1,223 @@
+/** 
+ * This client system handles displaying held items for all remote players in multiplayer session.
+ */
+@RegisterSystem(RegisterMode.CLIENT) public class ThirdPersonRemoteClientSystem extends BaseComponentSystem implements UpdateSubscriberSystem {
+  private static final Logger logger=LoggerFactory.getLogger(ThirdPersonRemoteClientSystem.class);
+  private static final int USEANIMATIONLENGTH=200;
+  @In private LocalPlayer localPlayer;
+  @In private LocalPlayerSystem localPlayerSystem;
+  @In private EntityManager entityManager;
+  @In private Time time;
+  /** 
+ * Ensures held item mount point entity exists, attaches it to the character and sets its transform.
+ * @param event the activation that triggered the need to consider changing a held item
+ * @param character the character for which we need to consider the held item
+ * @param remotePersonHeldItemMountPointComponent data for the mount point on the remote character
+ */
+  @ReceiveEvent public void ensureClientSideEntityOnHeldItemMountPoint(  OnActivatedComponent event,  EntityRef character,  RemotePersonHeldItemMountPointComponent remotePersonHeldItemMountPointComponent){
+    if (relatesToLocalPlayer(character)) {
+      logger.debug("ensureClientSideEntityOnHeldItemMountPoint found its given character to relate to the local" + " player, ignoring: {}",character);
+      return;
+    }
+    if (!remotePersonHeldItemMountPointComponent.mountPointEntity.exists()) {
+      EntityBuilder builder=entityManager.newBuilder("engine:RemotePersonHeldItemMountPoint");
+      builder.setPersistent(false);
+      remotePersonHeldItemMountPointComponent.mountPointEntity=builder.build();
+      character.saveComponent(remotePersonHeldItemMountPointComponent);
+    }
+    Location.removeChild(character,remotePersonHeldItemMountPointComponent.mountPointEntity);
+    Location.attachChild(character,remotePersonHeldItemMountPointComponent.mountPointEntity,remotePersonHeldItemMountPointComponent.translate,new Quaternionf().rotationYXZ(Math.toRadians(remotePersonHeldItemMountPointComponent.rotateDegrees.y),Math.toRadians(remotePersonHeldItemMountPointComponent.rotateDegrees.x),Math.toRadians(remotePersonHeldItemMountPointComponent.rotateDegrees.z)),remotePersonHeldItemMountPointComponent.scale);
+  }
+  @ReceiveEvent public void ensureHeldItemIsMountedOnLoad(  OnChangedComponent event,  EntityRef clientEntity,  ClientComponent clientComponent){
+    if (relatesToLocalPlayer(clientEntity)) {
+      logger.debug("ensureHeldItemIsMountedOnLoad found its given clientEntity to relate to the local player, " + "ignoring: {}",clientEntity);
+      return;
+    }
+    if (clientEntity.exists() && clientComponent.character != EntityRef.NULL) {
+      logger.debug("ensureHeldItemIsMountedOnLoad says a given clientEntity exists, has a character, and isn't " + "related to the local player: {}",clientEntity);
+      CharacterHeldItemComponent characterHeldItemComponent=clientComponent.character.getComponent(CharacterHeldItemComponent.class);
+      if (characterHeldItemComponent != null && !(clientComponent.character.equals(localPlayer.getCharacterEntity()))) {
+        linkHeldItemLocationForRemotePlayer(characterHeldItemComponent.selectedItem,clientComponent.character);
+      }
+    }
+ else {
+      logger.debug("ensureHeldItemIsMountedOnLoad given a remote client, but one that didn't properly exist?");
+    }
+  }
+  @Command(shortDescription="Sets the held item mount point translation for remote characters") public void setRemotePlayersHeldItemMountPointTranslations(  @CommandParam("x") float x,  @CommandParam("y") float y,  @CommandParam("z") float z){
+    for (    EntityRef remotePlayer : entityManager.getEntitiesWith(RemotePersonHeldItemMountPointComponent.class)) {
+      RemotePersonHeldItemMountPointComponent remoteMountPointComponent=remotePlayer.getComponent(RemotePersonHeldItemMountPointComponent.class);
+      remoteMountPointComponent.translate.set(x,y,z);
+    }
+  }
+  @Command(shortDescription="Sets the held item mount point rotation for remote characters") public void setRemotePlayersHeldItemMountPointRotations(  @CommandParam("x") float x,  @CommandParam("y") float y,  @CommandParam("z") float z){
+    for (    EntityRef remotePlayer : entityManager.getEntitiesWith(RemotePersonHeldItemMountPointComponent.class)) {
+      RemotePersonHeldItemMountPointComponent remoteMountPointComponent=remotePlayer.getComponent(RemotePersonHeldItemMountPointComponent.class);
+      remoteMountPointComponent.rotateDegrees.set(x,y,z);
+    }
+  }
+  @ReceiveEvent public void onHeldItemActivated(  OnActivatedComponent event,  EntityRef player,  CharacterHeldItemComponent heldItemComponent,  CharacterComponent characterComponents){
+    if (relatesToLocalPlayer(player)) {
+      logger.debug("onHeldItemActivated found its given player to relate to the local player, ignoring: {}",player);
+      return;
+    }
+    logger.debug("onHeldItemActivated says the given player is not the local player's character entity: {}",player);
+    EntityRef newItem=heldItemComponent.selectedItem;
+    linkHeldItemLocationForRemotePlayer(newItem,player);
+  }
+  @ReceiveEvent public void onHeldItemChanged(  OnChangedComponent event,  EntityRef character,  CharacterHeldItemComponent heldItemComponent,  CharacterComponent characterComponents){
+    if (relatesToLocalPlayer(character)) {
+      logger.debug("onHeldItemChanged found its given character to relate to the local player, ignoring: {}",character);
+      return;
+    }
+    logger.debug("onHeldItemChanged says the given character is not the local player's character entity: {}",character);
+    EntityRef newItem=heldItemComponent.selectedItem;
+    linkHeldItemLocationForRemotePlayer(newItem,character);
+  }
+  /** 
+ * Changes held item entity. <p> Detaches old held item and removes its components. Adds components to new held item and attaches it to the mount point entity.
+ */
+  private void linkHeldItemLocationForRemotePlayer(  EntityRef newItem,  EntityRef player){
+    if (relatesToLocalPlayer(player)) {
+      logger.debug("linkHeldItemLocationForRemotePlayer called with an entity that relates to the local player," + " ignoring{}",player);
+      return;
+    }
+    EntityRef currentHeldItem=EntityRef.NULL;
+    for (    EntityRef heldItemCandidate : entityManager.getEntitiesWith(ItemIsRemotelyHeldComponent.class)) {
+      EntityRef remotePlayerCandidate=heldItemCandidate.getComponent(ItemIsRemotelyHeldComponent.class).remotePlayer;
+      logger.debug("For held item candidate {} got its player candidate as {}",heldItemCandidate,remotePlayerCandidate);
+      if (remotePlayerCandidate.equals(player)) {
+        logger.debug("Thinking we found a match with player {} so counting this held item as relevant for " + "processing",player);
+        currentHeldItem=heldItemCandidate;
+        if (newItem.equals(EntityRef.NULL)) {
+          logger.debug("Found an existing held item but the new request was to no longer hold anything so " + "destroying {}",currentHeldItem);
+          currentHeldItem.destroy();
+          return;
+        }
+        break;
+      }
+    }
+    if (newItem != null && !newItem.equals(EntityRef.NULL) && !newItem.equals(currentHeldItem)) {
+      RemotePersonHeldItemMountPointComponent mountPointComponent=player.getComponent(RemotePersonHeldItemMountPointComponent.class);
+      if (mountPointComponent != null) {
+        if (currentHeldItem != EntityRef.NULL) {
+          currentHeldItem.destroy();
+        }
+        currentHeldItem=entityManager.create();
+        logger.debug("linkHeldItemLocationForRemotePlayer is now creating a new held item {}",currentHeldItem);
+        for (        Component component : newItem.iterateComponents()) {
+          if (component instanceof VisualComponent && !(component instanceof FirstPersonHeldItemTransformComponent)) {
+            currentHeldItem.addComponent(component);
+          }
+        }
+        currentHeldItem.addComponent(new LocationComponent());
+        ItemIsRemotelyHeldComponent itemIsRemotelyHeldComponent=new ItemIsRemotelyHeldComponent();
+        itemIsRemotelyHeldComponent.remotePlayer=player;
+        currentHeldItem.addComponent(itemIsRemotelyHeldComponent);
+        RemotePersonHeldItemTransformComponent heldItemTransformComponent=currentHeldItem.getComponent(RemotePersonHeldItemTransformComponent.class);
+        if (heldItemTransformComponent == null) {
+          heldItemTransformComponent=new RemotePersonHeldItemTransformComponent();
+          currentHeldItem.addComponent(heldItemTransformComponent);
+        }
+        Location.attachChild(mountPointComponent.mountPointEntity,currentHeldItem,heldItemTransformComponent.translate,new Quaternionf().rotationYXZ(Math.toRadians(heldItemTransformComponent.rotateDegrees.y),Math.toRadians(heldItemTransformComponent.rotateDegrees.x),Math.toRadians(heldItemTransformComponent.rotateDegrees.z)),heldItemTransformComponent.scale);
+      }
+    }
+ else {
+      logger.info("Somehow ended up in the else during linkHeldItemLocationForRemotePlayer - current item was " + "{} and new item {}",currentHeldItem,newItem);
+    }
+  }
+  /** 
+ * Modifies the remote players' held item mount points to show and move their held items at their location. Clean up no longer needed held item entities. <p> TODO: Also responsible for catching characters without current held item entities and then create them. Should be moved elsewhere
+ */
+  @Override public void update(  float delta){
+    Set<EntityRef> heldItemsForReview=Sets.newHashSet(entityManager.getEntitiesWith(ItemIsRemotelyHeldComponent.class));
+    for (    EntityRef remotePlayer : entityManager.getEntitiesWith(CharacterComponent.class,PlayerCharacterComponent.class)) {
+      if (relatesToLocalPlayer(remotePlayer)) {
+        continue;
+      }
+      EntityRef currentHeldItem=EntityRef.NULL;
+      Iterator<EntityRef> heldItermsIterator=heldItemsForReview.iterator();
+      while (heldItermsIterator.hasNext()) {
+        EntityRef heldItemCandidate=heldItermsIterator.next();
+        ItemIsRemotelyHeldComponent itemIsRemotelyHeldComponent=heldItemCandidate.getComponent(ItemIsRemotelyHeldComponent.class);
+        if (itemIsRemotelyHeldComponent.remotePlayer.equals(remotePlayer)) {
+          currentHeldItem=heldItemCandidate;
+          heldItermsIterator.remove();
+          break;
+        }
+      }
+      if (currentHeldItem == EntityRef.NULL) {
+        if (remotePlayer.hasComponent(CharacterHeldItemComponent.class)) {
+          CharacterHeldItemComponent characterHeldItemComponent=remotePlayer.getComponent(CharacterHeldItemComponent.class);
+          if (characterHeldItemComponent != null && !characterHeldItemComponent.selectedItem.equals(EntityRef.NULL)) {
+            linkHeldItemLocationForRemotePlayer(remotePlayer.getComponent(CharacterHeldItemComponent.class).selectedItem,remotePlayer);
+          }
+        }
+      }
+      CharacterHeldItemComponent characterHeldItemComponent=remotePlayer.getComponent(CharacterHeldItemComponent.class);
+      RemotePersonHeldItemMountPointComponent mountPointComponent=remotePlayer.getComponent(RemotePersonHeldItemMountPointComponent.class);
+      if (characterHeldItemComponent == null || mountPointComponent == null) {
+        continue;
+      }
+      LocationComponent locationComponent=mountPointComponent.mountPointEntity.getComponent(LocationComponent.class);
+      if (locationComponent == null) {
+        continue;
+      }
+      long timeElapsedSinceLastUsed=time.getGameTimeInMs() - characterHeldItemComponent.lastItemUsedTime;
+      float animateAmount=0f;
+      if (timeElapsedSinceLastUsed < USEANIMATIONLENGTH) {
+        animateAmount=1f - Math.abs(((float)timeElapsedSinceLastUsed / (float)USEANIMATIONLENGTH) - 0.5f);
+      }
+      float addPitch=15f * animateAmount;
+      float addYaw=10f * animateAmount;
+      locationComponent.setLocalRotation(new Quaternionf().rotationYXZ(Math.toRadians(mountPointComponent.rotateDegrees.y + addYaw),Math.toRadians(mountPointComponent.rotateDegrees.x + addPitch),Math.toRadians(mountPointComponent.rotateDegrees.z)));
+      Vector3f offset=new Vector3f(0.05f * animateAmount,-0.24f * animateAmount,0f);
+      offset.add(mountPointComponent.translate);
+      locationComponent.setLocalPosition(offset);
+      mountPointComponent.mountPointEntity.saveComponent(locationComponent);
+    }
+    heldItemsForReview.forEach(remainingHeldItem -> {
+      if (remainingHeldItem.exists()) {
+        remainingHeldItem.destroy();
+      }
+    }
+);
+  }
+  @Override public void postBegin(){
+  }
+  /** 
+ * Checks a given entity in a variety of ways to see if it is immediately related to a local player. TODO: Is a bit of a shotgun blast approach to throwing out undesired player/client/character entities. Needs a more surgical approach.
+ * @param entity the entity to check (probably a player, client, or character entity)
+ * @return true if any such check passes, otherwise false
+ */
+  private boolean relatesToLocalPlayer(  EntityRef entity){
+    if (entity == null || entity.equals(EntityRef.NULL)) {
+      return false;
+    }
+    if (entity.equals(localPlayer.getClientEntity())) {
+      return true;
+    }
+    if (entity.equals(localPlayer.getCharacterEntity())) {
+      return true;
+    }
+    if (entity.equals(localPlayer.getClientInfoEntity())) {
+      return true;
+    }
+    EntityRef networkSystemProvidedClientEntity=localPlayerSystem.getClientEntityViaNetworkSystem();
+    if (entity.equals(networkSystemProvidedClientEntity)) {
+      logger.debug("checkForLocalPlayer found its entity to match the network system provided local client " + "entity! {}",entity);
+    }
+    if (entity.hasComponent(CharacterComponent.class)) {
+      EntityRef controller=entity.getComponent(CharacterComponent.class).controller;
+      if (controller != null) {
+        if (controller.equals(localPlayer.getClientEntity())) {
+          return true;
+        }
+        if (controller.equals(networkSystemProvidedClientEntity)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+}

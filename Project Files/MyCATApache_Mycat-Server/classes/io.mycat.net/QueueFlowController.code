@@ -1,0 +1,59 @@
+/** 
+ * 队列流量控制器，防止队列过大内存OOM，功能： 1）超过最大阀值，关闭NIO读事件，停止从网络读取mysql数据 2）队列恢复到可继续写的阀值，重启NIO读事件，继续写队列
+ */
+public class QueueFlowController {
+  private volatile boolean readIOStopped;
+  private Collection<BackendConnection> relationedBackendConns;
+  private final FrontendConnection frontendConn;
+  public QueueFlowController(  FrontendConnection c){
+    this.readIOStopped=false;
+    this.relationedBackendConns=new ArrayList<BackendConnection>();
+    this.frontendConn=c;
+  }
+  /** 
+ * 恢复所有后端连接的读事件
+ */
+  private void recoverIORead(){
+    if (readIOStopped) {
+synchronized (relationedBackendConns) {
+        if (readIOStopped) {
+          readIOStopped=false;
+          for (          final BackendConnection conn : relationedBackendConns) {
+            conn.enableRead();
+          }
+          relationedBackendConns.clear();
+          LOGGER.info("The connection[{}] has removed flow control.",frontendConn.toString());
+        }
+      }
+    }
+  }
+  private void stopIORead(  final Collection<BackendConnection> conns){
+    if (null != conns && conns.size() > 0) {
+synchronized (relationedBackendConns) {
+        if (!readIOStopped) {
+          readIOStopped=true;
+          for (          BackendConnection conn : conns) {
+            conn.disableRead();
+            this.relationedBackendConns.add(conn);
+          }
+          LOGGER.info("Now the connection[{}]  is under flow control",frontendConn.toString());
+        }
+      }
+    }
+  }
+  /** 
+ * 检查writeQueue的流量控制阈值
+ * @param connection
+ */
+  public void check(  Map<RouteResultsetNode,BackendConnection> target){
+    int size=writeQueue.size();
+    if (!readIOStopped && size > writeQueueStopThreshold) {
+      stopIORead(target.values());
+    }
+ else {
+      if (readIOStopped && size <= writeQueueRecoverThreshold) {
+        recoverIORead();
+      }
+    }
+  }
+}

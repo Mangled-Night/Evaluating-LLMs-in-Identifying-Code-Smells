@@ -1,0 +1,68 @@
+public class DiscoverInfoBuilder extends IqBuilder<DiscoverInfoBuilder,DiscoverInfo> implements DiscoverInfoView {
+  private final List<Feature> features=new ArrayList<>();
+  private final List<Identity> identities=new ArrayList<>();
+  private String node;
+  DiscoverInfoBuilder(  IqData iqCommon){
+    super(iqCommon);
+  }
+  DiscoverInfoBuilder(  XMPPConnection connection){
+    super(connection);
+  }
+  DiscoverInfoBuilder(  String stanzaId){
+    super(stanzaId);
+  }
+  public DiscoverInfoBuilder(  DiscoverInfo discoverInfo,  String stanzaId){
+    super(discoverInfo,stanzaId);
+    features.addAll(discoverInfo.getFeatures());
+    identities.addAll(discoverInfo.getIdentities());
+    node=discoverInfo.getNode();
+  }
+  @Override public DiscoverInfoBuilder getThis(){
+    return this;
+  }
+  public DiscoverInfoBuilder addFeatures(  Collection<String> features){
+    for (    String feature : features) {
+      addFeature(feature);
+    }
+    return getThis();
+  }
+  public DiscoverInfoBuilder addFeature(  String feature){
+    return addFeature(new Feature(feature));
+  }
+  public DiscoverInfoBuilder addFeature(  Feature feature){
+    features.add(feature);
+    return getThis();
+  }
+  public DiscoverInfoBuilder addIdentities(  Collection<Identity> identities){
+    this.identities.addAll(identities);
+    return getThis();
+  }
+  public DiscoverInfoBuilder addIdentity(  Identity identity){
+    identities.add(identity);
+    return getThis();
+  }
+  public DiscoverInfoBuilder setNode(  String node){
+    this.node=node;
+    return getThis();
+  }
+  @Override public DiscoverInfo build(){
+    return new DiscoverInfo(this,true);
+  }
+  public DiscoverInfo buildWithoutValidiation(){
+    return new DiscoverInfo(this,false);
+  }
+  @Override public List<Feature> getFeatures(){
+    return features;
+  }
+  @Override public List<Identity> getIdentities(){
+    return identities;
+  }
+  @Override public String getNode(){
+    return node;
+  }
+  public static DiscoverInfoBuilder buildResponseFor(  DiscoverInfo request,  IQ.ResponseType responseType){
+    DiscoverInfoBuilder builder=new DiscoverInfoBuilder(createResponse(request,responseType));
+    builder.setNode(request.getNode());
+    return builder;
+  }
+}

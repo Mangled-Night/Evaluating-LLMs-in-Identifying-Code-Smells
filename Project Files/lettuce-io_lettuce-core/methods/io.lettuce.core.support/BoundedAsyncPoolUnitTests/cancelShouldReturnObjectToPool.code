@@ -1,0 +1,25 @@
+@Test void cancelShouldReturnObjectToPool(){
+  List<CompletableFuture<String>> progress=new ArrayList<>();
+  AsyncObjectFactory<String> IN_PROGRESS=new AsyncObjectFactory<String>(){
+    @Override public CompletableFuture<String> create(){
+      CompletableFuture<String> future=new CompletableFuture<>();
+      progress.add(future);
+      return future;
+    }
+    @Override public CompletableFuture<Void> destroy(    String object){
+      destroyed.add(object);
+      return CompletableFuture.completedFuture(null);
+    }
+    @Override public CompletableFuture<Boolean> validate(    String object){
+      return CompletableFuture.completedFuture(true);
+    }
+  }
+;
+  BoundedAsyncPool<String> pool=new BoundedAsyncPool<>(IN_PROGRESS,BoundedPoolConfig.builder().maxTotal(1).maxIdle(0).build());
+  CompletableFuture<String> acquire=pool.acquire();
+  assertThat(acquire).isNotCompleted();
+  acquire.cancel(false);
+  assertThat(acquire).isCancelled();
+  progress.get(0).complete("after-cancel");
+  assertThat(destroyed).contains("after-cancel");
+}

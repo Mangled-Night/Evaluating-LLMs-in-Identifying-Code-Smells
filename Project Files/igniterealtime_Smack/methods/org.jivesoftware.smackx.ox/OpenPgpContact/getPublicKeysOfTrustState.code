@@ -1,0 +1,28 @@
+/** 
+ * Return a  {@link PGPPublicKeyRingCollection}, which contains all keys from  {@code keys}, which are marked with the {@link OpenPgpTrustStore.Trust} state of {@code trust}.
+ * @param keys {@link PGPPublicKeyRingCollection}
+ * @param trust {@link OpenPgpTrustStore.Trust}
+ * @return all keys from {@code keys} with trust state {@code trust}.
+ * @throws IOException IO error
+ */
+protected PGPPublicKeyRingCollection getPublicKeysOfTrustState(PGPPublicKeyRingCollection keys,OpenPgpTrustStore.Trust trust) throws IOException {
+  if (keys == null) {
+    return null;
+  }
+  Set<PGPPublicKeyRing> toRemove=new HashSet<>();
+  Iterator<PGPPublicKeyRing> iterator=keys.iterator();
+  while (iterator.hasNext()) {
+    PGPPublicKeyRing ring=iterator.next();
+    OpenPgpV4Fingerprint fingerprint=new OpenPgpV4Fingerprint(ring);
+    if (store.getTrust(getJid(),fingerprint) != trust) {
+      toRemove.add(ring);
+    }
+  }
+  for (  PGPPublicKeyRing ring : toRemove) {
+    keys=PGPPublicKeyRingCollection.removePublicKeyRing(keys,ring);
+  }
+  if (!keys.iterator().hasNext()) {
+    return null;
+  }
+  return keys;
+}

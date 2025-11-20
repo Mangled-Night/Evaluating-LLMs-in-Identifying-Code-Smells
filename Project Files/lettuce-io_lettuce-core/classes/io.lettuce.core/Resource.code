@@ -1,0 +1,30 @@
+/** 
+ * Supplier for a  {@link InputStream} representing a resource. The resulting {@link InputStream} must be closed by thecalling code.
+ * @since 5.3
+ */
+@FunctionalInterface public interface Resource {
+  /** 
+ * Create a  {@link Resource} that obtains a {@link InputStream} from a {@link URL}.
+ * @param url the URL to obtain the {@link InputStream} from.
+ * @return a {@link Resource} that opens a connection to the URL and obtains the {@link InputStream} for it.
+ */
+  static Resource from(  URL url){
+    LettuceAssert.notNull(url,"URL must not be null");
+    return () -> url.openConnection().getInputStream();
+  }
+  /** 
+ * Create a  {@link Resource} that obtains a {@link InputStream} from a {@link File}.
+ * @param file the File to obtain the {@link InputStream} from.
+ * @return a {@link Resource} that obtains the {@link FileInputStream} for the given {@link File}.
+ */
+  static Resource from(  File file){
+    LettuceAssert.notNull(file,"File must not be null");
+    return () -> new FileInputStream(file);
+  }
+  /** 
+ * Obtains the  {@link InputStream}.
+ * @return the {@link InputStream}.
+ * @throws IOException
+ */
+  InputStream get() throws IOException ;
+}

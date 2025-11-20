@@ -1,0 +1,20 @@
+private boolean unloadChunkInternal(Vector3ic pos){
+  if (loadingPipeline.isPositionProcessing(pos)) {
+    loadingPipeline.stopProcessingAt(pos);
+    return false;
+  }
+  Chunk chunk=chunkCache.get(pos);
+  if (chunk == null) {
+    return false;
+  }
+  worldEntity.send(new BeforeChunkUnload(pos));
+  storageManager.deactivateChunk(chunk);
+  chunk.dispose();
+  try {
+    unloadRequestTaskMaster.put(new ChunkUnloadRequest(chunk,this));
+  }
+ catch (  InterruptedException e) {
+    logger.error("Failed to enqueue unload request for {}",chunk.getPosition(),e);
+  }
+  return true;
+}

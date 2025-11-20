@@ -1,0 +1,12 @@
+private <E extends Exception>void requestSmAckIfNecessary(TopLevelStreamElement element,SmAckAction<E> smAckAction) throws NotConnectedException, E {
+  if (!isSmEnabled())   return;
+  if (element instanceof Stanza) {
+    Stanza stanza=(Stanza)element;
+    for (    StanzaFilter requestAckPredicate : requestAckPredicates) {
+      if (requestAckPredicate.accept(stanza)) {
+        smAckAction.run();
+        break;
+      }
+    }
+  }
+}

@@ -1,0 +1,57 @@
+/** 
+ * Test for the DataPacketExtension class.
+ * @author Henning Staib
+ */
+public class DataPacketExtensionTest extends SmackTestSuite {
+  @Test public void shouldNotInstantiateWithInvalidArgument1(){
+    assertThrows(IllegalArgumentException.class,() -> {
+      new DataPacketExtension(null,0,"data");
+    }
+);
+  }
+  @Test public void shouldNotInstantiateWithInvalidArgument2(){
+    assertThrows(IllegalArgumentException.class,() -> {
+      new DataPacketExtension("",0,"data");
+    }
+);
+  }
+  @Test public void shouldNotInstantiateWithInvalidArgument3(){
+    assertThrows(IllegalArgumentException.class,() -> {
+      new DataPacketExtension("sessionID",-1,"data");
+    }
+);
+  }
+  @Test public void shouldNotInstantiateWithInvalidArgument4(){
+    assertThrows(IllegalArgumentException.class,() -> {
+      new DataPacketExtension("sessionID",70000,"data");
+    }
+);
+  }
+  @Test public void shouldNotInstantiateWithInvalidArgument5(){
+    assertThrows(IllegalArgumentException.class,() -> {
+      new DataPacketExtension("sessionID",0,null);
+    }
+);
+  }
+  @Test public void shouldSetAllFieldsCorrectly(){
+    DataPacketExtension data=new DataPacketExtension("sessionID",0,"data");
+    assertEquals("sessionID",data.getSessionID());
+    assertEquals(0,data.getSeq().intValue());
+    assertEquals("data",data.getData());
+  }
+  @Test public void shouldReturnNullIfDataIsInvalid(){
+    DataPacketExtension data=new DataPacketExtension("sessionID",0,"BBBB=CCC");
+    assertNull(data.getDecodedData());
+    data=new DataPacketExtension("sessionID",0,new String(new byte[]{123},StandardCharsets.UTF_8));
+    assertNull(data.getDecodedData());
+  }
+  private static final Properties outputProperties=new Properties();
+{
+    outputProperties.put(javax.xml.transform.OutputKeys.OMIT_XML_DECLARATION,"yes");
+  }
+  @Test public void shouldReturnValidIQStanzaXML() throws Exception {
+    String control=XMLBuilder.create("data").a("xmlns","http://jabber.org/protocol/ibb").a("seq","0").a("sid","i781hf64").t("DATA").asString(outputProperties);
+    DataPacketExtension data=new DataPacketExtension("i781hf64",0,"DATA");
+    assertXmlSimilar(control,data.toXML().toString());
+  }
+}

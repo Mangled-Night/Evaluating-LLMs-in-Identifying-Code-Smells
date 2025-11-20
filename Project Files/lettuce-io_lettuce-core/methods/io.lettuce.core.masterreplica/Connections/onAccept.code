@@ -1,0 +1,13 @@
+@Override protected void onAccept(Tuple2<RedisURI,StatefulRedisConnection<String,String>> value){
+  if (this.closed) {
+    value.getT2().closeAsync();
+    return;
+  }
+  try {
+    lock.lock();
+    this.connections.put(value.getT1(),value.getT2());
+  }
+  finally {
+    lock.unlock();
+  }
+}

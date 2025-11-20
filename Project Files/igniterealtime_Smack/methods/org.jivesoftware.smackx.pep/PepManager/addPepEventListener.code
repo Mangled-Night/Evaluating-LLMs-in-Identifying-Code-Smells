@@ -1,0 +1,14 @@
+public <E extends ExtensionElement>boolean addPepEventListener(String node,Class<E> extensionElementType,PepEventListener<E> pepEventListener){
+  PepEventListenerCoupling<E> pepEventListenerCoupling=new PepEventListenerCoupling<>(node,extensionElementType,pepEventListener);
+synchronized (pepEventListeners) {
+    if (listenerToCouplingMap.containsKey(pepEventListener)) {
+      return false;
+    }
+    listenerToCouplingMap.put(pepEventListener,pepEventListenerCoupling);
+    boolean listenerForNodeExisted=pepEventListeners.put(node,pepEventListenerCoupling);
+    if (!listenerForNodeExisted) {
+      serviceDiscoveryManager.addFeature(node + PubSubManager.PLUS_NOTIFY);
+    }
+  }
+  return true;
+}

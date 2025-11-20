@@ -1,0 +1,19 @@
+@Test void shouldCompleteWithChunkedResponseInterleavedSending() throws Exception {
+  Command<String,String,String> command1=new Command<>(CommandType.SUBSCRIBE,new PubSubOutput<>(StringCodec.UTF8),null);
+  sut.channelRegistered(context);
+  sut.channelActive(context);
+  sut.channelRegistered(context);
+  sut.channelActive(context);
+  sut.channelRead(context,responseBytes("*3\r\n$7\r\nmessage\r\n$3"));
+  stack.add(command1);
+  sut.channelRead(context,responseBytes("\r\nfoo\r\n$3\r\nbar\r\n"));
+  sut.channelRead(context,responseBytes("*3\r\n$9\r\nsubscribe\r\n$1\r\na\r\n:2"));
+  sut.channelRead(context,responseBytes("\r\n"));
+  assertThat(command1.isDone()).isTrue();
+  assertThat(stack).isEmpty();
+  ArgumentCaptor<PubSubOutput> captor=ArgumentCaptor.forClass(PubSubOutput.class);
+  verify(endpoint,times(2)).notifyMessage(captor.capture());
+  assertThat(captor.getAllValues().get(0).channel()).isEqualTo("foo");
+  assertThat(captor.getAllValues().get(0).get()).isEqualTo("bar");
+  assertThat(captor.getAllValues().get(1).channel()).isEqualTo("a");
+}

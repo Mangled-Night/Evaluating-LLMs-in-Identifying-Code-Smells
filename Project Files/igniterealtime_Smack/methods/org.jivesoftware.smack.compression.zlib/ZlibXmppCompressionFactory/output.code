@@ -1,0 +1,45 @@
+@Override public OutputResult output(ByteBuffer outputData,boolean isFinalDataOfElement,boolean destinationAddressChanged,boolean moreDataAvailable) throws IOException {
+  if (destinationAddressChanged && XMPPInputOutputStream.getFlushMethod() == FlushMethod.FULL_FLUSH) {
+    outputBuffer=ByteBuffer.allocate(256);
+    int bytesWritten=deflate(Deflater.FULL_FLUSH);
+    maxBytesWrittenAfterFullFlush=Math.max(bytesWritten,maxBytesWrittenAfterFullFlush);
+    compressorOutBytes+=bytesWritten;
+  }
+  if (outputData == null && outputBuffer == null) {
+    return OutputResult.NO_OUTPUT;
+  }
+  int bytesRemaining=outputData.remaining();
+  if (outputBuffer == null) {
+    final int outputBufferSize=bytesRemaining < MINIMUM_OUTPUT_BUFFER_INITIAL_SIZE ? MINIMUM_OUTPUT_BUFFER_INITIAL_SIZE : bytesRemaining;
+    outputBuffer=ByteBuffer.allocate(outputBufferSize);
+  }
+  assert compressor.needsInput();
+  final byte[] compressorInputBuffer;
+  final int compressorInputBufferOffset, compressorInputBufferLength;
+  if (outputData.hasArray()) {
+    compressorInputBuffer=outputData.array();
+    compressorInputBufferOffset=outputData.arrayOffset();
+    compressorInputBufferLength=outputData.remaining();
+  }
+ else {
+    compressorInputBuffer=new byte[outputData.remaining()];
+    compressorInputBufferOffset=0;
+    compressorInputBufferLength=compressorInputBuffer.length;
+    outputData.get(compressorInputBuffer);
+  }
+  compressorInBytes+=compressorInputBufferLength;
+  compressor.setInput(compressorInputBuffer,compressorInputBufferOffset,compressorInputBufferLength);
+  int flushMode;
+  if (moreDataAvailable) {
+    flushMode=Deflater.NO_FLUSH;
+  }
+ else {
+    flushMode=Deflater.SYNC_FLUSH;
+  }
+  int bytesWritten=deflate(flushMode);
+  maxOutputOutput=Math.max(outputBuffer.position(),maxOutputOutput);
+  compressorOutBytes+=bytesWritten;
+  OutputResult outputResult=new OutputResult(outputBuffer);
+  outputBuffer=null;
+  return outputResult;
+}

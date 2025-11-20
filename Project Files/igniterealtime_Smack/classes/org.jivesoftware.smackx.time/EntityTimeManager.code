@@ -1,0 +1,62 @@
+public final class EntityTimeManager extends Manager {
+  private static final Map<XMPPConnection,EntityTimeManager> INSTANCES=new WeakHashMap<>();
+  private static boolean autoEnable=true;
+static {
+    XMPPConnectionRegistry.addConnectionCreationListener(new ConnectionCreationListener(){
+      @Override public void connectionCreated(      XMPPConnection connection){
+        getInstanceFor(connection);
+      }
+    }
+);
+  }
+  public static void setAutoEnable(  boolean autoEnable){
+    EntityTimeManager.autoEnable=autoEnable;
+  }
+  public static synchronized EntityTimeManager getInstanceFor(  XMPPConnection connection){
+    EntityTimeManager entityTimeManager=INSTANCES.get(connection);
+    if (entityTimeManager == null) {
+      entityTimeManager=new EntityTimeManager(connection);
+      INSTANCES.put(connection,entityTimeManager);
+    }
+    return entityTimeManager;
+  }
+  private boolean enabled=false;
+  private EntityTimeManager(  XMPPConnection connection){
+    super(connection);
+    if (autoEnable)     enable();
+    connection.registerIQRequestHandler(new AbstractIqRequestHandler(Time.ELEMENT,Time.NAMESPACE,IQ.Type.get,Mode.async){
+      @Override public IQ handleIQRequest(      IQ iqRequest){
+        if (!enabled) {
+          return IQ.createErrorResponse(iqRequest,Condition.not_acceptable);
+        }
+        Time timeRequest=(Time)iqRequest;
+        Time timeResponse=Time.builder(timeRequest).build();
+        return timeResponse;
+      }
+    }
+);
+  }
+  public synchronized void enable(){
+    if (enabled)     return;
+    ServiceDiscoveryManager sdm=ServiceDiscoveryManager.getInstanceFor(connection());
+    sdm.addFeature(Time.NAMESPACE);
+    enabled=true;
+  }
+  public synchronized void disable(){
+    if (!enabled)     return;
+    ServiceDiscoveryManager sdm=ServiceDiscoveryManager.getInstanceFor(connection());
+    sdm.removeFeature(Time.NAMESPACE);
+    enabled=false;
+  }
+  public boolean isTimeSupported(  Jid jid) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    return ServiceDiscoveryManager.getInstanceFor(connection()).supportsFeature(jid,Time.NAMESPACE);
+  }
+  public Time getTime(  Jid jid) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException, FeatureNotSupportedException {
+    if (!isTimeSupported(jid)) {
+      throw new SmackException.FeatureNotSupportedException(Time.NAMESPACE);
+    }
+    XMPPConnection connection=connection();
+    Time request=Time.builder(connection).to(jid).build();
+    return connection.sendIqRequestAndWaitForResponse(request);
+  }
+}

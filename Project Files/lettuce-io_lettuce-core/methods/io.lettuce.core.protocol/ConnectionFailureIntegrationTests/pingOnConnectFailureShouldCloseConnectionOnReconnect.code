@@ -1,0 +1,28 @@
+@Test void pingOnConnectFailureShouldCloseConnectionOnReconnect() throws Exception {
+  BlockingQueue<Channel> ref=new LinkedBlockingQueue<>();
+  ClientResources clientResources=ClientResources.builder().nettyCustomizer(new NettyCustomizer(){
+    @Override public void afterChannelInitialized(    Channel channel){
+      ref.add(channel);
+    }
+  }
+).build();
+  RedisURI redisUri=RedisURI.create(TestSettings.host(),TestSettings.port());
+  RedisClient client=RedisClient.create(clientResources,redisUri);
+  client.setOptions(ClientOptions.builder().pingBeforeActivateConnection(true).build());
+  StatefulRedisConnection<String,String> connection=client.connect();
+  ConnectionWatchdog connectionWatchdog=ConnectionTestUtil.getConnectionWatchdog(connection);
+  connectionWatchdog.setListenOnChannelInactive(false);
+  connection.async().quit();
+  redisUri.setPort(7385);
+  connectionWatchdog.setListenOnChannelInactive(true);
+  connectionWatchdog.scheduleReconnect();
+  Wait.untilTrue(() -> ref.size() > 1).waitOrTimeout();
+  redisUri.setPort(TestSettings.port());
+  Channel initial=ref.take();
+  assertThat(initial.isOpen()).isFalse();
+  Channel reconnect=ref.take();
+  Wait.untilTrue(() -> !reconnect.isOpen()).waitOrTimeout();
+  assertThat(reconnect.isOpen()).isFalse();
+  FastShutdown.shutdown(client);
+  FastShutdown.shutdown(clientResources);
+}

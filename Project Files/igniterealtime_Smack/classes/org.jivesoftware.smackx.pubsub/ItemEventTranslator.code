@@ -1,0 +1,16 @@
+/** 
+ * This class translates low level item publication events into api level objects for user consumption.
+ * @author Robin Collier
+ */
+public static class ItemEventTranslator implements StanzaListener {
+  @SuppressWarnings("rawtypes") private final ItemEventListener listener;
+  public ItemEventTranslator(  @SuppressWarnings("rawtypes") ItemEventListener eventListener){
+    listener=eventListener;
+  }
+  @Override @SuppressWarnings({"rawtypes","unchecked"}) public void processStanza(  Stanza packet){
+    EventElement event=(EventElement)packet.getExtensionElement("event",PubSubNamespace.event.getXmlns());
+    ItemsExtension itemsElem=(ItemsExtension)event.getEvent();
+    ItemPublishEvent eventItems=new ItemPublishEvent(itemsElem.getNode(),itemsElem.getItems(),getSubscriptionIds(packet),DelayInformationManager.getDelayTimestamp(packet));
+    listener.handlePublishedItems(eventItems);
+  }
+}

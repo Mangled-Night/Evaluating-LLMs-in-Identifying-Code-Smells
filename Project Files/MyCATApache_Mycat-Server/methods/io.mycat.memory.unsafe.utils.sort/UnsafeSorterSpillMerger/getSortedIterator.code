@@ -1,0 +1,41 @@
+/** 
+ * 非常重要的一个排序迭代器
+ * @return
+ * @throws IOException
+ */
+public UnsafeSorterIterator getSortedIterator() throws IOException {
+  return new UnsafeSorterIterator(){
+    /** 
+ * 当前迭代器
+ */
+    private UnsafeSorterIterator spillReader;
+    @Override public int getNumRecords(){
+      return numRecords;
+    }
+    @Override public boolean hasNext(){
+      return !priorityQueue.isEmpty() || (spillReader != null && spillReader.hasNext());
+    }
+    @Override public void loadNext() throws IOException {
+      if (spillReader != null) {
+        if (spillReader.hasNext()) {
+          spillReader.loadNext();
+          priorityQueue.add(spillReader);
+        }
+      }
+      spillReader=priorityQueue.remove();
+    }
+    @Override public Object getBaseObject(){
+      return spillReader.getBaseObject();
+    }
+    @Override public long getBaseOffset(){
+      return spillReader.getBaseOffset();
+    }
+    @Override public int getRecordLength(){
+      return spillReader.getRecordLength();
+    }
+    @Override public long getKeyPrefix(){
+      return spillReader.getKeyPrefix();
+    }
+  }
+;
+}

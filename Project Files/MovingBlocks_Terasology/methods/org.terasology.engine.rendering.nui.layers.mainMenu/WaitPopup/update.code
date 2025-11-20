@@ -1,0 +1,27 @@
+@Override public void update(float delta){
+  super.update(delta);
+  if (parallelTask == null) {
+    return;
+  }
+  if (!parallelTask.isDone()) {
+    return;
+  }
+  if (parallelTask.isCancelled()) {
+    if (!thread.isAlive()) {
+      getManager().popScreen();
+    }
+    return;
+  }
+  try {
+    T result=parallelTask.get();
+    getManager().popScreen();
+    if (resultEvent != null) {
+      resultEvent.accept(result);
+    }
+  }
+ catch (  InterruptedException|ExecutionException e) {
+    logger.warn("An error occurred during execution",e);
+    getManager().popScreen();
+    getManager().pushScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage("Error",e.getMessage());
+  }
+}

@@ -1,0 +1,22 @@
+@Override public boolean hasAvailableCapacity(final int requiredCapacity){
+  return hasAvailableCapacity(gatingSequences,requiredCapacity,cursor.get());
+}
+/** 
+ * 与单一生产者验证原理类似
+ * @param gatingSequences
+ * @param requiredCapacity
+ * @param cursorValue
+ * @return
+ */
+private boolean hasAvailableCapacity(Sequence[] gatingSequences,final int requiredCapacity,long cursorValue){
+  long wrapPoint=(cursorValue + requiredCapacity) - bufferSize;
+  long cachedGatingSequence=gatingSequenceCache.get();
+  if (wrapPoint > cachedGatingSequence || cachedGatingSequence > cursorValue) {
+    long minSequence=Util.getMinimumSequence(gatingSequences,cursorValue);
+    gatingSequenceCache.set(minSequence);
+    if (wrapPoint > minSequence) {
+      return false;
+    }
+  }
+  return true;
+}

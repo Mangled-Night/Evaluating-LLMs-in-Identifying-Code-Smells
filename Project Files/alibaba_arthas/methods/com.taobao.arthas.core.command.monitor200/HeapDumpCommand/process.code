@@ -1,0 +1,21 @@
+@Override public void process(CommandProcess process){
+  try {
+    String dumpFile=file;
+    if (dumpFile == null || dumpFile.isEmpty()) {
+      String date=new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(new Date());
+      File file=File.createTempFile("heapdump" + date + (live ? "-live" : ""),".hprof");
+      dumpFile=file.getAbsolutePath();
+      file.delete();
+    }
+    process.appendResult(new MessageModel("Dumping heap to " + dumpFile + " ..."));
+    run(process,dumpFile,live);
+    process.appendResult(new MessageModel("Heap dump file created"));
+    process.appendResult(new HeapDumpModel(dumpFile,live));
+    process.end();
+  }
+ catch (  Throwable t) {
+    String errorMsg="heap dump error: " + t.getMessage();
+    logger.error(errorMsg,t);
+    process.end(-1,errorMsg);
+  }
+}

@@ -1,0 +1,18 @@
+/** 
+ * @param unsavedEntities currently loaded persistent entities without owner that have not been saved yet.This method removes entities it saves.
+ */
+private void preparePlayerStores(Set<EntityRef> unsavedEntities){
+  allPlayers=Maps.newHashMap();
+  allPlayers.putAll(unloadedPlayers);
+  for (  Map.Entry<String,PlayerStoreBuilder> playerEntry : loadedPlayers.entrySet()) {
+    PlayerStoreBuilder playerStoreBuilder=playerEntry.getValue();
+    EntityData.PlayerStore playerStore=playerStoreBuilder.build(privateEntityManager);
+    unsavedEntities.removeAll(playerStoreBuilder.getStoredEntities());
+    Long characterEntityId=playerStoreBuilder.getCharacterEntityId();
+    if (characterEntityId != null) {
+      EntityRef character=privateEntityManager.getEntity(characterEntityId);
+      unsavedEntities.remove(character);
+    }
+    allPlayers.put(playerEntry.getKey(),playerStore);
+  }
+}

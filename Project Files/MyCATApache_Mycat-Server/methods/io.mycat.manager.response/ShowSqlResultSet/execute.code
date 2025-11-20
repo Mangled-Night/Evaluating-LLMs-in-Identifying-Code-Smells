@@ -1,0 +1,26 @@
+public static void execute(ManagerConnection c){
+  ByteBuffer buffer=c.allocate();
+  buffer=header.write(buffer,c,true);
+  for (  FieldPacket field : fields) {
+    buffer=field.write(buffer,c,true);
+  }
+  buffer=eof.write(buffer,c,true);
+  byte packetId=eof.packetId;
+  int i=0;
+  Map<String,UserStat> statMap=UserStatAnalyzer.getInstance().getUserStatMap();
+  for (  UserStat userStat : statMap.values()) {
+    String user=userStat.getUser();
+    ConcurrentHashMap<String,SqlResultSet> map=userStat.getSqlResultSizeRecorder().getSqlResultSet();
+    if (map != null) {
+      for (      SqlResultSet sqlResultSet : map.values()) {
+        RowDataPacket row=getRow(++i,user,sqlResultSet.getSql(),sqlResultSet.getCount(),sqlResultSet.getResultSetSize(),c.getCharset());
+        row.packetId=++packetId;
+        buffer=row.write(buffer,c,true);
+      }
+    }
+  }
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

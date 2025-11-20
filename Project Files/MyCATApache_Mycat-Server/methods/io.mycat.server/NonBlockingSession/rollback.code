@@ -1,0 +1,20 @@
+public void rollback(){
+  final int initCount=target.size();
+  if (initCount <= 0) {
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("no session bound connections found ,no need send rollback cmd ");
+    }
+    ByteBuffer buffer=source.allocate();
+    buffer=source.writeToBuffer(OkPacket.OK,buffer);
+    source.write(buffer);
+    if (getXaTXID() != null) {
+      setXATXEnabled(false);
+    }
+    if (source.isPreAcStates() && !source.isAutocommit()) {
+      source.setAutocommit(true);
+    }
+    return;
+  }
+  rollbackHandler=new RollbackNodeHandler(this);
+  rollbackHandler.rollback();
+}

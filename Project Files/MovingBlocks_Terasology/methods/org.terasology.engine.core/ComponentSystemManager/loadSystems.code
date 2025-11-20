@@ -1,0 +1,28 @@
+public void loadSystems(ModuleEnvironment environment,NetworkMode netMode){
+  DisplayDevice display=context.get(DisplayDevice.class);
+  boolean isHeadless=display.isHeadless();
+  ListMultimap<Name,Class<?>> systemsByModule=ArrayListMultimap.create();
+  for (  Class<?> type : environment.getTypesAnnotatedWith(RegisterSystem.class)) {
+    if (!ComponentSystem.class.isAssignableFrom(type)) {
+      logger.error("Cannot load {}, must be a subclass of ComponentSystem",type.getSimpleName());
+      continue;
+    }
+    Name moduleId=environment.getModuleProviding(type);
+    RegisterSystem registerInfo=type.getAnnotation(RegisterSystem.class);
+    if (registerInfo.value().isValidFor(netMode.isAuthority(),isHeadless) && areOptionalRequirementsContained(registerInfo,environment)) {
+      systemsByModule.put(moduleId,type);
+    }
+  }
+  for (  Module module : environment.getModulesOrderedByDependencies()) {
+    for (    Class<?> system : systemsByModule.get(module.getId())) {
+      String id=module.getId() + ":" + system.getSimpleName();
+      logger.debug("Registering system {}",id);
+      if (checkOptionalDependenciesPresent(system)) {
+        tryToLoadSystem(system,id);
+      }
+ else {
+        logger.warn("Skip system {} for loading - possibly missing optional dependencies",id);
+      }
+    }
+  }
+}

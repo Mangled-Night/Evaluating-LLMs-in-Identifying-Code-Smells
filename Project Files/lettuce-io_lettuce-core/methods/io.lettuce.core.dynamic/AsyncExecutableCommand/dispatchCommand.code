@@ -1,0 +1,23 @@
+protected Object dispatchCommand(Object[] arguments,RedisCommand<Object,Object,Object> command) throws InterruptedException, java.util.concurrent.ExecutionException {
+  AsyncCommand<Object,Object,Object> asyncCommand=new AsyncCommand<>(command);
+  if (commandMethod.isFutureExecution()) {
+    RedisCommand<Object,Object,Object> dispatched=connection.dispatch(asyncCommand);
+    if (dispatched instanceof AsyncCommand) {
+      return dispatched;
+    }
+    return asyncCommand;
+  }
+  connection.dispatch(asyncCommand);
+  Duration timeout=connection.getTimeout();
+  if (commandMethod.getParameters() instanceof ExecutionSpecificParameters) {
+    ExecutionSpecificParameters executionSpecificParameters=(ExecutionSpecificParameters)commandMethod.getParameters();
+    if (executionSpecificParameters.hasTimeoutIndex()) {
+      Timeout timeoutArg=(Timeout)arguments[executionSpecificParameters.getTimeoutIndex()];
+      if (timeoutArg != null) {
+        timeout=timeoutArg.getTimeout();
+      }
+    }
+  }
+  Futures.await(timeout,asyncCommand);
+  return asyncCommand.get();
+}

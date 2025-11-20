@@ -1,0 +1,17 @@
+/** 
+ * Apply the block changes from the message to the local world.
+ */
+private void processBlockChanges(NetData.NetMessage message){
+  WorldProvider worldProvider=context.get(WorldProvider.class);
+  for (  NetData.BlockChangeMessage blockChange : message.getBlockChangeList()) {
+    Block newBlock=blockManager.getBlock((short)blockChange.getNewBlock());
+    logger.debug("Received block change to {}",newBlock);
+    Vector3i pos=NetMessageUtil.convert(blockChange.getPos());
+    if (worldProvider.isBlockRelevant(pos)) {
+      worldProvider.setBlock(pos,newBlock);
+    }
+ else {
+      awaitingChunkReadyBlockUpdates.put(Chunks.toChunkPos(pos),blockChange);
+    }
+  }
+}

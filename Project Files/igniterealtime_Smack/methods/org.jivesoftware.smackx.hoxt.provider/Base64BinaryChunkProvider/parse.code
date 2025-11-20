@@ -1,0 +1,30 @@
+@Override public Base64BinaryChunk parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  String streamId=parser.getAttributeValue("",Base64BinaryChunk.ATTRIBUTE_STREAM_ID);
+  String nrString=parser.getAttributeValue("",Base64BinaryChunk.ATTRIBUTE_NR);
+  String lastString=parser.getAttributeValue("",Base64BinaryChunk.ATTRIBUTE_LAST);
+  boolean last=false;
+  int nr=Integer.parseInt(nrString);
+  if (lastString != null) {
+    last=Boolean.parseBoolean(lastString);
+  }
+  String text=null;
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getName().equals(Base64BinaryChunk.ELEMENT_CHUNK)) {
+        done=true;
+      }
+ else {
+        throw new IllegalArgumentException("unexpected end tag of: " + parser.getName());
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.TEXT_CHARACTERS) {
+      text=parser.getText();
+    }
+ else {
+      throw new IllegalArgumentException("unexpected eventType: " + eventType);
+    }
+  }
+  return new Base64BinaryChunk(text,streamId,nr,last);
+}

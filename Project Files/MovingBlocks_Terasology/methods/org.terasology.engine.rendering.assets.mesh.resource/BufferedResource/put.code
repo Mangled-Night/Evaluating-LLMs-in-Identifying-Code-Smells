@@ -1,0 +1,26 @@
+/** 
+ * append the buffer to the current BufferedResource <p> make sure the data is structured in a way that the buffer expects. All  {@link BufferedResource} are all in native order. data willbe garbage if the order of the buffer is different from the endianness system.
+ * @param copyBuffer the buffer to replace the contents with
+ */
+public void put(ByteBuffer copyBuffer){
+  reserve(this.inSize + copyBuffer.limit());
+  copyBuffer.rewind();
+  buffer.position(this.inSize);
+  buffer.put(copyBuffer);
+  this.inSize+=copyBuffer.limit();
+  mark();
+}
+/** 
+ * append the buffer to the current BufferedResource <p> make sure the data is structured in a way that the buffer expects.
+ * @param resource the resource to append the contents with
+ */
+public void put(BufferedResource resource){
+  reserve(this.inSize + resource.inSize);
+  ByteBuffer copyBuffer=resource.buffer;
+  copyBuffer.limit(resource.inSize);
+  copyBuffer.rewind();
+  buffer.position(this.inSize);
+  buffer.put(copyBuffer);
+  this.inSize+=resource.inSize;
+  mark();
+}

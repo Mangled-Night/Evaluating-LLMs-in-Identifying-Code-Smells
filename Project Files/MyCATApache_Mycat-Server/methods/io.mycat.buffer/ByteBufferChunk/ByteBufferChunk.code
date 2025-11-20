@@ -1,0 +1,22 @@
+public ByteBufferChunk(int pageSize,int chunkSize){
+  this.pageSize=pageSize;
+  this.chunkSize=chunkSize;
+  this.chunkPageSize=chunkSize / pageSize;
+  this.maxOrder=log2(this.chunkPageSize) + 1;
+  this.unusable=(byte)this.maxOrder;
+  this.freeBytes=chunkSize;
+  this.buf=ByteBuffer.allocateDirect(chunkSize);
+  this.bufAddress=((DirectBuffer)buf).address();
+  this.depthMap=new byte[(1 << this.maxOrder)];
+  this.memoryMap=new byte[this.depthMap.length];
+  this.log2PageSize=log2(pageSize);
+  int memoryMapIndex=1;
+  for (int d=0; d < maxOrder; ++d) {
+    int depth=1 << d;
+    for (int p=0; p < depth; ++p) {
+      memoryMap[memoryMapIndex]=(byte)d;
+      depthMap[memoryMapIndex]=(byte)d;
+      memoryMapIndex++;
+    }
+  }
+}

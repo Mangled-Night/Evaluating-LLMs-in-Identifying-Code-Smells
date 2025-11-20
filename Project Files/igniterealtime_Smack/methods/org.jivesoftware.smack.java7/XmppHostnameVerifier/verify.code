@@ -1,0 +1,36 @@
+@Override public boolean verify(String hostname,SSLSession session){
+  boolean validCertificate=false, validPrincipal=false;
+  try {
+    Certificate[] peerCertificates=session.getPeerCertificates();
+    if (peerCertificates.length == 0) {
+      return false;
+    }
+    if (!(peerCertificates[0] instanceof X509Certificate)) {
+      return false;
+    }
+    X509Certificate peerCertificate=(X509Certificate)peerCertificates[0];
+    try {
+      match(hostname,peerCertificate);
+      validCertificate=true;
+    }
+ catch (    CertificateException e) {
+      LOGGER.log(Level.INFO,"Certificate does not match hostname",e);
+    }
+  }
+ catch (  SSLPeerUnverifiedException e) {
+    Principal peerPrincipal=null;
+    try {
+      peerPrincipal=session.getPeerPrincipal();
+    }
+ catch (    SSLPeerUnverifiedException e2) {
+      LOGGER.log(Level.INFO,"Can't verify principal for " + hostname + ". Not kerberos",e2);
+    }
+    if (peerPrincipal instanceof KerberosPrincipal) {
+      validPrincipal=match(hostname,(KerberosPrincipal)peerPrincipal);
+    }
+ else {
+      LOGGER.info("Can't verify principal for " + hostname + ". Not kerberos");
+    }
+  }
+  return validCertificate || validPrincipal;
+}

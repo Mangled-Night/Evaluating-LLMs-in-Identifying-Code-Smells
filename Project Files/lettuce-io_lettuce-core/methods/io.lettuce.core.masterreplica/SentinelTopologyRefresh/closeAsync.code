@@ -1,0 +1,29 @@
+@Override public CompletableFuture<Void> closeAsync(){
+  if (closed) {
+    return closeFuture;
+  }
+  closed=true;
+  HashMap<RedisURI,ConnectionFuture<StatefulRedisPubSubConnection<String,String>>> connections=new HashMap<>(pubSubConnections);
+  List<CompletableFuture<Void>> futures=new ArrayList<>();
+  connections.forEach((k,f) -> {
+    futures.add(f.exceptionally(t -> null).thenCompose(c -> {
+      if (c == null) {
+        return CompletableFuture.completedFuture(null);
+      }
+      return c.closeAsync();
+    }
+).toCompletableFuture());
+    pubSubConnections.remove(k);
+  }
+);
+  Futures.allOf(futures).whenComplete((aVoid,throwable) -> {
+    if (throwable != null) {
+      closeFuture.completeExceptionally(throwable);
+    }
+ else {
+      closeFuture.complete(null);
+    }
+  }
+);
+  return closeFuture;
+}

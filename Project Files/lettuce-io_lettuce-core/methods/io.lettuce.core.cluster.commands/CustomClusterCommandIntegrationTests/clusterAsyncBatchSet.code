@@ -1,0 +1,12 @@
+@Test void clusterAsyncBatchSet(){
+  RedisCommand<String,String,String> command1=new Command<>(CommandType.SET,new StatusOutput<>(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).addKey("key1").addValue("value"));
+  RedisCommand<String,String,String> command2=new Command<>(CommandType.GET,new StatusOutput<>(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).addKey("key1"));
+  RedisCommand<String,String,String> command3=new Command<>(CommandType.SET,new StatusOutput<>(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).addKey("other-key1").addValue("value"));
+  AsyncCommand<String,String,String> async1=new AsyncCommand<>(command1);
+  AsyncCommand<String,String,String> async2=new AsyncCommand<>(command2);
+  AsyncCommand<String,String,String> async3=new AsyncCommand<>(command3);
+  connection.dispatch(Arrays.asList(async1,async2,async3));
+  assertThat(TestFutures.getOrTimeout(async1.toCompletableFuture())).isEqualTo("OK");
+  assertThat(TestFutures.getOrTimeout(async2.toCompletableFuture())).isEqualTo("value");
+  assertThat(TestFutures.getOrTimeout(async3.toCompletableFuture())).isEqualTo("OK");
+}

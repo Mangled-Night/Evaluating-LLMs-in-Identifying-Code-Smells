@@ -1,0 +1,29 @@
+public static RowDescription parse(ByteBuffer buffer,int offset) throws IOException {
+  if (buffer.get(offset) != PacketMarker.B_RowDescription.getValue()) {
+    throw new IllegalArgumentException("this packetData not is RowDescription");
+  }
+  RowDescription pack=new RowDescription();
+  pack.length=PIOUtils.redInteger4(buffer,offset + 1);
+  pack.columnNumber=PIOUtils.redInteger2(buffer,offset + 1 + 4);
+  pack.columns=new ColumnDescription[pack.columnNumber];
+  int _offset=offset + 1 + 4+ 2;
+  for (int i=0; i < pack.columns.length; i++) {
+    ColumnDescription col=new ColumnDescription();
+    col.columnName=PIOUtils.redString(buffer,_offset,UTF8);
+    _offset=_offset + col.columnName.getBytes(UTF8).length + 1;
+    col.oid=PIOUtils.redInteger4(buffer,_offset);
+    _offset+=4;
+    col.coid=PIOUtils.redInteger2(buffer,_offset);
+    _offset+=2;
+    col.columnType=DateType.valueOf(PIOUtils.redInteger4(buffer,_offset));
+    _offset+=4;
+    col.typlen=PIOUtils.redInteger2(buffer,_offset);
+    _offset+=2;
+    col.atttypmod=PIOUtils.redInteger4(buffer,_offset);
+    _offset+=4;
+    col.protocol=DataProtocol.valueOf(PIOUtils.redInteger2(buffer,_offset));
+    _offset+=2;
+    pack.columns[i]=col;
+  }
+  return pack;
+}

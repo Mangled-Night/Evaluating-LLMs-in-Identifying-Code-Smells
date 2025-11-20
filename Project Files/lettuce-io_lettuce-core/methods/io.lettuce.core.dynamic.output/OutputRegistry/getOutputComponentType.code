@@ -1,0 +1,24 @@
+/** 
+ * Retrieve  {@link OutputType} for a {@link CommandOutput} type.
+ * @param commandOutputClass
+ * @return
+ */
+static OutputType getOutputComponentType(Class<? extends CommandOutput> commandOutputClass){
+  ClassTypeInformation<? extends CommandOutput> classTypeInformation=ClassTypeInformation.from(commandOutputClass);
+  TypeInformation<?> superTypeInformation=classTypeInformation.getSuperTypeInformation(CommandOutput.class);
+  if (superTypeInformation == null) {
+    return null;
+  }
+  List<TypeInformation<?>> typeArguments=superTypeInformation.getTypeArguments();
+  return new OutputType(commandOutputClass,typeArguments.get(2),false){
+    @Override public ResolvableType withCodec(    RedisCodec<?,?> codec){
+      TypeInformation<?> typeInformation=ClassTypeInformation.from(codec.getClass());
+      ResolvableType resolvableType=ResolvableType.forType(commandOutputClass,new CodecVariableTypeResolver(typeInformation));
+      while (!resolvableType.getRawClass().equals(CommandOutput.class)) {
+        resolvableType=resolvableType.getSuperType();
+      }
+      return resolvableType.getGeneric(2);
+    }
+  }
+;
+}

@@ -1,0 +1,14 @@
+@ApiOperation(value="修改系统") @RequiresPermissions("upms:system:update") @RequestMapping(value="/update/{id}",method=RequestMethod.GET) public String update(@PathVariable("id") int id,ModelMap modelMap){
+  UpmsSystem system=upmsSystemService.selectByPrimaryKey(id);
+  modelMap.put("system",system);
+  return "/manage/system/update.jsp";
+}
+@ApiOperation(value="修改系统") @RequiresPermissions("upms:system:update") @RequestMapping(value="/update/{id}",method=RequestMethod.POST) @ResponseBody public Object update(@PathVariable("id") int id,UpmsSystem upmsSystem){
+  ComplexResult result=FluentValidator.checkAll().on(upmsSystem.getTitle(),new LengthValidator(1,20,"标题")).on(upmsSystem.getName(),new LengthValidator(1,20,"名称")).doValidate().result(ResultCollectors.toComplex());
+  if (!result.isSuccess()) {
+    return new UpmsResult(UpmsResultConstant.INVALID_LENGTH,result.getErrors());
+  }
+  upmsSystem.setSystemId(id);
+  int count=upmsSystemService.updateByPrimaryKeySelective(upmsSystem);
+  return new UpmsResult(UpmsResultConstant.SUCCESS,count);
+}

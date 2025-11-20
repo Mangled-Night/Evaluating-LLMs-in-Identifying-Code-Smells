@@ -1,0 +1,20 @@
+/** 
+ * Add our load the deviceList of the user from cache, delete stale devices if needed, add the users device back if necessary, store the refurbished list in cache and return it.
+ * @param userDevice our own OMEMO device
+ * @return cleaned device list
+ * @throws IOException if an I/O error occurred.
+ */
+OmemoCachedDeviceList cleanUpDeviceList(OmemoDevice userDevice) throws IOException {
+  OmemoCachedDeviceList cachedDeviceList;
+  if (OmemoConfiguration.getDeleteStaleDevices()) {
+    cachedDeviceList=deleteStaleDevices(userDevice);
+  }
+ else {
+    cachedDeviceList=getOmemoStoreBackend().loadCachedDeviceList(userDevice);
+  }
+  if (!cachedDeviceList.getActiveDevices().contains(userDevice.getDeviceId())) {
+    cachedDeviceList.addDevice(userDevice.getDeviceId());
+  }
+  getOmemoStoreBackend().storeCachedDeviceList(userDevice,userDevice.getJid(),cachedDeviceList);
+  return cachedDeviceList;
+}

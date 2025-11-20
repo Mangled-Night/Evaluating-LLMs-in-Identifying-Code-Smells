@@ -1,0 +1,244 @@
+/** 
+ * Builder for  {@link CommandLatencyCollectorOptions}.
+ * @since 5.1
+ */
+interface Builder {
+  /** 
+ * Disable the latency collector.
+ * @return this
+ */
+  Builder disable();
+  /** 
+ * Enable the latency collector.
+ * @return this {@link DefaultCommandLatencyCollectorOptions.Builder}.
+ */
+  Builder enable();
+  /** 
+ * Use  {@code LatencyUtils.SimplePauseDetector} to detect pauses. Defaults to no pause detector.
+ * @return this {@link DefaultCommandLatencyCollectorOptions.Builder}.
+ * @since 6.1.7
+ * @see org.LatencyUtils.SimplePauseDetector
+ */
+  Builder usePauseDetector();
+  /** 
+ * Do not detect pauses. Defaults to no pause detector.
+ * @return this {@link DefaultCommandLatencyCollectorOptions.Builder}.
+ * @since 6.1.7
+ */
+  Builder useNoPauseDetector();
+  /** 
+ * Enables per connection metrics tracking instead of per host/port. If  {@code true}, multiple connections to the same host/connection point will be recorded separately which allows to inspect every connection individually. If {@code false}, multiple connections to the same host/connection point will be recorded together. This allows a consolidated view on one particular service. Defaults to  {@code false}. See {@link DefaultCommandLatencyCollectorOptions#DEFAULT_LOCAL_DISTINCTION}.
+ * @param localDistinction {@code true} if latencies are recorded distinct on local level (per connection).
+ * @return this {@link Builder}.
+ */
+  Builder localDistinction(  boolean localDistinction);
+  /** 
+ * Sets whether the recorded latencies should be reset once the metrics event was emitted. Defaults to  {@code true}. See  {@link DefaultCommandLatencyCollectorOptions#DEFAULT_RESET_LATENCIES_AFTER_EVENT}.
+ * @param resetLatenciesAfterEvent {@code true} if the recorded latencies should be reset once the metrics event wasemitted.
+ * @return this {@link Builder}.
+ */
+  Builder resetLatenciesAfterEvent(  boolean resetLatenciesAfterEvent);
+  /** 
+ * Sets the emitted percentiles. Defaults to 50.0, 90.0, 95.0, 99.0, 99.9}. See {@link DefaultCommandLatencyCollectorOptions#DEFAULT_TARGET_PERCENTILES}.
+ * @param targetPercentiles the percentiles which should be emitted, must not be {@code null}.
+ * @return this {@link Builder}.
+ */
+  Builder targetPercentiles(  double[] targetPercentiles);
+  /** 
+ * Set the target unit for the latencies. Defaults to  {@link TimeUnit#MILLISECONDS}. See {@link DefaultCommandLatencyCollectorOptions#DEFAULT_TARGET_UNIT}.
+ * @param targetUnit the target unit, must not be {@code null}.
+ * @return this {@link Builder}.
+ */
+  Builder targetUnit(  TimeUnit targetUnit);
+  /** 
+ * @return a new instance of {@link CommandLatencyCollectorOptions}.
+ */
+  CommandLatencyCollectorOptions build();
+}
+/** 
+ * Builder for  {@link DefaultCommandLatencyCollectorOptions}.
+ */
+public static class Builder implements CommandLatencyCollectorOptions.Builder {
+  private TimeUnit targetUnit=DEFAULT_TARGET_UNIT;
+  private double[] targetPercentiles=DEFAULT_TARGET_PERCENTILES;
+  private boolean resetLatenciesAfterEvent=DEFAULT_RESET_LATENCIES_AFTER_EVENT;
+  private boolean localDistinction=DEFAULT_LOCAL_DISTINCTION;
+  private boolean enabled=DEFAULT_ENABLED;
+  private boolean usePauseDetector=DEFAULT_USE_NO_PAUSE_DETECTOR;
+  private Builder(){
+  }
+  /** 
+ * Disable the latency collector.
+ * @return this {@link Builder}.
+ */
+  @Override public Builder disable(){
+    this.enabled=false;
+    return this;
+  }
+  /** 
+ * Enable the latency collector.
+ * @return this {@link Builder}.
+ * @since 5.1
+ */
+  @Override public Builder enable(){
+    this.enabled=true;
+    return this;
+  }
+  /** 
+ * Use  {@code LatencyUtils.SimplePauseDetector} to detect pauses. Defaults to no pause detector.
+ * @return this {@link DefaultCommandLatencyCollectorOptions.Builder}.
+ * @since 6.1.7
+ * @see org.LatencyUtils.SimplePauseDetector
+ */
+  @Override public Builder usePauseDetector(){
+    this.usePauseDetector=true;
+    return this;
+  }
+  /** 
+ * Do not detect pauses. Defaults to no pause detector.
+ * @return this {@link DefaultCommandLatencyCollectorOptions.Builder}.
+ * @since 6.1.7
+ */
+  @Override public Builder useNoPauseDetector(){
+    this.usePauseDetector=false;
+    return this;
+  }
+  /** 
+ * Set the target unit for the latencies. Defaults to  {@link TimeUnit#MILLISECONDS}. See {@link DefaultCommandLatencyCollectorOptions#DEFAULT_TARGET_UNIT}.
+ * @param targetUnit the target unit, must not be {@code null}
+ * @return this {@link Builder}.
+ */
+  @Override public Builder targetUnit(  TimeUnit targetUnit){
+    LettuceAssert.notNull(targetUnit,"TargetUnit must not be null");
+    this.targetUnit=targetUnit;
+    return this;
+  }
+  /** 
+ * Sets the emitted percentiles. Defaults to 50.0, 90.0, 95.0, 99.0, 99.9} . See {@link DefaultCommandLatencyCollectorOptions#DEFAULT_TARGET_PERCENTILES}.
+ * @param targetPercentiles the percentiles which should be emitted, must not be {@code null}
+ * @return this {@link Builder}.
+ */
+  @Override public Builder targetPercentiles(  double[] targetPercentiles){
+    LettuceAssert.notNull(targetPercentiles,"TargetPercentiles must not be null");
+    this.targetPercentiles=targetPercentiles;
+    return this;
+  }
+  /** 
+ * Sets whether the recorded latencies should be reset once the metrics event was emitted. Defaults to  {@code true}. See  {@link DefaultCommandLatencyCollectorOptions#DEFAULT_RESET_LATENCIES_AFTER_EVENT}.
+ * @param resetLatenciesAfterEvent {@code true} if the recorded latencies should be reset once the metrics event wasemitted
+ * @return this {@link Builder}.
+ */
+  @Override public Builder resetLatenciesAfterEvent(  boolean resetLatenciesAfterEvent){
+    this.resetLatenciesAfterEvent=resetLatenciesAfterEvent;
+    return this;
+  }
+  /** 
+ * Enables per connection metrics tracking insead of per host/port. If  {@code true}, multiple connections to the same host/connection point will be recorded separately which allows to inspect every connection individually. If {@code false}, multiple connections to the same host/connection point will be recorded together. This allows a consolidated view on one particular service. Defaults to  {@code false}. See {@link DefaultCommandLatencyCollectorOptions#DEFAULT_LOCAL_DISTINCTION}.
+ * @param localDistinction {@code true} if latencies are recorded distinct on local level (per connection)
+ * @return this {@link Builder}.
+ */
+  @Override public Builder localDistinction(  boolean localDistinction){
+    this.localDistinction=localDistinction;
+    return this;
+  }
+  /** 
+ * @return a new instance of {@link DefaultCommandLatencyCollectorOptions}.
+ */
+  @Override public DefaultCommandLatencyCollectorOptions build(){
+    return new DefaultCommandLatencyCollectorOptions(this);
+  }
+}
+/** 
+ * Builder for  {@link MicrometerOptions}.
+ */
+public static class Builder {
+  private boolean enabled=DEFAULT_ENABLED;
+  private boolean histogram=DEFAULT_HISTOGRAM;
+  private boolean localDistinction=DEFAULT_LOCAL_DISTINCTION;
+  private Duration maxLatency=DEFAULT_MAX_LATENCY;
+  private Duration minLatency=DEFAULT_MIN_LATENCY;
+  private Tags tags=Tags.empty();
+  private double[] targetPercentiles=DEFAULT_TARGET_PERCENTILES;
+  private Builder(){
+  }
+  /** 
+ * Disable the latency collector.
+ * @return this {@link Builder}.
+ */
+  public Builder disable(){
+    this.enabled=false;
+    return this;
+  }
+  /** 
+ * Enable the latency collector.
+ * @return this {@link Builder}.
+ */
+  public Builder enable(){
+    this.enabled=true;
+    return this;
+  }
+  /** 
+ * Enable histogram buckets used to generate aggregable percentile approximations in monitoring systems that have query facilities to do so.
+ * @param histogram {@code true} if histogram buckets are recorded
+ * @return this {@link Builder}.
+ */
+  public Builder histogram(  boolean histogram){
+    this.histogram=histogram;
+    return this;
+  }
+  /** 
+ * Enables per connection metrics tracking insead of per host/port. If  {@code true}, multiple connections to the same host/connection point will be recorded separately which allows to inspect every connection individually. If {@code false}, multiple connections to the same host/connection point will be recorded together. This allows a consolidated view on one particular service. Defaults to  {@code false}. See {@link MicrometerOptions#DEFAULT_LOCAL_DISTINCTION}. Warning: Enabling this could potentially cause a label cardinality explosion in the remote metric system and should be used with caution.
+ * @param localDistinction {@code true} if latencies are recorded distinct on local level (per connection)
+ * @return this {@link Builder}.
+ */
+  public Builder localDistinction(  boolean localDistinction){
+    this.localDistinction=localDistinction;
+    return this;
+  }
+  /** 
+ * Sets the maximum value that this timer is expected to observe. Sets an upper bound on histogram buckets that are shipped to monitoring systems that support aggregable percentile approximations. Only applicable when histogram is enabled. Defaults to  {@code 5m}. See  {@link MicrometerOptions#DEFAULT_MAX_LATENCY}.
+ * @param maxLatency The maximum value that this timer is expected to observe
+ * @return this {@link Builder}.
+ */
+  public Builder maxLatency(  Duration maxLatency){
+    LettuceAssert.notNull(maxLatency,"Max Latency must not be null");
+    this.maxLatency=maxLatency;
+    return this;
+  }
+  /** 
+ * Sets the minimum value that this timer is expected to observe. Sets a lower bound on histogram buckets that are shipped to monitoring systems that support aggregable percentile approximations. Only applicable when histogram is enabled. Defaults to  {@code 1ms}. See  {@link MicrometerOptions#DEFAULT_MIN_LATENCY}.
+ * @param minLatency The minimum value that this timer is expected to observe
+ * @return this {@link Builder}.
+ */
+  public Builder minLatency(  Duration minLatency){
+    LettuceAssert.notNull(minLatency,"Min Latency must not be null");
+    this.minLatency=minLatency;
+    return this;
+  }
+  /** 
+ * Extra tags to add to the generated metrics. Defaults to  {@code Tags.empty()}.
+ * @param tags Tags to add to the metrics
+ * @return this {@link Builder}.
+ */
+  public Builder tags(  Tags tags){
+    LettuceAssert.notNull(tags,"Tags must not be null");
+    this.tags=tags;
+    return this;
+  }
+  /** 
+ * Sets the emitted percentiles. Defaults to 0.50, 0.90, 0.95, 0.99, 0.999}. Only applicable when histogram is enabled. See  {@link MicrometerOptions#DEFAULT_TARGET_PERCENTILES}.
+ * @param targetPercentiles the percentiles which should be emitted, must not be {@code null}
+ * @return this {@link Builder}.
+ */
+  public Builder targetPercentiles(  double[] targetPercentiles){
+    LettuceAssert.notNull(targetPercentiles,"TargetPercentiles must not be null");
+    this.targetPercentiles=targetPercentiles;
+    return this;
+  }
+  /** 
+ * @return a new instance of {@link MicrometerOptions}.
+ */
+  public MicrometerOptions build(){
+    return new MicrometerOptions(this);
+  }
+}

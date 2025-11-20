@@ -1,0 +1,55 @@
+@Override public CharSequence toXML(org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+  XmlStringBuilder xml=new XmlStringBuilder(this);
+  xml.rightAngleBracket();
+  for (  String name : getPropertyNames()) {
+    Object value=getProperty(name);
+    xml.openElement("property");
+    xml.element("name",name);
+    xml.halfOpenElement("value");
+    String type;
+    String valueStr;
+    if (value instanceof Integer) {
+      type="integer";
+      valueStr=Integer.toString((Integer)value);
+    }
+ else     if (value instanceof Long) {
+      type="long";
+      valueStr=Long.toString((Long)value);
+    }
+ else     if (value instanceof Float) {
+      type="float";
+      valueStr=Float.toString((Float)value);
+    }
+ else     if (value instanceof Double) {
+      type="double";
+      valueStr=Double.toString((Double)value);
+    }
+ else     if (value instanceof Boolean) {
+      type="boolean";
+      valueStr=Boolean.toString((Boolean)value);
+    }
+ else     if (value instanceof String) {
+      type="string";
+      valueStr=(String)value;
+    }
+ else {
+      try (ByteArrayOutputStream byteStream=new ByteArrayOutputStream();ObjectOutputStream out=new ObjectOutputStream(byteStream)){
+        out.writeObject(value);
+        type="java-object";
+        valueStr=Base64.encodeToString(byteStream.toByteArray());
+      }
+ catch (      Exception e) {
+        LOGGER.log(Level.SEVERE,"Error encoding java object",e);
+        type="java-object";
+        valueStr="Serializing error: " + e.getMessage();
+      }
+    }
+    xml.attribute("type",type);
+    xml.rightAngleBracket();
+    xml.escape(valueStr);
+    xml.closeElement("value");
+    xml.closeElement("property");
+  }
+  xml.closeElement(this);
+  return xml;
+}

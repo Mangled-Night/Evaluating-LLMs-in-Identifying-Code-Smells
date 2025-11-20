@@ -1,0 +1,26 @@
+private class NotifyingMessageListener extends RedisClusterPubSubAdapter<K,V> {
+  @Override public void message(  RedisClusterNode node,  K channel,  V message){
+    getListeners().forEach(listener -> listener.message(channel,message));
+    clusterListeners.forEach(listener -> listener.message(node,channel,message));
+  }
+  @Override public void message(  RedisClusterNode node,  K pattern,  K channel,  V message){
+    getListeners().forEach(listener -> listener.message(pattern,channel,message));
+    clusterListeners.forEach(listener -> listener.message(node,pattern,channel,message));
+  }
+  @Override public void subscribed(  RedisClusterNode node,  K channel,  long count){
+    getListeners().forEach(listener -> listener.subscribed(channel,count));
+    clusterListeners.forEach(listener -> listener.subscribed(node,channel,count));
+  }
+  @Override public void psubscribed(  RedisClusterNode node,  K pattern,  long count){
+    getListeners().forEach(listener -> listener.psubscribed(pattern,count));
+    clusterListeners.forEach(listener -> listener.psubscribed(node,pattern,count));
+  }
+  @Override public void unsubscribed(  RedisClusterNode node,  K channel,  long count){
+    getListeners().forEach(listener -> listener.unsubscribed(channel,count));
+    clusterListeners.forEach(listener -> listener.unsubscribed(node,channel,count));
+  }
+  @Override public void punsubscribed(  RedisClusterNode node,  K pattern,  long count){
+    getListeners().forEach(listener -> listener.punsubscribed(pattern,count));
+    clusterListeners.forEach(listener -> listener.punsubscribed(node,pattern,count));
+  }
+}

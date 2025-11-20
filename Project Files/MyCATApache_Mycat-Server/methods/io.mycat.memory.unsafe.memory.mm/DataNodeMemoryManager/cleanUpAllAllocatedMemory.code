@@ -1,0 +1,22 @@
+/** 
+ * Clean up all allocated memory and pages. Returns the number of bytes freed. A non-zero return value can be used to detect memory leaks.
+ */
+public long cleanUpAllAllocatedMemory(){
+synchronized (this) {
+    for (    MemoryConsumer c : consumers) {
+      if (c != null && c.getUsed() > 0) {
+        logger.warn("leak " + JavaUtils.bytesToString(c.getUsed()) + " memory from "+ c);
+      }
+    }
+    consumers.clear();
+    for (    MemoryBlock page : pageTable) {
+      if (page != null) {
+        logger.warn("leak a page: " + page + " in task "+ connectionAttemptId);
+        memoryManager.tungstenMemoryAllocator().free(page);
+      }
+    }
+    Arrays.fill(pageTable,null);
+  }
+  memoryManager.releaseExecutionMemory(acquiredButNotUsed,connectionAttemptId,tungstenMemoryMode);
+  return memoryManager.releaseAllExecutionMemoryForConnection(connectionAttemptId);
+}

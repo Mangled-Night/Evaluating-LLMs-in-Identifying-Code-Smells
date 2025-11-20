@@ -1,0 +1,35 @@
+private EntityData.Entity serializeEntityFull(EntityRef entityRef,FieldSerializeCheck<Component> fieldCheck){
+  EntityData.Entity.Builder entity=EntityData.Entity.newBuilder();
+  if (!ignoringEntityId) {
+    entity.setId(entityRef.getId());
+  }
+  entity.setAlwaysRelevant(entityRef.isAlwaysRelevant());
+  EntityRef owner=entityRef.getOwner();
+  if (owner.exists()) {
+    entity.setOwner(owner.getId());
+  }
+  EntityScope scope=entityRef.getScope();
+  if (scope != null) {
+switch (scope) {
+case GLOBAL:
+      entity.setScope(GLOBAL);
+    break;
+case SECTOR:
+  entity.setScope(SECTOR);
+break;
+case CHUNK:
+entity.setScope(CHUNK);
+break;
+}
+}
+for (Component component : entityRef.iterateComponents()) {
+if (!componentSerializeCheck.serialize(componentLibrary.getMetadata(component.getClass()))) {
+continue;
+}
+EntityData.Component componentData=componentSerializer.serialize(component,fieldCheck);
+if (componentData != null) {
+entity.addComponent(componentData);
+}
+}
+return entity.build();
+}

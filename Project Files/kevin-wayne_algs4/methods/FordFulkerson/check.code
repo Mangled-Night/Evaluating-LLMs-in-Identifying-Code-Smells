@@ -1,0 +1,25 @@
+private boolean check(FlowNetwork G,int s,int t){
+  if (!isFeasible(G,s,t)) {
+    System.err.println("Flow is infeasible");
+    return false;
+  }
+  if (!inCut(s)) {
+    System.err.println("source " + s + " is not on source side of min cut");
+    return false;
+  }
+  if (inCut(t)) {
+    System.err.println("sink " + t + " is on source side of min cut");
+    return false;
+  }
+  double mincutValue=0.0;
+  for (int v=0; v < G.V(); v++) {
+    for (    FlowEdge e : G.adj(v)) {
+      if ((v == e.from()) && inCut(e.from()) && !inCut(e.to()))       mincutValue+=e.capacity();
+    }
+  }
+  if (Math.abs(mincutValue - value) > FLOATING_POINT_EPSILON) {
+    System.err.println("Max flow value = " + value + ", min cut value = "+ mincutValue);
+    return false;
+  }
+  return true;
+}

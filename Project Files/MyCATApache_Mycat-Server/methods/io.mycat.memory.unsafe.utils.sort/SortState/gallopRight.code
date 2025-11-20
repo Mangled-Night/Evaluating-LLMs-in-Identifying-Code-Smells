@@ -1,0 +1,48 @@
+/** 
+ * Like gallopLeft, except that if the range contains an element equal to key, gallopRight returns the index after the rightmost equal element.
+ * @param key the key whose insertion point to search for
+ * @param a the array in which to search
+ * @param base the index of the first element in the range
+ * @param len the length of the range; must be > 0
+ * @param hint the index at which to begin the search, 0 <= hint < n.The closer hint is to the result, the faster this method will run.
+ * @param c the comparator used to order the range, and to search
+ * @return the int k,  0 <= k <= n such that a[b + k - 1] <= key < a[b + k]
+ */
+private int gallopRight(K key,Buffer a,int base,int len,int hint,Comparator<? super K> c){
+  assert len > 0 && hint >= 0 && hint < len;
+  int ofs=1;
+  int lastOfs=0;
+  K key1=s.newKey();
+  if (c.compare(key,s.getKey(a,base + hint,key1)) < 0) {
+    int maxOfs=hint + 1;
+    while (ofs < maxOfs && c.compare(key,s.getKey(a,base + hint - ofs,key1)) < 0) {
+      lastOfs=ofs;
+      ofs=(ofs << 1) + 1;
+      if (ofs <= 0)       ofs=maxOfs;
+    }
+    if (ofs > maxOfs)     ofs=maxOfs;
+    int tmp=lastOfs;
+    lastOfs=hint - ofs;
+    ofs=hint - tmp;
+  }
+ else {
+    int maxOfs=len - hint;
+    while (ofs < maxOfs && c.compare(key,s.getKey(a,base + hint + ofs,key1)) >= 0) {
+      lastOfs=ofs;
+      ofs=(ofs << 1) + 1;
+      if (ofs <= 0)       ofs=maxOfs;
+    }
+    if (ofs > maxOfs)     ofs=maxOfs;
+    lastOfs+=hint;
+    ofs+=hint;
+  }
+  assert -1 <= lastOfs && lastOfs < ofs && ofs <= len;
+  lastOfs++;
+  while (lastOfs < ofs) {
+    int m=lastOfs + ((ofs - lastOfs) >>> 1);
+    if (c.compare(key,s.getKey(a,base + m,key1)) < 0)     ofs=m;
+ else     lastOfs=m + 1;
+  }
+  assert lastOfs == ofs;
+  return ofs;
+}

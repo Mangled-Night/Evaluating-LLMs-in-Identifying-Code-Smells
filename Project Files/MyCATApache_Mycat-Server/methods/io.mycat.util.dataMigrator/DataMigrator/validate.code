@@ -1,0 +1,25 @@
+private void validate() throws SQLException {
+  for (  TableMigrateInfo table : migrateTables) {
+    if (table.isError()) {
+      continue;
+    }
+    long size=table.getSize().get();
+    long factSize=0L;
+    for (    DataNode dn : table.getNewDataNodes()) {
+      factSize+=DataMigratorUtil.querySize(dn,table.getTableName());
+    }
+    if (factSize != size) {
+      String message="migrate error!after migrate should be:" + size + " but fact is:"+ factSize;
+      table.setError(true);
+      table.setErrMessage(message);
+    }
+  }
+  String title="migrate result";
+  Map<String,String> result=new HashMap<String,String>();
+  for (  TableMigrateInfo table : migrateTables) {
+    String resultMessage=table.isError() ? "fail! reason: " + table.getErrMessage() : "success";
+    result.put(table.getSchemaAndTableName(),resultMessage);
+  }
+  String info=DataMigratorUtil.printMigrateInfo(title,result,"->");
+  System.out.println(info);
+}

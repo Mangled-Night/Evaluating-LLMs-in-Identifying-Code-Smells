@@ -1,0 +1,57 @@
+public void handleInput(String input) throws NotConnectedException, NotLoggedInException, InterruptedException, IOException {
+  String[] com=input.split(" ",3);
+switch (com[0]) {
+case "/omemo":
+    if (com.length < 3) {
+      print("Usage: /omemo <contact-jid> <message>");
+      return;
+    }
+  BareJid recipient=JidCreate.bareFrom(com[1]);
+String body=com[2];
+MessageBuilder messageBuilder=connection.getStanzaFactory().buildMessageStanza();
+try {
+Message omemoMessage=omemoManager.encrypt(recipient,body).buildMessage(messageBuilder,recipient);
+connection.sendStanza(omemoMessage);
+}
+ catch (UndecidedOmemoIdentityException e) {
+print("Undecided Identities!\n" + Arrays.toString(e.getUndecidedDevices().toArray()));
+}
+catch (CryptoFailedException|SmackException.NoResponseException e) {
+LOGGER.log(Level.SEVERE,"Unexpected Exception",e);
+}
+break;
+case "/trust":
+print("Trust");
+if (com.length != 2) {
+print("Usage: /trust <contact-jid>");
+}
+BareJid contact=JidCreate.bareFrom(com[1]);
+HashMap<OmemoDevice,OmemoFingerprint> devices;
+try {
+devices=omemoManager.getActiveFingerprints(contact);
+}
+ catch (CorruptedOmemoKeyException|CannotEstablishOmemoSessionException|SmackException.NoResponseException e) {
+LOGGER.log(Level.SEVERE,"Unexpected Exception",e);
+return;
+}
+for (OmemoDevice d : devices.keySet()) {
+print("Trust (1) or distrust (2)?\n" + devices.get(d).blocksOf8Chars());
+if (Integer.parseInt(scanner.nextLine()) == 1) {
+omemoManager.trustOmemoIdentity(d,devices.get(d));
+}
+ else {
+omemoManager.distrustOmemoIdentity(d,devices.get(d));
+}
+}
+print("Done.");
+break;
+case "/purge":
+try {
+omemoManager.purgeDeviceList();
+print("Purged.");
+}
+ catch (XMPPException.XMPPErrorException|SmackException.NoResponseException|PubSubException.NotALeafNodeException e) {
+LOGGER.log(Level.SEVERE,"Unexpected Exception",e);
+}
+}
+}

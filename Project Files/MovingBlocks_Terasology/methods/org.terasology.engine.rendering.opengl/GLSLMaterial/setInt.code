@@ -1,0 +1,20 @@
+@Override public void setInt(String desc,int i,boolean currentOnly){
+  if (isDisposed()) {
+    return;
+  }
+  if (currentOnly) {
+    enable();
+    int id=getUniformLocation(getActiveShaderProgramId(),desc);
+    GL20.glUniform1i(id,i);
+  }
+ else {
+    TIntIntIterator it=disposalAction.shaderPrograms.iterator();
+    while (it.hasNext()) {
+      it.advance();
+      GL20.glUseProgram(it.value());
+      int id=getUniformLocation(it.value(),desc);
+      GL20.glUniform1i(id,i);
+    }
+    restoreStateAfterUniformsSet();
+  }
+}

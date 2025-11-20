@@ -1,0 +1,7 @@
+@Test void xinfoConsumers(){
+  assertThat(redis.xgroupCreate(StreamOffset.from(key,"0-0"),"group",XGroupCreateArgs.Builder.mkstream())).isEqualTo("OK");
+  redis.xadd(key,Collections.singletonMap("key1","value1"));
+  redis.xreadgroup(Consumer.from("group","consumer1"),StreamOffset.lastConsumed(key));
+  List<Object> objects=redis.xinfoConsumers(key,"group");
+  assertThat((List<Object>)objects.get(0)).containsSequence("name","consumer1");
+}

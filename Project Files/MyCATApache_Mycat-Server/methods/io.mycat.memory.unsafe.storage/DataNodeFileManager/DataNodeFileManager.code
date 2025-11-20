@@ -1,0 +1,17 @@
+public DataNodeFileManager(MycatPropertyConf conf,boolean deleteFilesOnStop) throws IOException {
+  this.conf=conf;
+  this.deleteFilesOnStop=deleteFilesOnStop;
+  subDirsPerLocalDir=conf.getInt("mycat.diskStore.subDirectories",64);
+  localDirs=createLocalDirs(conf);
+  if (localDirs.isEmpty()) {
+    System.exit(-1);
+  }
+  subDirs=new ConcurrentHashMap<Integer,ArrayList<File>>(localDirs.size());
+  for (int i=0; i < localDirs.size(); i++) {
+    ArrayList<File> list=new ArrayList<File>(subDirsPerLocalDir);
+    for (int j=0; j < subDirsPerLocalDir; j++) {
+      list.add(i,null);
+    }
+    subDirs.put(i,list);
+  }
+}

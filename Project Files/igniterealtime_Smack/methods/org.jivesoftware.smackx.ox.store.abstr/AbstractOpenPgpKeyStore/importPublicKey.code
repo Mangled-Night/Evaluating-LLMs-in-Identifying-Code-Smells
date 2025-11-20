@@ -1,0 +1,19 @@
+@Override public void importPublicKey(BareJid owner,PGPPublicKeyRing publicKeys) throws IOException, PGPException, MissingUserIdOnKeyException {
+  if (!new KeyRingInfo(publicKeys).isUserIdValid("xmpp:" + owner.toString())) {
+    throw new MissingUserIdOnKeyException(owner,new OpenPgpV4Fingerprint(publicKeys));
+  }
+  PGPPublicKeyRingCollection publicKeyRings=getPublicKeysOf(owner);
+  try {
+    if (publicKeyRings != null) {
+      publicKeyRings=PGPPublicKeyRingCollection.addPublicKeyRing(publicKeyRings,publicKeys);
+    }
+ else {
+      publicKeyRings=new PGPPublicKeyRingCollection(Collections.singleton(publicKeys));
+    }
+  }
+ catch (  IllegalArgumentException e) {
+    LOGGER.log(Level.FINE,"Skipping public key ring " + Long.toHexString(publicKeys.getPublicKey().getKeyID()) + " as it is already in the key ring of "+ owner.toString(),e);
+  }
+  this.publicKeyRingCollections.put(owner,publicKeyRings);
+  writePublicKeysOf(owner,publicKeyRings);
+}

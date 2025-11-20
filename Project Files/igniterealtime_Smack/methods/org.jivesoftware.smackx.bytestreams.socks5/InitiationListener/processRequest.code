@@ -1,0 +1,20 @@
+private void processRequest(Stanza packet) throws NotConnectedException, InterruptedException {
+  Bytestream byteStreamRequest=(Bytestream)packet;
+  StreamNegotiator.signal(byteStreamRequest.getFrom().toString() + '\t' + byteStreamRequest.getSessionID(),byteStreamRequest);
+  if (this.manager.getIgnoredBytestreamRequests().remove(byteStreamRequest.getSessionID())) {
+    return;
+  }
+  Socks5BytestreamRequest request=new Socks5BytestreamRequest(this.manager,byteStreamRequest);
+  BytestreamListener userListener=this.manager.getUserListener(byteStreamRequest.getFrom());
+  if (userListener != null) {
+    userListener.incomingBytestreamRequest(request);
+  }
+ else   if (!this.manager.getAllRequestListeners().isEmpty()) {
+    for (    BytestreamListener listener : this.manager.getAllRequestListeners()) {
+      listener.incomingBytestreamRequest(request);
+    }
+  }
+ else {
+    this.manager.replyRejectPacket(byteStreamRequest);
+  }
+}

@@ -1,0 +1,10 @@
+@Override public void delResourceListByRole(Long roleId){
+  UmsAdminRoleRelationExample example=new UmsAdminRoleRelationExample();
+  example.createCriteria().andRoleIdEqualTo(roleId);
+  List<UmsAdminRoleRelation> relationList=adminRoleRelationMapper.selectByExample(example);
+  if (CollUtil.isNotEmpty(relationList)) {
+    String keyPrefix=REDIS_DATABASE + ":" + REDIS_KEY_RESOURCE_LIST+ ":";
+    List<String> keys=relationList.stream().map(relation -> keyPrefix + relation.getAdminId()).collect(Collectors.toList());
+    redisService.del(keys);
+  }
+}

@@ -1,0 +1,25 @@
+/** 
+ * Sets the stateless reconnect  {@link Delay} to delay reconnect attempts. Defaults to binary exponential delay cappedat  {@literal 30 SECONDS}.  {@code reconnectDelay} must be a stateless {@link Delay}.
+ * @param reconnectDelay the reconnect delay, must not be {@code null}.
+ * @return this
+ * @since 4.3
+ */
+@Override public Builder reconnectDelay(Delay reconnectDelay){
+  LettuceAssert.notNull(reconnectDelay,"Delay must not be null");
+  LettuceAssert.isTrue(!(reconnectDelay instanceof StatefulDelay),"Delay must be a stateless instance.");
+  return reconnectDelay(() -> reconnectDelay);
+}
+/** 
+ * Sets the stateful reconnect  {@link Supplier} to delay reconnect attempts. Defaults to binary exponential delay cappedat  {@literal 30 SECONDS}.
+ * @param reconnectDelay the reconnect delay, must not be {@code null}.
+ * @return this
+ * @since 4.3
+ */
+@Override public Builder reconnectDelay(Supplier<Delay> reconnectDelay){
+  LettuceAssert.notNull(reconnectDelay,"Delay must not be null");
+  this.reconnectDelay=reconnectDelay;
+  return this;
+}
+@Override public Delay reconnectDelay(){
+  return reconnectDelay.get();
+}

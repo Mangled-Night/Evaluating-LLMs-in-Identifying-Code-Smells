@@ -1,0 +1,24 @@
+@Override protected void doReload(StaticSoundData newData){
+  try {
+    GameThread.synch(() -> {
+      if (bufferId == 0) {
+        bufferId=alGenBuffers();
+        disposalAction.bufferId=bufferId;
+      }
+ else {
+        audioManager.purgeSound(this);
+      }
+      AL10.alBufferData(bufferId,newData.getChannels() == 1 ? AL10.AL_FORMAT_MONO16 : AL10.AL_FORMAT_STEREO16,newData.getData(),newData.getSampleRate());
+      OpenALException.checkState("Allocating sound buffer");
+      int bits=newData.getBufferBits();
+      int size=getBufferSize();
+      int channels=getChannels();
+      int frequency=getSamplingRate();
+      length=(float)size / channels / (bits / 8)/ frequency;
+    }
+);
+  }
+ catch (  InterruptedException e) {
+    logger.error("Failed to reload {}",getUrn(),e);
+  }
+}

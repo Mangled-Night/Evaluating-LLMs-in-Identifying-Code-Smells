@@ -1,0 +1,19 @@
+private PerformanceListModel(){
+  executor.execute(() -> {
+    Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
+    try {
+      while (!stopThread) {
+        Thread.sleep(1000);
+        try (ThreadActivity ignored=ThreadMonitor.startThreadActivity("Poll")){
+          updateEntries(PerformanceMonitor.getRunningMean(),PerformanceMonitor.getDecayingSpikes());
+        }
+       }
+    }
+ catch (    Exception e) {
+      ThreadMonitor.addError(e);
+      LOGGER.error("Error executing performance monitor update",e);
+    }
+    executor.shutdownNow();
+  }
+);
+}

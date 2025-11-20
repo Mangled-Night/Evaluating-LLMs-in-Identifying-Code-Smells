@@ -1,0 +1,30 @@
+/** 
+ * Must be called when a XMPP stream open tag is encountered. Sets values like the stream ID and the incoming stream XML environment. <p> This method also returns a matching stream close tag. For example if the stream open is  {@code <stream …>}, then {@code </stream>} is returned. But if it is {@code <stream:stream>}, then  {@code </stream:stream>} is returned.Or if it is  {@code <foo:stream>}, then  {@code </foo:stream>} is returned.</p>
+ * @param parser an XML parser that is positioned at the start of the stream open.
+ * @return a String representing the corresponding stream end tag.
+ */
+protected String onStreamOpen(XmlPullParser parser){
+  assert StreamOpen.ETHERX_JABBER_STREAMS_NAMESPACE.equals(parser.getNamespace()) : parser.getNamespace() + " is not " + StreamOpen.ETHERX_JABBER_STREAMS_NAMESPACE;
+  assert StreamOpen.UNPREFIXED_ELEMENT.equals(parser.getName());
+  streamId=parser.getAttributeValue("id");
+  incomingStreamXmlEnvironment=XmlEnvironment.from(parser);
+  String reportedServerDomainString=parser.getAttributeValue("from");
+  if (reportedServerDomainString != null) {
+    DomainBareJid reportedServerDomain;
+    try {
+      reportedServerDomain=JidCreate.domainBareFrom(reportedServerDomainString);
+      DomainBareJid configuredXmppServiceDomain=config.getXMPPServiceDomain();
+      if (!configuredXmppServiceDomain.equals(reportedServerDomain)) {
+        LOGGER.warning("Domain reported by server '" + reportedServerDomain + "' does not match configured domain '"+ configuredXmppServiceDomain+ "'");
+      }
+    }
+ catch (    XmppStringprepException e) {
+      LOGGER.log(Level.WARNING,"XMPP service domain '" + reportedServerDomainString + "' as reported by server could not be transformed to a valid JID",e);
+    }
+  }
+  String prefix=parser.getPrefix();
+  if (StringUtils.isNotEmpty(prefix)) {
+    return "</" + prefix + ":stream>";
+  }
+  return "</stream>";
+}

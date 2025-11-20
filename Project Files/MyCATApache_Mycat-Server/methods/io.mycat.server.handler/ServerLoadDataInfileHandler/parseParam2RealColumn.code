@@ -1,0 +1,32 @@
+/** 
+ * load data infile使用set子句时将用户变量改成真实的列名 比如下面语句LOAD DATA INFILE 'file.txt' INTO TABLE t1 (column1, @var1,@var2) SET column2 = @var1/100,columns=100/(@var2/200)); 最后真实的列应该是{column1,column2,columns} 语法参考： 参考https://dev.mysql.com/doc/refman/5.7/en/load-data.html
+ * @param statement
+ * @return
+ */
+private List<SQLExpr> parseParam2RealColumn(MySqlLoadDataInFileStatement statement){
+  String HAS_FILTERED="HAS_FILTERED";
+  List<SQLExpr> realColumnList=new ArrayList<>(statement.getColumns().size());
+  for (  SQLExpr columnExpr : statement.getColumns()) {
+    boolean hasSetColumn=false;
+    if (columnExpr instanceof SQLVariantRefExpr) {
+      SQLVariantRefExpr varColumn=(SQLVariantRefExpr)columnExpr;
+      for (      SQLExpr setExpr : statement.getSetList()) {
+        if (setExpr.getAttribute(HAS_FILTERED) != null) {
+          continue;
+        }
+        if (setExpr.toString().contains(varColumn.toString())) {
+          if (setExpr instanceof SQLBinaryOpExpr) {
+            realColumnList.add(((SQLBinaryOpExpr)setExpr).getLeft());
+            hasSetColumn=true;
+          }
+          setExpr.putAttribute(HAS_FILTERED,true);
+          break;
+        }
+      }
+    }
+    if (!hasSetColumn) {
+      realColumnList.add(columnExpr);
+    }
+  }
+  return realColumnList;
+}

@@ -1,0 +1,118 @@
+private IoTProvisioningManager(XMPPConnection connection){
+  super(connection);
+  connection.addAsyncStanzaListener(new StanzaListener(){
+    @Override public void processStanza(    Stanza stanza) throws NotConnectedException, InterruptedException {
+      if (!isFromProvisioningService(stanza,true)) {
+        return;
+      }
+      Message message=(Message)stanza;
+      Unfriend unfriend=Unfriend.from(message);
+      BareJid unfriendJid=unfriend.getJid();
+      final XMPPConnection connection=connection();
+      Roster roster=Roster.getInstanceFor(connection);
+      if (!roster.isSubscribedToMyPresence(unfriendJid)) {
+        LOGGER.warning("Ignoring <unfriend/> request '" + stanza + "' because "+ unfriendJid+ " is already not subscribed to our presence.");
+        return;
+      }
+      Presence unsubscribed=connection.getStanzaFactory().buildPresenceStanza().ofType(Presence.Type.unsubscribed).to(unfriendJid).build();
+      connection.sendStanza(unsubscribed);
+    }
+  }
+,UNFRIEND_MESSAGE);
+  connection.addAsyncStanzaListener(new StanzaListener(){
+    @Override public void processStanza(    final Stanza stanza) throws NotConnectedException, InterruptedException {
+      final Message friendMessage=(Message)stanza;
+      final Friend friend=Friend.from(friendMessage);
+      final BareJid friendJid=friend.getFriend();
+      if (isFromProvisioningService(friendMessage,false)) {
+        final XMPPConnection connection=connection();
+        Friend friendNotification=new Friend(connection.getUser().asBareJid());
+        Message notificationMessage=connection.getStanzaFactory().buildMessageStanza().to(friendJid).addExtension(friendNotification).build();
+        connection.sendStanza(notificationMessage);
+      }
+ else {
+        BareJid bareFrom=friendMessage.getFrom().asBareJid();
+        if (!friendshipDeniedCache.containsKey(bareFrom)) {
+          LOGGER.log(Level.WARNING,"Ignoring friendship recommendation " + friendMessage + " because friendship to this JID was not previously denied.");
+          return;
+        }
+        if (!bareFrom.equals(friendJid)) {
+          LOGGER.log(Level.WARNING,"Ignoring friendship recommendation " + friendMessage + " because it does not recommend itself, but "+ friendJid+ '.');
+          return;
+        }
+        sendFriendshipRequest(friendJid);
+      }
+    }
+  }
+,FRIEND_MESSAGE);
+  connection.registerIQRequestHandler(new AbstractIqRequestHandler(ClearCache.ELEMENT,ClearCache.NAMESPACE,IQ.Type.set,Mode.async){
+    @Override public IQ handleIQRequest(    IQ iqRequest){
+      if (!isFromProvisioningService(iqRequest,true)) {
+        return null;
+      }
+      ClearCache clearCache=(ClearCache)iqRequest;
+      Jid from=iqRequest.getFrom();
+      LruCache<BareJid,Void> cache=negativeFriendshipRequestCache.lookup(from);
+      if (cache != null) {
+        cache.clear();
+      }
+      return new ClearCacheResponse(clearCache);
+    }
+  }
+);
+  roster=Roster.getInstanceFor(connection);
+  roster.addSubscribeListener(new SubscribeListener(){
+    @Override public SubscribeAnswer processSubscribe(    Jid from,    Presence subscribeRequest){
+      try {
+        if (IoTDiscoveryManager.getInstanceFor(connection()).isRegistry(from.asBareJid())) {
+          return SubscribeAnswer.Approve;
+        }
+      }
+ catch (      NoResponseException|XMPPErrorException|NotConnectedException|InterruptedException e) {
+        LOGGER.log(Level.WARNING,"Could not determine if " + from + " is a registry",e);
+      }
+      Jid provisioningServer=null;
+      try {
+        provisioningServer=getConfiguredProvisioningServer();
+      }
+ catch (      NoResponseException|XMPPErrorException|NotConnectedException|InterruptedException e) {
+        LOGGER.log(Level.WARNING,"Could not determine provisioning server. Ignoring friend request from " + from,e);
+      }
+      if (provisioningServer == null) {
+        return null;
+      }
+      boolean isFriend;
+      try {
+        isFriend=isFriend(provisioningServer,from.asBareJid());
+      }
+ catch (      NoResponseException|XMPPErrorException|NotConnectedException|InterruptedException e) {
+        LOGGER.log(Level.WARNING,"Could not determine if " + from + " is a friend.",e);
+        return null;
+      }
+      if (isFriend) {
+        return SubscribeAnswer.Approve;
+      }
+ else {
+        return SubscribeAnswer.Deny;
+      }
+    }
+  }
+);
+  roster.addPresenceEventListener(new AbstractPresenceEventListener(){
+    @Override public void presenceSubscribed(    BareJid address,    Presence subscribedPresence){
+      friendshipRequestedCache.remove(address);
+      for (      BecameFriendListener becameFriendListener : becameFriendListeners) {
+        becameFriendListener.becameFriend(address,subscribedPresence);
+      }
+    }
+    @Override public void presenceUnsubscribed(    BareJid address,    Presence unsubscribedPresence){
+      if (friendshipRequestedCache.containsKey(address)) {
+        friendshipDeniedCache.put(address,null);
+      }
+      for (      WasUnfriendedListener wasUnfriendedListener : wasUnfriendedListeners) {
+        wasUnfriendedListener.wasUnfriendedListener(address,unsubscribedPresence);
+      }
+    }
+  }
+);
+}

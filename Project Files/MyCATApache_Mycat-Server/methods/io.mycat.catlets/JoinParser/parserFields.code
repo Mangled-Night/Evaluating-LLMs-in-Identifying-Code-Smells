@@ -1,0 +1,27 @@
+private void parserFields(List<SQLSelectItem> mysqlSelectList){
+  String key="";
+  String value="";
+  String exprfield="";
+  for (  SQLSelectItem item : mysqlSelectList) {
+    if (item.getExpr() instanceof SQLAllColumnExpr) {
+      setField(item.toString(),item.toString());
+    }
+ else {
+      if (item.getExpr() instanceof SQLAggregateExpr) {
+        SQLAggregateExpr expr=(SQLAggregateExpr)item.getExpr();
+        key=getExprFieldName(expr);
+        setField(key,value);
+      }
+ else       if (item.getExpr() instanceof SQLMethodInvokeExpr) {
+        key=getMethodInvokeFieldName(item);
+        exprfield=getFieldName(item);
+        setField(key,value,exprfield);
+      }
+ else {
+        key=getFieldName(item);
+        value=item.getAlias();
+        setField(key,value);
+      }
+    }
+  }
+}

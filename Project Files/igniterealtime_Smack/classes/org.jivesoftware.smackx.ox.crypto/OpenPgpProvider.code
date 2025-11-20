@@ -1,0 +1,47 @@
+public interface OpenPgpProvider {
+  /** 
+ * Return the  {@link OpenPgpStore} instance of this provider.This MUST NOT return null.
+ * @return store TODO javadoc me please
+ */
+  OpenPgpStore getStore();
+  /** 
+ * Sign a  {@link SigncryptElement} using our signing key and encrypt it for all {@code recipients} and ourselves.
+ * @param element {@link SigncryptElement} which contains a payload which will be transmitted.
+ * @param self our own OpenPGP identity.
+ * @param recipients recipients identities.
+ * @return signed and encrypted {@link SigncryptElement} as a {@link OpenPgpElement}, along with {@link OpenPgpMetadata} about the encryption/signatures.
+ * @throws IOException IO is dangerous
+ * @throws PGPException PGP is brittle
+ */
+  OpenPgpElementAndMetadata signAndEncrypt(  SigncryptElement element,  OpenPgpSelf self,  Collection<OpenPgpContact> recipients) throws IOException, PGPException ;
+  /** 
+ * Sign a  {@link SignElement} using our signing key.
+ * @param element {@link SignElement} which contains a payload.
+ * @param self our OpenPGP identity.
+ * @return signed {@link SignElement} as {@link OpenPgpElement}, along with  {@link OpenPgpMetadata} about thesignatures.
+ * @throws IOException IO is dangerous
+ * @throws PGPException PGP is brittle
+ */
+  OpenPgpElementAndMetadata sign(  SignElement element,  OpenPgpSelf self) throws IOException, PGPException ;
+  /** 
+ * Encrypt a  {@link CryptElement} for all {@code recipients} and ourselves.
+ * @param element {@link CryptElement} which contains a payload which will be transmitted.
+ * @param self our own OpenPGP identity.
+ * @param recipients recipient identities.
+ * @return encrypted {@link CryptElement} as an {@link OpenPgpElement}, along with  {@link OpenPgpMetadata} aboutthe encryption.
+ * @throws IOException IO is dangerous
+ * @throws PGPException PGP is brittle
+ */
+  OpenPgpElementAndMetadata encrypt(  CryptElement element,  OpenPgpSelf self,  Collection<OpenPgpContact> recipients) throws IOException, PGPException ;
+  /** 
+ * Decrypt and/or verify signatures on an incoming  {@link OpenPgpElement}. If the message is encrypted, this method decrypts it. If it is (also) signed, the signature will be checked. The resulting  {@link OpenPgpMessage} contains the original {@link OpenPgpContentElement}, as well as information about the encryption/signing.
+ * @param element signed and or encrypted {@link OpenPgpElement}.
+ * @param self our OpenPGP identity.
+ * @param sender OpenPGP identity of the sender.
+ * @param connection XMPP connection used to fetch any missing keys.
+ * @return decrypted message as {@link OpenPgpMessage}.
+ * @throws IOException IO is dangerous
+ * @throws PGPException PGP is brittle
+ */
+  OpenPgpMessage decryptAndOrVerify(  XMPPConnection connection,  OpenPgpElement element,  OpenPgpSelf self,  OpenPgpContact sender) throws IOException, PGPException ;
+}

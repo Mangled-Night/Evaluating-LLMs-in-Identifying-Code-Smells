@@ -1,0 +1,13 @@
+<T>Command<K,V,T> eval(byte[] script,ScriptOutputType type,K[] keys,V... values){
+  return eval(script,type,false,keys,values);
+}
+<T>Command<K,V,T> eval(byte[] script,ScriptOutputType type,boolean readonly,K[] keys,V... values){
+  LettuceAssert.notNull(script,"Script " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(type,"ScriptOutputType " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(keys,"Keys " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(values,"Values " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  args.add(script).add(keys.length).addKeys(keys).addValues(values);
+  CommandOutput<K,V,T> output=newScriptOutput(codec,type);
+  return createCommand(readonly ? EVAL_RO : EVAL,output,args);
+}

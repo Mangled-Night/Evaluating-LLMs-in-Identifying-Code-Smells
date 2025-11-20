@@ -1,0 +1,35 @@
+/** 
+ * spring容器初始化完成事件 Created by shuzheng on 2017/1/7.
+ */
+public class ApplicationContextListener implements ApplicationListener<ContextRefreshedEvent> {
+  private static final Logger LOGGER=LoggerFactory.getLogger(ApplicationContextListener.class);
+  @Override public void onApplicationEvent(  ContextRefreshedEvent contextRefreshedEvent){
+    if (null == contextRefreshedEvent.getApplicationContext().getParent()) {
+      LOGGER.debug(">>>>> spring初始化完毕 <<<<<");
+      Map<String,Object> baseServices=contextRefreshedEvent.getApplicationContext().getBeansWithAnnotation(BaseService.class);
+      for (      Object service : baseServices.values()) {
+        LOGGER.debug(">>>>> {}.initMapper()",service.getClass().getName());
+        try {
+          Method initMapper=service.getClass().getMethod("initMapper");
+          initMapper.invoke(service);
+        }
+ catch (        Exception e) {
+          LOGGER.error("初始化BaseService的initMapper方法异常",e);
+          e.printStackTrace();
+        }
+      }
+      Map<String,BaseInterface> baseInterfaceBeans=contextRefreshedEvent.getApplicationContext().getBeansOfType(BaseInterface.class);
+      for (      Object service : baseInterfaceBeans.values()) {
+        LOGGER.debug(">>>>> {}.init()",service.getClass().getName());
+        try {
+          Method init=service.getClass().getMethod("init");
+          init.invoke(service);
+        }
+ catch (        Exception e) {
+          LOGGER.error("初始化BaseInterface的init方法异常",e);
+          e.printStackTrace();
+        }
+      }
+    }
+  }
+}

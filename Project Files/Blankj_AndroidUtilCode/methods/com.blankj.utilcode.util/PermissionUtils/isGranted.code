@@ -1,0 +1,22 @@
+/** 
+ * Return whether <em>you</em> have been granted the permissions.
+ * @param permissions The permissions.
+ * @return {@code true}: yes<br> {@code false}: no
+ */
+public static boolean isGranted(final String... permissions){
+  Pair<List<String>,List<String>> requestAndDeniedPermissions=getRequestAndDeniedPermissions(permissions);
+  List<String> deniedPermissions=requestAndDeniedPermissions.second;
+  if (!deniedPermissions.isEmpty()) {
+    return false;
+  }
+  List<String> requestPermissions=requestAndDeniedPermissions.first;
+  for (  String permission : requestPermissions) {
+    if (!isGranted(permission)) {
+      return false;
+    }
+  }
+  return true;
+}
+private static boolean isGranted(final String permission){
+  return Build.VERSION.SDK_INT < Build.VERSION_CODES.M || PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(Utils.getApp(),permission);
+}

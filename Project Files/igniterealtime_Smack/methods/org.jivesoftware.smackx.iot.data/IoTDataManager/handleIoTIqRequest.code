@@ -1,0 +1,29 @@
+@Override public IQ handleIoTIqRequest(IQ iqRequest){
+  final IoTDataRequest dataRequest=(IoTDataRequest)iqRequest;
+  if (!dataRequest.isMomentary()) {
+    return null;
+  }
+  final Thing thing=things.get(NodeInfo.EMPTY);
+  if (thing == null) {
+    return null;
+  }
+  ThingMomentaryReadOutRequest readOutRequest=thing.getMomentaryReadOutRequestHandler();
+  if (readOutRequest == null) {
+    return null;
+  }
+  readOutRequest.momentaryReadOutRequest(new ThingMomentaryReadOutResult(){
+    @Override public void momentaryReadOut(    List<? extends IoTDataField> results){
+      IoTFieldsExtension iotFieldsExtension=IoTFieldsExtension.buildFor(dataRequest.getSequenceNr(),true,thing.getNodeInfo(),results);
+      XMPPConnection connection=connection();
+      Message message=connection.getStanzaFactory().buildMessageStanza().to(dataRequest.getFrom()).addExtension(iotFieldsExtension).build();
+      try {
+        connection.sendStanza(message);
+      }
+ catch (      NotConnectedException|InterruptedException e) {
+        LOGGER.log(Level.SEVERE,"Could not send read-out response " + message,e);
+      }
+    }
+  }
+);
+  return new IoTDataReadOutAccepted(dataRequest);
+}

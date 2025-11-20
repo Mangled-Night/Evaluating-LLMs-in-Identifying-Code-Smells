@@ -1,0 +1,76 @@
+public static void copy(ByteBuffer src,int srcPosition,byte[] trg,int trgPosition,int length){
+  BestHolder.BEST.copy(src,srcPosition,trg,trgPosition,length);
+}
+public static void copy(ByteBuffer src,int srcPosition,ByteBuffer trg,int trgPosition,int length){
+  BestHolder.BEST.copy(src,srcPosition,trg,trgPosition,length);
+}
+abstract public void copy(ByteBuffer src,int srcPosition,byte[] trg,int trgPosition,int length);
+abstract public void copy(ByteBuffer src,int srcPosition,ByteBuffer trg,int trgPosition,int length);
+public void copy(ByteBuffer src,int srcPosition,byte[] trg,int trgPosition,int length){
+  if (src.hasArray()) {
+    System.arraycopy(src.array(),src.arrayOffset() + srcPosition,trg,trgPosition,length);
+  }
+ else {
+    copy(null,srcPosition + theUnsafe.getLong(src,DIRECT_BUFFER_ADDRESS_OFFSET),trg,trgPosition,length);
+  }
+}
+public void copy(ByteBuffer srcBuf,int srcPosition,ByteBuffer trgBuf,int trgPosition,int length){
+  Object src;
+  long srcOffset;
+  if (srcBuf.hasArray()) {
+    src=srcBuf.array();
+    srcOffset=BYTE_ARRAY_BASE_OFFSET + srcBuf.arrayOffset();
+  }
+ else {
+    src=null;
+    srcOffset=theUnsafe.getLong(srcBuf,DIRECT_BUFFER_ADDRESS_OFFSET);
+  }
+  copy(src,srcOffset + srcPosition,trgBuf,trgPosition,length);
+}
+public static void copy(Object src,long srcOffset,ByteBuffer trgBuf,int trgPosition,int length){
+  if (trgBuf.hasArray()) {
+    copy(src,srcOffset,trgBuf.array(),trgBuf.arrayOffset() + trgPosition,length);
+  }
+ else {
+    copy(src,srcOffset,null,trgPosition + theUnsafe.getLong(trgBuf,DIRECT_BUFFER_ADDRESS_OFFSET),length);
+  }
+}
+public static void copy(Object src,long srcOffset,byte[] trg,int trgPosition,int length){
+  if (length <= MIN_COPY_THRESHOLD) {
+    for (int i=0; i < length; i++) {
+      trg[trgPosition + i]=theUnsafe.getByte(src,srcOffset + i);
+    }
+  }
+ else {
+    copy(src,srcOffset,trg,BYTE_ARRAY_BASE_OFFSET + trgPosition,length);
+  }
+}
+public static void copy(Object src,long srcOffset,Object dst,long dstOffset,long length){
+  while (length > 0) {
+    long size=(length > UNSAFE_COPY_THRESHOLD) ? UNSAFE_COPY_THRESHOLD : length;
+    theUnsafe.copyMemory(src,srcOffset,dst,dstOffset,size);
+    length-=size;
+    srcOffset+=size;
+    dstOffset+=size;
+  }
+}
+public void copy(ByteBuffer src,int srcPosition,byte[] trg,int trgPosition,int length){
+  if (src.hasArray()) {
+    System.arraycopy(src.array(),src.arrayOffset() + srcPosition,trg,trgPosition,length);
+    return;
+  }
+  src=src.duplicate();
+  src.position(srcPosition);
+  src.get(trg,trgPosition,length);
+}
+public void copy(ByteBuffer src,int srcPosition,ByteBuffer trg,int trgPosition,int length){
+  if (src.hasArray() && trg.hasArray()) {
+    System.arraycopy(src.array(),src.arrayOffset() + srcPosition,trg.array(),trg.arrayOffset() + trgPosition,length);
+    return;
+  }
+  src=src.duplicate();
+  src.position(srcPosition).limit(srcPosition + length);
+  trg=trg.duplicate();
+  trg.position(trgPosition);
+  trg.put(src);
+}

@@ -1,0 +1,26 @@
+@Override public int delete(List<Long> ids){
+  PmsProductAttribute pmsProductAttribute=productAttributeMapper.selectByPrimaryKey(ids.get(0));
+  Integer type=pmsProductAttribute.getType();
+  PmsProductAttributeCategory pmsProductAttributeCategory=productAttributeCategoryMapper.selectByPrimaryKey(pmsProductAttribute.getProductAttributeCategoryId());
+  PmsProductAttributeExample example=new PmsProductAttributeExample();
+  example.createCriteria().andIdIn(ids);
+  int count=productAttributeMapper.deleteByExample(example);
+  if (type == 0) {
+    if (pmsProductAttributeCategory.getAttributeCount() >= count) {
+      pmsProductAttributeCategory.setAttributeCount(pmsProductAttributeCategory.getAttributeCount() - count);
+    }
+ else {
+      pmsProductAttributeCategory.setAttributeCount(0);
+    }
+  }
+ else   if (type == 1) {
+    if (pmsProductAttributeCategory.getParamCount() >= count) {
+      pmsProductAttributeCategory.setParamCount(pmsProductAttributeCategory.getParamCount() - count);
+    }
+ else {
+      pmsProductAttributeCategory.setParamCount(0);
+    }
+  }
+  productAttributeCategoryMapper.updateByPrimaryKey(pmsProductAttributeCategory);
+  return count;
+}

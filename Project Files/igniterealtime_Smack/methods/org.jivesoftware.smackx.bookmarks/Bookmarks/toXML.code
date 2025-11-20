@@ -1,0 +1,31 @@
+/** 
+ * Returns the XML representation of the PrivateData.
+ * @return the private data as XML.
+ */
+@Override public XmlStringBuilder toXML(){
+  XmlStringBuilder buf=new XmlStringBuilder();
+  buf.halfOpenElement(ELEMENT).xmlnsAttribute(NAMESPACE).rightAngleBracket();
+  for (  BookmarkedURL urlStorage : getBookmarkedURLS()) {
+    if (urlStorage.isShared()) {
+      continue;
+    }
+    buf.halfOpenElement("url").attribute("name",urlStorage.getName()).attribute("url",urlStorage.getURL());
+    buf.condAttribute(urlStorage.isRss(),"rss","true");
+    buf.closeEmptyElement();
+  }
+  for (  BookmarkedConference conference : getBookmarkedConferences()) {
+    if (conference.isShared()) {
+      continue;
+    }
+    buf.halfOpenElement("conference");
+    buf.attribute("name",conference.getName());
+    buf.attribute("autojoin",Boolean.toString(conference.isAutoJoin()));
+    buf.attribute("jid",conference.getJid());
+    buf.rightAngleBracket();
+    buf.optElement("nick",conference.getNickname());
+    buf.optElement("password",conference.getPassword());
+    buf.closeElement("conference");
+  }
+  buf.closeElement(ELEMENT);
+  return buf;
+}

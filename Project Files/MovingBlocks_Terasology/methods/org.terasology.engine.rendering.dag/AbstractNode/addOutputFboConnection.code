@@ -1,0 +1,36 @@
+/** 
+ * TODO do something if could not insert
+ * @param id
+ * @param fboData
+ * @return true if inserted, false otherwise
+ */
+protected boolean addOutputFboConnection(int id,FBO fboData){
+  boolean success=false;
+  String connectionUri=FboConnection.getConnectionName(id,this.nodeUri);
+  if (outputConnections.containsKey(connectionUri)) {
+    FboConnection fboConnection=(FboConnection)outputConnections.get(connectionUri);
+    if (fboConnection.getData() != null) {
+      logger.warn("Adding output fbo data to slot id " + id + " of "+ this.nodeUri+ "node overwrites data of existing connection: "+ fboConnection.toString());
+    }
+    fboConnection.setData(fboData);
+    if (!fboConnection.getConnectedConnections().isEmpty()) {
+      logger.info("Propagating fbo data to all connected connections of " + fboConnection + ": ");
+      fboConnection.getConnectedConnections().forEach((k,v) -> {
+        logger.info("setting data for: " + v.toString() + " ,");
+        v.setData(fboData);
+      }
+);
+      logger.info("data propagated.\n");
+    }
+    success=true;
+  }
+ else {
+    DependencyConnection fboConnection=new FboConnection(FboConnection.getConnectionName(id,this.nodeUri),DependencyConnection.Type.OUTPUT,fboData,this.getUri());
+    success=addOutputConnection(fboConnection);
+  }
+  return success;
+}
+public boolean addOutputFboConnection(int id){
+  DependencyConnection fboConnection=new FboConnection(FboConnection.getConnectionName(id,this.nodeUri),DependencyConnection.Type.OUTPUT,this.getUri());
+  return addOutputConnection(fboConnection);
+}

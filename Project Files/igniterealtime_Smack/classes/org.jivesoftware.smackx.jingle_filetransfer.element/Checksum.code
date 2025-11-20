@@ -1,0 +1,33 @@
+/** 
+ * Checksum element.
+ */
+public class Checksum implements ExtensionElement {
+  public static final String ELEMENT="checksum";
+  public static final QName QNAME=new QName(JingleFileTransfer.NAMESPACE_V5,ELEMENT);
+  public static final String ATTR_CREATOR="creator";
+  public static final String ATTR_NAME="name";
+  private final JingleContent.Creator creator;
+  private final String name;
+  private final JingleFileTransferChild file;
+  public Checksum(  JingleContent.Creator creator,  String name,  JingleFileTransferChild file){
+    this.creator=creator;
+    this.name=name;
+    this.file=Objects.requireNonNull(file,"file MUST NOT be null.");
+    Objects.requireNonNull(file.getHash(),"file MUST contain at least one hash element.");
+  }
+  @Override public String getElementName(){
+    return QNAME.getLocalPart();
+  }
+  @Override public CharSequence toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder sb=new XmlStringBuilder(this);
+    sb.optAttribute(ATTR_CREATOR,creator);
+    sb.optAttribute(ATTR_NAME,name);
+    sb.rightAngleBracket();
+    sb.append(file);
+    sb.closeElement(this);
+    return sb;
+  }
+  @Override public String getNamespace(){
+    return QNAME.getNamespaceURI();
+  }
+}

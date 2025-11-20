@@ -1,0 +1,60 @@
+/** 
+ * 处理简单查询结果 ,每一个查询都是一件 CommandComplete 为结束
+ * @param con PostgreSQL 后端连接
+ * @param response
+ * @param commandComplete
+ */
+private void doProcessBusinessQuery(PostgreSQLBackendConnection con,SelectResponse response,CommandComplete commandComplete){
+  RowDescription rowHd=response.getDescription();
+  List<FieldPacket> fieldPks=PgPacketApaterUtils.rowDescConvertFieldPacket(rowHd);
+  List<RowDataPacket> rowDatas=new ArrayList<>();
+  for (  DataRow dataRow : response.getDataRows()) {
+    rowDatas.add(PgPacketApaterUtils.rowDataConvertRowDataPacket(dataRow));
+  }
+  BufferArray bufferArray=MycatServer.getInstance().getBufferPool().allocateArray();
+  ResultSetHeaderPacket headerPkg=new ResultSetHeaderPacket();
+  headerPkg.fieldCount=fieldPks.size();
+  headerPkg.packetId=++packetId;
+  headerPkg.write(bufferArray);
+  byte[] header=bufferArray.writeToByteArrayAndRecycle();
+  List<byte[]> fields=new ArrayList<byte[]>(fieldPks.size());
+  Iterator<FieldPacket> itor=fieldPks.iterator();
+  while (itor.hasNext()) {
+    bufferArray=MycatServer.getInstance().getBufferPool().allocateArray();
+    FieldPacket curField=itor.next();
+    curField.packetId=++packetId;
+    curField.write(bufferArray);
+    byte[] field=bufferArray.writeToByteArrayAndRecycle();
+    fields.add(field);
+    itor.remove();
+  }
+  bufferArray=MycatServer.getInstance().getBufferPool().allocateArray();
+  EOFPacket eofPckg=new EOFPacket();
+  eofPckg.packetId=++packetId;
+  eofPckg.write(bufferArray);
+  byte[] eof=bufferArray.writeToByteArrayAndRecycle();
+  if (con.getResponseHandler() != null) {
+    con.getResponseHandler().fieldEofResponse(header,fields,eof,con);
+  }
+ else {
+    LOGGER.error("响应句柄为空");
+  }
+  for (  RowDataPacket curRow : rowDatas) {
+    bufferArray=MycatServer.getInstance().getBufferPool().allocateArray();
+    curRow.packetId=++packetId;
+    curRow.write(bufferArray);
+    byte[] row=bufferArray.writeToByteArrayAndRecycle();
+    con.getResponseHandler().rowResponse(row,con);
+  }
+  bufferArray=MycatServer.getInstance().getBufferPool().allocateArray();
+  eofPckg=new EOFPacket();
+  eofPckg.packetId=++packetId;
+  eofPckg.write(bufferArray);
+  eof=bufferArray.writeToByteArrayAndRecycle();
+  if (con.getResponseHandler() != null) {
+    con.getResponseHandler().rowEofResponse(eof,con);
+  }
+ else {
+    LOGGER.error("响应句柄为空");
+  }
+}

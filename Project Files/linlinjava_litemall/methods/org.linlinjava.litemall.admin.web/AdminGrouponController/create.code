@@ -1,0 +1,23 @@
+@RequiresPermissions("admin:groupon:create") @RequiresPermissionsDesc(menu={"推广管理","团购管理"},button="添加") @PostMapping("/create") public Object create(@RequestBody LitemallGrouponRules grouponRules){
+  Object error=validate(grouponRules);
+  if (error != null) {
+    return error;
+  }
+  Integer goodsId=grouponRules.getGoodsId();
+  LitemallGoods goods=goodsService.findById(goodsId);
+  if (goods == null) {
+    return ResponseUtil.fail(AdminResponseCode.GROUPON_GOODS_UNKNOWN,"团购商品不存在");
+  }
+  if (rulesService.countByGoodsId(goodsId) > 0) {
+    return ResponseUtil.fail(AdminResponseCode.GROUPON_GOODS_EXISTED,"团购商品已经存在");
+  }
+  grouponRules.setGoodsName(goods.getName());
+  grouponRules.setPicUrl(goods.getPicUrl());
+  grouponRules.setStatus(GrouponConstant.RULE_STATUS_ON);
+  rulesService.createRules(grouponRules);
+  LocalDateTime now=LocalDateTime.now();
+  LocalDateTime expire=grouponRules.getExpireTime();
+  long delay=ChronoUnit.MILLIS.between(now,expire);
+  taskService.addTask(new GrouponRuleExpiredTask(grouponRules.getId(),delay));
+  return ResponseUtil.ok(grouponRules);
+}

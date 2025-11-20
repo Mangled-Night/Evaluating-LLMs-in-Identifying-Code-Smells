@@ -1,0 +1,22 @@
+/** 
+ * Asserts that a MUC Service lists its public rooms. <p>From XEP-0045 § 6.3:</p> <blockquote> The service discovery items ("disco#items") protocol enables an entity to query a service for a list of associated items, which in the case of a chat service would consist of the specific chat rooms hosted by the service. The service SHOULD return a full list of the public rooms it hosts (i.e., not return any rooms that are hidden). </blockquote>
+ * @throws Exception when errors occur
+ */
+@SmackIntegrationTest public void mucTestForDiscoveringRooms() throws Exception {
+  EntityBareJid mucAddressPublic=getRandomRoom("smack-inttest-publicroom");
+  MultiUserChat mucAsSeenByOne=mucManagerOne.getMultiUserChat(mucAddressPublic);
+  EntityBareJid mucAddressHidden=getRandomRoom("smack-inttest-hiddenroom");
+  MultiUserChat mucAsSeenByTwo=mucManagerTwo.getMultiUserChat(mucAddressHidden);
+  createMuc(mucAsSeenByOne,Resourcepart.from("one-" + randomString));
+  Map<EntityBareJid,HostedRoom> rooms;
+  try {
+    createHiddenMuc(mucAsSeenByTwo,Resourcepart.from("two-" + randomString));
+    rooms=mucManagerThree.getRoomsHostedBy(mucService);
+  }
+  finally {
+    tryDestroy(mucAsSeenByOne);
+    tryDestroy(mucAsSeenByTwo);
+  }
+  assertTrue(rooms.containsKey(mucAddressPublic));
+  assertFalse(rooms.containsKey(mucAddressHidden));
+}

@@ -1,0 +1,12 @@
+@Test void shouldRecordEvent() throws IOException {
+  Recording recording=new Recording();
+  recording.start();
+  EventRecorder.getInstance().record(new ConnectionActivatedEvent("my-uri","0x1","0x2",new DomainSocketAddress("/foo"),new DomainSocketAddress("/bar")));
+  recording.stop();
+  File temp=getFile(recording);
+  RecordingFile input=new RecordingFile(temp.toPath());
+  RecordedEvent recordedEvent=input.readEvent();
+  assertThat(recordedEvent.getEventType().getName()).endsWith("JfrConnectionActivatedEvent");
+  assertThat(recordedEvent.getEventType().getLabel()).isEqualTo("Connection Activated");
+  input.close();
+}

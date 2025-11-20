@@ -1,0 +1,73 @@
+/** 
+ * Handles Roster results as described in <a href="https://tools.ietf.org/html/rfc6121#section-2.1.4">RFC 6121 2.1.4</a>.
+ */
+private class RosterResultListener implements SuccessCallback<IQ> {
+  @Override public void onSuccess(  IQ packet){
+    final XMPPConnection connection=connection();
+    LOGGER.log(Level.FINE,"RosterResultListener received {0}",packet);
+    Collection<Jid> addedEntries=new ArrayList<>();
+    Collection<Jid> updatedEntries=new ArrayList<>();
+    Collection<Jid> deletedEntries=new ArrayList<>();
+    Collection<Jid> unchangedEntries=new ArrayList<>();
+    if (packet instanceof RosterPacket) {
+      RosterPacket rosterPacket=(RosterPacket)packet;
+      ArrayList<Item> validItems=new ArrayList<>();
+      for (      RosterPacket.Item item : rosterPacket.getRosterItems()) {
+        if (hasValidSubscriptionType(item)) {
+          validItems.add(item);
+        }
+      }
+      for (      RosterPacket.Item item : validItems) {
+        RosterEntry entry=new RosterEntry(item,Roster.this,connection);
+        addUpdateEntry(addedEntries,updatedEntries,unchangedEntries,item,entry);
+      }
+      Set<Jid> toDelete=new HashSet<>();
+      for (      RosterEntry entry : entries.values()) {
+        toDelete.add(entry.getJid());
+      }
+      toDelete.removeAll(addedEntries);
+      toDelete.removeAll(updatedEntries);
+      toDelete.removeAll(unchangedEntries);
+      for (      Jid user : toDelete) {
+        deleteEntry(deletedEntries,entries.get(user));
+      }
+      if (rosterStore != null) {
+        String version=rosterPacket.getVersion();
+        rosterStore.resetEntries(validItems,version);
+      }
+      removeEmptyGroups();
+    }
+ else {
+      List<RosterPacket.Item> storedItems=rosterStore.getEntries();
+      if (storedItems == null) {
+        rosterStore.resetStore();
+        try {
+          reload();
+        }
+ catch (        NotLoggedInException|NotConnectedException|InterruptedException e) {
+          LOGGER.log(Level.FINE,"Exception while trying to load the roster after the roster store was corrupted",e);
+        }
+        return;
+      }
+      for (      RosterPacket.Item item : storedItems) {
+        RosterEntry entry=new RosterEntry(item,Roster.this,connection);
+        addUpdateEntry(addedEntries,updatedEntries,unchangedEntries,item,entry);
+      }
+    }
+    rosterState=RosterState.loaded;
+synchronized (Roster.this) {
+      Roster.this.notifyAll();
+    }
+    fireRosterChangedEvent(addedEntries,updatedEntries,deletedEntries);
+    try {
+synchronized (rosterLoadedListeners) {
+        for (        RosterLoadedListener rosterLoadedListener : rosterLoadedListeners) {
+          rosterLoadedListener.onRosterLoaded(Roster.this);
+        }
+      }
+    }
+ catch (    Exception e) {
+      LOGGER.log(Level.WARNING,"RosterLoadedListener threw exception",e);
+    }
+  }
+}

@@ -1,0 +1,14 @@
+@Test void zrevrangebyscore(){
+  redis.zadd(key,1.0,"a",2.0,"b",3.0,"c",4.0,"d");
+  assertThat(redis.zrevrangebyscore(key,3.0,2.0)).isEqualTo(list("c","b"));
+  assertThat(redis.zrevrangebyscore(key,"(4.0","(1.0")).isEqualTo(list("c","b"));
+  assertThat(redis.zrevrangebyscore(key,POSITIVE_INFINITY,NEGATIVE_INFINITY)).isEqualTo(list("d","c","b","a"));
+  assertThat(redis.zrevrangebyscore(key,"+inf","-inf")).isEqualTo(list("d","c","b","a"));
+  assertThat(redis.zrevrangebyscore(key,4.0,0.0,1,3)).isEqualTo(list("c","b","a"));
+  assertThat(redis.zrevrangebyscore(key,"+inf","-inf",2,2)).isEqualTo(list("b","a"));
+  assertThat(redis.zrevrangebyscore(key,Range.create(2.0,3.0))).isEqualTo(list("c","b"));
+  assertThat(redis.zrevrangebyscore(key,Range.from(Boundary.excluding(1.0),Boundary.excluding(4.0)))).isEqualTo(list("c","b"));
+  assertThat(redis.zrevrangebyscore(key,Range.unbounded())).isEqualTo(list("d","c","b","a"));
+  assertThat(redis.zrevrangebyscore(key,Range.create(0.0,4.0),Limit.create(1,3))).isEqualTo(list("c","b","a"));
+  assertThat(redis.zrevrangebyscore(key,Range.unbounded(),Limit.create(2,2))).isEqualTo(list("b","a"));
+}

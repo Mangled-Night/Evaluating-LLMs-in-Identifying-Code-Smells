@@ -1,0 +1,26 @@
+public void set(Map<String,String> resultResult,int switchType){
+  try {
+    long time=TimeUtil.currentTimeMillis();
+    this.switchType=switchType;
+    remove(time);
+    if (resultResult != null && !resultResult.isEmpty()) {
+      this.records=resultResult;
+      if (switchType == DataHostConfig.SYN_STATUS_SWITCH_DS) {
+        String sencords=resultResult.get("Seconds_Behind_Master");
+        long Seconds_Behind_Master=-1;
+        if (sencords != null) {
+          Seconds_Behind_Master=Long.parseLong(sencords);
+        }
+        this.asynRecords.add(new Record(TimeUtil.currentTimeMillis(),Seconds_Behind_Master));
+      }
+      if (switchType == DataHostConfig.CLUSTER_STATUS_SWITCH_DS) {
+        double wsrep_local_recv_queue_avg=Double.valueOf(resultResult.get("wsrep_local_recv_queue_avg"));
+        this.asynRecords.add(new Record(TimeUtil.currentTimeMillis(),wsrep_local_recv_queue_avg));
+      }
+      return;
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.error("record DataSourceSyncRecorder error " + e.getMessage());
+  }
+}

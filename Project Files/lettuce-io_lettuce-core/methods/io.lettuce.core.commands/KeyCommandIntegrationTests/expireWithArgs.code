@@ -1,0 +1,9 @@
+@Test @EnabledOnCommand("EXPIRETIME") void expireWithArgs(){
+  redis.setex(key,10,value);
+  assertThat(redis.expire(key,1,ExpireArgs.Builder.gt())).isFalse();
+  assertThat(redis.expire(key,1,ExpireArgs.Builder.lt())).isTrue();
+  redis.set(key,value);
+  assertThat(redis.expire(key,1,ExpireArgs.Builder.xx())).isFalse();
+  assertThat(redis.expire(key,20,ExpireArgs.Builder.nx())).isTrue();
+  assertThat(redis.ttl(key)).isBetween(10L,20L);
+}

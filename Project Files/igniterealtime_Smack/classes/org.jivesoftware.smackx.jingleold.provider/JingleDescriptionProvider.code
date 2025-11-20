@@ -1,0 +1,74 @@
+/** 
+ * Parser for a Jingle description.
+ * @author Alvaro Saurin
+ */
+public abstract class JingleDescriptionProvider extends ExtensionElementProvider<JingleDescription> {
+  /** 
+ * Parse a iq/jingle/description/payload-type element.
+ * @param parser TODO javadoc me pleasethe input to parse
+ * @return a payload type element
+ */
+  protected PayloadType parsePayload(  final XmlPullParser parser){
+    int ptId;
+    String ptName;
+    int ptChannels;
+    ptId=Integer.parseInt(parser.getAttributeValue("","id"));
+    ptName=parser.getAttributeValue("","name");
+    ptChannels=Integer.parseInt(parser.getAttributeValue("","channels"));
+    return new PayloadType(ptId,ptName,ptChannels);
+  }
+  /** 
+ * Parse a iq/jingle/description element.
+ * @param parser TODO javadoc me pleasethe input to parse
+ * @return a description element
+ * @throws IOException if an I/O error occurred.
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ */
+  @Override public JingleDescription parse(  XmlPullParser parser,  int initialDepth,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    JingleDescription desc=getInstance();
+    outerloop:     while (true) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT) {
+        String name=parser.getName();
+        if (name.equals(PayloadType.NODENAME)) {
+          desc.addPayloadType(parsePayload(parser));
+        }
+ else {
+          throw new IOException("Unknow element \"" + name + "\" in content.");
+        }
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT) {
+        if (parser.getDepth() == initialDepth) {
+          break outerloop;
+        }
+      }
+    }
+    return desc;
+  }
+  /** 
+ * Return a new instance of this class. Subclasses must overwrite this method.
+ * @return the jingle description.
+ */
+  protected abstract JingleDescription getInstance();
+  /** 
+ * Jingle audio.
+ */
+public static class Audio extends JingleDescriptionProvider {
+    /** 
+ * Parse an audio payload type.
+ */
+    @Override public PayloadType parsePayload(    final XmlPullParser parser){
+      PayloadType pte=super.parsePayload(parser);
+      PayloadType.Audio pt=new PayloadType.Audio(pte);
+      int ptClockRate=Integer.parseInt(parser.getAttributeValue("","clockrate"));
+      pt.setClockRate(ptClockRate);
+      return pt;
+    }
+    /** 
+ * Get a new instance of this object.
+ */
+    @Override protected JingleDescription getInstance(){
+      return new JingleDescription.Audio();
+    }
+  }
+}

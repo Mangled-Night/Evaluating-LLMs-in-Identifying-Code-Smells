@@ -1,0 +1,32 @@
+/** 
+ * Generate a fresh OpenPGP key pair, given we don't have one already. Publish the public key to the Public Key Node and update the Public Key Metadata Node with our keys fingerprint. Lastly register a  {@link PepListener} which listens for updates to Public Key Metadata Nodes.
+ * @throws NoSuchAlgorithmException if we are missing an algorithm to generate a fresh key pair.
+ * @throws NoSuchProviderException if we are missing a suitable {@link java.security.Provider}.
+ * @throws InterruptedException if the thread gets interrupted.
+ * @throws PubSubException.NotALeafNodeException if one of the PubSub nodes is not a {@link LeafNode}.
+ * @throws XMPPException.XMPPErrorException in case of an XMPP protocol error.
+ * @throws SmackException.NotConnectedException if we are not connected.
+ * @throws SmackException.NoResponseException if the server doesn't respond.
+ * @throws IOException IO is dangerous.
+ * @throws InvalidAlgorithmParameterException if illegal algorithm parameters are used for key generation.
+ * @throws SmackException.NotLoggedInException if we are not logged in.
+ * @throws PGPException if something goes wrong during key loading/generating
+ */
+public void announceSupportAndPublish() throws NoSuchAlgorithmException, NoSuchProviderException, InterruptedException, PubSubException.NotALeafNodeException, XMPPException.XMPPErrorException, SmackException.NotConnectedException, SmackException.NoResponseException, IOException, InvalidAlgorithmParameterException, SmackException.NotLoggedInException, PGPException {
+  throwIfNoProviderSet();
+  throwIfNotAuthenticated();
+  OpenPgpV4Fingerprint primaryFingerprint=getOurFingerprint();
+  if (primaryFingerprint == null) {
+    primaryFingerprint=generateAndImportKeyPair(getJidOrThrow());
+  }
+  PubkeyElement pubkeyElement;
+  try {
+    pubkeyElement=createPubkeyElement(getJidOrThrow(),primaryFingerprint,new Date());
+  }
+ catch (  MissingOpenPgpKeyException e) {
+    throw new AssertionError("Cannot publish our public key, since it is missing (MUST NOT happen!)");
+  }
+  publishPublicKey(pepManager,pubkeyElement,primaryFingerprint);
+  pepManager.addPepEventListener(PEP_NODE_PUBLIC_KEYS,PublicKeysListElement.class,pepPublicKeyListElementListener);
+  ServiceDiscoveryManager.getInstanceFor(connection()).addFeature(PEP_NODE_PUBLIC_KEYS_NOTIFY);
+}

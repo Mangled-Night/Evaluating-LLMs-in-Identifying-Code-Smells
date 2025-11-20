@@ -1,0 +1,12 @@
+@Test void standaloneWithPemCertAndImpossibleTimeout(){
+  Assertions.setMaxStackTraceElementsDisplayed(30);
+  SslOptions sslOptions=SslOptions.builder().trustManager(CA_CERT_FILE).build();
+  setOptions(sslOptions);
+  redisClient.setOptions(ClientOptions.builder().protocolVersion(ProtocolVersion.RESP3).sslOptions(sslOptions).build());
+  try {
+    redisClient.connect(URI_VERIFY_IMPOSSIBLE_TIMEOUT).close();
+  }
+ catch (  Exception e) {
+    assertThat(e).isInstanceOf(RedisConnectionException.class).hasRootCauseInstanceOf(RedisCommandTimeoutException.class);
+  }
+}

@@ -1,0 +1,21 @@
+public static FormField.Type lookup(String formType,String fieldName){
+  if (formType == null) {
+    if (XmlUtil.isClarkNotation(fieldName)) {
+      return CLARK_NOTATION_FIELD_REGISTRY.get(fieldName);
+    }
+    return LOOKASIDE_FIELD_REGISTRY.get(fieldName);
+  }
+synchronized (REGISTRY) {
+    Map<String,FormField.Type> fieldNameToTypeMap=REGISTRY.get(formType);
+    if (fieldNameToTypeMap != null) {
+      FormField.Type type=fieldNameToTypeMap.get(fieldName);
+      if (type != null) {
+        return type;
+      }
+    }
+  }
+  return null;
+}
+public static synchronized FormField.Type lookup(String fieldName){
+  return lookup(null,fieldName);
+}

@@ -1,0 +1,24 @@
+@Override public ExecutableCommand resolveCommandMethod(CommandMethod method,RedisCommandsMetadata metadata){
+  LettuceAssert.isTrue(!method.isReactiveExecution(),() -> String.format("Command method %s not supported by this command lookup strategy",method));
+  ExecutionSpecificParameters parameters=(ExecutionSpecificParameters)method.getParameters();
+  if (parameters.hasTimeoutIndex()) {
+    throw new IllegalArgumentException(String.format("Timeout and batching is not supported, offending command method %s ",method));
+  }
+  if (isForceFlush(method)) {
+    return new ExecutableCommand(){
+      @Override public Object execute(      Object[] parameters) throws ExecutionException, InterruptedException {
+        BatchExecutableCommand.synchronize(batcher.flush(),connection);
+        return null;
+      }
+      @Override public CommandMethod getCommandMethod(){
+        return method;
+      }
+    }
+;
+  }
+  if (method.isFutureExecution() || SYNCHRONOUS_RETURN_TYPES.contains(method.getReturnType().getRawClass())) {
+    CommandFactory commandFactory=super.resolveCommandFactory(method,metadata);
+    return new BatchExecutableCommand(method,commandFactory,batcher,connection);
+  }
+  throw new IllegalArgumentException(String.format("Batching command method %s must declare either a Future or void return type",method));
+}

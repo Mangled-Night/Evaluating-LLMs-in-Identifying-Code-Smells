@@ -1,0 +1,61 @@
+@Override public void process(CommandProcess process){
+  process.interruptHandler(new ClassLoaderInterruptHandler(this));
+  ClassLoader targetClassLoader=null;
+  boolean classLoaderSpecified=false;
+  Instrumentation inst=process.session().getInstrumentation();
+  if (urlStat) {
+    Map<ClassLoaderVO,ClassLoaderUrlStat> urlStats=this.urlStats(inst);
+    ClassLoaderModel model=new ClassLoaderModel();
+    model.setUrlStats(urlStats);
+    process.appendResult(model);
+    process.end();
+    return;
+  }
+  if (hashCode != null || classLoaderClass != null) {
+    classLoaderSpecified=true;
+  }
+  if (hashCode != null) {
+    Set<ClassLoader> allClassLoader=getAllClassLoaders(inst);
+    for (    ClassLoader cl : allClassLoader) {
+      if (Integer.toHexString(cl.hashCode()).equals(hashCode)) {
+        targetClassLoader=cl;
+        break;
+      }
+    }
+  }
+ else   if (classLoaderClass != null) {
+    List<ClassLoader> matchedClassLoaders=ClassLoaderUtils.getClassLoaderByClassName(inst,classLoaderClass);
+    if (matchedClassLoaders.size() == 1) {
+      targetClassLoader=matchedClassLoaders.get(0);
+    }
+ else     if (matchedClassLoaders.size() > 1) {
+      Collection<ClassLoaderVO> classLoaderVOList=ClassUtils.createClassLoaderVOList(matchedClassLoaders);
+      ClassLoaderModel classloaderModel=new ClassLoaderModel().setClassLoaderClass(classLoaderClass).setMatchedClassLoaders(classLoaderVOList);
+      process.appendResult(classloaderModel);
+      process.end(-1,"Found more than one classloader by class name, please specify classloader with '-c <classloader hash>'");
+      return;
+    }
+ else {
+      process.end(-1,"Can not find classloader by class name: " + classLoaderClass + ".");
+      return;
+    }
+  }
+  if (all) {
+    processAllClasses(process,inst);
+  }
+ else   if (classLoaderSpecified && resource != null) {
+    processResources(process,inst,targetClassLoader);
+  }
+ else   if (classLoaderSpecified && this.loadClass != null) {
+    processLoadClass(process,inst,targetClassLoader);
+  }
+ else   if (classLoaderSpecified) {
+    processClassLoader(process,inst,targetClassLoader);
+  }
+ else   if (listClassLoader || isTree) {
+    processClassLoaders(process,inst);
+  }
+ else {
+    processClassLoaderStats(process,inst);
+  }
+}

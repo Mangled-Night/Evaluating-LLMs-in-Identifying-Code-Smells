@@ -1,0 +1,119 @@
+protected Map<String,String> parseAggGroupCommon(SchemaConfig schema,SQLStatement stmt,RouteResultset rrs,SQLSelectQueryBlock mysqlSelectQuery){
+  Map<String,String> aliaColumns=new HashMap<String,String>();
+  Map<String,Integer> aggrColumns=new HashMap<String,Integer>();
+  List<String> havingColsName=new ArrayList<String>();
+  List<SQLSelectItem> selectList=mysqlSelectQuery.getSelectList();
+  boolean isNeedChangeSql=false;
+  int size=selectList.size();
+  boolean isDistinct=mysqlSelectQuery.getDistionOption() == 2;
+  for (int i=0; i < size; i++) {
+    SQLSelectItem item=selectList.get(i);
+    if (item.getExpr() instanceof SQLAggregateExpr) {
+      SQLAggregateExpr expr=(SQLAggregateExpr)item.getExpr();
+      String method=expr.getMethodName().toUpperCase();
+      boolean isHasArgument=!expr.getArguments().isEmpty();
+      if (isHasArgument) {
+        String aggrColName=method + "(" + expr.getArguments().get(0)+ ")";
+        havingColsName.add(aggrColName);
+      }
+      int mergeType=MergeCol.getMergeType(method);
+      if (MergeCol.MERGE_AVG == mergeType && isRoutMultiNode(schema,rrs)) {
+        String colName=item.getAlias() != null ? item.getAlias() : method + i;
+        SQLSelectItem sum=new SQLSelectItem();
+        String sumColName=colName + "SUM";
+        sum.setAlias(sumColName);
+        SQLAggregateExpr sumExp=new SQLAggregateExpr("SUM");
+        ObjectUtil.copyProperties(expr,sumExp);
+        sumExp.getArguments().addAll(expr.getArguments());
+        sumExp.setMethodName("SUM");
+        sum.setExpr(sumExp);
+        selectList.set(i,sum);
+        aggrColumns.put(sumColName,MergeCol.MERGE_SUM);
+        havingColsName.add(sumColName);
+        havingColsName.add(item.getAlias() != null ? item.getAlias() : "");
+        SQLSelectItem count=new SQLSelectItem();
+        String countColName=colName + "COUNT";
+        count.setAlias(countColName);
+        SQLAggregateExpr countExp=new SQLAggregateExpr("COUNT");
+        ObjectUtil.copyProperties(expr,countExp);
+        countExp.getArguments().addAll(expr.getArguments());
+        countExp.setMethodName("COUNT");
+        count.setExpr(countExp);
+        selectList.add(count);
+        aggrColumns.put(countColName,MergeCol.MERGE_COUNT);
+        isNeedChangeSql=true;
+        aggrColumns.put(colName,mergeType);
+        rrs.setHasAggrColumn(true);
+      }
+ else       if (MergeCol.MERGE_UNSUPPORT != mergeType) {
+        String aggColName=null;
+        StringBuilder sb=new StringBuilder();
+        if (mysqlSelectQuery instanceof MySqlSelectQueryBlock) {
+          expr.accept(new MySqlOutputVisitor(sb));
+        }
+ else         if (mysqlSelectQuery instanceof OracleSelectQueryBlock) {
+          expr.accept(new OracleOutputVisitor(sb));
+        }
+ else         if (mysqlSelectQuery instanceof PGSelectQueryBlock) {
+          expr.accept(new PGOutputVisitor(sb));
+        }
+ else         if (mysqlSelectQuery instanceof SQLServerSelectQueryBlock) {
+          expr.accept(new SQLASTOutputVisitor(sb));
+        }
+ else         if (mysqlSelectQuery instanceof DB2SelectQueryBlock) {
+          expr.accept(new DB2OutputVisitor(sb));
+        }
+        aggColName=sb.toString();
+        if (item.getAlias() != null && item.getAlias().length() > 0) {
+          aggrColumns.put(item.getAlias(),mergeType);
+          aliaColumns.put(aggColName,item.getAlias());
+        }
+ else {
+          item.setAlias(method + i);
+          aggrColumns.put(method + i,mergeType);
+          aliaColumns.put(aggColName,method + i);
+          isNeedChangeSql=true;
+        }
+        rrs.setHasAggrColumn(true);
+        havingColsName.add(item.getAlias());
+        havingColsName.add("");
+      }
+    }
+ else {
+      if (!(item.getExpr() instanceof SQLAllColumnExpr)) {
+        String alia=item.getAlias();
+        String field=getFieldName(item);
+        if (alia == null) {
+          alia=field;
+        }
+        aliaColumns.put(field,alia);
+      }
+    }
+  }
+  if (aggrColumns.size() > 0) {
+    rrs.setMergeCols(aggrColumns);
+  }
+  if (isDistinct) {
+    mysqlSelectQuery.setDistionOption(0);
+    SQLSelectGroupByClause groupBy=new SQLSelectGroupByClause();
+    for (    String fieldName : aliaColumns.keySet()) {
+      groupBy.addItem(new SQLIdentifierExpr(fieldName));
+    }
+    mysqlSelectQuery.setGroupBy(groupBy);
+    isNeedChangeSql=true;
+  }
+  if (mysqlSelectQuery.getGroupBy() != null) {
+    List<SQLExpr> groupByItems=mysqlSelectQuery.getGroupBy().getItems();
+    String[] groupByCols=buildGroupByCols(groupByItems,aliaColumns);
+    rrs.setGroupByCols(groupByCols);
+    rrs.setHavings(buildGroupByHaving(mysqlSelectQuery.getGroupBy().getHaving(),aliaColumns));
+    rrs.setHasAggrColumn(true);
+    rrs.setHavingColsName(havingColsName.toArray());
+  }
+  if (isNeedChangeSql) {
+    String sql=stmt.toString();
+    rrs.changeNodeSqlAfterAddLimit(schema,getCurentDbType(),sql,0,-1,false);
+    getCtx().setSql(sql);
+  }
+  return aliaColumns;
+}

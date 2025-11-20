@@ -1,0 +1,11 @@
+@Test void changeTopologyWhileOperations(){
+  ClusterTopologyRefreshOptions topologyRefreshOptions=ClusterTopologyRefreshOptions.builder().enablePeriodicRefresh(true).refreshPeriod(1,TimeUnit.SECONDS).build();
+  clusterClient.setOptions(ClusterClientOptions.builder().topologyRefreshOptions(topologyRefreshOptions).build());
+  RedisAdvancedClusterAsyncCommands<String,String> clusterConnection=clusterClient.connect().async();
+  clusterClient.getPartitions().clear();
+  Wait.untilTrue(() -> {
+    return !clusterClient.getPartitions().isEmpty();
+  }
+).waitOrTimeout();
+  clusterConnection.getStatefulConnection().close();
+}

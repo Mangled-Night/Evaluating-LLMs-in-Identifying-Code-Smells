@@ -1,0 +1,18 @@
+/** 
+ * Resp stanza provider.
+ * @author Andriy Tsykholyas
+ * @see <a href="http://xmpp.org/extensions/xep-0332.html">XEP-0332: HTTP over XMPP transport</a>
+ */
+public class HttpOverXmppRespProvider extends AbstractHttpOverXmppProvider<HttpOverXmppResp> {
+  private static final String ATTRIBUTE_STATUS_MESSAGE="statusMessage";
+  private static final String ATTRIBUTE_STATUS_CODE="statusCode";
+  @Override public HttpOverXmppResp parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws IOException, XmlPullParserException, SmackParsingException {
+    String version=parser.getAttributeValue("",ATTRIBUTE_VERSION);
+    String statusMessage=parser.getAttributeValue("",ATTRIBUTE_STATUS_MESSAGE);
+    String statusCodeString=parser.getAttributeValue("",ATTRIBUTE_STATUS_CODE);
+    int statusCode=Integer.parseInt(statusCodeString);
+    HeadersExtension headers=parseHeaders(parser);
+    AbstractHttpOverXmpp.Data data=parseData(parser);
+    return HttpOverXmppResp.builder().setHeaders(headers).setData(data).setStatusCode(statusCode).setStatusMessage(statusMessage).setVersion(version).build();
+  }
+}

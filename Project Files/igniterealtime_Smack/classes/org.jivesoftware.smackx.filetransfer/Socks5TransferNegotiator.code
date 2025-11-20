@@ -1,0 +1,55 @@
+/** 
+ * Negotiates a SOCKS5 Bytestream to be used for file transfers. The implementation is based on the {@link Socks5BytestreamManager} and the {@link Socks5BytestreamRequest}.
+ * @author Henning Staib
+ * @see <a href="http://xmpp.org/extensions/xep-0065.html">XEP-0065: SOCKS5 Bytestreams</a>
+ */
+public class Socks5TransferNegotiator extends StreamNegotiator {
+  private final Socks5BytestreamManager manager;
+  Socks5TransferNegotiator(  XMPPConnection connection){
+    super(connection);
+    this.manager=Socks5BytestreamManager.getBytestreamManager(connection);
+  }
+  @Override public OutputStream createOutgoingStream(  String streamID,  Jid initiator,  Jid target) throws SmackException, XMPPException {
+    try {
+      return this.manager.establishSession(target,streamID).getOutputStream();
+    }
+ catch (    IOException e) {
+      throw new SmackException.SmackWrappedException("error establishing SOCKS5 Bytestream",e);
+    }
+catch (    InterruptedException e) {
+      throw new SmackException.SmackWrappedException("error establishing SOCKS5 Bytestream",e);
+    }
+  }
+  @Override public InputStream createIncomingStream(  StreamInitiation initiation) throws XMPPErrorException, InterruptedException, SmackException {
+    this.manager.ignoreBytestreamRequestOnce(initiation.getSessionID());
+    Stanza streamInitiation=initiateIncomingStream(connection(),initiation);
+    return negotiateIncomingStream(streamInitiation);
+  }
+  @Override public void newStreamInitiation(  final Jid from,  String streamID){
+    this.manager.ignoreBytestreamRequestOnce(streamID);
+  }
+  @Override public String getNamespace(){
+    return Bytestream.NAMESPACE;
+  }
+  @Override InputStream negotiateIncomingStream(  Stanza streamInitiation) throws InterruptedException, SmackException, XMPPErrorException {
+    Socks5BytestreamRequest request=new ByteStreamRequest(this.manager,(Bytestream)streamInitiation);
+    Socks5BytestreamSession session=request.accept();
+    try {
+      PushbackInputStream stream=new PushbackInputStream(session.getInputStream());
+      int firstByte=stream.read();
+      stream.unread(firstByte);
+      return stream;
+    }
+ catch (    IOException e) {
+      throw new SmackException.SmackWrappedException("Error establishing input stream",e);
+    }
+  }
+  /** 
+ * Derive from Socks5BytestreamRequest to access protected constructor.
+ */
+private static final class ByteStreamRequest extends Socks5BytestreamRequest {
+    private ByteStreamRequest(    Socks5BytestreamManager manager,    Bytestream byteStreamRequest){
+      super(manager,byteStreamRequest);
+    }
+  }
+}

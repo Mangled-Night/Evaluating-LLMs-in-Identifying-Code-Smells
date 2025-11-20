@@ -1,0 +1,33 @@
+@Test public void testAllocateWithDifferentAddress(){
+  int size=256;
+  int pageSize=size * 4;
+  int allocTimes=8;
+  ByteBufferArena byteBufferArena=new ByteBufferArena(256 * 4,256,2,8);
+  Map<Long,ByteBuffer> buffs=new HashMap<Long,ByteBuffer>(8);
+  ByteBuffer byteBuffer=null;
+  DirectBuffer directBuffer=null;
+  ByteBuffer temp=null;
+  long address;
+  boolean failure=false;
+  for (int i=0; i < allocTimes; i++) {
+    byteBuffer=byteBufferArena.allocate(size);
+    if (byteBuffer == null) {
+      Assert.fail("Should have enough memory");
+    }
+    directBuffer=(DirectBuffer)byteBuffer;
+    address=directBuffer.address();
+    System.out.println(address);
+    temp=buffs.get(address);
+    buffs.put(address,byteBuffer);
+    if (null != temp) {
+      failure=true;
+      break;
+    }
+  }
+  for (  ByteBuffer buff : buffs.values()) {
+    byteBufferArena.recycle(buff);
+  }
+  if (failure == true) {
+    Assert.fail("Allocate with same address");
+  }
+}

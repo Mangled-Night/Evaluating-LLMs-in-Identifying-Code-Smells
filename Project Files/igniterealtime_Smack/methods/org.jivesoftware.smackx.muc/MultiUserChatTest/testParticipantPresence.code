@@ -1,0 +1,31 @@
+public void testParticipantPresence(){
+  try {
+    MultiUserChat muc2=new MultiUserChat(getConnection(1),room);
+    muc2.join("testbot2");
+    Thread.sleep(400);
+    Presence presence=muc.getOccupantPresence(room + "/testbot2");
+    assertNotNull("Presence of user2 in room is missing",presence);
+    assertTrue("Presence mode of user2 is wrong",presence.getMode() == null || presence.getMode() == Presence.Mode.available);
+    muc2.changeAvailabilityStatus("Gone to have lunch",Presence.Mode.away);
+    Thread.sleep(200);
+    presence=muc.getOccupantPresence(room + "/testbot2");
+    assertNotNull("Presence of user2 in room is missing",presence);
+    assertEquals("Presence mode of user2 is wrong",Presence.Mode.away,presence.getMode());
+    assertEquals("Presence status of user2 is wrong","Gone to have lunch",presence.getStatus());
+    muc2.changeNickname("testbotII");
+    Thread.sleep(200);
+    presence=muc.getOccupantPresence(room + "/testbot2");
+    assertNull("Presence of participant testbot2 still exists",presence);
+    presence=muc.getOccupantPresence(room + "/testbotII");
+    assertNotNull("Presence of participant testbotII does not exist",presence);
+    assertEquals("Presence of participant testbotII has a wrong from",room + "/testbotII",presence.getFrom());
+    muc2.leave();
+    Thread.sleep(250);
+    presence=muc.getOccupantPresence(room + "/testbotII");
+    assertNull("Presence of participant testbotII still exists",presence);
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

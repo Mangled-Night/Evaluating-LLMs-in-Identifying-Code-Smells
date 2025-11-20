@@ -1,0 +1,35 @@
+@Override public void run(){
+  try {
+    initialize();
+    finishedCallback.initializationFinished(OmemoManager.this);
+  }
+ catch (  Exception e) {
+    finishedCallback.initializationFailed(e);
+  }
+}
+@Override public void run(){
+  try {
+    getOmemoService().onOmemoMessageStanzaReceived(packet,new LoggedInOmemoManager(OmemoManager.this));
+  }
+ catch (  SmackException.NotLoggedInException|IOException e) {
+    LOGGER.log(Level.SEVERE,"Exception while processing OMEMO stanza",e);
+  }
+}
+@Override public void run(){
+  if (isOmemoMessage(carbonCopy)) {
+    try {
+      getOmemoService().onOmemoCarbonCopyReceived(direction,carbonCopy,wrappingMessage,new LoggedInOmemoManager(OmemoManager.this));
+    }
+ catch (    SmackException.NotLoggedInException|IOException e) {
+      LOGGER.log(Level.SEVERE,"Exception while processing OMEMO stanza",e);
+    }
+  }
+}
+@Override public void run(){
+  try {
+    OmemoService.publishDeviceList(connection(),newDeviceList);
+  }
+ catch (  InterruptedException|XMPPException.XMPPErrorException|SmackException.NotConnectedException|SmackException.NoResponseException|PubSubException.NotALeafNodeException e) {
+    LOGGER.log(Level.WARNING,"Could not publish our deviceList upon an received update.",e);
+  }
+}

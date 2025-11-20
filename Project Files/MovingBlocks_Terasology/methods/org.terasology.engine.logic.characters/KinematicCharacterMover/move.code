@@ -1,0 +1,25 @@
+private MoveResult move(final Vector3f startPosition,final Vector3f moveDelta,final float stepHeight,final float slopeFactor,final CharacterCollider collider){
+  steppedUpDist=0;
+  stepped=false;
+  Vector3f position=new Vector3f(startPosition);
+  boolean hitTop=false;
+  boolean hitBottom=false;
+  boolean hitSide;
+  if (moveDelta.y > 0) {
+    hitTop=moveDelta.y - moveUp(moveDelta.y,collider,position) > physics.getEpsilon();
+  }
+  hitSide=moveHorizontal(new Vector3f(moveDelta.x,0,moveDelta.z),collider,position,slopeFactor,stepHeight);
+  if (moveDelta.y < 0 || steppedUpDist > 0) {
+    float dist=(moveDelta.y < 0) ? moveDelta.y : 0;
+    dist-=steppedUpDist;
+    hitBottom=moveDown(dist,slopeFactor,collider,position);
+  }
+  if (!hitBottom && stepHeight > 0) {
+    Vector3f tempPos=new Vector3f(position);
+    hitBottom=moveDown(-stepHeight,slopeFactor,collider,tempPos);
+    if (hitBottom) {
+      position.set(tempPos);
+    }
+  }
+  return new MoveResult(position,hitSide,hitBottom,hitTop);
+}

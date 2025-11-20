@@ -1,0 +1,21 @@
+private final class AuthenticatedAndResourceBoundState extends State {
+  private AuthenticatedAndResourceBoundState(  StateDescriptor stateDescriptor,  ModularXmppClientToServerConnectionInternal connectionInternal){
+    super(stateDescriptor,connectionInternal);
+  }
+  @Override public StateTransitionResult.AttemptResult transitionInto(  WalkStateGraphContext walkStateGraphContext) throws NotConnectedException, InterruptedException {
+    if (walkFromDisconnectToAuthenticated != null) {
+      assert walkStateGraphContext.getWalk().get(0).getStateDescriptor().getClass() != DisconnectedStateDescriptor.class;
+      walkStateGraphContext.appendWalkTo(walkFromDisconnectToAuthenticated);
+    }
+ else {
+      walkFromDisconnectToAuthenticated=new ArrayList<>(walkStateGraphContext.getWalkLength() + 1);
+      walkStateGraphContext.appendWalkTo(walkFromDisconnectToAuthenticated);
+    }
+    walkFromDisconnectToAuthenticated.add(this);
+    afterSuccessfulLogin(streamResumed);
+    return StateTransitionResult.Success.EMPTY_INSTANCE;
+  }
+  @Override public void resetState(){
+    authenticated=false;
+  }
+}

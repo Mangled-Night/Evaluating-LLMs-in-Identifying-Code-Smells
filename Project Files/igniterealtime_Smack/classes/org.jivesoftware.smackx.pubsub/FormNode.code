@@ -1,0 +1,41 @@
+/** 
+ * Generic stanza extension which represents any PubSub form that is parsed from the incoming stream or being sent out to the server. Form types are defined in  {@link FormNodeType}.
+ * @author Robin Collier
+ */
+public class FormNode extends NodeExtension {
+  private final DataForm configForm;
+  /** 
+ * Create a  {@link FormNode} which contains the specified form.
+ * @param formType The type of form being sent
+ * @param submitForm The form
+ */
+  public FormNode(  FormNodeType formType,  DataForm submitForm){
+    this(formType,null,submitForm);
+  }
+  /** 
+ * Create a  {@link FormNode} which contains the specified form, which isassociated with the specified node.
+ * @param formType The type of form being sent
+ * @param nodeId The node the form is associated with
+ * @param submitForm The form
+ */
+  public FormNode(  FormNodeType formType,  String nodeId,  DataForm submitForm){
+    super(formType.getNodeElement(),nodeId);
+    configForm=submitForm;
+  }
+  /** 
+ * Get the Form that is to be sent, or was retrieved from the server.
+ * @return The form
+ */
+  public DataForm getForm(){
+    return configForm;
+  }
+  @Override protected void addXml(  XmlStringBuilder xml){
+    if (configForm == null) {
+      xml.closeEmptyElement();
+      return;
+    }
+    xml.rightAngleBracket();
+    xml.append(configForm);
+    xml.closeElement(this);
+  }
+}

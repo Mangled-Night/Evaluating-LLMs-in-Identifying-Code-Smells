@@ -1,0 +1,24 @@
+@SuppressWarnings("unchecked") class DecoratingClusterNodeConnectionFactory implements ClusterNodeConnectionFactory<K,V> {
+  private final ClusterNodeConnectionFactory<K,V> delegate;
+  DecoratingClusterNodeConnectionFactory(  ClusterNodeConnectionFactory<K,V> delegate){
+    this.delegate=delegate;
+  }
+  @Override public void setPartitions(  Partitions partitions){
+    delegate.setPartitions(partitions);
+  }
+  @Override public ConnectionFuture<StatefulRedisConnection<K,V>> apply(  ConnectionKey key){
+    ConnectionFuture<StatefulRedisConnection<K,V>> future=delegate.apply(key);
+    if (key.nodeId != null) {
+      return future.thenApply(connection -> {
+        ((StatefulRedisPubSubConnection)connection).addListener(new DelegatingRedisClusterPubSubListener(key.nodeId));
+        return connection;
+      }
+);
+    }
+    return future.thenApply(connection -> {
+      ((StatefulRedisPubSubConnection)connection).addListener(new DelegatingRedisClusterPubSubListener(key.host,key.port));
+      return connection;
+    }
+);
+  }
+}

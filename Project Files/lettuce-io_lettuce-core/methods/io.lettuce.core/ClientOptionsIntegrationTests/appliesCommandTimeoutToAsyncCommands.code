@@ -1,0 +1,9 @@
+@Test void appliesCommandTimeoutToAsyncCommands(){
+  client.setOptions(ClientOptions.builder().timeoutOptions(TimeoutOptions.enabled()).build());
+  try (StatefulRedisConnection<String,String> connection=client.connect()){
+    connection.setTimeout(Duration.ofMillis(100));
+    connection.async().clientPause(300);
+    RedisFuture<String> future=connection.async().ping();
+    assertThatThrownBy(future::get).isInstanceOf(ExecutionException.class).hasCauseInstanceOf(RedisCommandTimeoutException.class).hasMessageContaining("100 milli");
+  }
+ }

@@ -1,0 +1,12 @@
+@Test void xtrim(){
+  List<String> ids=new ArrayList<>();
+  for (int i=0; i < 10; i++) {
+    ids.add(redis.xadd(key,Collections.singletonMap("key","value")));
+  }
+  redis.xdel(key,ids.get(0),ids.get(2));
+  assertThat(redis.xlen(key)).isBetween(8L,10L);
+  redis.xtrim(key,true,8);
+  assertThat(redis.xlen(key)).isLessThanOrEqualTo(10);
+  redis.xtrim(key,XTrimArgs.Builder.maxlen(0).limit(0).approximateTrimming());
+  assertThat(redis.xlen(key)).isLessThanOrEqualTo(10);
+}

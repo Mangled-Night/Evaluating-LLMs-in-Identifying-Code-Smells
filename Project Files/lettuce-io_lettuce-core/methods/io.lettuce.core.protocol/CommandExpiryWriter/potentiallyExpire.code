@@ -1,0 +1,20 @@
+@SuppressWarnings("unchecked") private void potentiallyExpire(RedisCommand<?,?,?> command,ScheduledExecutorService executors){
+  long timeout=applyConnectionTimeout ? this.timeout : source.getTimeout(command);
+  if (timeout <= 0) {
+    return;
+  }
+  ScheduledFuture<?> schedule=executors.schedule(() -> {
+    if (!command.isDone()) {
+      command.completeExceptionally(ExceptionFactory.createTimeoutException(Duration.ofNanos(timeUnit.toNanos(timeout))));
+    }
+  }
+,timeout,timeUnit);
+  if (command instanceof CompleteableCommand) {
+    ((CompleteableCommand)command).onComplete((o,o2) -> {
+      if (!schedule.isDone()) {
+        schedule.cancel(false);
+      }
+    }
+);
+  }
+}

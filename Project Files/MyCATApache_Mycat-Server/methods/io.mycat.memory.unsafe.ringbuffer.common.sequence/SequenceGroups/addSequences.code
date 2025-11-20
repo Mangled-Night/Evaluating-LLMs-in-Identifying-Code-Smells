@@ -1,0 +1,28 @@
+/** 
+ * 原子添加sequences
+ * @param holder 原子更新的域所属的类对象
+ * @param updater 原子更新的域对象
+ * @param cursor 定位
+ * @param sequencesToAdd 要添加的sequences
+ * @param < T >
+ */
+public static <T>void addSequences(final T holder,final AtomicReferenceFieldUpdater<T,Sequence[]> updater,final Cursored cursor,final Sequence... sequencesToAdd){
+  long cursorSequence;
+  Sequence[] updatedSequences;
+  Sequence[] currentSequences;
+  do {
+    currentSequences=updater.get(holder);
+    updatedSequences=copyOf(currentSequences,currentSequences.length + sequencesToAdd.length);
+    cursorSequence=cursor.getCursor();
+    int index=currentSequences.length;
+    for (    Sequence sequence : sequencesToAdd) {
+      sequence.set(cursorSequence);
+      updatedSequences[index++]=sequence;
+    }
+  }
+ while (!updater.compareAndSet(holder,currentSequences,updatedSequences));
+  cursorSequence=cursor.getCursor();
+  for (  Sequence sequence : sequencesToAdd) {
+    sequence.set(cursorSequence);
+  }
+}

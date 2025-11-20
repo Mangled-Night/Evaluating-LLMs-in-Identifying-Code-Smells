@@ -1,0 +1,11 @@
+@Test void testFuture() throws Exception {
+  RedisFuture<Map<String,String>> future=sentinelAsync.master("unknown master");
+  AtomicBoolean state=new AtomicBoolean();
+  future.exceptionally(throwable -> {
+    state.set(true);
+    return null;
+  }
+);
+  assertThat(future.await(5,TimeUnit.SECONDS)).isTrue();
+  assertThat(state.get()).isTrue();
+}

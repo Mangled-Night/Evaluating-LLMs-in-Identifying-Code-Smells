@@ -1,0 +1,45 @@
+/** 
+ * Add entity to relevance system. create region for it. Update distance if region exists already. Create/Load chunks for region.
+ * @param entity the region will be centered around the LocationComponent of this entity
+ * @param distance the dimensions of the region, in chunks
+ * @param listener notified when relevant chunks become available
+ * @return the region of chunks deemed relevant
+ */
+public BlockRegionc addRelevanceEntity(EntityRef entity,Vector3ic distance,ChunkRegionListener listener){
+  if (!entity.exists()) {
+    return null;
+  }
+  regionLock.readLock().lock();
+  try {
+    ChunkRelevanceRegion region=regions.get(entity);
+    if (region != null) {
+      region.setRelevanceDistance(distance);
+      return new BlockRegion(region.getCurrentRegion());
+    }
+  }
+  finally {
+    regionLock.readLock().unlock();
+  }
+  ChunkRelevanceRegion region=new ChunkRelevanceRegion(entity,distance);
+  if (listener != null) {
+    region.setListener(listener);
+  }
+  regionLock.writeLock().lock();
+  try {
+    regions.put(entity,region);
+  }
+  finally {
+    regionLock.writeLock().unlock();
+  }
+  StreamSupport.stream(region.getCurrentRegion().spliterator(),false).sorted(new PositionRelevanceComparator()).forEach(pos -> {
+    Chunk chunk=chunkProvider.getChunk(pos);
+    if (chunk != null) {
+      region.checkIfChunkIsRelevant(chunk);
+    }
+ else {
+      chunkProvider.createOrLoadChunk(pos);
+    }
+  }
+);
+  return new BlockRegion(region.getCurrentRegion());
+}

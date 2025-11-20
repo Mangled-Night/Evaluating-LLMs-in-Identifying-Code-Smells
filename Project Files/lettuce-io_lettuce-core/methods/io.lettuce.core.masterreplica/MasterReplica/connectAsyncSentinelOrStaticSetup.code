@@ -1,0 +1,16 @@
+private static <K,V>CompletableFuture<StatefulRedisMasterReplicaConnection<K,V>> connectAsyncSentinelOrStaticSetup(RedisClient redisClient,RedisCodec<K,V> codec,Iterable<RedisURI> redisURIs){
+  LettuceAssert.notNull(redisClient,"RedisClient must not be null");
+  LettuceAssert.notNull(codec,"RedisCodec must not be null");
+  LettuceAssert.notNull(redisURIs,"RedisURIs must not be null");
+  List<RedisURI> uriList=LettuceLists.newList(redisURIs);
+  LettuceAssert.isTrue(!uriList.isEmpty(),"RedisURIs must not be empty");
+  RedisURI first=uriList.get(0);
+  if (isSentinel(first)) {
+    if (uriList.size() > 1) {
+      InternalLogger logger=InternalLoggerFactory.getInstance(MasterReplica.class);
+      logger.warn("RedisURIs contains multiple endpoints of which the first is configured for Sentinel usage. Using only the first URI [{}] without considering the remaining URIs. Make sure to include all Sentinel endpoints in a single RedisURI.",first);
+    }
+    return new SentinelConnector<>(redisClient,codec,first).connectAsync();
+  }
+  return new StaticMasterReplicaConnector<>(redisClient,codec,uriList).connectAsync();
+}

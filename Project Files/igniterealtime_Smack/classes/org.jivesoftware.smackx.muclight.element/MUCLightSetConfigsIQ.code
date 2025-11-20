@@ -1,0 +1,48 @@
+/** 
+ * MUC Light set configurations IQ class.
+ * @author Fernando Ramirez
+ */
+public class MUCLightSetConfigsIQ extends IQ {
+  public static final String ELEMENT=QUERY_ELEMENT;
+  public static final String NAMESPACE=MultiUserChatLight.NAMESPACE + MultiUserChatLight.CONFIGURATION;
+  private String roomName;
+  private String subject;
+  private HashMap<String,String> customConfigs;
+  /** 
+ * MUC Light set configuration IQ constructor.
+ * @param roomJid TODO javadoc me please
+ * @param roomName TODO javadoc me please
+ * @param subject TODO javadoc me please
+ * @param customConfigs TODO javadoc me please
+ */
+  public MUCLightSetConfigsIQ(  Jid roomJid,  String roomName,  String subject,  HashMap<String,String> customConfigs){
+    super(ELEMENT,NAMESPACE);
+    this.roomName=roomName;
+    this.subject=subject;
+    this.customConfigs=customConfigs;
+    this.setType(Type.set);
+    this.setTo(roomJid);
+  }
+  /** 
+ * MUC Light set configuration IQ constructor.
+ * @param roomJid TODO javadoc me please
+ * @param roomName TODO javadoc me please
+ * @param customConfigs TODO javadoc me please
+ */
+  public MUCLightSetConfigsIQ(  Jid roomJid,  String roomName,  HashMap<String,String> customConfigs){
+    this(roomJid,roomName,null,customConfigs);
+  }
+  @Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(  IQChildElementXmlStringBuilder xml){
+    xml.rightAngleBracket();
+    xml.optElement("roomname",roomName);
+    xml.optElement("subject",subject);
+    if (customConfigs != null) {
+      Iterator<Map.Entry<String,String>> it=customConfigs.entrySet().iterator();
+      while (it.hasNext()) {
+        Map.Entry<String,String> pair=it.next();
+        xml.element(pair.getKey(),pair.getValue());
+      }
+    }
+    return xml;
+  }
+}

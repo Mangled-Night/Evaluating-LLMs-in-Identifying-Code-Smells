@@ -1,0 +1,26 @@
+/** 
+ * @author Mark Paluch
+ */
+class GeoReactiveCommandIntegrationTests extends GeoCommandIntegrationTests {
+  private final StatefulRedisConnection<String,String> connection;
+  @Inject GeoReactiveCommandIntegrationTests(  StatefulRedisConnection<String,String> connection){
+    super(ReactiveSyncInvocationHandler.sync(connection));
+    this.connection=connection;
+  }
+  @Test @Override public void geopos(){
+    RedisReactiveCommands<String,String> reactive=connection.reactive();
+    prepareGeo();
+    StepVerifier.create(reactive.geopos(key,"Weinheim","foobar","Bahn")).consumeNextWith(actual -> {
+      assertThat(actual.getValue().getX().doubleValue()).isEqualTo(8.6638,offset(0.001));
+    }
+).consumeNextWith(actual -> {
+      assertThat(actual.hasValue()).isFalse();
+    }
+).consumeNextWith(actual -> {
+      assertThat(actual.hasValue()).isTrue();
+    }
+).verifyComplete();
+  }
+  @Test @Disabled("API differences") @Override public void geoposInTransaction(){
+  }
+}

@@ -1,0 +1,21 @@
+@Override public BlockFamilyDefinitionData load(ResourceUrn resourceUrn,List<AssetDataFile> input) throws IOException {
+  try (BufferedReader reader=new BufferedReader(new InputStreamReader(input.get(0).openStream(),Charsets.UTF_8))){
+    BlockFamilyDefinitionData data=gson.fromJson(reader,BlockFamilyDefinitionData.class);
+    applyDefaults(resourceUrn,data.getBaseSection());
+    data.getSections().values().stream().forEach(section -> applyDefaults(resourceUrn,section));
+    if (!data.isTemplate()) {
+      if (data.getBlockFamily() == null && data.getBaseSection().getShape() != null) {
+        if (data.getBaseSection().getShape().isCollisionYawSymmetric()) {
+          data.setBlockFamily(SymmetricFamily.class);
+        }
+ else {
+          data.setBlockFamily(HorizontalFamily.class);
+        }
+      }
+ else       if (data.getBlockFamily() == null) {
+        data.setBlockFamily(FreeformFamily.class);
+      }
+    }
+    return data;
+  }
+ }

@@ -1,0 +1,69 @@
+public static IQ parseIQ(XmlPullParser parser) throws Exception {
+  return parseIQ(parser,null);
+}
+/** 
+ * Parses an IQ packet.
+ * @param parser the XML parser, positioned at the start of an IQ packet.
+ * @param outerXmlEnvironment the outer XML environment (optional).
+ * @return an IQ object.
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ * @throws XmppStringprepException if the provided string is invalid.
+ * @throws IOException if an I/O error occurred.
+ * @throws SmackParsingException if the Smack parser (provider) encountered invalid input.
+ */
+public static IQ parseIQ(XmlPullParser parser,XmlEnvironment outerXmlEnvironment) throws XmlPullParserException, XmppStringprepException, IOException, SmackParsingException {
+  ParserUtils.assertAtStartTag(parser);
+  final int initialDepth=parser.getDepth();
+  XmlEnvironment iqXmlEnvironment=XmlEnvironment.from(parser,outerXmlEnvironment);
+  IQ iqPacket=null;
+  StanzaError error=null;
+  IqData iqData=parseIqData(parser);
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String elementName=parser.getName();
+    String namespace=parser.getNamespace();
+switch (elementName) {
+case "error":
+    error=PacketParserUtils.parseError(parser,iqXmlEnvironment);
+  break;
+default :
+IqProvider<IQ> provider=ProviderManager.getIQProvider(elementName,namespace);
+if (provider != null) {
+iqPacket=provider.parse(parser,iqData,outerXmlEnvironment);
+}
+ else {
+iqPacket=new UnparsedIQ(elementName,namespace,parseElement(parser));
+}
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+if (iqPacket == null) {
+switch (iqData.getType()) {
+case error:
+iqPacket=new ErrorIQ(error);
+break;
+case result:
+iqPacket=new EmptyResultIQ();
+break;
+default :
+break;
+}
+}
+iqPacket.setStanzaId(iqData.getStanzaId());
+iqPacket.setTo(iqData.getTo());
+iqPacket.setFrom(iqData.getFrom());
+iqPacket.setType(iqData.getType());
+iqPacket.setError(error);
+return iqPacket;
+}

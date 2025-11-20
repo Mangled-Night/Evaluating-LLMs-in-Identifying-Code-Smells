@@ -1,0 +1,71 @@
+/** 
+ * @author mycat
+ */
+public class ShowCobarCluster {
+  private static final Logger alarm=LoggerFactory.getLogger("alarm");
+  private static final int FIELD_COUNT=2;
+  private static final ResultSetHeaderPacket header=PacketUtil.getHeader(FIELD_COUNT);
+  private static final FieldPacket[] fields=new FieldPacket[FIELD_COUNT];
+  private static final EOFPacket eof=new EOFPacket();
+static {
+    int i=0;
+    byte packetId=0;
+    header.packetId=++packetId;
+    fields[i]=PacketUtil.getField("HOST",Fields.FIELD_TYPE_VAR_STRING);
+    fields[i++].packetId=++packetId;
+    fields[i]=PacketUtil.getField("WEIGHT",Fields.FIELD_TYPE_LONG);
+    fields[i++].packetId=++packetId;
+    eof.packetId=++packetId;
+  }
+  public static void response(  ServerConnection c){
+    ByteBuffer buffer=c.allocate();
+    buffer=header.write(buffer,c,true);
+    for (    FieldPacket field : fields) {
+      buffer=field.write(buffer,c,true);
+    }
+    buffer=eof.write(buffer,c,true);
+    byte packetId=eof.packetId;
+    for (    RowDataPacket row : getRows(c)) {
+      row.packetId=++packetId;
+      buffer=row.write(buffer,c,true);
+    }
+    EOFPacket lastEof=new EOFPacket();
+    lastEof.packetId=++packetId;
+    buffer=lastEof.write(buffer,c,true);
+    c.write(buffer);
+  }
+  private static List<RowDataPacket> getRows(  ServerConnection c){
+    List<RowDataPacket> rows=new LinkedList<RowDataPacket>();
+    MycatConfig config=MycatServer.getInstance().getConfig();
+    MycatCluster cluster=config.getCluster();
+    Map<String,SchemaConfig> schemas=config.getSchemas();
+    SchemaConfig schema=(c.getSchema() == null) ? null : schemas.get(c.getSchema());
+    if (schema == null) {
+      Map<String,MycatNode> nodes=cluster.getNodes();
+      for (      MycatNode n : nodes.values()) {
+        if (n != null && n.isOnline()) {
+          rows.add(getRow(n,c.getCharset()));
+        }
+      }
+    }
+ else {
+      Map<String,MycatNode> nodes=cluster.getNodes();
+      for (      MycatNode n : nodes.values()) {
+        if (n != null && n.isOnline()) {
+          rows.add(getRow(n,c.getCharset()));
+        }
+      }
+    }
+    if (rows.size() == 0) {
+      alarm.error(Alarms.CLUSTER_EMPTY + c.toString());
+    }
+    return rows;
+  }
+  private static RowDataPacket getRow(  MycatNode node,  String charset){
+    MycatNodeConfig conf=node.getConfig();
+    RowDataPacket row=new RowDataPacket(FIELD_COUNT);
+    row.add(StringUtil.encode(conf.getHost(),charset));
+    row.add(IntegerUtil.toBytes(conf.getWeight()));
+    return row;
+  }
+}

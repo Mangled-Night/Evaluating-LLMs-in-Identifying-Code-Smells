@@ -1,0 +1,71 @@
+/** 
+ * Sort and spill the current records in response to memory pressure.
+ */
+@Override public long spill(long size,MemoryConsumer trigger) throws IOException {
+  if (trigger != this) {
+    if (readingIterator != null) {
+      return readingIterator.spill();
+    }
+    return 0L;
+  }
+  if (inMemSorter == null || inMemSorter.numRecords() <= 0) {
+    return 0L;
+  }
+  logger.info("Thread" + Thread.currentThread().getId() + " spilling sort data of "+ JavaUtils.bytesToString(getMemoryUsage())+ " to disk ("+ spillWriters.size()+ " times so far)");
+  if (inMemSorter.numRecords() > 0) {
+    final UnsafeSorterSpillWriter spillWriter=new UnsafeSorterSpillWriter(blockManager,fileBufferSizeBytes,inMemSorter.numRecords());
+    spillWriters.add(spillWriter);
+    final UnsafeSorterIterator sortedRecords=inMemSorter.getSortedIterator();
+    while (sortedRecords.hasNext()) {
+      sortedRecords.loadNext();
+      final Object baseObject=sortedRecords.getBaseObject();
+      final long baseOffset=sortedRecords.getBaseOffset();
+      final int recordLength=sortedRecords.getRecordLength();
+      spillWriter.write(baseObject,baseOffset,recordLength,sortedRecords.getKeyPrefix());
+    }
+    spillWriter.close();
+  }
+  final long spillSize=freeMemory();
+  inMemSorter.reset();
+  totalSpillBytes+=spillSize;
+  return spillSize;
+}
+public long spill() throws IOException {
+synchronized (this) {
+    if (!(upstream instanceof UnsafeInMemorySorter.SortedIterator && nextUpstream == null && numRecords > 0)) {
+      return 0L;
+    }
+    UnsafeInMemorySorter.SortedIterator inMemIterator=((UnsafeInMemorySorter.SortedIterator)upstream).clone();
+    final UnsafeSorterSpillWriter spillWriter=new UnsafeSorterSpillWriter(blockManager,fileBufferSizeBytes,numRecords);
+    while (inMemIterator.hasNext()) {
+      inMemIterator.loadNext();
+      final Object baseObject=inMemIterator.getBaseObject();
+      final long baseOffset=inMemIterator.getBaseOffset();
+      final int recordLength=inMemIterator.getRecordLength();
+      spillWriter.write(baseObject,baseOffset,recordLength,inMemIterator.getKeyPrefix());
+    }
+    spillWriter.close();
+    spillWriters.add(spillWriter);
+    nextUpstream=spillWriter.getReader(serializerManager);
+    long released=0L;
+synchronized (UnsafeExternalSorter.this) {
+      for (      MemoryBlock page : allocatedPages) {
+        if (!loaded || page.getBaseObject() != upstream.getBaseObject()) {
+          released+=page.size();
+          freePage(page);
+        }
+ else {
+          lastPage=page;
+        }
+      }
+      allocatedPages.clear();
+    }
+    assert (inMemSorter != null);
+    released+=inMemSorter.getMemoryUsage();
+    totalSortTimeNanos+=inMemSorter.getSortTimeNanos();
+    inMemSorter.free();
+    inMemSorter=null;
+    totalSpillBytes+=released;
+    return released;
+  }
+}

@@ -1,0 +1,12 @@
+private <T extends AutoConfig>void loadConfig(Class<T> clazz,SimpleUri id,Context context){
+  Optional<T> optionalConfig=InjectionHelper.safeCreateWithConstructorInjection(clazz,context);
+  if (!optionalConfig.isPresent()) {
+    logger.error("Unable to instantiate config {}",id);
+    return;
+  }
+  T config=optionalConfig.get();
+  config.setId(id);
+  loadedConfigs.add(config);
+  context.put(clazz,config);
+  loadSettingsFromDisk(clazz,config);
+}

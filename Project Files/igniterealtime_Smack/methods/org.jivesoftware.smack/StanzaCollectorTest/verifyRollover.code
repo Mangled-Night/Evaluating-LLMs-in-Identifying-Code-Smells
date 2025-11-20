@@ -1,0 +1,24 @@
+@Test public void verifyRollover() throws InterruptedException {
+  StanzaCollector collector=createTestStanzaCollector(null,new OKEverything(),5);
+  for (int i=0; i < 6; i++) {
+    Stanza testPacket=new TestPacket(i);
+    collector.processStanza(testPacket);
+  }
+  assertEquals("1",collector.nextResultBlockForever().getStanzaId());
+  assertEquals("2",collector.nextResultBlockForever().getStanzaId());
+  assertEquals("3",collector.nextResultBlockForever().getStanzaId());
+  assertEquals("4",collector.nextResultBlockForever().getStanzaId());
+  assertEquals("5",collector.pollResult().getStanzaId());
+  assertNull(collector.pollResult());
+  for (int i=10; i < 15; i++) {
+    Stanza testPacket=new TestPacket(i);
+    collector.processStanza(testPacket);
+  }
+  assertEquals("10",collector.nextResultBlockForever().getStanzaId());
+  assertEquals("11",collector.nextResultBlockForever().getStanzaId());
+  assertEquals("12",collector.nextResultBlockForever().getStanzaId());
+  assertEquals("13",collector.nextResultBlockForever().getStanzaId());
+  assertEquals("14",collector.pollResult().getStanzaId());
+  assertNull(collector.pollResult());
+  assertNull(collector.nextResult(10));
+}

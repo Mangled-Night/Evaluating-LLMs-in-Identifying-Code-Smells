@@ -1,0 +1,15 @@
+@ApiOperation(value="修改用户") @RequiresPermissions("upms:user:update") @RequestMapping(value="/update/{id}",method=RequestMethod.GET) public String update(@PathVariable("id") int id,ModelMap modelMap){
+  UpmsUser user=upmsUserService.selectByPrimaryKey(id);
+  modelMap.put("user",user);
+  return "/manage/user/update.jsp";
+}
+@ApiOperation(value="修改用户") @RequiresPermissions("upms:user:update") @RequestMapping(value="/update/{id}",method=RequestMethod.POST) @ResponseBody public Object update(@PathVariable("id") int id,UpmsUser upmsUser){
+  ComplexResult result=FluentValidator.checkAll().on(upmsUser.getUsername(),new LengthValidator(1,20,"帐号")).on(upmsUser.getRealname(),new NotNullValidator("姓名")).doValidate().result(ResultCollectors.toComplex());
+  if (!result.isSuccess()) {
+    return new UpmsResult(UpmsResultConstant.INVALID_LENGTH,result.getErrors());
+  }
+  upmsUser.setPassword(null);
+  upmsUser.setUserId(id);
+  int count=upmsUserService.updateByPrimaryKeySelective(upmsUser);
+  return new UpmsResult(UpmsResultConstant.SUCCESS,count);
+}

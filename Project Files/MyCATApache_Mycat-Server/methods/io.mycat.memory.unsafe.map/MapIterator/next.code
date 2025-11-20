@@ -1,0 +1,33 @@
+@Override public Location next(){
+  if (recordsInPage == 0) {
+    advanceToNextPage();
+  }
+  numRecords--;
+  if (currentPage != null) {
+    int totalLength=Platform.getInt(pageBaseObject,offsetInPage);
+    loc.with(currentPage,offsetInPage);
+    offsetInPage+=4 + totalLength + 8;
+    recordsInPage--;
+    return loc;
+  }
+ else {
+    assert (reader != null);
+    if (!reader.hasNext()) {
+      advanceToNextPage();
+    }
+    try {
+      reader.loadNext();
+    }
+ catch (    IOException e) {
+      try {
+        reader.close();
+      }
+ catch (      IOException e2) {
+        logger.error("Error while closing spill reader",e2);
+      }
+      Platform.throwException(e);
+    }
+    loc.with(reader.getBaseObject(),reader.getBaseOffset(),reader.getRecordLength());
+    return loc;
+  }
+}

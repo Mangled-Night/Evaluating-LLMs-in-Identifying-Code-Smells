@@ -1,0 +1,23 @@
+private void attachTracing(ChannelHandlerContext ctx,RedisCommand<?,?,?> command){
+  if (!tracingEnabled || !(command instanceof CompleteableCommand)) {
+    return;
+  }
+  TracedCommand<?,?,?> traced=CommandWrapper.unwrap(command,TracedCommand.class);
+  TraceContextProvider provider=(traced == null ? clientResources.tracing().initialTraceContextProvider() : traced);
+  Tracer tracer=clientResources.tracing().getTracerProvider().getTracer();
+  if (provider != null) {
+    TraceContext context=provider.getTraceContext();
+    Tracer.Span span=tracer.nextSpan(context);
+    span.name(command.getType().name());
+    if (tracedEndpoint != null) {
+      span.remoteEndpoint(tracedEndpoint);
+    }
+ else {
+      span.remoteEndpoint(clientResources.tracing().createEndpoint(ctx.channel().remoteAddress()));
+    }
+    span.start(command);
+    if (traced != null) {
+      traced.setSpan(span);
+    }
+  }
+}

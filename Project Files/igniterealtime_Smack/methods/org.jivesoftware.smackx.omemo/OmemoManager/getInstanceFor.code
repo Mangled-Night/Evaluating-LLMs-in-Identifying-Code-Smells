@@ -1,0 +1,43 @@
+/** 
+ * Return an OmemoManager instance for the given connection and deviceId. If there was an OmemoManager for the connection and id before, return it. Otherwise create a new OmemoManager instance and return it.
+ * @param connection XmppConnection.
+ * @param deviceId MUST NOT be null and MUST be greater than 0.
+ * @return OmemoManager instance for the given connection and deviceId.
+ */
+public static synchronized OmemoManager getInstanceFor(XMPPConnection connection,Integer deviceId){
+  if (deviceId == null || deviceId < 1) {
+    throw new IllegalArgumentException("DeviceId MUST NOT be null and MUST be greater than 0.");
+  }
+  TreeMap<Integer,OmemoManager> managersOfConnection=INSTANCES.get(connection);
+  if (managersOfConnection == null) {
+    managersOfConnection=new TreeMap<>();
+    INSTANCES.put(connection,managersOfConnection);
+  }
+  OmemoManager manager=managersOfConnection.get(deviceId);
+  if (manager == null) {
+    manager=new OmemoManager(connection,deviceId);
+    managersOfConnection.put(deviceId,manager);
+  }
+  return manager;
+}
+/** 
+ * Returns an OmemoManager instance for the given connection. If there was one manager for the connection before, return it. If there were multiple managers before, return the one with the lowest deviceId. If there was no manager before, return a new one. As soon as the connection gets authenticated, the manager will look for local deviceIDs and select the lowest one as its id. If there are not local deviceIds, the manager will assign itself a random id.
+ * @param connection XmppConnection.
+ * @return OmemoManager instance for the given connection and a determined deviceId.
+ */
+public static synchronized OmemoManager getInstanceFor(XMPPConnection connection){
+  TreeMap<Integer,OmemoManager> managers=INSTANCES.get(connection);
+  if (managers == null) {
+    managers=new TreeMap<>();
+    INSTANCES.put(connection,managers);
+  }
+  OmemoManager manager;
+  if (managers.size() == 0) {
+    manager=new OmemoManager(connection,UNKNOWN_DEVICE_ID);
+    managers.put(UNKNOWN_DEVICE_ID,manager);
+  }
+ else {
+    manager=managers.get(managers.firstKey());
+  }
+  return manager;
+}

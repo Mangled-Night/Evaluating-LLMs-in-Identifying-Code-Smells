@@ -1,0 +1,26 @@
+/** 
+ * Attempts to serialize the system clipboard's contents - if successful, sets the current state of the editor to the serialized  {@link JsonTree}.
+ */
+protected void pasteJson(){
+  Clipboard clipboard=Toolkit.getDefaultToolkit().getSystemClipboard();
+  Transferable t=clipboard.getContents(null);
+  String clipboardContents=null;
+  try {
+    if (t != null) {
+      clipboardContents=(String)t.getTransferData(DataFlavor.stringFlavor);
+    }
+  }
+ catch (  UnsupportedFlavorException|IOException e) {
+    logger.warn("Could not fetch clipboard contents.",e);
+  }
+  if (clipboardContents != null) {
+    try {
+      JsonElement json=new JsonParser().parse(clipboardContents);
+      JsonTree node=JsonTreeConverter.serialize(json);
+      resetState(node);
+    }
+ catch (    JsonSyntaxException|NullPointerException e) {
+      logger.warn("Could not construct a valid tree from clipboard contents.",e);
+    }
+  }
+}

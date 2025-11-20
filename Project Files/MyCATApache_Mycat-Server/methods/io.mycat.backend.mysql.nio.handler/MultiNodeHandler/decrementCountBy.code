@@ -1,0 +1,20 @@
+protected boolean decrementCountBy(int finished){
+  boolean zeroReached=false;
+  Runnable callback=null;
+  lock.lock();
+  try {
+    nodeCount-=finished;
+    zeroReached=nodeCount == 0;
+    if (zeroReached) {
+      callback=this.terminateCallBack;
+      this.terminateCallBack=null;
+    }
+  }
+  finally {
+    lock.unlock();
+  }
+  if (zeroReached && callback != null) {
+    callback.run();
+  }
+  return zeroReached;
+}

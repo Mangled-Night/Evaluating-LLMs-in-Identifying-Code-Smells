@@ -1,0 +1,29 @@
+/** 
+ * Turn on the keyboard overlay. This is a keyboard that hovers in front of the user, that can be typed upon by pointing the ray extending from the top of the controller at the key the user wants to press.
+ * @param showingState - true or false
+ * @return - true if successful. If this call fails, an error is logged.
+ */
+public static boolean setKeyboardOverlayShowing(boolean showingState){
+  int ret;
+  if (showingState) {
+    Pointer pointer=new Memory(3);
+    pointer.setString(0,"mc");
+    Pointer empty=new Memory(1);
+    empty.setString(0,"");
+    ret=vrOverlay.ShowKeyboard.apply(0,0,pointer,256,empty,(byte)1,0);
+    keyboardShowing=0 == ret;
+    if (ret != 0) {
+      logger.error("VR Overlay Error: " + vrOverlay.GetOverlayErrorNameFromEnum.apply(ret).getString(0));
+    }
+  }
+ else {
+    try {
+      vrOverlay.HideKeyboard.apply();
+    }
+ catch (    Error e) {
+      logger.error("Error bringing up keyboard overlay: " + e.toString());
+    }
+    keyboardShowing=false;
+  }
+  return keyboardShowing;
+}

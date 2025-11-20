@@ -1,0 +1,24 @@
+private static Path findInstallPath(){
+  List<Path> installationSearchPaths=new ArrayList<>(2);
+  try {
+    URI urlToSource=PathManager.class.getProtectionDomain().getCodeSource().getLocation().toURI();
+    Path codeLocation=Paths.get(urlToSource);
+    installationSearchPaths.add(codeLocation);
+    System.out.println("PathManager: Initial code location is " + codeLocation.toAbsolutePath());
+  }
+ catch (  URISyntaxException e) {
+    System.err.println("PathManager: Failed to convert code location to path.");
+    e.printStackTrace();
+  }
+  Path currentDirectory=Paths.get("").toAbsolutePath();
+  installationSearchPaths.add(currentDirectory);
+  System.out.println("PathManager: Working directory is " + currentDirectory);
+  for (  Path startPath : installationSearchPaths) {
+    Path installationPath=findNativesHome(startPath,5);
+    if (installationPath != null) {
+      return installationPath;
+    }
+  }
+  System.err.printf("Native library installation directory not found. %n" + "Things will almost certainly crash as a result, %n" + "unless something else installed everything to java.library.path. %n"+ "Searched: %s%n",installationSearchPaths);
+  return currentDirectory;
+}

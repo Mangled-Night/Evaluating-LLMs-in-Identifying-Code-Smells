@@ -1,0 +1,94 @@
+/** 
+ * This is a simple test where the user_2 rejects the Jingle session.
+ */
+public void testSTUNJingleSession(){
+  resetCounter();
+  try {
+    TransportResolver tr1=new STUNResolver(){
+    }
+;
+    TransportResolver tr2=new STUNResolver(){
+    }
+;
+    tr1.resolve(null);
+    tr2.resolve(null);
+    STUNTransportManager stm0=new STUNTransportManager();
+    TestMediaManager tmm0=new TestMediaManager(stm0);
+    tmm0.setPayloads(getTestPayloads1());
+    List<JingleMediaManager> trl0=new ArrayList<JingleMediaManager>();
+    trl0.add(tmm0);
+    STUNTransportManager stm1=new STUNTransportManager();
+    TestMediaManager tmm1=new TestMediaManager(stm1);
+    tmm1.setPayloads(getTestPayloads2());
+    List<JingleMediaManager> trl1=new ArrayList<JingleMediaManager>();
+    trl1.add(tmm1);
+    final JingleManager man0=new JingleManager(getConnection(0),trl0);
+    final JingleManager man1=new JingleManager(getConnection(1),trl1);
+    man1.addJingleSessionRequestListener(new JingleSessionRequestListener(){
+      /** 
+ * Called when a new session request is detected
+ */
+      public void sessionRequested(      final JingleSessionRequest request){
+        System.out.println("Session request detected, from " + request.getFrom() + ": accepting.");
+        JingleSession session1;
+        try {
+          session1=request.accept();
+          session1.addListener(new JingleSessionListener(){
+            public void sessionClosed(            String reason,            JingleSession jingleSession){
+            }
+            public void sessionClosedOnError(            XMPPException e,            JingleSession jingleSession){
+            }
+            public void sessionDeclined(            String reason,            JingleSession jingleSession){
+            }
+            public void sessionEstablished(            PayloadType pt,            TransportCandidate rc,            TransportCandidate lc,            JingleSession jingleSession){
+              incCounter();
+              System.out.println("Responder: the session is fully established.");
+              System.out.println("+ Payload Type: " + pt.getId());
+              System.out.println("+ Local IP/port: " + lc.getIp() + ":"+ lc.getPort());
+              System.out.println("+ Remote IP/port: " + rc.getIp() + ":"+ rc.getPort());
+            }
+            public void sessionRedirected(            String redirection,            JingleSession jingleSession){
+            }
+            public void sessionMediaReceived(            JingleSession jingleSession,            String participant){
+            }
+          }
+);
+          session1.startIncoming();
+        }
+ catch (        XMPPException e) {
+          LOGGER.log(Level.WARNING,"exception",e);
+        }
+      }
+    }
+);
+    System.out.println("Starting session request, to " + getFullJID(1) + "...");
+    JingleSession session0=man0.createOutgoingJingleSession(getFullJID(1));
+    session0.addListener(new JingleSessionListener(){
+      public void sessionClosed(      String reason,      JingleSession jingleSession){
+      }
+      public void sessionClosedOnError(      XMPPException e,      JingleSession jingleSession){
+      }
+      public void sessionDeclined(      String reason,      JingleSession jingleSession){
+      }
+      public void sessionEstablished(      PayloadType pt,      TransportCandidate rc,      TransportCandidate lc,      JingleSession jingleSession){
+        incCounter();
+        System.out.println("Initiator: the session is fully established.");
+        System.out.println("+ Payload Type: " + pt.getId());
+        System.out.println("+ Local IP/port: " + lc.getIp() + ":"+ lc.getPort());
+        System.out.println("+ Remote IP/port: " + rc.getIp() + ":"+ rc.getPort());
+      }
+      public void sessionMediaReceived(      JingleSession jingleSession,      String participant){
+      }
+      public void sessionRedirected(      String redirection,      JingleSession jingleSession){
+      }
+    }
+);
+    session0.startOutgoing();
+    Thread.sleep(60000);
+    assertTrue(valCounter() == 2);
+  }
+ catch (  Exception e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+    fail("An error occurred with Jingle");
+  }
+}

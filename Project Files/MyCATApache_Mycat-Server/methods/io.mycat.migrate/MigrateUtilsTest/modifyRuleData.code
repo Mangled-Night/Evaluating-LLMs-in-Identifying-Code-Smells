@@ -1,0 +1,21 @@
+private void modifyRuleData(Properties prop,MigrateTask task,List<String> allNewDataNodes){
+  int fromIndex=-1;
+  int toIndex=-1;
+  List<String> dataNodes=allNewDataNodes;
+  for (int i=0; i < dataNodes.size(); i++) {
+    String dataNode=dataNodes.get(i);
+    if (dataNode.equalsIgnoreCase(task.getFrom())) {
+      fromIndex=i;
+    }
+ else     if (dataNode.equalsIgnoreCase(task.getTo())) {
+      toIndex=i;
+    }
+  }
+  String from=prop.getProperty(String.valueOf(fromIndex));
+  String to=prop.getProperty(String.valueOf(toIndex));
+  String fromRemain=removeRangesRemain(from,task.getSlots());
+  String taskRanges=MigrateUtils.convertRangeListToString(task.getSlots());
+  String newTo=to == null ? taskRanges : to + "," + taskRanges;
+  prop.setProperty(String.valueOf(fromIndex),fromRemain);
+  prop.setProperty(String.valueOf(toIndex),newTo);
+}

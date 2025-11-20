@@ -1,0 +1,37 @@
+/** 
+ * Return the bitmap with reflection.
+ * @param src              The source of bitmap.
+ * @param reflectionHeight The height of reflection.
+ * @return the bitmap with reflection
+ */
+public static Bitmap addReflection(final Bitmap src,final int reflectionHeight){
+  return addReflection(src,reflectionHeight,false);
+}
+/** 
+ * Return the bitmap with reflection.
+ * @param src              The source of bitmap.
+ * @param reflectionHeight The height of reflection.
+ * @param recycle          True to recycle the source of bitmap, false otherwise.
+ * @return the bitmap with reflection
+ */
+public static Bitmap addReflection(final Bitmap src,final int reflectionHeight,final boolean recycle){
+  if (isEmptyBitmap(src))   return null;
+  final int REFLECTION_GAP=0;
+  int srcWidth=src.getWidth();
+  int srcHeight=src.getHeight();
+  Matrix matrix=new Matrix();
+  matrix.preScale(1,-1);
+  Bitmap reflectionBitmap=Bitmap.createBitmap(src,0,srcHeight - reflectionHeight,srcWidth,reflectionHeight,matrix,false);
+  Bitmap ret=Bitmap.createBitmap(srcWidth,srcHeight + reflectionHeight,src.getConfig());
+  Canvas canvas=new Canvas(ret);
+  canvas.drawBitmap(src,0,0,null);
+  canvas.drawBitmap(reflectionBitmap,0,srcHeight + REFLECTION_GAP,null);
+  Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+  LinearGradient shader=new LinearGradient(0,srcHeight,0,ret.getHeight() + REFLECTION_GAP,0x70FFFFFF,0x00FFFFFF,Shader.TileMode.MIRROR);
+  paint.setShader(shader);
+  paint.setXfermode(new PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN));
+  canvas.drawRect(0,srcHeight + REFLECTION_GAP,srcWidth,ret.getHeight(),paint);
+  if (!reflectionBitmap.isRecycled())   reflectionBitmap.recycle();
+  if (recycle && !src.isRecycled() && ret != src)   src.recycle();
+  return ret;
+}

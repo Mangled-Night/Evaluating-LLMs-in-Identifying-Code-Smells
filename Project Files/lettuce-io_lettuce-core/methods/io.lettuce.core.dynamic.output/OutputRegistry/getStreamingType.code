@@ -1,0 +1,30 @@
+/** 
+ * Retrieve  {@link OutputType} for a {@link StreamingOutput} type.
+ * @param commandOutputClass
+ * @return
+ */
+@SuppressWarnings("rawtypes") static OutputType getStreamingType(Class<? extends CommandOutput> commandOutputClass){
+  ClassTypeInformation<? extends CommandOutput> classTypeInformation=ClassTypeInformation.from(commandOutputClass);
+  TypeInformation<?> superTypeInformation=classTypeInformation.getSuperTypeInformation(StreamingOutput.class);
+  if (superTypeInformation == null) {
+    return null;
+  }
+  List<TypeInformation<?>> typeArguments=superTypeInformation.getTypeArguments();
+  return new OutputType(commandOutputClass,typeArguments.get(0),true){
+    @Override public ResolvableType withCodec(    RedisCodec<?,?> codec){
+      TypeInformation<?> typeInformation=ClassTypeInformation.from(codec.getClass());
+      ResolvableType resolvableType=ResolvableType.forType(commandOutputClass,new CodecVariableTypeResolver(typeInformation));
+      while (resolvableType != ResolvableType.NONE) {
+        ResolvableType[] interfaces=resolvableType.getInterfaces();
+        for (        ResolvableType resolvableInterface : interfaces) {
+          if (resolvableInterface.getRawClass().equals(StreamingOutput.class)) {
+            return resolvableInterface.getGeneric(0);
+          }
+        }
+        resolvableType=resolvableType.getSuperType();
+      }
+      throw new IllegalStateException();
+    }
+  }
+;
+}

@@ -1,0 +1,13 @@
+@Test void plainConnectionShouldNotUseWrappers() throws Exception {
+  GenericObjectPool<StatefulRedisConnection<String,String>> pool=ConnectionPoolSupport.createGenericObjectPool(() -> client.connect(),new GenericObjectPoolConfig<>(),false);
+  StatefulRedisConnection<String,String> connection=pool.borrowObject();
+  RedisCommands<String,String> sync=connection.sync();
+  assertThat(connection).isInstanceOf(StatefulRedisConnection.class).isNotInstanceOf(StatefulRedisClusterConnectionImpl.class);
+  assertThat(Proxy.isProxyClass(connection.getClass())).isFalse();
+  assertThat(sync).isInstanceOf(RedisCommands.class);
+  assertThat(connection.async()).isInstanceOf(RedisAsyncCommands.class).isInstanceOf(RedisAsyncCommandsImpl.class);
+  assertThat(connection.reactive()).isInstanceOf(RedisReactiveCommands.class).isInstanceOf(RedisReactiveCommandsImpl.class);
+  assertThat(sync.getStatefulConnection()).isInstanceOf(StatefulRedisConnection.class).isInstanceOf(StatefulRedisConnectionImpl.class);
+  pool.returnObject(connection);
+  pool.close();
+}

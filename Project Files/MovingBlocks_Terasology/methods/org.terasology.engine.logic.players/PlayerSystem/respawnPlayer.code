@@ -1,0 +1,14 @@
+private void respawnPlayer(EntityRef clientEntity){
+  ClientComponent client=clientEntity.getComponent(ClientComponent.class);
+  EntityRef playerCharacter=client.character;
+  LocationComponent location=playerCharacter.getComponent(LocationComponent.class);
+  PlayerFactory playerFactory=new PlayerFactory(entityManager,worldProvider);
+  Vector3f spawnPosition=playerFactory.findSpawnPositionFromLocationComponent(location);
+  playerCharacter.addComponent(new AliveCharacterComponent());
+  playerCharacter.send(new CharacterTeleportEvent(spawnPosition));
+  logger.debug("Re-spawing player at: {}",spawnPosition);
+  Client clientListener=networkSystem.getOwner(clientEntity);
+  Vector3ic distance=clientListener.getViewDistance().getChunkDistance();
+  updateRelevanceEntity(clientEntity,distance);
+  playerCharacter.send(new OnPlayerRespawnedEvent());
+}

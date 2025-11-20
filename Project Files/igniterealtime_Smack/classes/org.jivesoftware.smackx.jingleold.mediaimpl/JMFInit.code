@@ -1,0 +1,134 @@
+@SuppressWarnings("UnusedVariable") public class JMFInit extends Frame implements Runnable {
+  private static final long serialVersionUID=6476412003260641680L;
+  private static final Logger LOGGER=Logger.getLogger(JMFInit.class.getName());
+  private String tempDir="/tmp";
+  private boolean done=false;
+  private String userHome;
+  private boolean visible=false;
+  public JMFInit(  String[] args,  boolean visible){
+    super("Initializing JMF...");
+    this.visible=visible;
+    Registry.set("secure.allowCaptureFromApplets",true);
+    Registry.set("secure.allowSaveFileFromApplets",true);
+    updateTemp(args);
+    try {
+      Registry.commit();
+    }
+ catch (    Exception e) {
+      LOGGER.fine("Failed to commit to JMFRegistry!");
+    }
+    Thread detectThread=new Thread(this);
+    detectThread.run();
+  }
+  @Override public void run(){
+    detectDirectAudio();
+    detectS8DirectAudio();
+    detectCaptureDevices();
+    done=true;
+  }
+  private void updateTemp(  String[] args){
+    if (args != null && args.length > 0) {
+      tempDir=args[0];
+      LOGGER.fine("Setting cache directory to " + tempDir);
+      try {
+        Registry.set("secure.cacheDir",tempDir);
+        Registry.commit();
+        LOGGER.fine("Updated registry");
+      }
+ catch (      Exception e) {
+        LOGGER.fine("Couldn't update registry!");
+      }
+    }
+  }
+  @SuppressWarnings("LiteralClassName") private static void detectCaptureDevices(){
+    LOGGER.fine("Looking for Audio capturer");
+    Class<?> dsauto;
+    try {
+      dsauto=Class.forName("DirectSoundAuto");
+      dsauto.getConstructor().newInstance();
+      LOGGER.fine("Finished detecting DirectSound capturer");
+    }
+ catch (    ThreadDeath td) {
+      throw td;
+    }
+catch (    Throwable t) {
+    }
+    Class<?> jsauto;
+    try {
+      jsauto=Class.forName("JavaSoundAuto");
+      jsauto.getConstructor().newInstance();
+      LOGGER.fine("Finished detecting javasound capturer");
+    }
+ catch (    ThreadDeath td) {
+      throw td;
+    }
+catch (    Throwable t) {
+      LOGGER.fine("JavaSound capturer detection failed!");
+    }
+  }
+  private static void detectDirectAudio(){
+    Class<?> cls;
+    int plType=PlugInManager.RENDERER;
+    String dar="com.sun.media.renderer.audio.DirectAudioRenderer";
+    try {
+      cls=Class.forName("VFWAuto");
+      cls=Class.forName("com.sun.media.protocol.dsound.DSound");
+      cls=Class.forName(dar);
+      Renderer rend=(Renderer)cls.getConstructor().newInstance();
+      try {
+        AudioFormat af=new AudioFormat(AudioFormat.LINEAR,44100,16,2);
+        rend.setInputFormat(af);
+        rend.open();
+        Format[] inputFormats=rend.getSupportedInputFormats();
+        PlugInManager.addPlugIn(dar,inputFormats,new Format[0],plType);
+        @SuppressWarnings("unchecked") Vector<String> rendList=PlugInManager.getPlugInList(null,null,plType);
+        int listSize=rendList.size();
+        if (rendList.elementAt(listSize - 1).equals(dar)) {
+          rendList.removeElementAt(listSize - 1);
+          rendList.insertElementAt(dar,0);
+          PlugInManager.setPlugInList(rendList,plType);
+          PlugInManager.commit();
+        }
+        rend.close();
+      }
+ catch (      Throwable t) {
+      }
+    }
+ catch (    Throwable tt) {
+    }
+  }
+  private static void detectS8DirectAudio(){
+    Class<?> cls;
+    int plType=PlugInManager.RENDERER;
+    String dar="com.sun.media.renderer.audio.DirectAudioRenderer";
+    try {
+      cls=Class.forName("SunVideoAuto");
+      cls=Class.forName(dar);
+      Renderer rend=(Renderer)cls.getConstructor().newInstance();
+      if (rend instanceof ExclusiveUse && !((ExclusiveUse)rend).isExclusive()) {
+        @SuppressWarnings("unchecked") Vector<String> rendList=PlugInManager.getPlugInList(null,null,plType);
+        int listSize=rendList.size();
+        boolean found=false;
+        String rname;
+        for (int i=0; i < listSize; i++) {
+          rname=rendList.elementAt(i);
+          if (rname.equals(dar)) {
+            found=true;
+            rendList.removeElementAt(i);
+            break;
+          }
+        }
+        if (found) {
+          rendList.insertElementAt(dar,0);
+          PlugInManager.setPlugInList(rendList,plType);
+          PlugInManager.commit();
+        }
+      }
+    }
+ catch (    Throwable tt) {
+    }
+  }
+  public static void start(  boolean visible){
+    new JMFInit(null,visible);
+  }
+}

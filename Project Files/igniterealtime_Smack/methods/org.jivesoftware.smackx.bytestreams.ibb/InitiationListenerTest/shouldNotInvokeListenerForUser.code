@@ -1,0 +1,14 @@
+/** 
+ * If listener for a specific user is registered it should not be notified on incoming requests from other users.
+ * @throws Exception should not happen
+ */
+@Test public void shouldNotInvokeListenerForUser() throws Exception {
+  InBandBytestreamListener listener=mock(InBandBytestreamListener.class);
+  byteStreamManager.addIncomingBytestreamListener(listener,JidCreate.from("other_" + initiatorJID));
+  IQ response=initiationListener.handleIQRequest(initBytestream);
+  ArgumentCaptor<BytestreamRequest> byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+  verify(listener,never()).incomingBytestreamRequest(byteStreamRequest.capture());
+  assertEquals(initiatorJID,response.getTo());
+  assertEquals(IQ.Type.error,response.getType());
+  assertEquals(StanzaError.Condition.not_acceptable,response.getError().getCondition());
+}

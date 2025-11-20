@@ -1,0 +1,19 @@
+@Override protected void shutdown(){
+  shutdown(false);
+}
+private void shutdown(boolean instant){
+  Class<? extends StateDescriptor> mandatoryIntermediateState;
+  if (instant) {
+    mandatoryIntermediateState=InstantShutdownStateDescriptor.class;
+  }
+ else {
+    mandatoryIntermediateState=ShutdownStateDescriptor.class;
+  }
+  WalkStateGraphContext context=buildNewWalkTo(DisconnectedStateDescriptor.class).withMandatoryIntermediateState(mandatoryIntermediateState).build();
+  try {
+    walkStateGraph(context);
+  }
+ catch (  IOException|SmackException|InterruptedException|XMPPException e) {
+    throw new IllegalStateException("A walk to disconnected state should never throw",e);
+  }
+}

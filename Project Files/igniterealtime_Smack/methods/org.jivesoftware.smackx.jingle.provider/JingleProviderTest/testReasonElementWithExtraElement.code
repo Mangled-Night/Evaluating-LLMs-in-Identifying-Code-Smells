@@ -1,0 +1,11 @@
+@ParameterizedTest @EnumSource(SmackTestUtil.XmlPullParserKind.class) public void testReasonElementWithExtraElement(SmackTestUtil.XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+  String xml="<iq from='juliet@capulet.lit/balcony'" + " id='le71fa63'" + " to='romeo@montague.lit/orchard'"+ " type='set'>"+ "<jingle xmlns='urn:xmpp:jingle:1'"+ " action='session-terminate'"+ " sid='a73sjjvkla37jfea'>"+ "<reason>"+ "<success/>"+ "<my-element xmlns='https://example.org' foo='bar'/>"+ "</reason>"+ "</jingle>"+ "</iq>";
+  Jingle jingle=SmackTestUtil.parse(xml,JingleProvider.class,parserKind);
+  JingleReason jingleReason=jingle.getReason();
+  assertEquals(JingleReason.Reason.success,jingleReason.asEnum());
+  XmlElement element=jingleReason.getElement();
+  assertTrue(element instanceof StandardExtensionElement);
+  StandardExtensionElement extraElement=(StandardExtensionElement)element;
+  assertEquals("https://example.org",extraElement.getNamespace());
+  assertEquals("bar",extraElement.getAttributes().get("foo"));
+}

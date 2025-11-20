@@ -1,0 +1,18 @@
+/** 
+ * Load an area of the world. <p> The area is defined as a  {@index "relevance region"} and will not be unloaded as long as {@link #entity} existsand has a  {@link LocationComponent}.
+ * @param entityManager used to create the entity that depends on this region
+ * @param relevanceSystem the authority on what is relevant
+ * @param center a point to center the region around, in block coordinates
+ * @param sizeInChunks the size of the region, in chunks
+ */
+static ChunkRegionFuture create(EntityManager entityManager,RelevanceSystem relevanceSystem,Vector3fc center,Vector3ic sizeInChunks){
+  EntityRef entity=entityManager.create(new LocationComponent(center));
+  entity.setScope(EntityScope.GLOBAL);
+  Vector3ic correctedSizeInChunks=addMargin(sizeInChunks);
+  Function<ChunkRegionListener,BlockRegionc> makeChunksRelevant=listener -> {
+    BlockRegionc paddedRegion=relevanceSystem.addRelevanceEntity(entity,correctedSizeInChunks,listener);
+    return removeMargin(paddedRegion);
+  }
+;
+  return new ChunkRegionFuture(entity,makeChunksRelevant);
+}

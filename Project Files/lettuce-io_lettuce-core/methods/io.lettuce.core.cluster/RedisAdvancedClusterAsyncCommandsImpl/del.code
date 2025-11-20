@@ -1,0 +1,15 @@
+@Override public RedisFuture<Long> del(K... keys){
+  return del(Arrays.asList(keys));
+}
+@Override public RedisFuture<Long> del(Iterable<K> keys){
+  Map<Integer,List<K>> partitioned=SlotHash.partition(codec,keys);
+  if (partitioned.size() < 2) {
+    return super.del(keys);
+  }
+  Map<Integer,RedisFuture<Long>> executions=new HashMap<>();
+  for (  Map.Entry<Integer,List<K>> entry : partitioned.entrySet()) {
+    RedisFuture<Long> del=super.del(entry.getValue());
+    executions.put(entry.getKey(),del);
+  }
+  return MultiNodeExecution.aggregateAsync(executions);
+}

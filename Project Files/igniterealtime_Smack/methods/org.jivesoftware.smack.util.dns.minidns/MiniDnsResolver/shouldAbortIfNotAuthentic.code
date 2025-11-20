@@ -1,0 +1,18 @@
+private static boolean shouldAbortIfNotAuthentic(DnsName name,DnssecMode dnssecMode,ResolverResult<?> result,List<RemoteConnectionEndpointLookupFailure> lookupFailures){
+switch (dnssecMode) {
+case needsDnssec:
+case needsDnssecAndDane:
+    DnssecResultNotAuthenticException exception=result.getDnssecResultNotAuthenticException();
+  if (exception != null) {
+    RemoteConnectionEndpointLookupFailure failure=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,exception);
+    lookupFailures.add(failure);
+    return true;
+  }
+break;
+case disabled:
+break;
+default :
+throw new IllegalStateException("Unknown DnssecMode: " + dnssecMode);
+}
+return false;
+}

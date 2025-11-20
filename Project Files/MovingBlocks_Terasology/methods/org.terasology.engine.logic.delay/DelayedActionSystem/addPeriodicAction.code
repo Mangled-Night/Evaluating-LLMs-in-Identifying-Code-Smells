@@ -1,0 +1,22 @@
+@Override public void addPeriodicAction(EntityRef entity,String actionId,long initialDelay,long period){
+  long scheduleTime=time.getGameTimeInMs() + initialDelay;
+  PeriodicActionComponent periodicActionComponent=entity.getComponent(PeriodicActionComponent.class);
+  if (periodicActionComponent != null) {
+    final long oldWakeUp=periodicActionComponent.getLowestWakeUp();
+    periodicActionComponent.addScheduledActionId(actionId,scheduleTime,period);
+    entity.saveComponent(periodicActionComponent);
+    final long newWakeUp=periodicActionComponent.getLowestWakeUp();
+    if (oldWakeUp < newWakeUp) {
+      periodicOperationsSortedByTime.remove(oldWakeUp,entity);
+      periodicOperationsSortedByTime.put(newWakeUp,entity);
+    }
+ else {
+      periodicOperationsSortedByTime.put(scheduleTime,entity);
+    }
+  }
+ else {
+    periodicActionComponent=new PeriodicActionComponent();
+    periodicActionComponent.addScheduledActionId(actionId,scheduleTime,period);
+    entity.addComponent(periodicActionComponent);
+  }
+}

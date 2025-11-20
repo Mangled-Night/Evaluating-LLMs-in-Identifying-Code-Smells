@@ -1,0 +1,23 @@
+public CandidateEcho(TransportCandidate candidate,JingleSession session) throws UnknownHostException, SocketException {
+  this.socket=new DatagramSocket(candidate.getPort(),InetAddress.getByName(candidate.getLocalIp()));
+  this.localUser=session.getInitiator();
+  this.remoteUser=session.getResponder();
+  this.id=session.getSid();
+  this.candidate=candidate;
+  int keySplitIndex=(int)Math.ceil(((float)id.length()) / 2);
+  String local=id.substring(0,keySplitIndex) + ";" + localUser;
+  String remote=id.substring(keySplitIndex) + ";" + remoteUser;
+  try {
+    if (session.getConnection().getUser().equals(session.getInitiator())) {
+      this.send=local.getBytes("UTF-8");
+      this.receive=remote.getBytes("UTF-8");
+    }
+ else {
+      this.receive=local.getBytes("UTF-8");
+      this.send=remote.getBytes("UTF-8");
+    }
+  }
+ catch (  UnsupportedEncodingException e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+}

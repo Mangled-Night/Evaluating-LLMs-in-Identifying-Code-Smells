@@ -1,0 +1,41 @@
+public void testDiscussionHistory(){
+  try {
+    muc.sendMessage("Message 1");
+    muc.sendMessage("Message 2");
+    Thread.sleep(5000);
+    muc.sendMessage("Message 3");
+    MultiUserChat muc2=new MultiUserChat(getConnection(1),room);
+    DiscussionHistory history=new DiscussionHistory();
+    history.setSeconds(2);
+    muc2.join("testbot2",null,history,SmackConfiguration.getPacketReplyTimeout());
+    Message msg;
+    msg=muc2.nextMessage(1000);
+    assertNotNull("First message is null",msg);
+    DelayInformation delay=DelayInformationManager.getDelayInformation(msg);
+    assertNotNull("Message contains no delay information",delay);
+    SimpleDateFormat UTC_FORMAT=new SimpleDateFormat("yyyyMMdd'T'HH:mm:ss");
+    UTC_FORMAT.setTimeZone(TimeZone.getDefault());
+    System.out.println(UTC_FORMAT.format(delay.getStamp()));
+    assertEquals("Body of first message is incorrect","Message 3",msg.getBody());
+    msg=muc2.nextMessage(1000);
+    assertNull("Second message is not null",msg);
+    MultiUserChat muc3=new MultiUserChat(getConnection(2),room);
+    history=new DiscussionHistory();
+    history.setMaxStanzas(2);
+    muc3.join("testbot3",null,history,SmackConfiguration.getPacketReplyTimeout());
+    msg=muc3.nextMessage(1000);
+    assertNotNull("First message is null",msg);
+    assertEquals("Body of first message is incorrect","Message 2",msg.getBody());
+    msg=muc3.nextMessage(1000);
+    assertNotNull("Second message is null",msg);
+    assertEquals("Body of second message is incorrect","Message 3",msg.getBody());
+    msg=muc3.nextMessage(1000);
+    assertNull("Third message is not null",msg);
+    muc2.leave();
+    muc3.leave();
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

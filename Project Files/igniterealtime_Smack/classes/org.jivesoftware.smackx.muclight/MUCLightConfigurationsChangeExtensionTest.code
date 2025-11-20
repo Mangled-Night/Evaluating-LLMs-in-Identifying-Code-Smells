@@ -1,0 +1,35 @@
+public class MUCLightConfigurationsChangeExtensionTest {
+  private static final String messageWithSubjectChangeExample="<message xmlns='jabber:client' to='crone1@shakespeare.lit' from='coven@muclight.shakespeare.lit' id='newsubject' type='groupchat'>" + "<body></body>" + "<x xmlns='urn:xmpp:muclight:0#configuration'>"+ "<prev-version>asdfghj000</prev-version>"+ "<version>asdfghj</version>"+ "<subject>To be or not to be?</subject>"+ "</x>"+ "</message>";
+  private static final String messageWithRoomNameChangeExample="<message xmlns='jabber:client' to='crone1@shakespeare.lit' from='coven@muclight.shakespeare.lit' id='newsubject' type='groupchat'>" + "<body></body>" + "<x xmlns='urn:xmpp:muclight:0#configuration'>"+ "<prev-version>zaqwsx</prev-version>"+ "<version>zxcvbnm</version>"+ "<roomname>A Darker Cave</roomname>"+ "</x>"+ "</message>";
+  private static final String messageWithConfigsChangeExample="<message xmlns='jabber:client' to='crone1@shakespeare.lit' from='coven@muclight.shakespeare.lit' id='newsubject' type='groupchat'>" + "<body></body>" + "<x xmlns='urn:xmpp:muclight:0#configuration'>"+ "<prev-version>zaqwsx</prev-version>"+ "<version>zxcvbnm</version>"+ "<roomname>A Darker Cave</roomname>"+ "<color>blue</color>"+ "</x>"+ "</message>";
+  @Test public void checkSubjectChangeExtension() throws Exception {
+    Message configurationsMessage=PacketParserUtils.parseStanza(messageWithSubjectChangeExample);
+    ConfigurationsChangeExtension configurationsChangeExtension=ConfigurationsChangeExtension.from(configurationsMessage);
+    assertEquals("asdfghj000",configurationsChangeExtension.getPrevVersion());
+    assertEquals("asdfghj",configurationsChangeExtension.getVersion());
+    assertEquals("To be or not to be?",configurationsChangeExtension.getSubject());
+    assertNull(configurationsChangeExtension.getRoomName());
+    assertNull(configurationsChangeExtension.getCustomConfigs());
+    assertEquals(messageWithSubjectChangeExample,configurationsMessage.toXML().toString());
+  }
+  @Test public void checkRoomNameChangeExtension() throws Exception {
+    Message configurationsMessage=PacketParserUtils.parseStanza(messageWithRoomNameChangeExample);
+    ConfigurationsChangeExtension configurationsChangeExtension=ConfigurationsChangeExtension.from(configurationsMessage);
+    assertEquals("zaqwsx",configurationsChangeExtension.getPrevVersion());
+    assertEquals("zxcvbnm",configurationsChangeExtension.getVersion());
+    assertEquals("A Darker Cave",configurationsChangeExtension.getRoomName());
+    assertNull(configurationsChangeExtension.getSubject());
+    assertNull(configurationsChangeExtension.getCustomConfigs());
+    assertEquals(messageWithRoomNameChangeExample,configurationsMessage.toXML().toString());
+  }
+  @Test public void checkConfigsChangeExtension() throws Exception {
+    Message configurationsMessage=PacketParserUtils.parseStanza(messageWithConfigsChangeExample);
+    ConfigurationsChangeExtension configurationsChangeExtension=ConfigurationsChangeExtension.from(configurationsMessage);
+    assertEquals("zaqwsx",configurationsChangeExtension.getPrevVersion());
+    assertEquals("zxcvbnm",configurationsChangeExtension.getVersion());
+    assertEquals("A Darker Cave",configurationsChangeExtension.getRoomName());
+    assertNull(configurationsChangeExtension.getSubject());
+    assertEquals("blue",configurationsChangeExtension.getCustomConfigs().get("color"));
+    assertEquals(messageWithConfigsChangeExample,configurationsMessage.toXML().toString());
+  }
+}

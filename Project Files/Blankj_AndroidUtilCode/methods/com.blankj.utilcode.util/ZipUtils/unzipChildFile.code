@@ -1,0 +1,30 @@
+private static boolean unzipChildFile(final File destDir,final List<File> files,final ZipFile zip,final ZipEntry entry,final String name) throws IOException {
+  File file=new File(destDir,name);
+  files.add(file);
+  if (entry.isDirectory()) {
+    return UtilsBridge.createOrExistsDir(file);
+  }
+ else {
+    if (!UtilsBridge.createOrExistsFile(file))     return false;
+    InputStream in=null;
+    OutputStream out=null;
+    try {
+      in=new BufferedInputStream(zip.getInputStream(entry));
+      out=new BufferedOutputStream(new FileOutputStream(file));
+      byte buffer[]=new byte[BUFFER_LEN];
+      int len;
+      while ((len=in.read(buffer)) != -1) {
+        out.write(buffer,0,len);
+      }
+    }
+  finally {
+      if (in != null) {
+        in.close();
+      }
+      if (out != null) {
+        out.close();
+      }
+    }
+  }
+  return true;
+}

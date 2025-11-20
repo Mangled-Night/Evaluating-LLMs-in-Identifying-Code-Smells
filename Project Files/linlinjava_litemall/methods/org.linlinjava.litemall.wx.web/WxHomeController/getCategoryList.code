@@ -1,0 +1,24 @@
+private List<Map> getCategoryList(){
+  List<Map> categoryList=new ArrayList<>();
+  List<LitemallCategory> catL1List=categoryService.queryL1WithoutRecommend(0,SystemConfig.getCatlogListLimit());
+  for (  LitemallCategory catL1 : catL1List) {
+    List<LitemallCategory> catL2List=categoryService.queryByPid(catL1.getId());
+    List<Integer> l2List=new ArrayList<>();
+    for (    LitemallCategory catL2 : catL2List) {
+      l2List.add(catL2.getId());
+    }
+    List<LitemallGoods> categoryGoods;
+    if (l2List.size() == 0) {
+      categoryGoods=new ArrayList<>();
+    }
+ else {
+      categoryGoods=goodsService.queryByCategory(l2List,0,SystemConfig.getCatlogMoreLimit());
+    }
+    Map<String,Object> catGoods=new HashMap<>();
+    catGoods.put("id",catL1.getId());
+    catGoods.put("name",catL1.getName());
+    catGoods.put("goodsList",categoryGoods);
+    categoryList.add(catGoods);
+  }
+  return categoryList;
+}

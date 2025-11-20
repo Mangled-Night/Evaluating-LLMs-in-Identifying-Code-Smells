@@ -1,0 +1,20 @@
+/** 
+ * If a data stanza of an unknown session is received it should be replied with an &lt;item-not-found/&gt; error.
+ * @throws Exception should not happen
+ */
+@Test public void shouldReplyErrorIfSessionIsUnknown() throws Exception {
+  XMPPConnection connection=mock(XMPPConnection.class);
+  InBandBytestreamManager byteStreamManager=InBandBytestreamManager.getByteStreamManager(connection);
+  DataListener dataListener=Whitebox.getInternalState(byteStreamManager,"dataListener",DataListener.class);
+  DataPacketExtension dpe=new DataPacketExtension("unknownSessionID",0,"Data");
+  Data data=new Data(dpe);
+  data.setFrom(initiatorJID);
+  data.setTo(targetJID);
+  dataListener.handleIQRequest(data);
+  Thread.sleep(200);
+  ArgumentCaptor<IQ> argument=ArgumentCaptor.forClass(IQ.class);
+  verify(connection).sendStanza(argument.capture());
+  assertEquals(initiatorJID,argument.getValue().getTo());
+  assertEquals(IQ.Type.error,argument.getValue().getType());
+  assertEquals(StanzaError.Condition.item_not_found,argument.getValue().getError().getCondition());
+}

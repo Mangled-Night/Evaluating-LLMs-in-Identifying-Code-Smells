@@ -1,0 +1,66 @@
+/** 
+ * Checks creation and deletion of methods, as well as existing method changes.
+ * @param originalApi the original api generated from ORIGINAL_API_FILE
+ * @param newApi the new apí generated from NEW_API_FILE
+ */
+private static void checkMethodChanges(Map<String,Collection<ApiMethod>> originalApi,Map<String,Collection<ApiMethod>> newApi){
+  System.out.println("Checking Method Changes");
+  Collection<ApiMethod> originalMethods;
+  Collection<ApiMethod> newMethods;
+  for (  String className : originalApi.keySet()) {
+    originalMethods=originalApi.get(className);
+    newMethods=newApi.get(className);
+    if (newMethods == null) {
+      continue;
+    }
+    checkMethodDeletion(originalMethods,newMethods);
+    for (    ApiMethod method2 : newMethods) {
+      boolean found=false;
+      for (      ApiMethod method1 : originalMethods) {
+        if (method1.getName().equals(method2.getName())) {
+          ApiMethod auxMethod=getMethodWithSameNameAndParameters(method2,originalMethods);
+          if (auxMethod.getName().equals("")) {
+            ApiMethod auxMethod2=getMethodWithSameNameAndParameters(method1,newMethods);
+            if (auxMethod2.getName().equals("")) {
+              checkMethodIncrease(method1,method2);
+            }
+ else             if (isInterfaceOrAbstract(method2.getClassName())) {
+              System.out.println("MINOR INCREASE, NEW OVERLOADED METHOD " + method2.getName() + " ON "+ method2.getClassName()+ "\nNEW PARAMETERS: "+ method2.getParametersType());
+              System.out.println("=================================================================");
+            }
+          }
+ else {
+            checkMethodIncrease(auxMethod,method2);
+          }
+          found=true;
+        }
+      }
+      if (!found) {
+        if (isInterfaceOrAbstract(method2.getClassName())) {
+          if (method2.getName().endsWith("(ABSTRACT METHOD)")) {
+            System.out.println("MAJOR INCREASE, NEW ABSTRACT METHOD " + method2.getName() + " ON "+ method2.getClassName());
+          }
+ else {
+            String minorOrMajor;
+            if (method2.getClassName().endsWith("(INTERFACE)")) {
+              if (method2.getName().endsWith("(DEFAULT METHOD)")) {
+                minorOrMajor="MINOR";
+              }
+ else {
+                minorOrMajor="MAJOR";
+              }
+            }
+ else {
+              minorOrMajor="MINOR";
+            }
+            System.out.println(minorOrMajor + " INCREASE, NEW METHOD " + method2.getName()+ " ON "+ method2.getClassName());
+          }
+        }
+ else {
+          System.out.println("MINOR INCREASE, NEW METHOD " + method2.getName() + " ON "+ method2.getClassName());
+        }
+        System.out.println("=================================================================");
+      }
+    }
+  }
+}

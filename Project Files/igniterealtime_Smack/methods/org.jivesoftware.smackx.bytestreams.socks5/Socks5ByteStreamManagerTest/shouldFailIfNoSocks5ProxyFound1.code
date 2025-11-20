@@ -1,0 +1,26 @@
+/** 
+ * Invoking  {@link Socks5BytestreamManager#establishSession(org.jxmpp.jid.Jid,String)} should fail if XMPPserver doesn't return any proxies.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws IOException if an I/O error occurred.
+ */
+@Test public void shouldFailIfNoSocks5ProxyFound1() throws SmackException, InterruptedException, IOException, XMPPException {
+  final Protocol protocol=new Protocol();
+  final XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+  final String sessionID="session_id_shouldFailIfNoSocks5ProxyFound1";
+  Socks5BytestreamManager byteStreamManager=Socks5BytestreamManager.getBytestreamManager(connection);
+  byteStreamManager.setAnnounceLocalStreamHost(false);
+  DiscoverInfoBuilder discoverInfo=Socks5PacketUtils.createDiscoverInfo(targetJID,initiatorJID);
+  discoverInfo.addFeature(Bytestream.NAMESPACE);
+  protocol.addResponse(discoverInfo.build(),Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  DiscoverItems discoverItems=Socks5PacketUtils.createDiscoverItems(xmppServer,initiatorJID);
+  protocol.addResponse(discoverItems,Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  SmackException e=assertThrows(SmackException.class,() -> {
+    byteStreamManager.establishSession(targetJID,sessionID);
+    fail("exception should be thrown");
+  }
+);
+  protocol.verifyAll();
+  assertTrue(e.getMessage().contains("no SOCKS5 proxies available"));
+}

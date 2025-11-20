@@ -1,0 +1,42 @@
+/** 
+ * Sequentially iterate over scored values in a sorted set identified by  {@code key}. This method uses  {@code ZSCAN} toperform an iterative scan.
+ * @param commands the commands interface, must not be {@code null}.
+ * @param key the sorted set to scan.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @return a new {@link ScanIterator}.
+ */
+public static <K,V>ScanIterator<ScoredValue<V>> zscan(RedisSortedSetCommands<K,V> commands,K key){
+  return zscan(commands,key,Optional.empty());
+}
+/** 
+ * Sequentially iterate over scored values in a sorted set identified by  {@code key}. This method uses  {@code ZSCAN} toperform an iterative scan.
+ * @param commands the commands interface, must not be {@code null}.
+ * @param key the sorted set to scan.
+ * @param scanArgs the scan arguments, must not be {@code null}.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @return a new {@link ScanIterator}.
+ */
+public static <K,V>ScanIterator<ScoredValue<V>> zscan(RedisSortedSetCommands<K,V> commands,K key,ScanArgs scanArgs){
+  LettuceAssert.notNull(scanArgs,"ScanArgs must not be null");
+  return zscan(commands,key,Optional.of(scanArgs));
+}
+private static <K,V>ScanIterator<ScoredValue<V>> zscan(RedisSortedSetCommands<K,V> commands,K key,Optional<ScanArgs> scanArgs){
+  LettuceAssert.notNull(commands,"RedisKeyCommands must not be null");
+  LettuceAssert.notNull(key,"Key must not be null");
+  return new SyncScanIterator<ScoredValue<V>>(){
+    @Override protected ScanCursor nextScanCursor(    ScanCursor scanCursor){
+      ScoredValueScanCursor<V> cursor=getNextScanCursor(scanCursor);
+      chunk=cursor.getValues().iterator();
+      return cursor;
+    }
+    private ScoredValueScanCursor<V> getNextScanCursor(    ScanCursor scanCursor){
+      if (scanCursor == null) {
+        return scanArgs.map(scanArgs -> commands.zscan(key,scanArgs)).orElseGet(() -> commands.zscan(key));
+      }
+      return scanArgs.map((scanArgs) -> commands.zscan(key,scanCursor,scanArgs)).orElseGet(() -> commands.zscan(key,scanCursor));
+    }
+  }
+;
+}

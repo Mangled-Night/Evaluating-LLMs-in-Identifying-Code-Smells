@@ -1,0 +1,25 @@
+/** 
+ * Test a simple roster push according to the example in <a href="http://xmpp.org/internet-drafts/draft-ietf-xmpp-3921bis-03.html#roster-syntax-actions-push" >RFC3921bis-03: Roster Push</a>.
+ * @throws Throwable in case a throwable is thrown.
+ */
+@Test public void testSimpleRosterPush() throws Throwable {
+  final BareJid contactJID=JidCreate.entityBareFrom("nurse@example.com");
+  assertNotNull("Can't get the roster from the provided connection!",roster);
+  final StringBuilder sb=new StringBuilder();
+  sb.append("<iq id=\"rostertest1\" type=\"set\" ").append("to=\"").append(connection.getUser()).append("\">").append("<query xmlns=\"jabber:iq:roster\">").append("<item jid=\"").append(contactJID).append("\"/>").append("</query>").append("</iq>");
+  final XmlPullParser parser=TestUtils.getIQParser(sb.toString());
+  final IQ rosterPush=PacketParserUtils.parseIQ(parser);
+  initRoster();
+  rosterListener.reset();
+  connection.processStanza(rosterPush);
+  rosterListener.waitUntilInvocationOrTimeout();
+  final RosterEntry addedEntry=roster.getEntry(contactJID);
+  assertNotNull("The new contact wasn't added to the roster!",addedEntry);
+  assertTrue("The roster listener wasn't invoked for the new contact!",rosterListener.getAddedAddresses().contains(contactJID));
+  assertSame("Setup wrong default subscription status!",ItemType.none,addedEntry.getType());
+  assertSame("The new contact shouldn't be member of any group!",0,addedEntry.getGroups().size());
+  verifyRomeosEntry(roster.getEntry(JidCreate.entityBareFrom("romeo@example.net")));
+  verifyMercutiosEntry(roster.getEntry(JidCreate.entityBareFrom("mercutio@example.com")));
+  verifyBenvoliosEntry(roster.getEntry(JidCreate.entityBareFrom("benvolio@example.net")));
+  assertSame("Wrong number of roster entries.",4,roster.getEntries().size());
+}

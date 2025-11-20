@@ -1,0 +1,68 @@
+private ChatManager(final XMPPConnection connection){
+  super(connection);
+  connection.addSyncStanzaListener(new StanzaListener(){
+    @Override public void processStanza(    Stanza stanza){
+      final Message message=(Message)stanza;
+      if (!shouldAcceptMessage(message)) {
+        return;
+      }
+      final Jid from=message.getFrom();
+      final EntityFullJid fullFrom=from.asEntityFullJidOrThrow();
+      final EntityBareJid bareFrom=fullFrom.asEntityBareJid();
+      final Chat chat=chatWith(bareFrom);
+      chat.lockedResource=fullFrom;
+      asyncButOrdered.performAsyncButOrdered(chat,new Runnable(){
+        @Override public void run(){
+          for (          IncomingChatMessageListener listener : incomingListeners) {
+            listener.newIncomingMessage(bareFrom,message,chat);
+          }
+        }
+      }
+);
+    }
+  }
+,INCOMING_MESSAGE_FILTER);
+  connection.addMessageInterceptor(messageBuilder -> {
+    if (!shouldAcceptMessage(messageBuilder)) {
+      return;
+    }
+    final EntityBareJid to=messageBuilder.getTo().asEntityBareJidOrThrow();
+    final Chat chat=chatWith(to);
+    for (    OutgoingChatMessageListener listener : outgoingListeners) {
+      listener.newOutgoingMessage(to,messageBuilder,chat);
+    }
+  }
+,m -> {
+    return OUTGOING_MESSAGE_FILTER.accept(m);
+  }
+);
+  Roster roster=Roster.getInstanceFor(connection);
+  roster.addRosterListener(new AbstractRosterListener(){
+    @Override public void presenceChanged(    Presence presence){
+      final Jid from=presence.getFrom();
+      final EntityBareJid bareFrom=from.asEntityBareJidIfPossible();
+      if (bareFrom == null) {
+        return;
+      }
+      final Chat chat=chats.get(bareFrom);
+      if (chat == null) {
+        return;
+      }
+      if (chat.lockedResource == null) {
+        return;
+      }
+      final EntityFullJid fullFrom=from.asEntityFullJidIfPossible();
+      if (chat.lockedResource.equals(fullFrom)) {
+        return;
+      }
+      if (chat.lastPresenceOfLockedResource == null) {
+        chat.lastPresenceOfLockedResource=presence;
+        return;
+      }
+      if (chat.lastPresenceOfLockedResource.getMode() != presence.getMode() || chat.lastPresenceOfLockedResource.getType() != presence.getType()) {
+        chat.unlockResource();
+      }
+    }
+  }
+);
+}

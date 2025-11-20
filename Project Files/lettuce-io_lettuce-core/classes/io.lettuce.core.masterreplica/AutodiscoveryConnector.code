@@ -1,0 +1,77 @@
+/** 
+ * {@link MasterReplicaConnector} to connect unmanaged Redis Master/Replica with auto-discovering master and replica nodes froma single  {@link RedisURI}.
+ * @author Mark Paluch
+ * @since 5.1
+ */
+class AutodiscoveryConnector<K,V> implements MasterReplicaConnector<K,V> {
+  private final RedisClient redisClient;
+  private final RedisCodec<K,V> codec;
+  private final RedisURI redisURI;
+  private final Map<RedisURI,StatefulRedisConnection<?,?>> initialConnections=new ConcurrentHashMap<>();
+  AutodiscoveryConnector(  RedisClient redisClient,  RedisCodec<K,V> codec,  RedisURI redisURI){
+    this.redisClient=redisClient;
+    this.codec=codec;
+    this.redisURI=redisURI;
+  }
+  @Override public CompletableFuture<StatefulRedisMasterReplicaConnection<K,V>> connectAsync(){
+    ConnectionFuture<StatefulRedisConnection<K,V>> initialConnection=redisClient.connectAsync(codec,redisURI);
+    Mono<StatefulRedisMasterReplicaConnection<K,V>> connect=Mono.fromCompletionStage(initialConnection).flatMap(nodeConnection -> {
+      initialConnections.put(redisURI,nodeConnection);
+      TopologyProvider topologyProvider=new ReplicaTopologyProvider(nodeConnection,redisURI);
+      return Mono.fromCompletionStage(topologyProvider.getNodesAsync()).flatMap(nodes -> getMasterConnectionAndUri(nodes,Tuples.of(redisURI,nodeConnection),codec));
+    }
+).flatMap(connectionAndUri -> {
+      return initializeConnection(codec,connectionAndUri);
+    }
+);
+    return connect.onErrorResume(t -> {
+      Mono<Void> close=Mono.empty();
+      for (      StatefulRedisConnection<?,?> connection : initialConnections.values()) {
+        close=close.then(Mono.fromFuture(connection.closeAsync()));
+      }
+      return close.then(Mono.error(t));
+    }
+).onErrorMap(ExecutionException.class,Throwable::getCause).toFuture();
+  }
+  private Mono<Tuple2<RedisURI,StatefulRedisConnection<K,V>>> getMasterConnectionAndUri(  List<RedisNodeDescription> nodes,  Tuple2<RedisURI,StatefulRedisConnection<K,V>> connectionTuple,  RedisCodec<K,V> codec){
+    RedisNodeDescription node=getConnectedNode(redisURI,nodes);
+    if (!node.getRole().isUpstream()) {
+      RedisNodeDescription master=lookupMaster(nodes);
+      ConnectionFuture<StatefulRedisConnection<K,V>> masterConnection=redisClient.connectAsync(codec,master.getUri());
+      return Mono.just(master.getUri()).zipWith(Mono.fromCompletionStage(masterConnection)).doOnNext(it -> {
+        initialConnections.put(it.getT1(),it.getT2());
+      }
+);
+    }
+    return Mono.just(connectionTuple);
+  }
+  @SuppressWarnings("unchecked") private Mono<StatefulRedisMasterReplicaConnection<K,V>> initializeConnection(  RedisCodec<K,V> codec,  Tuple2<RedisURI,StatefulRedisConnection<K,V>> connectionAndUri){
+    ReplicaTopologyProvider topologyProvider=new ReplicaTopologyProvider(connectionAndUri.getT2(),connectionAndUri.getT1());
+    MasterReplicaTopologyRefresh refresh=new MasterReplicaTopologyRefresh(redisClient,topologyProvider);
+    MasterReplicaConnectionProvider<K,V> connectionProvider=new MasterReplicaConnectionProvider<>(redisClient,codec,redisURI,(Map)initialConnections);
+    Mono<List<RedisNodeDescription>> refreshFuture=refresh.getNodes(redisURI);
+    return refreshFuture.map(nodes -> {
+      EventRecorder.getInstance().record(new MasterReplicaTopologyChangedEvent(redisURI,nodes));
+      connectionProvider.setKnownNodes(nodes);
+      MasterReplicaChannelWriter channelWriter=new MasterReplicaChannelWriter(connectionProvider,redisClient.getResources());
+      StatefulRedisMasterReplicaConnectionImpl<K,V> connection=new StatefulRedisMasterReplicaConnectionImpl<>(channelWriter,codec,redisURI.getTimeout());
+      connection.setOptions(redisClient.getOptions());
+      return connection;
+    }
+);
+  }
+  private static RedisNodeDescription lookupMaster(  List<RedisNodeDescription> nodes){
+    Optional<RedisNodeDescription> first=findFirst(nodes,n -> n.getRole().isUpstream());
+    return first.orElseThrow(() -> new IllegalStateException("Cannot lookup master from " + nodes));
+  }
+  private static RedisNodeDescription getConnectedNode(  RedisURI redisURI,  List<RedisNodeDescription> nodes){
+    Optional<RedisNodeDescription> first=findFirst(nodes,n -> equals(redisURI,n));
+    return first.orElseThrow(() -> new IllegalStateException("Cannot lookup node descriptor for connected node at " + redisURI));
+  }
+  private static Optional<RedisNodeDescription> findFirst(  List<RedisNodeDescription> nodes,  Predicate<? super RedisNodeDescription> predicate){
+    return nodes.stream().filter(predicate).findFirst();
+  }
+  private static boolean equals(  RedisURI redisURI,  RedisNodeDescription node){
+    return node.getUri().getHost().equals(redisURI.getHost()) && node.getUri().getPort() == redisURI.getPort();
+  }
+}

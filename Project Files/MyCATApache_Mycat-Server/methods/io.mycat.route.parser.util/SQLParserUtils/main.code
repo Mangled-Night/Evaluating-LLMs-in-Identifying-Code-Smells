@@ -1,0 +1,57 @@
+public static void main(String[] args){
+  SQLParserUtils parser=new SQLParserUtils();
+  List<String[]> list=new ArrayList<String[]>();
+  list.add(new String[]{"select * from B","B"});
+  list.add(new String[]{"select * from B,C","B,C"});
+  list.add(new String[]{"select * from B ,C","B,C"});
+  list.add(new String[]{"select * from B , C","B,C"});
+  list.add(new String[]{"select * from B a","B"});
+  list.add(new String[]{"select * from B a,C,D","B,C,D"});
+  list.add(new String[]{"select * from B a,C e ,D","B,C,D"});
+  list.add(new String[]{"select * from B a,C e ,D f","B,C,D"});
+  list.add(new String[]{"select * from B,(select * from C),D","B,C,D"});
+  list.add(new String[]{"select * from B, (select * from C),D","B,C,D"});
+  list.add(new String[]{"select * from B, ( select * from C),D","B,C,D"});
+  list.add(new String[]{"select * from B, ( select * from C),D,E","B,C,D,E"});
+  list.add(new String[]{"select * from B,(select * from C ),D","B,C,D"});
+  list.add(new String[]{"select * from B,(select * from C ) ,D","B,C,D"});
+  list.add(new String[]{"select * from B,(select * from C), D","B,C,D"});
+  list.add(new String[]{"select * from B,(select * from C ) , D","B,C,D"});
+  list.add(new String[]{"select * from B,(select * from C ) , (select * from D )","B,C,D"});
+  list.add(new String[]{"select * from B,(select * from C ) , (select * from D ),E","B,C,D,E"});
+  list.add(new String[]{"select * from B,(select C.ID , D.ID from C ) , (select * from D ),E","B,C,D,E"});
+  list.add(new String[]{"select (select C.ID,D.ID from C ) from B, D","B,C,D"});
+  list.add(new String[]{"select (select C.ID,D.ID from C ) , E from B, D","B,C,D"});
+  list.add(new String[]{"select (select C.ID,D.ID from C ), E from B, D","B,C,D"});
+  list.add(new String[]{"select (select C.ID,D.ID from C ),E from B, D","B,C,D"});
+  list.add(new String[]{"select a from t1 union select b from t2","t1,t2"});
+  list.add(new String[]{"select * from B where C =1","B"});
+  list.add(new String[]{"select * from B where C = (select 1 from D)","B,D"});
+  list.add(new String[]{"select * from B where C = (select 1 from D) AND E = (select 2 from F)","B,D,F"});
+  list.add(new String[]{"select * from B INNER JOIN C ON C.ID = D.ID","B,C"});
+  list.add(new String[]{"select * from B INNER JOIN C ON C.ID = D.ID INNER JOIN E ON 1=1","B,C,E"});
+  list.add(new String[]{"select * from B INNER JOIN C ON C.ID = (select G,H FROM I) INNER JOIN E ON 1=1","B,C,E,I"});
+  list.add(new String[]{"select * from B INNER JOIN C ON C.ID = (select G,H FROM I ) INNER JOIN E ON 1=1","B,C,E,I"});
+  list.add(new String[]{"select * from B INNER JOIN C ON C.ID = ( select G,H FROM I ) INNER JOIN E ON 1=1","B,C,E,I"});
+  list.add(new String[]{"select 'select * from C' from B","B"});
+  list.add(new String[]{"select 'select * from C,D' from B","B"});
+  list.add(new String[]{"select 'select * from C , D',E from B","B"});
+  list.add(new String[]{"select 'select * from C , D',' select * from E' from B","B"});
+  list.add(new String[]{"select 'select * from C , D','F',' select * from E' from B","B"});
+  list.add(new String[]{"select 'select * from C , D',' F',' select * from E' from B","B"});
+  list.add(new String[]{"select 'select * from C , D',' F ',' select * from E' from B","B"});
+  list.add(new String[]{"select * from 'B'","'B'"});
+  list.add(new String[]{"select * from 'B','C'","'B','C'"});
+  list.add(new String[]{sql1,"dbo.D_Materiel,dbo.D_Routing,dbo.D_MoldClass,dbo.D_Type_Detail,dbo.D_User"});
+  for (  String[] tmp : list) {
+    Assert.assertTrue(tmp[0],parser.test(tmp[0],tmp[1].split(",")));
+{
+      System.out.println(tmp[0] + "--->" + tmp[1]);
+      Map<String,String> tables=parser.parse(tmp[0]);
+      System.out.print("表名：");
+      for (      String key : tables.keySet()) {
+        System.out.println(key);
+      }
+    }
+  }
+}

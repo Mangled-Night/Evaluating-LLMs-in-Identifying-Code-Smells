@@ -1,0 +1,214 @@
+/** 
+ * 分页实体类
+ * @author shuzheng
+ * @date 2016年7月6日 下午6:05:00
+ */
+public class Paginator {
+  private long total=0L;
+  private int page=1;
+  private long totalPage=1;
+  private int rows=10;
+  private int step=5;
+  private String param="page";
+  private String url="";
+  private String query="";
+  public Paginator(){
+  }
+  public Paginator(  long total,  int page,  int rows,  HttpServletRequest request){
+    setTotal(total);
+    setPage(page);
+    setRows(rows);
+    setUrl(request.getRequestURI());
+    setQuery(request.getQueryString());
+  }
+  public long getTotal(){
+    return total;
+  }
+  public void setTotal(  long total){
+    this.total=total;
+    this.initTotalPage();
+  }
+  public int getPage(){
+    return page;
+  }
+  public void setPage(  int page){
+    this.page=page;
+  }
+  public long getTotalPage(){
+    return totalPage;
+  }
+  public void setTotalPage(  long totalPage){
+    this.totalPage=totalPage;
+  }
+  public int getRows(){
+    return rows;
+  }
+  public void setRows(  int rows){
+    if (rows > 10000) {
+      rows=10000;
+    }
+    this.rows=rows;
+    this.initTotalPage();
+  }
+  public int getStep(){
+    return step;
+  }
+  public void setStep(  int step){
+    this.step=step;
+  }
+  public String getParam(){
+    return param;
+  }
+  public void setParam(  String param){
+    this.param=param;
+  }
+  public String getUrl(){
+    return url;
+  }
+  public void setUrl(  String url){
+    this.url=url;
+  }
+  public String getQuery(){
+    return query;
+  }
+  public void setQuery(  String query){
+    this.query=query;
+  }
+  /** 
+ * 初始化分页信息
+ */
+  public void initTotalPage(){
+    totalPage=(total % rows) == 0 ? (total / rows) : ((total / rows) + 1);
+    if (page > totalPage) {
+      page=(int)totalPage;
+    }
+    if (page < 1) {
+      page=1;
+    }
+  }
+  /** 
+ * 生成简单的分页页面内容
+ * @return
+ */
+  public String getHtml(){
+    if (query != null) {
+      String params="";
+      String[] querys=query.split("&");
+      for (int i=0; i < querys.length; i++) {
+        if (querys[i].startsWith(param)) {
+          continue;
+        }
+        if ("".equals(params)) {
+          params=querys[i];
+        }
+ else {
+          params+="&" + querys[i];
+        }
+      }
+      if (!"".equals(params)) {
+        url+="?" + params;
+      }
+    }
+    String pages="";
+    int pageCount=(int)Math.ceil((double)total / rows);
+    if (pageCount <= 1) {
+      return pages;
+    }
+    if (page > pageCount) {
+      page=pageCount;
+    }
+    if (page <= 0) {
+      page=1;
+    }
+    if (page > 1) {
+      if (url.contains("?")) {
+        pages=pages.concat("<a class=\"prev\" href=\"" + url + "&"+ param+ "="+ (page - 1)+ "\">上一页</a>\n");
+      }
+ else {
+        pages=pages.concat("<a class=\"prev\" href=\"" + url + "?"+ param+ "="+ (page - 1)+ "\">上一页</a>\n");
+      }
+    }
+ else {
+      pages=pages.concat("<a class=\"prev\" href=\"javascript:;\" style=\"color:#ccc\">上一页</a>\n");
+    }
+    if (pageCount > step) {
+      int listBegin=(page - (int)Math.floor((double)step / 2));
+      if (listBegin < 1) {
+        listBegin=1;
+      }
+      if (listBegin >= 2) {
+        if (url.contains("?")) {
+          pages=pages.concat("<a href=\"" + url + "&"+ param+ "=1\">1</a> ... \n");
+        }
+ else {
+          pages=pages.concat("<a href=\"" + url + "?"+ param+ "=1\">1</a> ... \n");
+        }
+      }
+      if (pageCount - page >= page - listBegin) {
+        for (int i=listBegin; i < (listBegin + step); i++) {
+          if (i != page) {
+            if (url.contains("?")) {
+              pages=pages.concat("<a href=\"" + url + "&"+ param+ "="+ i+ "\">"+ i+ "</a>\n");
+            }
+ else {
+              pages=pages.concat("<a href=\"" + url + "?"+ param+ "="+ i+ "\">"+ i+ "</a>\n");
+            }
+          }
+ else {
+            pages=pages.concat("<span class=\"current\">" + i + "</span>\n");
+          }
+        }
+        if (listBegin + step <= pageCount) {
+          if (url.contains("?")) {
+            pages=pages.concat(" ... <a href=\"" + url + "&"+ param+ "="+ pageCount+ "\">"+ pageCount+ "</a>\n");
+          }
+ else {
+            pages=pages.concat(" ... <a href=\"" + url + "?"+ param+ "="+ pageCount+ "\">"+ pageCount+ "</a>\n");
+          }
+        }
+      }
+ else {
+        for (int i=(pageCount - step) + 1; i <= pageCount; i++) {
+          if (i != page) {
+            if (url.contains("?")) {
+              pages=pages.concat("<a href=\"" + url + "&"+ param+ "="+ i+ "\">"+ i+ "</a>\n");
+            }
+ else {
+              pages=pages.concat("<a href=\"" + url + "?"+ param+ "="+ i+ "\">"+ i+ "</a>\n");
+            }
+          }
+ else {
+            pages=pages.concat("<span class=\"current\">" + i + "</span>\n");
+          }
+        }
+      }
+    }
+ else {
+      for (int i=1; i <= pageCount; i++) {
+        if (i != page) {
+          if (url.contains("?")) {
+            pages=pages.concat("<a href=\"" + url + "&"+ param+ "="+ i+ "\">"+ i+ "</a>\n");
+          }
+ else {
+            pages=pages.concat("<a href=\"" + url + "?"+ param+ "="+ i+ "\">"+ i+ "</a>\n");
+          }
+        }
+ else {
+          pages=pages.concat("<span class=\"current\">" + i + "</span>\n");
+        }
+      }
+    }
+    if (page < pageCount) {
+      if (url.contains("?")) {
+        pages=pages.concat("<a class=\"next\" href=\"" + url + "&"+ param+ "="+ (page + 1)+ "\">下一页</a>\n");
+      }
+ else {
+        pages=pages.concat("<a class=\"next\" href=\"" + url + "?"+ param+ "="+ (page + 1)+ "\">下一页</a>\n");
+      }
+    }
+ else {
+      pages=pages.concat("<a class=\"next\" href=\"javascript:;\" style=\"color:#ccc\">下一页</a>\n");
+    }
+    return pages;
+  }
+}

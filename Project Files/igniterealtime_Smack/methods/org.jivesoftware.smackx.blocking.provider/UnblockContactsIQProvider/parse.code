@@ -1,0 +1,24 @@
+@Override public UnblockContactsIQ parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  List<Jid> jids=null;
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      if (parser.getName().equals("item")) {
+        if (jids == null) {
+          jids=new ArrayList<>();
+        }
+        jids.add(JidCreate.from(parser.getAttributeValue("","jid")));
+      }
+    break;
+case END_ELEMENT:
+  if (parser.getDepth() == initialDepth) {
+    break outerloop;
+  }
+break;
+default :
+break;
+}
+}
+return new UnblockContactsIQ(jids);
+}

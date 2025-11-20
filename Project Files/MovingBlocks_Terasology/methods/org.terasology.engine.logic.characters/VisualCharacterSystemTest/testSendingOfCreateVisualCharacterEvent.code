@@ -1,0 +1,32 @@
+/** 
+ * This test verifies that: <ul> <li>No visual character gets created (via event) for the own character (as it is first person)</li> <li>That the system can deal with LocalPlayer and characters not being properly linked when the character entities get loaded/created</li> <li>A visual character gets created (via event) for characters that were already present when the player joined</li> <li>A visual character gets created (via event) for characters that joins afterwards </li> </ul>
+ */
+@Test public void testSendingOfCreateVisualCharacterEvent(){
+  EntityRef clientEntity=mockEntityWithUniqueId();
+  EntityRef otherClientEntity=mockEntityWithUniqueId();
+  EntityRef ownCharacterEntity=mockEntityWithUniqueId();
+  List<Event> ownCharacterEntityEvents=new ArrayList<>();
+  recordEntityEventsToList(ownCharacterEntity,ownCharacterEntityEvents);
+  VisualCharacterComponent visualComponentOfOwnCharacter=new VisualCharacterComponent();
+  Mockito.when(ownCharacterEntity.getComponent(VisualCharacterComponent.class)).thenReturn(visualComponentOfOwnCharacter);
+  EntityRef otherCharacterEntity=mockEntityWithUniqueId();
+  List<Event> otherCharacterEntityEvents=new ArrayList<>();
+  recordEntityEventsToList(otherCharacterEntity,otherCharacterEntityEvents);
+  VisualCharacterComponent visualComponentOfOtherCharacter=new VisualCharacterComponent();
+  Mockito.when(otherCharacterEntity.getComponent(VisualCharacterComponent.class)).thenReturn(visualComponentOfOtherCharacter);
+  clientEntityReturnedByLocalPlayer=EntityRef.NULL;
+  system.onActivatedVisualCharacter(OnActivatedComponent.newInstance(),otherCharacterEntity,visualComponentOfOtherCharacter);
+  system.onActivatedVisualCharacter(OnActivatedComponent.newInstance(),ownCharacterEntity,visualComponentOfOwnCharacter);
+  simulateProperLinkingOfLocalPlayerAndCharacterEntities(clientEntity,otherClientEntity,ownCharacterEntity,otherCharacterEntity);
+  system.onAwaitedLocalCharacterSpawnEvent(new AwaitedLocalCharacterSpawnEvent(),ownCharacterEntity);
+  assertTypesInListEqual(ownCharacterEntityEvents,Collections.emptyList());
+  assertTypesInListEqual(otherCharacterEntityEvents,Arrays.asList(CreateVisualCharacterEvent.class));
+  EntityRef laterJoiningCharacterEntity=mockEntityWithUniqueId();
+  List<Event> laterJoiningCharacterEntityEvents=new ArrayList<>();
+  recordEntityEventsToList(laterJoiningCharacterEntity,laterJoiningCharacterEntityEvents);
+  VisualCharacterComponent visualComponentOfLaterJoiningCharacter=new VisualCharacterComponent();
+  Mockito.when(laterJoiningCharacterEntity.getComponent(VisualCharacterComponent.class)).thenReturn(visualComponentOfLaterJoiningCharacter);
+  Mockito.when(laterJoiningCharacterEntity.getOwner()).thenReturn(EntityRef.NULL);
+  system.onActivatedVisualCharacter(OnActivatedComponent.newInstance(),laterJoiningCharacterEntity,visualComponentOfLaterJoiningCharacter);
+  assertTypesInListEqual(laterJoiningCharacterEntityEvents,Arrays.asList(CreateVisualCharacterEvent.class));
+}

@@ -1,0 +1,19 @@
+protected Collection<EntityRef> getEntitiesOfChunk(Chunk chunk){
+  List<EntityRef> entitiesToStore=Lists.newArrayList();
+  AABBfc aabb=chunk.getAABB();
+  for (  EntityRef entity : getEntityManager().getEntitiesWith(LocationComponent.class)) {
+    if (!entity.getOwner().exists() && !entity.isAlwaysRelevant() && !entity.hasComponent(ClientComponent.class)) {
+      LocationComponent loc=entity.getComponent(LocationComponent.class);
+      if (loc == null) {
+        continue;
+      }
+      Vector3f pos=loc.getWorldPosition(new Vector3f());
+      if (pos.isFinite()) {
+        if (aabb.containsPoint(loc.getWorldPosition(new Vector3f()))) {
+          entitiesToStore.add(entity);
+        }
+      }
+    }
+  }
+  return entitiesToStore;
+}

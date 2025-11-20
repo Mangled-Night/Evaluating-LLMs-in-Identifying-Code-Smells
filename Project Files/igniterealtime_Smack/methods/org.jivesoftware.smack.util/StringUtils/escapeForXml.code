@@ -1,0 +1,113 @@
+/** 
+ * Escape <code>input</code> for XML.
+ * @param input the input to escape.
+ * @return the XML escaped variant of <code>input</code>.
+ */
+public static CharSequence escapeForXml(CharSequence input){
+  return escapeForXml(input,XmlEscapeMode.safe);
+}
+/** 
+ * Escapes all necessary characters in the CharSequence so that it can be used in an XML doc.
+ * @param input the CharSequence to escape.
+ * @return the string with appropriate characters escaped.
+ */
+private static CharSequence escapeForXml(final CharSequence input,final XmlEscapeMode xmlEscapeMode){
+  if (input == null) {
+    return null;
+  }
+  final int len=input.length();
+  final StringBuilder out=new StringBuilder((int)(len * 1.3));
+  CharSequence toAppend;
+  char ch;
+  int last=0;
+  int i=0;
+  while (i < len) {
+    toAppend=null;
+    ch=input.charAt(i);
+switch (xmlEscapeMode) {
+case safe:
+switch (ch) {
+case '<':
+        toAppend=LT_ENCODE;
+      break;
+case '>':
+    toAppend=GT_ENCODE;
+  break;
+case '&':
+toAppend=AMP_ENCODE;
+break;
+case '"':
+toAppend=QUOTE_ENCODE;
+break;
+case '\'':
+toAppend=APOS_ENCODE;
+break;
+default :
+break;
+}
+break;
+case forAttribute:
+switch (ch) {
+case '<':
+toAppend=LT_ENCODE;
+break;
+case '&':
+toAppend=AMP_ENCODE;
+break;
+case '"':
+toAppend=QUOTE_ENCODE;
+break;
+case '\'':
+toAppend=APOS_ENCODE;
+break;
+default :
+break;
+}
+break;
+case forAttributeApos:
+switch (ch) {
+case '<':
+toAppend=LT_ENCODE;
+break;
+case '&':
+toAppend=AMP_ENCODE;
+break;
+case '\'':
+toAppend=APOS_ENCODE;
+break;
+default :
+break;
+}
+break;
+case forText:
+switch (ch) {
+case '<':
+toAppend=LT_ENCODE;
+break;
+case '&':
+toAppend=AMP_ENCODE;
+break;
+default :
+break;
+}
+break;
+}
+if (toAppend != null) {
+if (i > last) {
+out.append(input,last,i);
+}
+out.append(toAppend);
+last=++i;
+}
+ else {
+i++;
+}
+}
+if (last == 0) {
+return input;
+}
+if (i > last) {
+out.append(input,last,i);
+}
+return out;
+}

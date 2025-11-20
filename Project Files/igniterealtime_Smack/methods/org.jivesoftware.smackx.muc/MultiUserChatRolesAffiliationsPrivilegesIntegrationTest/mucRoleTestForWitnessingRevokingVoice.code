@@ -1,0 +1,29 @@
+/** 
+ * Asserts that a user who is present when another user undergoes a role change receives that change as a presence update <p>From XEP-0045 § 5.1.3:</p> <blockquote> ...a MUC service implementation MUST change the occupant's role to reflect the change and communicate the change to all occupants... </blockquote> <p>From XEP-0045 § 8.4:</p> <blockquote> The service MUST then send updated presence from this individual to all occupants, indicating the removal of voice privileges... </blockquote>
+ * @throws Exception when errors occur
+ */
+@SmackIntegrationTest public void mucRoleTestForWitnessingRevokingVoice() throws Exception {
+  EntityBareJid mucAddress=getRandomRoom("smack-inttest");
+  MultiUserChat mucAsSeenByOne=mucManagerOne.getMultiUserChat(mucAddress);
+  MultiUserChat mucAsSeenByTwo=mucManagerTwo.getMultiUserChat(mucAddress);
+  MultiUserChat mucAsSeenByThree=mucManagerThree.getMultiUserChat(mucAddress);
+  final ResultSyncPoint<String,Exception> resultSyncPoint=new ResultSyncPoint<>();
+  mucAsSeenByThree.addParticipantStatusListener(new ParticipantStatusListener(){
+    @Override public void voiceRevoked(    EntityFullJid participant){
+      resultSyncPoint.signal("done");
+    }
+  }
+);
+  createMuc(mucAsSeenByOne,"one-" + randomString);
+  try {
+    final Resourcepart nicknameTwo=Resourcepart.from("two-" + randomString);
+    final Resourcepart nicknameThree=Resourcepart.from("three-" + randomString);
+    mucAsSeenByTwo.join(nicknameTwo);
+    mucAsSeenByThree.join(nicknameThree);
+    mucAsSeenByOne.revokeVoice(nicknameTwo);
+    resultSyncPoint.waitForResult(timeout);
+  }
+  finally {
+    tryDestroy(mucAsSeenByOne);
+  }
+}

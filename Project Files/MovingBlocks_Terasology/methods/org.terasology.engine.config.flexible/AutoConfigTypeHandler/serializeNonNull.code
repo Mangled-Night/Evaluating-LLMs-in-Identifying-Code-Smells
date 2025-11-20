@@ -1,0 +1,21 @@
+@Override protected PersistedData serializeNonNull(AutoConfig value,PersistedDataSerializer serializer){
+  Set<Field> settingFields=AutoConfig.getSettingFieldsIn(typeInfo.getRawType());
+  Map<String,PersistedData> fields=new HashMap<>();
+  for (  Field field : settingFields) {
+    try {
+      Setting setting=(Setting)field.get(value);
+      if (!Objects.equals(setting.getDefaultValue(),setting.get())) {
+        Optional<TypeHandler<Object>> typeHandler=typeHandlerLibrary.getTypeHandler(setting.getValueType());
+        if (typeHandler.isPresent()) {
+          fields.put(field.getName(),typeHandler.get().serialize(setting.get(),serializer));
+        }
+ else {
+          logger.error("Cannot serialize type [{}]",setting.getValueType());
+        }
+      }
+    }
+ catch (    IllegalAccessException e) {
+    }
+  }
+  return serializer.serialize(fields);
+}

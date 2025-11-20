@@ -1,0 +1,20 @@
+@Override public void processStanza(Stanza packet){
+  final Message message=(Message)packet;
+  final MUCUser mucUser=MUCUser.from(message);
+  if (mucUser.getInvite() != null) {
+    EntityBareJid mucJid=message.getFrom().asEntityBareJidIfPossible();
+    if (mucJid == null) {
+      LOGGER.warning("Invite to non bare JID: '" + message.toXML() + "'");
+      return;
+    }
+    final MultiUserChat muc=getMultiUserChat(mucJid);
+    final XMPPConnection connection=connection();
+    final MUCUser.Invite invite=mucUser.getInvite();
+    final EntityJid from=invite.getFrom();
+    final String reason=invite.getReason();
+    final String password=mucUser.getPassword();
+    for (    final InvitationListener listener : invitationsListeners) {
+      listener.invitationReceived(connection,muc,from,reason,password,message,invite);
+    }
+  }
+}

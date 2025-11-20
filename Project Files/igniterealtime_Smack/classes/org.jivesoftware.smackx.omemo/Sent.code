@@ -1,0 +1,57 @@
+/** 
+ * Outgoing OMEMO message.
+ */
+public static class Sent extends OmemoMessage {
+  private final Set<OmemoDevice> intendedDevices=new HashSet<>();
+  private final HashMap<OmemoDevice,Throwable> skippedDevices=new HashMap<>();
+  /** 
+ * Create a new outgoing OMEMO message.
+ * @param element OmemoElement
+ * @param key messageKey (or transported key)
+ * @param iv initialization vector belonging to key
+ * @param intendedDevices devices the client intended to encrypt the message for
+ * @param skippedDevices devices which were skipped during encryption process because encryptionfailed for some reason
+ */
+  Sent(  OmemoElement element,  byte[] key,  byte[] iv,  Set<OmemoDevice> intendedDevices,  HashMap<OmemoDevice,Throwable> skippedDevices){
+    super(element,key,iv);
+    this.intendedDevices.addAll(intendedDevices);
+    this.skippedDevices.putAll(skippedDevices);
+  }
+  /** 
+ * Return a list of all devices the sender originally intended to encrypt the message for.
+ * @return list of intended recipients.
+ */
+  public Set<OmemoDevice> getIntendedDevices(){
+    return intendedDevices;
+  }
+  /** 
+ * Return a map of all skipped recipients and the reasons for skipping.
+ * @return map of skipped recipients and reasons for that.
+ */
+  public HashMap<OmemoDevice,Throwable> getSkippedDevices(){
+    return skippedDevices;
+  }
+  /** 
+ * Determine, if some recipients were skipped during encryption.
+ * @return true if recipients were skipped.
+ */
+  public boolean isMissingRecipients(){
+    return !getSkippedDevices().isEmpty();
+  }
+  /** 
+ * Return the OmemoElement wrapped in a Message ready to be sent. The message is addressed to recipient, contains the OmemoElement as well as an optional clear text hint as body, a MAM storage hint and an EME hint about OMEMO encryption.
+ * @param messageBuilder a message builder which will be used to build the message.
+ * @param recipient recipient for the to-field of the message.
+ * @return the build message.
+ */
+  public Message buildMessage(  MessageBuilder messageBuilder,  Jid recipient){
+    messageBuilder.ofType(Message.Type.chat).to(recipient);
+    messageBuilder.addExtension(getElement());
+    if (OmemoConfiguration.getAddOmemoHintBody()) {
+      messageBuilder.setBody(BODY_OMEMO_HINT);
+    }
+    StoreHint.set(messageBuilder);
+    messageBuilder.addExtension(new ExplicitMessageEncryptionElement(OMEMO_NAMESPACE_V_AXOLOTL,OMEMO));
+    return messageBuilder.build();
+  }
+}

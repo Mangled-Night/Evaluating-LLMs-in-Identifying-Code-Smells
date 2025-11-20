@@ -1,0 +1,51 @@
+private static final class RowComparator extends RecordComparator {
+  private final int numFields;
+  private final UnsafeRow row1;
+  private final UnsafeRow row2;
+  private final StructType schema;
+  RowComparator(  StructType schema){
+    assert schema.length() >= 0;
+    this.schema=schema;
+    this.numFields=schema.length();
+    this.row1=new UnsafeRow(numFields);
+    this.row2=new UnsafeRow(numFields);
+  }
+  @Override public int compare(  Object baseObj1,  long baseOff1,  Object baseObj2,  long baseOff2){
+    OrderCol[] orderCols=schema.getOrderCols();
+    if (orderCols == null) {
+      return 0;
+    }
+    row1.pointTo(baseObj1,baseOff1,-1);
+    row2.pointTo(baseObj2,baseOff2,-1);
+    int cmp=0;
+    int len=orderCols.length;
+    int type=OrderCol.COL_ORDER_TYPE_ASC;
+    for (int i=0; i < len; i++) {
+      int colIndex=orderCols[i].colMeta.colIndex;
+      byte[] left=null;
+      byte[] right=null;
+      if (!row1.isNullAt(colIndex)) {
+        left=row1.getBinary(colIndex);
+      }
+ else {
+        left=new byte[1];
+        left[0]=UnsafeRow.NULL_MARK;
+      }
+      if (!row2.isNullAt(colIndex)) {
+        right=row2.getBinary(colIndex);
+      }
+ else {
+        right=new byte[1];
+        right[0]=UnsafeRow.NULL_MARK;
+      }
+      if (orderCols[i].orderType == type) {
+        cmp=RowDataPacketSorter.compareObject(left,right,orderCols[i]);
+      }
+ else {
+        cmp=RowDataPacketSorter.compareObject(right,left,orderCols[i]);
+      }
+      if (cmp != 0)       return cmp;
+    }
+    return cmp;
+  }
+}

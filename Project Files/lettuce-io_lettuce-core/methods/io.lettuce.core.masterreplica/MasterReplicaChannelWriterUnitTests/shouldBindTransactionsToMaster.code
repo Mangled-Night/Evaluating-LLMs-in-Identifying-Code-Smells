@@ -1,0 +1,8 @@
+@Test void shouldBindTransactionsToMaster(){
+  MasterReplicaChannelWriter writer=new MasterReplicaChannelWriter(connectionProvider,clientResources);
+  when(connectionProvider.getConnectionAsync(any(ConnectionIntent.class))).thenReturn(CompletableFuture.completedFuture(connection));
+  writer.write(mockCommand(CommandType.MULTI));
+  writer.write(mockCommand(CommandType.GET));
+  writer.write(mockCommand(CommandType.EXEC));
+  verify(connectionProvider,times(3)).getConnectionAsync(ConnectionIntent.WRITE);
+}

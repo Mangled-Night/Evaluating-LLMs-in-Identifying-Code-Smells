@@ -1,0 +1,10 @@
+@Test @EnabledOnCommand("XAUTOCLAIM") void scriptFlushAsync(){
+  assertThat(redis.scriptFlush()).isEqualTo("OK");
+  String script1="return 1 + 1";
+  String digest1=redis.digest(script1);
+  assertThat(redis.scriptExists(digest1)).isEqualTo(list(false));
+  assertThat(redis.scriptLoad(script1)).isEqualTo(digest1);
+  assertThat(redis.scriptExists(digest1)).isEqualTo(list(true));
+  assertThat(redis.scriptFlush(FlushMode.ASYNC)).isEqualTo("OK");
+  assertThat(redis.scriptExists(digest1)).isEqualTo(list(false));
+}

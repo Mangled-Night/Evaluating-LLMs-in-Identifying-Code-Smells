@@ -1,0 +1,13 @@
+protected void writeToStream(final InputStream in,final OutputStream out) throws IOException {
+  final byte[] b=new byte[BUFFER_SIZE];
+  int count=0;
+  amountWritten=0;
+  while ((count=in.read(b)) > 0 && !getStatus().equals(Status.cancelled)) {
+    out.write(b,0,count);
+    amountWritten+=count;
+  }
+  if (!getStatus().equals(Status.cancelled) && getError() == null && amountWritten != fileSize) {
+    setStatus(Status.error);
+    this.error=Error.connection;
+  }
+}

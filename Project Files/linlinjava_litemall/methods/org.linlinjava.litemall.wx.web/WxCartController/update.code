@@ -1,0 +1,44 @@
+/** 
+ * 修改购物车商品货品数量
+ * @param userId 用户ID
+ * @param cart   购物车商品信息， { id: xxx, goodsId: xxx, productId: xxx, number: xxx }
+ * @return 修改结果
+ */
+@PostMapping("update") public Object update(@LoginUser Integer userId,@RequestBody LitemallCart cart){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  Integer productId=cart.getProductId();
+  Integer number=cart.getNumber().intValue();
+  Integer goodsId=cart.getGoodsId();
+  Integer id=cart.getId();
+  if (!ObjectUtils.allNotNull(id,productId,number,goodsId)) {
+    return ResponseUtil.badArgument();
+  }
+  if (number <= 0) {
+    return ResponseUtil.badArgument();
+  }
+  LitemallCart existCart=cartService.findById(userId,id);
+  if (existCart == null) {
+    return ResponseUtil.badArgumentValue();
+  }
+  if (!existCart.getGoodsId().equals(goodsId)) {
+    return ResponseUtil.badArgumentValue();
+  }
+  if (!existCart.getProductId().equals(productId)) {
+    return ResponseUtil.badArgumentValue();
+  }
+  LitemallGoods goods=goodsService.findById(goodsId);
+  if (goods == null || !goods.getIsOnSale()) {
+    return ResponseUtil.fail(GOODS_UNSHELVE,"商品已下架");
+  }
+  LitemallGoodsProduct product=productService.findById(productId);
+  if (product == null || product.getNumber() < number) {
+    return ResponseUtil.fail(GOODS_UNSHELVE,"库存不足");
+  }
+  existCart.setNumber(number.shortValue());
+  if (cartService.updateById(existCart) == 0) {
+    return ResponseUtil.updatedDataFailed();
+  }
+  return ResponseUtil.ok();
+}

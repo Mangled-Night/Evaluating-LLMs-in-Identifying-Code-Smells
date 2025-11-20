@@ -1,0 +1,23 @@
+@Override public List<RedisNodeDescription> getNodes(){
+  logger.debug("lookup topology for masterId {}",masterId);
+  try {
+    return getNodesAsync().get(timeout.toMillis(),TimeUnit.MILLISECONDS);
+  }
+ catch (  Exception e) {
+    throw Exceptions.bubble(e);
+  }
+}
+protected Mono<List<RedisNodeDescription>> getNodes(StatefulRedisSentinelConnection<String,String> connection){
+  RedisSentinelReactiveCommands<String,String> reactive=connection.reactive();
+  Mono<Tuple2<Map<String,String>,List<Map<String,String>>>> masterAndReplicas=reactive.master(masterId).zipWith(reactive.replicas(masterId).collectList()).timeout(this.timeout).flatMap(tuple -> {
+    return ResumeAfter.close(connection).thenEmit(tuple);
+  }
+).doOnError(e -> connection.closeAsync());
+  return masterAndReplicas.map(tuple -> {
+    List<RedisNodeDescription> result=new ArrayList<>();
+    result.add(toNode(tuple.getT1(),RedisInstance.Role.UPSTREAM));
+    result.addAll(tuple.getT2().stream().filter(SentinelTopologyProvider::isAvailable).map(map -> toNode(map,RedisInstance.Role.REPLICA)).collect(Collectors.toList()));
+    return result;
+  }
+);
+}

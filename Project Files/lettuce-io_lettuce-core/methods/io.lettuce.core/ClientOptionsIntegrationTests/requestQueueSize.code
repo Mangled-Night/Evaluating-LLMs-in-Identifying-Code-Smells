@@ -1,0 +1,13 @@
+@Test void requestQueueSize(){
+  client.setOptions(ClientOptions.builder().requestQueueSize(10).build());
+  StatefulRedisConnection<String,String> connection=client.connect();
+  getConnectionWatchdog(connection).setListenOnChannelInactive(false);
+  connection.async().quit();
+  Wait.untilTrue(() -> !connection.isOpen()).waitOrTimeout();
+  for (int i=0; i < 10; i++) {
+    connection.async().ping();
+  }
+  assertThatThrownBy(() -> connection.async().ping().toCompletableFuture().join()).hasMessageContaining("Request queue size exceeded");
+  assertThatThrownBy(() -> connection.sync().ping()).hasMessageContaining("Request queue size exceeded");
+  connection.close();
+}

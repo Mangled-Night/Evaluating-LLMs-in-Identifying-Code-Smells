@@ -1,0 +1,122 @@
+public class EntityCapsTest extends AbstractSmackIntegrationTest {
+  private final EntityCapsManager ecmTwo;
+  private final ServiceDiscoveryManager sdmOne;
+  private final ServiceDiscoveryManager sdmTwo;
+  public EntityCapsTest(  SmackIntegrationTestEnvironment environment){
+    super(environment);
+    ecmTwo=EntityCapsManager.getInstanceFor(environment.conTwo);
+    sdmOne=ServiceDiscoveryManager.getInstanceFor(environment.conOne);
+    sdmTwo=ServiceDiscoveryManager.getInstanceFor(environment.conTwo);
+  }
+  private final AtomicInteger dummyFeatureId=new AtomicInteger();
+  private final Set<String> dummyFeatures=new HashSet<>();
+  private String getNewDummyFeature(){
+    String dummyFeature="entityCapsTest" + dummyFeatureId.incrementAndGet();
+    dummyFeatures.add(dummyFeature);
+    return dummyFeature;
+  }
+  @BeforeClass public void setUp() throws NotLoggedInException, NotConnectedException, InterruptedException, TimeoutException {
+    RosterUtil.ensureSubscribed(conOne,conTwo,timeout);
+  }
+  @AfterClass public void tearDown() throws NotConnectedException, InterruptedException {
+    RosterUtil.ensureNotSubscribedToEachOther(conOne,conTwo);
+    ServiceDiscoveryManager[] sdms=new ServiceDiscoveryManager[]{sdmOne,sdmTwo};
+    for (    ServiceDiscoveryManager sdm : sdms) {
+      for (      String dummyFeature : dummyFeatures) {
+        sdm.removeFeature(dummyFeature);
+      }
+    }
+  }
+  @SmackIntegrationTest public void testLocalEntityCaps() throws InterruptedException, NoResponseException, XMPPErrorException, NotConnectedException {
+    final String dummyFeature=getNewDummyFeature();
+    DiscoverInfo info=EntityCapsManager.getDiscoveryInfoByNodeVer(ecmTwo.getLocalNodeVer());
+    assertFalse(info.containsFeature(dummyFeature));
+    dropWholeEntityCapsCache();
+    performActionAndWaitUntilStanzaReceived(new Runnable(){
+      @Override public void run(){
+        sdmTwo.addFeature(dummyFeature);
+      }
+    }
+,conOne,new AndFilter(PresenceTypeFilter.AVAILABLE,FromMatchesFilter.create(conTwo.getUser())));
+    info=EntityCapsManager.getDiscoveryInfoByNodeVer(ecmTwo.getLocalNodeVer());
+    assertNotNull(info);
+    assertTrue(info.containsFeature(dummyFeature));
+  }
+  /** 
+ * Test if entity caps actually prevent a disco info request and reply.
+ * @throws Exception if exception.
+ */
+  @SmackIntegrationTest public void testPreventDiscoInfo() throws Exception {
+    final String dummyFeature=getNewDummyFeature();
+    final AtomicBoolean discoInfoSend=new AtomicBoolean();
+    conOne.addStanzaSendingListener(new StanzaListener(){
+      @Override public void processStanza(      Stanza stanza){
+        discoInfoSend.set(true);
+      }
+    }
+,new AndFilter(new StanzaTypeFilter(DiscoverInfo.class),IQTypeFilter.GET));
+    addFeatureAndWaitForPresence(conOne,conTwo,dummyFeature);
+    dropCapsCache();
+    DiscoverInfo info=sdmOne.discoverInfo(conTwo.getUser());
+    assertTrue(discoInfoSend.get());
+    assertTrue(info.containsFeature(dummyFeature),"The info response '" + info + "' does not contain the expected feature '"+ dummyFeature+ '\'');
+    discoInfoSend.set(false);
+    info=sdmOne.discoverInfo(conTwo.getUser());
+    assertFalse(discoInfoSend.get());
+    assertTrue(info.containsFeature(dummyFeature));
+  }
+  @SmackIntegrationTest public void testCapsChanged() throws Exception {
+    final String dummyFeature=getNewDummyFeature();
+    String nodeVerBefore=EntityCapsManager.getNodeVersionByJid(conTwo.getUser());
+    addFeatureAndWaitForPresence(conOne,conTwo,dummyFeature);
+    String nodeVerAfter=EntityCapsManager.getNodeVersionByJid(conTwo.getUser());
+    assertFalse(nodeVerBefore.equals(nodeVerAfter));
+  }
+  @SmackIntegrationTest public void testEntityCaps() throws XMPPException, InterruptedException, NoResponseException, NotConnectedException, TimeoutException {
+    final String dummyFeature=getNewDummyFeature();
+    dropWholeEntityCapsCache();
+    performActionAndWaitUntilStanzaReceived(new Runnable(){
+      @Override public void run(){
+        sdmTwo.addFeature(dummyFeature);
+      }
+    }
+,connection,new AndFilter(PresenceTypeFilter.AVAILABLE,FromMatchesFilter.create(conTwo.getUser())));
+    waitUntilTrue(new Condition(){
+      @Override public boolean evaluate() throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+        DiscoverInfo info=sdmOne.discoverInfo(conTwo.getUser());
+        return info.containsFeature(dummyFeature);
+      }
+    }
+);
+    DiscoverInfo info=sdmOne.discoverInfo(conTwo.getUser());
+    String u1ver=EntityCapsManager.getNodeVersionByJid(conTwo.getUser());
+    assertNotNull(u1ver);
+    DiscoverInfo entityInfo=EntityCapsManager.CAPS_CACHE.lookup(u1ver);
+    assertNotNull(entityInfo);
+    assertEquals(info.toXML().toString(),entityInfo.toXML().toString());
+  }
+  private static void dropWholeEntityCapsCache(){
+    EntityCapsManager.CAPS_CACHE.clear();
+    EntityCapsManager.JID_TO_NODEVER_CACHE.clear();
+  }
+  private static void dropCapsCache(){
+    EntityCapsManager.CAPS_CACHE.clear();
+  }
+  /** 
+ * Adds 'feature' to conB and waits until conA observes a presence form conB.
+ * @param conA the connection to observe the presence on.
+ * @param conB the connection to add the feature to.
+ * @param feature the feature to add.
+ * @throws Exception in case of an exception.
+ */
+  private void addFeatureAndWaitForPresence(  XMPPConnection conA,  XMPPConnection conB,  String feature) throws Exception {
+    final ServiceDiscoveryManager sdmB=ServiceDiscoveryManager.getInstanceFor(conB);
+    ThrowingRunnable action=new ThrowingRunnable(){
+      @Override public void runOrThrow() throws Exception {
+        sdmB.addFeature(feature);
+      }
+    }
+;
+    performActionAndWaitForPresence(conA,conB,action);
+  }
+}

@@ -1,0 +1,44 @@
+@Override public ByteBuffer write(ByteBuffer bb,FrontendConnection c,boolean writeSocketIfFull){
+  bb=c.checkWriteBuffer(bb,c.getPacketHeaderSize(),writeSocketIfFull);
+  BufferUtil.writeUB3(bb,calcPacketSize());
+  bb.put(packetId);
+  for (int i=0; i < fieldCount; i++) {
+    byte[] fv=fieldValues.get(i);
+    if (fv == null) {
+      bb=c.checkWriteBuffer(bb,1,writeSocketIfFull);
+      bb.put(RowDataPacket.NULL_MARK);
+    }
+ else     if (fv.length == 0) {
+      bb=c.checkWriteBuffer(bb,1,writeSocketIfFull);
+      bb.put(RowDataPacket.EMPTY_MARK);
+    }
+ else {
+      bb=c.checkWriteBuffer(bb,BufferUtil.getLength(fv),writeSocketIfFull);
+      BufferUtil.writeLength(bb,fv.length);
+      bb=c.writeToBuffer(fv,bb);
+    }
+  }
+  return bb;
+}
+public void write(BufferArray bufferArray){
+  int size=calcPacketSize();
+  ByteBuffer buffer=bufferArray.checkWriteBuffer(packetHeaderSize + size);
+  BufferUtil.writeUB3(buffer,size);
+  buffer.put(packetId);
+  for (int i=0; i < fieldCount; i++) {
+    byte[] fv=fieldValues.get(i);
+    if (fv == null) {
+      buffer=bufferArray.checkWriteBuffer(1);
+      buffer.put(RowDataPacket.NULL_MARK);
+    }
+ else     if (fv.length == 0) {
+      buffer=bufferArray.checkWriteBuffer(1);
+      buffer.put(RowDataPacket.EMPTY_MARK);
+    }
+ else {
+      buffer=bufferArray.checkWriteBuffer(BufferUtil.getLength(fv.length));
+      BufferUtil.writeLength(buffer,fv.length);
+      bufferArray.write(fv);
+    }
+  }
+}

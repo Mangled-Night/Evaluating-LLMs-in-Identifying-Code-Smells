@@ -1,0 +1,26 @@
+private void validateParameters(CommandDetail commandDetail,CommandSegments commandSegments,CommandMethod commandMethod){
+  List<? extends Parameter> bindableParameters=commandMethod.getParameters().getBindableParameters();
+  int availableParameterCount=calculateAvailableParameterCount(commandSegments,bindableParameters);
+  if (commandDetail.getArity() - 1 == availableParameterCount) {
+    return;
+  }
+  if (0 > commandDetail.getArity() && availableParameterCount >= -(commandDetail.getArity() + 1)) {
+    return;
+  }
+  for (  Parameter bindableParameter : bindableParameters) {
+    if (bindableParameter.getTypeInformation().isCollectionLike()) {
+      return;
+    }
+  }
+  String message;
+  if (commandDetail.getArity() == 1) {
+    message=String.format("Command %s accepts no parameters.",commandDetail.getName().toUpperCase());
+  }
+ else   if (commandDetail.getArity() < -1) {
+    message=String.format("Command %s requires at least %d parameters but method declares %d parameter(s).",commandDetail.getName().toUpperCase(),Math.abs(commandDetail.getArity()) - 1,availableParameterCount);
+  }
+ else {
+    message=String.format("Command %s accepts %d parameters but method declares %d parameter(s).",commandDetail.getName().toUpperCase(),commandDetail.getArity() - 1,availableParameterCount);
+  }
+  throw new CommandMethodSyntaxException(commandMethod,message);
+}

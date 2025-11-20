@@ -1,0 +1,17 @@
+@Override public <K,V,T>RedisCommand<K,V,T> write(RedisCommand<K,V,T> command){
+  long now=clock.millis();
+  CommandStartedEvent startedEvent=new CommandStartedEvent((RedisCommand<Object,Object,Object>)command,now);
+  listener.commandStarted(startedEvent);
+  return delegate.write(new RedisCommandListenerCommand<>(command,clock,startedEvent.getContext(),now,listener));
+}
+@Override public <K,V>Collection<RedisCommand<K,V,?>> write(Collection<? extends RedisCommand<K,V,?>> redisCommands){
+  List<RedisCommandListenerCommand<K,V,?>> listenedCommands=new ArrayList<>();
+  long now=clock.millis();
+  for (  RedisCommand<K,V,?> redisCommand : redisCommands) {
+    CommandStartedEvent startedEvent=new CommandStartedEvent((RedisCommand<Object,Object,Object>)redisCommand,now);
+    listener.commandStarted(startedEvent);
+    RedisCommandListenerCommand<K,V,?> command=new RedisCommandListenerCommand<>(redisCommand,clock,startedEvent.getContext(),now,listener);
+    listenedCommands.add(command);
+  }
+  return delegate.write(listenedCommands);
+}

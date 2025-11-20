@@ -1,0 +1,21 @@
+@Test public void testResolveThroughInheritanceTree(){
+class A<S,T> implements MarkerA<T>, MarkerC<S> {
+  }
+class B<S,T> extends A<S,T> implements MarkerB<T>, MarkerC<S> {
+  }
+class C<T> extends B<Integer,T> {
+  }
+  final Type typeToResolve=ReflectionUtil.parameterizeRawType(C.class);
+  ParameterizedType resolvedThroughMarkerA=(ParameterizedType)ReflectionUtil.resolveType(new TypeInfo<MarkerA<String>>(){
+  }
+.getType(),typeToResolve);
+  assertEquals(String.class,resolvedThroughMarkerA.getActualTypeArguments()[0]);
+  ParameterizedType resolvedThroughMarkerB=(ParameterizedType)ReflectionUtil.resolveType(new TypeInfo<MarkerB<String>>(){
+  }
+.getType(),typeToResolve);
+  assertEquals(String.class,resolvedThroughMarkerB.getActualTypeArguments()[0]);
+  ParameterizedType resolvedThroughAWithIncorrectFirstType=(ParameterizedType)ReflectionUtil.resolveType(new TypeInfo<A<String,String>>(){
+  }
+.getType(),typeToResolve);
+  assertEquals(String.class,resolvedThroughAWithIncorrectFirstType.getActualTypeArguments()[0]);
+}

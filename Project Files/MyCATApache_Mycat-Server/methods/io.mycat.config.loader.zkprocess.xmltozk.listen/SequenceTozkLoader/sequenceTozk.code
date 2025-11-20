@@ -1,0 +1,27 @@
+/** 
+ * 将xml文件的信息写入到zk中 方法描述
+ * @param basePath 基本路径
+ * @param schema schema文件的信息
+ * @throws Exception 异常信息
+ * @创建日期 2016年9月17日
+ */
+private void sequenceTozk(String basePath,String name) throws Exception {
+  String commPath=ZookeeperPath.ZK_SEPARATOR.getKey() + ZookeeperPath.FLOW_ZK_PATH_SEQUENCE_COMMON.getKey() + ZookeeperPath.ZK_SEPARATOR.getKey();
+  String readFile=name + PROPERTIES_SUFFIX;
+  String commSequence=this.readSequenceCfg(readFile);
+  String sequenceZkPath=commPath + readFile;
+  this.checkAndwriteString(basePath,sequenceZkPath,commSequence);
+  String culsterPath=ZookeeperPath.ZK_SEPARATOR.getKey() + ZookeeperPath.FLOW_ZK_PATH_SEQUENCE_CLUSTER.getKey() + ZookeeperPath.ZK_SEPARATOR.getKey();
+  String[] clusters=ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_CLUSTER_NODES).split(ZkParamCfg.ZK_CFG_CLUSTER_NODES_SEPARATE.getKey());
+  if (null != clusters) {
+    String nodeName=null;
+    for (    String clusterName : clusters) {
+      nodeName=name + "-" + clusterName+ PROPERTIES_SUFFIX;
+      String clusterSequence=this.readSequenceCfg(nodeName);
+      if (null != clusterSequence) {
+        String seqclusterZkPath=culsterPath + nodeName;
+        this.checkAndwriteString(basePath,seqclusterZkPath,clusterSequence);
+      }
+    }
+  }
+}

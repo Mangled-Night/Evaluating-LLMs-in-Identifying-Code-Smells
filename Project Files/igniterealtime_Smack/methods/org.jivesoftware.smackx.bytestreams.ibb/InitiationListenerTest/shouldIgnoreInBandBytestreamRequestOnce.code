@@ -1,0 +1,22 @@
+/** 
+ * If a request with a specific session ID should be ignored no listeners should be notified.
+ * @throws Exception should not happen
+ */
+@Test public void shouldIgnoreInBandBytestreamRequestOnce() throws Exception {
+  InBandBytestreamListener allRequestsListener=mock(InBandBytestreamListener.class);
+  byteStreamManager.addIncomingBytestreamListener(allRequestsListener);
+  InBandBytestreamListener userRequestsListener=mock(InBandBytestreamListener.class);
+  byteStreamManager.addIncomingBytestreamListener(userRequestsListener,initiatorJID);
+  byteStreamManager.ignoreBytestreamRequestOnce(sessionID);
+  initiationListener.handleIQRequest(initBytestream);
+  Thread.sleep(200);
+  ArgumentCaptor<BytestreamRequest> byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+  verify(userRequestsListener,never()).incomingBytestreamRequest(byteStreamRequest.capture());
+  byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+  verify(allRequestsListener,never()).incomingBytestreamRequest(byteStreamRequest.capture());
+  initiationListener.handleIQRequest(initBytestream);
+  Thread.sleep(200);
+  verify(userRequestsListener).incomingBytestreamRequest(byteStreamRequest.capture());
+  byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+  verify(allRequestsListener,never()).incomingBytestreamRequest(byteStreamRequest.capture());
+}

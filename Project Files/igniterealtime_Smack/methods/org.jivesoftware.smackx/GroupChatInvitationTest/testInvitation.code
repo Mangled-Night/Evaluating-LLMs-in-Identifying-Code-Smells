@@ -1,0 +1,17 @@
+public void testInvitation(){
+  try {
+    GroupChatInvitation invitation=new GroupChatInvitation("test@" + getChatDomain());
+    Message message=new Message(getBareJID(1));
+    message.setBody("Group chat invitation!");
+    message.addExtension(invitation);
+    getConnection(0).sendStanza(message);
+    Thread.sleep(250);
+    Message result=(Message)collector.pollResult();
+    assertNotNull("Message not delivered correctly.",result);
+    GroupChatInvitation resultInvite=(GroupChatInvitation)result.getExtension("x","jabber:x:conference");
+    assertEquals("Invitation not to correct room","test@" + getChatDomain(),resultInvite.getRoomAddress());
+  }
+ catch (  Exception e) {
+    fail(e.getMessage());
+  }
+}

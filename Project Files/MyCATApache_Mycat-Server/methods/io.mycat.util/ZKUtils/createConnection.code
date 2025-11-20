@@ -1,0 +1,16 @@
+private static CuratorFramework createConnection(){
+  String url=ZkConfig.getInstance().getZkURL();
+  CuratorFramework curatorFramework=CuratorFrameworkFactory.newClient(url,new ExponentialBackoffRetry(100,6));
+  curatorFramework.start();
+  try {
+    curatorFramework.blockUntilConnected(3,TimeUnit.SECONDS);
+    if (curatorFramework.getZookeeperClient().isConnected()) {
+      return curatorFramework;
+    }
+  }
+ catch (  InterruptedException ignored) {
+    Thread.currentThread().interrupt();
+  }
+  curatorFramework.close();
+  throw new RuntimeException("failed to connect to zookeeper service : " + url);
+}

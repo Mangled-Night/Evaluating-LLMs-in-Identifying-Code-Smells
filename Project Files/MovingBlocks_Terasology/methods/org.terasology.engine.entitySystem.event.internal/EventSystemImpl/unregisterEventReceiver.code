@@ -1,0 +1,21 @@
+@Override public <T extends Event>void unregisterEventReceiver(EventReceiver<T> eventReceiver,Class<T> eventClass,Class<? extends Component>... componentTypes){
+  SetMultimap<Class<? extends Component>,EventHandlerInfo> eventHandlerMap=componentSpecificHandlers.get(eventClass);
+  if (eventHandlerMap != null) {
+    ReceiverEventHandlerInfo testReceiver=new ReceiverEventHandlerInfo<>(eventReceiver,0,componentTypes);
+    for (    Class<? extends Component> c : componentTypes) {
+      eventHandlerMap.remove(c,testReceiver);
+      for (      Class<? extends Event> childType : childEvents.get(eventClass)) {
+        eventHandlerMap.remove(childType,testReceiver);
+      }
+    }
+  }
+  if (0 == componentTypes.length) {
+    Iterator<EventHandlerInfo> eventHandlerIterator=generalHandlers.values().iterator();
+    while (eventHandlerIterator.hasNext()) {
+      EventHandlerInfo eventHandler=eventHandlerIterator.next();
+      if (eventHandler.getHandler().equals(eventReceiver)) {
+        eventHandlerIterator.remove();
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+private void processRemovedClient(Client client){
+  if (client instanceof NetClient) {
+    ServerConnectListManager serverConnectListManager=context.get(ServerConnectListManager.class);
+    if (!serverConnectListManager.isClientAllowedToConnect(client.getId())) {
+      return;
+    }
+    NetClient netClient=(NetClient)client;
+    netClientList.remove(netClient);
+  }
+  clientList.remove(client);
+  clientPlayerLookup.remove(client.getEntity());
+  logger.info("Client disconnected: " + client.getName());
+  storageManager.deactivatePlayer(client);
+  client.getEntity().send(new DisconnectedEvent());
+  client.disconnect();
+}

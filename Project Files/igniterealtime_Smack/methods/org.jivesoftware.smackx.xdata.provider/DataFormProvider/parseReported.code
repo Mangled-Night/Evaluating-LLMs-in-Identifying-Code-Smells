@@ -1,0 +1,24 @@
+private static DataForm.ReportedData parseReported(XmlPullParser parser,XmlEnvironment xmlEnvironment,String formType) throws XmlPullParserException, IOException, SmackParsingException {
+  final int initialDepth=parser.getDepth();
+  List<FormField> fields=new ArrayList<>();
+  outerloop:   while (true) {
+    XmlPullParser.TagEvent eventType=parser.nextTag();
+switch (eventType) {
+case START_ELEMENT:
+      String name=parser.getName();
+switch (name) {
+case "field":
+      FormField field=parseField(parser,XmlEnvironment.from(parser,xmlEnvironment),formType);
+    fields.add(field);
+  break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+}
+}
+return new DataForm.ReportedData(fields);
+}

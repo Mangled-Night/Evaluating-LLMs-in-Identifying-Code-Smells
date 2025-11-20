@@ -1,0 +1,21 @@
+/** 
+ * Parses an In-Band Bytestream data stanza which can be a stanza extension of either an IQ stanza or a message stanza.
+ * @author Henning Staib
+ */
+public class DataPacketProvider {
+public static class IQProvider extends org.jivesoftware.smack.provider.IqProvider<Data> {
+    private static final PacketExtensionProvider packetExtensionProvider=new PacketExtensionProvider();
+    @Override public Data parse(    XmlPullParser parser,    int initialDepth,    IqData iqData,    XmlEnvironment xmlEnvironment) throws IOException, XmlPullParserException, SmackParsingException {
+      DataPacketExtension data=packetExtensionProvider.parse(parser);
+      return new Data(data);
+    }
+  }
+public static class PacketExtensionProvider extends org.jivesoftware.smack.provider.ExtensionElementProvider<DataPacketExtension> {
+    @Override public DataPacketExtension parse(    XmlPullParser parser,    int initialDepth,    XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, RequiredAttributeMissingException {
+      String sessionID=parser.getAttributeValue("","sid");
+      UInt16 seq=ParserUtils.getRequiredUInt16Attribute(parser,"seq");
+      String data=parser.nextText();
+      return new DataPacketExtension(sessionID,seq,data);
+    }
+  }
+}

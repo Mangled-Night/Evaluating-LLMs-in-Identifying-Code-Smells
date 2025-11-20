@@ -1,0 +1,40 @@
+/** 
+ * Returns the size of the physical memory in bytes on Windows.
+ * @return the size of the physical memory in bytes or <code>-1</code> ifthe size could not be determined
+ */
+private static long getSizeOfPhysicalMemoryForWindows(){
+  BufferedReader bi=null;
+  try {
+    Process proc=Runtime.getRuntime().exec("wmic memorychip get capacity");
+    bi=new BufferedReader(new InputStreamReader(proc.getInputStream()));
+    String line=bi.readLine();
+    if (line == null) {
+      return -1L;
+    }
+    if (!line.startsWith("Capacity")) {
+      return -1L;
+    }
+    long sizeOfPhyiscalMemory=0L;
+    while ((line=bi.readLine()) != null) {
+      if (line.isEmpty()) {
+        continue;
+      }
+      line=line.replaceAll(" ","");
+      sizeOfPhyiscalMemory+=Long.parseLong(line);
+    }
+    return sizeOfPhyiscalMemory;
+  }
+ catch (  Throwable t) {
+    LOG.error("Cannot determine the size of the physical memory for Windows host (using 'wmic memorychip'): " + t.getMessage(),t);
+    return -1L;
+  }
+ finally {
+    if (bi != null) {
+      try {
+        bi.close();
+      }
+ catch (      Throwable ignored) {
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+@Override public MediaElement parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws IOException, XmlPullParserException, SmackUriSyntaxParsingException {
+  UInt16 height=ParserUtils.getUInt16Attribute(parser,"height");
+  UInt16 width=ParserUtils.getUInt16Attribute(parser,"width");
+  MediaElement.Builder mediaElementBuilder=MediaElement.builder();
+  if (height != null && width != null) {
+    mediaElementBuilder.setHeightAndWidth(height,width);
+  }
+ else   if (height != null || width != null) {
+    LOGGER.warning("Only one of height and width set while parsing media element");
+  }
+  outerloop:   while (true) {
+    XmlPullParser.TagEvent event=parser.nextTag();
+switch (event) {
+case START_ELEMENT:
+      QName qname=parser.getQName();
+    if (qname.equals(MediaElement.Uri.QNAME)) {
+      MediaElement.Uri uri=parseUri(parser);
+      mediaElementBuilder.addUri(uri);
+    }
+  break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+  break outerloop;
+}
+break;
+}
+}
+return mediaElementBuilder.build();
+}

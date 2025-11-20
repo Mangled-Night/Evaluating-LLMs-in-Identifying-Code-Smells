@@ -1,0 +1,9 @@
+@Test void nodeIPChanges(){
+  RoundRobinSocketAddressSupplier sut=new RoundRobinSocketAddressSupplier(() -> partitions,redisClusterNodes -> redisClusterNodes,clientResourcesMock);
+  assertThat(sut.get()).isEqualTo(addr1);
+  assertThat(partitions.remove(new RedisClusterNode(hap1,"2",true,"",0,0,0,new ArrayList<>(),new HashSet<>()))).isTrue();
+  assertThat(partitions.add(new RedisClusterNode(hap5,"2",true,"",0,0,0,new ArrayList<>(),new HashSet<>()))).isTrue();
+  assertThat(sut.get()).isEqualTo(addr1);
+  assertThat(sut.get()).isEqualTo(addr3);
+  assertThat(sut.get()).isEqualTo(addr5);
+}

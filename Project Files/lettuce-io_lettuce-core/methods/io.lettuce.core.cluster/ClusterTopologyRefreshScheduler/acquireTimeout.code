@@ -1,0 +1,14 @@
+private boolean acquireTimeout(){
+  Timeout existingTimeout=timeoutRef.get();
+  if (existingTimeout != null) {
+    if (!existingTimeout.isExpired()) {
+      return false;
+    }
+  }
+  ClusterTopologyRefreshOptions refreshOptions=getClusterTopologyRefreshOptions();
+  Timeout timeout=new Timeout(refreshOptions.getAdaptiveRefreshTimeout());
+  if (timeoutRef.compareAndSet(existingTimeout,timeout)) {
+    return true;
+  }
+  return false;
+}

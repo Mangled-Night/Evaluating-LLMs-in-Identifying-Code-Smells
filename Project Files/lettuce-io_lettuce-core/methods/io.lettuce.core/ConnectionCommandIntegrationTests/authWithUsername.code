@@ -1,0 +1,20 @@
+@Test @EnabledOnCommand("ACL") void authWithUsername(){
+  WithPassword.run(client,() -> {
+    client.setOptions(ClientOptions.builder().pingBeforeActivateConnection(false).protocolVersion(ProtocolVersion.RESP2).build());
+    RedisCommands<String,String> connection=client.connect().sync();
+    assertThatThrownBy(connection::ping).isInstanceOf(RedisException.class).hasMessageContaining("NOAUTH");
+    assertThat(connection.auth(passwd)).isEqualTo("OK");
+    assertThat(connection.set(key,value)).isEqualTo("OK");
+    assertThat(connection.auth(username,passwd)).isEqualTo("OK");
+    assertThat(connection.set(key,value)).isEqualTo("OK");
+    assertThat(connection.auth(aclUsername,aclPasswd)).isEqualTo("OK");
+    assertThat(connection.set("cached:demo",value)).isEqualTo("OK");
+    assertThatThrownBy(() -> connection.get(key)).isInstanceOf(RedisCommandExecutionException.class);
+    assertThat(connection.del("cached:demo")).isEqualTo(1);
+    RedisURI redisURI=RedisURI.Builder.redis(host,port).withDatabase(2).withPassword(passwd).build();
+    RedisCommands<String,String> authConnection=client.connect(redisURI).sync();
+    authConnection.ping();
+    authConnection.getStatefulConnection().close();
+  }
+);
+}

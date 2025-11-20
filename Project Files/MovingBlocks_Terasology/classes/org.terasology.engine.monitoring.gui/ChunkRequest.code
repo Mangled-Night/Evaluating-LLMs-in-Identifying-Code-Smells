@@ -1,0 +1,52 @@
+private class ChunkRequest implements Request {
+  public final ChunkMonitorEvent event;
+  ChunkRequest(  ChunkMonitorEvent event){
+    Preconditions.checkNotNull(event,"The parameter 'event' must not be null");
+    this.event=event;
+  }
+  @Override public String getName(){
+    return "Chunk Request";
+  }
+  @Override public boolean isChunkEvent(){
+    return true;
+  }
+  @Override public void execute(){
+    if (event instanceof ChunkMonitorEvent.ChunkProviderInitialized) {
+      chunks.clear();
+      map.clear();
+      ChunkMonitor.getChunks(chunks);
+      for (      ChunkMonitorEntry e : chunks) {
+        map.put(e.getPosition(),e);
+      }
+      recomputeRenderY();
+    }
+ else     if (event instanceof ChunkMonitorEvent.ChunkProviderDisposed) {
+      chunks.clear();
+      map.clear();
+      recomputeRenderY();
+    }
+ else     if (event instanceof ChunkMonitorEvent.BasicChunkEvent) {
+      final ChunkMonitorEvent.BasicChunkEvent bEvent=(ChunkMonitorEvent.BasicChunkEvent)event;
+      final Vector3ic pos=bEvent.getPosition();
+      final ChunkMonitorEntry entry;
+      if (event instanceof ChunkMonitorEvent.Created) {
+        final ChunkMonitorEvent.Created cEvent=(ChunkMonitorEvent.Created)event;
+        entry=cEvent.getEntry();
+        if (pos.y() < minRenderY) {
+          minRenderY=pos.y();
+        }
+        if (pos.y() > maxRenderY) {
+          maxRenderY=pos.y();
+        }
+        chunks.add(entry);
+        map.put(pos,entry);
+      }
+    }
+  }
+  @Override public boolean needsRendering(){
+    return true;
+  }
+  @Override public boolean fastResume(){
+    return false;
+  }
+}

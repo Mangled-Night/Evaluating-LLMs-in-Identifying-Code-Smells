@@ -1,0 +1,70 @@
+public class OpenALStreamingSoundSource extends BaseSoundSource<OpenALStreamingSound> {
+  private OpenALStreamingSound audio;
+  public OpenALStreamingSoundSource(  SoundPool<OpenALStreamingSound,OpenALStreamingSoundSource> owningPool){
+    super(owningPool);
+  }
+  @Override public SoundSource<OpenALStreamingSound> stop(){
+    if (audio != null) {
+      audio.reset();
+    }
+    return super.stop();
+  }
+  @Override public boolean isLooping(){
+    return false;
+  }
+  @Override public OpenALStreamingSound getAudio(){
+    return audio;
+  }
+  @Override public OpenALStreamingSoundSource setLooping(  boolean looping){
+    if (looping) {
+      throw new UnsupportedOperationException("Looping is unsupported on streaming sounds!");
+    }
+    return this;
+  }
+  @Override public void update(  float delta){
+    int buffersProcessed=alGetSourcei(this.getSourceId(),AL_BUFFERS_PROCESSED);
+    while (buffersProcessed-- > 0) {
+      int buffer=alSourceUnqueueBuffers(this.getSourceId());
+      OpenALException.checkState("Buffer unqueue");
+      if (audio.updateBuffer(buffer)) {
+        alSourceQueueBuffers(this.getSourceId(),buffer);
+        OpenALException.checkState("Buffer refill");
+      }
+ else {
+        stop();
+      }
+    }
+    super.update(delta);
+  }
+  @Override protected void updateState(){
+    if (isPlaying() && alGetSourcei(getSourceId(),AL_SOURCE_STATE) != AL_PLAYING) {
+      alSourcePlay(this.getSourceId());
+    }
+  }
+  @Override public OpenALStreamingSoundSource setAudio(  OpenALStreamingSound sound){
+    boolean isPlaying=this.isPlaying();
+    if (isPlaying) {
+      alSourceStop(getSourceId());
+      alSourceRewind(getSourceId());
+    }
+    alSourcei(this.getSourceId(),AL_BUFFER,0);
+    this.audio=sound;
+    sound.reset();
+    int[] buffers=sound.getBuffers();
+    for (    int buffer : buffers) {
+      sound.updateBuffer(buffer);
+    }
+    alSourceQueueBuffers(this.getSourceId(),(IntBuffer)BufferUtils.createIntBuffer(buffers.length).put(buffers).flip());
+    if (isPlaying) {
+      this.play();
+    }
+    return this;
+  }
+  @Override public void purge(){
+    if (isPlaying()) {
+      alSourceStop(getSourceId());
+      alSourceRewind(getSourceId());
+    }
+    alSourcei(this.getSourceId(),AL_BUFFER,0);
+  }
+}

@@ -1,0 +1,33 @@
+public void testSendAndReceiveMultipleItems() throws Exception {
+  String nodeId="TestNode" + System.currentTimeMillis();
+  PubSubManager creatorMgr=new PubSubManager(getConnection(0),getService());
+  LeafNode creatorNode=getPubnode(creatorMgr,nodeId,true,true);
+  BlockingQueue<ItemEventCoordinator<PayloadItem<SimplePayload>>> queue=new ArrayBlockingQueue<ItemEventCoordinator<PayloadItem<SimplePayload>>>(3);
+  ItemEventCoordinator<PayloadItem<SimplePayload>> creatorHandler=new ItemEventCoordinator<PayloadItem<SimplePayload>>(queue,"creator");
+  creatorNode.addItemEventListener(creatorHandler);
+  creatorNode.subscribe(getConnection(0).getUser());
+  PubSubManager subMgr=new PubSubManager(getConnection(1),getService());
+  LeafNode subNode=(LeafNode)subMgr.getNode(nodeId);
+  ItemEventCoordinator<PayloadItem<SimplePayload>> sub1Handler=new ItemEventCoordinator<PayloadItem<SimplePayload>>(queue,"sub1");
+  subNode.addItemEventListener(sub1Handler);
+  Subscription sub1=subNode.subscribe(getConnection(1).getUser());
+  ItemEventCoordinator<PayloadItem<SimplePayload>> sub2Handler=new ItemEventCoordinator<PayloadItem<SimplePayload>>(queue,"sub2");
+  subNode.addItemEventListener(sub2Handler);
+  Subscription sub2=subNode.subscribe(getConnection(1).getUser());
+  assertEquals(Subscription.State.subscribed,sub1.getState());
+  assertEquals(Subscription.State.subscribed,sub2.getState());
+  String itemId=String.valueOf(System.currentTimeMillis());
+  Collection<PayloadItem<SimplePayload>> items=new ArrayList<PayloadItem<SimplePayload>>(3);
+  String ids[]={"First-" + itemId,"Second-" + itemId,"Third-" + itemId};
+  items.add(new PayloadItem<SimplePayload>(ids[0],new SimplePayload("a","pubsub:test","<a xmlns='pubsub:test' href='1'/>")));
+  items.add(new PayloadItem<SimplePayload>(ids[1],new SimplePayload("a","pubsub:test","<a xmlns='pubsub:test' href='1'/>")));
+  items.add(new PayloadItem<SimplePayload>(ids[2],new SimplePayload("a","pubsub:test","<a xmlns='pubsub:test' href='1'/>")));
+  creatorNode.send(items);
+  for (int i=0; i < 3; i++) {
+    ItemEventCoordinator<PayloadItem<SimplePayload>> coord=queue.poll(5,TimeUnit.SECONDS);
+    if (coord == creatorHandler)     assertEquals(1,coord.events.getSubscriptions().size());
+ else     assertEquals(2,coord.events.getSubscriptions().size());
+    List<PayloadItem<SimplePayload>> itemResults=coord.events.getItems();
+    assertEquals(3,itemResults.size());
+  }
+}

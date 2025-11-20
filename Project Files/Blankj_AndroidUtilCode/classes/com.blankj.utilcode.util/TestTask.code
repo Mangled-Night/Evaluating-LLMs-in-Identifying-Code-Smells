@@ -1,0 +1,19 @@
+abstract static class TestTask<T> extends ThreadUtils.Task<T> {
+  CountDownLatch mLatch;
+  TestTask(  final CountDownLatch latch){
+    mLatch=latch;
+  }
+  abstract void onTestSuccess(  T result);
+  @Override public void onSuccess(  T result){
+    onTestSuccess(result);
+    mLatch.countDown();
+  }
+  @Override public void onCancel(){
+    System.out.println(Thread.currentThread() + " onCancel: ");
+    mLatch.countDown();
+  }
+  @Override public void onFail(  Throwable t){
+    System.out.println(Thread.currentThread() + " onFail: " + t);
+    mLatch.countDown();
+  }
+}

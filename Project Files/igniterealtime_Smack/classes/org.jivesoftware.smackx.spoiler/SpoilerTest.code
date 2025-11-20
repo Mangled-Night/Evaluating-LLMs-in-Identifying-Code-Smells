@@ -1,0 +1,59 @@
+public class SpoilerTest extends SmackTestSuite {
+  @Test public void emptySpoilerTest() throws Exception {
+    final String xml="<spoiler xmlns='urn:xmpp:spoiler:0'/>";
+    Message message=StanzaBuilder.buildMessage().build();
+    SpoilerElement.addSpoiler(message);
+    SpoilerElement empty=(SpoilerElement)message.getExtensionElement(SpoilerElement.ELEMENT,SpoilerManager.NAMESPACE_0);
+    assertNull(empty.getHint());
+    assertNull(empty.getLanguage());
+    assertXmlSimilar(xml,empty.toXML().toString());
+    XmlPullParser parser=TestUtils.getParser(xml);
+    SpoilerElement parsed=SpoilerProvider.INSTANCE.parse(parser);
+    assertXmlSimilar(xml,parsed.toXML().toString());
+  }
+  @Test public void hintSpoilerTest() throws Exception {
+    final String xml="<spoiler xmlns='urn:xmpp:spoiler:0'>Love story end</spoiler>";
+    Message message=StanzaBuilder.buildMessage().build();
+    SpoilerElement.addSpoiler(message,"Love story end");
+    SpoilerElement withHint=(SpoilerElement)message.getExtensionElement(SpoilerElement.ELEMENT,SpoilerManager.NAMESPACE_0);
+    assertEquals("Love story end",withHint.getHint());
+    assertNull(withHint.getLanguage());
+    assertXmlSimilar(xml,withHint.toXML().toString());
+    XmlPullParser parser=TestUtils.getParser(xml);
+    SpoilerElement parsed=SpoilerProvider.INSTANCE.parse(parser);
+    assertXmlSimilar(xml,parsed.toXML().toString());
+  }
+  @Test public void i18nHintSpoilerTest() throws Exception {
+    final String xml="<spoiler xml:lang='de' xmlns='urn:xmpp:spoiler:0'>Der Kuchen ist eine Lüge!</spoiler>";
+    Message message=StanzaBuilder.buildMessage().build();
+    SpoilerElement.addSpoiler(message,"de","Der Kuchen ist eine Lüge!");
+    SpoilerElement i18nHint=(SpoilerElement)message.getExtensionElement(SpoilerElement.ELEMENT,SpoilerManager.NAMESPACE_0);
+    assertEquals("Der Kuchen ist eine Lüge!",i18nHint.getHint());
+    assertEquals("de",i18nHint.getLanguage());
+    assertXmlSimilar(xml,i18nHint.toXML().toString());
+    XmlPullParser parser=TestUtils.getParser(xml);
+    SpoilerElement parsed=SpoilerProvider.INSTANCE.parse(parser);
+    assertEquals(i18nHint.getLanguage(),parsed.getLanguage());
+    assertXmlSimilar(xml,parsed.toXML().toString());
+  }
+  @Test public void getSpoilersTest(){
+    Message m=StanzaBuilder.buildMessage().build();
+    assertTrue(SpoilerElement.getSpoilers(m).isEmpty());
+    SpoilerElement.addSpoiler(m);
+    assertTrue(SpoilerElement.containsSpoiler(m));
+    Map<String,String> spoilers=SpoilerElement.getSpoilers(m);
+    assertEquals(1,spoilers.size());
+    assertEquals(null,spoilers.get(""));
+    final String spoilerText="Spoiler Text";
+    SpoilerElement.addSpoiler(m,"de",spoilerText);
+    spoilers=SpoilerElement.getSpoilers(m);
+    assertEquals(2,spoilers.size());
+    assertEquals(spoilerText,spoilers.get("de"));
+  }
+  @Test public void spoilerCheckArgumentsNullTest(){
+    assertThrows(IllegalArgumentException.class,() -> new SpoilerElement("de",null));
+  }
+  @Test public void spoilerCheckArgumentsEmptyTest(){
+    assertThrows(IllegalArgumentException.class,() -> new SpoilerElement("de",""));
+  }
+}

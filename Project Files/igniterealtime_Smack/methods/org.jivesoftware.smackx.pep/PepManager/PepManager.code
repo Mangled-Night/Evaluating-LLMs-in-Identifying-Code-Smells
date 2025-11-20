@@ -1,0 +1,48 @@
+/** 
+ * Creates a new PEP exchange manager.
+ * @param connection an XMPPConnection which is used to send and receive messages.
+ */
+private PepManager(XMPPConnection connection){
+  super(connection);
+  serviceDiscoveryManager=ServiceDiscoveryManager.getInstanceFor(connection);
+  pepPubSubManager=PubSubManager.getInstanceFor(connection,null);
+  StanzaListener packetListener=new StanzaListener(){
+    @Override public void processStanza(    Stanza stanza){
+      final Message message=(Message)stanza;
+      final EventElement event=EventElement.from(stanza);
+      assert event != null;
+      final EntityBareJid from=message.getFrom().asEntityBareJidIfPossible();
+      assert from != null;
+      asyncButOrdered.performAsyncButOrdered(from,new Runnable(){
+        @Override public void run(){
+          ItemsExtension itemsExtension=(ItemsExtension)event.getEvent();
+          String node=itemsExtension.getNode();
+          for (          PepListener listener : pepListeners) {
+            listener.eventReceived(from,event,message);
+          }
+          List<PepEventListenerCoupling<? extends ExtensionElement>> nodeListeners;
+synchronized (pepEventListeners) {
+            nodeListeners=pepEventListeners.getAll(node);
+            if (nodeListeners.isEmpty()) {
+              return;
+            }
+            nodeListeners=CollectionUtil.newListWith(nodeListeners);
+          }
+          for (          PepEventListenerCoupling<? extends ExtensionElement> listener : nodeListeners) {
+            List<? extends NamedElement> items=itemsExtension.getItems();
+            for (            NamedElement namedElementItem : items) {
+              Item item=(Item)namedElementItem;
+              String id=item.getId();
+              @SuppressWarnings("unchecked") PayloadItem<ExtensionElement> payloadItem=(PayloadItem<ExtensionElement>)item;
+              ExtensionElement payload=payloadItem.getPayload();
+              listener.invoke(from,payload,id,message);
+            }
+          }
+        }
+      }
+);
+    }
+  }
+;
+  connection.addSyncStanzaListener(packetListener,PEP_EVENTS_FILTER);
+}

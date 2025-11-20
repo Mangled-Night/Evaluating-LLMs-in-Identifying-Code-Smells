@@ -1,0 +1,24 @@
+@Override public void onEntityComponentChange(EntityRef entity,Class<? extends Component> component){
+  NetworkComponent netComp=entity.getComponent(NetworkComponent.class);
+  ComponentMetadata<? extends Component> metadata=componentLibrary.getMetadata(component);
+  if (netComp != null && netComp.getNetworkId() != NULL_NET_ID) {
+switch (mode) {
+case LISTEN_SERVER:
+case DEDICATED_SERVER:
+      if (metadata.isReplicated()) {
+        for (        NetClient client : netClientList) {
+          client.setComponentDirty(netComp.getNetworkId(),component);
+        }
+      }
+    break;
+case CLIENT:
+  if (server != null && metadata.isReplicatedFromOwner() && getOwnerEntity(entity).equals(server.getClientEntity())) {
+    server.setComponentDirty(netComp.getNetworkId(),component);
+  }
+break;
+default :
+break;
+}
+}
+updatedOwnedEntities(entity,component,metadata);
+}

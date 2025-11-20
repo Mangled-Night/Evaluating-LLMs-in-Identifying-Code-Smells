@@ -1,0 +1,27 @@
+private static boolean testMethodParametersIsListOfConnections(Method testMethod){
+  return testMethodParametersIsListOfConnections(testMethod,AbstractXMPPConnection.class);
+}
+static boolean testMethodParametersIsListOfConnections(Method testMethod,Class<? extends AbstractXMPPConnection> connectionClass){
+  Type[] parameterTypes=testMethod.getGenericParameterTypes();
+  if (parameterTypes.length != 1) {
+    return false;
+  }
+  Class<?> soleParameter=testMethod.getParameterTypes()[0];
+  if (!Collection.class.isAssignableFrom(soleParameter)) {
+    return false;
+  }
+  ParameterizedType soleParameterizedType=(ParameterizedType)parameterTypes[0];
+  Type[] actualTypeArguments=soleParameterizedType.getActualTypeArguments();
+  if (actualTypeArguments.length != 1) {
+    return false;
+  }
+  Type soleActualTypeArgument=actualTypeArguments[0];
+  if (!(soleActualTypeArgument instanceof Class<?>)) {
+    return false;
+  }
+  Class<?> soleActualTypeArgumentAsClass=(Class<?>)soleActualTypeArgument;
+  if (!connectionClass.isAssignableFrom(soleActualTypeArgumentAsClass)) {
+    return false;
+  }
+  return true;
+}

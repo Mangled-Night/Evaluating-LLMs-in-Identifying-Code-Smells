@@ -1,0 +1,35 @@
+private String[] buildGroupByCols(List<SQLExpr> groupByItems,Map<String,String> aliaColumns){
+  String[] groupByCols=new String[groupByItems.size()];
+  for (int i=0; i < groupByItems.size(); i++) {
+    SQLExpr sqlExpr=groupByItems.get(i);
+    String column=null;
+    if (sqlExpr instanceof SQLIdentifierExpr) {
+      column=((SQLIdentifierExpr)sqlExpr).getName();
+    }
+ else     if (sqlExpr instanceof SQLMethodInvokeExpr) {
+      column=((SQLMethodInvokeExpr)sqlExpr).toString();
+    }
+ else     if (sqlExpr instanceof MySqlOrderingExpr) {
+      SQLExpr expr=((MySqlOrderingExpr)sqlExpr).getExpr();
+      if (expr instanceof SQLName) {
+        column=StringUtil.removeBackquote(((SQLName)expr).getSimpleName());
+      }
+ else {
+        column=StringUtil.removeBackquote(expr.toString());
+      }
+    }
+ else     if (sqlExpr instanceof SQLPropertyExpr) {
+      column=sqlExpr.toString();
+    }
+    if (column == null) {
+      column=sqlExpr.toString();
+    }
+    int dotIndex=column.indexOf(".");
+    int bracketIndex=column.indexOf("(");
+    if (dotIndex != -1 && bracketIndex == -1) {
+      column=column.substring(dotIndex + 1);
+    }
+    groupByCols[i]=getAliaColumn(aliaColumns,column);
+  }
+  return groupByCols;
+}

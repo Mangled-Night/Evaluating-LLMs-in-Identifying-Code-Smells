@@ -1,0 +1,29 @@
+@Command(shortDescription="Replaces a block in front of user",helpText="Replaces a block in front of the user at the specified max distance",runOnServer=true,requiredPermission=PermissionManager.CHEAT_PERMISSION) public void replaceBlock(@Sender EntityRef sender,@CommandParam("blockName") String uri,@CommandParam(value="maxDistance",required=false) Integer maxDistanceParam){
+  int maxDistance=maxDistanceParam != null ? maxDistanceParam : 12;
+  EntityRef playerEntity=sender.getComponent(ClientComponent.class).character;
+  EntityRef gazeEntity=GazeAuthoritySystem.getGazeEntityForCharacter(playerEntity);
+  LocationComponent gazeLocation=gazeEntity.getComponent(LocationComponent.class);
+  Set<ResourceUrn> matchingUris=Assets.resolveAssetUri(uri,BlockFamilyDefinition.class);
+  targetSystem.updateTarget(gazeLocation.getWorldPosition(new Vector3f()),gazeLocation.getWorldDirection(new Vector3f()),maxDistance);
+  EntityRef target=targetSystem.getTarget();
+  BlockComponent targetLocation=target.getComponent(BlockComponent.class);
+  if (matchingUris.size() == 1) {
+    Optional<BlockFamilyDefinition> def=Assets.get(matchingUris.iterator().next(),BlockFamilyDefinition.class);
+    if (def.isPresent()) {
+      BlockFamily blockFamily=blockManager.getBlockFamily(uri);
+      Block block=blockManager.getBlock(blockFamily.getURI());
+      world.setBlock(targetLocation.getPosition(),block);
+    }
+ else     if (matchingUris.size() > 1) {
+      StringBuilder builder=new StringBuilder();
+      builder.append("Non-unique shape name, possible matches: ");
+      Iterator<ResourceUrn> shapeUris=sortItems(matchingUris).iterator();
+      while (shapeUris.hasNext()) {
+        builder.append(shapeUris.next().toString());
+        if (shapeUris.hasNext()) {
+          builder.append(", ");
+        }
+      }
+    }
+  }
+}

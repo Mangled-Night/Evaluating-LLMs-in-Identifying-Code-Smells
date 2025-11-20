@@ -1,0 +1,21 @@
+@SmackIntegrationTest(connectionCount=2) public void createConnectionTest(List<AbstractXMPPConnection> connections) throws TimeoutException, Exception {
+  final AbstractXMPPConnection conOne=connections.get(0), conTwo=connections.get(1);
+  EntityFullJid userTwo=conTwo.getUser();
+  final String messageBody=testRunId + ": Hello from the other side!";
+  Message message=conTwo.getStanzaFactory().buildMessageStanza().to(userTwo).setBody(messageBody).build();
+  final SimpleResultSyncPoint messageReceived=new SimpleResultSyncPoint();
+  final StanzaListener stanzaListener=(  Stanza stanza) -> {
+    if (((Message)stanza).getBody().equals(messageBody)) {
+      messageReceived.signal();
+    }
+  }
+;
+  conTwo.addAsyncStanzaListener(stanzaListener,MessageWithBodiesFilter.INSTANCE);
+  try {
+    conOne.sendStanza(message);
+    messageReceived.waitForResult(timeout);
+  }
+  finally {
+    conTwo.removeAsyncStanzaListener(stanzaListener);
+  }
+}

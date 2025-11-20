@@ -1,0 +1,34 @@
+@Override public Page<EsProduct> recommend(Long id,Integer pageNum,Integer pageSize){
+  Pageable pageable=PageRequest.of(pageNum,pageSize);
+  List<EsProduct> esProductList=productDao.getAllEsProductList(id);
+  if (esProductList.size() > 0) {
+    EsProduct esProduct=esProductList.get(0);
+    String keyword=esProduct.getName();
+    Long brandId=esProduct.getBrandId();
+    Long productCategoryId=esProduct.getProductCategoryId();
+    List<FunctionScoreQueryBuilder.FilterFunctionBuilder> filterFunctionBuilders=new ArrayList<>();
+    filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(QueryBuilders.matchQuery("name",keyword),ScoreFunctionBuilders.weightFactorFunction(8)));
+    filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(QueryBuilders.matchQuery("subTitle",keyword),ScoreFunctionBuilders.weightFactorFunction(2)));
+    filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(QueryBuilders.matchQuery("keywords",keyword),ScoreFunctionBuilders.weightFactorFunction(2)));
+    filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(QueryBuilders.matchQuery("brandId",brandId),ScoreFunctionBuilders.weightFactorFunction(5)));
+    filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(QueryBuilders.matchQuery("productCategoryId",productCategoryId),ScoreFunctionBuilders.weightFactorFunction(3)));
+    FunctionScoreQueryBuilder.FilterFunctionBuilder[] builders=new FunctionScoreQueryBuilder.FilterFunctionBuilder[filterFunctionBuilders.size()];
+    filterFunctionBuilders.toArray(builders);
+    FunctionScoreQueryBuilder functionScoreQueryBuilder=QueryBuilders.functionScoreQuery(builders).scoreMode(FunctionScoreQuery.ScoreMode.SUM).setMinScore(2);
+    BoolQueryBuilder boolQueryBuilder=new BoolQueryBuilder();
+    boolQueryBuilder.mustNot(QueryBuilders.termQuery("id",id));
+    NativeSearchQueryBuilder builder=new NativeSearchQueryBuilder();
+    builder.withQuery(functionScoreQueryBuilder);
+    builder.withFilter(boolQueryBuilder);
+    builder.withPageable(pageable);
+    NativeSearchQuery searchQuery=builder.build();
+    LOGGER.info("DSL:{}",searchQuery.getQuery().toString());
+    SearchHits<EsProduct> searchHits=elasticsearchRestTemplate.search(searchQuery,EsProduct.class);
+    if (searchHits.getTotalHits() <= 0) {
+      return new PageImpl<>(ListUtil.empty(),pageable,0);
+    }
+    List<EsProduct> searchProductList=searchHits.stream().map(SearchHit::getContent).collect(Collectors.toList());
+    return new PageImpl<>(searchProductList,pageable,searchHits.getTotalHits());
+  }
+  return new PageImpl<>(ListUtil.empty());
+}

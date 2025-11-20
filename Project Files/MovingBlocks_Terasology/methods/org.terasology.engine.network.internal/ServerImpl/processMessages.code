@@ -1,0 +1,25 @@
+private void processMessages(){
+  List<NetData.NetMessage> messages=Lists.newArrayListWithExpectedSize(queuedMessages.size());
+  queuedMessages.drainTo(messages);
+  for (  NetData.NetMessage message : messages) {
+    if (message.hasTime()) {
+      time.updateTimeFromServer(message.getTime());
+    }
+    processBlockRegistrations(message);
+    processReceivedChunks(message);
+    processInvalidatedChunks(message);
+    processBlockChanges(message);
+    processExtraDataChanges(message);
+    processRemoveEntities(message);
+    message.getCreateEntityList().forEach(this::createEntityMessage);
+    message.getUpdateEntityList().forEach(this::updateEntity);
+    for (    NetData.EventMessage event : message.getEventList()) {
+      try {
+        processEvent(event);
+      }
+ catch (      RuntimeException e) {
+        logger.error("Error processing server event",e);
+      }
+    }
+  }
+}

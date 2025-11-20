@@ -1,0 +1,81 @@
+public static String toString(WildcardType wildcardType){
+  return toString(wildcardType,false);
+}
+public static String toString(WildcardType wildcardType,boolean useSimpleName){
+  Type[] lowerBounds=wildcardType.getLowerBounds();
+  Type[] bounds=lowerBounds;
+  StringBuilder stringBuilder=new StringBuilder();
+  if (lowerBounds.length > 0) {
+    stringBuilder.append("? super ");
+  }
+ else {
+    Type[] upperBounds=wildcardType.getUpperBounds();
+    if (upperBounds.length <= 0 || upperBounds[0].equals(Object.class)) {
+      return "?";
+    }
+    bounds=upperBounds;
+    stringBuilder.append("? extends ");
+  }
+  boolean isFirstBound=true;
+  for (  Type bound : bounds) {
+    if (!isFirstBound) {
+      stringBuilder.append(" & ");
+    }
+    isFirstBound=false;
+    stringBuilder.append(typeToString(bound,useSimpleName));
+  }
+  return stringBuilder.toString();
+}
+public String toString(){
+  return toString(this);
+}
+public static String toString(GenericArrayType type){
+  return toString(type,false);
+}
+public static String toString(GenericArrayType type,boolean useSimpleName){
+  Type genericComponentType=type.getGenericComponentType();
+  return typeToString(genericComponentType,useSimpleName) + "[]";
+}
+public String toString(){
+  return toString(this);
+}
+public static String toString(ParameterizedType type){
+  return toString(type,false);
+}
+public static String toString(ParameterizedType type,boolean useSimpleName){
+  StringBuilder var1=new StringBuilder();
+  if (type.getOwnerType() != null) {
+    var1.append(typeToString(type.getOwnerType(),useSimpleName));
+    var1.append("$");
+    if (type.getOwnerType() instanceof ParameterizedTypeImpl) {
+      final String charSequence=typeToString(((ParameterizedTypeImpl)type.getOwnerType()).rawType,useSimpleName) + "$";
+      final String rawTypeName=typeToString(type.getRawType(),useSimpleName);
+      var1.append(rawTypeName.replace(charSequence,""));
+    }
+ else {
+      var1.append(typeToString(type.getRawType(),true));
+    }
+  }
+ else {
+    var1.append(typeToString(type.getRawType(),useSimpleName));
+  }
+  if (type.getActualTypeArguments() != null && type.getActualTypeArguments().length > 0) {
+    var1.append("<");
+    boolean var2=true;
+    Type[] var3=type.getActualTypeArguments();
+    int var4=var3.length;
+    for (int var5=0; var5 < var4; ++var5) {
+      Type var6=var3[var5];
+      if (!var2) {
+        var1.append(", ");
+      }
+      var1.append(typeToString(var6,useSimpleName));
+      var2=false;
+    }
+    var1.append(">");
+  }
+  return var1.toString();
+}
+public String toString(){
+  return toString(this);
+}

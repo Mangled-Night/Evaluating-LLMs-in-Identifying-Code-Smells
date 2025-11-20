@@ -1,0 +1,8 @@
+@Command(runOnServer=true,requiredPermission=PermissionManager.CHAT_PERMISSION,shortDescription="Sends a message to all other players") public String say(@Sender EntityRef sender,@CommandParam(value="message") String[] message){
+  String messageToString=join(message," ");
+  logger.debug("Received chat message from {} : '{}'",sender,messageToString);
+  for (  EntityRef client : entityManager.getEntitiesWith(ClientComponent.class)) {
+    client.send(new ChatMessageEvent(messageToString,sender.getComponent(ClientComponent.class).clientInfo));
+  }
+  return "Message sent";
+}

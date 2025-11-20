@@ -1,0 +1,24 @@
+@Override public void fileTransferRequest(FileTransferRequest request){
+  byte[] dataReceived;
+  IncomingFileTransfer ift=request.accept();
+  try {
+    InputStream is=ift.receiveFile();
+    ByteArrayOutputStream os=new ByteArrayOutputStream();
+    int nRead;
+    byte[] buf=new byte[1024];
+    while ((nRead=is.read(buf,0,buf.length)) != -1) {
+      os.write(buf,0,nRead);
+    }
+    os.flush();
+    dataReceived=os.toByteArray();
+    if (Arrays.equals(dataToSend,dataReceived)) {
+      resultSyncPoint.signal("Received data matches send data. \\o/");
+    }
+ else {
+      resultSyncPoint.signal(new Exception("Received data does not match"));
+    }
+  }
+ catch (  SmackException|IOException|XMPPErrorException|InterruptedException e) {
+    resultSyncPoint.signal(e);
+  }
+}

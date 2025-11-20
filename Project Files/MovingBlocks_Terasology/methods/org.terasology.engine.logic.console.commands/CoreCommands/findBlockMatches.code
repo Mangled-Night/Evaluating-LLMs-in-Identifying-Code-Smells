@@ -1,0 +1,24 @@
+/** 
+ * List blocks that match searched string
+ * @param searchLowercase searched string
+ * @return List of blocks that match searched string
+ */
+private List<String> findBlockMatches(String searchLowercase){
+  ResourceUrn curUrn;
+  List<String> outputList=new ArrayList<>();
+  for (  ResourceUrn urn : assetManager.getAvailableAssets(BlockFamilyDefinition.class)) {
+    curUrn=urn;
+    try {
+      Optional<BlockFamilyDefinition> def=assetManager.getAsset(urn,BlockFamilyDefinition.class);
+      if (def.isPresent() && def.get().isLoadable() && matchesSearch(searchLowercase,def.get())) {
+        outputList.add(new BlockUri(def.get().getUrn()).toString());
+      }
+    }
+ catch (    Exception e) {
+      console.addMessage("Note : Search may not return results if invalid assets are present");
+      console.addMessage("Error parsing : " + curUrn.toString());
+      console.addMessage(e.toString());
+    }
+  }
+  return outputList;
+}

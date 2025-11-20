@@ -1,0 +1,19 @@
+@Override public int close(List<Long> ids,String note){
+  OmsOrder record=new OmsOrder();
+  record.setStatus(4);
+  OmsOrderExample example=new OmsOrderExample();
+  example.createCriteria().andDeleteStatusEqualTo(0).andIdIn(ids);
+  int count=orderMapper.updateByExampleSelective(record,example);
+  List<OmsOrderOperateHistory> historyList=ids.stream().map(orderId -> {
+    OmsOrderOperateHistory history=new OmsOrderOperateHistory();
+    history.setOrderId(orderId);
+    history.setCreateTime(new Date());
+    history.setOperateMan("后台管理员");
+    history.setOrderStatus(4);
+    history.setNote("订单关闭:" + note);
+    return history;
+  }
+).collect(Collectors.toList());
+  orderOperateHistoryDao.insertList(historyList);
+  return count;
+}

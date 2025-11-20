@@ -1,0 +1,53 @@
+/** 
+ * 订单详情
+ * @param userId  用户ID
+ * @param orderId 订单ID
+ * @return 订单详情
+ */
+public Object detail(Integer userId,Integer orderId){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  LitemallOrder order=orderService.findById(userId,orderId);
+  if (null == order) {
+    return ResponseUtil.fail(ORDER_UNKNOWN,"订单不存在");
+  }
+  if (!order.getUserId().equals(userId)) {
+    return ResponseUtil.fail(ORDER_INVALID,"不是当前用户的订单");
+  }
+  Map<String,Object> orderVo=new HashMap<String,Object>();
+  orderVo.put("id",order.getId());
+  orderVo.put("orderSn",order.getOrderSn());
+  orderVo.put("message",order.getMessage());
+  orderVo.put("addTime",order.getAddTime());
+  orderVo.put("consignee",order.getConsignee());
+  orderVo.put("mobile",order.getMobile());
+  orderVo.put("address",order.getAddress());
+  orderVo.put("goodsPrice",order.getGoodsPrice());
+  orderVo.put("couponPrice",order.getCouponPrice());
+  orderVo.put("freightPrice",order.getFreightPrice());
+  orderVo.put("actualPrice",order.getActualPrice());
+  orderVo.put("orderStatusText",OrderUtil.orderStatusText(order));
+  orderVo.put("handleOption",OrderUtil.build(order));
+  orderVo.put("aftersaleStatus",order.getAftersaleStatus());
+  orderVo.put("expCode",order.getShipChannel());
+  orderVo.put("expName",expressService.getVendorName(order.getShipChannel()));
+  orderVo.put("expNo",order.getShipSn());
+  List<LitemallOrderGoods> orderGoodsList=orderGoodsService.queryByOid(order.getId());
+  Map<String,Object> result=new HashMap<>();
+  result.put("orderInfo",orderVo);
+  result.put("orderGoods",orderGoodsList);
+  if (order.getOrderStatus().equals(OrderUtil.STATUS_SHIP)) {
+    ExpressInfo ei=expressService.getExpressInfo(order.getShipChannel(),order.getShipSn());
+    if (ei == null) {
+      result.put("expressInfo",new ArrayList<>());
+    }
+ else {
+      result.put("expressInfo",ei);
+    }
+  }
+ else {
+    result.put("expressInfo",new ArrayList<>());
+  }
+  return ResponseUtil.ok(result);
+}

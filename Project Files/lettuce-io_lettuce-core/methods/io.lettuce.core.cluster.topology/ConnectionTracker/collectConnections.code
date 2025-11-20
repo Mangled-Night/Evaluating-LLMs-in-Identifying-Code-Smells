@@ -1,0 +1,10 @@
+protected Map<RedisURI,StatefulRedisConnection<String,String>> collectConnections(){
+  Map<RedisURI,StatefulRedisConnection<String,String>> activeConnections=new LinkedHashMap<>();
+  for (  Map.Entry<RedisURI,CompletableFuture<StatefulRedisConnection<String,String>>> entry : connections.entrySet()) {
+    CompletableFuture<StatefulRedisConnection<String,String>> future=entry.getValue();
+    if (future.isDone() && !future.isCompletedExceptionally()) {
+      activeConnections.put(entry.getKey(),future.join());
+    }
+  }
+  return activeConnections;
+}

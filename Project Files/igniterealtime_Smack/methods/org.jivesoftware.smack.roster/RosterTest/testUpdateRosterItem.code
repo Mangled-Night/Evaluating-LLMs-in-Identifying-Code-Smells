@@ -1,0 +1,41 @@
+/** 
+ * Test updating a roster item according to the example in <a href="http://xmpp.org/rfcs/rfc3921.html#roster-update" >RFC3921: Updating a Roster Item</a>.
+ * @throws Throwable in case a throwable is thrown.
+ */
+@Test public void testUpdateRosterItem() throws Throwable {
+  final BareJid contactJID=JidCreate.entityBareFrom("romeo@example.net");
+  final String contactName="Romeo";
+  final String[] contactGroups={"Friends","Lovers"};
+  assertNotNull("Can't get the roster from the provided connection!",roster);
+  initRoster();
+  rosterListener.reset();
+  final RosterUpdateResponder serverSimulator=new RosterUpdateResponder(){
+    @Override void verifyUpdateRequest(    final RosterPacket updateRequest){
+      final Item item=updateRequest.getRosterItems().iterator().next();
+      assertEquals("The provided JID doesn't match the requested!",contactJID,item.getJid());
+      assertSame("The provided name doesn't match the requested!",contactName,item.getName());
+      assertTrue("The updated contact doesn't belong to the requested groups (" + contactGroups[0] + ")!",item.getGroupNames().contains(contactGroups[0]));
+      assertTrue("The updated contact doesn't belong to the requested groups (" + contactGroups[1] + ")!",item.getGroupNames().contains(contactGroups[1]));
+      assertSame("The provided group number doesn't match the requested!",contactGroups.length,item.getGroupNames().size());
+    }
+  }
+;
+  serverSimulator.start();
+  roster.createGroup(contactGroups[1]).addEntry(roster.getEntry(contactJID));
+  serverSimulator.join();
+  final Throwable exception=serverSimulator.getException();
+  if (exception != null) {
+    throw exception;
+  }
+  rosterListener.waitUntilInvocationOrTimeout();
+  final RosterEntry addedEntry=roster.getEntry(contactJID);
+  assertNotNull("The contact was deleted from the roster!",addedEntry);
+  assertTrue("The roster listener wasn't invoked for the updated contact!",rosterListener.getUpdatedAddresses().contains(contactJID));
+  assertSame("Setup wrong name for the changed contact!",contactName,addedEntry.getName());
+  assertTrue("The updated contact doesn't belong to the requested groups (" + contactGroups[0] + ")!",roster.getGroup(contactGroups[0]).contains(addedEntry));
+  assertTrue("The updated contact doesn't belong to the requested groups (" + contactGroups[1] + ")!",roster.getGroup(contactGroups[1]).contains(addedEntry));
+  assertSame("The updated contact should be member of two groups!",contactGroups.length,addedEntry.getGroups().size());
+  verifyMercutiosEntry(roster.getEntry(JidCreate.entityBareFrom("mercutio@example.com")));
+  verifyBenvoliosEntry(roster.getEntry(JidCreate.entityBareFrom("benvolio@example.net")));
+  assertSame("Wrong number of roster entries (" + roster.getEntries() + ").",3,roster.getEntries().size());
+}

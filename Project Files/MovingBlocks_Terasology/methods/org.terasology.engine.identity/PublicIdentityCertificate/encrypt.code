@@ -1,0 +1,21 @@
+/** 
+ * Encrypts data such that it can only be decrypted by the paired private certificate, which is held by the certificate owner. <br><br> Note that only a limited amount of data can be encrypted in this fashion - for large exchanges this should be used to establish shared symmetric key which can then be used for the main exchange.
+ * @param data
+ * @return The encrypted data
+ */
+public byte[] encrypt(byte[] data){
+  RSAPublicKeySpec keySpec=new RSAPublicKeySpec(modulus,exponent);
+  try {
+    KeyFactory keyFactory=KeyFactory.getInstance(IdentityConstants.CERTIFICATE_ALGORITHM);
+    PublicKey key=keyFactory.generatePublic(keySpec);
+    Cipher cipher=Cipher.getInstance(IdentityConstants.CERTIFICATE_ALGORITHM);
+    cipher.init(Cipher.ENCRYPT_MODE,key);
+    return cipher.doFinal(data);
+  }
+ catch (  NoSuchAlgorithmException|NoSuchPaddingException e) {
+    throw new RuntimeException("Insufficient support for '" + IdentityConstants.CERTIFICATE_ALGORITHM + "', required for identity management",e);
+  }
+catch (  InvalidKeySpecException|InvalidKeyException|BadPaddingException|IllegalBlockSizeException e) {
+    throw new RuntimeException("Unexpected error during encryption",e);
+  }
+}

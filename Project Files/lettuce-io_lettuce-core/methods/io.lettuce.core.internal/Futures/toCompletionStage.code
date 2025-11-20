@@ -1,0 +1,29 @@
+/** 
+ * Adapt Netty's  {@link ChannelFuture} emitting a {@link Void} result.
+ * @param future the {@link ChannelFuture} to adapt.
+ * @return the {@link CompletableFuture}.
+ * @since 6.0
+ */
+public static <V>CompletionStage<V> toCompletionStage(io.netty.util.concurrent.Future<V> future){
+  LettuceAssert.notNull(future,"Future must not be null");
+  CompletableFuture<V> promise=new CompletableFuture<>();
+  if (future.isDone() || future.isCancelled()) {
+    if (future.isSuccess()) {
+      promise.complete(null);
+    }
+ else {
+      promise.completeExceptionally(future.cause());
+    }
+    return promise;
+  }
+  future.addListener(f -> {
+    if (f.isSuccess()) {
+      promise.complete(null);
+    }
+ else {
+      promise.completeExceptionally(f.cause());
+    }
+  }
+);
+  return promise;
+}

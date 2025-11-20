@@ -1,0 +1,23 @@
+public void testPurgeAndNotify() throws Exception {
+  String nodeId="TestNode" + System.currentTimeMillis();
+  PubSubManager creatorMgr=new PubSubManager(getConnection(0),getService());
+  LeafNode creatorNode=getPubnode(creatorMgr,nodeId,true,false);
+  BlockingQueue<ItemDeleteCoordinator> queue=new ArrayBlockingQueue<ItemDeleteCoordinator>(3);
+  PubSubManager subMgr=new PubSubManager(getConnection(1),getService());
+  LeafNode subNode=(LeafNode)subMgr.getNode(nodeId);
+  ItemDeleteCoordinator sub1Handler=new ItemDeleteCoordinator(queue,"sub1");
+  subNode.addItemDeleteListener(sub1Handler);
+  subNode.subscribe(getConnection(1).getUser());
+  String itemId=String.valueOf(System.currentTimeMillis());
+  Collection<Item> items=new ArrayList<Item>(3);
+  String id1="First-" + itemId;
+  String id2="Second-" + itemId;
+  String id3="Third-" + itemId;
+  items.add(new Item(id1));
+  items.add(new Item(id2));
+  items.add(new Item(id3));
+  creatorNode.send(items);
+  creatorNode.deleteAllItems();
+  ItemDeleteCoordinator coord=queue.poll(5,TimeUnit.SECONDS);
+  assertNull(nodeId,coord.event);
+}

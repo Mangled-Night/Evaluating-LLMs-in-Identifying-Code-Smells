@@ -1,0 +1,25 @@
+@Override public RedisFuture<String> clientSetname(K name){
+  Map<String,CompletionStage<String>> executions=new HashMap<>();
+  CompletableFuture<String> ok=CompletableFuture.completedFuture("OK");
+  executions.put("Default",super.clientSetname(name).toCompletableFuture());
+  for (  RedisClusterNode redisClusterNode : getStatefulConnection().getPartitions()) {
+    RedisURI uri=redisClusterNode.getUri();
+    CompletableFuture<RedisClusterAsyncCommands<K,V>> byNodeId=getConnectionAsync(redisClusterNode.getNodeId());
+    executions.put("NodeId: " + redisClusterNode.getNodeId(),byNodeId.thenCompose(c -> {
+      if (c.isOpen()) {
+        return c.clientSetname(name);
+      }
+      return ok;
+    }
+));
+    CompletableFuture<RedisClusterAsyncCommands<K,V>> byHost=getConnectionAsync(uri.getHost(),uri.getPort());
+    executions.put("HostAndPort: " + redisClusterNode.getNodeId(),byHost.thenCompose(c -> {
+      if (c.isOpen()) {
+        return c.clientSetname(name);
+      }
+      return ok;
+    }
+));
+  }
+  return MultiNodeExecution.firstOfAsync(executions);
+}

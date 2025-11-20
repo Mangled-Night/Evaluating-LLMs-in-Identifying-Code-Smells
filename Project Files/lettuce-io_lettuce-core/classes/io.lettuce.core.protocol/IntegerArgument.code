@@ -1,0 +1,31 @@
+static class IntegerArgument extends SingularArgument {
+  final long val;
+  private IntegerArgument(  long val){
+    this.val=val;
+  }
+  static IntegerArgument of(  long val){
+    if (val >= 0 && val < IntegerCache.cache.length) {
+      return IntegerCache.cache[(int)val];
+    }
+    if (val < 0 && val > Integer.MIN_VALUE && -val < IntegerCache.cache.length) {
+      return IntegerCache.negativeCache[(int)-val];
+    }
+    return new IntegerArgument(val);
+  }
+  @Override void encode(  ByteBuf target){
+    StringArgument.writeString(target,Long.toString(val));
+  }
+  @Override public String toString(){
+    return "" + val;
+  }
+  static void writeInteger(  ByteBuf target,  long value){
+    if (value < 10) {
+      target.writeByte((byte)('0' + value));
+      return;
+    }
+    String asString=Long.toString(value);
+    for (int i=0; i < asString.length(); i++) {
+      target.writeByte((byte)asString.charAt(i));
+    }
+  }
+}

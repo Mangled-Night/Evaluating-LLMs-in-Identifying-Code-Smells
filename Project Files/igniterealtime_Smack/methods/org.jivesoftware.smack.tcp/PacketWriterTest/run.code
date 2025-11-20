@@ -1,0 +1,21 @@
+@Override public void run(){
+  try {
+    barrier.await();
+    pw.sendStreamElement(StanzaBuilder.buildMessage().build());
+    if (!shutdown) {
+      prematureUnblocked=true;
+    }
+  }
+ catch (  InterruptedException|SmackException.NotConnectedException e) {
+    expectedThreadExceptionReference.set(e);
+  }
+catch (  BrokenBarrierException e) {
+    unexpectedThreadExceptionReference.set(e);
+  }
+  try {
+    barrier.await();
+  }
+ catch (  InterruptedException|BrokenBarrierException e) {
+    unexpectedThreadExceptionReference.set(e);
+  }
+}

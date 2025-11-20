@@ -1,0 +1,47 @@
+/** 
+ * Test for the session request detection. Here, we use the same filter we use in the JingleManager...
+ */
+public void testInitJingleSessionRequestListeners(){
+  resetCounter();
+  ProviderManager.getInstance().addIQProvider("jingle","http://jabber.org/protocol/jingle",new JingleProvider());
+  PacketFilter initRequestFilter=new PacketFilter(){
+    public boolean accept(    Packet pin){
+      if (pin instanceof IQ) {
+        System.out.println("packet: " + pin.toXML());
+        IQ iq=(IQ)pin;
+        if (iq.getType().equals(IQ.Type.set)) {
+          System.out.println("packet");
+          if (iq instanceof Jingle) {
+            Jingle jin=(Jingle)pin;
+            if (jin.getAction().equals(JingleActionEnum.SESSION_INITIATE)) {
+              System.out.println("Session initiation packet accepted... ");
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
+  }
+;
+  getConnection(0).addAsyncPacketListener(new PacketListener(){
+    public void processStanza(    final Packet packet){
+      System.out.println("Packet detected... ");
+      incCounter();
+    }
+  }
+,initRequestFilter);
+  IQfake iqSent=new IQfake(" <jingle xmlns='http://jabber.org/protocol/jingle'" + " initiator=\"user1@thiago\"" + " responder=\"user0@thiago\""+ " action=\"session-initiate\" sid=\"08666555\">"+ "</jingle>");
+  iqSent.setTo(getFullJID(0));
+  iqSent.setFrom(getFullJID(0));
+  iqSent.setType(IQ.Type.set);
+  System.out.println("Sending packet and waiting... ");
+  getConnection(1).sendStanza(iqSent);
+  try {
+    Thread.sleep(10000);
+  }
+ catch (  InterruptedException e) {
+  }
+  System.out.println("Awake... " + valCounter());
+  assertTrue(valCounter() > 0);
+}

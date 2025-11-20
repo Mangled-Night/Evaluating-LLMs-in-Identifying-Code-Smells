@@ -1,0 +1,29 @@
+/** 
+ * 测试获取的唯一id
+ * @throws Exception
+ */
+@Test public void testUniqueID() throws Exception {
+  final ConcurrentHashMap<Long,String> idSet=new ConcurrentHashMap<>();
+  Thread thread[]=new Thread[10];
+  long start=System.currentTimeMillis();
+  for (int i=0; i < 10; i++) {
+    thread[i]=new Thread(){
+      @Override public void run(){
+        for (int j=0; j < 100; j++) {
+          for (int k=0; k < 16; k++) {
+            idSet.put(distributedSequenceHandler[k].nextId(""),"");
+          }
+        }
+      }
+    }
+;
+    thread[i].start();
+  }
+  for (int i=0; i < 10; i++) {
+    thread[i].join();
+  }
+  long end=System.currentTimeMillis();
+  System.out.println("Time elapsed:" + (double)(end - start) / 1000.0 + "s");
+  System.out.println("ID/s:" + (((double)idSet.size()) / ((double)(end - start) / 1000.0)));
+  Assert.assertEquals(idSet.size(),16000);
+}

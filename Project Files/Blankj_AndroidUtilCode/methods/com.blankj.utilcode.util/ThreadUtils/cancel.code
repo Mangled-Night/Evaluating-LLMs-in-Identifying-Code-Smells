@@ -1,0 +1,67 @@
+/** 
+ * Cancel the given task.
+ * @param task The task to cancel.
+ */
+public static void cancel(final Task task){
+  if (task == null)   return;
+  task.cancel();
+}
+/** 
+ * Cancel the given tasks.
+ * @param tasks The tasks to cancel.
+ */
+public static void cancel(final Task... tasks){
+  if (tasks == null || tasks.length == 0)   return;
+  for (  Task task : tasks) {
+    if (task == null)     continue;
+    task.cancel();
+  }
+}
+/** 
+ * Cancel the given tasks.
+ * @param tasks The tasks to cancel.
+ */
+public static void cancel(final List<Task> tasks){
+  if (tasks == null || tasks.size() == 0)   return;
+  for (  Task task : tasks) {
+    if (task == null)     continue;
+    task.cancel();
+  }
+}
+/** 
+ * Cancel the tasks in pool.
+ * @param executorService The pool.
+ */
+public static void cancel(ExecutorService executorService){
+  if (executorService instanceof ThreadPoolExecutor4Util) {
+    for (    Map.Entry<Task,ExecutorService> taskTaskInfoEntry : TASK_POOL_MAP.entrySet()) {
+      if (taskTaskInfoEntry.getValue() == executorService) {
+        cancel(taskTaskInfoEntry.getKey());
+      }
+    }
+  }
+ else {
+    Log.e("ThreadUtils","The executorService is not ThreadUtils's pool.");
+  }
+}
+public void cancel(){
+  cancel(true);
+}
+public void cancel(boolean mayInterruptIfRunning){
+synchronized (state) {
+    if (state.get() > RUNNING)     return;
+    state.set(CANCELLED);
+  }
+  if (mayInterruptIfRunning) {
+    if (runner != null) {
+      runner.interrupt();
+    }
+  }
+  getDeliver().execute(new Runnable(){
+    @Override public void run(){
+      onCancel();
+      onDone();
+    }
+  }
+);
+}

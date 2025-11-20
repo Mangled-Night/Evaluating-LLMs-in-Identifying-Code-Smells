@@ -1,0 +1,38 @@
+public static void execute(ManagerConnection c,String name){
+  ByteBuffer buffer=c.allocate();
+  buffer=header.write(buffer,c,true);
+  for (  FieldPacket field : fields) {
+    buffer=field.write(buffer,c,true);
+  }
+  buffer=eof.write(buffer,c,true);
+  byte packetId=eof.packetId;
+  MycatConfig conf=MycatServer.getInstance().getConfig();
+  Map<String,List<PhysicalDatasource>> dataSources=new HashMap<String,List<PhysicalDatasource>>();
+  if (null != name) {
+    PhysicalDBNode dn=conf.getDataNodes().get(name);
+    if (dn != null) {
+      List<PhysicalDatasource> dslst=new LinkedList<PhysicalDatasource>();
+      dslst.addAll(dn.getDbPool().getAllDataSources());
+      dataSources.put(dn.getName(),dslst);
+    }
+  }
+ else {
+    for (    PhysicalDBNode dn : conf.getDataNodes().values()) {
+      List<PhysicalDatasource> dslst=new LinkedList<PhysicalDatasource>();
+      dslst.addAll(dn.getDbPool().getAllDataSources());
+      dataSources.put(dn.getName(),dslst);
+    }
+  }
+  for (  Map.Entry<String,List<PhysicalDatasource>> dsEntry : dataSources.entrySet()) {
+    String dnName=dsEntry.getKey();
+    for (    PhysicalDatasource ds : dsEntry.getValue()) {
+      RowDataPacket row=getRow(dnName,ds,c.getCharset());
+      row.packetId=++packetId;
+      buffer=row.write(buffer,c,true);
+    }
+  }
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

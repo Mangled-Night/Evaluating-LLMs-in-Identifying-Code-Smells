@@ -1,0 +1,18 @@
+public ChunkImpl(int x,int y,int z,BlockManager blockManager,ExtraBlockDataManager extraDataManager){
+  this(new Vector3i(x,y,z),blockManager,extraDataManager);
+}
+public ChunkImpl(Vector3ic chunkPos,BlockManager blockManager,ExtraBlockDataManager extraDataManager){
+  this(chunkPos,new TeraDenseArray16Bit(Chunks.SIZE_X,Chunks.SIZE_Y,Chunks.SIZE_Z),extraDataManager.makeDataArrays(Chunks.SIZE_X,Chunks.SIZE_Y,Chunks.SIZE_Z),blockManager);
+}
+public ChunkImpl(Vector3ic chunkPos,TeraArray blocks,TeraArray[] extra,BlockManager blockManager){
+  this.chunkPos=new Vector3i(Preconditions.checkNotNull(chunkPos));
+  this.blockData=Preconditions.checkNotNull(blocks);
+  this.extraData=Preconditions.checkNotNull(extra);
+  sunlightData=new TeraSparseArray8Bit(getChunkSizeX(),getChunkSizeY(),getChunkSizeZ());
+  sunlightRegenData=new TeraSparseArray8Bit(getChunkSizeX(),getChunkSizeY(),getChunkSizeZ());
+  lightData=new TeraSparseArray8Bit(getChunkSizeX(),getChunkSizeY(),getChunkSizeZ());
+  dirty=true;
+  this.blockManager=blockManager;
+  region=new BlockRegion(chunkPos.x() * getChunkSizeX(),chunkPos.y() * getChunkSizeY(),chunkPos.z() * getChunkSizeZ()).setSize(getChunkSizeX(),getChunkSizeY(),getChunkSizeZ());
+  ChunkMonitor.fireChunkCreated(this);
+}

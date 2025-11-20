@@ -1,0 +1,68 @@
+/** 
+ * TODO do something if could not insert
+ * @param id
+ * @param bufferPair
+ * @return true if inserted, false otherwise
+ */
+public boolean addOutputBufferPairConnection(int id,BufferPair bufferPair){
+  boolean success=false;
+  String connectionUri=BufferPairConnection.getConnectionName(id,this.nodeUri);
+  if (outputConnections.containsKey(connectionUri)) {
+    BufferPairConnection localBufferPairConnection=(BufferPairConnection)outputConnections.get(connectionUri);
+    if (!localBufferPairConnection.getConnectedConnections().isEmpty()) {
+      logger.debug("Propagating bufferPair data to all connected connections of " + localBufferPairConnection + ": ");
+      localBufferPairConnection.getConnectedConnections().forEach((k,v) -> {
+        logger.debug("setting data for: " + v.toString() + " ,");
+        v.setData(bufferPair);
+      }
+);
+      logger.debug("data propagated.\n");
+    }
+    if (localBufferPairConnection.getData() != null) {
+      logger.warn("Adding output buffer pair to slot id " + id + " of "+ this.nodeUri+ "node overwrites data of existing connection: "+ localBufferPairConnection.toString());
+    }
+    localBufferPairConnection.setData(bufferPair);
+    success=true;
+  }
+ else {
+    DependencyConnection localBufferPairConnection=new BufferPairConnection(BufferPairConnection.getConnectionName(id,this.nodeUri),DependencyConnection.Type.OUTPUT,bufferPair,this.getUri());
+    success=addOutputConnection(localBufferPairConnection);
+  }
+  return success;
+}
+/** 
+ * TODO do something if could not insert
+ * @param id
+ * @param from
+ * @return true if inserted, false otherwise
+ */
+public boolean addOutputBufferPairConnection(int id,BufferPairConnection from){
+  boolean success=false;
+  String connectionUri=BufferPairConnection.getConnectionName(id,this.nodeUri);
+  if (outputConnections.containsKey(connectionUri)) {
+    BufferPairConnection localBufferPairConnection=(BufferPairConnection)outputConnections.get(connectionUri);
+    if (!localBufferPairConnection.getConnectedConnections().isEmpty()) {
+      logger.info("Propagating data from " + from.toString() + " to all connected connections of "+ localBufferPairConnection+ ": ");
+      localBufferPairConnection.getConnectedConnections().forEach((k,v) -> {
+        logger.info("setting data for: " + v.toString() + " ,");
+        v.setData(from.getData());
+      }
+);
+      logger.info("data propagated.\n");
+    }
+    if (localBufferPairConnection.getData() != null) {
+      logger.warn("Adding output buffer pair connection " + from.toString() + "\n to slot id "+ id+ " of "+ this.nodeUri+ "node overwrites data of existing connection: "+ localBufferPairConnection.toString());
+    }
+    localBufferPairConnection.setData(from.getData());
+    success=true;
+  }
+ else {
+    DependencyConnection localBufferPairConnection=new BufferPairConnection(BufferPairConnection.getConnectionName(id,this.nodeUri),DependencyConnection.Type.OUTPUT,from.getData(),this.getUri());
+    success=addOutputConnection(localBufferPairConnection);
+  }
+  return success;
+}
+public boolean addOutputBufferPairConnection(int id){
+  DependencyConnection localBufferPairConnection=new BufferPairConnection(BufferPairConnection.getConnectionName(id,this.nodeUri),DependencyConnection.Type.OUTPUT,this.getUri());
+  return addOutputConnection(localBufferPairConnection);
+}

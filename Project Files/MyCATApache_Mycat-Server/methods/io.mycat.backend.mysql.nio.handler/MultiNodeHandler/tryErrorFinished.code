@@ -1,0 +1,18 @@
+protected void tryErrorFinished(boolean allEnd){
+  if (allEnd && !session.closed()) {
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug(this.toString() + "error all end ,clear session resource ");
+      LOGGER.debug("error all end ,clear session resource ");
+    }
+    if (session.getSource().isAutocommit()) {
+      session.closeAndClearResources(error);
+    }
+ else {
+      session.getSource().setTxInterrupt(this.error);
+      clearResources();
+    }
+    if (errorRepsponsed.compareAndSet(false,true)) {
+      session.getSource().writeErrMessage(ErrorCode.ER_UNKNOWN_ERROR,this.error);
+    }
+  }
+}

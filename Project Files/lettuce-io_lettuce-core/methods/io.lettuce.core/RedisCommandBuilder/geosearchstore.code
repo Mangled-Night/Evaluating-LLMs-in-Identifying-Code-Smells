@@ -1,0 +1,15 @@
+Command<K,V,Long> geosearchstore(K destination,K key,GeoSearch.GeoRef<K> reference,GeoSearch.GeoPredicate predicate,GeoArgs geoArgs,boolean storeDist){
+  notNullKey(key);
+  LettuceAssert.notNull(destination,"Destination " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(key,"Key " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(reference,"GeoRef " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(predicate,"GeoPredicate " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(destination).addKey(key);
+  reference.build(args);
+  predicate.build(args);
+  geoArgs.build(args);
+  if (storeDist) {
+    args.add("STOREDIST");
+  }
+  return createCommand(GEOSEARCHSTORE,new IntegerOutput<>(codec),args);
+}

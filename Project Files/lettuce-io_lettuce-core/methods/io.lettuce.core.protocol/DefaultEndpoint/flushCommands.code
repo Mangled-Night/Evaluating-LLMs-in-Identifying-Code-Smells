@@ -1,0 +1,23 @@
+@Override @SuppressWarnings({"rawtypes","unchecked"}) public void flushCommands(){
+  flushCommands(commandBuffer);
+}
+private void flushCommands(Queue<RedisCommand<?,?,?>> queue){
+  if (debugEnabled) {
+    logger.debug("{} flushCommands()",logPrefix());
+  }
+  if (isConnected()) {
+    List<RedisCommand<?,?,?>> commands=sharedLock.doExclusive(() -> {
+      if (queue.isEmpty()) {
+        return Collections.emptyList();
+      }
+      return drainCommands(queue);
+    }
+);
+    if (debugEnabled) {
+      logger.debug("{} flushCommands() Flushing {} commands",logPrefix(),commands.size());
+    }
+    if (!commands.isEmpty()) {
+      writeToChannelAndFlush(commands);
+    }
+  }
+}

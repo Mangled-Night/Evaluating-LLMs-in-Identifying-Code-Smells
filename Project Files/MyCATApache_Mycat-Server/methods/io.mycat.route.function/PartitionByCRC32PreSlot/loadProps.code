@@ -1,0 +1,29 @@
+private Properties loadProps(String name,boolean forceNew){
+  Properties prop=new Properties();
+  File file=getFile();
+  if (file.exists() && forceNew)   file.delete();
+  if (!file.exists()) {
+    prop=genarateProperties();
+    try {
+      Files.createParentDirs(file);
+    }
+ catch (    IOException e) {
+      throw new RuntimeException(e);
+    }
+    try (FileOutputStream out=new FileOutputStream(file)){
+      prop.store(out,"WARNING   !!!Please do not modify or delete this file!!!");
+      out.flush();
+    }
+ catch (    IOException e) {
+      throw new RuntimeException(e);
+    }
+    return prop;
+  }
+  try (FileInputStream filein=new FileInputStream(file)){
+    prop.load(filein);
+  }
+ catch (  Exception e) {
+    throw new RuntimeException(e);
+  }
+  return prop;
+}

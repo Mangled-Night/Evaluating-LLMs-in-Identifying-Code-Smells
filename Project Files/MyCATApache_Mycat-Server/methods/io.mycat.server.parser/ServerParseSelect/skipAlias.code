@@ -1,0 +1,26 @@
+/** 
+ * <code>SELECT LAST_INSERT_ID() AS id, </code>
+ * @param offset index of 'i', offset == stmt.length() is possible
+ * @return index of ','. return stmt.length() is possible. -1 if not alias
+ */
+private static int skipAlias(String stmt,int offset){
+  offset=ParseUtil.move(stmt,offset,0);
+  if (offset >= stmt.length()) {
+    return offset;
+  }
+switch (stmt.charAt(offset)) {
+case '\'':
+    return skipString(stmt,offset);
+case '"':
+  return skipString2(stmt,offset);
+case '`':
+return skipIdentifierEscape(stmt,offset);
+default :
+if (CharTypes.isIdentifierChar(stmt.charAt(offset))) {
+for (; offset < stmt.length() && CharTypes.isIdentifierChar(stmt.charAt(offset)); ++offset) {
+}
+return offset;
+}
+}
+return -1;
+}

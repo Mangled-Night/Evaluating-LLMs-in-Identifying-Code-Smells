@@ -1,0 +1,21 @@
+private void testInsertSpeed(){
+  this.GC();
+  long freeMem=Runtime.getRuntime().freeMemory();
+  System.out.println("test insert speed for " + this.pool + " with insert count:"+ this.maxCacheCount);
+  long start=System.currentTimeMillis();
+  for (int i=0; i < maxCacheCount; i++) {
+    try {
+      pool.putIfAbsent(i + "","dn" + i % 100);
+    }
+ catch (    Error e) {
+      System.out.println("insert " + i + " error");
+      e.printStackTrace();
+      break;
+    }
+  }
+  long used=(System.currentTimeMillis() - start) / 1000;
+  long count=pool.getCacheStatic().getItemSize();
+  this.GC();
+  long usedMem=freeMem - Runtime.getRuntime().freeMemory();
+  System.out.println(" cache size is " + count + " ,all in cache :"+ (count == maxCacheCount)+ " ,used time:"+ used+ " ,tps:"+ count / used + " used memory:" + usedMem / 1024 / 1024 + "M");
+}

@@ -1,0 +1,14 @@
+void waitForReplication(String key,int port){
+  waitForReplication(commands,key,port);
+}
+static void waitForReplication(RedisAdvancedClusterCommands<String,String> commands,String key,int port){
+  NodeSelection<String,String> selection=commands.slaves(redisClusterNode -> redisClusterNode.getUri().getPort() == port);
+  Wait.untilNotEquals(null,() -> {
+    Executions<String> strings=selection.commands().get(key);
+    if (strings.stream().filter(s -> s != null).findFirst().isPresent()) {
+      return "OK";
+    }
+    return null;
+  }
+).waitOrTimeout();
+}

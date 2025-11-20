@@ -1,0 +1,33 @@
+public ByteBufferArena(int chunkSize,int pageSize,int chunkCount,int conReadBuferChunk){
+  try {
+    this.chunkSize=chunkSize;
+    this.pageSize=pageSize;
+    this.chunkCount.set(chunkCount);
+    this.conReadBuferChunk=conReadBuferChunk;
+    q=new ByteBufferChunkList[6];
+    q[5]=new ByteBufferChunkList(100,Integer.MAX_VALUE,chunkSize,pageSize,0);
+    q[4]=new ByteBufferChunkList(75,100,chunkSize,pageSize,0);
+    q[3]=new ByteBufferChunkList(50,100,chunkSize,pageSize,0);
+    q[2]=new ByteBufferChunkList(25,75,chunkSize,pageSize,0);
+    q[1]=new ByteBufferChunkList(1,50,chunkSize,pageSize,0);
+    q[0]=new ByteBufferChunkList(Integer.MIN_VALUE,25,chunkSize,pageSize,chunkCount);
+    q[0].nextList=q[1];
+    q[1].nextList=q[2];
+    q[2].nextList=q[3];
+    q[3].nextList=q[4];
+    q[4].nextList=q[5];
+    q[5].nextList=null;
+    q[5].prevList=q[4];
+    q[4].prevList=q[3];
+    q[3].prevList=q[2];
+    q[2].prevList=q[1];
+    q[1].prevList=q[0];
+    q[0].prevList=null;
+    capacity=new AtomicLong(6 * chunkCount * chunkSize);
+    size=new AtomicLong(6 * chunkCount * chunkSize);
+    sharedOptsCount=new ConcurrentHashMap<>();
+    memoryUsage=new ConcurrentHashMap<>();
+  }
+  finally {
+  }
+}

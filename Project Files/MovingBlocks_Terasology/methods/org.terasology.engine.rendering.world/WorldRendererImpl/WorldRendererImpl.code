@@ -1,0 +1,49 @@
+/** 
+ * Instantiates a WorldRenderer implementation. <p> This particular implementation works as deferred shader. The scene is rendered multiple times per frame in a number of separate passes (each stored in GPU buffers) and the passes are combined throughout the rendering pipeline to calculate per-pixel lighting and other effects. <p> Transparencies are handled through alpha rejection (i.e. ground plants) and alpha-based blending. An exception to this is water, which is handled separately to allow for reflections and refractions, if enabled. <p> By the time it is fully instantiated this implementation is already connected to all the support objects it requires and is ready to render via the render(RenderingStage) method.
+ * @param context a context object, to obtain instances of classes such as the rendering config.
+ */
+public WorldRendererImpl(Context context){
+  this.context=context;
+  renderGraph=new RenderGraph(context);
+  this.worldProvider=context.get(WorldProvider.class);
+  this.backdropProvider=context.get(BackdropProvider.class);
+  this.renderingConfig=context.get(Config.class).getRendering();
+  this.shaderManager=context.get(ShaderManager.class);
+  vrProvider=OpenVRProvider.getInstance();
+  if (renderingConfig.isVrSupport()) {
+    context.put(OpenVRProvider.class,vrProvider);
+    if (vrProvider.init()) {
+      playerCamera=new OpenVRStereoCamera(vrProvider);
+      vrProvider.getState().setGroundPlaneYOffset(GROUND_PLANE_HEIGHT_DISPARITY - context.get(PlayerConfig.class).eyeHeight.get());
+      currentRenderingStage=RenderingStage.LEFT_EYE;
+    }
+ else {
+      playerCamera=new PerspectiveCamera(renderingConfig,context.get(DisplayDevice.class));
+      currentRenderingStage=RenderingStage.MONO;
+    }
+  }
+ else {
+    playerCamera=new PerspectiveCamera(renderingConfig,context.get(DisplayDevice.class));
+    currentRenderingStage=RenderingStage.MONO;
+  }
+  LocalPlayerSystem localPlayerSystem=context.get(LocalPlayerSystem.class);
+  localPlayerSystem.setPlayerCamera(playerCamera);
+  context.put(ChunkTessellator.class,new ChunkTessellator());
+  ChunkProvider chunkProvider=context.get(ChunkProvider.class);
+  ChunkTessellator chunkTessellator=context.get(ChunkTessellator.class);
+  BlockManager blockManager=context.get(BlockManager.class);
+  ExtraBlockDataManager extraDataManager=context.get(ExtraBlockDataManager.class);
+  Config config=context.get(Config.class);
+  WorldGenerator worldGenerator=context.get(WorldGenerator.class);
+  LodChunkProvider lodChunkProvider=null;
+  if (worldGenerator instanceof ScalableWorldGenerator) {
+    lodChunkProvider=new LodChunkProvider(chunkProvider,blockManager,extraDataManager,(ScalableWorldGenerator)worldGenerator,chunkTessellator);
+  }
+  this.renderableWorld=new RenderableWorldImpl(this,lodChunkProvider,chunkProvider,chunkTessellator,worldProvider,config,playerCamera);
+  renderQueues=renderableWorld.getRenderQueues();
+  initRenderingSupport();
+  initRenderGraph();
+  initRenderingModules();
+  console=context.get(Console.class);
+  MethodCommand.registerAvailable(this,console,context);
+}

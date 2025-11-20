@@ -1,0 +1,29 @@
+/** 
+ * Asserts that an affiliation is persistent between visits to the room. <p>From XEP-0045 § 5.2:</p> <blockquote> These affiliations are long-lived in that they persist across a user's visits to the room and are not affected by happenings in the room...Affiliations are granted, revoked, and maintained based on the user's bare JID, not the nick as with roles. </blockquote>
+ * @throws Exception when errors occur
+ */
+@SmackIntegrationTest public void mucTestPersistentAffiliation() throws Exception {
+  EntityBareJid mucAddress=getRandomRoom("smack-inttest");
+  MultiUserChat mucAsSeenByOne=mucManagerOne.getMultiUserChat(mucAddress);
+  MultiUserChat mucAsSeenByTwo=mucManagerTwo.getMultiUserChat(mucAddress);
+  MultiUserChat mucAsSeenByThree=mucManagerThree.getMultiUserChat(mucAddress);
+  final Resourcepart nicknameOne=Resourcepart.from("one-" + randomString);
+  final Resourcepart nicknameTwo=Resourcepart.from("two-" + randomString);
+  final Resourcepart nicknameThree=Resourcepart.from("three-" + randomString);
+  createMuc(mucAsSeenByOne,nicknameOne);
+  try {
+    mucAsSeenByTwo.join(nicknameTwo);
+    mucAsSeenByThree.join(nicknameThree);
+    mucAsSeenByOne.grantOwnership(conTwo.getUser().asBareJid());
+    mucAsSeenByOne.grantAdmin(conThree.getUser().asBareJid());
+    mucAsSeenByTwo.leave();
+    mucAsSeenByThree.leave();
+    Presence p2=mucAsSeenByTwo.join(nicknameTwo);
+    Presence p3=mucAsSeenByThree.join(nicknameThree);
+    assertEquals(MUCAffiliation.owner,MUCUser.from(p2).getItem().getAffiliation());
+    assertEquals(MUCAffiliation.admin,MUCUser.from(p3).getItem().getAffiliation());
+  }
+  finally {
+    tryDestroy(mucAsSeenByOne);
+  }
+}

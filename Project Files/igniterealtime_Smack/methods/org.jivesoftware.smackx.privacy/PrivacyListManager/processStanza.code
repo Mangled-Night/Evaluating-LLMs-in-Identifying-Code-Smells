@@ -1,0 +1,67 @@
+@Override public void processStanza(Stanza packet) throws NotConnectedException {
+  XMPPConnection connection=connection();
+  Privacy privacy=(Privacy)packet;
+  StanzaFilter iqResultReplyFilter=new IQResultReplyFilter(privacy,connection);
+  final String activeListName=privacy.getActiveName();
+  final boolean declinceActiveList=privacy.isDeclineActiveList();
+  connection.addOneTimeSyncCallback(new StanzaListener(){
+    @Override public void processStanza(    Stanza packet) throws NotConnectedException {
+      if (declinceActiveList) {
+        cachedActiveListName=null;
+      }
+ else {
+        cachedActiveListName=activeListName;
+      }
+      return;
+    }
+  }
+,iqResultReplyFilter);
+}
+@Override public void processStanza(Stanza packet) throws NotConnectedException {
+  if (declinceActiveList) {
+    cachedActiveListName=null;
+  }
+ else {
+    cachedActiveListName=activeListName;
+  }
+  return;
+}
+@Override public void processStanza(Stanza packet) throws NotConnectedException {
+  XMPPConnection connection=connection();
+  Privacy privacy=(Privacy)packet;
+  StanzaFilter iqResultReplyFilter=new IQResultReplyFilter(privacy,connection);
+  final String defaultListName=privacy.getDefaultName();
+  final boolean declinceDefaultList=privacy.isDeclineDefaultList();
+  connection.addOneTimeSyncCallback(new StanzaListener(){
+    @Override public void processStanza(    Stanza packet) throws NotConnectedException {
+      if (declinceDefaultList) {
+        cachedDefaultListName=null;
+      }
+ else {
+        cachedDefaultListName=defaultListName;
+      }
+      return;
+    }
+  }
+,iqResultReplyFilter);
+}
+@Override public void processStanza(Stanza packet) throws NotConnectedException {
+  if (declinceDefaultList) {
+    cachedDefaultListName=null;
+  }
+ else {
+    cachedDefaultListName=defaultListName;
+  }
+  return;
+}
+@Override public void processStanza(Stanza packet) throws NotConnectedException {
+  Privacy privacy=(Privacy)packet;
+  String activeList=privacy.getActiveName();
+  if (activeList != null) {
+    cachedActiveListName=activeList;
+  }
+  String defaultList=privacy.getDefaultName();
+  if (defaultList != null) {
+    cachedDefaultListName=defaultList;
+  }
+}

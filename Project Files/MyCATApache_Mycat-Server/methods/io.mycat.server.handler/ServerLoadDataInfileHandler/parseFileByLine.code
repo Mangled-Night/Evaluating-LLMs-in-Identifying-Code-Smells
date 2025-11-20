@@ -1,0 +1,50 @@
+private void parseFileByLine(String file,String encode,String split){
+  List<SQLExpr> columns=statement.getColumns();
+  CsvParserSettings settings=new CsvParserSettings();
+  settings.setMaxColumns(65535);
+  settings.setMaxCharsPerColumn(65535);
+  settings.getFormat().setLineSeparator(loadData.getLineTerminatedBy());
+  settings.getFormat().setDelimiter(loadData.getFieldTerminatedBy().charAt(0));
+  if (loadData.getEnclose() != null) {
+    settings.getFormat().setQuote(loadData.getEnclose().charAt(0));
+  }
+  if (loadData.getEscape() != null) {
+    settings.getFormat().setQuoteEscape(loadData.getEscape().charAt(0));
+  }
+  settings.getFormat().setNormalizedNewline(loadData.getLineTerminatedBy().charAt(0));
+  settings.trimValues(false);
+  CsvParser parser=new CsvParser(settings);
+  InputStreamReader reader=null;
+  FileInputStream fileInputStream=null;
+  try {
+    fileInputStream=new FileInputStream(file);
+    reader=new InputStreamReader(fileInputStream,encode);
+    parser.beginParsing(reader);
+    String[] row=null;
+    while ((row=parser.parseNext()) != null) {
+      parseOneLine(columns,tableName,row,true,loadData.getLineTerminatedBy());
+    }
+  }
+ catch (  FileNotFoundException|UnsupportedEncodingException e) {
+    throw new RuntimeException(e);
+  }
+ finally {
+    parser.stopParsing();
+    if (fileInputStream != null) {
+      try {
+        fileInputStream.close();
+      }
+ catch (      IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    if (reader != null) {
+      try {
+        reader.close();
+      }
+ catch (      IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+}

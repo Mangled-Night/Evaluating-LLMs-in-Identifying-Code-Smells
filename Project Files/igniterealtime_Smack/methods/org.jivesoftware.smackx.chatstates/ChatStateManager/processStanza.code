@@ -1,0 +1,31 @@
+@Override public void processStanza(Stanza stanza){
+  final Message message=(Message)stanza;
+  EntityFullJid fullFrom=message.getFrom().asEntityFullJidIfPossible();
+  EntityBareJid bareFrom=fullFrom.asEntityBareJid();
+  final Chat chat=ChatManager.getInstanceFor(connection()).chatWith(bareFrom);
+  XmlElement extension=message.getExtension(NAMESPACE);
+  String chatStateElementName=extension.getElementName();
+  ChatState state;
+  try {
+    state=ChatState.valueOf(chatStateElementName);
+  }
+ catch (  Exception ex) {
+    LOGGER.log(Level.WARNING,"Invalid chat state element name: " + chatStateElementName,ex);
+    return;
+  }
+  final ChatState finalState=state;
+  List<ChatStateListener> listeners;
+synchronized (chatStateListeners) {
+    listeners=new ArrayList<>(chatStateListeners.size());
+    listeners.addAll(chatStateListeners);
+  }
+  final List<ChatStateListener> finalListeners=listeners;
+  asyncButOrdered.performAsyncButOrdered(chat,new Runnable(){
+    @Override public void run(){
+      for (      ChatStateListener listener : finalListeners) {
+        listener.stateChanged(chat,finalState,message);
+      }
+    }
+  }
+);
+}

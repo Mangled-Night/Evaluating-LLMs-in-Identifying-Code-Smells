@@ -1,0 +1,22 @@
+private Mono<SocketAddress> lookupRedis(RedisURI sentinelUri){
+  Duration timeout=sentinelUri.getTimeout();
+  return Mono.usingWhen(Mono.fromCompletionStage(() -> connectSentinelAsync(newStringStringCodec(),sentinelUri,timeout)),c -> {
+    String sentinelMasterId=sentinelUri.getSentinelMasterId();
+    return c.reactive().getMasterAddrByName(sentinelMasterId).map(it -> {
+      if (it instanceof InetSocketAddress) {
+        InetSocketAddress isa=(InetSocketAddress)it;
+        SocketAddress resolved=getResources().socketAddressResolver().resolve(RedisURI.create(isa.getHostString(),isa.getPort()));
+        logger.debug("Resolved Master {} SocketAddress {}:{} to {}",sentinelMasterId,isa.getHostString(),isa.getPort(),resolved);
+        return resolved;
+      }
+      return it;
+    }
+).timeout(timeout).onErrorMap(e -> {
+      RedisCommandTimeoutException ex=ExceptionFactory.createTimeoutException("Cannot obtain master using SENTINEL MASTER",timeout);
+      ex.addSuppressed(e);
+      return ex;
+    }
+);
+  }
+,c -> Mono.fromCompletionStage(c::closeAsync),(c,ex) -> Mono.fromCompletionStage(c::closeAsync),c -> Mono.fromCompletionStage(c::closeAsync));
+}

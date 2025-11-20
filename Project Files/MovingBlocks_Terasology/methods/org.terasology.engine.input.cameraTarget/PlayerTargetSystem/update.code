@@ -1,0 +1,21 @@
+@Override public void update(float delta){
+  EntityRef charEntity=player.getCharacterEntity();
+  if (charEntity.exists()) {
+    Vector3f cameraPos=player.getViewPosition(new Vector3f());
+    CharacterComponent charComp=charEntity.getComponent(CharacterComponent.class);
+    if (charComp != null) {
+      Vector3f dir=player.getViewDirection(new Vector3f());
+      float maxDist=charComp.interactionRange;
+      FirstPersonHeldItemMountPointComponent heldItemMountPoint=player.getCameraEntity().getComponent(FirstPersonHeldItemMountPointComponent.class);
+      if (heldItemMountPoint != null && heldItemMountPoint.isTracked()) {
+        maxDist=heldItemMountPoint.translate.length() + 0.25f;
+        dir=new Vector3f(heldItemMountPoint.translate).normalize();
+      }
+      if (targetSystem.updateTarget(cameraPos,dir,maxDist)) {
+        EntityRef oldTarget=targetSystem.getPreviousTarget();
+        EntityRef newTarget=targetSystem.getTarget();
+        charEntity.send(new PlayerTargetChangedEvent(oldTarget,newTarget));
+      }
+    }
+  }
+}

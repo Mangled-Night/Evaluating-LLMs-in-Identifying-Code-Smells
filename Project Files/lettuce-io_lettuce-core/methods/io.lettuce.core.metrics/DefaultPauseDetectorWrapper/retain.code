@@ -1,0 +1,33 @@
+/** 
+ * Creates or initializes a  {@link PauseDetector} instance after incrementing the usage counter to one. Should be{@link #release() released} once it is no longer in use.
+ */
+@Override public void retain(){
+  if (counter.incrementAndGet() == 1) {
+    lock.lock();
+    try {
+      if (instanceCounter.getAndIncrement() > 0) {
+        InternalLogger instance=InternalLoggerFactory.getInstance(getClass());
+        instance.info("Initialized PauseDetectorWrapper more than once.");
+      }
+      PauseDetector pauseDetector=new SimplePauseDetector(TimeUnit.MILLISECONDS.toNanos(10),TimeUnit.MILLISECONDS.toNanos(10),3);
+      shutdownHook=new Thread("ShutdownHook for SimplePauseDetector"){
+        @Override public void run(){
+          pauseDetector.shutdown();
+        }
+      }
+;
+      this.pauseDetector=pauseDetector;
+      try {
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
+      }
+ catch (      IllegalStateException ignored) {
+        InternalLogger instance=InternalLoggerFactory.getInstance(getClass());
+        instance.warn("Initialized PauseDetectorWrapper during shutdown; pause detector was shutdown immediately.");
+        pauseDetector.shutdown();
+      }
+    }
+  finally {
+      lock.unlock();
+    }
+  }
+}

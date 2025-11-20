@@ -1,0 +1,60 @@
+public ImageReceiver(final InetAddress remoteHost,final int remotePort,final int localPort,int width,int height){
+  tiles=new BufferedImage[width][height];
+  try {
+    socket=new DatagramSocket(localPort);
+    localHost=socket.getLocalAddress();
+    this.remoteHost=remoteHost;
+    this.remotePort=remotePort;
+    this.localPort=localPort;
+    this.decoder=new DefaultDecoder();
+    new Thread(new Runnable(){
+      @Override public void run(){
+        byte[] buf=new byte[1024];
+        DatagramPacket p=new DatagramPacket(buf,1024);
+        try {
+          while (on) {
+            socket.receive(p);
+            int length=p.getLength();
+            BufferedImage bufferedImage=decoder.decode(new ByteArrayInputStream(p.getData(),0,length - 2));
+            if (bufferedImage != null) {
+              int x=p.getData()[length - 2];
+              int y=p.getData()[length - 1];
+              drawTile(x,y,bufferedImage);
+            }
+          }
+        }
+ catch (        IOException e) {
+          LOGGER.log(Level.WARNING,"exception",e);
+        }
+      }
+    }
+).start();
+    new Thread(new Runnable(){
+      @Override public void run(){
+        byte[] buf=new byte[1024];
+        DatagramPacket p=new DatagramPacket(buf,1024);
+        try {
+          while (on) {
+            p.setAddress(remoteHost);
+            p.setPort(remotePort);
+            socket.send(p);
+            try {
+              Thread.sleep(1000);
+            }
+ catch (            InterruptedException e) {
+              LOGGER.log(Level.WARNING,"exception",e);
+            }
+          }
+        }
+ catch (        IOException e) {
+          LOGGER.log(Level.WARNING,"exception",e);
+        }
+      }
+    }
+).start();
+  }
+ catch (  SocketException e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+  this.setSize(width,height);
+}

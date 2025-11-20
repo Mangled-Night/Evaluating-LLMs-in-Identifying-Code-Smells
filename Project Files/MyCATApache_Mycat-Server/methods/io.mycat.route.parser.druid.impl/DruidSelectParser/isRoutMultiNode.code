@@ -1,0 +1,16 @@
+private boolean isRoutMultiNode(SchemaConfig schema,RouteResultset rrs){
+  if (rrs.getNodes() != null && rrs.getNodes().length > 1) {
+    return true;
+  }
+  LayerCachePool tableId2DataNodeCache=(LayerCachePool)MycatServer.getInstance().getCacheService().getCachePool("TableID2DataNodeCache");
+  try {
+    tryRoute(schema,rrs,tableId2DataNodeCache);
+    if (rrs.getNodes() != null && rrs.getNodes().length > 1) {
+      return true;
+    }
+  }
+ catch (  SQLNonTransientException e) {
+    throw new RuntimeException(e);
+  }
+  return false;
+}

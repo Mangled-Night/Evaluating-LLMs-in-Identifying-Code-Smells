@@ -1,0 +1,34 @@
+/** 
+ * This exception is thrown if Smack is unable to connect to all hosts of a given XMPP service. The connection exceptions can be retrieved with {@link EndpointConnectionException#getConnectionExceptions()}, which will have the exception causing the connection failure set and retrievable with  {@link RemoteConnectionException#getException()}.
+ */
+public static final class EndpointConnectionException extends ConnectionException {
+  /** 
+ */
+  private static final long serialVersionUID=1;
+  private final List<RemoteConnectionEndpointLookupFailure> lookupFailures;
+  private final List<? extends RemoteConnectionException<?>> connectionExceptions;
+  private EndpointConnectionException(  String message,  List<RemoteConnectionEndpointLookupFailure> lookupFailures,  List<? extends RemoteConnectionException<?>> connectionExceptions){
+    super(message);
+    assert !lookupFailures.isEmpty() || !connectionExceptions.isEmpty();
+    this.lookupFailures=lookupFailures;
+    this.connectionExceptions=connectionExceptions;
+  }
+  public static EndpointConnectionException from(  List<RemoteConnectionEndpointLookupFailure> lookupFailures,  List<? extends RemoteConnectionException<?>> connectionExceptions){
+    StringBuilder sb=new StringBuilder(256);
+    if (!lookupFailures.isEmpty()) {
+      sb.append("Could not lookup the following endpoints: ");
+      StringUtils.appendTo(lookupFailures,sb);
+    }
+    if (!connectionExceptions.isEmpty()) {
+      sb.append("The following addresses failed: ");
+      StringUtils.appendTo(connectionExceptions,sb,rce -> sb.append(rce.getErrorMessage()));
+    }
+    return new EndpointConnectionException(sb.toString(),lookupFailures,connectionExceptions);
+  }
+  public List<RemoteConnectionEndpointLookupFailure> getLookupFailures(){
+    return lookupFailures;
+  }
+  public List<? extends RemoteConnectionException<? extends RemoteConnectionEndpoint>> getConnectionExceptions(){
+    return connectionExceptions;
+  }
+}

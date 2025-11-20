@@ -1,0 +1,31 @@
+/** 
+ * Return a  {@link ResolvableType} for the specified nesting level. See {@link #getNested(int,Map)} for details.
+ * @param nestingLevel the nesting level
+ * @return the {@link ResolvableType} type, or {@code #NONE}
+ */
+public ResolvableType getNested(int nestingLevel){
+  return getNested(nestingLevel,null);
+}
+/** 
+ * Return a  {@link ResolvableType} for the specified nesting level. The nesting level refers to the specific genericparameter that should be returned. A nesting level of 1 indicates this type; 2 indicates the first nested generic; 3 the second; and so on. For example, given  {@code List<Set<Integer>>} level 1 refers to the {@code List}, level 2 the {@code Set}, and level 3 the  {@code Integer}. <p> The  {@code typeIndexesPerLevel} map can be used to reference a specific generic for the given level. For example, anindex of 0 would refer to a  {@code Map} key; whereas, 1 would refer to the value. If the map does not contain a value fora specific level the last generic will be used (e.g. a  {@code Map} value).<p> Nesting levels may also apply to array types; for example given  {@code String[]}, a nesting level of 2 refers to {@code String}. <p> If a type does not  {@link #hasGenerics() contain} generics the {@link #getSuperType() supertype} hierarchy will beconsidered.
+ * @param nestingLevel the required nesting level, indexed from 1 for the current type, 2 for the first nested generic, 3for the second and so on
+ * @param typeIndexesPerLevel a map containing the generic index for a given nesting level (may be {@code null})
+ * @return a {@link ResolvableType} for the nested level or {@link #NONE}
+ */
+public ResolvableType getNested(int nestingLevel,Map<Integer,Integer> typeIndexesPerLevel){
+  ResolvableType result=this;
+  for (int i=2; i <= nestingLevel; i++) {
+    if (result.isArray()) {
+      result=result.getComponentType();
+    }
+ else {
+      while (result != ResolvableType.NONE && !result.hasGenerics()) {
+        result=result.getSuperType();
+      }
+      Integer index=(typeIndexesPerLevel != null ? typeIndexesPerLevel.get(i) : null);
+      index=(index == null ? result.getGenerics().length - 1 : index);
+      result=result.getGeneric(index);
+    }
+  }
+  return result;
+}

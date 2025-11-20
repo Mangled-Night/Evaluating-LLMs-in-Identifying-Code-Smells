@@ -1,0 +1,39 @@
+/** 
+ * Wrapper for initialization of  {@link PauseDetector}. Encapsulates absence of LatencyUtils.
+ */
+interface PauseDetectorWrapper {
+  /** 
+ * No-operation  {@link PauseDetectorWrapper} implementation.
+ */
+  PauseDetectorWrapper NO_OP=new PauseDetectorWrapper(){
+    @Override public void release(){
+    }
+    @Override public void retain(){
+    }
+    @Override public Object getPauseDetector(){
+      return NoPauseDetector.INSTANCE;
+    }
+  }
+;
+  static PauseDetectorWrapper create(){
+    if (HDR_UTILS_AVAILABLE && LATENCY_UTILS_AVAILABLE) {
+      return new DefaultPauseDetectorWrapper();
+    }
+    return NO_OP;
+  }
+  static PauseDetectorWrapper noop(){
+    return NO_OP;
+  }
+  /** 
+ * Retain reference to  {@link PauseDetectorWrapper} and increment reference counter.
+ */
+  void retain();
+  /** 
+ * Release reference to  {@link PauseDetectorWrapper} and decrement reference counter.
+ */
+  void release();
+  /** 
+ * Obtain the current  {@link PauseDetector}. Requires a call to  {@link #retain()} first. Using {@code Object} to avoidstatic code paths to optional libraries.
+ */
+  Object getPauseDetector();
+}

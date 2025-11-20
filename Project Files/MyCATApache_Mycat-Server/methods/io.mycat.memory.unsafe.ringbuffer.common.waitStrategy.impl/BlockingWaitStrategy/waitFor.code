@@ -1,0 +1,19 @@
+@Override public long waitFor(long sequence,Sequence cursorSequence,Sequence dependentSequence,SequenceBarrier barrier) throws AlertException, InterruptedException {
+  long availableSequence;
+  if (cursorSequence.get() < sequence) {
+    lock.lock();
+    try {
+      while (cursorSequence.get() < sequence) {
+        barrier.checkAlert();
+        processorNotifyCondition.await();
+      }
+    }
+  finally {
+      lock.unlock();
+    }
+  }
+  while ((availableSequence=dependentSequence.get()) < sequence) {
+    barrier.checkAlert();
+  }
+  return availableSequence;
+}

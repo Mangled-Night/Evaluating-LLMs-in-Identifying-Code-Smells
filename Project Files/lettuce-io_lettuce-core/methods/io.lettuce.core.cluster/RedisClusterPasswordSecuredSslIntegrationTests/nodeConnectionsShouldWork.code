@@ -1,0 +1,11 @@
+@Test void nodeConnectionsShouldWork(){
+  StatefulRedisClusterConnection<String,String> connection=redisClient.connect();
+  StatefulRedisConnection<String,String> node2Connection=connection.getConnection(hostAddr(),7445);
+  try {
+    node2Connection.sync().get(SLOT_1_KEY);
+  }
+ catch (  RedisCommandExecutionException e) {
+    assertThat(e).hasMessage("MOVED 1 127.0.0.1:7443");
+  }
+  connection.close();
+}

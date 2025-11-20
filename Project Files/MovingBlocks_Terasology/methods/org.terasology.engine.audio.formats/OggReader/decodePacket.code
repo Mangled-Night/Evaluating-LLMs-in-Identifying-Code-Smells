@@ -1,0 +1,30 @@
+/** 
+ * Decodes a packet.
+ */
+private int decodePacket(){
+  final boolean bigEndian=ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
+  if (block.synthesis(packet) == 0) {
+    dspState.synthesis_blockin(block);
+  }
+  int convOff=0;
+  int samples;
+  while ((samples=dspState.synthesis_pcmout(pcm,index)) > 0) {
+    float[][] localPcm=this.pcm[0];
+    int bout=(samples < convsize ? samples : convsize);
+    for (int i=0; i < info.channels; i++) {
+      int ptr=(i << 1) + convOff;
+      int mono=index[i];
+      for (int j=0; j < bout; j++) {
+        int val=(int)(localPcm[i][mono + j] * 32767);
+        val=Math.max(-32768,Math.min(32767,val));
+        val|=(val < 0 ? 0x8000 : 0);
+        convbuffer[ptr + 0]=(byte)(bigEndian ? val >>> 8 : val);
+        convbuffer[ptr + 1]=(byte)(bigEndian ? val : val >>> 8);
+        ptr+=(info.channels) << 1;
+      }
+    }
+    convOff+=2 * info.channels * bout;
+    dspState.synthesis_read(bout);
+  }
+  return convOff;
+}

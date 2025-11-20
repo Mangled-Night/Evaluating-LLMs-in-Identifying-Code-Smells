@@ -1,0 +1,17 @@
+/** 
+ * Set the command timeout for this connection.
+ * @param timeout Command timeout.
+ * @since 5.0
+ */
+public void setTimeout(Duration timeout){
+  LettuceAssert.notNull(timeout,"Timeout duration must not be null");
+  LettuceAssert.isTrue(!timeout.isNegative(),"Timeout duration must be greater or equal to zero");
+  this.timeout=timeout;
+  RedisChannelWriter writer=channelWriter;
+  if (writer instanceof CommandListenerWriter) {
+    writer=((CommandListenerWriter)channelWriter).getDelegate();
+  }
+  if (writer instanceof CommandExpiryWriter) {
+    ((CommandExpiryWriter)writer).setTimeout(timeout);
+  }
+}

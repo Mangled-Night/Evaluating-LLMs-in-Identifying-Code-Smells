@@ -1,0 +1,72 @@
+/** 
+ * Initializes sort order.
+ */
+public void postBegin(){
+  initialized=true;
+  controlPressed=false;
+  Map<Integer,BindableButton> keys=bindsManager.getKeyBinds();
+  BindButtonSubscriber controlSubscriber=new BindButtonSubscriber(){
+    @Override public boolean onPress(    float delta,    EntityRef target){
+      if (!containsConsole()) {
+        controlPressed=true;
+      }
+ else {
+        controlPressed=false;
+      }
+      return false;
+    }
+    @Override public boolean onRepeat(    float delta,    EntityRef target){
+      return false;
+    }
+    @Override public boolean onRelease(    float delta,    EntityRef target){
+      controlPressed=false;
+      return false;
+    }
+  }
+;
+  BindButtonSubscriber tabSubscriber=new BindButtonSubscriber(){
+    @Override public boolean onPress(    float delta,    EntityRef target){
+      if (controlPressed) {
+        target.send(new FocusChangedEvent());
+      }
+      return false;
+    }
+    @Override public boolean onRepeat(    float delta,    EntityRef target){
+      if (controlPressed) {
+        target.send(new FocusChangedEvent());
+      }
+      return false;
+    }
+    @Override public boolean onRelease(    float delta,    EntityRef target){
+      return false;
+    }
+  }
+;
+  if (keys.containsKey(Keyboard.Key.RIGHT_CTRL.getId())) {
+    keys.get(Keyboard.Key.RIGHT_CTRL.getId()).subscribe(controlSubscriber);
+  }
+ else {
+    keys.put(Keyboard.Key.RIGHT_CTRL.getId(),new BindableButtonImpl(new SimpleUri("ctrlMod"),"Control Modifier",new BindButtonEvent()));
+    keys.get(Keyboard.Key.RIGHT_CTRL.getId()).subscribe(controlSubscriber);
+  }
+  if (keys.containsKey(Keyboard.Key.LEFT_CTRL.getId())) {
+    keys.get(Keyboard.Key.LEFT_CTRL.getId()).subscribe(controlSubscriber);
+  }
+ else {
+    keys.put(Keyboard.Key.LEFT_CTRL.getId(),new BindableButtonImpl(new SimpleUri("ctrlMod"),"Control Modifier",new BindButtonEvent()));
+    keys.get(Keyboard.Key.LEFT_CTRL.getId()).subscribe(controlSubscriber);
+  }
+  if (keys.containsKey(Keyboard.Key.TAB.getId())) {
+    keys.get(Keyboard.Key.TAB.getId()).subscribe(tabSubscriber);
+  }
+ else {
+    keys.put(Keyboard.Key.TAB.getId(),new BindableButtonImpl(new SimpleUri("changeFocus"),"Change Focus",new BindButtonEvent()));
+    keys.get(Keyboard.Key.TAB.getId()).subscribe(tabSubscriber);
+  }
+  current=0;
+  index=0;
+  layersFilled=new ArrayList<>();
+  enabledWidgets=new ArrayList<>();
+  used=new ArrayList<>();
+  inSortOrder=false;
+}

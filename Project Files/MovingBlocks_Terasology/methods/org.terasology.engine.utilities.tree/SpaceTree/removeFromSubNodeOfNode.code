@@ -1,0 +1,44 @@
+/** 
+ * Removes and returns the value of the subNode removed from the node.
+ * @param position        The position of the node
+ * @param node            The parent node
+ * @param subNodeIndex    The index of the subNode to be removed
+ * @return the value of the subNode removed
+ */
+private T removeFromSubNodeOfNode(float[] position,Node node,int subNodeIndex){
+  Node processedNode=node;
+  int processedSubNodeIndex=subNodeIndex;
+  while (true) {
+    Node subNode=processedNode.subNodes[processedSubNodeIndex];
+    if (subNode == null) {
+      return null;
+    }
+ else {
+      if (subNode.center != null) {
+        int subSubNodeIndex=getSubNodeIndex(position,subNode.center);
+        if (subSubNodeIndex == -1) {
+          processedNode.subNodes[processedSubNodeIndex]=null;
+          for (          Node subSubNode : subNode.subNodes) {
+            addAllFromNode(subSubNode,processedNode);
+          }
+          return subNode.centerValue;
+        }
+ else {
+          processedNode=subNode;
+          processedSubNodeIndex=subSubNodeIndex;
+        }
+      }
+ else {
+        for (        NodeEntry<T> nodeEntry : subNode.nodeBucket) {
+          if (distanceFunction.getDistance(nodeEntry.position,position) == 0) {
+            subNode.nodeBucket.remove(nodeEntry);
+            if (subNode.nodeBucket.size() == 0) {
+              processedNode.subNodes[processedSubNodeIndex]=null;
+            }
+            return nodeEntry.value;
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,66 @@
+@Override public void responseReceived(BOSHMessageEvent event){
+  if (event.getBody() != null) {
+    try {
+      readerPipe.write(event.getBody().toXML());
+      readerPipe.flush();
+    }
+ catch (    Exception e) {
+    }
+  }
+}
+/** 
+ * Parse the received packets and notify the corresponding connection.
+ * @param event the BOSH client response which includes the received packet.
+ */
+@Override public void responseReceived(BOSHMessageEvent event){
+  AbstractBody body=event.getBody();
+  if (body != null) {
+    try {
+      if (sessionID == null) {
+        sessionID=body.getAttribute(BodyQName.create(XMPPBOSHConnection.BOSH_URI,"sid"));
+      }
+      if (streamId == null) {
+        streamId=body.getAttribute(BodyQName.create(XMPPBOSHConnection.BOSH_URI,"authid"));
+      }
+      final XmlPullParser parser=PacketParserUtils.getParserFor(body.toXML());
+      XmlPullParser.Event eventType=parser.getEventType();
+      do {
+        eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+          String name=parser.getName();
+switch (name) {
+case Message.ELEMENT:
+case IQ.IQ_ELEMENT:
+case Presence.ELEMENT:
+          parseAndProcessStanza(parser);
+        break;
+case "features":
+      parseFeaturesAndNotify(parser);
+    break;
+case "error":
+  if ("urn:ietf:params:xml:ns:xmpp-streams".equals(parser.getNamespace(null))) {
+    throw new StreamErrorException(PacketParserUtils.parseStreamError(parser));
+  }
+ else {
+    StanzaError stanzaError=PacketParserUtils.parseError(parser);
+    throw new XMPPException.XMPPErrorException(null,stanzaError);
+  }
+default :
+parseAndProcessNonza(parser);
+break;
+}
+break;
+default :
+break;
+}
+}
+ while (eventType != XmlPullParser.Event.END_DOCUMENT);
+}
+ catch (Exception e) {
+if (isConnected()) {
+notifyConnectionError(e);
+}
+}
+}
+}

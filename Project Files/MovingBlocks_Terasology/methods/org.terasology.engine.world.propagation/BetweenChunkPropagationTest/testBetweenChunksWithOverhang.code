@@ -1,0 +1,23 @@
+@Test public void testBetweenChunksWithOverhang(){
+  Chunk topChunk=new ChunkImpl(new Vector3i(0,1,0),blockManager,extraDataManager);
+  Chunk bottomChunk=new ChunkImpl(new Vector3i(0,0,0),blockManager,extraDataManager);
+  provider.addChunk(topChunk);
+  provider.addChunk(bottomChunk);
+  for (  Vector3ic pos : new BlockRegion(0,0,0).setSize(Chunks.SIZE_X,1,Chunks.SIZE_Z)) {
+    topChunk.setSunlight(pos,Chunks.MAX_SUNLIGHT);
+    topChunk.setSunlightRegen(pos,Chunks.MAX_SUNLIGHT_REGEN);
+  }
+  for (  Vector3ic pos : new BlockRegion(16,48,0,31,48,31)) {
+    bottomChunk.setBlock(pos,solid);
+  }
+  InternalLightProcessor.generateInternalLighting(bottomChunk);
+  propagator.propagateBetween(topChunk,bottomChunk,Side.BOTTOM,false);
+  propagator.process();
+  sunlightPropagator.process();
+  for (int z=0; z < Chunks.SIZE_Z; ++z) {
+    assertEquals(14,bottomChunk.getSunlight(16,47,z));
+  }
+  for (int z=0; z < Chunks.SIZE_Z; ++z) {
+    assertEquals(13,bottomChunk.getSunlight(17,47,z));
+  }
+}

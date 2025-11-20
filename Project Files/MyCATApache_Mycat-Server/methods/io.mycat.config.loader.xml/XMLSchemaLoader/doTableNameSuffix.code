@@ -1,0 +1,53 @@
+/** 
+ * 处理动态日期表, 支持 YYYYMM、YYYYMMDD 两种格式 <p> YYYYMM格式： 	  yyyymm,2015,01,60 YYYYMMDD格式:  yyyymmdd,2015,01,10,50
+ * @param tableNameElement
+ * @param tableNameSuffixElement
+ * @return
+ */
+private String doTableNameSuffix(String tableNameElement,String tableNameSuffixElement){
+  String newTableName=tableNameElement;
+  String[] params=tableNameSuffixElement.split(",");
+  String suffixFormat=params[0].toUpperCase();
+  if (suffixFormat.equals("YYYYMM")) {
+    int yyyy=Integer.parseInt(params[1]);
+    int mm=Integer.parseInt(params[2]);
+    int mmEndIdx=Integer.parseInt(params[3]);
+    SimpleDateFormat yyyyMMSDF=new SimpleDateFormat("yyyyMM");
+    Calendar cal=Calendar.getInstance();
+    cal.set(Calendar.YEAR,yyyy);
+    cal.set(Calendar.MONTH,mm - 1);
+    cal.set(Calendar.DATE,0);
+    StringBuffer tableNameBuffer=new StringBuffer();
+    for (int mmIdx=0; mmIdx <= mmEndIdx; mmIdx++) {
+      tableNameBuffer.append(tableNameElement);
+      tableNameBuffer.append(yyyyMMSDF.format(cal.getTime()));
+      cal.add(Calendar.MONTH,1);
+      if (mmIdx != mmEndIdx) {
+        tableNameBuffer.append(",");
+      }
+    }
+    newTableName=tableNameBuffer.toString();
+  }
+ else   if (suffixFormat.equals("YYYYMMDD")) {
+    int yyyy=Integer.parseInt(params[1]);
+    int mm=Integer.parseInt(params[2]);
+    int dd=Integer.parseInt(params[3]);
+    int ddEndIdx=Integer.parseInt(params[4]);
+    SimpleDateFormat yyyyMMddSDF=new SimpleDateFormat("yyyyMMdd");
+    Calendar cal=Calendar.getInstance();
+    cal.set(Calendar.YEAR,yyyy);
+    cal.set(Calendar.MONTH,mm - 1);
+    cal.set(Calendar.DATE,dd);
+    StringBuffer tableNameBuffer=new StringBuffer();
+    for (int ddIdx=0; ddIdx <= ddEndIdx; ddIdx++) {
+      tableNameBuffer.append(tableNameElement);
+      tableNameBuffer.append(yyyyMMddSDF.format(cal.getTime()));
+      cal.add(Calendar.DATE,1);
+      if (ddIdx != ddEndIdx) {
+        tableNameBuffer.append(",");
+      }
+    }
+    newTableName=tableNameBuffer.toString();
+  }
+  return newTableName;
+}

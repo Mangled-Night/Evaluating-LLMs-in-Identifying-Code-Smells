@@ -1,0 +1,34 @@
+/** 
+ * Return the MAC address. <p>Must hold  {@code <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />}, {@code <uses-permission android:name="android.permission.INTERNET" />}, {@code <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />}</p>
+ * @return the MAC address
+ */
+@RequiresPermission(allOf={ACCESS_WIFI_STATE,CHANGE_WIFI_STATE}) public static String getMacAddress(){
+  String macAddress=getMacAddress((String[])null);
+  if (!TextUtils.isEmpty(macAddress) || getWifiEnabled())   return macAddress;
+  setWifiEnabled(true);
+  setWifiEnabled(false);
+  return getMacAddress((String[])null);
+}
+/** 
+ * Return the MAC address. <p>Must hold  {@code <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />}, {@code <uses-permission android:name="android.permission.INTERNET" />}</p>
+ * @return the MAC address
+ */
+@RequiresPermission(allOf={ACCESS_WIFI_STATE}) public static String getMacAddress(final String... excepts){
+  String macAddress=getMacAddressByNetworkInterface();
+  if (isAddressNotInExcepts(macAddress,excepts)) {
+    return macAddress;
+  }
+  macAddress=getMacAddressByInetAddress();
+  if (isAddressNotInExcepts(macAddress,excepts)) {
+    return macAddress;
+  }
+  macAddress=getMacAddressByWifiInfo();
+  if (isAddressNotInExcepts(macAddress,excepts)) {
+    return macAddress;
+  }
+  macAddress=getMacAddressByFile();
+  if (isAddressNotInExcepts(macAddress,excepts)) {
+    return macAddress;
+  }
+  return "";
+}

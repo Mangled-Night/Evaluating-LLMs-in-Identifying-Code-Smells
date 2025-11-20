@@ -1,0 +1,23 @@
+public void testModifySQLLimit() throws Exception {
+  final SchemaConfig schema=schemaMap.get("TESTDB");
+  String sql=null;
+  RouteResultset rrs=null;
+  sql="select * from orders limit 2,3";
+  rrs=routeStrategy.route(new SystemConfig(),schema,ServerParse.SELECT,sql,null,null,cachePool);
+  Assert.assertEquals(true,rrs.isCacheAble());
+  Map<String,RouteResultsetNode> nodeMap=getNodeMap(rrs,2);
+  NodeNameAsserter nameAsserter=new NodeNameAsserter("dn2","dn1");
+  nameAsserter.assertRouteNodeNames(nodeMap.keySet());
+  Assert.assertEquals(3,rrs.getLimitSize());
+  MySqlStatementParser parser=new MySqlStatementParser("SELECT * FROM orders LIMIT 0,5");
+  SQLStatement statement=parser.parseStatement();
+  Assert.assertEquals(statement.toString(),rrs.getNodes()[0].getStatement());
+  sql="select * from customer where id=10000 limit 2,3";
+  rrs=routeStrategy.route(new SystemConfig(),schema,ServerParse.SELECT,sql,null,null,cachePool);
+  Assert.assertEquals(true,rrs.isCacheAble());
+  nodeMap=getNodeMap(rrs,1);
+  nameAsserter=new NodeNameAsserter("dn1");
+  nameAsserter.assertRouteNodeNames(nodeMap.keySet());
+  Assert.assertEquals(3,rrs.getLimitSize());
+  Assert.assertEquals("select * from customer where id=10000 limit 2,3",rrs.getNodes()[0].getStatement());
+}

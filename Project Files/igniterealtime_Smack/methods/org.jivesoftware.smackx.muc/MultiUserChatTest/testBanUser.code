@@ -1,0 +1,46 @@
+public void testBanUser(){
+  final String[] answer=new String[3];
+  try {
+    MultiUserChat muc2=new MultiUserChat(getConnection(1),room);
+    muc2.join("testbot2");
+    muc2.addUserStatusListener(new DefaultUserStatusListener(){
+      public void banned(      String actor,      String reason){
+        super.banned(actor,reason);
+        answer[0]=actor;
+        answer[1]=reason;
+      }
+    }
+);
+    MultiUserChat muc3=new MultiUserChat(getConnection(2),room);
+    muc3.join("testbot3");
+    muc3.addParticipantStatusListener(new DefaultParticipantStatusListener(){
+      public void banned(      String participant,      String actor,      String reason){
+        super.banned(participant,actor,reason);
+        answer[2]=participant;
+      }
+    }
+);
+    try {
+      muc2.banUser(getBareJID(0),"Because I'm bad");
+      fail("User2 was able to ban a room owner");
+    }
+ catch (    XMPPException e) {
+      XMPPError xmppError=e.getStanzaError();
+      assertNotNull("No XMPPError was received when banning a room owner",xmppError);
+      assertEquals("A simple participant was able to ban another participant from the room",403,xmppError.getCode());
+    }
+    muc.banUser(getBareJID(1),"Because I'm the owner");
+    Thread.sleep(300);
+    assertNull("User2 wasn't banned from the room",muc.getOccupant(room + "/testbot2"));
+    assertFalse("User2 thinks that he's still in the room",muc2.isJoined());
+    assertEquals("User2 didn't receive the correct initiator of the ban",getBareJID(0),answer[0]);
+    assertEquals("User2 didn't receive the correct reason for the banning","Because I'm the owner",answer[1]);
+    assertEquals("User3 didn't receive the correct banned JID",room + "/testbot2",answer[2]);
+    muc2.leave();
+    muc3.leave();
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

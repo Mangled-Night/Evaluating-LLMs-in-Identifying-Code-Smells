@@ -1,0 +1,21 @@
+/** 
+ * Wait for stateLock and no writers. Must be used in an outer  {@code synchronized} block to prevent interleaving with othermethods using writers. Sets writers to a negative value to create a lock for  {@link #incrementWriters()}.
+ */
+private void lockWritersExclusive(){
+  if (exclusiveLockOwner == Thread.currentThread()) {
+    WRITERS.decrementAndGet(this);
+    return;
+  }
+  lock.lock();
+  try {
+    for (; ; ) {
+      if (WRITERS.compareAndSet(this,0,-1)) {
+        exclusiveLockOwner=Thread.currentThread();
+        return;
+      }
+    }
+  }
+  finally {
+    lock.unlock();
+  }
+}

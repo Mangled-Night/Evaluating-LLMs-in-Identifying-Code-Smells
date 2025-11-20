@@ -1,0 +1,24 @@
+@SuppressWarnings("unchecked") protected AbstractProvider(){
+  Type currentType=getClass().getGenericSuperclass();
+  while (!(currentType instanceof ParameterizedType)) {
+    Class<?> currentClass=(Class<?>)currentType;
+    currentType=currentClass.getGenericSuperclass();
+  }
+  ParameterizedType parameterizedGenericSuperclass=(ParameterizedType)currentType;
+  Type[] actualTypeArguments=parameterizedGenericSuperclass.getActualTypeArguments();
+  Type elementType=actualTypeArguments[0];
+  if (elementType instanceof Class) {
+    elementClass=(Class<E>)elementType;
+  }
+ else   if (elementType instanceof ParameterizedType) {
+    ParameterizedType parameteriezedElementType=(ParameterizedType)elementType;
+    elementClass=(Class<E>)parameteriezedElementType.getRawType();
+  }
+ else   if (elementType instanceof TypeVariable) {
+    TypeVariable<?> typeVariableElementType=(TypeVariable<?>)elementType;
+    elementClass=(Class<E>)typeVariableElementType.getClass();
+  }
+ else {
+    throw new AssertionError("Element type '" + elementType + "' ("+ elementType.getClass()+ ") is neither of type Class, ParameterizedType or TypeVariable");
+  }
+}

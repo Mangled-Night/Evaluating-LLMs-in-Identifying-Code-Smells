@@ -1,0 +1,49 @@
+public abstract class FilledForm implements FormReader {
+  private final DataForm dataForm;
+  protected final TextSingleFormField formTypeFormField;
+  public FilledForm(  DataForm dataForm){
+    this.dataForm=Objects.requireNonNull(dataForm);
+    if (dataForm.getType() == DataForm.Type.cancel) {
+      throw new IllegalArgumentException("Forms of type 'cancel' are not filled nor fillable");
+    }
+    formTypeFormField=dataForm.getHiddenFormTypeField();
+  }
+  @Override public FormField getField(  String fieldName){
+    return dataForm.getField(fieldName);
+  }
+  public String getTitle(){
+    return dataForm.getTitle();
+  }
+  public StringBuilder getInstructions(){
+    StringBuilder sb=new StringBuilder();
+    for (    String instruction : dataForm.getInstructions()) {
+      sb.append(instruction).append('\n');
+    }
+    return sb;
+  }
+  public DataForm getDataForm(){
+    return dataForm;
+  }
+  public String getFormType(){
+    if (formTypeFormField == null) {
+      return null;
+    }
+    return formTypeFormField.getValue();
+  }
+  public boolean hasField(  String fieldName){
+    return dataForm.hasField(fieldName);
+  }
+  protected FormField getFieldOrThrow(  String fieldName){
+    FormField formField=getField(fieldName);
+    if (formField == null) {
+      throw new IllegalArgumentException("No field named " + fieldName);
+    }
+    return formField;
+  }
+  protected static void ensureFormType(  DataForm dataForm,  String formType){
+    String dataFormType=dataForm.getFormType();
+    if (!formType.equals(dataFormType)) {
+      throw new IllegalArgumentException("The provided data form must be of type '" + formType + "', this one was of type '"+ dataFormType+ '\'');
+    }
+  }
+}

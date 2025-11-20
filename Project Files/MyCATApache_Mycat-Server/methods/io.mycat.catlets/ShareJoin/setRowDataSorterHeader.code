@@ -1,0 +1,30 @@
+private void setRowDataSorterHeader(List<byte[]> afields,List<byte[]> bfields){
+  if (!ctx.getIsStreamOutputResult() && !isInit) {
+synchronized (joinParser) {
+      if (!isInit) {
+        LinkedHashMap<String,Integer> orderByCols=joinParser.getOrderByCols();
+        LinkedHashMap<String,Integer> childOrderByCols=joinParser.getChildByCols();
+        OrderCol[] orderCols=new OrderCol[orderByCols.size() + childOrderByCols.size()];
+        for (        String fileldName : orderByCols.keySet()) {
+          ColMeta colMeta=getCommonFieldIndex(afields,fileldName);
+          int val=orderByCols.get(fileldName);
+          int orignIndex=TableFilter.decodeOrignOrder(val);
+          int orderType=TableFilter.decodeOrderType(val);
+          orderCols[orignIndex]=new OrderCol(colMeta,orderType);
+        }
+        for (        String fileldName : childOrderByCols.keySet()) {
+          ColMeta colMeta=getCommonFieldIndex(bfields,fileldName);
+          colMeta.setColIndex(colMeta.getColIndex() + afields.size() - 1);
+          int val=childOrderByCols.get(fileldName);
+          int orignIndex=TableFilter.decodeOrignOrder(val);
+          int orderType=TableFilter.decodeOrderType(val);
+          orderCols[orignIndex]=new OrderCol(colMeta,orderType);
+        }
+        RowDataSorter tmp=new RowDataSorter(orderCols);
+        tmp.setLimit(joinParser.getOffset(),joinParser.getRowCount());
+        sorter=tmp;
+        isInit=true;
+      }
+    }
+  }
+}

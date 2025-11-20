@@ -1,0 +1,25 @@
+@Test public void randomizedTestWithRecordsLargerThanPageSize(){
+  final long pageSizeBytes=128;
+  final BytesToBytesMap map=new BytesToBytesMap(dataNodeMemoryManager,64,pageSizeBytes);
+  final Map<ByteBuffer,byte[]> expected=new HashMap<ByteBuffer,byte[]>();
+  try {
+    for (int i=0; i < 1000; i++) {
+      final byte[] key=getRandomByteArray(rand.nextInt(128));
+      final byte[] value=getRandomByteArray(rand.nextInt(128));
+      if (!expected.containsKey(ByteBuffer.wrap(key))) {
+        expected.put(ByteBuffer.wrap(key),value);
+        final BytesToBytesMap.Location loc=map.lookup(key,Platform.BYTE_ARRAY_OFFSET,key.length);
+        Assert.assertFalse(loc.isDefined());
+        Assert.assertTrue(loc.append(key,Platform.BYTE_ARRAY_OFFSET,key.length,value,Platform.BYTE_ARRAY_OFFSET,value.length));
+        Assert.assertTrue(loc.isDefined());
+        Assert.assertEquals(key.length,loc.getKeyLength());
+        Assert.assertEquals(value.length,loc.getValueLength());
+        Assert.assertTrue(arrayEquals(key,loc.getKeyBase(),loc.getKeyOffset(),key.length));
+        Assert.assertTrue(arrayEquals(value,loc.getValueBase(),loc.getValueOffset(),value.length));
+      }
+    }
+  }
+  finally {
+    map.free();
+  }
+}

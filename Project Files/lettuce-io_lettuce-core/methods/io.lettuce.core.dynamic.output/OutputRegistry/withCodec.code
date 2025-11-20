@@ -1,0 +1,22 @@
+@Override public ResolvableType withCodec(RedisCodec<?,?> codec){
+  TypeInformation<?> typeInformation=ClassTypeInformation.from(codec.getClass());
+  ResolvableType resolvableType=ResolvableType.forType(commandOutputClass,new CodecVariableTypeResolver(typeInformation));
+  while (resolvableType != ResolvableType.NONE) {
+    ResolvableType[] interfaces=resolvableType.getInterfaces();
+    for (    ResolvableType resolvableInterface : interfaces) {
+      if (resolvableInterface.getRawClass().equals(StreamingOutput.class)) {
+        return resolvableInterface.getGeneric(0);
+      }
+    }
+    resolvableType=resolvableType.getSuperType();
+  }
+  throw new IllegalStateException();
+}
+@Override public ResolvableType withCodec(RedisCodec<?,?> codec){
+  TypeInformation<?> typeInformation=ClassTypeInformation.from(codec.getClass());
+  ResolvableType resolvableType=ResolvableType.forType(commandOutputClass,new CodecVariableTypeResolver(typeInformation));
+  while (!resolvableType.getRawClass().equals(CommandOutput.class)) {
+    resolvableType=resolvableType.getSuperType();
+  }
+  return resolvableType.getGeneric(2);
+}

@@ -1,0 +1,17 @@
+@Override public void visitLocalVariable(String name,String desc,String signature,Label start,Label end,int index){
+  super.visitLocalVariable(name,desc,signature,start,end,index);
+  if (busInfo != null && !funParamDesc.equals("")) {
+    if (!isStartVisitParams && index != 0) {
+      return;
+    }
+    isStartVisitParams=true;
+    if ("this".equals(name)) {
+      return;
+    }
+    funParamDesc=funParamDesc.substring(desc.length());
+    busInfo.paramsInfo.add(new BusInfo.ParamsInfo(Type.getType(desc).getClassName(),name));
+    if (busInfo.isParamSizeNoMoreThanOne && busInfo.paramsInfo.size() > 1) {
+      busInfo.isParamSizeNoMoreThanOne=false;
+    }
+  }
+}

@@ -1,0 +1,28 @@
+/** 
+ * Test that the data is correctly chunked.
+ * @throws Exception should not happen
+ */
+@Test public void shouldSendDataCorrectly() throws Exception {
+  Random rand=new Random();
+  final byte[] controlData=new byte[256 * blockSize];
+  rand.nextBytes(controlData);
+  Verification<Data,IQ> dataVerification=new Verification<Data,IQ>(){
+    @Override public void verify(    Data request,    IQ response){
+      byte[] decodedData=request.getDataPacketExtension().getDecodedData();
+      UInt16 seq=request.getDataPacketExtension().getSeq();
+      for (int i=0; i < decodedData.length; i++) {
+        assertEquals(controlData[(seq.intValue() * blockSize) + i],decodedData[i]);
+      }
+    }
+  }
+;
+  IQ resultIQ=IBBPacketUtils.createResultIQ(initiatorJID,targetJID);
+  for (int i=0; i < controlData.length / blockSize; i++) {
+    protocol.addResponse(resultIQ,incrementingSequence,dataVerification);
+  }
+  InBandBytestreamSession session=new InBandBytestreamSession(connection,initBytestream,initiatorJID);
+  OutputStream outputStream=session.getOutputStream();
+  outputStream.write(controlData);
+  outputStream.flush();
+  protocol.verifyAll();
+}

@@ -1,0 +1,15 @@
+private Map<Vector3i,Collection<EntityRef>> createChunkPosToUnsavedOwnerLessEntitiesMap(){
+  Map<Vector3i,Collection<EntityRef>> chunkPosToEntitiesMap=Maps.newHashMap();
+  for (  EntityRef entity : privateEntityManager.getEntitiesWith(LocationComponent.class)) {
+    if (entity.isPersistent() && !entity.getOwner().exists() && !entity.hasComponent(ClientComponent.class)&& !entity.isAlwaysRelevant()) {
+      LocationComponent locationComponent=entity.getComponent(LocationComponent.class);
+      if (locationComponent != null) {
+        Vector3f loc=locationComponent.getWorldPosition(new Vector3f());
+        Vector3i chunkPos=Chunks.toChunkPos((int)loc.x,(int)loc.y,(int)loc.z,new Vector3i());
+        Collection<EntityRef> collection=chunkPosToEntitiesMap.computeIfAbsent(chunkPos,x -> new ArrayList<>());
+        collection.add(entity);
+      }
+    }
+  }
+  return chunkPosToEntitiesMap;
+}

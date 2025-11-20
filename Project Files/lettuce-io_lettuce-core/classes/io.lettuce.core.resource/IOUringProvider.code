@@ -1,0 +1,87 @@
+/** 
+ * Wraps and provides io_uring classes. This is to protect the user from  {@link ClassNotFoundException}'s caused by the absence of the  {@literal netty-incubator-transport-native-io_uring} library during runtime. Internal API.
+ * @author Mark Paluch
+ * @since 6.1
+ */
+public class IOUringProvider {
+  private static final InternalLogger logger=InternalLoggerFactory.getInstance(IOUringProvider.class);
+  private static final String IOURING_ENABLED_KEY="io.lettuce.core.iouring";
+  private static final boolean IOURING_ENABLED=Boolean.parseBoolean(SystemPropertyUtil.get(IOURING_ENABLED_KEY,"true"));
+  private static final boolean IOURING_AVAILABLE;
+  private static final EventLoopResources IOURING_RESOURCES;
+static {
+    boolean availability;
+    try {
+      Class.forName("io.netty.incubator.channel.uring.IOUring");
+      availability=IOUring.isAvailable();
+    }
+ catch (    ClassNotFoundException e) {
+      availability=false;
+    }
+    IOURING_AVAILABLE=availability;
+    if (IOURING_AVAILABLE) {
+      logger.debug("Starting with io_uring library");
+      IOURING_RESOURCES=new EventLoopResourcesWrapper(IOUringResources.INSTANCE,IOUringProvider::checkForIOUringLibrary);
+    }
+ else {
+      logger.debug("Starting without optional io_uring library");
+      IOURING_RESOURCES=new EventLoopResourcesWrapper(UnavailableResources.INSTANCE,IOUringProvider::checkForIOUringLibrary);
+    }
+  }
+  /** 
+ * @return {@code true} if io_uring is available.
+ */
+  public static boolean isAvailable(){
+    return IOURING_AVAILABLE && IOURING_ENABLED;
+  }
+  /** 
+ * Check whether the io_uring library is available on the class path.
+ * @throws IllegalStateException if the {@literal netty-incubator-transport-native-io_uring} library is not available
+ */
+  static void checkForIOUringLibrary(){
+    LettuceAssert.assertState(IOURING_ENABLED,String.format("io_uring use is disabled via System properties (%s)",IOURING_ENABLED_KEY));
+    LettuceAssert.assertState(isAvailable(),"netty-incubator-transport-native-io_uring is not available. Make sure netty-incubator-transport-native-io_uring library on the class path and supported by your operating system.");
+  }
+  /** 
+ * Returns the  {@link EventLoopResources} for io_uring-backed transport. Check availability with {@link #isAvailable()}prior to obtaining the resources.
+ * @return the {@link EventLoopResources}. May be unavailable.
+ */
+  public static EventLoopResources getResources(){
+    return IOURING_RESOURCES;
+  }
+  /** 
+ * Apply Keep-Alive options.
+ * @since 6.1
+ */
+  public static void applyKeepAlive(  Bootstrap bootstrap,  int count,  Duration idle,  Duration interval){
+    bootstrap.option(IOUringChannelOption.TCP_KEEPCNT,count);
+    bootstrap.option(IOUringChannelOption.TCP_KEEPIDLE,Math.toIntExact(idle.getSeconds()));
+    bootstrap.option(IOUringChannelOption.TCP_KEEPINTVL,Math.toIntExact(interval.getSeconds()));
+  }
+  /** 
+ * {@link EventLoopResources} for available io_uring.
+ */
+  enum IOUringResources implements EventLoopResources {  INSTANCE;   @Override public boolean matches(  Class<? extends EventExecutorGroup> type){
+    LettuceAssert.notNull(type,"EventLoopGroup type must not be null");
+    return type.equals(eventLoopGroupClass());
+  }
+  @Override public Class<? extends EventLoopGroup> eventLoopGroupClass(){
+    return IOUringEventLoopGroup.class;
+  }
+  @Override public EventLoopGroup newEventLoopGroup(  int nThreads,  ThreadFactory threadFactory){
+    return new IOUringEventLoopGroup(nThreads,threadFactory);
+  }
+  @Override public Class<? extends Channel> socketChannelClass(){
+    return IOUringSocketChannel.class;
+  }
+  @Override public Class<? extends Channel> domainSocketChannelClass(){
+    return IOUringSocketChannel.class;
+  }
+  @Override public Class<? extends DatagramChannel> datagramChannelClass(){
+    return IOUringDatagramChannel.class;
+  }
+  @Override public SocketAddress newSocketAddress(  String socketPath){
+    return new DomainSocketAddress(socketPath);
+  }
+}
+}

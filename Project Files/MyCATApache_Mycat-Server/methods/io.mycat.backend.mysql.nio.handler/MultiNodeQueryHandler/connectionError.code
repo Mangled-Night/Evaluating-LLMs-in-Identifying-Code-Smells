@@ -1,0 +1,14 @@
+@Override public void connectionError(Throwable e,BackendConnection conn){
+  LOGGER.info("backend connect",e);
+  ErrorPacket errPacket=new ErrorPacket();
+  errPacket.errno=ErrorCode.ER_ABORTING_CONNECTION;
+  String errMsg=null;
+  if (conn == null) {
+    errMsg=e.toString();
+  }
+ else {
+    errMsg="Backend connect Error, Connection{DataHost[" + conn.getHost() + ":"+ conn.getPort()+ "],Schema["+ conn.getSchema()+ "]} refused";
+  }
+  errPacket.message=StringUtil.encode(errMsg,session.getSource().getCharset());
+  executeError(conn,errPacket);
+}

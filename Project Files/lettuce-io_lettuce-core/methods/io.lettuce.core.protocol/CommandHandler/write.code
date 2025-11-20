@@ -1,0 +1,24 @@
+/** 
+ * @see io.netty.channel.ChannelDuplexHandler#write(io.netty.channel.ChannelHandlerContext,java.lang.Object,io.netty.channel.ChannelPromise)
+ */
+@Override @SuppressWarnings("unchecked") public void write(ChannelHandlerContext ctx,Object msg,ChannelPromise promise) throws Exception {
+  if (debugEnabled) {
+    logger.debug("{} write(ctx, {}, promise)",logPrefix(),msg);
+  }
+  if (msg instanceof RedisCommand) {
+    writeSingleCommand(ctx,(RedisCommand<?,?,?>)msg,promise);
+    return;
+  }
+  if (msg instanceof List) {
+    List<RedisCommand<?,?,?>> batch=(List<RedisCommand<?,?,?>>)msg;
+    if (batch.size() == 1) {
+      writeSingleCommand(ctx,batch.get(0),promise);
+      return;
+    }
+    writeBatch(ctx,batch,promise);
+    return;
+  }
+  if (msg instanceof Collection) {
+    writeBatch(ctx,(Collection<RedisCommand<?,?,?>>)msg,promise);
+  }
+}

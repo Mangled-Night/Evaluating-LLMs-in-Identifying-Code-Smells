@@ -1,0 +1,27 @@
+public NodeElement parseNode(XmlPullParser parser) throws XmlPullParserException, IOException, ParseException {
+  final int initialDepth=parser.getDepth();
+  final NodeInfo nodeInfo=NodeInfoParser.parse(parser);
+  List<TimestampElement> timestampElements=new ArrayList<>();
+  outerloop:   while (true) {
+    final XmlPullParser.Event eventType=parser.next();
+    final String name=parser.getName();
+switch (eventType) {
+case START_ELEMENT:
+switch (name) {
+case TimestampElement.ELEMENT:
+        TimestampElement timestampElement=parseTimestampElement(parser);
+      timestampElements.add(timestampElement);
+    break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return new NodeElement(nodeInfo,timestampElements);
+}

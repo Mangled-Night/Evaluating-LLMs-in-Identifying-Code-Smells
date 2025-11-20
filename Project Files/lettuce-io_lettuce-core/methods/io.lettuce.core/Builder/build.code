@@ -1,0 +1,73 @@
+/** 
+ * Create a new instance of  {@link ClientOptions}.
+ * @return new instance of {@link ClientOptions}
+ */
+public ClientOptions build(){
+  return new ClientOptions(this);
+}
+/** 
+ * @return the RedisURI.
+ */
+public RedisURI build(){
+  if (sentinels.isEmpty() && LettuceStrings.isEmpty(host) && LettuceStrings.isEmpty(socket)) {
+    throw new IllegalStateException("Cannot build a RedisURI. One of the following must be provided Host, Socket or Sentinel");
+  }
+  RedisURI redisURI=new RedisURI();
+  redisURI.setHost(host);
+  redisURI.setPort(port);
+  if (credentialsProvider != null) {
+    redisURI.setCredentialsProvider(credentialsProvider);
+  }
+ else {
+    redisURI.setUsername(username);
+    if (password != null) {
+      redisURI.setPassword(password);
+    }
+  }
+  redisURI.setDatabase(database);
+  redisURI.setClientName(clientName);
+  redisURI.setSentinelMasterId(sentinelMasterId);
+  for (  RedisURI sentinel : sentinels) {
+    sentinel.setTimeout(timeout);
+    redisURI.getSentinels().add(sentinel);
+  }
+  redisURI.setSocket(socket);
+  redisURI.setSsl(ssl);
+  redisURI.setStartTls(startTls);
+  redisURI.setVerifyPeer(verifyMode);
+  redisURI.setTimeout(timeout);
+  return redisURI;
+}
+/** 
+ * Create a new instance of  {@link SocketOptions}
+ * @return new instance of {@link SocketOptions}
+ */
+public SocketOptions build(){
+  return new SocketOptions(this);
+}
+/** 
+ * Create a new instance of  {@link KeepAliveOptions}
+ * @return new instance of {@link KeepAliveOptions}
+ */
+public KeepAliveOptions build(){
+  return new KeepAliveOptions(this);
+}
+/** 
+ * Create a new instance of  {@link SslOptions}
+ * @return new instance of {@link SslOptions}
+ */
+public SslOptions build(){
+  return new SslOptions(this);
+}
+/** 
+ * Create a new instance of  {@link TimeoutOptions}.
+ * @return new instance of {@link TimeoutOptions}
+ */
+public TimeoutOptions build(){
+  if (timeoutCommands) {
+    if (source == null) {
+      throw new IllegalStateException("TimeoutSource is required for enabled timeouts");
+    }
+  }
+  return new TimeoutOptions(timeoutCommands,applyConnectionTimeout,source);
+}

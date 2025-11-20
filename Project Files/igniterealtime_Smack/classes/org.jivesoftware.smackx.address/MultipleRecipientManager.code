@@ -1,0 +1,195 @@
+/** 
+ * A MultipleRecipientManager allows to send packets to multiple recipients by making use of <a href="http://www.xmpp.org/extensions/jep-0033.html">XEP-33: Extended Stanza Addressing</a>. It also allows to send replies to packets that were sent to multiple recipients.
+ * @author Gaston Dombiak
+ */
+public class MultipleRecipientManager {
+  /** 
+ * Sends the specified stanza to the collection of specified recipients using the specified connection. If the server has support for XEP-33 then only one stanza is going to be sent to the server with the multiple recipient instructions. However, if XEP-33 is not supported by the server then the client is going to send the stanza to each recipient.
+ * @param connection the connection to use to send the packet.
+ * @param packet     the stanza to send to the list of recipients.
+ * @param to         the collection of JIDs to include in the TO list or <code>null</code> if no TOlist exists.
+ * @param cc         the collection of JIDs to include in the CC list or <code>null</code> if no CClist exists.
+ * @param bcc        the collection of JIDs to include in the BCC list or <code>null</code> if no BCClist exists.
+ * @throws FeatureNotSupportedException if special XEP-33 features where requested, but theserver does not support them.
+ * @throws XMPPErrorException if server does not support XEP-33: Extended Stanza Addressing andsome XEP-33 specific features were requested.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  public static void send(  XMPPConnection connection,  Stanza packet,  Collection<? extends Jid> to,  Collection<? extends Jid> cc,  Collection<? extends Jid> bcc) throws NoResponseException, XMPPErrorException, FeatureNotSupportedException, NotConnectedException, InterruptedException {
+    send(connection,packet,to,cc,bcc,null,null,false);
+  }
+  /** 
+ * Sends the specified stanza to the collection of specified recipients using the specified connection. If the server has support for XEP-33 then only one stanza is going to be sent to the server with the multiple recipient instructions. However, if XEP-33 is not supported by the server then the client is going to send the stanza to each recipient.
+ * @param connection the connection to use to send the packet.
+ * @param packet the stanza to send to the list of recipients.
+ * @param to the collection of JIDs to include in the TO list or <code>null</code> if no TO list exists.
+ * @param cc the collection of JIDs to include in the CC list or <code>null</code> if no CC list exists.
+ * @param bcc the collection of JIDs to include in the BCC list or <code>null</code> if no BCC listexists.
+ * @param replyTo address to which all replies are requested to be sent or <code>null</code>indicating that they can reply to any address.
+ * @param replyRoom JID of a MUC room to which responses should be sent or <code>null</code>indicating that they can reply to any address.
+ * @param noReply true means that receivers should not reply to the message.
+ * @throws XMPPErrorException if server does not support XEP-33: Extended Stanza Addressing andsome XEP-33 specific features were requested.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws FeatureNotSupportedException if special XEP-33 features where requested, but theserver does not support them.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  public static void send(  XMPPConnection connection,  Stanza packet,  Collection<? extends Jid> to,  Collection<? extends Jid> cc,  Collection<? extends Jid> bcc,  Jid replyTo,  Jid replyRoom,  boolean noReply) throws NoResponseException, XMPPErrorException, FeatureNotSupportedException, NotConnectedException, InterruptedException {
+    if (to != null && to.size() == 1 && (cc == null || cc.isEmpty()) && (bcc == null || bcc.isEmpty()) && !noReply && StringUtils.isNullOrEmpty(replyTo) && StringUtils.isNullOrEmpty(replyRoom)) {
+      Jid toJid=to.iterator().next();
+      packet.setTo(toJid);
+      connection.sendStanza(packet);
+      return;
+    }
+    DomainBareJid serviceAddress=getMultipleRecipientServiceAddress(connection);
+    if (serviceAddress != null) {
+      sendThroughService(connection,packet,to,cc,bcc,replyTo,replyRoom,noReply,serviceAddress);
+    }
+ else {
+      if (noReply || replyTo != null || replyRoom != null) {
+        throw new FeatureNotSupportedException("Extended Stanza Addressing");
+      }
+      sendToIndividualRecipients(connection,packet,to,cc,bcc);
+    }
+  }
+  /** 
+ * Sends a reply to a previously received stanza that was sent to multiple recipients. Before attempting to send the reply message some checks are performed. If any of those checks fails, then an XMPPException is going to be thrown with the specific error detail.
+ * @param connection the connection to use to send the reply.
+ * @param original   the previously received stanza that was sent to multiple recipients.
+ * @param reply      the new message to send as a reply.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws FeatureNotSupportedException if a requested feature is not supported by the remote entity.
+ * @throws NoResponseException if there was no response from the remote entity.
+ */
+  public static void reply(  XMPPConnection connection,  Message original,  Message reply) throws XMPPErrorException, InterruptedException, NotConnectedException, NoResponseException, FeatureNotSupportedException {
+    MultipleRecipientInfo info=getMultipleRecipientInfo(original);
+    if (info == null) {
+      throw new IllegalArgumentException("Original message does not contain multiple recipient info");
+    }
+    if (info.shouldNotReply()) {
+      throw new IllegalArgumentException("Original message should not be replied");
+    }
+    if (info.getReplyRoom() != null) {
+      throw new IllegalArgumentException("Reply should be sent through a room");
+    }
+    if (original.getThread() != null) {
+      reply.asBuilder().setThread(original.getThread()).build();
+    }
+    MultipleAddresses.Address replyAddress=info.getReplyAddress();
+    if (replyAddress != null && replyAddress.getJid() != null) {
+      reply.setTo(replyAddress.getJid());
+      connection.sendStanza(reply);
+    }
+ else {
+      List<Jid> to=new ArrayList<>(info.getTOAddresses().size());
+      List<Jid> cc=new ArrayList<>(info.getCCAddresses().size());
+      for (      MultipleAddresses.Address jid : info.getTOAddresses()) {
+        to.add(jid.getJid());
+      }
+      for (      MultipleAddresses.Address jid : info.getCCAddresses()) {
+        cc.add(jid.getJid());
+      }
+      if (!to.contains(original.getFrom()) && !cc.contains(original.getFrom())) {
+        to.add(original.getFrom());
+      }
+      EntityFullJid from=connection.getUser();
+      if (!to.remove(from) && !cc.remove(from)) {
+        EntityBareJid bareJID=from.asEntityBareJid();
+        to.remove(bareJID);
+        cc.remove(bareJID);
+      }
+      send(connection,reply,to,cc,null,null,null,false);
+    }
+  }
+  /** 
+ * Returns the  {@link MultipleRecipientInfo} contained in the specified stanza or<code>null</code> if none was found. Only packets sent to multiple recipients will contain such information.
+ * @param packet the stanza to check.
+ * @return the MultipleRecipientInfo contained in the specified stanza or <code>null</code>if none was found.
+ */
+  public static MultipleRecipientInfo getMultipleRecipientInfo(  Stanza packet){
+    MultipleAddresses extension=packet.getExtension(MultipleAddresses.class);
+    return extension == null ? null : new MultipleRecipientInfo(extension);
+  }
+  private static void sendToIndividualRecipients(  XMPPConnection connection,  StanzaView stanza,  Collection<? extends Jid> to,  Collection<? extends Jid> cc,  Collection<? extends Jid> bcc) throws NotConnectedException, InterruptedException {
+    final StanzaFactory stanzaFactory=connection.getStanzaFactory();
+    final StanzaBuilder<?> stanzaBuilder;
+    if (stanza instanceof Message) {
+      Message message=(Message)stanza;
+      stanzaBuilder=stanzaFactory.buildMessageStanzaFrom(message);
+    }
+ else     if (stanza instanceof Presence) {
+      Presence presence=(Presence)stanza;
+      stanzaBuilder=stanzaFactory.buildPresenceStanzaFrom(presence);
+    }
+ else     if (stanza instanceof IQ) {
+      throw new IllegalArgumentException("IQ stanzas have no supported fallback in case no XEP-0033 service is available");
+    }
+ else {
+      throw new AssertionError();
+    }
+    if (to == null)     to=Collections.emptyList();
+    if (cc == null)     cc=Collections.emptyList();
+    if (bcc == null)     bcc=Collections.emptyList();
+    final int numRecipients=to.size() + cc.size() + bcc.size();
+    final List<Jid> recipients=new ArrayList<>(numRecipients);
+    recipients.addAll(to);
+    recipients.addAll(cc);
+    recipients.addAll(bcc);
+    final List<Stanza> stanzasToSend=new ArrayList<>(numRecipients);
+    for (    Jid recipient : recipients) {
+      Stanza stanzaToSend=stanzaBuilder.to(recipient).build();
+      stanzasToSend.add(stanzaToSend);
+    }
+    for (    Stanza stanzaToSend : stanzasToSend) {
+      connection.sendStanza(stanzaToSend);
+    }
+  }
+  private static void sendThroughService(  XMPPConnection connection,  Stanza packet,  Collection<? extends Jid> to,  Collection<? extends Jid> cc,  Collection<? extends Jid> bcc,  Jid replyTo,  Jid replyRoom,  boolean noReply,  DomainBareJid serviceAddress) throws NotConnectedException, InterruptedException {
+    MultipleAddresses multipleAddresses=new MultipleAddresses();
+    if (to != null) {
+      for (      Jid jid : to) {
+        multipleAddresses.addAddress(MultipleAddresses.Type.to,jid,null,null,false,null);
+      }
+    }
+    if (cc != null) {
+      for (      Jid jid : cc) {
+        multipleAddresses.addAddress(MultipleAddresses.Type.to,jid,null,null,false,null);
+      }
+    }
+    if (bcc != null) {
+      for (      Jid jid : bcc) {
+        multipleAddresses.addAddress(MultipleAddresses.Type.bcc,jid,null,null,false,null);
+      }
+    }
+    if (noReply) {
+      multipleAddresses.setNoReply();
+    }
+ else {
+      if (replyTo != null) {
+        multipleAddresses.addAddress(MultipleAddresses.Type.replyto,replyTo,null,null,false,null);
+      }
+      if (replyRoom != null) {
+        multipleAddresses.addAddress(MultipleAddresses.Type.replyroom,replyRoom,null,null,false,null);
+      }
+    }
+    packet.setTo(serviceAddress);
+    packet.addExtension(multipleAddresses);
+    connection.sendStanza(packet);
+  }
+  /** 
+ * Returns the address of the multiple recipients service. To obtain such address service discovery is going to be used on the connected server and if none was found then another attempt will be tried on the server items. The discovered information is going to be cached for 24 hours.
+ * @param connection the connection to use for disco. The connected server is going to bequeried.
+ * @return the address of the multiple recipients service or <code>null</code> if none was found.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  private static DomainBareJid getMultipleRecipientServiceAddress(  XMPPConnection connection) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    ServiceDiscoveryManager sdm=ServiceDiscoveryManager.getInstanceFor(connection);
+    return sdm.findService(MultipleAddresses.NAMESPACE,true);
+  }
+}

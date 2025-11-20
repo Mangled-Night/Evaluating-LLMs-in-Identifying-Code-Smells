@@ -1,0 +1,18 @@
+@ParameterizedTest @EnumSource(SmackTestUtil.XmlPullParserKind.class) public void fasteningDeserializationTest(SmackTestUtil.XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+  String xml="<apply-to xmlns='urn:xmpp:fasten:0' id='origin-id-1'>" + "    <i-like-this xmlns='urn:example:like'/>" + "    <external name='custom' element-namespace='urn:example:custom'/>"+ "    <external name='body'/>"+ "</apply-to>";
+  FasteningElement parsed=SmackTestUtil.parse(xml,FasteningElementProvider.class,parserKind);
+  assertNotNull(parsed);
+  assertEquals(new OriginIdElement("origin-id-1"),parsed.getReferencedStanzasOriginId());
+  assertFalse(parsed.isRemovingElement());
+  assertFalse(parsed.isShellElement());
+  assertEquals(1,parsed.getWrappedPayloads().size());
+  assertEquals("i-like-this",parsed.getWrappedPayloads().get(0).getElementName());
+  assertEquals("urn:example:like",parsed.getWrappedPayloads().get(0).getNamespace());
+  assertEquals(2,parsed.getExternalPayloads().size());
+  ExternalElement custom=parsed.getExternalPayloads().get(0);
+  assertEquals("custom",custom.getName());
+  assertEquals("urn:example:custom",custom.getElementNamespace());
+  ExternalElement body=parsed.getExternalPayloads().get(1);
+  assertEquals("body",body.getName());
+  assertNull(body.getElementNamespace());
+}

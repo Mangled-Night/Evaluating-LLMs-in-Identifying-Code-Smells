@@ -1,0 +1,21 @@
+/** 
+ * Tests the creation of a roster and then simulates abrupt termination. Cached presences must go offline. At reconnection, presences must go back to online. <ol> <li> Create some entries <li> Breack the connection <li> Check offline presences <li> Whait for automatic reconnection <li> Check online presences </ol>
+ */
+public void testOfflinePresencesAfterDisconnection() throws Exception {
+  Roster roster=getConnection(0).getRoster();
+  roster.createEntry(getBareJID(1),"gato11",null);
+  roster.createEntry(getBareJID(2),"gato12",null);
+  long initial=System.currentTimeMillis();
+  while (System.currentTimeMillis() - initial < 2000 && (!roster.getPresence(getBareJID(1)).isAvailable() || !roster.getPresence(getBareJID(2)).isAvailable())) {
+    Thread.sleep(100);
+  }
+  Thread.sleep(200);
+  getConnection(0).notifyConnectionError(new Exception("Simulated Error"));
+  Presence presence=roster.getPresence(getBareJID(1));
+  assertFalse("Unavailable presence not found for offline user",presence.isAvailable());
+  assertEquals("Unavailable presence not found for offline user",Presence.Type.unavailable,presence.getType());
+  Thread.sleep(12200);
+  presence=roster.getPresence(getBareJID(1));
+  assertTrue("Presence not found for user",presence.isAvailable());
+  assertEquals("Presence should be online after a connection reconnection",Presence.Type.available,presence.getType());
+}

@@ -1,0 +1,21 @@
+/** 
+ * Note: this method must be thread-safe!
+ * @param region the thread-safe region
+ * @return an image of that region
+ */
+private BufferedImage rasterize(Region region){
+  int width=region.getRegion().getSizeX();
+  int height=region.getRegion().getSizeZ();
+  WritableRaster raster=colorModel.createCompatibleWritableRaster(width,height);
+  BufferedImage image=new BufferedImage(colorModel,raster,false,null);
+  Graphics2D g=image.createGraphics();
+  g.setColor(Color.BLACK);
+  g.fillRect(0,0,width,height);
+  try {
+    facetLayers.stream().filter(FacetLayer::isVisible).forEach(layer -> layer.render(image,region));
+  }
+  finally {
+    g.dispose();
+  }
+  return image;
+}

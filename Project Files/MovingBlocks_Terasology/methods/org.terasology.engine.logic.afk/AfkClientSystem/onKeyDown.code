@@ -1,0 +1,14 @@
+@Priority(EventPriority.PRIORITY_HIGH) @ReceiveEvent public void onKeyDown(KeyDownEvent event,EntityRef entity){
+  if (requireConnection()) {
+    return;
+  }
+  AfkComponent component=entity.getComponent(AfkComponent.class);
+  if (component != null && component.afk) {
+    long afkTime=time.getGameTimeInMs() - lastActive;
+    if (afkTime <= AFK_FREEDOM || event.getKey() == Keyboard.Key.ESCAPE) {
+      return;
+    }
+    updateActive();
+    disable();
+  }
+}

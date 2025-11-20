@@ -1,0 +1,38 @@
+/** 
+ * 单例
+ * @param instrumentation JVM增强
+ * @return ArthasServer单例
+ * @throws Throwable
+ */
+public synchronized static ArthasBootstrap getInstance(Instrumentation instrumentation,String args) throws Throwable {
+  if (arthasBootstrap != null) {
+    return arthasBootstrap;
+  }
+  Map<String,String> argsMap=FeatureCodec.DEFAULT_COMMANDLINE_CODEC.toMap(args);
+  Map<String,String> mapWithPrefix=new HashMap<String,String>(argsMap.size());
+  for (  Entry<String,String> entry : argsMap.entrySet()) {
+    mapWithPrefix.put("arthas." + entry.getKey(),entry.getValue());
+  }
+  return getInstance(instrumentation,mapWithPrefix);
+}
+/** 
+ * 单例
+ * @param instrumentation JVM增强
+ * @return ArthasServer单例
+ * @throws Throwable
+ */
+public synchronized static ArthasBootstrap getInstance(Instrumentation instrumentation,Map<String,String> args) throws Throwable {
+  if (arthasBootstrap == null) {
+    arthasBootstrap=new ArthasBootstrap(instrumentation,args);
+  }
+  return arthasBootstrap;
+}
+/** 
+ * @return ArthasServer单例
+ */
+public static ArthasBootstrap getInstance(){
+  if (arthasBootstrap == null) {
+    throw new IllegalStateException("ArthasBootstrap must be initialized before!");
+  }
+  return arthasBootstrap;
+}

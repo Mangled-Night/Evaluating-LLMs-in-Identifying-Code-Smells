@@ -1,0 +1,13 @@
+@Test void testMTCConcurrentConcurrentWrite() throws Throwable {
+  ThreadPoolExecutor executor=new ThreadPoolExecutor(2,2,10,TimeUnit.SECONDS,new ArrayBlockingQueue<>(4));
+  try {
+    MTCConcurrentConcurrentWrite instance=new MTCConcurrentConcurrentWrite(command,clientResources);
+    CompletableFuture<Void> part1=CompletableFuture.runAsync(instance::thread1,executor);
+    CompletableFuture<Void> part2=CompletableFuture.runAsync(instance::thread2,executor);
+    CompletableFuture<Void> sync=CompletableFuture.allOf(part1,part2);
+    sync.get(10,TimeUnit.SECONDS);
+  }
+  finally {
+    executor.shutdownNow();
+  }
+}

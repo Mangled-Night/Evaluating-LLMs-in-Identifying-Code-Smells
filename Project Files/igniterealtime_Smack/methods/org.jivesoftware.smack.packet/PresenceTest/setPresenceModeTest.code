@@ -1,0 +1,19 @@
+@Test public void setPresenceModeTest() throws IOException, SAXException {
+  Presence.Mode mode1=Presence.Mode.dnd;
+  final int priority=10;
+  final String status="This is a test of the emergency broadcast system.";
+  Presence.Mode mode2=Presence.Mode.chat;
+  StringBuilder controlBuilder=new StringBuilder();
+  controlBuilder.append("<presence>").append("<status>").append(status).append("</status>").append("<priority>").append(priority).append("</priority>").append("<show>").append(mode1).append("</show>").append("</presence>");
+  String control=controlBuilder.toString();
+  Presence presenceBuildWithBuilder=StanzaBuilder.buildPresence().ofType(Presence.Type.available).setStatus(status).setPriority(priority).setMode(mode1).build();
+  assertEquals(mode1,presenceBuildWithBuilder.getMode());
+  assertXmlSimilar(control,presenceBuildWithBuilder.toXML(StreamOpen.CLIENT_NAMESPACE).toString());
+  controlBuilder=new StringBuilder();
+  controlBuilder.append("<presence>").append("<show>").append(mode2).append("</show>").append("</presence>");
+  control=controlBuilder.toString();
+  PresenceBuilder presenceModeSet=getNewPresence();
+  presenceModeSet.setMode(mode2);
+  assertEquals(mode2,presenceModeSet.getMode());
+  assertXmlSimilar(control,presenceModeSet.build().toXML(StreamOpen.CLIENT_NAMESPACE).toString());
+}

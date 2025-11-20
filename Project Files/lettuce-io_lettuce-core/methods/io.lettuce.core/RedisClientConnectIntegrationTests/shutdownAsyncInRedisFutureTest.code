@@ -1,0 +1,10 @@
+@Test void shutdownAsyncInRedisFutureTest(){
+  RedisClient redisClient=RedisClient.create();
+  StatefulRedisConnection<String,String> connection=redisClient.connect(redis(host,port).build());
+  CompletableFuture<Void> f=connection.async().get("key1").thenCompose(result -> {
+    connection.close();
+    return redisClient.shutdownAsync(0,0,SECONDS);
+  }
+).toCompletableFuture();
+  TestFutures.awaitOrTimeout(f);
+}

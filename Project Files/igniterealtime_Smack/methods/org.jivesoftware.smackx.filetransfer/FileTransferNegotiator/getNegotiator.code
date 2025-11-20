@@ -1,0 +1,23 @@
+private StreamNegotiator getNegotiator(final ListSingleFormField field) throws NoAcceptableTransferMechanisms {
+  String variable;
+  boolean isByteStream=false;
+  boolean isIBB=false;
+  for (  FormField.Option option : field.getOptions()) {
+    variable=option.getValueString();
+    if (variable.equals(Bytestream.NAMESPACE) && !IBB_ONLY) {
+      isByteStream=true;
+    }
+ else     if (variable.equals(DataPacketExtension.NAMESPACE)) {
+      isIBB=true;
+    }
+  }
+  if (!isByteStream && !isIBB) {
+    throw new FileTransferException.NoAcceptableTransferMechanisms();
+  }
+  if (isByteStream) {
+    return byteStreamTransferManager;
+  }
+ else {
+    return inbandTransferManager;
+  }
+}

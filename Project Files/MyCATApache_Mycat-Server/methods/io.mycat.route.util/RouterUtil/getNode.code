@@ -1,0 +1,64 @@
+private static RouteResultsetNode[] getNode(RouteResultset rrs,String orgSql,Set<String> tablesRouteSet,String dataNode,boolean is,String tableName){
+  Object[] subTables=tablesRouteSet.toArray();
+  RouteResultsetNode[] nodes=new RouteResultsetNode[subTables.length];
+  Map<String,Integer> dataNodeSlotMap=rrs.getDataNodeSlotMap();
+  for (int i=0; i < nodes.length; i++) {
+    String table=String.valueOf(subTables[i]);
+    String changeSql=orgSql;
+    nodes[i]=new RouteResultsetNode(dataNode,rrs.getSqlType(),changeSql);
+    nodes[i].setSubTableName(table);
+    if (is) {
+      Map<String,List<String>> subTableMaps=rrs.getSubTableMaps();
+      if (subTableMaps != null) {
+        List<String> list=subTableMaps.get(tableName);
+        int index=0;
+        for (        String subTable : list) {
+          if (table.equals(subTable)) {
+            break;
+          }
+          index++;
+        }
+        for (        String tableSource : subTableMaps.keySet()) {
+          Map<String,String> subTableNames=nodes[i].getSubTableNames();
+          if (subTableNames == null) {
+            subTableNames=Maps.newHashMap();
+            nodes[i].setSubTableNames(subTableNames);
+          }
+          if (tableSource.equals(tableName)) {
+            subTableNames.put(tableSource,table);
+          }
+ else {
+            subTableNames.put(tableSource,subTableMaps.get(tableSource).get(index));
+          }
+        }
+      }
+    }
+ else {
+      Map<String,List<String>> subTableMaps=rrs.getSubTableMaps();
+      if (subTableMaps != null) {
+        for (        String tableSource : subTableMaps.keySet()) {
+          Map<String,String> subTableNames=nodes[i].getSubTableNames();
+          if (subTableNames == null) {
+            subTableNames=Maps.newHashMap();
+            nodes[i].setSubTableNames(subTableNames);
+          }
+          subTableNames.put(tableSource,subTableMaps.get(tableSource).get(i));
+        }
+      }
+    }
+    nodes[i].setSource(rrs);
+    if (rrs.getDataNodeSlotMap().containsKey(dataNode)) {
+      nodes[i].setSlot(rrs.getDataNodeSlotMap().get(dataNode));
+    }
+    if (rrs.getCanRunInReadDB() != null) {
+      nodes[i].setCanRunInReadDB(rrs.getCanRunInReadDB());
+    }
+    if (dataNodeSlotMap.containsKey(table)) {
+      nodes[i].setSlot(dataNodeSlotMap.get(table));
+    }
+    if (rrs.getRunOnSlave() != null) {
+      nodes[0].setRunOnSlave(rrs.getRunOnSlave());
+    }
+  }
+  return nodes;
+}

@@ -1,0 +1,11 @@
+@Test void basic(){
+  StatefulRedisConnection<String,String> connection=client.connect();
+  connection.setAutoFlushCommands(false);
+  int iterations=100;
+  List<RedisFuture<?>> futures=triggerSet(connection.async(),iterations);
+  verifyNotExecuted(iterations);
+  connection.flushCommands();
+  Futures.awaitAll(5,TimeUnit.SECONDS,futures.toArray(new RedisFuture[futures.size()]));
+  verifyExecuted(iterations);
+  connection.close();
+}

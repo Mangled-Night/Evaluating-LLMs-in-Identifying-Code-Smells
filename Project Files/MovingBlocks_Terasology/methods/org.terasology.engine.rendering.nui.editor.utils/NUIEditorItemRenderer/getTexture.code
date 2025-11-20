@@ -1,0 +1,39 @@
+@Override public Texture getTexture(JsonTreeValue value){
+  String textureName=null;
+  if (value.getType() == JsonTreeValue.Type.KEY_VALUE_PAIR) {
+    textureName=ATTRIBUTE_TEXTURE_NAME;
+  }
+ else   if (value.getType() == JsonTreeValue.Type.OBJECT) {
+    JsonTree node=(JsonTree)editorTreeViewModel.getNodeByValue(value);
+    if (node != null) {
+      if (node.isRoot()) {
+        return null;
+      }
+ else       if (!node.isRoot() && "elements".equals(node.getParent().getValue().getKey())) {
+        textureName=node.getValue().getKey();
+      }
+ else {
+        for (        Tree<JsonTreeValue> child : node.getChildren()) {
+          JsonTreeValue childValue=child.getValue();
+          if (childValue.getType() == JsonTreeValue.Type.KEY_VALUE_PAIR && "type".equals(childValue.getKey())) {
+            textureName=(String)childValue.getValue();
+          }
+        }
+      }
+    }
+    if (textureName == null) {
+      textureName=OBJECT_TEXTURE_NAME;
+    }
+  }
+ else   if (value.getType() == JsonTreeValue.Type.ARRAY) {
+    textureName=ARRAY_TEXTURE_NAME;
+  }
+ else   if (value.getKey() != null) {
+    textureName=value.getKey();
+  }
+ else {
+    return null;
+  }
+  Optional<Texture> texture=Assets.getTexture(textureName != null ? String.format("engine:editor_%s",textureName) : ICON_BLANK);
+  return texture.isPresent() ? texture.get() : null;
+}

@@ -1,0 +1,29 @@
+@Override public RoomTransfer parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  final RoomTransfer invitation=new RoomTransfer();
+  invitation.type=RoomTransfer.Type.valueOf(parser.getAttributeValue("","type"));
+  outerloop:   while (true) {
+    parser.next();
+    if (parser.getEventType() == XmlPullParser.Event.START_ELEMENT) {
+      String elementName=parser.getName();
+      if ("session".equals(elementName)) {
+        invitation.sessionID=parser.getAttributeValue("","id");
+      }
+ else       if ("invitee".equals(elementName)) {
+        invitation.invitee=parser.nextText();
+      }
+ else       if ("inviter".equals(elementName)) {
+        invitation.inviter=parser.nextText();
+      }
+ else       if ("reason".equals(elementName)) {
+        invitation.reason=parser.nextText();
+      }
+ else       if ("room".equals(elementName)) {
+        invitation.room=parser.nextText();
+      }
+    }
+ else     if (parser.getEventType() == XmlPullParser.Event.END_ELEMENT && parser.getDepth() == initialDepth) {
+      break outerloop;
+    }
+  }
+  return invitation;
+}

@@ -1,0 +1,12 @@
+public void heartbeat(){
+  lastSendQryTime=System.currentTimeMillis();
+  PostgreSQLDataSource ds=heartbeat.getSource();
+  String databaseName=ds.getDbPool().getSchemas()[0];
+  String[] fetchColms={};
+  if (heartbeat.getSource().getHostConfig().isShowSlaveSql()) {
+    fetchColms=MYSQL_SLAVE_STAUTS_COLMS;
+  }
+  OneRawSQLQueryResultHandler resultHandler=new OneRawSQLQueryResultHandler(fetchColms,this);
+  sqlJob=new SQLJob(heartbeat.getHeartbeatSQL(),databaseName,resultHandler,ds);
+  sqlJob.run();
+}

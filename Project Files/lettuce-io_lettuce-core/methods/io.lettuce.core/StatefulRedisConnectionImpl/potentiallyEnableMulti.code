@@ -1,0 +1,13 @@
+private void potentiallyEnableMulti(RedisCommand<K,V,?> command){
+  if (command.getType().name().equals(MULTI.name())) {
+    multi=(multi == null ? new MultiOutput<>(codec) : multi);
+    if (command instanceof CompleteableCommand) {
+      ((CompleteableCommand<?>)command).onComplete((ignored,e) -> {
+        if (e != null) {
+          multi=null;
+        }
+      }
+);
+    }
+  }
+}

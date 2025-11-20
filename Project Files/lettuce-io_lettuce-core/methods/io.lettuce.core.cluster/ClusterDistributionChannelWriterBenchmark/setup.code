@@ -1,0 +1,16 @@
+@Setup public void setup(){
+  writer=new ClusterDistributionChannelWriter(CLIENT_OPTIONS,EMPTY_WRITER,ClusterEventListener.NO_OP);
+  Partitions partitions=new Partitions();
+  partitions.add(new RedisClusterNode(RedisURI.create("localhost",1),"1",true,null,0,0,0,IntStream.range(0,8191).boxed().collect(Collectors.toList()),new HashSet<>()));
+  partitions.add(new RedisClusterNode(RedisURI.create("localhost",2),"2",true,null,0,0,0,IntStream.range(8192,SlotHash.SLOT_COUNT).boxed().collect(Collectors.toList()),new HashSet<>()));
+  partitions.updateCache();
+  CompletableFuture<EmptyStatefulRedisConnection> connectionFuture=CompletableFuture.completedFuture(CONNECTION);
+  writer.setPartitions(partitions);
+  writer.setClusterConnectionProvider(new PooledClusterConnectionProvider(new EmptyRedisClusterClient(RedisURI.create("localhost",7379)),EMPTY_WRITER,ByteArrayCodec.INSTANCE,ClusterEventListener.NO_OP){
+    public CompletableFuture getConnectionAsync(    ConnectionIntent connectionIntent,    int slot){
+      return connectionFuture;
+    }
+  }
+);
+  writer.setPartitions(partitions);
+}

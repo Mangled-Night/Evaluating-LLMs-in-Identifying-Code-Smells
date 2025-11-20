@@ -1,0 +1,27 @@
+/** 
+ * @return true if the cluster state is {@code ok} and there are no failing nodes
+ */
+public boolean isStable(){
+  for (  RedisAsyncCommands<String,String> commands : connectionCache.values()) {
+    try {
+      RedisCommands<String,String> sync=commands.getStatefulConnection().sync();
+      String info=sync.clusterInfo();
+      if (info != null && info.contains("cluster_state:ok")) {
+        String s=sync.clusterNodes();
+        Partitions parse=ClusterPartitionParser.parse(s);
+        for (        RedisClusterNode redisClusterNode : parse) {
+          if (redisClusterNode.getFlags().contains(RedisClusterNode.NodeFlag.FAIL) || redisClusterNode.getFlags().contains(RedisClusterNode.NodeFlag.EVENTUAL_FAIL) || redisClusterNode.getFlags().contains(RedisClusterNode.NodeFlag.HANDSHAKE)) {
+            return false;
+          }
+        }
+      }
+ else {
+        return false;
+      }
+    }
+ catch (    Exception e) {
+      e.printStackTrace();
+    }
+  }
+  return true;
+}

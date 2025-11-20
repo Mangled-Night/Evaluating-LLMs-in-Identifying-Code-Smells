@@ -1,0 +1,22 @@
+private <K,V>ConnectionFuture<StatefulRedisConnection<K,V>> connectStandaloneAsync(RedisCodec<K,V> codec,RedisURI redisURI,Duration timeout){
+  assertNotNull(codec);
+  checkValidRedisURI(redisURI);
+  logger.debug("Trying to get a Redis connection for: {}",redisURI);
+  DefaultEndpoint endpoint=new DefaultEndpoint(getOptions(),getResources());
+  RedisChannelWriter writer=endpoint;
+  if (CommandExpiryWriter.isSupported(getOptions())) {
+    writer=new CommandExpiryWriter(writer,getOptions(),getResources());
+  }
+  if (CommandListenerWriter.isSupported(getCommandListeners())) {
+    writer=new CommandListenerWriter(writer,getCommandListeners());
+  }
+  StatefulRedisConnectionImpl<K,V> connection=newStatefulRedisConnection(writer,endpoint,codec,timeout);
+  ConnectionFuture<StatefulRedisConnection<K,V>> future=connectStatefulAsync(connection,endpoint,redisURI,() -> new CommandHandler(getOptions(),getResources(),endpoint));
+  future.whenComplete((channelHandler,throwable) -> {
+    if (throwable != null) {
+      connection.closeAsync();
+    }
+  }
+);
+  return future;
+}

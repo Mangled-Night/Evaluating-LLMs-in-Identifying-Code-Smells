@@ -1,0 +1,57 @@
+/** 
+ * Represents an invitation for another user to a room. The sender of the invitation must be an occupant of the room. The invitation will be sent to the room which in turn will forward the invitation to the invitee.
+ * @author Gaston Dombiak
+ */
+public static class Invite implements NamedElement {
+  public static final String ELEMENT="invite";
+  private final String reason;
+  /** 
+ * From XEP-0045 § 7.8.2: "… whose value is the bare JID, full JID, or occupant JID of the inviting user …"
+ */
+  private final EntityJid from;
+  private final EntityBareJid to;
+  public Invite(  String reason,  EntityFullJid from){
+    this(reason,from,null);
+  }
+  public Invite(  String reason,  EntityBareJid to){
+    this(reason,null,to);
+  }
+  public Invite(  String reason,  EntityJid from,  EntityBareJid to){
+    this.reason=reason;
+    this.from=from;
+    this.to=to;
+  }
+  /** 
+ * Returns the bare JID of the inviting user or, optionally, the room JID. (e.g. 'crone1@shakespeare.lit/desktop').
+ * @return the room's occupant that sent the invitation.
+ */
+  public EntityJid getFrom(){
+    return from;
+  }
+  /** 
+ * Returns the message explaining the invitation.
+ * @return the message explaining the invitation.
+ */
+  public String getReason(){
+    return reason;
+  }
+  /** 
+ * Returns the bare JID of the invitee. (e.g. 'hecate@shakespeare.lit')
+ * @return the bare JID of the invitee.
+ */
+  public EntityBareJid getTo(){
+    return to;
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this);
+    xml.optAttribute("to",getTo());
+    xml.optAttribute("from",getFrom());
+    xml.rightAngleBracket();
+    xml.optElement("reason",getReason());
+    xml.closeElement(this);
+    return xml;
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+}

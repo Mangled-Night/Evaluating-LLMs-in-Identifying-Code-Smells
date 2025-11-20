@@ -1,0 +1,24 @@
+@Override public void run(){
+  mainloop:   while (true) {
+    Runnable runnable=null;
+    while ((runnable=keyQueue.poll()) != null) {
+      try {
+        runnable.run();
+      }
+ catch (      Throwable t) {
+        Handler newlyCreatedHandler=new Handler(keyQueue,key);
+synchronized (threadActiveMap) {
+          threadActiveMap.put(key,newlyCreatedHandler);
+        }
+        scheduleHandler(newlyCreatedHandler);
+        throw t;
+      }
+    }
+synchronized (threadActiveMap) {
+      if (keyQueue.isEmpty()) {
+        threadActiveMap.remove(key);
+        break mainloop;
+      }
+    }
+  }
+}

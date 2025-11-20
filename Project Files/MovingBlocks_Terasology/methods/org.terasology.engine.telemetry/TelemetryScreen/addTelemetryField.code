@@ -1,0 +1,60 @@
+/** 
+ * Add a new row in the menu, the new row includes the field name and value.
+ * @param type the type(name) of the this field
+ * @param value the value of this field
+ * @param layout the layout where the new line will be added
+ * @param isWithCheckbox whether add a check box in the line
+ * @param telemetryCategory the TelemetryCategory that this field belongs to
+ */
+private void addTelemetryField(String type,Object value,ColumnLayout layout,boolean isWithCheckbox,TelemetryCategory telemetryCategory){
+  RowLayout newRow;
+  if (isWithCheckbox) {
+    String fieldName=telemetryCategory.id() + ":" + type;
+    UICheckbox uiCheckbox=new UICheckbox(fieldName);
+    Map<String,Boolean> bindingMap=config.getTelemetryConfig().getMetricsUserPermissionConfig().getBindingMap();
+    if (!bindingMap.containsKey(fieldName)) {
+      bindingMap.put(fieldName,config.getTelemetryConfig().isTelemetryEnabled());
+    }
+    Binding<Boolean> binding=getBindingFromBooleanMap(bindingMap,fieldName);
+    uiCheckbox.bindChecked(binding);
+    uiCheckbox.subscribe((checkbox) -> {
+      if (bindingMap.get(fieldName)) {
+        bindingMap.put(telemetryCategory.id(),true);
+      }
+ else {
+        Set<Field> fields=ReflectionUtils.getFields(telemetryCategories.get(telemetryCategory),ReflectionUtils.withAnnotation(TelemetryField.class));
+        boolean isOneEnabled=false;
+        for (        Field field : fields) {
+          isOneEnabled=isOneEnabled || bindingMap.get(telemetryCategory.id() + ":" + field.getName());
+        }
+        if (!isOneEnabled) {
+          bindingMap.put(telemetryCategory.id(),false);
+        }
+      }
+    }
+);
+    newRow=new RowLayout(new UILabel(type),new UILabel(value.toString()),uiCheckbox).setColumnRatios(0.4f,0.5f,0.1f).setHorizontalSpacing(horizontalSpacing);
+  }
+ else {
+    newRow=new RowLayout(new UILabel(type),new UILabel(value.toString())).setColumnRatios(0.4f,0.5f).setHorizontalSpacing(horizontalSpacing);
+  }
+  layout.addWidget(newRow);
+}
+/** 
+ * If the field value is a list, then will add more than one rows. Each new line includes the field name with index and its value.
+ * @param type the type(name) of the this field
+ * @param value the value of this field (a List)
+ * @param layout the layout where the new line will be added
+ * @param isWithCheckbox whether add a check box in the line
+ */
+private void addTelemetryField(String type,List value,ColumnLayout layout,boolean isWithCheckbox,TelemetryCategory telemetryCategory){
+  int moduleCount=1;
+  for (  Object o : value) {
+    StringBuilder sb=new StringBuilder();
+    sb.append(type);
+    sb.append(" ");
+    sb.append(moduleCount);
+    addTelemetryField(sb.toString(),o,layout,isWithCheckbox,telemetryCategory);
+    moduleCount=moduleCount + 1;
+  }
+}

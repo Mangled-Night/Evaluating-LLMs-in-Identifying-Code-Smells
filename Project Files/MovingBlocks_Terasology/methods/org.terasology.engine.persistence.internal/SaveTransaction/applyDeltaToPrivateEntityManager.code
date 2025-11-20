@@ -1,0 +1,52 @@
+private void applyDeltaToPrivateEntityManager(){
+  deltaToSave.getEntityDeltas().forEachEntry((entityId,delta) -> {
+    if (entityId >= privateEntityManager.getNextId()) {
+      privateEntityManager.setNextId(entityId + 1);
+    }
+    return true;
+  }
+);
+  deltaToSave.getDestroyedEntities().forEach(entityId -> {
+    if (entityId >= privateEntityManager.getNextId()) {
+      privateEntityManager.setNextId(entityId + 1);
+    }
+    return true;
+  }
+);
+  deltaToSave.getEntityDeltas().forEachEntry((entityId,delta) -> {
+    if (privateEntityManager.isActiveEntity(entityId)) {
+      EntityRef entity=privateEntityManager.getEntity(entityId);
+      for (      var changedComponent : delta.getChangedComponents().values()) {
+        entity.removeComponent(changedComponent.getClass());
+        entity.addComponent(changedComponent);
+      }
+      delta.getRemovedComponents().forEach(entity::removeComponent);
+    }
+ else {
+      privateEntityManager.createEntityWithId(entityId,delta.getChangedComponents().values());
+    }
+    return true;
+  }
+);
+  final List<EntityRef> entitiesToDestroy=Lists.newArrayList();
+  deltaToSave.getDestroyedEntities().forEach(entityId -> {
+    EntityRef entityToDestroy;
+    if (privateEntityManager.isActiveEntity(entityId)) {
+      entityToDestroy=privateEntityManager.getEntity(entityId);
+    }
+ else {
+      entityToDestroy=privateEntityManager.createEntityWithId(entityId,Collections.emptyList());
+    }
+    entitiesToDestroy.add(entityToDestroy);
+    return true;
+  }
+);
+  deltaToSave.bindAllDelayedEntityRefsTo(privateEntityManager);
+  entitiesToDestroy.forEach(EntityRef::destroy);
+  deltaToSave.getDeactivatedEntities().forEach(entityId -> {
+    EntityRef entityRef=privateEntityManager.getEntity(entityId);
+    privateEntityManager.deactivateForStorage(entityRef);
+    return true;
+  }
+);
+}

@@ -1,0 +1,27 @@
+@Override public <K1,V1,T>RedisCommand<K1,V1,T> write(RedisCommand<K1,V1,T> command){
+  if (isSubscribed() && !isAllowed(command)) {
+    rejectCommand(command);
+    return command;
+  }
+  if (!subscribeWritten && SUBSCRIBE_COMMANDS.contains(command.getType().name())) {
+    subscribeWritten=true;
+  }
+  return super.write(command);
+}
+@Override public <K1,V1>Collection<RedisCommand<K1,V1,?>> write(Collection<? extends RedisCommand<K1,V1,?>> redisCommands){
+  if (isSubscribed()) {
+    if (containsViolatingCommands(redisCommands)) {
+      rejectCommands(redisCommands);
+      return (Collection<RedisCommand<K1,V1,?>>)redisCommands;
+    }
+  }
+  if (!subscribeWritten) {
+    for (    RedisCommand<?,?,?> redisCommand : redisCommands) {
+      if (SUBSCRIBE_COMMANDS.contains(redisCommand.getType().name())) {
+        subscribeWritten=true;
+        break;
+      }
+    }
+  }
+  return super.write(redisCommands);
+}

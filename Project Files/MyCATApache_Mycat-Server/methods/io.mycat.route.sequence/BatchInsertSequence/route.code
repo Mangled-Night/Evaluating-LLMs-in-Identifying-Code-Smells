@@ -1,0 +1,55 @@
+@Override public void route(SystemConfig sysConfig,SchemaConfig schema,int sqlType,String realSQL,String charset,ServerConnection sc,LayerCachePool cachePool){
+  int rs=ServerParse.parse(realSQL);
+  this.sqltype=rs & 0xff;
+  this.sysConfig=sysConfig;
+  this.schema=schema;
+  this.charset=charset;
+  this.sc=sc;
+  this.cachePool=cachePool;
+  try {
+    MySqlStatementParser parser=new MySqlStatementParser(realSQL);
+    SQLStatement statement=parser.parseStatement();
+    MySqlInsertStatement insert=(MySqlInsertStatement)statement;
+    if (insert.getValuesList() != null) {
+      String tableName=StringUtil.getTableName(realSQL).toUpperCase();
+      TableConfig tableConfig=schema.getTables().get(tableName);
+      String primaryKey=tableConfig.getPrimaryKey();
+      SQLIdentifierExpr sqlIdentifierExpr=new SQLIdentifierExpr();
+      sqlIdentifierExpr.setName(primaryKey);
+      insert.getColumns().add(sqlIdentifierExpr);
+      if (sequenceHandler == null) {
+        int seqHandlerType=MycatServer.getInstance().getConfig().getSystem().getSequenceHandlerType();
+switch (seqHandlerType) {
+case SystemConfig.SEQUENCEHANDLER_MYSQLDB:
+          sequenceHandler=IncrSequenceMySQLHandler.getInstance();
+        break;
+case SystemConfig.SEQUENCEHANDLER_LOCALFILE:
+      sequenceHandler=IncrSequencePropHandler.getInstance();
+    break;
+case SystemConfig.SEQUENCEHANDLER_LOCAL_TIME:
+  sequenceHandler=IncrSequenceTimeHandler.getInstance();
+break;
+case SystemConfig.SEQUENCEHANDLER_ZK_DISTRIBUTED:
+sequenceHandler=DistributedSequenceHandler.getInstance(MycatServer.getInstance().getConfig().getSystem());
+break;
+case SystemConfig.SEQUENCEHANDLER_ZK_GLOBAL_INCREMENT:
+sequenceHandler=IncrSequenceZKHandler.getInstance();
+break;
+default :
+throw new java.lang.IllegalArgumentException("Invalid sequnce handler type " + seqHandlerType);
+}
+}
+for (ValuesClause vc : insert.getValuesList()) {
+SQLIntegerExpr sqlIntegerExpr=new SQLIntegerExpr();
+long value=sequenceHandler.nextId(tableName.toUpperCase());
+sqlIntegerExpr.setNumber(value);
+vc.addValue(sqlIntegerExpr);
+}
+String insertSql=insert.toString();
+this.executeSql=insertSql;
+}
+}
+ catch (Exception e) {
+LOGGER.error("BatchInsertSequence.route(......)",e);
+}
+}

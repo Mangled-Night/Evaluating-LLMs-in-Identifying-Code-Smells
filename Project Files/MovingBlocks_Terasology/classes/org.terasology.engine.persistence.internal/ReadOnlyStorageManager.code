@@ -1,0 +1,34 @@
+/** 
+ * A  {@link org.terasology.engine.persistence.StorageManager} that performs reading only.
+ */
+public final class ReadOnlyStorageManager extends AbstractStorageManager {
+  public ReadOnlyStorageManager(  Path savePath,  ModuleEnvironment environment,  EngineEntityManager entityManager,  BlockManager blockManager,  ExtraBlockDataManager extraDataManager){
+    this(savePath,environment,entityManager,blockManager,extraDataManager,true);
+  }
+  public ReadOnlyStorageManager(  Path savePath,  ModuleEnvironment environment,  EngineEntityManager entityManager,  BlockManager blockManager,  ExtraBlockDataManager extraDataManager,  boolean storeChunksInZips){
+    super(savePath,environment,entityManager,blockManager,extraDataManager,storeChunksInZips);
+  }
+  @Override public void finishSavingAndShutdown(){
+  }
+  @Override public void requestSaving(){
+  }
+  @Override public void waitForCompletionOfPreviousSaveAndStartSaving(){
+  }
+  @Override public void deactivateChunk(  Chunk chunk){
+    Collection<EntityRef> entitiesOfChunk=getEntitiesOfChunk(chunk);
+    entitiesOfChunk.forEach(this::deactivateOrDestroyEntityRecursive);
+  }
+  @Override public void update(){
+  }
+  @Override public boolean isSaving(){
+    return false;
+  }
+  @Override public void checkAndRepairSaveIfNecessary() throws IOException {
+  }
+  @Override public void deleteWorld(){
+  }
+  @Override public void deactivatePlayer(  Client client){
+    EntityRef character=client.getEntity().getComponent(ClientComponent.class).character;
+    deactivateOrDestroyEntityRecursive(character);
+  }
+}

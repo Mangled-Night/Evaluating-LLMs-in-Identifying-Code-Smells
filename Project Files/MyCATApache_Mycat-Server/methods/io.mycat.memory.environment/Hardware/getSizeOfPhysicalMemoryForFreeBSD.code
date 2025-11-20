@@ -1,0 +1,35 @@
+/** 
+ * Returns the size of the physical memory in bytes on FreeBSD.
+ * @return the size of the physical memory in bytes or <code>-1</code> ifthe size could not be determined
+ */
+private static long getSizeOfPhysicalMemoryForFreeBSD(){
+  BufferedReader bi=null;
+  try {
+    Process proc=Runtime.getRuntime().exec("sysctl hw.physmem");
+    bi=new BufferedReader(new InputStreamReader(proc.getInputStream()));
+    String line;
+    while ((line=bi.readLine()) != null) {
+      if (line.startsWith("hw.physmem")) {
+        long memsize=Long.parseLong(line.split(":")[1].trim());
+        bi.close();
+        proc.destroy();
+        return memsize;
+      }
+    }
+    LOG.error("Cannot determine the size of the physical memory for FreeBSD host (using 'sysctl hw.physmem').");
+    return -1;
+  }
+ catch (  Throwable t) {
+    LOG.error("Cannot determine the size of the physical memory for FreeBSD host (using 'sysctl hw.physmem'): " + t.getMessage(),t);
+    return -1;
+  }
+ finally {
+    if (bi != null) {
+      try {
+        bi.close();
+      }
+ catch (      IOException ignored) {
+      }
+    }
+  }
+}

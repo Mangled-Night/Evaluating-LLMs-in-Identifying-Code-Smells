@@ -1,0 +1,37 @@
+/** 
+ * Default constructor with a defined XMPPConnection, Transport Resolver and a Media Manager. If a fully implemented JingleMediaSession is entered, JingleManager manage Jingle signalling and jmf
+ * @param connection             XMPP XMPPConnection to be used
+ * @param jingleMediaManagers     an implemented JingleMediaManager to be used.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws XMPPException if an XMPP protocol error was received.
+ */
+public JingleManager(XMPPConnection connection,List<JingleMediaManager> jingleMediaManagers) throws XMPPException, SmackException {
+  this.connection=connection;
+  this.jingleMediaManagers=jingleMediaManagers;
+  Roster.getInstanceFor(connection).addRosterListener(new RosterListener(){
+    @Override public void entriesAdded(    Collection<Jid> addresses){
+    }
+    @Override public void entriesUpdated(    Collection<Jid> addresses){
+    }
+    @Override public void entriesDeleted(    Collection<Jid> addresses){
+    }
+    @Override public void presenceChanged(    Presence presence){
+      if (!presence.isAvailable()) {
+        Jid xmppAddress=presence.getFrom();
+        JingleSession aux=null;
+        for (        JingleSession jingleSession : jingleSessions) {
+          if (jingleSession.getInitiator().equals(xmppAddress) || jingleSession.getResponder().equals(xmppAddress)) {
+            aux=jingleSession;
+          }
+        }
+        if (aux != null)         try {
+          aux.terminate();
+        }
+ catch (        Exception e) {
+          LOGGER.log(Level.WARNING,"exception",e);
+        }
+      }
+    }
+  }
+);
+}

@@ -1,0 +1,14 @@
+@Test void zremrangebyscore(){
+  setup();
+  assertThat(redis.zremrangebyscore(key,1.0,2.0)).isEqualTo(2);
+  assertThat(redis.zrange(key,0,-1)).isEqualTo(list("c"));
+  setup();
+  assertThat(redis.zremrangebyscore(key,Range.create(1.0,2.0))).isEqualTo(2);
+  assertThat(redis.zrange(key,0,-1)).isEqualTo(list("c"));
+  setup();
+  assertThat(redis.zremrangebyscore(key,"(1.0","(3.0")).isEqualTo(1);
+  assertThat(redis.zrange(key,0,-1)).isEqualTo(list("a","c"));
+  setup();
+  assertThat(redis.zremrangebyscore(key,Range.from(Boundary.excluding(1.0),Boundary.excluding(3.0)))).isEqualTo(1);
+  assertThat(redis.zrange(key,0,-1)).isEqualTo(list("a","c"));
+}

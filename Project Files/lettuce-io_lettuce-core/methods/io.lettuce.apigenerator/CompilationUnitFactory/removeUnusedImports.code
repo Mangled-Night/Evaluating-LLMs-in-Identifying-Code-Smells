@@ -1,0 +1,15 @@
+public void removeUnusedImports(){
+  ClassOrInterfaceDeclaration declaringClass=(ClassOrInterfaceDeclaration)result.getChildNodes().get(1);
+  List<ImportDeclaration> optimizedImports=result.getImports().stream().filter(i -> i.isAsterisk() || i.isStatic() || declaringClass.findFirst(Type.class,t -> {
+    String fullType=t.toString();
+    String importIdentifier=i.getName().getIdentifier();
+    return fullType.contains(importIdentifier);
+  }
+).isPresent()).sorted((o1,o2) -> {
+    if (o1.getNameAsString().startsWith("java"))     return -1;
+    if (o2.getNameAsString().startsWith("java"))     return 1;
+    return o1.getNameAsString().compareTo(o2.getNameAsString());
+  }
+).collect(Collectors.toList());
+  result.setImports(NodeList.nodeList(optimizedImports));
+}

@@ -1,0 +1,36 @@
+private Column getColumnByExpr(SQLIdentifierExpr expr){
+  String column=expr.getName();
+  String table=getCurrentTable();
+  if (table != null && aliasMap.containsKey(table)) {
+    table=aliasMap.get(table);
+    if (table == null) {
+      return null;
+    }
+  }
+  if (table != null) {
+    return new Column(table,column);
+  }
+  return new Column("UNKNOWN",column);
+}
+private Column getColumnByExpr(SQLBetweenExpr betweenExpr){
+  if (betweenExpr.getTestExpr() != null) {
+    String tableName=null;
+    String column=null;
+    if (betweenExpr.getTestExpr() instanceof SQLPropertyExpr) {
+      tableName=((SQLIdentifierExpr)((SQLPropertyExpr)betweenExpr.getTestExpr()).getOwner()).getName();
+      column=((SQLPropertyExpr)betweenExpr.getTestExpr()).getName();
+      tableName=getTableNameByAlias(tableName);
+      return new Column(tableName,column);
+    }
+ else     if (betweenExpr.getTestExpr() instanceof SQLIdentifierExpr) {
+      column=((SQLIdentifierExpr)betweenExpr.getTestExpr()).getName();
+      tableName=getOwnerTableName(betweenExpr,column);
+    }
+    String table=tableName;
+    table=getTableNameByAlias(table);
+    if (table != null && !"".equals(table)) {
+      return new Column(table,column);
+    }
+  }
+  return null;
+}

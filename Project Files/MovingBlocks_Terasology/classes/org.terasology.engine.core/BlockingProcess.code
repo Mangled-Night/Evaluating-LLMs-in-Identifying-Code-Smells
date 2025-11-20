@@ -1,0 +1,17 @@
+/** 
+ * A process decorated allowing a thread to block until the process has been run.
+ */
+private static class BlockingProcess implements Runnable {
+  private Runnable internalProcess;
+  private Semaphore semaphore=new Semaphore(0);
+  BlockingProcess(  Runnable runnable){
+    this.internalProcess=runnable;
+  }
+  @Override public void run(){
+    internalProcess.run();
+    semaphore.release();
+  }
+  public void waitForCompletion() throws InterruptedException {
+    semaphore.acquire();
+  }
+}

@@ -1,0 +1,72 @@
+public class OmemoManagerSetupHelper {
+  public static void trustAllIdentities(  OmemoManager alice,  OmemoManager bob) throws InterruptedException, SmackException.NotConnectedException, SmackException.NotLoggedInException, SmackException.NoResponseException, CannotEstablishOmemoSessionException, CorruptedOmemoKeyException, XMPPException.XMPPErrorException, PubSubException.NotALeafNodeException, IOException {
+    Roster roster=Roster.getInstanceFor(alice.getConnection());
+    if (alice.getOwnJid() != bob.getOwnJid() && (!roster.iAmSubscribedTo(bob.getOwnJid()) || !roster.isSubscribedToMyPresence(bob.getOwnJid()))) {
+      throw new IllegalStateException("Before trusting identities of a user, we must be subscribed to one another.");
+    }
+    alice.requestDeviceListUpdateFor(bob.getOwnJid());
+    HashMap<OmemoDevice,OmemoFingerprint> fingerprints=alice.getActiveFingerprints(bob.getOwnJid());
+    for (    OmemoDevice device : fingerprints.keySet()) {
+      OmemoFingerprint fingerprint=fingerprints.get(device);
+      alice.trustOmemoIdentity(device,fingerprint);
+    }
+  }
+  public static void trustAllIdentitiesWithTests(  OmemoManager alice,  OmemoManager bob) throws InterruptedException, SmackException.NotConnectedException, SmackException.NotLoggedInException, SmackException.NoResponseException, CannotEstablishOmemoSessionException, CorruptedOmemoKeyException, XMPPException.XMPPErrorException, PubSubException.NotALeafNodeException, IOException {
+    alice.requestDeviceListUpdateFor(bob.getOwnJid());
+    HashMap<OmemoDevice,OmemoFingerprint> fps1=alice.getActiveFingerprints(bob.getOwnJid());
+    assertFalse(fps1.isEmpty());
+    assertAllDevicesAreUndecided(alice,fps1);
+    assertAllDevicesAreUntrusted(alice,fps1);
+    trustAllIdentities(alice,bob);
+    HashMap<OmemoDevice,OmemoFingerprint> fps2=alice.getActiveFingerprints(bob.getOwnJid());
+    assertEquals(fps1.size(),fps2.size());
+    assertTrue(Maps.difference(fps1,fps2).areEqual());
+    assertAllDevicesAreDecided(alice,fps2);
+    assertAllDevicesAreTrusted(alice,fps2);
+  }
+  public static OmemoManager prepareOmemoManager(  XMPPConnection connection) throws Exception {
+    final OmemoManager manager=OmemoManager.getInstanceFor(connection,OmemoManager.randomDeviceId());
+    manager.setTrustCallback(new EphemeralTrustCallback());
+    if (connection.isAuthenticated()) {
+      manager.initialize();
+    }
+ else {
+      throw new AssertionError("Connection must be authenticated.");
+    }
+    return manager;
+  }
+  public static void assertAllDevicesAreUndecided(  OmemoManager manager,  HashMap<OmemoDevice,OmemoFingerprint> devices){
+    for (    OmemoDevice device : devices.keySet()) {
+      assertFalse(manager.isDecidedOmemoIdentity(device,devices.get(device)));
+    }
+  }
+  public static void assertAllDevicesAreUntrusted(  OmemoManager manager,  HashMap<OmemoDevice,OmemoFingerprint> devices){
+    for (    OmemoDevice device : devices.keySet()) {
+      assertFalse(manager.isTrustedOmemoIdentity(device,devices.get(device)));
+    }
+  }
+  public static void assertAllDevicesAreDecided(  OmemoManager manager,  HashMap<OmemoDevice,OmemoFingerprint> devices){
+    for (    OmemoDevice device : devices.keySet()) {
+      assertTrue(manager.isDecidedOmemoIdentity(device,devices.get(device)));
+    }
+  }
+  public static void assertAllDevicesAreTrusted(  OmemoManager manager,  HashMap<OmemoDevice,OmemoFingerprint> devices){
+    for (    OmemoDevice device : devices.keySet()) {
+      assertTrue(manager.isTrustedOmemoIdentity(device,devices.get(device)));
+    }
+  }
+  public static void cleanUpPubSub(  OmemoManager omemoManager) throws IOException, NotConnectedException, InterruptedException {
+    List<Exception> exceptions=omemoManager.purgeEverything();
+    assertTrue(exceptions.isEmpty(),"There where exceptions while purging OMEMO: " + exceptions);
+  }
+  public static void cleanUpRoster(  OmemoManager omemoManager){
+    Roster roster=Roster.getInstanceFor(omemoManager.getConnection());
+    for (    RosterEntry r : roster.getEntries()) {
+      try {
+        roster.removeEntry(r);
+      }
+ catch (      InterruptedException|SmackException.NoResponseException|SmackException.NotConnectedException|XMPPException.XMPPErrorException|SmackException.NotLoggedInException e) {
+      }
+    }
+  }
+}

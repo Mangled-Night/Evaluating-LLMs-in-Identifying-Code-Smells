@@ -1,0 +1,48 @@
+/** 
+ * @author Mark Paluch
+ */
+class OutputRegistryUnitTests {
+  @Test void getKeyOutputType(){
+    OutputType outputComponentType=OutputRegistry.getOutputComponentType(KeyListOutput.class);
+    assertThat(outputComponentType.getTypeInformation().getComponentType().getType()).isEqualTo(Object.class);
+  }
+  @Test void getStringListOutputType(){
+    OutputType outputComponentType=OutputRegistry.getOutputComponentType(StringListOutput.class);
+    assertThat(outputComponentType.getTypeInformation().getComponentType()).isEqualTo(ClassTypeInformation.from(String.class));
+  }
+  @Test void componentTypeOfKeyOuputWithCodecIsAssignableFromString(){
+    OutputType outputComponentType=OutputRegistry.getOutputComponentType(KeyOutput.class);
+    ResolvableType resolvableType=outputComponentType.withCodec(new StringCodec());
+    assertThat(resolvableType.isAssignableFrom(String.class)).isTrue();
+  }
+  @Test void componentTypeOfKeyListOuputWithCodecIsAssignableFromListOfString(){
+    OutputType outputComponentType=OutputRegistry.getOutputComponentType(KeyListOutput.class);
+    ResolvableType resolvableType=outputComponentType.withCodec(new StringCodec());
+    assertThat(resolvableType.isAssignableFrom(ResolvableType.forClassWithGenerics(List.class,String.class))).isTrue();
+  }
+  @Test void streamingTypeOfKeyOuputWithCodecIsAssignableFromString(){
+    OutputType outputComponentType=OutputRegistry.getStreamingType(KeyListOutput.class);
+    ResolvableType resolvableType=outputComponentType.withCodec(new StringCodec());
+    assertThat(resolvableType.isAssignableFrom(ResolvableType.forClass(String.class))).isTrue();
+  }
+  @Test void streamingTypeOfKeyListOuputWithCodecIsAssignableFromListOfString(){
+    OutputType outputComponentType=OutputRegistry.getStreamingType(ScoredValueListOutput.class);
+    ResolvableType resolvableType=outputComponentType.withCodec(new StringCodec());
+    assertThat(resolvableType.isAssignableFrom(ResolvableType.forClassWithGenerics(ScoredValue.class,String.class))).isTrue();
+  }
+  @Test void customizedValueOutput(){
+    OutputType outputComponentType=OutputRegistry.getOutputComponentType(KeyTypedOutput.class);
+    ResolvableType resolvableType=outputComponentType.withCodec(ByteArrayCodec.INSTANCE);
+    assertThat(resolvableType.isAssignableFrom(ResolvableType.forClass(byte[].class))).isTrue();
+  }
+private static abstract class IntermediateOutput<K1,V1> extends CommandOutput<K1,V1,V1> {
+    IntermediateOutput(    RedisCodec<K1,V1> codec,    V1 output){
+      super(codec,null);
+    }
+  }
+private static class KeyTypedOutput extends IntermediateOutput<ByteBuffer,byte[]> {
+    KeyTypedOutput(    RedisCodec<ByteBuffer,byte[]> codec){
+      super(codec,null);
+    }
+  }
+}

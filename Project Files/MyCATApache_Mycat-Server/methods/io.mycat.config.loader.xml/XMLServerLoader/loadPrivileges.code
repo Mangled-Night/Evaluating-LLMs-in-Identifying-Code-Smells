@@ -1,0 +1,58 @@
+private void loadPrivileges(UserConfig userConfig,Element node){
+  UserPrivilegesConfig privilegesConfig=new UserPrivilegesConfig();
+  NodeList privilegesNodes=node.getElementsByTagName("privileges");
+  int privilegesNodesLength=privilegesNodes.getLength();
+  for (int i=0; i < privilegesNodesLength; ++i) {
+    Element privilegesNode=(Element)privilegesNodes.item(i);
+    String check=privilegesNode.getAttribute("check");
+    if (null != check) {
+      privilegesConfig.setCheck(Boolean.valueOf(check));
+    }
+    NodeList schemaNodes=privilegesNode.getElementsByTagName("schema");
+    int schemaNodeLength=schemaNodes.getLength();
+    for (int j=0; j < schemaNodeLength; j++) {
+      Element schemaNode=(Element)schemaNodes.item(j);
+      String name1=schemaNode.getAttribute("name");
+      String dml1=schemaNode.getAttribute("dml");
+      int[] dml1Array=new int[dml1.length()];
+      for (int offset1=0; offset1 < dml1.length(); offset1++) {
+        dml1Array[offset1]=Character.getNumericValue(dml1.charAt(offset1));
+      }
+      UserPrivilegesConfig.SchemaPrivilege schemaPrivilege=new UserPrivilegesConfig.SchemaPrivilege();
+      schemaPrivilege.setName(name1);
+      schemaPrivilege.setDml(dml1Array);
+      NodeList tableNodes=schemaNode.getElementsByTagName("table");
+      int tableNodeLength=tableNodes.getLength();
+      for (int z=0; z < tableNodeLength; z++) {
+        UserPrivilegesConfig.TablePrivilege tablePrivilege=new UserPrivilegesConfig.TablePrivilege();
+        Element tableNode=(Element)tableNodes.item(z);
+        String name2=tableNode.getAttribute("name");
+        String dml2=tableNode.getAttribute("dml");
+        int[] dml2Array=new int[dml2.length()];
+        for (int offset2=0; offset2 < dml2.length(); offset2++) {
+          dml2Array[offset2]=Character.getNumericValue(dml2.charAt(offset2));
+        }
+        tablePrivilege.setName(name2);
+        tablePrivilege.setDml(dml2Array);
+        schemaPrivilege.addTablePrivilege(name2,tablePrivilege);
+      }
+      privilegesConfig.addSchemaPrivilege(name1,schemaPrivilege);
+    }
+    NodeList dataNodes=privilegesNode.getElementsByTagName("dataNode");
+    int dataNodeLength=dataNodes.getLength();
+    for (int k=0; k < dataNodeLength; k++) {
+      UserPrivilegesConfig.DataNodePrivilege dataNodePrivilege=new UserPrivilegesConfig.DataNodePrivilege();
+      Element dataNode=(Element)dataNodes.item(k);
+      String dataNodeName=dataNode.getAttribute("name");
+      String dataNodeDml=dataNode.getAttribute("dml");
+      int[] dataNodeDmlArray=new int[dataNodeDml.length()];
+      for (int offset2=0; offset2 < dataNodeDml.length(); offset2++) {
+        dataNodeDmlArray[offset2]=Character.getNumericValue(dataNodeDml.charAt(offset2));
+      }
+      dataNodePrivilege.setName(dataNodeName);
+      dataNodePrivilege.setDml(dataNodeDmlArray);
+      privilegesConfig.addDataNodePrivileges(dataNodeName,dataNodePrivilege);
+    }
+  }
+  userConfig.setPrivilegesConfig(privilegesConfig);
+}

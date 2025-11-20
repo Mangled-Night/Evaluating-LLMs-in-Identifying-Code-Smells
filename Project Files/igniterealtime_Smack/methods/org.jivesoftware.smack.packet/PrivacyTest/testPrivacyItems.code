@@ -1,0 +1,97 @@
+/** 
+ * Check different types of privacy items.
+ */
+public void testPrivacyItems(){
+  try {
+    String listName="testPrivacyItems";
+    String user="tybalt@example.com";
+    String groupName="enemies";
+    PrivacyListManager privacyManager=PrivacyListManager.getInstanceFor(getConnection(0));
+    PrivacyClient client=new PrivacyClient(privacyManager);
+    privacyManager.addListener(client);
+    PrivacyItem[] originalPrivacyItems=new PrivacyItem[12];
+    int i=0;
+    PrivacyItem item=new PrivacyItem(PrivacyItem.Type.jid.name(),true,i);
+    item.setValue(i + "_" + user);
+    originalPrivacyItems[i]=item;
+    i=i + 1;
+    item=new PrivacyItem(PrivacyItem.Type.jid.name(),false,i);
+    item.setValue(i + "_" + user);
+    originalPrivacyItems[i]=item;
+    i=i + 1;
+    item=new PrivacyItem(PrivacyItem.Type.subscription.name(),true,i);
+    item.setValue(PrivacyRule.SUBSCRIPTION_BOTH);
+    originalPrivacyItems[i]=item;
+    i=i + 1;
+    item=new PrivacyItem(PrivacyItem.Type.subscription.name(),false,i);
+    item.setValue(PrivacyRule.SUBSCRIPTION_FROM);
+    originalPrivacyItems[i]=item;
+    i=i + 1;
+    item=new PrivacyItem(PrivacyItem.Type.subscription.name(),true,i);
+    item.setValue(PrivacyRule.SUBSCRIPTION_TO);
+    originalPrivacyItems[i]=item;
+    i=i + 1;
+    item=new PrivacyItem(PrivacyItem.Type.subscription.name(),false,i);
+    item.setValue(PrivacyRule.SUBSCRIPTION_NONE);
+    originalPrivacyItems[i]=item;
+    i=i + 1;
+    item=new PrivacyItem(PrivacyItem.Type.group.name(),false,i);
+    item.setValue(groupName);
+    originalPrivacyItems[i]=item;
+    i=i + 1;
+    item=new PrivacyItem(PrivacyItem.Type.group.name(),false,i);
+    item.setValue(groupName);
+    item.setFilterMessage(true);
+    originalPrivacyItems[i]=item;
+    i=i + 1;
+    item=new PrivacyItem(PrivacyItem.Type.group.name(),false,i);
+    item.setValue(groupName);
+    item.setFilterMessage(true);
+    originalPrivacyItems[i]=item;
+    i=i + 1;
+    item=new PrivacyItem(null,false,i);
+    item.setFilterPresence_in(true);
+    originalPrivacyItems[i]=item;
+    i=i + 1;
+    item=new PrivacyItem(PrivacyItem.Type.subscription.name(),false,i);
+    item.setValue(PrivacyRule.SUBSCRIPTION_TO);
+    item.setFilterPresence_out(true);
+    originalPrivacyItems[i]=item;
+    i=i + 1;
+    item=new PrivacyItem(PrivacyItem.Type.jid.name(),false,i);
+    item.setValue(i + "_" + user);
+    item.setFilterPresence_out(true);
+    item.setFilterPresence_in(true);
+    item.setFilterMessage(true);
+    originalPrivacyItems[i]=item;
+    privacyManager.createPrivacyList(listName,Arrays.asList(originalPrivacyItems));
+    Thread.sleep(500);
+    List<PrivacyItem> privacyItems=privacyManager.getPrivacyList(listName).getItems();
+    assertEquals(originalPrivacyItems.length,privacyItems.size());
+    PrivacyItem originalItem;
+    PrivacyItem receivedItem;
+    int index;
+    for (int j=0; j < originalPrivacyItems.length; j++) {
+      receivedItem=privacyItems.get(j);
+      index=0;
+      while ((index < originalPrivacyItems.length) && (originalPrivacyItems[index].getOrder() != receivedItem.getOrder())) {
+        index++;
+      }
+      originalItem=originalPrivacyItems[index];
+      assertEquals(originalItem.getOrder(),receivedItem.getOrder());
+      assertEquals(originalItem.getType(),receivedItem.getType());
+      assertEquals(originalItem.isAllow(),receivedItem.isAllow());
+      assertEquals(originalItem.getValue(),receivedItem.getValue());
+      assertEquals(originalItem.isFilterEverything(),receivedItem.isFilterEverything());
+      assertEquals(originalItem.isFilterIQ(),receivedItem.isFilterIQ());
+      assertEquals(originalItem.isFilterMessage(),receivedItem.isFilterMessage());
+      assertEquals(originalItem.isFilterPresence_in(),receivedItem.isFilterPresence_in());
+      assertEquals(originalItem.isFilterPresence_out(),receivedItem.isFilterPresence_out());
+    }
+    privacyManager.deletePrivacyList(listName);
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

@@ -1,0 +1,23 @@
+@Override public String getString(JsonTreeValue value){
+  if (value.getType() == JsonTreeValue.Type.OBJECT) {
+    JsonTree node=(JsonTree)editorTreeViewModel.getNodeByValue(value);
+    if (node != null) {
+      String resultString="";
+      for (      Tree<JsonTreeValue> child : node.getChildren()) {
+        JsonTreeValue childValue=child.getValue();
+        if (childValue.getType() == JsonTreeValue.Type.KEY_VALUE_PAIR) {
+          if ("type".equals(childValue.getKey())) {
+            resultString+=String.format("\"type\": \"%s\"",childValue.getValue());
+          }
+ else           if ("id".equals(childValue.getKey())) {
+            resultString+=String.format("; \"id\": \"%s\"",childValue.getValue());
+          }
+        }
+      }
+      if (!resultString.isEmpty()) {
+        return String.format("%s{ %s }",value.getKey() != null ? value.getKey() + " " : "",resultString);
+      }
+    }
+  }
+  return value.toString();
+}

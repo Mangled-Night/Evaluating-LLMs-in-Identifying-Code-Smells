@@ -1,0 +1,38 @@
+public class UserID implements ExtensionElement {
+  /** 
+ * Element name of the stanza extension.
+ */
+  public static final String ELEMENT_NAME="user";
+  /** 
+ * Namespace of the stanza extension.
+ */
+  public static final String NAMESPACE="http://jivesoftware.com/protocol/workgroup";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT_NAME);
+  private final Jid userID;
+  public UserID(  Jid userID){
+    this.userID=userID;
+  }
+  public Jid getUserID(){
+    return this.userID;
+  }
+  @Override public String getElementName(){
+    return ELEMENT_NAME;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  @Override public String toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    StringBuilder buf=new StringBuilder();
+    buf.append('<').append(ELEMENT_NAME).append(" xmlns=\"").append(NAMESPACE).append("\" ");
+    buf.append("id=\"").append(this.getUserID());
+    buf.append("\"/>");
+    return buf.toString();
+  }
+public static class Provider extends ExtensionElementProvider<UserID> {
+    @Override public UserID parse(    XmlPullParser parser,    int initialDepth,    XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+      Jid userID=ParserUtils.getJidAttribute(parser,"id");
+      parser.next();
+      return new UserID(userID);
+    }
+  }
+}

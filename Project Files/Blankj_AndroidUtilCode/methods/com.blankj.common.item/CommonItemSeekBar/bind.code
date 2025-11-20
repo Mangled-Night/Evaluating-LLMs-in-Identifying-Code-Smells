@@ -1,0 +1,32 @@
+@Override public void bind(@NonNull ItemViewHolder holder,int position){
+  super.bind(holder,position);
+  final TextView titleTv=holder.findViewById(R.id.commonItemTitleTv);
+  final TextView contentTv=holder.findViewById(R.id.commonItemContentTv);
+  titleTv.setText(mTitle);
+  contentTv.setText(mContent);
+  final SeekBar seekBar=holder.findViewById(R.id.commonItemSb);
+  seekBar.setMax(mMaxProgress);
+  seekBar.setProgress(mCurProgress);
+  holder.itemView.setOnTouchListener(new View.OnTouchListener(){
+    @Override public boolean onTouch(    View v,    MotionEvent event){
+      return seekBar.dispatchTouchEvent(event);
+    }
+  }
+);
+  seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+    @Override public void onProgressChanged(    SeekBar seekBar,    int progress,    boolean fromUser){
+      mProgressListener.onProgressChanged(seekBar,progress,fromUser);
+      int curValue=mProgressListener.getCurValue();
+      mCurProgress=curValue;
+      contentTv.setText(String.valueOf(curValue));
+      seekBar.setProgress(curValue);
+    }
+    @Override public void onStartTrackingTouch(    SeekBar seekBar){
+      mProgressListener.onStartTrackingTouch(seekBar);
+    }
+    @Override public void onStopTrackingTouch(    SeekBar seekBar){
+      mProgressListener.onStopTrackingTouch(seekBar);
+    }
+  }
+);
+}

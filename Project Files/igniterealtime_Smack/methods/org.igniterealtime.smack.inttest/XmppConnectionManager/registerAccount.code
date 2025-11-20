@@ -1,0 +1,27 @@
+private void registerAccount(String username,String password) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException, XmppStringprepException {
+  if (accountRegistrationConnection == null) {
+    throw new IllegalStateException("Account registration not configured");
+  }
+switch (sinttestConfiguration.accountRegistration) {
+case serviceAdministration:
+    EntityBareJid userJid=JidCreate.entityBareFrom(Localpart.from(username),accountRegistrationConnection.getXMPPServiceDomain());
+  adminManager.addUser(userJid,password);
+break;
+case inBandRegistration:
+if (!accountManager.supportsAccountCreation()) {
+throw new UnsupportedOperationException("Account creation/registation is not supported");
+}
+Set<String> requiredAttributes=accountManager.getAccountAttributes();
+if (requiredAttributes.size() > 4) {
+throw new IllegalStateException("Unkown required attributes");
+}
+Map<String,String> additionalAttributes=new HashMap<>();
+additionalAttributes.put("name","Smack Integration Test");
+additionalAttributes.put("email","flow@igniterealtime.org");
+Localpart usernameLocalpart=Localpart.from(username);
+accountManager.createAccount(usernameLocalpart,password,additionalAttributes);
+break;
+case disabled:
+throw new IllegalStateException("Account creation no possible");
+}
+}

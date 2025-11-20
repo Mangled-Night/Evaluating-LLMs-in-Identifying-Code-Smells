@@ -1,0 +1,31 @@
+@Test public void testColorBinding(){
+  VertexResourceBuilder builder=new VertexResourceBuilder();
+  VertexAttributeBinding<Colorc,Color> a1=builder.add(0,GLAttributes.COLOR_4_F_VERTEX_ATTRIBUTE);
+  VertexResource resource=builder.build();
+  a1.put(Color.white);
+  a1.put(Color.red);
+  a1.put(Color.green);
+  a1.put(Color.blue);
+  assertEquals(4,a1.getPosition());
+  int stride=Float.BYTES * 4;
+  resource.writeBuffer(buffer -> {
+    assertEquals(4 * 4 * Float.BYTES,buffer.limit());
+    assertEquals(1.0f,buffer.getFloat(Float.BYTES * 0),0.001f);
+    assertEquals(1.0f,buffer.getFloat(Float.BYTES * 1),0.001f);
+    assertEquals(1.0f,buffer.getFloat(Float.BYTES * 2),0.001f);
+    assertEquals(1.0f,buffer.getFloat(Float.BYTES * 3),0.001f);
+    assertEquals(1.0f,buffer.getFloat(stride + Float.BYTES * 0));
+    assertEquals(0,buffer.getFloat(stride + Float.BYTES * 1));
+    assertEquals(0,buffer.getFloat(stride + Float.BYTES * 2));
+    assertEquals(1.0f,buffer.getFloat(stride + Float.BYTES * 3));
+    assertEquals(0,buffer.getFloat((2 * stride) + Float.BYTES * 0));
+    assertEquals(1.0f,buffer.getFloat((2 * stride) + Float.BYTES * 1));
+    assertEquals(0,buffer.getFloat((2 * stride) + Float.BYTES * 2));
+    assertEquals(1.0f,buffer.getFloat((2 * stride) + Float.BYTES * 3));
+    assertEquals(0,buffer.getFloat((3 * stride) + Float.BYTES * 0));
+    assertEquals(0,buffer.getFloat((3 * stride) + Float.BYTES * 1));
+    assertEquals(1.0f,buffer.getFloat((3 * stride) + Float.BYTES * 2));
+    assertEquals(1.0f,buffer.getFloat((3 * stride) + Float.BYTES * 3));
+  }
+);
+}

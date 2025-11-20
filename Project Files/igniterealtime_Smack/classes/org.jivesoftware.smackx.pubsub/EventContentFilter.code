@@ -1,0 +1,35 @@
+/** 
+ * Filter for  {@link StanzaListener} to filter out events not specific to theevent type expected for this node.
+ * @author Robin Collier
+ */
+class EventContentFilter extends FlexibleStanzaTypeFilter<Message> {
+  private final String firstElement;
+  private final String secondElement;
+  private final boolean allowEmpty;
+  EventContentFilter(  String elementName){
+    this(elementName,null);
+  }
+  EventContentFilter(  String firstLevelElement,  String secondLevelElement){
+    firstElement=firstLevelElement;
+    secondElement=secondLevelElement;
+    allowEmpty=firstElement.equals(EventElementType.items.toString()) && "item".equals(secondLevelElement);
+  }
+  @Override public boolean acceptSpecific(  Message message){
+    EventElement event=EventElement.from(message);
+    if (event == null)     return false;
+    NodeExtension embedEvent=event.getEvent();
+    if (embedEvent == null)     return false;
+    if (embedEvent.getElementName().equals(firstElement)) {
+      if (!embedEvent.getNode().equals(getId()))       return false;
+      if (secondElement == null)       return true;
+      if (embedEvent instanceof EmbeddedPacketExtension) {
+        List<XmlElement> secondLevelList=((EmbeddedPacketExtension)embedEvent).getExtensions();
+        if (allowEmpty && secondLevelList.isEmpty()) {
+          return true;
+        }
+        if (secondLevelList.size() > 0 && secondLevelList.get(0).getElementName().equals(secondElement))         return true;
+      }
+    }
+    return false;
+  }
+}

@@ -1,0 +1,24 @@
+@Override public List<SmsCoupon> listByProduct(Long productId){
+  List<Long> allCouponIds=new ArrayList<>();
+  SmsCouponProductRelationExample cprExample=new SmsCouponProductRelationExample();
+  cprExample.createCriteria().andProductIdEqualTo(productId);
+  List<SmsCouponProductRelation> cprList=couponProductRelationMapper.selectByExample(cprExample);
+  if (CollUtil.isNotEmpty(cprList)) {
+    List<Long> couponIds=cprList.stream().map(SmsCouponProductRelation::getCouponId).collect(Collectors.toList());
+    allCouponIds.addAll(couponIds);
+  }
+  PmsProduct product=productMapper.selectByPrimaryKey(productId);
+  SmsCouponProductCategoryRelationExample cpcrExample=new SmsCouponProductCategoryRelationExample();
+  cpcrExample.createCriteria().andProductCategoryIdEqualTo(product.getProductCategoryId());
+  List<SmsCouponProductCategoryRelation> cpcrList=couponProductCategoryRelationMapper.selectByExample(cpcrExample);
+  if (CollUtil.isNotEmpty(cpcrList)) {
+    List<Long> couponIds=cpcrList.stream().map(SmsCouponProductCategoryRelation::getCouponId).collect(Collectors.toList());
+    allCouponIds.addAll(couponIds);
+  }
+  SmsCouponExample couponExample=new SmsCouponExample();
+  couponExample.createCriteria().andEndTimeGreaterThan(new Date()).andStartTimeLessThan(new Date()).andUseTypeEqualTo(0);
+  if (CollUtil.isNotEmpty(allCouponIds)) {
+    couponExample.or(couponExample.createCriteria().andEndTimeGreaterThan(new Date()).andStartTimeLessThan(new Date()).andUseTypeNotEqualTo(0).andIdIn(allCouponIds));
+  }
+  return couponMapper.selectByExample(couponExample);
+}

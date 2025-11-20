@@ -1,0 +1,31 @@
+@Override public boolean startTag(String tag,Attributes attributes){
+  if (tag.equalsIgnoreCase("b")) {
+    bold=true;
+    return true;
+  }
+ else   if (tag.equalsIgnoreCase("font")) {
+    String name=HTMLUtils.findAttribute(attributes,"name");
+    if (name != null) {
+      fontName=name;
+    }
+    String colorAttr=HTMLUtils.findAttribute(attributes,"color");
+    if (colorAttr != null && colorAttr.length() == 7 && colorAttr.charAt(0) == '#') {
+      color=new Color(Integer.parseInt(colorAttr.substring(1),16));
+    }
+    return true;
+  }
+ else   if (tag.equalsIgnoreCase("a")) {
+    String href=HTMLUtils.findAttribute(attributes,"href");
+    if (href == null) {
+      throw new HTMLParseException("Expected href attribute");
+    }
+    hyperlink=href;
+  }
+  for (  Map.Entry<String,FlowRenderableFactory> flowRenderableFactoryEntry : flowRenderableFactoryMap.entrySet()) {
+    if (flowRenderableFactoryEntry.getKey().equalsIgnoreCase(tag)) {
+      paragraphData.append(flowRenderableFactoryEntry.getValue().create(attributes,htmlFontResolver.getFont(fontName,bold),color,hyperlink));
+      return true;
+    }
+  }
+  return false;
+}

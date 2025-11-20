@@ -1,0 +1,43 @@
+private void performXARecoveryLog(CoordinatorLogEntry[] coordinatorLogEntries){
+  for (int i=0; i < coordinatorLogEntries.length; i++) {
+    CoordinatorLogEntry coordinatorLogEntry=coordinatorLogEntries[i];
+    boolean needRollback=false;
+    boolean hasCommit=false;
+    for (int j=0; j < coordinatorLogEntry.participants.length; j++) {
+      ParticipantLogEntry participantLogEntry=coordinatorLogEntry.participants[j];
+      if (participantLogEntry.txState == TxState.TX_PREPARED_STATE || participantLogEntry.txState == TxState.TX_STARTED_STATE) {
+        needRollback=true;
+      }
+      if (participantLogEntry.txState == TxState.TX_COMMITED_STATE) {
+        hasCommit=true;
+      }
+    }
+    if (needRollback) {
+      if (!hasCommit) {
+        for (int j=0; j < coordinatorLogEntry.participants.length; j++) {
+          ParticipantLogEntry participantLogEntry=coordinatorLogEntry.participants[j];
+          if (participantLogEntry.txState == TxState.TX_COMMITED_STATE || participantLogEntry.txState == TxState.TX_ROLLBACKED_STATE) {
+            continue;
+          }
+          String xacmd="XA ROLLBACK " + coordinatorLogEntry.id + ",'"+ participantLogEntry.resourceName+ "'"+ ';';
+          LOGGER.debug("send xaCmd : {}",xacmd);
+          OneRawSQLQueryResultHandler resultHandler=new OneRawSQLQueryResultHandler(new String[0],new XARollbackCallback(coordinatorLogEntry.id,participantLogEntry));
+          sendXaCmd(participantLogEntry,xacmd,resultHandler);
+        }
+      }
+ else {
+        LOGGER.debug("some has commit in {}",coordinatorLogEntry);
+        for (int j=0; j < coordinatorLogEntry.participants.length; j++) {
+          ParticipantLogEntry participantLogEntry=coordinatorLogEntry.participants[j];
+          if (participantLogEntry.txState == TxState.TX_COMMITED_STATE || participantLogEntry.txState == TxState.TX_ROLLBACKED_STATE) {
+            continue;
+          }
+          String xacmd="XA COMMIT " + coordinatorLogEntry.id + ",'"+ participantLogEntry.resourceName+ "'"+ ';';
+          LOGGER.debug("send xaCmd : {}",xacmd);
+          OneRawSQLQueryResultHandler resultHandler=new OneRawSQLQueryResultHandler(new String[0],new XACommitCallback(coordinatorLogEntry.id,participantLogEntry));
+          sendXaCmd(participantLogEntry,xacmd,resultHandler);
+        }
+      }
+    }
+  }
+}

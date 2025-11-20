@@ -1,0 +1,98 @@
+/** 
+ * @author mycat
+ */
+public class JVMInfo {
+  private static final float DEFAULT_JAVA_VERSION=1.3f;
+  private static final boolean reverseFieldOrder;
+  private static final float majorJavaVersion=getMajorJavaVersion(System.getProperty("java.specification.version"));
+  private ReflectionProvider reflectionProvider;
+  private Map<String,Class<?>> loaderCache=new HashMap<String,Class<?>>();
+static {
+    boolean reverse=false;
+    final Field[] fields=AttributedString.class.getDeclaredFields();
+    for (int i=0; i < fields.length; i++) {
+      if (fields[i].getName().equals("text")) {
+        reverse=i > 3;
+      }
+    }
+    reverseFieldOrder=reverse;
+  }
+  /** 
+ * Parses the java version system property to determine the major java version, ie 1.x
+ * @param javaVersion the system property 'java.specification.version'
+ * @return A float of the form 1.x
+ */
+  public static final float getMajorJavaVersion(  String javaVersion){
+    try {
+      return Float.parseFloat(javaVersion.substring(0,3));
+    }
+ catch (    NumberFormatException e) {
+      return DEFAULT_JAVA_VERSION;
+    }
+  }
+  public static boolean is14(){
+    return majorJavaVersion >= 1.4f;
+  }
+  public static boolean is15(){
+    return majorJavaVersion >= 1.5f;
+  }
+  public static boolean is16(){
+    return majorJavaVersion >= 1.6f;
+  }
+  private static boolean isSun(){
+    return System.getProperty("java.vm.vendor").indexOf("Sun") != -1;
+  }
+  private static boolean isApple(){
+    return System.getProperty("java.vm.vendor").indexOf("Apple") != -1;
+  }
+  private static boolean isHPUX(){
+    return System.getProperty("java.vm.vendor").indexOf("Hewlett-Packard Company") != -1;
+  }
+  private static boolean isIBM(){
+    return System.getProperty("java.vm.vendor").indexOf("IBM") != -1;
+  }
+  private static boolean isBlackdown(){
+    return System.getProperty("java.vm.vendor").indexOf("Blackdown") != -1;
+  }
+  private static boolean isBEAWithUnsafeSupport(){
+    if (System.getProperty("java.vm.vendor").indexOf("BEA") != -1) {
+      String vmVersion=System.getProperty("java.vm.version");
+      if (vmVersion.startsWith("R")) {
+        return true;
+      }
+      String vmInfo=System.getProperty("java.vm.info");
+      if (vmInfo != null) {
+        return (vmInfo.startsWith("R25.1") || vmInfo.startsWith("R25.2"));
+      }
+    }
+    return false;
+  }
+  public Class<?> loadClass(  String name){
+    try {
+      Class<?> clazz=loaderCache.get(name);
+      if (clazz == null) {
+        clazz=Class.forName(name,false,getClass().getClassLoader());
+        loaderCache.put(name,clazz);
+      }
+      return clazz;
+    }
+ catch (    ClassNotFoundException e) {
+      return null;
+    }
+  }
+  public synchronized ReflectionProvider getReflectionProvider(){
+    if (reflectionProvider == null) {
+      reflectionProvider=new ReflectionProvider();
+    }
+    return reflectionProvider;
+  }
+  protected boolean canUseSun14ReflectionProvider(){
+    return (isSun() || isApple() || isHPUX()|| isIBM()|| isBlackdown()|| isBEAWithUnsafeSupport()) && is14() && loadClass("sun.misc.Unsafe") != null;
+  }
+  public static boolean reverseFieldDefinition(){
+    return reverseFieldOrder;
+  }
+  public static void main(  String[] args){
+    System.out.println(majorJavaVersion);
+  }
+}

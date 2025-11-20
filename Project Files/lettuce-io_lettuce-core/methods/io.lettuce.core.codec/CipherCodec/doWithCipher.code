@@ -1,0 +1,18 @@
+private void doWithCipher(Cipher cipher,ByteBuf serialized,ByteBuf target) throws GeneralSecurityException {
+  ByteBuffer intermediate=ByteBuffer.allocate(cipher.getOutputSize(serialized.readableBytes()));
+  ByteBuffer buffer=serialized.nioBuffer();
+  cipher.update(buffer,intermediate);
+  cipher.doFinal(buffer,intermediate);
+  intermediate.flip();
+  target.writeBytes(intermediate);
+  serialized.readerIndex(serialized.writerIndex());
+}
+private ByteBuffer doWithCipher(Cipher cipher,ByteBuffer source) throws GeneralSecurityException {
+  byte[] encrypted=new byte[source.remaining()];
+  source.get(encrypted);
+  byte[] update=cipher.update(encrypted);
+  byte[] finalBytes=cipher.doFinal();
+  ByteBuffer buffer=ByteBuffer.allocate(update.length + finalBytes.length);
+  buffer.put(update).put(finalBytes).flip();
+  return buffer;
+}

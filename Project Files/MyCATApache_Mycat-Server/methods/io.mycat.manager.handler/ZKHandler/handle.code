@@ -1,0 +1,60 @@
+public static void handle(String stmt,ManagerConnection c,int offset){
+  String command=stmt.toLowerCase();
+  if (RELOAD_FROM_ZK.equals(command)) {
+    try {
+      ZktoXmlMain.ZKLISTENER.notifly(ZkNofiflyCfg.ZK_NOTIFLY_LOAD_ALL.getKey());
+      ReloadHandler.handle("RELOAD @@config_all",c,6);
+      offset+=RELOAD_FROM_ZK.length();
+      ReloadZktoXml.execute(c,"zk reload success ");
+    }
+ catch (    Exception e) {
+      LOGGER.error("ZKHandler loadZktoFile exception",e);
+      c.writeErrMessage(ErrorCode.ER_YES,"zk command send error,command is :" + command);
+    }
+  }
+ else {
+    String[] matchKeys=stmt.split("\\s+");
+    if (null != matchKeys && matchKeys.length > 2) {
+      String key=ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_CLUSTER_NODES);
+      String[] myidArray=key.split(",");
+      String idkeys=matchKeys[1].toLowerCase();
+      StringBuilder commandMsg=new StringBuilder();
+      for (int i=2; i < matchKeys.length; i++) {
+        if (i == matchKeys.length - 1) {
+          commandMsg.append(matchKeys[i]);
+        }
+ else {
+          commandMsg.append(matchKeys[i]).append(" ");
+        }
+      }
+      if (RELOAD_ALL.equals(idkeys)) {
+        try {
+          for (          String myid : myidArray) {
+            sendZkCommand(myid,commandMsg.toString());
+          }
+          ReloadZktoXml.execute(c,"zk reload " + matchKeys[1] + " success ");
+        }
+ catch (        Exception e) {
+          c.writeErrMessage(ErrorCode.ER_YES,"zk command send error");
+        }
+      }
+ else {
+        for (        String myid : myidArray) {
+          if (myid.equals(idkeys)) {
+            try {
+              sendZkCommand(myid,commandMsg.toString());
+              ReloadZktoXml.execute(c,"zk reload " + matchKeys[1] + " success ");
+            }
+ catch (            Exception e) {
+              c.writeErrMessage(ErrorCode.ER_YES,"zk command send error,myid :" + myid);
+            }
+            break;
+          }
+        }
+      }
+    }
+ else {
+      c.writeErrMessage(ErrorCode.ER_YES,"zk command is error");
+    }
+  }
+}

@@ -1,0 +1,14 @@
+@ReceiveEvent(components=AliveCharacterComponent.class) public void onSetMovementModeEvent(SetMovementModeEvent event,EntityRef character,CharacterMovementComponent movementComponent){
+  CircularBuffer<CharacterStateEvent> stateBuffer=characterStates.get(character);
+  CharacterStateEvent lastState=stateBuffer.getLast();
+  CharacterStateEvent newState=new CharacterStateEvent(lastState);
+  newState.setSequenceNumber(lastState.getSequenceNumber());
+  if (event.getMode() != lastState.getMode()) {
+    newState.setMode(event.getMode());
+  }
+ else {
+    newState.setMode(MovementMode.WALKING);
+  }
+  stateBuffer.add(newState);
+  characterMovementSystemUtility.setToState(character,newState);
+}

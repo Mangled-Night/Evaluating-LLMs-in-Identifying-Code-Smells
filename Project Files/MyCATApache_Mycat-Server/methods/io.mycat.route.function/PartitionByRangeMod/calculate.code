@@ -1,0 +1,24 @@
+@Override public Integer calculate(String columnValue){
+  try {
+    long value=Long.parseLong(columnValue);
+    Integer rst=null;
+    int nodeIndex=0;
+    for (    LongRange longRang : this.longRanges) {
+      if (value <= longRang.valueEnd && value >= longRang.valueStart) {
+        BigInteger bigNum=new BigInteger(columnValue).abs();
+        int innerIndex=(bigNum.mod(BigInteger.valueOf(longRang.groupSize))).intValue();
+        return nodeIndex + innerIndex;
+      }
+ else {
+        nodeIndex+=longRang.groupSize;
+      }
+    }
+    if (rst == null && defaultNode >= 0) {
+      return defaultNode;
+    }
+    return rst;
+  }
+ catch (  NumberFormatException e) {
+    throw new IllegalArgumentException(new StringBuilder().append("columnValue:").append(columnValue).append(" Please eliminate any quote and non number within it.").toString(),e);
+  }
+}

@@ -1,0 +1,35 @@
+public class LocaleConstraintWidgetFactory extends ConstraintWidgetFactory<Locale,LocaleConstraint> {
+  /** 
+ * Remove language x from this languagesExcluded table when it is ready for testing
+ */
+  private final Locale[] languagesExcluded={Locale.forLanguageTag("zh"),Locale.forLanguageTag("hi"),Locale.forLanguageTag("ar"),Locale.forLanguageTag("ko"),Locale.forLanguageTag("fa")};
+  private final TranslationSystem translationSystem;
+  public LocaleConstraintWidgetFactory(  TranslationSystem translationSystem){
+    this.translationSystem=translationSystem;
+  }
+  @Override protected Optional<UIWidget> buildWidget(){
+    Setting<Locale> setting=getSetting();
+    Binding<Locale> binding=new Binding<Locale>(){
+      @Override public Locale get(){
+        return setting.get();
+      }
+      @Override public void set(      Locale value){
+        setting.set(value);
+      }
+    }
+;
+    UIDropdownScrollable<Locale> dropdownScrollable=new UIDropdownScrollable<>();
+    ResourceUrn menuUrn=new ResourceUrn("engine:menu");
+    TranslationProject menuProject=translationSystem.getProject(menuUrn);
+    List<Locale> locales=new ArrayList<>(menuProject.getAvailableLocales());
+    for (    Locale languageExcluded : languagesExcluded) {
+      locales.remove(languageExcluded);
+    }
+    Collections.sort(locales,(Comparator.comparing((Function<Object,String>)Object::toString)));
+    dropdownScrollable.setOptions(Lists.newArrayList(locales));
+    dropdownScrollable.setVisibleOptions(5);
+    dropdownScrollable.bindSelection(binding);
+    dropdownScrollable.setOptionRenderer(new LocaleRenderer(translationSystem));
+    return Optional.of(dropdownScrollable);
+  }
+}

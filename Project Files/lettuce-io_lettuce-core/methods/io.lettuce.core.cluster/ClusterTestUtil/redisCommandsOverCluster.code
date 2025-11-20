@@ -1,0 +1,10 @@
+/** 
+ * Create an API wrapper which exposes the  {@link RedisCommands} API by using internally a cluster connection.
+ * @param connection
+ * @return
+ */
+public static RedisCommands<String,String> redisCommandsOverCluster(StatefulRedisClusterConnection<String,String> connection){
+  StatefulRedisClusterConnectionImpl clusterConnection=(StatefulRedisClusterConnectionImpl)connection;
+  InvocationHandler h=new RoutingInvocationHandler(connection.async(),clusterConnection.syncInvocationHandler());
+  return (RedisCommands<String,String>)Proxy.newProxyInstance(ClusterTestUtil.class.getClassLoader(),new Class[]{RedisCommands.class},h);
+}

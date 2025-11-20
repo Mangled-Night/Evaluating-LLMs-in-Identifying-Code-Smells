@@ -1,0 +1,47 @@
+/** 
+ * select 元数据返回时触发，将header和元数据内容依次写入缓冲区中
+ */
+@Override public void fieldEofResponse(byte[] header,List<byte[]> fields,byte[] eof,BackendConnection conn){
+  this.header=header;
+  this.fields=fields;
+  MiddlerResultHandler middlerResultHandler=session.getMiddlerResultHandler();
+  if (null != middlerResultHandler) {
+    return;
+  }
+  this.netOutBytes+=header.length;
+  for (int i=0, len=fields.size(); i < len; ++i) {
+    byte[] field=fields.get(i);
+    this.netOutBytes+=field.length;
+  }
+  header[3]=++packetId;
+  ServerConnection source=session.getSource();
+  buffer=source.writeToBuffer(header,allocBuffer());
+  for (int i=0, len=fields.size(); i < len; ++i) {
+    byte[] field=fields.get(i);
+    field[3]=++packetId;
+    FieldPacket fieldPk=new FieldPacket();
+    fieldPk.read(field);
+    fieldPackets.add(fieldPk);
+    buffer=source.writeToBuffer(field,buffer);
+  }
+  fieldCount=fieldPackets.size();
+  eof[3]=++packetId;
+  buffer=source.writeToBuffer(eof,buffer);
+  if (isDefaultNodeShowTable) {
+    for (    String name : shardingTablesSet) {
+      RowDataPacket row=new RowDataPacket(1);
+      row.add(StringUtil.encode(name.toLowerCase(),source.getCharset()));
+      row.packetId=++packetId;
+      buffer=row.write(buffer,source,true);
+    }
+  }
+ else   if (isDefaultNodeShowFullTable) {
+    for (    String name : shardingTablesSet) {
+      RowDataPacket row=new RowDataPacket(1);
+      row.add(StringUtil.encode(name.toLowerCase(),source.getCharset()));
+      row.add(StringUtil.encode("BASE TABLE",source.getCharset()));
+      row.packetId=++packetId;
+      buffer=row.write(buffer,source,true);
+    }
+  }
+}

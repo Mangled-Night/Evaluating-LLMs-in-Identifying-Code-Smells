@@ -1,0 +1,41 @@
+@Override public BlockMeshPart deserialize(JsonElement json,Type typeOfT,JsonDeserializationContext context) throws JsonParseException {
+  final JsonObject meshObj=json.getAsJsonObject();
+  final Vector3f[] vertices=context.deserialize(meshObj.get("vertices"),Vector3f[].class);
+  final Vector3f[] normals=context.deserialize(meshObj.get("normals"),Vector3f[].class);
+  final Vector2f[] texCoords=context.deserialize(meshObj.get("texcoords"),Vector2f[].class);
+  if (vertices == null) {
+    throw new JsonParseException("Vertices missing");
+  }
+  if (normals == null) {
+    throw new JsonParseException("Normals missing");
+  }
+  if (texCoords == null) {
+    throw new JsonParseException("Texcoords missing");
+  }
+  if (!meshObj.has("faces")) {
+    throw new JsonParseException("Faces missing");
+  }
+  if (vertices.length != normals.length || vertices.length != texCoords.length) {
+    throw new JsonParseException("vertices, normals and texcoords must have the same length");
+  }
+  for (  Vector3f norm : normals) {
+    norm.normalize();
+  }
+  int[][] faces=context.deserialize(meshObj.get("faces"),int[][].class);
+  TIntList indices=new TIntArrayList();
+  for (  int[] face : faces) {
+    for (int tri=0; tri < face.length - 2; tri++) {
+      indices.add(face[0]);
+      indices.add(face[tri + 1]);
+      indices.add(face[tri + 2]);
+    }
+  }
+  indices.forEach(value -> {
+    if (value < 0 || value >= vertices.length) {
+      throw new JsonParseException("Face value out of range: " + value + ", max vertex is "+ (vertices.length - 1));
+    }
+    return true;
+  }
+);
+  return new BlockMeshPart(vertices,normals,texCoords,indices.toArray());
+}

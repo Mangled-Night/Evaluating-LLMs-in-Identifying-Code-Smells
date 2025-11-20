@@ -1,0 +1,22 @@
+private static void forceRulesToLocal(Path localPath,XmlProcessBase xmlProcess) throws Exception {
+  Rules rules=new Rules();
+  String value=new String(ZKUtils.getConnection().getData().forPath(ZKUtils.getZKBasePath() + "rules/tableRule"),"UTF-8");
+  LOGGER.info("-----------------------------------从zookeeper中拉取的新的tablerule的信息--------------------------------------------------");
+  LOGGER.info(value);
+  DataInf RulesZkData=new ZkDataImpl("tableRule",value);
+  TableRuleJsonParse tableRuleJsonParse=new TableRuleJsonParse();
+  List<TableRule> tableRuleData=tableRuleJsonParse.parseJsonToBean(RulesZkData.getDataValue());
+  rules.setTableRule(tableRuleData);
+  String fucValue=new String(ZKUtils.getConnection().getData().forPath(ZKUtils.getZKBasePath() + "rules/function"),"UTF-8");
+  LOGGER.info("-----------------------------------从zookeeper中拉取的新的function的信息--------------------------------------------------");
+  LOGGER.info(fucValue);
+  DataInf functionZkData=new ZkDataImpl("function",fucValue);
+  FunctionJsonParse functionJsonParse=new FunctionJsonParse();
+  List<Function> functionList=functionJsonParse.parseJsonToBean(functionZkData.getDataValue());
+  rules.setFunction(functionList);
+  xmlProcess.addParseClass(Table.class);
+  xmlProcess.addParseClass(Function.class);
+  RuleParseXmlImpl ruleParseXml=new RuleParseXmlImpl(xmlProcess);
+  xmlProcess.initJaxbClass();
+  ruleParseXml.parseToXmlWrite(rules,localPath.resolve("rule.xml").toString(),"rule");
+}

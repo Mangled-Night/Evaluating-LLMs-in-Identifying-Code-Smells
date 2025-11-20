@@ -1,0 +1,32 @@
+public class SASLPlainMechanism extends SASLMechanism {
+  public static final String NAME=PLAIN;
+  @Override protected void authenticateInternal(  CallbackHandler cbh){
+    throw new UnsupportedOperationException("CallbackHandler not (yet) supported");
+  }
+  @Override protected byte[] getAuthenticationText(){
+    String authzid;
+    if (authorizationId == null) {
+      authzid="";
+    }
+ else {
+      authzid=authorizationId.toString();
+    }
+    byte[] authcid=toBytes(authzid + '\u0000' + authenticationId);
+    byte[] passw=toBytes('\u0000' + password);
+    return ByteUtils.concat(authcid,passw);
+  }
+  @Override public String getName(){
+    return NAME;
+  }
+  @Override public int getPriority(){
+    return 410;
+  }
+  @Override public SASLPlainMechanism newInstance(){
+    return new SASLPlainMechanism();
+  }
+  @Override public void checkIfSuccessfulOrThrow(){
+  }
+  @Override public boolean authzidSupported(){
+    return true;
+  }
+}

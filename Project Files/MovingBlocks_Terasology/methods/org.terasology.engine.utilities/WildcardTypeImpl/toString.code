@@ -1,0 +1,31 @@
+public static String toString(WildcardType wildcardType){
+  return toString(wildcardType,false);
+}
+public static String toString(WildcardType wildcardType,boolean useSimpleName){
+  Type[] lowerBounds=wildcardType.getLowerBounds();
+  Type[] bounds=lowerBounds;
+  StringBuilder stringBuilder=new StringBuilder();
+  if (lowerBounds.length > 0) {
+    stringBuilder.append("? super ");
+  }
+ else {
+    Type[] upperBounds=wildcardType.getUpperBounds();
+    if (upperBounds.length <= 0 || upperBounds[0].equals(Object.class)) {
+      return "?";
+    }
+    bounds=upperBounds;
+    stringBuilder.append("? extends ");
+  }
+  boolean isFirstBound=true;
+  for (  Type bound : bounds) {
+    if (!isFirstBound) {
+      stringBuilder.append(" & ");
+    }
+    isFirstBound=false;
+    stringBuilder.append(typeToString(bound,useSimpleName));
+  }
+  return stringBuilder.toString();
+}
+public String toString(){
+  return toString(this);
+}

@@ -1,0 +1,46 @@
+/** 
+ * Updates all of the path manager's file/directory references to match the path settings. Creates directories if they don't already exist.
+ * @throws IOException Thrown when required directories cannot be accessed.
+ */
+private void updateDirs() throws IOException {
+  savesPath=homePath.resolve(SAVED_GAMES_DIR);
+  recordingsPath=homePath.resolve(RECORDINGS_LIBRARY_DIR);
+  logPath=homePath.resolve(LOG_DIR);
+  shaderLogPath=logPath.resolve(SHADER_LOG_DIR);
+  screenshotPath=homePath.resolve(SCREENSHOT_DIR);
+  nativesPath=installPath.resolve(NATIVES_DIR);
+  configsPath=homePath.resolve(CONFIGS_DIR);
+  if (currentWorldPath == null) {
+    currentWorldPath=homePath;
+  }
+  sandboxPath=homePath.resolve(SANDBOX_DIR);
+  modPaths=defaultModPaths();
+  for (  Path path : getAllPaths()) {
+    try {
+      Files.createDirectories(path);
+    }
+ catch (    FileAlreadyExistsException e) {
+      if (!(Files.isSymbolicLink(path) && Files.isDirectory(path))) {
+        throw e;
+      }
+    }
+  }
+  final Path path;
+switch (OS.get()) {
+case WINDOWS:
+    path=nativesPath.resolve("windows");
+  break;
+case MACOSX:
+path=nativesPath.resolve("macosx");
+break;
+case LINUX:
+path=nativesPath.resolve("linux");
+break;
+default :
+throw new UnsupportedOperationException("Unsupported operating system: " + System.getProperty("os" + ".name"));
+}
+final String natives=path.toAbsolutePath().toString();
+System.setProperty("org.lwjgl.librarypath",natives);
+System.setProperty("net.java.games.input.librarypath",natives);
+System.setProperty("org.terasology.librarypath",natives);
+}

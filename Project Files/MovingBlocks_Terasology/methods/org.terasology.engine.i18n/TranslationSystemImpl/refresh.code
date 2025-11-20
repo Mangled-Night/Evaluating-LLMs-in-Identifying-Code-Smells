@@ -1,0 +1,19 @@
+@Override public void refresh(){
+  Set<ResourceUrn> urns=assetManager.getAvailableAssets(Translation.class);
+  for (  ResourceUrn urn : urns) {
+    Optional<Translation> asset=assetManager.getAsset(urn,Translation.class);
+    if (asset.isPresent()) {
+      Translation trans=asset.get();
+      ResourceUrn projectUrn=trans.getProjectUrn();
+      if (!projectUrn.getModuleName().isEmpty() && !projectUrn.getResourceName().isEmpty()) {
+        TranslationProject proj=projects.computeIfAbsent(projectUrn,e -> new StandardTranslationProject());
+        proj.add(trans);
+        trans.subscribe(this::onAssetChanged);
+        logger.info("Discovered " + trans);
+      }
+ else {
+        logger.warn("Ignoring invalid project projectUrn: {}",projectUrn);
+      }
+    }
+  }
+}

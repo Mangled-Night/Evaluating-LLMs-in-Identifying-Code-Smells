@@ -1,0 +1,57 @@
+/** 
+ * Return the compressed bitmap using sample size.
+ * @param src        The source of bitmap.
+ * @param sampleSize The sample size.
+ * @return the compressed bitmap
+ */
+public static Bitmap compressBySampleSize(final Bitmap src,final int sampleSize){
+  return compressBySampleSize(src,sampleSize,false);
+}
+/** 
+ * Return the compressed bitmap using sample size.
+ * @param src        The source of bitmap.
+ * @param sampleSize The sample size.
+ * @param recycle    True to recycle the source of bitmap, false otherwise.
+ * @return the compressed bitmap
+ */
+public static Bitmap compressBySampleSize(final Bitmap src,final int sampleSize,final boolean recycle){
+  if (isEmptyBitmap(src))   return null;
+  BitmapFactory.Options options=new BitmapFactory.Options();
+  options.inSampleSize=sampleSize;
+  ByteArrayOutputStream baos=new ByteArrayOutputStream();
+  src.compress(Bitmap.CompressFormat.JPEG,100,baos);
+  byte[] bytes=baos.toByteArray();
+  if (recycle && !src.isRecycled())   src.recycle();
+  return BitmapFactory.decodeByteArray(bytes,0,bytes.length,options);
+}
+/** 
+ * Return the compressed bitmap using sample size.
+ * @param src       The source of bitmap.
+ * @param maxWidth  The maximum width.
+ * @param maxHeight The maximum height.
+ * @return the compressed bitmap
+ */
+public static Bitmap compressBySampleSize(final Bitmap src,final int maxWidth,final int maxHeight){
+  return compressBySampleSize(src,maxWidth,maxHeight,false);
+}
+/** 
+ * Return the compressed bitmap using sample size.
+ * @param src       The source of bitmap.
+ * @param maxWidth  The maximum width.
+ * @param maxHeight The maximum height.
+ * @param recycle   True to recycle the source of bitmap, false otherwise.
+ * @return the compressed bitmap
+ */
+public static Bitmap compressBySampleSize(final Bitmap src,final int maxWidth,final int maxHeight,final boolean recycle){
+  if (isEmptyBitmap(src))   return null;
+  BitmapFactory.Options options=new BitmapFactory.Options();
+  options.inJustDecodeBounds=true;
+  ByteArrayOutputStream baos=new ByteArrayOutputStream();
+  src.compress(Bitmap.CompressFormat.JPEG,100,baos);
+  byte[] bytes=baos.toByteArray();
+  BitmapFactory.decodeByteArray(bytes,0,bytes.length,options);
+  options.inSampleSize=calculateInSampleSize(options,maxWidth,maxHeight);
+  options.inJustDecodeBounds=false;
+  if (recycle && !src.isRecycled())   src.recycle();
+  return BitmapFactory.decodeByteArray(bytes,0,bytes.length,options);
+}

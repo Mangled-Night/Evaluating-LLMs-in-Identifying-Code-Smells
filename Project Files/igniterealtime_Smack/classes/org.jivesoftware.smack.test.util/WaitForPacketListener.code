@@ -1,0 +1,27 @@
+public class WaitForPacketListener implements StanzaListener {
+  private CountDownLatch latch=new CountDownLatch(1);
+  @Override public void processStanza(  Stanza packet) throws NotConnectedException {
+    reportInvoked();
+  }
+  protected void reportInvoked(){
+    latch.countDown();
+  }
+  public void waitAndReset(){
+    waitUntilInvocationOrTimeout();
+    reset();
+  }
+  public void waitUntilInvocationOrTimeout(){
+    try {
+      boolean res=latch.await(300,TimeUnit.SECONDS);
+      if (!res) {
+        throw new IllegalStateException("Latch timed out before it reached zero");
+      }
+    }
+ catch (    InterruptedException e) {
+      throw new IllegalStateException(e);
+    }
+  }
+  public void reset(){
+    latch=new CountDownLatch(1);
+  }
+}

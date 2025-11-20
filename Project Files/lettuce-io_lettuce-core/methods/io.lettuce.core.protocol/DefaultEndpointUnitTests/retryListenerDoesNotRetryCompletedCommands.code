@@ -1,0 +1,8 @@
+@Test void retryListenerDoesNotRetryCompletedCommands(){
+  DefaultEndpoint.RetryListener listener=DefaultEndpoint.RetryListener.newInstance(sut,command);
+  when(channel.eventLoop()).thenReturn(mock(EventLoop.class));
+  command.complete();
+  promise.tryFailure(new Exception());
+  listener.operationComplete(promise);
+  verify(channel,never()).writeAndFlush(command);
+}

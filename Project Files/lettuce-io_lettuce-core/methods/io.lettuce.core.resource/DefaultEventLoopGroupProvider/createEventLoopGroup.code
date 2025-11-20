@@ -1,0 +1,48 @@
+/** 
+ * Create an instance of a  {@link EventExecutorGroup} using the default {@link ThreadFactoryProvider}. Supported types are: <ul> <li>DefaultEventExecutorGroup</li> <li>NioEventLoopGroup</li> <li>EpollEventLoopGroup</li> <li>KqueueEventLoopGroup</li> </ul>
+ * @param type the type
+ * @param numberOfThreads the number of threads to use for the {@link EventExecutorGroup}
+ * @param < T > type parameter
+ * @return a new instance of a {@link EventExecutorGroup}
+ * @throws IllegalArgumentException if the {@code type} is not supported.
+ */
+public static <T extends EventExecutorGroup>EventExecutorGroup createEventLoopGroup(Class<T> type,int numberOfThreads){
+  return createEventLoopGroup(type,numberOfThreads,DefaultThreadFactoryProvider.INSTANCE);
+}
+/** 
+ * Create an instance of a  {@link EventExecutorGroup}. Supported types are: <ul> <li>DefaultEventExecutorGroup</li> <li>NioEventLoopGroup</li> <li>EpollEventLoopGroup</li> <li>KqueueEventLoopGroup</li> </ul>
+ * @param type the type
+ * @param numberOfThreads the number of threads to use for the {@link EventExecutorGroup}
+ * @param < T > type parameter
+ * @return a new instance of a {@link EventExecutorGroup}
+ * @throws IllegalArgumentException if the {@code type} is not supported.
+ * @since 5.3
+ */
+static <T extends EventExecutorGroup>EventExecutorGroup createEventLoopGroup(Class<T> type,int numberOfThreads,io.lettuce.core.resource.ThreadFactoryProvider factoryProvider){
+  logger.debug("Creating executor {}",type.getName());
+  if (DefaultEventExecutorGroup.class.equals(type)) {
+    return new DefaultEventExecutorGroup(numberOfThreads,factoryProvider.getThreadFactory("lettuce-eventExecutorLoop"));
+  }
+  if (NioEventLoopGroup.class.equals(type)) {
+    return new NioEventLoopGroup(numberOfThreads,factoryProvider.getThreadFactory("lettuce-nioEventLoop"));
+  }
+  if (EpollProvider.isAvailable()) {
+    EventLoopResources resources=EpollProvider.getResources();
+    if (resources.matches(type)) {
+      return resources.newEventLoopGroup(numberOfThreads,factoryProvider.getThreadFactory("lettuce-epollEventLoop"));
+    }
+  }
+  if (KqueueProvider.isAvailable()) {
+    EventLoopResources resources=KqueueProvider.getResources();
+    if (resources.matches(type)) {
+      return resources.newEventLoopGroup(numberOfThreads,factoryProvider.getThreadFactory("lettuce-kqueueEventLoop"));
+    }
+  }
+  if (IOUringProvider.isAvailable()) {
+    EventLoopResources resources=IOUringProvider.getResources();
+    if (resources.matches(type)) {
+      return resources.newEventLoopGroup(numberOfThreads,factoryProvider.getThreadFactory("lettuce-io_uringEventLoop"));
+    }
+  }
+  throw new IllegalArgumentException(String.format("Type %s not supported",type.getName()));
+}

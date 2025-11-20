@@ -1,0 +1,37 @@
+/** 
+ * 进行连接处理
+ * @param con
+ * @param buf
+ * @param start
+ * @param readedLength
+ */
+private void doConnecting(PostgreSQLBackendConnection con,ByteBuffer buf,int start,int readedLength){
+  try {
+    List<PostgreSQLPacket> packets=PacketUtils.parsePacket(buf,0,readedLength);
+    LOGGER.debug(JSON.toJSONString(packets));
+    if (!packets.isEmpty() && packets.get(0) instanceof AuthenticationPacket) {
+      AuthenticationPacket packet=(AuthenticationPacket)packets.get(0);
+      AuthType aut=packet.getAuthType();
+      if (aut != AuthType.Ok) {
+        PasswordMessage pak=new PasswordMessage(con.getUser(),con.getPassword(),aut,((AuthenticationPacket)packet).getSalt());
+        ByteBuffer buffer=con.allocate();
+        pak.write(buffer);
+        con.write(buffer);
+      }
+ else {
+        for (int i=1; i < packets.size(); i++) {
+          PostgreSQLPacket _p=packets.get(i);
+          if (_p instanceof BackendKeyData) {
+            con.setServerSecretKey(((BackendKeyData)_p).getSecretKey());
+          }
+        }
+        LOGGER.debug("SUCCESS Connected TO PostgreSQL , con id is {}",con.getId());
+        con.setState(BackendConnectionState.connected);
+        con.getResponseHandler().connectionAcquired(con);
+      }
+    }
+  }
+ catch (  IOException e) {
+    LOGGER.error("error",e);
+  }
+}

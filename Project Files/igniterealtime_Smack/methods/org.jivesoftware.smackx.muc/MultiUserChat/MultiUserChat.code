@@ -1,0 +1,123 @@
+MultiUserChat(XMPPConnection connection,EntityBareJid room,MultiUserChatManager multiUserChatManager){
+  this.connection=connection;
+  this.room=room;
+  this.multiUserChatManager=multiUserChatManager;
+  this.messageInterceptors=MultiUserChatManager.getMessageInterceptors();
+  fromRoomFilter=FromMatchesFilter.create(room);
+  fromRoomGroupchatFilter=new AndFilter(fromRoomFilter,MessageTypeFilter.GROUPCHAT);
+  messageListener=new StanzaListener(){
+    @Override public void processStanza(    Stanza packet) throws NotConnectedException {
+      final Message message=(Message)packet;
+      for (      MessageListener listener : messageListeners) {
+        listener.processMessage(message);
+      }
+    }
+  }
+;
+  subjectListener=new StanzaListener(){
+    @Override public void processStanza(    Stanza packet){
+      final Message msg=(Message)packet;
+      final EntityFullJid from=msg.getFrom().asEntityFullJidIfPossible();
+      subject=msg.getSubject();
+      for (      SubjectUpdatedListener listener : subjectUpdatedListeners) {
+        listener.subjectUpdated(msg.getSubject(),from);
+      }
+    }
+  }
+;
+  presenceListener=new StanzaListener(){
+    @Override public void processStanza(    final Stanza packet){
+      final Presence presence=(Presence)packet;
+      final EntityFullJid from=presence.getFrom().asEntityFullJidIfPossible();
+      if (from == null) {
+        return;
+      }
+      final EntityFullJid myRoomJID=getMyRoomJid();
+      final boolean isUserStatusModification=presence.getFrom().equals(myRoomJID);
+      final MUCUser mucUser=MUCUser.from(packet);
+switch (presence.getType()) {
+case available:
+        if (!processedReflectedSelfPresence && mucUser.getStatus().contains(MUCUser.Status.PRESENCE_TO_SELF_110)) {
+          processedReflectedSelfPresence=true;
+synchronized (this) {
+            notify();
+          }
+        }
+      Presence oldPresence=occupantsMap.put(from,presence);
+    if (oldPresence != null) {
+      MUCUser mucExtension=MUCUser.from(oldPresence);
+      MUCAffiliation oldAffiliation=mucExtension.getItem().getAffiliation();
+      MUCRole oldRole=mucExtension.getItem().getRole();
+      MUCAffiliation newAffiliation=mucUser.getItem().getAffiliation();
+      MUCRole newRole=mucUser.getItem().getRole();
+      checkRoleModifications(oldRole,newRole,isUserStatusModification,from);
+      checkAffiliationModifications(oldAffiliation,newAffiliation,isUserStatusModification,from);
+    }
+ else {
+      for (      ParticipantStatusListener listener : participantStatusListeners) {
+        listener.joined(from);
+      }
+    }
+  break;
+case unavailable:
+occupantsMap.remove(from);
+if (mucUser != null && mucUser.hasStatus()) {
+if (isUserStatusModification) {
+  userHasLeft();
+}
+checkPresenceCode(mucUser.getStatus(),isUserStatusModification,mucUser,from);
+}
+ else {
+if (!isUserStatusModification) {
+  for (  ParticipantStatusListener listener : participantStatusListeners) {
+    listener.left(from);
+  }
+}
+}
+Destroy destroy=mucUser.getDestroy();
+if (destroy != null) {
+EntityBareJid alternateMucJid=destroy.getJid();
+final MultiUserChat alternateMuc;
+if (alternateMucJid == null) {
+alternateMuc=null;
+}
+ else {
+alternateMuc=multiUserChatManager.getMultiUserChat(alternateMucJid);
+}
+for (UserStatusListener listener : userStatusListeners) {
+listener.roomDestroyed(alternateMuc,destroy.getReason());
+}
+}
+if (isUserStatusModification) {
+for (UserStatusListener listener : userStatusListeners) {
+listener.removed(mucUser,presence);
+}
+}
+ else {
+for (ParticipantStatusListener listener : participantStatusListeners) {
+listener.parted(from);
+}
+}
+break;
+default :
+break;
+}
+for (PresenceListener listener : presenceListeners) {
+listener.processPresence(presence);
+}
+}
+}
+;
+declinesListener=new StanzaListener(){
+@Override public void processStanza(Stanza packet){
+Message message=(Message)packet;
+MUCUser mucUser=MUCUser.from(packet);
+MUCUser.Decline rejection=mucUser.getDecline();
+if (rejection == null) {
+return;
+}
+fireInvitationRejectionListeners(message,rejection);
+}
+}
+;
+}

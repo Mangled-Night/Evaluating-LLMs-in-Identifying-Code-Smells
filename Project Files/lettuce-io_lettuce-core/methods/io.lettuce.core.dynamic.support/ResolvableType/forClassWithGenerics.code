@@ -1,0 +1,37 @@
+/** 
+ * Return a  {@link ResolvableType} for the specified {@link Class} with pre-declared generics.
+ * @param sourceClass the source class
+ * @param generics the generics of the class
+ * @return a {@link ResolvableType} for the specific class and generics
+ * @see #forClassWithGenerics(Class,ResolvableType)
+ */
+public static ResolvableType forClassWithGenerics(Class<?> sourceClass,Class<?>... generics){
+  LettuceAssert.notNull(sourceClass,"Source class must not be null");
+  LettuceAssert.notNull(generics,"Generics must not be null");
+  ResolvableType[] resolvableGenerics=new ResolvableType[generics.length];
+  for (int i=0; i < generics.length; i++) {
+    resolvableGenerics[i]=forClass(generics[i]);
+  }
+  return forClassWithGenerics(sourceClass,resolvableGenerics);
+}
+/** 
+ * Return a  {@link ResolvableType} for the specified {@link Class} with pre-declared generics.
+ * @param sourceClass the source class
+ * @param generics the generics of the class
+ * @return a {@link ResolvableType} for the specific class and generics
+ * @see #forClassWithGenerics(Class,Class)
+ */
+public static ResolvableType forClassWithGenerics(Class<?> sourceClass,ResolvableType... generics){
+  LettuceAssert.notNull(sourceClass,"Source class must not be null");
+  LettuceAssert.notNull(generics,"Generics must not be null");
+  TypeVariable<?>[] variables=sourceClass.getTypeParameters();
+  LettuceAssert.isTrue(variables.length == generics.length,"Mismatched number of generics specified");
+  Type[] arguments=new Type[generics.length];
+  for (int i=0; i < generics.length; i++) {
+    ResolvableType generic=generics[i];
+    Type argument=(generic != null ? generic.getType() : null);
+    arguments[i]=(argument != null ? argument : variables[i]);
+  }
+  ParameterizedType syntheticType=new SyntheticParameterizedType(sourceClass,arguments);
+  return forType(syntheticType,new TypeVariablesVariableResolver(variables,generics));
+}

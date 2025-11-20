@@ -1,0 +1,32 @@
+@Override protected Trust readTrust(BareJid owner,OpenPgpV4Fingerprint fingerprint) throws IOException {
+  File file=getTrustPath(owner,fingerprint);
+  BufferedReader reader=null;
+  try {
+    InputStream inputStream=FileUtils.prepareFileInputStream(file);
+    InputStreamReader isr=new InputStreamReader(inputStream,Util.UTF8);
+    reader=new BufferedReader(isr);
+    Trust trust=null;
+    String line;
+    int lineNr=0;
+    while ((line=reader.readLine()) != null) {
+      lineNr++;
+      try {
+        trust=Trust.valueOf(line);
+        break;
+      }
+ catch (      IllegalArgumentException e) {
+        LOGGER.log(Level.WARNING,"Skipping invalid trust record in line " + lineNr + " \""+ line+ "\" of file "+ file.getAbsolutePath());
+      }
+    }
+    return trust != null ? trust : Trust.undecided;
+  }
+ catch (  IOException e) {
+    if (e instanceof FileNotFoundException) {
+      return Trust.undecided;
+    }
+    throw e;
+  }
+ finally {
+    CloseableUtil.maybeClose(reader,LOGGER);
+  }
+}

@@ -1,0 +1,30 @@
+/** 
+ * Low level API test. 1. User_1 will send his/her roster entries to user_2 2. User_2 will receive the entries and iterate over them to check if everything is fine 3. User_1 will wait several seconds for an ACK from user_2, if none is received then something is wrong
+ */
+public void testSendAndReceiveRosterEntries(){
+  Chat chat1=getConnection(0).getChatManager().createChat(getBareJID(1),null);
+  final StanzaCollector chat2=getConnection(1).createStanzaCollector(new ThreadFilter(chat1.getThreadID()));
+  Message msg=new Message();
+  msg.setSubject("Any subject you want");
+  msg.setBody("This message contains roster items.");
+  assertTrue("Roster has no entries",getConnection(0).getRoster().getEntryCount() > 0);
+  RosterExchange rosterExchange=new RosterExchange(getConnection(0).getRoster());
+  msg.addExtension(rosterExchange);
+  try {
+    chat1.sendMessage(msg);
+  }
+ catch (  Exception e) {
+    fail("An error occurred sending the message with the roster");
+  }
+  Packet packet=chat2.nextResult(2000);
+  Message message=(Message)packet;
+  assertNotNull("Body is null",message.getBody());
+  try {
+    rosterExchange=(RosterExchange)message.getExtension("x","jabber:x:roster");
+    assertNotNull("Message without extension \"jabber:x:roster\"",rosterExchange);
+    assertTrue("Roster without entries",rosterExchange.getRosterEntries().hasNext());
+  }
+ catch (  ClassCastException e) {
+    fail("ClassCastException - Most probable cause is that smack providers is misconfigured");
+  }
+}

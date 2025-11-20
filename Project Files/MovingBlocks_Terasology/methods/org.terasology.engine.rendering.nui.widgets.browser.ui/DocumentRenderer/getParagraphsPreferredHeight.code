@@ -1,0 +1,34 @@
+public static int getParagraphsPreferredHeight(ParagraphRenderStyle baseRenderStyle,Collection<ParagraphData> paragraphs,ContainerRenderSpace containerRenderSpace,int yStart){
+  int containerWidth=containerRenderSpace.getContainerWidth();
+  int yShift=yStart;
+  for (  ParagraphData paragraphData : paragraphs) {
+    ParagraphRenderStyle paragraphRenderStyle=getParagraphRenderStyle(baseRenderStyle,paragraphData);
+    ParagraphRenderStyle.ClearStyle clearStyle=paragraphRenderStyle.getClearStyle();
+    if (clearStyle != ParagraphRenderStyle.ClearStyle.NONE) {
+      yShift=Math.max(yShift,containerRenderSpace.getNextClearYPosition(clearStyle));
+    }
+    ParagraphRenderStyle.FloatStyle floatStyle=paragraphRenderStyle.getFloatStyle();
+    if (floatStyle == ParagraphRenderStyle.FloatStyle.LEFT || floatStyle == ParagraphRenderStyle.FloatStyle.RIGHT) {
+      int paragraphMinWidth=Math.max(paragraphRenderStyle.getParagraphMinimumWidth().getValue(containerWidth),paragraphData.getParagraphContents().getContentsMinWidth(paragraphRenderStyle));
+      int paragraphSideIndent=paragraphRenderStyle.getParagraphMarginLeft().getValue(containerWidth) + paragraphRenderStyle.getParagraphMarginRight().getValue(containerWidth) + paragraphRenderStyle.getParagraphPaddingLeft().getValue(containerWidth)+ paragraphRenderStyle.getParagraphPaddingRight().getValue(containerWidth);
+      int height=paragraphRenderStyle.getParagraphMarginTop().getValue(containerWidth) + paragraphRenderStyle.getParagraphPaddingTop().getValue(containerWidth);
+      height+=paragraphData.getParagraphContents().getPreferredContentsHeight(paragraphRenderStyle,0,new ContainerFlowContainerRenderSpace(paragraphMinWidth),paragraphSideIndent);
+      height+=paragraphRenderStyle.getParagraphPaddingBottom().getValue(containerWidth) + paragraphRenderStyle.getParagraphMarginBottom().getValue(containerWidth);
+      if (floatStyle == ParagraphRenderStyle.FloatStyle.LEFT) {
+        Rectanglei position=containerRenderSpace.addLeftFloat(yShift,paragraphMinWidth,height);
+        yShift=position.minY;
+      }
+ else {
+        Rectanglei position=containerRenderSpace.addRightFloat(yShift,paragraphMinWidth,height);
+        yShift=position.minY;
+      }
+    }
+ else {
+      yShift+=paragraphRenderStyle.getParagraphMarginTop().getValue(containerWidth) + paragraphRenderStyle.getParagraphPaddingTop().getValue(containerWidth);
+      int paragraphSideIndent=paragraphRenderStyle.getParagraphMarginLeft().getValue(containerWidth) + paragraphRenderStyle.getParagraphMarginRight().getValue(containerWidth) + paragraphRenderStyle.getParagraphPaddingLeft().getValue(containerWidth)+ paragraphRenderStyle.getParagraphPaddingRight().getValue(containerWidth);
+      yShift+=paragraphData.getParagraphContents().getPreferredContentsHeight(paragraphRenderStyle,yShift,containerRenderSpace,paragraphSideIndent);
+      yShift+=paragraphRenderStyle.getParagraphPaddingBottom().getValue(containerWidth) + paragraphRenderStyle.getParagraphMarginBottom().getValue(containerWidth);
+    }
+  }
+  return yShift - yStart;
+}

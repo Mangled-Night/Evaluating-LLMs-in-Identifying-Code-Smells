@@ -1,0 +1,57 @@
+/** 
+ * This class can be used to simulate the server response for a pre approve request request.
+ */
+private abstract class PreApproveAndCreateEntryResponder extends Thread {
+  private Throwable exception=null;
+  /** 
+ * Overwrite this method to check if the received roster update request is valid.
+ * @param updateRequest the request which would be sent to the server.
+ */
+  abstract void verifyRosterUpdateRequest(  RosterPacket updateRequest);
+  /** 
+ * Overwrite this method to check if received pre-approval request is valid
+ * @param preApproval the request which would be sent to server.
+ */
+  abstract void verifyPreApprovalRequest(  Presence preApproval);
+  @Override public void run(){
+    try {
+      while (true) {
+        final Stanza packet=connection.getSentPacket();
+        if (packet instanceof RosterPacket && ((IQ)packet).getType() == IQ.Type.set) {
+          final RosterPacket rosterRequest=(RosterPacket)packet;
+          final RosterPacket rosterPush=new RosterPacket();
+          final Item item=rosterRequest.getRosterItems().iterator().next();
+          if (item.getItemType() != ItemType.remove) {
+            item.setItemType(ItemType.none);
+          }
+          rosterPush.setType(IQ.Type.set);
+          rosterPush.setTo(connection.getUser());
+          rosterPush.addRosterItem(item);
+          connection.processStanza(rosterPush);
+          final IQ response=IQ.createResultIQ(rosterRequest);
+          connection.processStanza(response);
+          if (rosterRequest.getRosterItemCount() != 1) {
+            throw new AssertionError("A roster set MUST contain one and only one <item/> element.");
+          }
+          verifyRosterUpdateRequest(rosterRequest);
+          break;
+        }
+ else         if (packet instanceof Presence && ((Presence)packet).getType() == Presence.Type.subscribed) {
+          final Presence approval=(Presence)packet;
+          verifyPreApprovalRequest(approval);
+        }
+      }
+    }
+ catch (    Throwable e) {
+      exception=e;
+      fail(e.getMessage());
+    }
+  }
+  /** 
+ * Returns the exception or error if something went wrong.
+ * @return the Throwable exception or error that occurred.
+ */
+  public Throwable getException(){
+    return exception;
+  }
+}

@@ -1,0 +1,81 @@
+@Override public void initialise(){
+  setAnimationSystem(MenuAnimationSystems.createDefaultSwipeAnimation());
+  ColumnLayout mainLayout=find("main",ColumnLayout.class);
+  UIButton azerty=find("azerty",UIButton.class);
+  if (azerty != null) {
+    azerty.subscribe(event -> {
+      BindCommands.AZERTY.forEach(this::setPrimaryBind);
+      bindsManager.registerBinds();
+    }
+);
+  }
+  UIButton dvorak=find("dvorak",UIButton.class);
+  if (dvorak != null) {
+    dvorak.subscribe(event -> {
+      BindCommands.DVORAK.forEach(this::setPrimaryBind);
+      bindsManager.registerBinds();
+    }
+);
+  }
+  UIButton neo=find("neo",UIButton.class);
+  if (neo != null) {
+    neo.subscribe(event -> {
+      BindCommands.NEO.forEach(this::setPrimaryBind);
+      bindsManager.registerBinds();
+    }
+);
+  }
+  UISlider mouseSensitivity=new UISlider("mouseSensitivity");
+  mouseSensitivity.bindValue(BindHelper.bindBeanProperty("mouseSensitivity",inputDeviceConfiguration,Float.TYPE));
+  mouseSensitivity.setIncrement(0.025f);
+  mouseSensitivity.setPrecision(3);
+  UICheckbox mouseInverted=new UICheckbox("mouseYAxisInverted");
+  mouseInverted.bindChecked(BindHelper.bindBeanProperty("mouseYAxisInverted",inputDeviceConfiguration,Boolean.TYPE));
+  if (mainLayout != null) {
+    mainLayout.addWidget(new UILabel("mouseLabel","subheading",translationSystem.translate("${engine:menu" + "#category-mouse}")));
+    mainLayout.addWidget(new RowLayout(new UILabel(translationSystem.translate("${engine:menu#mouse" + "-sensitivity}") + ":"),mouseSensitivity).setColumnRatios(0.4f).setHorizontalSpacing(horizontalSpacing));
+    mainLayout.addWidget(new RowLayout(new UILabel(translationSystem.translate("${engine:menu#invert-mouse}") + ":"),mouseInverted).setColumnRatios(0.4f).setHorizontalSpacing(horizontalSpacing));
+  }
+  Map<String,InputCategory> inputCategories=Maps.newHashMap();
+  Map<SimpleUri,RegisterBindButton> inputsById=Maps.newHashMap();
+  DependencyResolver resolver=new DependencyResolver(moduleManager.getRegistry());
+  for (  Name moduleId : moduleManager.getRegistry().getModuleIds()) {
+    Module module=moduleManager.getRegistry().getLatestModuleVersion(moduleId);
+    ResolutionResult result=resolver.resolve(moduleId);
+    if (result.isSuccess()) {
+      try (ModuleEnvironment environment=moduleManager.loadEnvironment(result.getModules(),false)){
+        for (        Class<?> holdingType : environment.getTypesAnnotatedWith(InputCategory.class,new FromModule(environment,moduleId))) {
+          InputCategory inputCategory=holdingType.getAnnotation(InputCategory.class);
+          inputCategories.put(module.getId() + ":" + inputCategory.id(),inputCategory);
+        }
+        for (        Class<?> bindEvent : environment.getTypesAnnotatedWith(RegisterBindButton.class,new FromModule(environment,moduleId))) {
+          if (BindButtonEvent.class.isAssignableFrom(bindEvent)) {
+            RegisterBindButton bindRegister=bindEvent.getAnnotation(RegisterBindButton.class);
+            inputsById.put(new SimpleUri(module.getId(),bindRegister.id()),bindRegister);
+          }
+        }
+      }
+     }
+  }
+  if (mainLayout != null) {
+    addInputSection(inputCategories.remove("engine:movement"),mainLayout,inputsById);
+    addInputSection(inputCategories.remove("engine:interaction"),mainLayout,inputsById);
+    addInputSection(inputCategories.remove("engine:inventory"),mainLayout,inputsById);
+    addInputSection(inputCategories.remove("engine:general"),mainLayout,inputsById);
+    for (    InputCategory category : inputCategories.values()) {
+      addInputSection(category,mainLayout,inputsById);
+    }
+    mainLayout.addWidget(new UISpace(new Vector2i(1,16)));
+    List<String> controllers=inputSystem.getControllerDevice().getControllers();
+    for (    String name : controllers) {
+      ControllerInfo cfg=inputDeviceConfiguration.getController(name);
+      addInputSection(mainLayout,name,cfg);
+    }
+  }
+  WidgetUtil.trySubscribe(this,"reset",button -> {
+    inputDeviceConfiguration.reset();
+    bindsManager.getBindsConfig().setBinds(bindsManager.getDefaultBindsConfig());
+  }
+);
+  WidgetUtil.trySubscribe(this,"back",button -> triggerBackAnimation());
+}

@@ -1,0 +1,41 @@
+/** 
+ * @author Mark Paluch
+ * @since 5.1
+ */
+private static class RedisPooledObjectFactory<T extends StatefulConnection<?,?>> implements AsyncObjectFactory<T> {
+  private final Supplier<CompletionStage<T>> connectionSupplier;
+  RedisPooledObjectFactory(  Supplier<CompletionStage<T>> connectionSupplier){
+    this.connectionSupplier=connectionSupplier;
+  }
+  @Override public CompletableFuture<T> create(){
+    return connectionSupplier.get().toCompletableFuture();
+  }
+  @Override public CompletableFuture<Void> destroy(  T object){
+    return object.closeAsync();
+  }
+  @Override public CompletableFuture<Boolean> validate(  T object){
+    return CompletableFuture.completedFuture(object.isOpen());
+  }
+}
+/** 
+ * @author Mark Paluch
+ * @since 4.3
+ */
+private static class RedisPooledObjectFactory<T extends StatefulConnection<?,?>> extends BasePooledObjectFactory<T> {
+  private final Supplier<T> connectionSupplier;
+  RedisPooledObjectFactory(  Supplier<T> connectionSupplier){
+    this.connectionSupplier=connectionSupplier;
+  }
+  @Override public T create() throws Exception {
+    return connectionSupplier.get();
+  }
+  @Override public void destroyObject(  PooledObject<T> p) throws Exception {
+    p.getObject().close();
+  }
+  @Override public PooledObject<T> wrap(  T obj){
+    return new DefaultPooledObject<>(obj);
+  }
+  @Override public boolean validateObject(  PooledObject<T> p){
+    return p.getObject().isOpen();
+  }
+}

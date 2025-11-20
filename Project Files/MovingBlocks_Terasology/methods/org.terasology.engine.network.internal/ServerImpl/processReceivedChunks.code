@@ -1,0 +1,15 @@
+private void processReceivedChunks(){
+  if (remoteWorldProvider != null) {
+    List<Chunk> chunks=Lists.newArrayListWithExpectedSize(chunkQueue.size());
+    chunkQueue.drainTo(chunks);
+    for (    Chunk chunk : chunks) {
+      remoteWorldProvider.receiveChunk(chunk);
+    }
+  }
+}
+private void processReceivedChunks(NetData.NetMessage message){
+  for (  EntityData.ChunkStore chunkInfo : message.getChunkInfoList()) {
+    Chunk chunk=ChunkSerializer.decode(chunkInfo,blockManager,extraDataManager);
+    chunkQueue.offer(chunk);
+  }
+}

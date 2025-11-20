@@ -1,0 +1,167 @@
+public static final class MamQueryArgs {
+  private final String node;
+  private final Map<String,FormField> formFields;
+  private final Integer maxResults;
+  private final String afterUid;
+  private final String beforeUid;
+  private MamQueryArgs(  Builder builder){
+    node=builder.node;
+    formFields=builder.formFields;
+    if (builder.maxResults > 0) {
+      maxResults=builder.maxResults;
+    }
+ else {
+      maxResults=null;
+    }
+    afterUid=builder.afterUid;
+    beforeUid=builder.beforeUid;
+  }
+  private DataForm dataForm;
+  DataForm getDataForm(  MamVersion version){
+    if (dataForm != null) {
+      return dataForm;
+    }
+    DataForm.Builder dataFormBuilder=getNewMamForm(version);
+    dataFormBuilder.addFields(formFields.values());
+    dataForm=dataFormBuilder.build();
+    return dataForm;
+  }
+  void maybeAddRsmSet(  MamQueryIQ mamQueryIQ){
+    if (maxResults == null && afterUid == null && beforeUid == null) {
+      return;
+    }
+    int max;
+    if (maxResults != null) {
+      max=maxResults;
+    }
+ else {
+      max=-1;
+    }
+    RSMSet rsmSet=new RSMSet(afterUid,beforeUid,-1,-1,null,max,null,-1);
+    mamQueryIQ.addExtension(rsmSet);
+  }
+  public static Builder builder(){
+    return new Builder();
+  }
+public static final class Builder {
+    private String node;
+    private final Map<String,FormField> formFields=new LinkedHashMap<>(8);
+    private int maxResults=-1;
+    private String afterUid;
+    private String beforeUid;
+    public Builder queryNode(    String node){
+      if (node == null) {
+        return this;
+      }
+      this.node=node;
+      return this;
+    }
+    public Builder limitResultsToJid(    Jid withJid){
+      if (withJid == null) {
+        return this;
+      }
+      FormField formField=getWithFormField(withJid);
+      formFields.put(formField.getFieldName(),formField);
+      return this;
+    }
+    public Builder limitResultsSince(    Date start){
+      if (start == null) {
+        return this;
+      }
+      FormField formField=FormField.builder(FORM_FIELD_START).setValue(start).build();
+      formFields.put(formField.getFieldName(),formField);
+      FormField endFormField=formFields.get(FORM_FIELD_END);
+      if (endFormField != null) {
+        Date end;
+        try {
+          end=endFormField.getFirstValueAsDate();
+        }
+ catch (        ParseException e) {
+          throw new IllegalStateException(e);
+        }
+        if (end.getTime() <= start.getTime()) {
+          throw new IllegalArgumentException("Given start date (" + start + ") is after the existing end date ("+ end+ ')');
+        }
+      }
+      return this;
+    }
+    public Builder limitResultsBefore(    Date end){
+      if (end == null) {
+        return this;
+      }
+      FormField formField=FormField.builder(FORM_FIELD_END).setValue(end).build();
+      formFields.put(formField.getFieldName(),formField);
+      FormField startFormField=formFields.get(FORM_FIELD_START);
+      if (startFormField != null) {
+        Date start;
+        try {
+          start=startFormField.getFirstValueAsDate();
+        }
+ catch (        ParseException e) {
+          throw new IllegalStateException(e);
+        }
+        if (end.getTime() <= start.getTime()) {
+          throw new IllegalArgumentException("Given end date (" + end + ") is before the existing start date ("+ start+ ')');
+        }
+      }
+      return this;
+    }
+    public Builder setResultPageSize(    Integer max){
+      if (max == null) {
+        maxResults=-1;
+        return this;
+      }
+      return setResultPageSizeTo(max.intValue());
+    }
+    public Builder setResultPageSizeTo(    int max){
+      if (max < 0) {
+        throw new IllegalArgumentException();
+      }
+      this.maxResults=max;
+      return this;
+    }
+    /** 
+ * Only return the count of messages the query yields, not the actual messages. Note that not all services return a correct count, some return an approximate count.
+ * @return an reference to this builder.
+ * @see <a href="https://xmpp.org/extensions/xep-0059.html#count">XEP-0059 § 2.7</a>
+ */
+    public Builder onlyReturnMessageCount(){
+      return setResultPageSizeTo(0);
+    }
+    public Builder withAdditionalFormField(    FormField formField){
+      formFields.put(formField.getFieldName(),formField);
+      return this;
+    }
+    public Builder withAdditionalFormFields(    List<FormField> additionalFields){
+      for (      FormField formField : additionalFields) {
+        withAdditionalFormField(formField);
+      }
+      return this;
+    }
+    public Builder afterUid(    String afterUid){
+      this.afterUid=StringUtils.requireNullOrNotEmpty(afterUid,"afterUid must not be empty");
+      return this;
+    }
+    /** 
+ * Specifies a message UID as 'before' anchor for the query. Note that unlike  {@link #afterUid(String)} thismethod also accepts the empty String to query the last page of an archive (c.f. XEP-0059 § 2.5).
+ * @param beforeUid a message UID acting as 'before' query anchor.
+ * @return an instance to this builder.
+ */
+    public Builder beforeUid(    String beforeUid){
+      this.beforeUid=beforeUid;
+      return this;
+    }
+    /** 
+ * Query from the last, i.e. most recent, page of the archive. This will return the very last page of the archive holding the most recent matching messages. You usually would page backwards from there on.
+ * @return a reference to this builder.
+ * @see <a href="https://xmpp.org/extensions/xep-0059.html#last">XEP-0059 § 2.5. Requesting the Last Page in
+             *      a Result Set</a>
+ */
+    public Builder queryLastPage(){
+      return beforeUid("");
+    }
+    public MamQueryArgs build(){
+      return new MamQueryArgs(this);
+    }
+  }
+}

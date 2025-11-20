@@ -1,0 +1,33 @@
+public String genLocateRootParentSQL(){
+  TableConfig tb=this;
+  StringBuilder tableSb=new StringBuilder();
+  StringBuilder condition=new StringBuilder();
+  TableConfig prevTC=null;
+  String ancestorTableName=null;
+  int level=0;
+  String latestCond=null;
+  while (tb.parentTC != null) {
+    ancestorTableName=tb.parentTC.name;
+    String currentTableName=tb.name;
+    if (!ancestorTableName.contains("`")) {
+      ancestorTableName="`" + ancestorTableName + "`";
+    }
+    if (!currentTableName.contains("`")) {
+      currentTableName="`" + currentTableName + "`";
+    }
+    tableSb.append(ancestorTableName).append(',');
+    String relation=null;
+    if (level == 0) {
+      latestCond=" " + ancestorTableName + '.'+ tb.parentKey+ "=";
+    }
+ else {
+      relation=ancestorTableName + '.' + tb.parentKey+ '='+ currentTableName+ '.'+ tb.joinKey;
+      condition.append(relation).append(" AND ");
+    }
+    level++;
+    prevTC=tb;
+    tb=tb.parentTC;
+  }
+  String sql="SELECT " + ancestorTableName + '.'+ prevTC.parentKey+ " FROM "+ tableSb.substring(0,tableSb.length() - 1)+ " WHERE "+ ((level < 2) ? latestCond : condition.toString() + latestCond);
+  return sql;
+}

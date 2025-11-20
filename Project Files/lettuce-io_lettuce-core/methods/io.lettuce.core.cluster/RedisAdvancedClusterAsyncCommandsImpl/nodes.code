@@ -1,0 +1,18 @@
+@Override public AsyncNodeSelection<K,V> nodes(Predicate<RedisClusterNode> predicate){
+  return nodes(predicate,false);
+}
+@Override public AsyncNodeSelection<K,V> nodes(Predicate<RedisClusterNode> predicate,boolean dynamic){
+  return nodes(predicate,ConnectionIntent.WRITE,dynamic);
+}
+@SuppressWarnings("unchecked") protected AsyncNodeSelection<K,V> nodes(Predicate<RedisClusterNode> predicate,ConnectionIntent connectionIntent,boolean dynamic){
+  NodeSelectionSupport<RedisAsyncCommands<K,V>,?> selection;
+  StatefulRedisClusterConnectionImpl<K,V> impl=(StatefulRedisClusterConnectionImpl<K,V>)getConnection();
+  if (dynamic) {
+    selection=new DynamicNodeSelection<RedisAsyncCommands<K,V>,Object,K,V>(impl.getClusterDistributionChannelWriter(),predicate,connectionIntent,StatefulRedisConnection::async);
+  }
+ else {
+    selection=new StaticNodeSelection<RedisAsyncCommands<K,V>,Object,K,V>(impl.getClusterDistributionChannelWriter(),predicate,connectionIntent,StatefulRedisConnection::async);
+  }
+  NodeSelectionInvocationHandler h=new NodeSelectionInvocationHandler((AbstractNodeSelection<?,?,?,?>)selection,RedisClusterAsyncCommands.class,ASYNC);
+  return (AsyncNodeSelection<K,V>)Proxy.newProxyInstance(NodeSelectionSupport.class.getClassLoader(),new Class<?>[]{NodeSelectionAsyncCommands.class,AsyncNodeSelection.class},h);
+}

@@ -1,0 +1,17 @@
+/** 
+ * 根据执行语句判断数据路由
+ * @param schema     			数据库名
+ * @param rrs		  		 	数据路由集合
+ * @param stmt		  	 		执行sql
+ * @return RouteResultset		数据路由集合
+ * @throws SQLSyntaxErrorException
+ * @author mycat
+ */
+private RouteResultset analyseDoubleAtSgin(SchemaConfig schema,RouteResultset rrs,String stmt) throws SQLSyntaxErrorException {
+  String upStmt=stmt.toUpperCase();
+  int atSginInd=upStmt.indexOf(" @@");
+  if (atSginInd > 0) {
+    return RouterUtil.routeToMultiNode(false,rrs,schema.getMetaDataNodes(),stmt);
+  }
+  return RouterUtil.routeToSingleNode(rrs,schema.getRandomDataNode(),stmt);
+}

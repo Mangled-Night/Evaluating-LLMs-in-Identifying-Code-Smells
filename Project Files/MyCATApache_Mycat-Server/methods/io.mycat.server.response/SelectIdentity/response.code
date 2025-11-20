@@ -1,0 +1,23 @@
+public static void response(ServerConnection c,String stmt,int aliasIndex,final String orgName){
+  String alias=ParseUtil.parseAlias(stmt,aliasIndex);
+  if (alias == null) {
+    alias=orgName;
+  }
+  ByteBuffer buffer=c.allocate();
+  buffer=header.write(buffer,c,true);
+  byte packetId=header.packetId;
+  FieldPacket field=PacketUtil.getField(alias,orgName,Fields.FIELD_TYPE_LONGLONG);
+  field.packetId=++packetId;
+  buffer=field.write(buffer,c,true);
+  EOFPacket eof=new EOFPacket();
+  eof.packetId=++packetId;
+  buffer=eof.write(buffer,c,true);
+  RowDataPacket row=new RowDataPacket(FIELD_COUNT);
+  row.add(LongUtil.toBytes(c.getLastInsertId()));
+  row.packetId=++packetId;
+  buffer=row.write(buffer,c,true);
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

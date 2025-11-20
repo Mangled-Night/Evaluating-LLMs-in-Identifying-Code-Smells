@@ -1,0 +1,28 @@
+private RedisCommandExecutionException createExecutionException(Map<RedisClusterNode,CompletionStage<?>> executions){
+  List<RedisClusterNode> failed=new ArrayList<>();
+  executions.forEach((redisClusterNode,completionStage) -> {
+    if (!completionStage.toCompletableFuture().isCompletedExceptionally()) {
+      failed.add(redisClusterNode);
+    }
+  }
+);
+  RedisCommandExecutionException e=ExceptionFactory.createExecutionException("Multi-node command execution failed on node(s): " + getNodeDescription(failed));
+  executions.forEach((redisClusterNode,completionStage) -> {
+    CompletableFuture<?> completableFuture=completionStage.toCompletableFuture();
+    if (completableFuture.isCompletedExceptionally()) {
+      try {
+        completableFuture.get();
+      }
+ catch (      Exception innerException) {
+        if (innerException instanceof ExecutionException) {
+          e.addSuppressed(innerException.getCause());
+        }
+ else {
+          e.addSuppressed(innerException);
+        }
+      }
+    }
+  }
+);
+  return e;
+}

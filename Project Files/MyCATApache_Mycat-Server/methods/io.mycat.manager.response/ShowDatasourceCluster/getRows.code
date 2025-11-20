@@ -1,0 +1,34 @@
+private static List<RowDataPacket> getRows(String charset){
+  List<RowDataPacket> list=new LinkedList<RowDataPacket>();
+  MycatConfig conf=MycatServer.getInstance().getConfig();
+  Map<String,PhysicalDBPool> dataHosts=conf.getDataHosts();
+  for (  PhysicalDBPool pool : dataHosts.values()) {
+    for (    PhysicalDatasource ds : pool.getAllDataSources()) {
+      DBHeartbeat hb=ds.getHeartbeat();
+      DataSourceSyncRecorder record=hb.getAsynRecorder();
+      Map<String,String> states=record.getRecords();
+      RowDataPacket row=new RowDataPacket(FIELD_COUNT);
+      if (!states.isEmpty()) {
+        row.add(StringUtil.encode(ds.getName(),charset));
+        row.add(StringUtil.encode(ds.getConfig().getIp(),charset));
+        row.add(LongUtil.toBytes(ds.getConfig().getPort()));
+        row.add(StringUtil.encode(states.get("wsrep_incoming_addresses") == null ? "" : states.get("wsrep_incoming_addresses"),charset));
+        row.add(StringUtil.encode(states.get("wsrep_cluster_size") == null ? "" : states.get("wsrep_cluster_size"),charset));
+        row.add(StringUtil.encode(states.get("wsrep_cluster_status") == null ? "" : states.get("wsrep_cluster_status"),charset));
+        row.add(StringUtil.encode(states.get("wsrep_connected") == null ? "" : states.get("wsrep_connected"),charset));
+        row.add(StringUtil.encode(states.get("wsrep_flow_control_paused") == null ? "" : states.get("wsrep_flow_control_paused"),charset));
+        row.add(StringUtil.encode(states.get("wsrep_local_state_comment") == null ? "" : states.get("wsrep_local_state_comment"),charset));
+        row.add(StringUtil.encode(states.get("wsrep_ready") == null ? "" : states.get("wsrep_ready"),charset));
+        row.add(StringUtil.encode(states.get("wsrep_flow_control_paused_ns") == null ? "" : states.get("wsrep_flow_control_paused_ns"),charset));
+        row.add(StringUtil.encode(states.get("wsrep_flow_control_recv") == null ? "" : states.get("wsrep_flow_control_recv"),charset));
+        row.add(StringUtil.encode(states.get("wsrep_local_bf_aborts") == null ? "" : states.get("wsrep_local_bf_aborts"),charset));
+        row.add(StringUtil.encode(states.get("wsrep_local_recv_queue_avg") == null ? "" : states.get("wsrep_local_recv_queue_avg"),charset));
+        row.add(StringUtil.encode(states.get("wsrep_local_send_queue_avg") == null ? "" : states.get("wsrep_local_recv_queue_avg"),charset));
+        row.add(StringUtil.encode(states.get("wsrep_apply_oool") == null ? "" : states.get("wsrep_apply_oool"),charset));
+        row.add(StringUtil.encode(states.get("wsrep_apply_oooe") == null ? "" : states.get("wsrep_apply_oooe"),charset));
+        list.add(row);
+      }
+    }
+  }
+  return list;
+}

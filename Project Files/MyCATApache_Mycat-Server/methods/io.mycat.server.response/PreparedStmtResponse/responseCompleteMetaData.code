@@ -1,0 +1,30 @@
+private static void responseCompleteMetaData(PreparedStatement pstmt,FrontendConnection c){
+  byte packetId=0;
+  PreparedOkPacket preparedOk=new PreparedOkPacket();
+  preparedOk.packetId=++packetId;
+  preparedOk.statementId=pstmt.getId();
+  preparedOk.columnsNumber=pstmt.getColumnsNumber();
+  preparedOk.parametersNumber=pstmt.getParametersNumber();
+  ByteBuffer buffer=preparedOk.write(c.allocate(),c,true);
+  int parametersNumber=pstmt.getParametersNumber();
+  if (parametersNumber > 0) {
+    for (    FieldPacket param : pstmt.getParams()) {
+      param.packetId=++packetId;
+      buffer=param.write(buffer,c,true);
+    }
+    EOFPacket eof=new EOFPacket();
+    eof.packetId=++packetId;
+    buffer=eof.write(buffer,c,true);
+  }
+  int columnsNumber=pstmt.getColumnsNumber();
+  if (columnsNumber > 0) {
+    for (    FieldPacket field : pstmt.getFields()) {
+      field.packetId=++packetId;
+      buffer=field.write(buffer,c,true);
+    }
+    EOFPacket eof=new EOFPacket();
+    eof.packetId=++packetId;
+    buffer=eof.write(buffer,c,true);
+  }
+  c.write(buffer);
+}

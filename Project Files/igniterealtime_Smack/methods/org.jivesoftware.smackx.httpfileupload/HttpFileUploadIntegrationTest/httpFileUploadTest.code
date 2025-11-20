@@ -1,0 +1,36 @@
+@SmackIntegrationTest public void httpFileUploadTest() throws IOException, XMPPErrorException, InterruptedException, SmackException {
+  final int fileSize=FILE_SIZE;
+  File file=createNewTempFile();
+  FileOutputStream fos=new FileOutputStream(file.getCanonicalPath());
+  byte[] upBytes;
+  try {
+    upBytes=new byte[fileSize];
+    INSECURE_RANDOM.nextBytes(upBytes);
+    fos.write(upBytes);
+  }
+  finally {
+    fos.close();
+  }
+  URL getUrl=hfumOne.uploadFile(file,new UploadProgressListener(){
+    @Override public void onUploadProgress(    long uploadedBytes,    long totalBytes){
+      double progress=uploadedBytes / totalBytes;
+      LOGGER.fine("HTTP File Upload progress " + progress + "% ("+ uploadedBytes+ '/'+ totalBytes+ ')');
+    }
+  }
+);
+  HttpURLConnection urlConnection=getHttpUrlConnectionFor(getUrl);
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(fileSize);
+  byte[] buffer=new byte[4096];
+  int n;
+  try {
+    InputStream is=new BufferedInputStream(urlConnection.getInputStream());
+    while ((n=is.read(buffer)) != -1) {
+      baos.write(buffer,0,n);
+    }
+  }
+  finally {
+    urlConnection.disconnect();
+  }
+  byte[] downBytes=baos.toByteArray();
+  assertArrayEquals(upBytes,downBytes);
+}

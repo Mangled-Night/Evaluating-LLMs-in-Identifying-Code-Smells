@@ -1,0 +1,25 @@
+/** 
+ * User1 logs in, then sets offline presence information (presence with status text). User2 logs in and checks to see if offline presence is returned.
+ * @throws Exception if an exception occurs.
+ */
+public void testOfflineStatusPresence() throws Exception {
+  Roster roster=getConnection(0).getRoster();
+  roster.createEntry(getBareJID(1),"gato1",null);
+  long initial=System.currentTimeMillis();
+  while (System.currentTimeMillis() - initial < 2000 && (roster.getPresence(getBareJID(1)).getType().equals(Presence.Type.unavailable))) {
+    Thread.sleep(100);
+  }
+  Presence offlinePresence=new Presence(Presence.Type.unavailable);
+  offlinePresence.setStatus("Offline test");
+  getConnection(1).disconnect(offlinePresence);
+  Thread.sleep(500);
+  Presence presence=getConnection(0).getRoster().getPresence(getBareJID(1));
+  assertEquals("Offline presence status not received.","Offline test",presence.getStatus());
+  getConnection(0).disconnect();
+  XMPPTCPConnection con0=getConnection(0);
+  con0.connect();
+  con0.login(getUsername(0),getUsername(0));
+  Thread.sleep(500);
+  presence=con0.getRoster().getPresence(getBareJID(1));
+  assertTrue("Offline presence status not received after logout.","Offline test".equals(presence.getStatus()));
+}

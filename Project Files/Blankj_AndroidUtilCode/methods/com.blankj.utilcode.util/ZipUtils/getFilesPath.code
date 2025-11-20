@@ -1,0 +1,33 @@
+/** 
+ * Return the files' path in ZIP file.
+ * @param zipFilePath The path of ZIP file.
+ * @return the files' path in ZIP file
+ * @throws IOException if an I/O error has occurred
+ */
+public static List<String> getFilesPath(final String zipFilePath) throws IOException {
+  return getFilesPath(UtilsBridge.getFileByPath(zipFilePath));
+}
+/** 
+ * Return the files' path in ZIP file.
+ * @param zipFile The ZIP file.
+ * @return the files' path in ZIP file
+ * @throws IOException if an I/O error has occurred
+ */
+public static List<String> getFilesPath(final File zipFile) throws IOException {
+  if (zipFile == null)   return null;
+  List<String> paths=new ArrayList<>();
+  ZipFile zip=new ZipFile(zipFile);
+  Enumeration<?> entries=zip.entries();
+  while (entries.hasMoreElements()) {
+    String entryName=((ZipEntry)entries.nextElement()).getName().replace("\\","/");
+    if (entryName.contains("../")) {
+      Log.e("ZipUtils","entryName: " + entryName + " is dangerous!");
+      paths.add(entryName);
+    }
+ else {
+      paths.add(entryName);
+    }
+  }
+  zip.close();
+  return paths;
+}

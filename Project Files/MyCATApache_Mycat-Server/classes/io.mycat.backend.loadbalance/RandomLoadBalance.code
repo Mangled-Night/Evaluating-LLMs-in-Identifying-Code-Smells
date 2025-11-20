@@ -1,0 +1,28 @@
+public class RandomLoadBalance implements LoadBalance {
+  @Override public PhysicalDatasource doSelect(  String hostName,  ArrayList<PhysicalDatasource> okSources){
+    boolean sameWeight=true;
+    int length=okSources.size();
+    int[] weights=new int[length];
+    int firstWeight=okSources.get(0).getConfig().getWeight();
+    weights[0]=firstWeight;
+    int totalWeight=firstWeight;
+    for (int i=1; i < length; i++) {
+      int weight=okSources.get(i).getConfig().getWeight();
+      weights[i]=weight;
+      totalWeight+=weight;
+      if (sameWeight && weight != firstWeight) {
+        sameWeight=false;
+      }
+    }
+    if (!sameWeight && totalWeight > 0) {
+      int offset=ThreadLocalRandom.current().nextInt(totalWeight);
+      for (int i=0; i < length; i++) {
+        offset-=weights[i];
+        if (offset < 0) {
+          return okSources.get(i);
+        }
+      }
+    }
+    return okSources.get(ThreadLocalRandom.current().nextInt(length));
+  }
+}

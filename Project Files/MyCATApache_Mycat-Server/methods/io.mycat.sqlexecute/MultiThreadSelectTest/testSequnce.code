@@ -1,0 +1,27 @@
+private static void testSequnce(Connection theCon) throws SQLException {
+  boolean autCommit=System.currentTimeMillis() % 2 == 1;
+  theCon.setAutoCommit(autCommit);
+  String sql="select * from company ";
+  Statement stmt=theCon.createStatement();
+  int charChoise=(int)(System.currentTimeMillis() % 3);
+  if (charChoise == 0) {
+    stmt.executeQuery("SET NAMES UTF8;");
+  }
+ else   if (charChoise == 1) {
+    stmt.executeQuery("SET NAMES latin1;");
+  }
+  if (charChoise == 2) {
+    stmt.executeQuery("SET NAMES gb2312;");
+  }
+  ResultSet rs=stmt.executeQuery(sql);
+  if (rs.next()) {
+    System.out.println(Thread.currentThread().getName() + " get seq " + rs.getLong(1));
+  }
+ else {
+    System.out.println(Thread.currentThread().getName() + " can't get  seq ");
+  }
+  if (autCommit == false) {
+    theCon.commit();
+  }
+  stmt.close();
+}

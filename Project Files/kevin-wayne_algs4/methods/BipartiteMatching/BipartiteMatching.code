@@ -1,0 +1,35 @@
+/** 
+ * Determines a maximum matching (and a minimum vertex cover) in a bipartite graph.
+ * @param G the bipartite graph
+ * @throws IllegalArgumentException if {@code G} is not bipartite
+ */
+public BipartiteMatching(Graph G){
+  bipartition=new BipartiteX(G);
+  if (!bipartition.isBipartite()) {
+    throw new IllegalArgumentException("graph is not bipartite");
+  }
+  this.V=G.V();
+  mate=new int[V];
+  for (int v=0; v < V; v++)   mate[v]=UNMATCHED;
+  while (hasAugmentingPath(G)) {
+    int t=-1;
+    for (int v=0; v < G.V(); v++) {
+      if (!isMatched(v) && edgeTo[v] != -1) {
+        t=v;
+        break;
+      }
+    }
+    for (int v=t; v != -1; v=edgeTo[edgeTo[v]]) {
+      int w=edgeTo[v];
+      mate[v]=w;
+      mate[w]=v;
+    }
+    cardinality++;
+  }
+  inMinVertexCover=new boolean[V];
+  for (int v=0; v < V; v++) {
+    if (bipartition.color(v) && !marked[v])     inMinVertexCover[v]=true;
+    if (!bipartition.color(v) && marked[v])     inMinVertexCover[v]=true;
+  }
+  assert certifySolution(G);
+}

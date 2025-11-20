@@ -1,0 +1,82 @@
+/** 
+ * IQProvider for RTP Bridge packets. Parse receive RTPBridge stanza to a RTPBridge instance
+ * @author Thiago Rocha
+ */
+public static class Provider extends IqProvider<RTPBridge> {
+  @Override public RTPBridge parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    boolean done=false;
+    XmlPullParser.Event eventType;
+    if (!parser.getNamespace().equals(RTPBridge.NAMESPACE))     throw new IOException("Not a RTP Bridge packet");
+    RTPBridge iq=new RTPBridge();
+    for (int i=0; i < parser.getAttributeCount(); i++) {
+      if (parser.getAttributeName(i).equals("sid"))       iq.setSid(parser.getAttributeValue(i));
+    }
+    while (!done) {
+      eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT) {
+        String elementName=parser.getName();
+        if (elementName.equals("candidate")) {
+          for (int i=0; i < parser.getAttributeCount(); i++) {
+            if (parser.getAttributeName(i).equals("ip"))             iq.setIp(parser.getAttributeValue(i));
+ else             if (parser.getAttributeName(i).equals("pass"))             iq.setPass(parser.getAttributeValue(i));
+ else             if (parser.getAttributeName(i).equals("name"))             iq.setName(parser.getAttributeValue(i));
+ else             if (parser.getAttributeName(i).equals("porta"))             iq.setPortA(Integer.parseInt(parser.getAttributeValue(i)));
+ else             if (parser.getAttributeName(i).equals("portb"))             iq.setPortB(Integer.parseInt(parser.getAttributeValue(i)));
+          }
+        }
+ else         if (elementName.equals("publicip")) {
+          for (int i=0; i < parser.getAttributeCount(); i++) {
+            if (parser.getAttributeName(i).equals("ip"))             iq.setIp(parser.getAttributeValue(i));
+          }
+        }
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT) {
+        if (parser.getName().equals(RTPBridge.ELEMENT_NAME)) {
+          done=true;
+        }
+      }
+    }
+    return iq;
+  }
+}
+/** 
+ * IQProvider for RTP Bridge packets. Parse receive RTPBridge stanza to a RTPBridge instance
+ * @author Thiago Rocha
+ */
+public static class Provider extends IqProvider<STUN> {
+  @Override public STUN parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    boolean done=false;
+    XmlPullParser.Event eventType;
+    String elementName;
+    if (!parser.getNamespace().equals(NAMESPACE))     throw new IOException("Not a STUN packet");
+    STUN iq=new STUN();
+    while (!done) {
+      eventType=parser.next();
+      elementName=parser.getName();
+      if (eventType == XmlPullParser.Event.START_ELEMENT) {
+        if (elementName.equals("server")) {
+          String host=null;
+          String port=null;
+          for (int i=0; i < parser.getAttributeCount(); i++) {
+            if (parser.getAttributeName(i).equals("host"))             host=parser.getAttributeValue(i);
+ else             if (parser.getAttributeName(i).equals("udp"))             port=parser.getAttributeValue(i);
+          }
+          if (host != null && port != null)           iq.servers.add(new StunServerAddress(host,port));
+        }
+ else         if (elementName.equals("publicip")) {
+          String host=null;
+          for (int i=0; i < parser.getAttributeCount(); i++) {
+            if (parser.getAttributeName(i).equals("ip"))             host=parser.getAttributeValue(i);
+          }
+          if (host != null && !host.equals(""))           iq.setPublicIp(host);
+        }
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT) {
+        if (parser.getName().equals(ELEMENT_NAME)) {
+          done=true;
+        }
+      }
+    }
+    return iq;
+  }
+}

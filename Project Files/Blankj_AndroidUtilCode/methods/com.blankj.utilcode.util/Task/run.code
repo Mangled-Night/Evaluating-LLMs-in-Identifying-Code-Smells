@@ -1,0 +1,88 @@
+@Override public void run(){
+  if (isSchedule) {
+    if (runner == null) {
+      if (!state.compareAndSet(NEW,RUNNING))       return;
+      runner=Thread.currentThread();
+      if (mTimeoutListener != null) {
+        Log.w("ThreadUtils","Scheduled task doesn't support timeout.");
+      }
+    }
+ else {
+      if (state.get() != RUNNING)       return;
+    }
+  }
+ else {
+    if (!state.compareAndSet(NEW,RUNNING))     return;
+    runner=Thread.currentThread();
+    if (mTimeoutListener != null) {
+      mTimer=new Timer();
+      mTimer.schedule(new TimerTask(){
+        @Override public void run(){
+          if (!isDone() && mTimeoutListener != null) {
+            timeout();
+            mTimeoutListener.onTimeout();
+            onDone();
+          }
+        }
+      }
+,mTimeoutMillis);
+    }
+  }
+  try {
+    final T result=doInBackground();
+    if (isSchedule) {
+      if (state.get() != RUNNING)       return;
+      getDeliver().execute(new Runnable(){
+        @Override public void run(){
+          onSuccess(result);
+        }
+      }
+);
+    }
+ else {
+      if (!state.compareAndSet(RUNNING,COMPLETING))       return;
+      getDeliver().execute(new Runnable(){
+        @Override public void run(){
+          onSuccess(result);
+          onDone();
+        }
+      }
+);
+    }
+  }
+ catch (  InterruptedException ignore) {
+    state.compareAndSet(CANCELLED,INTERRUPTED);
+  }
+catch (  final Throwable throwable) {
+    if (!state.compareAndSet(RUNNING,EXCEPTIONAL))     return;
+    getDeliver().execute(new Runnable(){
+      @Override public void run(){
+        onFail(throwable);
+        onDone();
+      }
+    }
+);
+  }
+}
+@Override public void run(){
+  if (!isDone() && mTimeoutListener != null) {
+    timeout();
+    mTimeoutListener.onTimeout();
+    onDone();
+  }
+}
+@Override public void run(){
+  onSuccess(result);
+}
+@Override public void run(){
+  onSuccess(result);
+  onDone();
+}
+@Override public void run(){
+  onFail(throwable);
+  onDone();
+}
+@Override public void run(){
+  onCancel();
+  onDone();
+}

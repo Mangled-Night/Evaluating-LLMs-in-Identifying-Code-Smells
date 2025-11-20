@@ -1,0 +1,34 @@
+private static void createResponses(Protocol protocol,String sessionID,Verification<Bytestream,Bytestream> streamHostUsedVerification,Socks5TestProxy socks5TestProxy) throws XmppStringprepException {
+  DiscoverInfoBuilder discoverInfo=Socks5PacketUtils.createDiscoverInfo(targetJID,initiatorJID);
+  discoverInfo.addFeature(Bytestream.NAMESPACE);
+  protocol.addResponse(discoverInfo.build(),Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  DiscoverItems discoverItems=Socks5PacketUtils.createDiscoverItems(xmppServer,initiatorJID);
+  discoverItems.addItem(new Item(JidCreate.from("proxy2.xmpp-server")));
+  discoverItems.addItem(new Item(proxyJID));
+  protocol.addResponse(discoverItems,Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  DiscoverInfoBuilder proxyInfo1=Socks5PacketUtils.createDiscoverInfo(JidCreate.from("proxy2.xmpp-server"),initiatorJID);
+  Identity identity1=new Identity("proxy","proxy2.xmpp-server","bytestreams");
+  proxyInfo1.addIdentity(identity1);
+  protocol.addResponse(proxyInfo1.build(),Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  DiscoverInfoBuilder proxyInfo2=Socks5PacketUtils.createDiscoverInfo(proxyJID,initiatorJID);
+  Identity identity2=new Identity("proxy",proxyJID.toString(),"bytestreams");
+  proxyInfo2.addIdentity(identity2);
+  protocol.addResponse(proxyInfo2.build(),Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  Bytestream streamHostInfo1=Socks5PacketUtils.createBytestreamResponse(JidCreate.from("proxy2.xmpp-server"),initiatorJID);
+  streamHostInfo1.addStreamHost(JidCreate.from("proxy2.xmpp-server"),proxyAddress,socks5TestProxy.getPort());
+  protocol.addResponse(streamHostInfo1,Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  Bytestream streamHostInfo2=Socks5PacketUtils.createBytestreamResponse(proxyJID,initiatorJID);
+  streamHostInfo2.addStreamHost(proxyJID,proxyAddress,socks5TestProxy.getPort());
+  protocol.addResponse(streamHostInfo2,Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  Bytestream streamHostUsedPacket=Socks5PacketUtils.createBytestreamResponse(targetJID,initiatorJID);
+  streamHostUsedPacket.setSessionID(sessionID);
+  streamHostUsedPacket.setUsedHost(proxyJID);
+  protocol.addResponse(streamHostUsedPacket,streamHostUsedVerification,Verification.correspondingSenderReceiver,Verification.requestTypeSET);
+  IQ activationResponse=Socks5PacketUtils.createActivationConfirmation(proxyJID,initiatorJID);
+  protocol.addResponse(activationResponse,new Verification<Bytestream,IQ>(){
+    @Override public void verify(    Bytestream request,    IQ response){
+      assertEquals(targetJID,request.getToActivate().getTarget());
+    }
+  }
+,Verification.correspondingSenderReceiver,Verification.requestTypeSET);
+}

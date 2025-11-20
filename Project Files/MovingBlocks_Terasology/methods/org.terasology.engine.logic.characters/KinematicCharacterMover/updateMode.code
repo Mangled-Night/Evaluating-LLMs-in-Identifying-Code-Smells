@@ -1,0 +1,39 @@
+/** 
+ * Updates a character's movement mode and changes his vertical velocity accordingly.
+ * @param state       The current state of the character.
+ * @param newSwimming True if the top of the character's body isn't in a liquid block but his bottom is.
+ * @param newDiving   True if the character's body is fully inside liquid blocks.
+ * @param newClimbing True if the character has a climbable block near him and is in conditions to climb it (not swimming or diving).
+ */
+static void updateMode(CharacterStateEvent state,boolean newSwimming,boolean newDiving,boolean newClimbing,boolean isCrouching){
+  if (newDiving) {
+    if (state.getMode() != MovementMode.DIVING) {
+      state.setMode(MovementMode.DIVING);
+    }
+  }
+ else   if (newSwimming) {
+    if (state.getMode() != MovementMode.SWIMMING) {
+      state.setMode(MovementMode.SWIMMING);
+    }
+    state.getVelocity().y+=0.02f;
+  }
+ else   if (state.getMode() == MovementMode.SWIMMING || state.getMode() == MovementMode.DIVING) {
+    if (newClimbing) {
+      state.setMode(MovementMode.CLIMBING);
+      state.getVelocity().y=0;
+    }
+ else {
+      if (state.getVelocity().y > 0) {
+        state.getVelocity().y+=4;
+      }
+      state.setMode(isCrouching ? MovementMode.CROUCHING : MovementMode.WALKING);
+    }
+  }
+ else   if (newClimbing != (state.getMode() == MovementMode.CLIMBING)) {
+    state.getVelocity().y=0;
+    state.setMode((newClimbing) ? MovementMode.CLIMBING : isCrouching ? MovementMode.CROUCHING : MovementMode.WALKING);
+  }
+  if (state.getMode() == MovementMode.WALKING || state.getMode() == MovementMode.CROUCHING) {
+    state.setMode(isCrouching ? MovementMode.CROUCHING : MovementMode.WALKING);
+  }
+}

@@ -1,0 +1,18 @@
+/** 
+ * Processes input actions by the mouse wheel, sends input events and updates bind buttons accordingly.
+ * @param delta The length of the current frame.
+ * @param action The input action to be processed.
+ */
+private void processMouseWheelInput(float delta,MouseAction action){
+  int dir=action.getInput().getId();
+  if (dir != 0 && action.getTurns() != 0) {
+    boolean consumed=sendMouseWheelEvent(action.getMousePosition(),dir * action.getTurns(),delta);
+    BindableButton bind=(dir == 1) ? bindsManager.getMouseWheelUpBind() : bindsManager.getMouseWheelDownBind();
+    if (bind != null) {
+      for (int i=0; i < action.getTurns(); ++i) {
+        updateBindState(bind,action.getInput(),true,delta,consumed);
+        updateBindState(bind,action.getInput(),false,delta,consumed);
+      }
+    }
+  }
+}

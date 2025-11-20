@@ -1,0 +1,17 @@
+@Override public Optional<ChunkMesh> deserialize(PersistedData data){
+  List<ByteBuffer> asBuffers=new ArrayList<>();
+  for (  PersistedData datum : data.getAsArray()) {
+    ByteBuffer buffer=datum.getAsByteBuffer();
+    ByteBuffer directBuffer=BufferUtils.createByteBuffer(buffer.limit());
+    directBuffer.put(buffer);
+    directBuffer.rewind();
+    asBuffers.add(directBuffer);
+  }
+  ChunkMesh result=new ChunkMeshImpl();
+  for (  ChunkMesh.RenderType renderType : ChunkMesh.RenderType.values()) {
+    result.getVertexElements(renderType).buffer.replace(asBuffers.remove(0));
+    result.getVertexElements(renderType).indices.replace(asBuffers.remove(0));
+  }
+  result.updateMesh();
+  return Optional.of(result);
+}

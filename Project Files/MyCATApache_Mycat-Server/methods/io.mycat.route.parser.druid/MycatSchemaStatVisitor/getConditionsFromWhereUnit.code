@@ -1,0 +1,16 @@
+private void getConditionsFromWhereUnit(WhereUnit whereUnit){
+  List<List<Condition>> retList=new ArrayList<List<Condition>>();
+  List<Condition> outSideCondition=new ArrayList<Condition>();
+  outSideCondition.addAll(conditions);
+  this.conditions.clear();
+  for (  SQLExpr sqlExpr : whereUnit.getSplitedExprList()) {
+    sqlExpr.accept(this);
+    List<Condition> conditions=mergeSqlConditionList(getConditions(),outSideCondition);
+    retList.add(conditions);
+    this.conditions.clear();
+  }
+  whereUnit.setConditionList(retList);
+  for (  WhereUnit subWhere : whereUnit.getSubWhereUnit()) {
+    getConditionsFromWhereUnit(subWhere);
+  }
+}

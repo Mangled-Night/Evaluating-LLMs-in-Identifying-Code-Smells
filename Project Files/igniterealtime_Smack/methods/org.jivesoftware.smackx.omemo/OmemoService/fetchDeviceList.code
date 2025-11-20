@@ -1,0 +1,25 @@
+/** 
+ * Retrieve the OMEMO device list of a contact.
+ * @param connection authenticated XMPP connection.
+ * @param contact BareJid of the contact of which we want to retrieve the device list from.
+ * @return device list
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws PubSubException.NotALeafNodeException if a PubSub leaf node operation was attempted on a non-leaf node.
+ * @throws SmackException.NoResponseException if there was no response from the remote entity.
+ * @throws SmackException.NotConnectedException if the XMPP connection is not connected.
+ * @throws XMPPException.XMPPErrorException if there was an XMPP error returned.
+ * @throws PubSubException.NotAPubSubNodeException if a involved node is not a PubSub node.
+ */
+private static OmemoDeviceListElement fetchDeviceList(XMPPConnection connection,BareJid contact) throws InterruptedException, PubSubException.NotALeafNodeException, SmackException.NoResponseException, SmackException.NotConnectedException, XMPPException.XMPPErrorException, PubSubException.NotAPubSubNodeException {
+  PubSubManager pm=PubSubManager.getInstanceFor(connection,contact);
+  String nodeName=OmemoConstants.PEP_NODE_DEVICE_LIST;
+  LeafNode node=pm.getLeafNode(nodeName);
+  if (node == null) {
+    return null;
+  }
+  List<PayloadItem<OmemoDeviceListElement>> items=node.getItems();
+  if (items.isEmpty()) {
+    return null;
+  }
+  return items.get(items.size() - 1).getPayload();
+}

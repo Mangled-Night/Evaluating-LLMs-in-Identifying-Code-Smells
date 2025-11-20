@@ -1,0 +1,18 @@
+@Override public long size(){
+  List<PoolArenaMetric> list=allocator.getAlloc().directArenas();
+  long chunkSizeBytes=allocator.getChunkSize();
+  int chunkCount=0;
+synchronized (this) {
+    for (    PoolArenaMetric pool : list) {
+      List<PoolChunkListMetric> pcks=pool.chunkLists();
+      for (      PoolChunkListMetric pck : pcks) {
+        Iterator<PoolChunkMetric> it=pck.iterator();
+        while (it.hasNext()) {
+          PoolChunkMetric p=it.next();
+          chunkCount++;
+        }
+      }
+    }
+  }
+  return chunkCount * chunkSizeBytes;
+}

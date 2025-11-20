@@ -1,0 +1,24 @@
+public static Method findGetter(Field field){
+  return findGetter(field.getName(),field.getDeclaringClass(),field.getType());
+}
+public static Method findGetter(String propertyName,Class<?> beanClass,Class<?> propertyType){
+  Method result=findGetter(propertyName,beanClass);
+  if (result != null && propertyType.equals(result.getReturnType())) {
+    return result;
+  }
+  return null;
+}
+public static Method findGetter(String propertyName,Class<?> beanClass){
+  String propertyNameSuffix=propertyName.substring(0,1).toUpperCase(Locale.ENGLISH) + propertyName.substring(1);
+  Method result=findMethod(beanClass,"get" + propertyNameSuffix);
+  if (result != null) {
+    result.setAccessible(true);
+    return result;
+  }
+  result=findMethod(beanClass,"is" + propertyNameSuffix);
+  if (result != null) {
+    result.setAccessible(true);
+    return result;
+  }
+  return null;
+}

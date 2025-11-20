@@ -1,0 +1,24 @@
+public void route(SystemConfig sysConfig,SchemaConfig schema,int sqlType,String realSQL,String charset,ServerConnection sc,LayerCachePool cachePool){
+  int rs=ServerParse.parse(realSQL);
+  this.sqltype=rs & 0xff;
+  this.sysConfig=sysConfig;
+  this.schema=schema;
+  this.charset=charset;
+  this.sc=sc;
+  this.cachePool=cachePool;
+  try {
+    MySqlStatementParser parser=new MySqlStatementParser(realSQL);
+    SQLStatement statement=parser.parseStatement();
+    if (statement instanceof SQLSelectStatement) {
+      SQLSelectStatement st=(SQLSelectStatement)statement;
+      SQLSelectQuery sqlSelectQuery=st.getSelect().getQuery();
+      if (sqlSelectQuery instanceof MySqlSelectQueryBlock) {
+        MySqlSelectQueryBlock mysqlSelectQuery=(MySqlSelectQueryBlock)sqlSelectQuery;
+        joinParser=new JoinParser(mysqlSelectQuery,realSQL);
+        joinParser.parser();
+      }
+    }
+  }
+ catch (  Exception e) {
+  }
+}

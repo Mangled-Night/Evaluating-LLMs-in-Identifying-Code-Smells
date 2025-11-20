@@ -1,0 +1,9 @@
+@Test void sync(){
+  StatefulRedisConnection<byte[],byte[]> connection=client.connect(ByteArrayCodec.INSTANCE);
+  RedisCommandFactory factory=new RedisCommandFactory(connection);
+  MultipleExecutionModels api=factory.getCommands(MultipleExecutionModels.class);
+  api.setSync(key,value,Timeout.create(10,TimeUnit.SECONDS));
+  assertThat(api.get("key")).isEqualTo("value");
+  assertThat(api.getAsBytes("key")).isEqualTo("value".getBytes());
+  connection.close();
+}

@@ -1,0 +1,34 @@
+/** 
+ * Processes the current input state of the mouse, sends input events and updates bind buttons. <p> Mouse position actions are handled here, while mouse button and mouse wheel actions are handled at  {@link #processMouseButtonInput(float,MouseAction)} and {@link #processMouseWheelInput(float,MouseAction)}accordingly.
+ * @param delta The length of the current frame.
+ */
+private void processMouseInput(float delta){
+  if (!isCapturingMouse()) {
+    return;
+  }
+  this.mouse.update();
+  Vector2d deltaMouse=mouse.getDelta();
+  if (deltaMouse.x != 0) {
+    double xValue=deltaMouse.x * inputDeviceConfig.getMouseSensitivity();
+    MouseAxisEvent event=MouseAxisEvent.create(MouseAxis.X,xValue,delta);
+    send(event);
+  }
+  if (deltaMouse.y != 0) {
+    double yMovement=inputDeviceConfig.isMouseYAxisInverted() ? deltaMouse.y * -1 : deltaMouse.y;
+    double yValue=yMovement * inputDeviceConfig.getMouseSensitivity();
+    MouseAxisEvent event=MouseAxisEvent.create(MouseAxis.Y,yValue,delta);
+    send(event);
+  }
+  for (  MouseAction action : mouse.getInputQueue()) {
+switch (action.getInput().getType()) {
+case MOUSE_BUTTON:
+      processMouseButtonInput(delta,action);
+    break;
+case MOUSE_WHEEL:
+  processMouseWheelInput(delta,action);
+break;
+default :
+break;
+}
+}
+}

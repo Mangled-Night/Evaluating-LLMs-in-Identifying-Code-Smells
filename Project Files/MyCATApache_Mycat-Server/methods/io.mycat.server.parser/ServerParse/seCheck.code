@@ -1,0 +1,27 @@
+static int seCheck(String stmt,int offset){
+  if (stmt.length() > ++offset) {
+switch (stmt.charAt(offset)) {
+case 'L':
+case 'l':
+      return selectCheck(stmt,offset);
+case 'T':
+case 't':
+    if (stmt.length() > ++offset) {
+      if (stmt.startsWith("/*!mycat:") || stmt.startsWith("/*#mycat:") || stmt.startsWith("/*mycat:")|| stmt.startsWith("/* mycat:")) {
+        Matcher matcher=callPattern.matcher(stmt);
+        if (matcher.find()) {
+          return CALL;
+        }
+      }
+      char c=stmt.charAt(offset);
+      if (c == ' ' || c == '\r' || c == '\n' || c == '\t' || c == '/' || c == '#') {
+        return (offset << 8) | SET;
+      }
+    }
+  return OTHER;
+default :
+return OTHER;
+}
+}
+return OTHER;
+}

@@ -1,0 +1,32 @@
+public class LoadEntities extends SingleStepLoadProcess {
+  private static final Logger logger=LoggerFactory.getLogger(LoadEntities.class);
+  private final Context context;
+  public LoadEntities(  Context context){
+    this.context=context;
+  }
+  @Override public String getMessage(){
+    return "Loading Entities";
+  }
+  @Override public boolean step(){
+    EntityManager em=context.get(EntityManager.class);
+    boolean entityCreated=false;
+    for (    EntityRef entity : em.getAllEntities()) {
+      entityCreated=true;
+      logger.error("Entity created before load: {}",entity.toFullDescription());
+    }
+    if (entityCreated) {
+      throw new IllegalStateException("Entity creation detected during component system initialisation, game load aborting");
+    }
+    StorageManager storageManager=context.get(StorageManager.class);
+    try {
+      storageManager.loadGlobalStore();
+    }
+ catch (    IOException e) {
+      logger.error("Failed to load global data.",e);
+    }
+    return true;
+  }
+  @Override public int getExpectedCost(){
+    return 1;
+  }
+}

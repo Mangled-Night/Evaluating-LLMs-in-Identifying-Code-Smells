@@ -1,0 +1,39 @@
+@Override public EntityData.Entity deserialize(JsonElement json,Type typeOfT,JsonDeserializationContext context) throws JsonParseException {
+  EntityData.Entity.Builder entity=EntityData.Entity.newBuilder();
+  JsonObject jsonObject=json.getAsJsonObject();
+  for (  Map.Entry<String,JsonElement> entry : jsonObject.entrySet()) {
+    String name=entry.getKey().toLowerCase(Locale.ENGLISH);
+switch (name) {
+case "parentprefab":
+      if (entry.getValue().isJsonPrimitive()) {
+        entity.setParentPrefab(entry.getValue().getAsString());
+      }
+    break;
+case "id":
+  if (entry.getValue().isJsonPrimitive()) {
+    entity.setId(entry.getValue().getAsInt());
+  }
+break;
+case "removedcomponent":
+if (entry.getValue().isJsonArray()) {
+for (JsonElement element : entry.getValue().getAsJsonArray()) {
+  entity.addRemovedComponent(element.getAsString());
+}
+}
+break;
+case "owner":
+if (entry.getValue().isJsonPrimitive()) {
+entity.setOwner(entry.getValue().getAsInt());
+}
+break;
+case "alwaysrelevant":
+entity.setAlwaysRelevant(entry.getValue().getAsBoolean());
+break;
+default :
+EntityData.Component.Builder component=context.deserialize(entry.getValue(),EntityData.Component.Builder.class);
+component.setType(entry.getKey());
+entity.addComponent(component);
+}
+}
+return entity.build();
+}

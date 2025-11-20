@@ -1,0 +1,51 @@
+/** 
+ * Returns a random simple digraph on  {@code V} vertices, {@code E}edges and (at least)  {@code c} strong components. The vertices are randomlyassigned integer labels between  {@code 0} and {@code c-1} (corresponding tostrong components). Then, a strong component is creates among the vertices with the same label. Next, random edges (either between two vertices with the same labels or from a vertex with a smaller label to a vertex with a larger label). The number of components will be equal to the number of distinct labels that are assigned to vertices.
+ * @param V the number of vertices
+ * @param E the number of edges
+ * @param c the (maximum) number of strong components
+ * @return a random simple digraph on {@code V} vertices and{@code E} edges, with (at most) {@code c} strong components
+ * @throws IllegalArgumentException if {@code c} is larger than {@code V}
+ */
+public static Digraph strong(int V,int E,int c){
+  if (c >= V || c <= 0)   throw new IllegalArgumentException("Number of components must be between 1 and V");
+  if (E <= 2 * (V - c))   throw new IllegalArgumentException("Number of edges must be at least 2(V-c)");
+  if (E > (long)V * (V - 1) / 2)   throw new IllegalArgumentException("Too many edges");
+  Digraph G=new Digraph(V);
+  SET<Edge> set=new SET<Edge>();
+  int[] label=new int[V];
+  for (int v=0; v < V; v++)   label[v]=StdRandom.uniformInt(c);
+  for (int i=0; i < c; i++) {
+    int count=0;
+    for (int v=0; v < G.V(); v++) {
+      if (label[v] == i)       count++;
+    }
+    int[] vertices=new int[count];
+    int j=0;
+    for (int v=0; v < V; v++) {
+      if (label[v] == i)       vertices[j++]=v;
+    }
+    StdRandom.shuffle(vertices);
+    for (int v=0; v < count - 1; v++) {
+      int w=StdRandom.uniformInt(v + 1,count);
+      Edge e=new Edge(w,v);
+      set.add(e);
+      G.addEdge(vertices[w],vertices[v]);
+    }
+    for (int v=0; v < count - 1; v++) {
+      int w=StdRandom.uniformInt(v + 1,count);
+      Edge e=new Edge(v,w);
+      set.add(e);
+      G.addEdge(vertices[v],vertices[w]);
+    }
+  }
+  while (G.E() < E) {
+    int v=StdRandom.uniformInt(V);
+    int w=StdRandom.uniformInt(V);
+    Edge e=new Edge(v,w);
+    if (!set.contains(e) && v != w && label[v] <= label[w]) {
+      set.add(e);
+      G.addEdge(v,w);
+    }
+  }
+  return G;
+}

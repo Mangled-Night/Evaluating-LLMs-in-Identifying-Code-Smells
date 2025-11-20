@@ -1,0 +1,18 @@
+@Override protected void sendInternal(TopLevelStreamElement element){
+  super.sendInternal(element);
+  if (element instanceof IQ && !timeout) {
+    IQ iq=(IQ)element;
+    timeout=false;
+    IQ replyPacket=replyQ.peek();
+    if (replyPacket == null) {
+      replyPacket=IQ.createResultIQ(iq);
+      replyQ.add(replyPacket);
+    }
+    replyPacket.setStanzaId(iq.getStanzaId());
+    replyPacket.setTo(iq.getFrom());
+    if (replyPacket.getType() == null) {
+      replyPacket.setType(IQ.Type.result);
+    }
+    new ProcessQueue(replyQ).start();
+  }
+}

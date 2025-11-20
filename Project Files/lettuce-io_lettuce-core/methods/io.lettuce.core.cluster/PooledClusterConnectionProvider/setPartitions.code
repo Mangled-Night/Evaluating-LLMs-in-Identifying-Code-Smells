@@ -1,0 +1,20 @@
+/** 
+ * Synchronize on  {@code stateLock} to initiate a happens-before relation and clear the thread caches of other threads.
+ * @param partitions the new partitions.
+ */
+@Override public void setPartitions(Partitions partitions){
+  boolean reconfigurePartitions=false;
+synchronized (stateLock) {
+    if (this.partitions != null) {
+      reconfigurePartitions=true;
+    }
+    this.partitions=partitions;
+    this.connectionFactory.setPartitions(partitions);
+  }
+  if (reconfigurePartitions) {
+    reconfigurePartitions();
+  }
+}
+@Override public void setPartitions(Partitions partitions){
+  this.delegate.setPartitions(partitions);
+}

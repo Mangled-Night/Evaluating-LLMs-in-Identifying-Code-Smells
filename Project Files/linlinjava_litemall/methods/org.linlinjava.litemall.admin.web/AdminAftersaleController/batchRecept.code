@@ -1,0 +1,18 @@
+@RequiresPermissions("admin:aftersale:batch-recept") @RequiresPermissionsDesc(menu={"商城管理","售后管理"},button="批量通过") @PostMapping("/batch-recept") public Object batchRecept(@RequestBody String body){
+  List<Integer> ids=JacksonUtil.parseIntegerList(body,"ids");
+  for (  Integer id : ids) {
+    LitemallAftersale aftersale=aftersaleService.findById(id);
+    if (aftersale == null) {
+      continue;
+    }
+    Short status=aftersale.getStatus();
+    if (!status.equals(AftersaleConstant.STATUS_REQUEST)) {
+      continue;
+    }
+    aftersale.setStatus(AftersaleConstant.STATUS_RECEPT);
+    aftersale.setHandleTime(LocalDateTime.now());
+    aftersaleService.updateById(aftersale);
+    orderService.updateAftersaleStatus(aftersale.getOrderId(),AftersaleConstant.STATUS_RECEPT);
+  }
+  return ResponseUtil.ok();
+}

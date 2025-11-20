@@ -1,0 +1,15 @@
+@RequiresPermission(ACCESS_NETWORK_STATE) void registerListener(final OnNetworkStatusChangedListener listener){
+  if (listener == null)   return;
+  UtilsBridge.runOnUiThread(new Runnable(){
+    @Override @RequiresPermission(ACCESS_NETWORK_STATE) public void run(){
+      int preSize=mListeners.size();
+      mListeners.add(listener);
+      if (preSize == 0 && mListeners.size() == 1) {
+        mType=getNetworkType();
+        IntentFilter intentFilter=new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+        Utils.getApp().registerReceiver(NetworkChangedReceiver.getInstance(),intentFilter);
+      }
+    }
+  }
+);
+}

@@ -1,0 +1,22 @@
+/** 
+ * Spawns a block in front of the player
+ * @param sender    Sender of command
+ * @param blockName String containing name of block to spawn
+ * @return String containg final message
+ */
+@Command(shortDescription="Spawns a block in front of the player",helpText="Spawns the specified block as a " + "item in front of the player. You can simply pick it up.",runOnServer=true,requiredPermission=PermissionManager.CHEAT_PERMISSION) public String spawnBlock(@Sender EntityRef sender,@CommandParam("blockName") String blockName){
+  ClientComponent clientComponent=sender.getComponent(ClientComponent.class);
+  LocationComponent characterLocation=clientComponent.character.getComponent(LocationComponent.class);
+  Vector3f spawnPos=characterLocation.getWorldPosition(new Vector3f());
+  Vector3f offset=characterLocation.getWorldDirection(new Vector3f());
+  offset.mul(3);
+  spawnPos.add(offset);
+  BlockFamily block=blockManager.getBlockFamily(blockName);
+  if (block == null) {
+    return "";
+  }
+  BlockItemFactory blockItemFactory=new BlockItemFactory(entityManager);
+  EntityRef blockItem=blockItemFactory.newInstance(block);
+  blockItem.send(new DropItemEvent(spawnPos));
+  return "Spawned block.";
+}

@@ -1,0 +1,43 @@
+private static void parseTel(XmlPullParser parser,VCard vCard) throws XmlPullParserException, IOException {
+  final int initialDepth=parser.getDepth();
+  boolean isWork=true;
+  String telLabel=null;
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String name=parser.getName();
+    if ("HOME".equals(name)) {
+      isWork=false;
+    }
+ else {
+      if ("NUMBER".equals(name)) {
+        if (StringUtils.isNullOrEmpty(telLabel)) {
+          telLabel="VOICE";
+        }
+        if (isWork) {
+          vCard.setPhoneWork(telLabel,parser.nextText());
+        }
+ else {
+          vCard.setPhoneHome(telLabel,parser.nextText());
+        }
+      }
+ else {
+        for (        String tel : TEL) {
+          if (tel.equals(name)) {
+            telLabel=name;
+          }
+        }
+      }
+    }
+  break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+  break outerloop;
+}
+break;
+default :
+break;
+}
+}
+}

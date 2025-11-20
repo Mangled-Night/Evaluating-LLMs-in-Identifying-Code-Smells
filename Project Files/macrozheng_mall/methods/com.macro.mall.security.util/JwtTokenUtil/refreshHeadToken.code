@@ -1,0 +1,27 @@
+/** 
+ * 当原来的token没过期时是可以刷新的
+ * @param oldToken 带tokenHead的token
+ */
+public String refreshHeadToken(String oldToken){
+  if (StrUtil.isEmpty(oldToken)) {
+    return null;
+  }
+  String token=oldToken.substring(tokenHead.length());
+  if (StrUtil.isEmpty(token)) {
+    return null;
+  }
+  Claims claims=getClaimsFromToken(token);
+  if (claims == null) {
+    return null;
+  }
+  if (isTokenExpired(token)) {
+    return null;
+  }
+  if (tokenRefreshJustBefore(token,30 * 60)) {
+    return token;
+  }
+ else {
+    claims.put(CLAIM_KEY_CREATED,new Date());
+    return generateToken(claims);
+  }
+}

@@ -1,0 +1,137 @@
+public static void handle(String stmt,ServerConnection c,int offset){
+  int rs=ServerParseSet.parse(stmt,offset);
+switch (rs & 0xff) {
+case AUTOCOMMIT_ON:
+    if (c.isAutocommit()) {
+      c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+    }
+ else {
+      c.setPreAcStates(true);
+      c.commit();
+      c.setAutocommit(true);
+    }
+  break;
+case AUTOCOMMIT_OFF:
+{
+  if (c.isAutocommit()) {
+    c.setAutocommit(false);
+    c.setPreAcStates(false);
+  }
+  c.write(c.writeToBuffer(AC_OFF,c.allocate()));
+  break;
+}
+case XA_FLAG_ON:
+{
+if (c.isAutocommit()) {
+  c.writeErrMessage(ErrorCode.ERR_WRONG_USED,"set xa cmd on can't used in autocommit connection ");
+  return;
+}
+c.getSession2().setXATXEnabled(true);
+c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+break;
+}
+case XA_FLAG_OFF:
+{
+c.writeErrMessage(ErrorCode.ERR_WRONG_USED,"set xa cmd off not for external use ");
+return;
+}
+case TX_READ_UNCOMMITTED:
+{
+c.setTxIsolation(Isolations.READ_UNCOMMITTED);
+c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+break;
+}
+case TX_READ_COMMITTED:
+{
+c.setTxIsolation(Isolations.READ_COMMITTED);
+c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+break;
+}
+case TX_REPEATED_READ:
+{
+c.setTxIsolation(Isolations.REPEATED_READ);
+c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+break;
+}
+case TX_SERIALIZABLE:
+{
+c.setTxIsolation(Isolations.SERIALIZABLE);
+c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+break;
+}
+case TX_READONLY:
+{
+c.setTxReadonly(true);
+c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+break;
+}
+case TX_READWRITE:
+{
+c.setTxReadonly(false);
+c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+break;
+}
+case NAMES:
+String charset=stmt.substring(rs >>> 8).trim();
+int index=charset.indexOf(",");
+if (index > -1) {
+charset=charset.substring(0,index);
+}
+if (charset.startsWith("'") && charset.endsWith("'")) {
+charset=charset.substring(1,charset.length() - 1);
+}
+if (c.setCharset(charset)) {
+c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+}
+ else {
+int beginIndex=stmt.toLowerCase().indexOf("names");
+int endIndex=stmt.toLowerCase().indexOf("collate");
+if (beginIndex > -1 && endIndex > -1) {
+charset=stmt.substring(beginIndex + "names".length(),endIndex);
+if (c.setCharset(charset.trim())) {
+c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+}
+ else {
+c.writeErrMessage(ErrorCode.ER_UNKNOWN_CHARACTER_SET,"Unknown charset '" + charset + "'");
+}
+}
+ else {
+c.writeErrMessage(ErrorCode.ER_UNKNOWN_CHARACTER_SET,"Unknown charset '" + charset + "'");
+}
+}
+break;
+case SQL_SELECT_LIMIT:
+String limit=ParseUtil.parseString(stmt);
+int sqlSelectLimit=-1;
+if ("default".equalsIgnoreCase(limit)) {
+sqlSelectLimit=-1;
+}
+ else {
+try {
+sqlSelectLimit=Integer.parseInt(limit);
+}
+ catch (Exception ex) {
+c.writeErrMessage(ErrorCode.ER_YES,"Unsupported statement:" + ex.getMessage());
+break;
+}
+}
+c.setSqlSelectLimit(sqlSelectLimit);
+c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+break;
+case CHARACTER_SET_CLIENT:
+case CHARACTER_SET_CONNECTION:
+case CHARACTER_SET_RESULTS:
+CharacterSet.response(stmt,c,rs);
+break;
+default :
+boolean ignore=SetIgnoreUtil.isIgnoreStmt(stmt);
+if (ignore) {
+StringBuilder s=new StringBuilder();
+logger.warn(s.append(c).append(stmt).append(" is not recoginized and ignored").toString());
+c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+}
+ else {
+c.execute(stmt,ServerParse.UPDATE);
+}
+}
+}

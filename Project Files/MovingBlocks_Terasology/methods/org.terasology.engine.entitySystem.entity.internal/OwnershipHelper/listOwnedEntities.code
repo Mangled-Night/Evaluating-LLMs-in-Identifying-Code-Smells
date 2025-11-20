@@ -1,0 +1,22 @@
+/** 
+ * Produces a collection of entities that are owned by the provided entity. This is immediate ownership only - it does not recursively follow ownership.
+ * @param entity The owning entity
+ * @return A collection of owned entities of the given entity
+ */
+public Collection<EntityRef> listOwnedEntities(EntityRef entity){
+  Set<EntityRef> entityRefList=Sets.newHashSet();
+  for (  ComponentMetadata<?> componentMetadata : componentLibrary.iterateComponentMetadata()) {
+    if (componentMetadata.isReferenceOwner()) {
+      Component comp=entity.getComponent(componentMetadata.getType());
+      if (comp != null) {
+        addOwnedEntitiesFor(comp,componentMetadata,entityRefList);
+      }
+    }
+  }
+  return entityRefList;
+}
+public Collection<EntityRef> listOwnedEntities(Component component){
+  Set<EntityRef> entityRefList=Sets.newHashSet();
+  addOwnedEntitiesFor(component,componentLibrary.getMetadata(component.getClass()),entityRefList);
+  return entityRefList;
+}

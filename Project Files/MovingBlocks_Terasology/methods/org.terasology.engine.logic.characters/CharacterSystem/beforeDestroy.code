@@ -1,0 +1,14 @@
+@ReceiveEvent public void beforeDestroy(BeforeDestroyEvent event,EntityRef character,CharacterComponent characterComponent,AliveCharacterComponent aliveCharacterComponent){
+  if (character.hasComponent(PlayerCharacterComponent.class)) {
+    event.consume();
+    PlayerDeathEvent playerDeathEvent=new PlayerDeathEvent();
+    playerDeathEvent.damageTypeName=getDamageTypeName(event.getDamageType());
+    playerDeathEvent.instigatorName=getInstigatorName(event.getInstigator());
+    character.send(playerDeathEvent);
+  }
+  DeathEvent deathEvent=new DeathEvent();
+  deathEvent.damageTypeName=getDamageTypeName(event.getDamageType());
+  deathEvent.instigatorName=getInstigatorName(event.getInstigator());
+  characterComponent.controller.send(deathEvent);
+  character.removeComponent(AliveCharacterComponent.class);
+}

@@ -1,0 +1,18 @@
+public EntityData.PlayerStore build(EngineEntityManager entityManager){
+  EntityData.PlayerStore.Builder playerEntityStore=EntityData.PlayerStore.newBuilder();
+  playerEntityStore.setCharacterPosX(relevanceLocation.x());
+  playerEntityStore.setCharacterPosY(relevanceLocation.y());
+  playerEntityStore.setCharacterPosZ(relevanceLocation.z());
+  playerEntityStore.setHasCharacter(characterEntityId != null);
+  if (characterEntityId != null) {
+    EntityRef character=entityManager.getEntity(characterEntityId);
+    EntityStorer store=new EntityStorer(entityManager);
+    store.store(character,PlayerStoreInternal.CHARACTER);
+    storedEntities=store.getStoredEntities();
+    playerEntityStore.setStore(store.finaliseStore());
+  }
+ else {
+    storedEntities=Sets.newHashSet();
+  }
+  return playerEntityStore.build();
+}

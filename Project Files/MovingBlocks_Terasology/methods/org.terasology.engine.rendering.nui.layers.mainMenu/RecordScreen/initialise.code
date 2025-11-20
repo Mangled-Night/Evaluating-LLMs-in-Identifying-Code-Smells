@@ -1,0 +1,26 @@
+@Override public void initialise(){
+  setAnimationSystem(MenuAnimationSystems.createDefaultSwipeAnimation());
+  initWidgets();
+  if (isValidScreen()) {
+    initSaveGamePathWidget(PathManager.getInstance().getSavesPath());
+    NameRecordingScreen nameRecordingScreen=getManager().createScreen(NameRecordingScreen.ASSET_URI,NameRecordingScreen.class);
+    getGameInfos().subscribeSelection((widget,item) -> {
+      load.setEnabled(item != null);
+      updateDescription(item);
+    }
+);
+    getGameInfos().subscribe((widget,item) -> launchNamingScreen(nameRecordingScreen,item));
+    load.subscribe(button -> {
+      final GameInfo gameInfo=getGameInfos().getSelection();
+      if (gameInfo != null) {
+        launchNamingScreen(nameRecordingScreen,gameInfo);
+      }
+    }
+);
+    close.subscribe(button -> {
+      recordAndReplayCurrentStatus.setStatus(RecordAndReplayStatus.NOT_ACTIVATED);
+      triggerBackAnimation();
+    }
+);
+  }
+}

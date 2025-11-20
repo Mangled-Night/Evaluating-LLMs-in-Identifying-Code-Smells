@@ -1,0 +1,30 @@
+private final class OrderedListParagraphRenderable implements ParagraphRenderable {
+  private int index;
+  private ParagraphData paragraphData;
+  private OrderedListParagraphRenderable(  int index,  ParagraphData paragraphData){
+    this.index=index;
+    this.paragraphData=paragraphData;
+  }
+  @Override public int getContentsMinWidth(  ParagraphRenderStyle defaultStyle){
+    FallbackParagraphRenderStyle fallbackStyle=new FallbackParagraphRenderStyle(defaultStyle,paragraphData.getParagraphRenderStyle());
+    Font font=fallbackStyle.getFont(false);
+    int maxIndent=getMaxIndent(font);
+    return maxIndent + paragraphData.getParagraphContents().getContentsMinWidth(fallbackStyle);
+  }
+  @Override public int getPreferredContentsHeight(  ParagraphRenderStyle defaultStyle,  int yStart,  ContainerRenderSpace containerRenderSpace,  int sideIndents){
+    FallbackParagraphRenderStyle fallbackStyle=new FallbackParagraphRenderStyle(defaultStyle,paragraphData.getParagraphRenderStyle());
+    Font font=fallbackStyle.getFont(false);
+    int maxIndent=getMaxIndent(font);
+    return paragraphData.getParagraphContents().getPreferredContentsHeight(fallbackStyle,yStart,containerRenderSpace,sideIndents + maxIndent);
+  }
+  @Override public void renderContents(  Canvas canvas,  Vector2i startPos,  ContainerRenderSpace containerRenderSpace,  int leftIndent,  int rightIndent,  ParagraphRenderStyle defaultStyle,  HorizontalAlign horizontalAlign,  HyperlinkRegister hyperlinkRegister){
+    FallbackParagraphRenderStyle fallbackStyle=new FallbackParagraphRenderStyle(defaultStyle,paragraphData.getParagraphRenderStyle());
+    Font font=fallbackStyle.getFont(false);
+    int advance=containerRenderSpace.getAdvanceForVerticalPosition(startPos.y);
+    String text=(index + 1) + ".";
+    Rectanglei bounds=RectUtility.createFromMinAndSize(startPos.x + leftIndent + advance,startPos.y,font.getWidth(text),font.getLineHeight());
+    canvas.drawTextRaw(text,font,fallbackStyle.getColor(false),bounds);
+    int maxIndent=getMaxIndent(font);
+    paragraphData.getParagraphContents().renderContents(canvas,startPos,containerRenderSpace,leftIndent + maxIndent,rightIndent,fallbackStyle,horizontalAlign,hyperlinkRegister);
+  }
+}

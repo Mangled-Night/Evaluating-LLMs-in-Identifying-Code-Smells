@@ -1,0 +1,333 @@
+/** 
+ * Task that writes a previously created memory snapshot of the game to the disk.
+ */
+public class SaveTransaction implements Runnable {
+  private static final Logger logger=LoggerFactory.getLogger(SaveTransaction.class);
+  private static final ImmutableMap<String,String> CREATE_ZIP_OPTIONS=ImmutableMap.of("create","true","encoding","UTF-8");
+  private final GameManifest gameManifest;
+  private final Lock worldDirectoryWriteLock;
+  private final EngineEntityManager privateEntityManager;
+  private final EntitySetDeltaRecorder deltaToSave;
+  private final Map<String,EntityData.PlayerStore> unloadedPlayers;
+  private final Map<String,PlayerStoreBuilder> loadedPlayers;
+  private final Map<Vector3i,CompressedChunkBuilder> unloadedChunks;
+  private final Map<Vector3i,ChunkImpl> loadedChunks;
+  private final GlobalStoreBuilder globalStoreBuilder;
+  private EntityData.GlobalStore globalStore;
+  private Map<String,EntityData.PlayerStore> allPlayers;
+  private Map<Vector3i,CompressedChunkBuilder> allChunks;
+  private final boolean storeChunksInZips;
+  private final StoragePathProvider storagePathProvider;
+  private final SaveTransactionHelper saveTransactionHelper;
+  private final RecordAndReplaySerializer recordAndReplaySerializer;
+  private final RecordAndReplayUtils recordAndReplayUtils;
+  private final RecordAndReplayCurrentStatus recordAndReplayCurrentStatus;
+  public SaveTransaction(  EngineEntityManager privateEntityManager,  EntitySetDeltaRecorder deltaToSave,  Map<String,EntityData.PlayerStore> unloadedPlayers,  Map<String,PlayerStoreBuilder> loadedPlayers,  GlobalStoreBuilder globalStoreBuilder,  Map<Vector3i,CompressedChunkBuilder> unloadedChunks,  Map<Vector3i,ChunkImpl> loadedChunks,  GameManifest gameManifest,  boolean storeChunksInZips,  StoragePathProvider storagePathProvider,  Lock worldDirectoryWriteLock,  RecordAndReplaySerializer recordAndReplaySerializer,  RecordAndReplayUtils recordAndReplayUtils,  RecordAndReplayCurrentStatus recordAndReplayCurrentStatus){
+    this.privateEntityManager=privateEntityManager;
+    this.deltaToSave=deltaToSave;
+    this.unloadedPlayers=unloadedPlayers;
+    this.loadedPlayers=loadedPlayers;
+    this.unloadedChunks=unloadedChunks;
+    this.loadedChunks=loadedChunks;
+    this.globalStoreBuilder=globalStoreBuilder;
+    this.gameManifest=gameManifest;
+    this.storeChunksInZips=storeChunksInZips;
+    this.storagePathProvider=storagePathProvider;
+    this.saveTransactionHelper=new SaveTransactionHelper(storagePathProvider);
+    this.worldDirectoryWriteLock=worldDirectoryWriteLock;
+    this.recordAndReplaySerializer=recordAndReplaySerializer;
+    this.recordAndReplayUtils=recordAndReplayUtils;
+    this.recordAndReplayCurrentStatus=recordAndReplayCurrentStatus;
+  }
+  public String getName(){
+    return "Saving";
+  }
+  @Override public void run(){
+    if (isReplay()) {
+      return;
+    }
+    try {
+      if (Files.exists(storagePathProvider.getUnmergedChangesPath())) {
+        throw new IOException("Save ran while there were unmerged changes");
+      }
+      saveTransactionHelper.cleanupSaveTransactionDirectory();
+      applyDeltaToPrivateEntityManager();
+      prepareChunksPlayersAndGlobalStore();
+      createPreviewImagesFolder();
+      createSaveTransactionDirectory();
+      writePlayerStores();
+      writeGlobalStore();
+      writeChunkStores();
+      saveGameManifest();
+      perpareChangesForMerge();
+      mergeChanges();
+      logger.info("Save game finished");
+      saveRecordingData();
+    }
+ catch (    IOException t) {
+      logger.error("Save game creation failed",t);
+      throw new UncheckedIOException("Save game creation failed",t);
+    }
+  }
+  private void createPreviewImagesFolder() throws IOException {
+    Files.createDirectories(storagePathProvider.getPreviewsPath());
+  }
+  private void saveRecordingData(){
+    if (recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.RECORDING) {
+      if (recordAndReplayUtils.isShutdownRequested()) {
+        recordAndReplaySerializer.serializeRecordAndReplayData();
+        recordAndReplayCurrentStatus.setStatus(RecordAndReplayStatus.NOT_ACTIVATED);
+        recordAndReplayUtils.reset();
+      }
+ else {
+        String recordingPath=PathManager.getInstance().getRecordingPath(recordAndReplayUtils.getGameTitle()).toString();
+        recordAndReplaySerializer.serializeRecordedEvents(recordingPath);
+      }
+    }
+  }
+  private boolean isReplay(){
+    boolean isReplay=false;
+    if (recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.REPLAY_FINISHED || recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.REPLAYING) {
+      isReplay=true;
+      if (recordAndReplayUtils.isShutdownRequested()) {
+        recordAndReplayCurrentStatus.setStatus(RecordAndReplayStatus.NOT_ACTIVATED);
+        recordAndReplayUtils.reset();
+      }
+    }
+    return isReplay;
+  }
+  private void prepareChunksPlayersAndGlobalStore(){
+    Set<EntityRef> unsavedEntities=new HashSet<>();
+    for (    EntityRef entity : privateEntityManager.getAllEntities()) {
+      if (entity.isPersistent()) {
+        unsavedEntities.add(entity);
+      }
+    }
+    preparePlayerStores(unsavedEntities);
+    prepareCompressedChunkBuilders(unsavedEntities);
+    this.globalStore=globalStoreBuilder.build(privateEntityManager,unsavedEntities);
+  }
+  /** 
+ * @param unsavedEntities currently loaded persistent entities without owner that have not been saved yet.This method removes entities it saves.
+ */
+  private void prepareCompressedChunkBuilders(  Set<EntityRef> unsavedEntities){
+    Map<Vector3i,Collection<EntityRef>> chunkPosToEntitiesMap=createChunkPosToUnsavedOwnerLessEntitiesMap();
+    allChunks=Maps.newHashMap();
+    allChunks.putAll(unloadedChunks);
+    for (    Map.Entry<Vector3i,ChunkImpl> chunkEntry : loadedChunks.entrySet()) {
+      Collection<EntityRef> entitiesToStore=chunkPosToEntitiesMap.get(chunkEntry.getKey());
+      if (entitiesToStore == null) {
+        entitiesToStore=Collections.emptySet();
+      }
+      ChunkImpl chunk=chunkEntry.getValue();
+      unsavedEntities.removeAll(entitiesToStore);
+      CompressedChunkBuilder compressedChunkBuilder=new CompressedChunkBuilder(privateEntityManager,chunk,entitiesToStore,false);
+      unsavedEntities.removeAll(compressedChunkBuilder.getStoredEntities());
+      allChunks.put(chunkEntry.getKey(),compressedChunkBuilder);
+    }
+  }
+  /** 
+ * @param unsavedEntities currently loaded persistent entities without owner that have not been saved yet.This method removes entities it saves.
+ */
+  private void preparePlayerStores(  Set<EntityRef> unsavedEntities){
+    allPlayers=Maps.newHashMap();
+    allPlayers.putAll(unloadedPlayers);
+    for (    Map.Entry<String,PlayerStoreBuilder> playerEntry : loadedPlayers.entrySet()) {
+      PlayerStoreBuilder playerStoreBuilder=playerEntry.getValue();
+      EntityData.PlayerStore playerStore=playerStoreBuilder.build(privateEntityManager);
+      unsavedEntities.removeAll(playerStoreBuilder.getStoredEntities());
+      Long characterEntityId=playerStoreBuilder.getCharacterEntityId();
+      if (characterEntityId != null) {
+        EntityRef character=privateEntityManager.getEntity(characterEntityId);
+        unsavedEntities.remove(character);
+      }
+      allPlayers.put(playerEntry.getKey(),playerStore);
+    }
+  }
+  private Map<Vector3i,Collection<EntityRef>> createChunkPosToUnsavedOwnerLessEntitiesMap(){
+    Map<Vector3i,Collection<EntityRef>> chunkPosToEntitiesMap=Maps.newHashMap();
+    for (    EntityRef entity : privateEntityManager.getEntitiesWith(LocationComponent.class)) {
+      if (entity.isPersistent() && !entity.getOwner().exists() && !entity.hasComponent(ClientComponent.class)&& !entity.isAlwaysRelevant()) {
+        LocationComponent locationComponent=entity.getComponent(LocationComponent.class);
+        if (locationComponent != null) {
+          Vector3f loc=locationComponent.getWorldPosition(new Vector3f());
+          Vector3i chunkPos=Chunks.toChunkPos((int)loc.x,(int)loc.y,(int)loc.z,new Vector3i());
+          Collection<EntityRef> collection=chunkPosToEntitiesMap.computeIfAbsent(chunkPos,x -> new ArrayList<>());
+          collection.add(entity);
+        }
+      }
+    }
+    return chunkPosToEntitiesMap;
+  }
+  private void applyDeltaToPrivateEntityManager(){
+    deltaToSave.getEntityDeltas().forEachEntry((entityId,delta) -> {
+      if (entityId >= privateEntityManager.getNextId()) {
+        privateEntityManager.setNextId(entityId + 1);
+      }
+      return true;
+    }
+);
+    deltaToSave.getDestroyedEntities().forEach(entityId -> {
+      if (entityId >= privateEntityManager.getNextId()) {
+        privateEntityManager.setNextId(entityId + 1);
+      }
+      return true;
+    }
+);
+    deltaToSave.getEntityDeltas().forEachEntry((entityId,delta) -> {
+      if (privateEntityManager.isActiveEntity(entityId)) {
+        EntityRef entity=privateEntityManager.getEntity(entityId);
+        for (        var changedComponent : delta.getChangedComponents().values()) {
+          entity.removeComponent(changedComponent.getClass());
+          entity.addComponent(changedComponent);
+        }
+        delta.getRemovedComponents().forEach(entity::removeComponent);
+      }
+ else {
+        privateEntityManager.createEntityWithId(entityId,delta.getChangedComponents().values());
+      }
+      return true;
+    }
+);
+    final List<EntityRef> entitiesToDestroy=Lists.newArrayList();
+    deltaToSave.getDestroyedEntities().forEach(entityId -> {
+      EntityRef entityToDestroy;
+      if (privateEntityManager.isActiveEntity(entityId)) {
+        entityToDestroy=privateEntityManager.getEntity(entityId);
+      }
+ else {
+        entityToDestroy=privateEntityManager.createEntityWithId(entityId,Collections.emptyList());
+      }
+      entitiesToDestroy.add(entityToDestroy);
+      return true;
+    }
+);
+    deltaToSave.bindAllDelayedEntityRefsTo(privateEntityManager);
+    entitiesToDestroy.forEach(EntityRef::destroy);
+    deltaToSave.getDeactivatedEntities().forEach(entityId -> {
+      EntityRef entityRef=privateEntityManager.getEntity(entityId);
+      privateEntityManager.deactivateForStorage(entityRef);
+      return true;
+    }
+);
+  }
+  private void createSaveTransactionDirectory() throws IOException {
+    Path directory=storagePathProvider.getUnfinishedSaveTransactionPath();
+    Files.createDirectories(directory);
+  }
+  private void perpareChangesForMerge() throws IOException {
+    try {
+      renameMergeFolder();
+    }
+ catch (    AccessDeniedException e) {
+      logger.warn("Rename of merge folder failed, retrying in one second");
+      try {
+        Thread.sleep(1000);
+      }
+ catch (      InterruptedException e1) {
+        Thread.currentThread().interrupt();
+      }
+      renameMergeFolder();
+    }
+  }
+  private void renameMergeFolder() throws IOException {
+    Path directoryForUnfinishedFiles=storagePathProvider.getUnfinishedSaveTransactionPath();
+    Path directoryForFinishedFiles=storagePathProvider.getUnmergedChangesPath();
+    try {
+      Files.move(directoryForUnfinishedFiles,directoryForFinishedFiles,StandardCopyOption.ATOMIC_MOVE);
+    }
+ catch (    AtomicMoveNotSupportedException e) {
+      logger.warn("Atomic rename of merge folder was not possible, doing it non atomically...");
+      Files.move(directoryForUnfinishedFiles,directoryForFinishedFiles);
+    }
+  }
+  private void writePlayerStores() throws IOException {
+    Files.createDirectories(storagePathProvider.getPlayersTempPath());
+    for (    Map.Entry<String,EntityData.PlayerStore> playerStoreEntry : allPlayers.entrySet()) {
+      Path playerFile=storagePathProvider.getPlayerFileTempPath(playerStoreEntry.getKey());
+      try (OutputStream out=new BufferedOutputStream(Files.newOutputStream(playerFile))){
+        playerStoreEntry.getValue().writeTo(out);
+      }
+     }
+  }
+  private void writeGlobalStore() throws IOException {
+    Path path=storagePathProvider.getGlobalEntityStoreTempPath();
+    try (OutputStream out=new BufferedOutputStream(Files.newOutputStream(path))){
+      globalStore.writeTo(out);
+    }
+   }
+  private void writeChunkStores() throws IOException {
+    Path chunksPath=storagePathProvider.getWorldTempPath();
+    Files.createDirectories(chunksPath);
+    if (storeChunksInZips) {
+      Map<Vector3i,FileSystem> newChunkZips=Maps.newHashMap();
+      for (      Map.Entry<Vector3i,CompressedChunkBuilder> entry : allChunks.entrySet()) {
+        Vector3i chunkPos=entry.getKey();
+        Vector3i chunkZipPos=storagePathProvider.getChunkZipPosition(chunkPos);
+        FileSystem zip=newChunkZips.get(chunkZipPos);
+        if (zip == null) {
+          Path targetPath=storagePathProvider.getChunkZipTempPath(chunkZipPos);
+          Files.deleteIfExists(targetPath);
+          zip=FileSystems.newFileSystem(URI.create("jar:" + targetPath.toUri()),CREATE_ZIP_OPTIONS);
+          newChunkZips.put(chunkZipPos,zip);
+        }
+        Path chunkPath=zip.getPath(storagePathProvider.getChunkFilename(chunkPos));
+        CompressedChunkBuilder compressedChunkBuilder=entry.getValue();
+        byte[] compressedChunk=compressedChunkBuilder.buildEncodedChunk();
+        try (BufferedOutputStream bos=new BufferedOutputStream(Files.newOutputStream(chunkPath))){
+          bos.write(compressedChunk);
+        }
+       }
+      for (      Map.Entry<Vector3i,FileSystem> chunkZipEntry : newChunkZips.entrySet()) {
+        Vector3i chunkZipPos=chunkZipEntry.getKey();
+        Path oldChunkZipPath=storagePathProvider.getChunkZipPath(chunkZipPos);
+        final FileSystem zip=chunkZipEntry.getValue();
+        if (Files.isRegularFile(oldChunkZipPath)) {
+          try (FileSystem oldZip=FileSystems.newFileSystem(oldChunkZipPath,null)){
+            for (            Path root : oldZip.getRootDirectories()) {
+              Files.walkFileTree(root,new SimpleFileVisitor<>(){
+                @Override public FileVisitResult visitFile(                Path file,                BasicFileAttributes attrs) throws IOException {
+                  if (!Files.isRegularFile(zip.getPath(file.toString()))) {
+                    Files.copy(file,zip.getPath(file.toString()));
+                  }
+                  return FileVisitResult.CONTINUE;
+                }
+              }
+);
+            }
+          }
+         }
+        zip.close();
+      }
+    }
+ else {
+      for (      Map.Entry<Vector3i,CompressedChunkBuilder> entry : allChunks.entrySet()) {
+        Vector3i chunkPos=entry.getKey();
+        CompressedChunkBuilder compressedChunkBuilder=entry.getValue();
+        byte[] compressedChunk=compressedChunkBuilder.buildEncodedChunk();
+        Path chunkPath=storagePathProvider.getChunkTempPath(chunkPos);
+        try (OutputStream out=new BufferedOutputStream(Files.newOutputStream(chunkPath))){
+          out.write(compressedChunk);
+        }
+       }
+    }
+  }
+  private void saveGameManifest(){
+    try {
+      Path path=storagePathProvider.getGameManifestTempPath();
+      GameManifest.save(path,gameManifest);
+    }
+ catch (    IOException e) {
+      logger.error("Failed to save world manifest",e);
+    }
+  }
+  private void mergeChanges() throws IOException {
+    worldDirectoryWriteLock.lock();
+    try {
+      saveTransactionHelper.mergeChanges();
+    }
+  finally {
+      worldDirectoryWriteLock.unlock();
+    }
+  }
+}

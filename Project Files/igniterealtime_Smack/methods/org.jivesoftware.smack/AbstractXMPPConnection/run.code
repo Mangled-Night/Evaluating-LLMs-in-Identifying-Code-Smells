@@ -1,0 +1,87 @@
+@Override public void run(){
+  for (  StanzaListener listener : listenersToNotify) {
+    try {
+      listener.processStanza(packet);
+    }
+ catch (    Exception e) {
+      LOGGER.log(Level.WARNING,"Sending listener threw exception",e);
+      continue;
+    }
+  }
+}
+@Override public void run(){
+  IQ response=finalIqRequestHandler.handleIQRequest(iq);
+  if (response == null) {
+    return;
+  }
+  assert response.isResponseIQ();
+  response.setTo(iqRequest.getFrom());
+  response.setStanzaId(iqRequest.getStanzaId());
+  try {
+    sendStanza(response);
+  }
+ catch (  InterruptedException|NotConnectedException e) {
+    LOGGER.log(Level.WARNING,"Exception while sending response to IQ request",e);
+  }
+}
+@Override public void run(){
+  try {
+    listener.processStanza(packet);
+  }
+ catch (  Exception e) {
+    LOGGER.log(Level.SEVERE,"Exception in async packet listener",e);
+  }
+}
+@Override public void run(){
+  Iterator<StanzaListener> it=listenersToNotify.iterator();
+synchronized (syncRecvListeners) {
+    while (it.hasNext()) {
+      StanzaListener stanzaListener=it.next();
+      if (!syncRecvListeners.containsKey(stanzaListener)) {
+        it.remove();
+      }
+    }
+  }
+  for (  StanzaListener listener : listenersToNotify) {
+    try {
+      listener.processStanza(packet);
+    }
+ catch (    NotConnectedException e) {
+      LOGGER.log(Level.WARNING,"Got not connected exception, aborting",e);
+      break;
+    }
+catch (    Exception e) {
+      LOGGER.log(Level.SEVERE,"Exception in packet listener",e);
+    }
+  }
+}
+@Override public void run(){
+  boolean removed=removeAsyncStanzaListener(stanzaListener);
+  if (!removed) {
+    return;
+  }
+  Exception exception;
+  if (!isConnected()) {
+    exception=new NotConnectedException(AbstractXMPPConnection.this,replyFilter);
+  }
+ else {
+    exception=NoResponseException.newWith(AbstractXMPPConnection.this,replyFilter);
+  }
+  future.setException(exception);
+}
+@Override public void run(){
+  removeSyncStanzaListener(packetListener);
+}
+@Override public void run(){
+  runnable.run();
+synchronized (deferredAsyncRunnables) {
+    Runnable defferredRunnable=deferredAsyncRunnables.poll();
+    if (defferredRunnable == null) {
+      currentAsyncRunnables--;
+    }
+ else {
+      deferredAsyncRunnablesCount--;
+      asyncGo(defferredRunnable);
+    }
+  }
+}

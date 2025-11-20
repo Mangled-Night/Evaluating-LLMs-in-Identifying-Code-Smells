@@ -1,0 +1,20 @@
+@SuppressWarnings({"unchecked","rawtypes"}) private void requeueCommands(RedisCommand<?,?,?> sentCommand,Collection<? extends RedisCommand<?,?,?>> sentCommands,DefaultEndpoint endpoint){
+  if (sentCommand != null) {
+    try {
+      endpoint.write(sentCommand);
+    }
+ catch (    Exception e) {
+      sentCommand.completeExceptionally(e);
+    }
+  }
+ else {
+    try {
+      endpoint.write((Collection)sentCommands);
+    }
+ catch (    Exception e) {
+      for (      RedisCommand<?,?,?> command : sentCommands) {
+        command.completeExceptionally(e);
+      }
+    }
+  }
+}

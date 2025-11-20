@@ -1,0 +1,29 @@
+/** 
+ * Creates a new  {@link StringCodec} with the default {@link Charset#defaultCharset() charset}. The default is determined from the  {@code file.encoding} system property.
+ */
+public StringCodec(){
+  this(Charset.defaultCharset());
+}
+/** 
+ * Creates a new  {@link StringCodec} for the given {@link Charset} that encodes and decodes keys and values.
+ * @param charset must not be {@code null}.
+ */
+public StringCodec(Charset charset){
+  LettuceAssert.notNull(charset,"Charset must not be null");
+  this.charset=charset;
+  CharsetEncoder encoder=CharsetUtil.encoder(charset);
+  this.averageBytesPerChar=encoder.averageBytesPerChar();
+  this.maxBytesPerChar=encoder.maxBytesPerChar();
+  if (charset.name().equals("UTF-8")) {
+    utf8=true;
+    ascii=false;
+  }
+ else   if (charset.name().contains("ASCII")) {
+    utf8=false;
+    ascii=true;
+  }
+ else {
+    ascii=false;
+    utf8=false;
+  }
+}

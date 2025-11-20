@@ -1,0 +1,22 @@
+@SuppressWarnings("unchecked") public static Object createBean(BeanConfig config) throws IllegalAccessException, InvocationTargetException {
+  Object bean=config.create(true);
+  if (bean instanceof Map) {
+    Map<String,Object> map=(Map<String,Object>)bean;
+    for (    Map.Entry<String,Object> entry : config.getParams().entrySet()) {
+      String key=entry.getKey();
+      Object value=entry.getValue();
+      if (value instanceof BeanConfig) {
+        BeanConfig mapBeanConfig=(BeanConfig)entry.getValue();
+        value=mapBeanConfig.create(true);
+        mapping(value,mapBeanConfig.getParams());
+      }
+      map.put(key,value);
+    }
+  }
+ else   if (bean instanceof List) {
+  }
+ else {
+    mapping(bean,config.getParams());
+  }
+  return bean;
+}

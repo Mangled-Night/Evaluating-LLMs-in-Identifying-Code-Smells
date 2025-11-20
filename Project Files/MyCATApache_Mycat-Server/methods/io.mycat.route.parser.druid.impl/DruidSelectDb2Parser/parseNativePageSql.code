@@ -1,0 +1,100 @@
+protected void parseNativePageSql(SQLStatement stmt,RouteResultset rrs,OracleSelectQueryBlock mysqlSelectQuery,SchemaConfig schema){
+  SQLExpr where=mysqlSelectQuery.getWhere();
+  SQLTableSource from=mysqlSelectQuery.getFrom();
+  if (where instanceof SQLBinaryOpExpr && from instanceof SQLSubqueryTableSource) {
+    SQLBinaryOpExpr one=(SQLBinaryOpExpr)where;
+    SQLExpr left=one.getLeft();
+    SQLBinaryOperator operator=one.getOperator();
+    SQLSelectQuery subSelect=((SQLSubqueryTableSource)from).getSelect().getQuery();
+    SQLOrderBy orderBy=null;
+    if (subSelect instanceof OracleSelectQueryBlock) {
+      boolean hasRowNumber=false;
+      OracleSelectQueryBlock subSelectOracle=(OracleSelectQueryBlock)subSelect;
+      List<SQLSelectItem> sqlSelectItems=subSelectOracle.getSelectList();
+      for (      SQLSelectItem sqlSelectItem : sqlSelectItems) {
+        SQLExpr sqlExpr=sqlSelectItem.getExpr();
+        if (sqlExpr instanceof SQLAggregateExpr) {
+          SQLAggregateExpr agg=(SQLAggregateExpr)sqlExpr;
+          if ("row_number".equalsIgnoreCase(agg.getMethodName()) && agg.getOver() != null) {
+            hasRowNumber=true;
+            orderBy=agg.getOver().getOrderBy();
+          }
+        }
+      }
+      if (hasRowNumber) {
+        if ((operator == SQLBinaryOperator.LessThan || operator == SQLBinaryOperator.LessThanOrEqual) && one.getRight() instanceof SQLIntegerExpr) {
+          SQLIntegerExpr right=(SQLIntegerExpr)one.getRight();
+          int firstrownum=right.getNumber().intValue();
+          if (operator == SQLBinaryOperator.LessThan && firstrownum != 0) {
+            firstrownum=firstrownum - 1;
+          }
+          if (subSelect instanceof OracleSelectQueryBlock) {
+            rrs.setLimitStart(0);
+            rrs.setLimitSize(firstrownum);
+            mysqlSelectQuery=(OracleSelectQueryBlock)subSelect;
+            if (orderBy != null) {
+              SQLSelect oracleSelect=(SQLSelect)subSelect.getParent();
+              oracleSelect.setOrderBy(orderBy);
+            }
+            parseOrderAggGroupOracle(stmt,rrs,mysqlSelectQuery,schema);
+            isNeedParseOrderAgg=false;
+          }
+        }
+ else         if (operator == SQLBinaryOperator.BooleanAnd && left instanceof SQLBinaryOpExpr && one.getRight() instanceof SQLBinaryOpExpr) {
+          SQLBinaryOpExpr leftE=(SQLBinaryOpExpr)left;
+          SQLBinaryOpExpr rightE=(SQLBinaryOpExpr)one.getRight();
+          SQLBinaryOpExpr small=null;
+          SQLBinaryOpExpr larger=null;
+          int firstrownum=0;
+          int lastrownum=0;
+          if (leftE.getRight() instanceof SQLIntegerExpr && (leftE.getOperator() == SQLBinaryOperator.GreaterThan || leftE.getOperator() == SQLBinaryOperator.GreaterThanOrEqual)) {
+            small=leftE;
+            firstrownum=((SQLIntegerExpr)leftE.getRight()).getNumber().intValue();
+            if (leftE.getOperator() == SQLBinaryOperator.GreaterThanOrEqual && firstrownum != 0) {
+              firstrownum=firstrownum - 1;
+            }
+          }
+ else           if (leftE.getRight() instanceof SQLIntegerExpr && (leftE.getOperator() == SQLBinaryOperator.LessThan || leftE.getOperator() == SQLBinaryOperator.LessThanOrEqual)) {
+            larger=leftE;
+            lastrownum=((SQLIntegerExpr)leftE.getRight()).getNumber().intValue();
+            if (leftE.getOperator() == SQLBinaryOperator.LessThan && lastrownum != 0) {
+              lastrownum=lastrownum - 1;
+            }
+          }
+          if (rightE.getRight() instanceof SQLIntegerExpr && (rightE.getOperator() == SQLBinaryOperator.GreaterThan || rightE.getOperator() == SQLBinaryOperator.GreaterThanOrEqual)) {
+            small=rightE;
+            firstrownum=((SQLIntegerExpr)rightE.getRight()).getNumber().intValue();
+            if (rightE.getOperator() == SQLBinaryOperator.GreaterThanOrEqual && firstrownum != 0) {
+              firstrownum=firstrownum - 1;
+            }
+          }
+ else           if (rightE.getRight() instanceof SQLIntegerExpr && (rightE.getOperator() == SQLBinaryOperator.LessThan || rightE.getOperator() == SQLBinaryOperator.LessThanOrEqual)) {
+            larger=rightE;
+            lastrownum=((SQLIntegerExpr)rightE.getRight()).getNumber().intValue();
+            if (rightE.getOperator() == SQLBinaryOperator.LessThan && lastrownum != 0) {
+              lastrownum=lastrownum - 1;
+            }
+          }
+          if (small != null && larger != null) {
+            setLimitIFChange(stmt,rrs,schema,small,firstrownum,lastrownum);
+            if (orderBy != null) {
+              SQLSelect oracleSelect=(SQLSelect)subSelect.getParent();
+              oracleSelect.setOrderBy(orderBy);
+            }
+            parseOrderAggGroupOracle(stmt,rrs,(OracleSelectQueryBlock)subSelect,schema);
+            isNeedParseOrderAgg=false;
+          }
+        }
+      }
+ else {
+        parseNativeSql(stmt,rrs,mysqlSelectQuery,schema);
+      }
+    }
+  }
+ else {
+    parseNativeSql(stmt,rrs,mysqlSelectQuery,schema);
+  }
+  if (isNeedParseOrderAgg) {
+    parseOrderAggGroupOracle(stmt,rrs,mysqlSelectQuery,schema);
+  }
+}

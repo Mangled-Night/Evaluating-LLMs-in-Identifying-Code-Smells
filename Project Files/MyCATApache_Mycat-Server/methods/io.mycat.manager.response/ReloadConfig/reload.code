@@ -1,0 +1,15 @@
+public static boolean reload(){
+  ConfigInitializer loader=new ConfigInitializer(false);
+  Map<String,UserConfig> users=loader.getUsers();
+  Map<String,SchemaConfig> schemas=loader.getSchemas();
+  Map<String,PhysicalDBNode> dataNodes=loader.getDataNodes();
+  Map<String,PhysicalDBPool> dataHosts=loader.getDataHosts();
+  MycatCluster cluster=loader.getCluster();
+  FirewallConfig firewall=loader.getFirewall();
+  MycatServer.getInstance().getConfig().getSystem().setUseSqlStat(loader.getSystem().getUseSqlStat());
+  MycatServer.getInstance().ensureSqlstatRecycleFuture();
+  MycatServer.getInstance().getConfig().reload(users,schemas,dataNodes,dataHosts,cluster,firewall,false);
+  MycatServer.getInstance().getCacheService().clearCache();
+  MycatServer.getInstance().initRuleData();
+  return true;
+}

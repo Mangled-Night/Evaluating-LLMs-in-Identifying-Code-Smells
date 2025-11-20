@@ -1,0 +1,24 @@
+private void backendCheck(){
+  long sqlTimeout=MycatServer.getInstance().getConfig().getSystem().getSqlExecuteTimeout() * 1000L;
+  Iterator<Entry<Long,BackendConnection>> it=backends.entrySet().iterator();
+  while (it.hasNext()) {
+    BackendConnection c=it.next().getValue();
+    if (c == null) {
+      it.remove();
+      continue;
+    }
+    if (c.isBorrowed() && c.getLastTime() < TimeUtil.currentTimeMillis() - sqlTimeout) {
+      LOGGER.warn("found backend connection SQL timeout ,close it " + c);
+      c.close("sql timeout");
+    }
+    if (c.isClosed()) {
+      it.remove();
+    }
+ else {
+      if (c instanceof AbstractConnection) {
+        checkConSendQueue((AbstractConnection)c);
+      }
+      c.idleCheck();
+    }
+  }
+}

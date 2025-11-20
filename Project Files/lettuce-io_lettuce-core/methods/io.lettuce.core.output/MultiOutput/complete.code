@@ -1,0 +1,20 @@
+@Override public void complete(int depth){
+  if (queue.isEmpty()) {
+    return;
+  }
+  if (depth >= 1) {
+    RedisCommand<K,V,?> cmd=queue.peek();
+    cmd.getOutput().complete(depth - 1);
+  }
+  if (depth == 1) {
+    RedisCommand<K,V,?> cmd=queue.remove();
+    CommandOutput<K,V,?> o=cmd.getOutput();
+    responses.add(!o.hasError() ? o.get() : ExceptionFactory.createExecutionException(o.getError()));
+    cmd.complete();
+  }
+ else   if (depth == 0 && !queue.isEmpty()) {
+    for (    RedisCommand<K,V,?> cmd : queue) {
+      cmd.complete();
+    }
+  }
+}

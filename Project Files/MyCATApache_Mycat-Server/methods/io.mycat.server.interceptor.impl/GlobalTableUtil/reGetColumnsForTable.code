@@ -1,0 +1,28 @@
+/** 
+ * 重新获得table 的列list
+ * @param tableName
+ */
+private static void reGetColumnsForTable(String tableName){
+  MycatConfig config=MycatServer.getInstance().getConfig();
+  if (globalTableMap != null && globalTableMap.get(tableName.toUpperCase()) != null) {
+    TableConfig tableConfig=globalTableMap.get(tableName.toUpperCase());
+    if (tableConfig == null || isInnerColumnCheckFinished != 1)     return;
+    String nodeName=tableConfig.getDataNodes().get(0);
+    Map<String,PhysicalDBNode> map=config.getDataNodes();
+    for (    String k2 : map.keySet()) {
+      PhysicalDBNode dBnode=map.get(k2);
+      if (nodeName.equals(dBnode.getName())) {
+        PhysicalDBPool pool=dBnode.getDbPool();
+        List<PhysicalDatasource> dsList=(List<PhysicalDatasource>)pool.genAllDataSources();
+        for (        PhysicalDatasource ds : dsList) {
+          if (ds instanceof MySQLDataSource) {
+            MySQLDataSource mds=(MySQLDataSource)dsList.get(0);
+            MySQLConsistencyChecker checker=new MySQLConsistencyChecker(mds,tableConfig.getName());
+            checker.checkInnerColumnExist();
+            return;
+          }
+        }
+      }
+    }
+  }
+}

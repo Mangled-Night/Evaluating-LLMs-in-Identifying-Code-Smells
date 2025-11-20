@@ -1,0 +1,43 @@
+/** 
+ * Accepts the SOCKS5 Bytestream initialization request and returns the socket to send/receive data. <p> Before accepting the SOCKS5 Bytestream request you can set timeouts by invoking {@link #setTotalConnectTimeout(int)} and {@link #setMinimumConnectTimeout(int)}.
+ * @return the socket to send/receive data
+ * @throws InterruptedException if the current thread was interrupted while waiting
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws CouldNotConnectToAnyProvidedSocks5Host if no connection to any provided stream host could be established
+ * @throws NoSocks5StreamHostsProvided if no stream host was provided.
+ */
+@Override public Socks5BytestreamSession accept() throws InterruptedException, XMPPErrorException, CouldNotConnectToAnyProvidedSocks5Host, NotConnectedException, NoSocks5StreamHostsProvided {
+  Collection<StreamHost> streamHosts=this.bytestreamRequest.getStreamHosts();
+  Map<StreamHost,Exception> streamHostsExceptions=new HashMap<>();
+  if (streamHosts.size() == 0) {
+    cancelRequest(streamHostsExceptions);
+  }
+  StreamHost selectedHost=null;
+  Socket socket=null;
+  String digest=Socks5Utils.createDigest(this.bytestreamRequest.getSessionID(),this.bytestreamRequest.getFrom(),this.manager.getConnection().getUser());
+  int timeout=Math.max(getTotalConnectTimeout() / streamHosts.size(),getMinimumConnectTimeout());
+  for (  StreamHost streamHost : streamHosts) {
+    String address=streamHost.getAddress() + ":" + streamHost.getPort();
+    int failures=getConnectionFailures(address);
+    if (connectionFailureThreshold > 0 && failures >= connectionFailureThreshold) {
+      continue;
+    }
+    try {
+      final Socks5Client socks5Client=new Socks5Client(streamHost,digest);
+      socket=socks5Client.getSocket(timeout);
+      selectedHost=streamHost;
+      break;
+    }
+ catch (    TimeoutException|IOException|SmackException|XMPPException e) {
+      streamHostsExceptions.put(streamHost,e);
+      incrementConnectionFailures(address);
+    }
+  }
+  if (selectedHost == null || socket == null) {
+    cancelRequest(streamHostsExceptions);
+  }
+  Bytestream response=createUsedHostResponse(selectedHost);
+  this.manager.getConnection().sendStanza(response);
+  return new Socks5BytestreamSession(socket,selectedHost.getJID().equals(this.bytestreamRequest.getFrom()));
+}

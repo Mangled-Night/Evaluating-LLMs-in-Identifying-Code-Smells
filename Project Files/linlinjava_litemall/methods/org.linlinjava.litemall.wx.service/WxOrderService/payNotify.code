@@ -1,0 +1,79 @@
+/** 
+ * 微信付款成功或失败回调接口 <p> 1. 检测当前订单是否是付款状态; 2. 设置订单付款成功状态相关信息; 3. 响应微信商户平台.
+ * @param request  请求内容
+ * @param response 响应内容
+ * @return 操作结果
+ */
+@Transactional public Object payNotify(HttpServletRequest request,HttpServletResponse response){
+  String xmlResult=null;
+  try {
+    xmlResult=IOUtils.toString(request.getInputStream(),request.getCharacterEncoding());
+  }
+ catch (  IOException e) {
+    e.printStackTrace();
+    return WxPayNotifyResponse.fail(e.getMessage());
+  }
+  WxPayOrderNotifyResult result=null;
+  try {
+    result=wxPayService.parseOrderNotifyResult(xmlResult);
+    if (!WxPayConstants.ResultCode.SUCCESS.equals(result.getResultCode())) {
+      logger.error(xmlResult);
+      throw new WxPayException("微信通知支付失败！");
+    }
+    if (!WxPayConstants.ResultCode.SUCCESS.equals(result.getReturnCode())) {
+      logger.error(xmlResult);
+      throw new WxPayException("微信通知支付失败！");
+    }
+  }
+ catch (  WxPayException e) {
+    e.printStackTrace();
+    return WxPayNotifyResponse.fail(e.getMessage());
+  }
+  logger.info("处理腾讯支付平台的订单支付");
+  logger.info(result);
+  String orderSn=result.getOutTradeNo();
+  String payId=result.getTransactionId();
+  String totalFee=BaseWxPayResult.fenToYuan(result.getTotalFee());
+  LitemallOrder order=orderService.findBySn(orderSn);
+  if (order == null) {
+    return WxPayNotifyResponse.fail("订单不存在 sn=" + orderSn);
+  }
+  if (OrderUtil.hasPayed(order)) {
+    return WxPayNotifyResponse.success("订单已经处理成功!");
+  }
+  if (!totalFee.equals(order.getActualPrice().toString())) {
+    return WxPayNotifyResponse.fail(order.getOrderSn() + " : 支付金额不符合 totalFee=" + totalFee);
+  }
+  order.setPayId(payId);
+  order.setPayTime(LocalDateTime.now());
+  order.setOrderStatus(OrderUtil.STATUS_PAY);
+  if (orderService.updateWithOptimisticLocker(order) == 0) {
+    return WxPayNotifyResponse.fail("更新数据已失效");
+  }
+  LitemallGroupon groupon=grouponService.queryByOrderId(order.getId());
+  if (groupon != null) {
+    LitemallGrouponRules grouponRules=grouponRulesService.findById(groupon.getRulesId());
+    if (groupon.getGrouponId() == 0) {
+      String url=qCodeService.createGrouponShareImage(grouponRules.getGoodsName(),grouponRules.getPicUrl(),groupon);
+      groupon.setShareUrl(url);
+    }
+    groupon.setStatus(GrouponConstant.STATUS_ON);
+    if (grouponService.updateById(groupon) == 0) {
+      return WxPayNotifyResponse.fail("更新数据已失效");
+    }
+    List<LitemallGroupon> grouponList=grouponService.queryJoinRecord(groupon.getGrouponId());
+    if (groupon.getGrouponId() != 0 && (grouponList.size() >= grouponRules.getDiscountMember() - 1)) {
+      for (      LitemallGroupon grouponActivity : grouponList) {
+        grouponActivity.setStatus(GrouponConstant.STATUS_SUCCEED);
+        grouponService.updateById(grouponActivity);
+      }
+      LitemallGroupon grouponSource=grouponService.queryById(groupon.getGrouponId());
+      grouponSource.setStatus(GrouponConstant.STATUS_SUCCEED);
+      grouponService.updateById(grouponSource);
+    }
+  }
+  notifyService.notifyMail("新订单通知",order.toString());
+  notifyService.notifySmsTemplateSync(order.getMobile(),NotifyType.PAY_SUCCEED,new String[]{orderSn.substring(8,14)});
+  taskService.removeTask(new OrderUnpaidTask(order.getId()));
+  return WxPayNotifyResponse.success("处理成功!");
+}

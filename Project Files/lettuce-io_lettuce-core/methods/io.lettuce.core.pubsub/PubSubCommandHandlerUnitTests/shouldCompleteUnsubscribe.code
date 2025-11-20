@@ -1,0 +1,20 @@
+@Test void shouldCompleteUnsubscribe() throws Exception {
+  Command<String,String,String> subCmd=new Command<>(CommandType.SUBSCRIBE,new PubSubOutput<>(StringCodec.UTF8),null);
+  Command<String,String,String> unSubCmd=new Command<>(CommandType.UNSUBSCRIBE,new PubSubOutput<>(StringCodec.UTF8),null);
+  doAnswer((Answer<PubSubEndpoint<String,String>>)inv -> {
+    PubSubOutput<String,String> out=inv.getArgument(0);
+    if (out.type() == PubSubOutput.Type.message) {
+      throw new NullPointerException("Expected exception");
+    }
+    return endpoint;
+  }
+).when(endpoint).notifyMessage(any());
+  sut.channelRegistered(context);
+  sut.channelActive(context);
+  stack.add(subCmd);
+  stack.add(unSubCmd);
+  ByteBuf buf=responseBytes("*3\r\n$9\r\nsubscribe\r\n$10\r\ntest_sub_0\r\n:1\r\n" + "*3\r\n$7\r\nmessage\r\n$10\r\ntest_sub_0\r\n$3\r\nabc\r\n" + "*3\r\n$11\r\nunsubscribe\r\n$10\r\ntest_sub_0\r\n:0\r\n");
+  sut.channelRead(context,buf);
+  sut.channelRead(context,responseBytes("*3\r\n$7\r\nmessage\r\n$10\r\ntest_sub_1\r\n$3\r\nabc\r\n"));
+  assertThat(unSubCmd.isDone()).isTrue();
+}

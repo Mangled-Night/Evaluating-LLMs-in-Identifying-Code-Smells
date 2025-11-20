@@ -1,0 +1,65 @@
+public static JingleContent parseJingleContent(XmlPullParser parser,final int initialDepth) throws XmlPullParserException, IOException, SmackParsingException {
+  JingleContent.Builder builder=JingleContent.getBuilder();
+  String creatorString=parser.getAttributeValue("",JingleContent.CREATOR_ATTRIBUTE_NAME);
+  JingleContent.Creator creator=JingleContent.Creator.valueOf(creatorString);
+  builder.setCreator(creator);
+  String disposition=parser.getAttributeValue("",JingleContent.DISPOSITION_ATTRIBUTE_NAME);
+  builder.setDisposition(disposition);
+  String name=parser.getAttributeValue("",JingleContent.NAME_ATTRIBUTE_NAME);
+  builder.setName(name);
+  String sendersString=parser.getAttributeValue("",JingleContent.SENDERS_ATTRIBUTE_NAME);
+  if (sendersString != null) {
+    JingleContent.Senders senders=JingleContent.Senders.valueOf(sendersString);
+    builder.setSenders(senders);
+  }
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String tagName=parser.getName();
+    String namespace=parser.getNamespace();
+switch (tagName) {
+case JingleContentDescription.ELEMENT:
+{
+      JingleContentDescription description;
+      JingleContentDescriptionProvider<?> provider=JingleContentProviderManager.getJingleContentDescriptionProvider(namespace);
+      if (provider == null) {
+        StandardExtensionElement standardExtensionElement=StandardExtensionElementProvider.INSTANCE.parse(parser);
+        description=new UnknownJingleContentDescription(standardExtensionElement);
+      }
+ else {
+        description=provider.parse(parser);
+      }
+      builder.setDescription(description);
+      break;
+    }
+case JingleContentTransport.ELEMENT:
+{
+    JingleContentTransport transport;
+    JingleContentTransportProvider<?> provider=JingleContentProviderManager.getJingleContentTransportProvider(namespace);
+    if (provider == null) {
+      StandardExtensionElement standardExtensionElement=StandardExtensionElementProvider.INSTANCE.parse(parser);
+      transport=new UnknownJingleContentTransport(standardExtensionElement);
+    }
+ else {
+      transport=provider.parse(parser);
+    }
+    builder.setTransport(transport);
+    break;
+  }
+default :
+LOGGER.severe("Unknown Jingle content element: " + tagName);
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return builder.build();
+}

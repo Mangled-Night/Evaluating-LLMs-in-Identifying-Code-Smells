@@ -1,0 +1,67 @@
+/** 
+ * 解析 SQL table name
+ */
+public List<String> parseTableNames(String sql){
+  final List<String> tables=new ArrayList<String>();
+  try {
+    SQLStatement stmt=parseStmt(sql);
+    if (stmt instanceof SQLReplaceStatement) {
+      String table=((SQLReplaceStatement)stmt).getTableName().getSimpleName();
+      tables.add(fixName(table));
+    }
+ else     if (stmt instanceof SQLInsertStatement) {
+      String table=((SQLInsertStatement)stmt).getTableName().getSimpleName();
+      tables.add(fixName(table));
+    }
+ else     if (stmt instanceof SQLUpdateStatement) {
+      String table=((SQLUpdateStatement)stmt).getTableName().getSimpleName();
+      tables.add(fixName(table));
+    }
+ else     if (stmt instanceof SQLDeleteStatement) {
+      ((SQLDeleteStatement)stmt).getTableSource().accept(new SQLASTVisitorAdapter(){
+        public boolean visit(        SQLExprTableSource x){
+          tables.add(fixName(x.toString()));
+          return super.visit(x);
+        }
+      }
+);
+      if (((SQLDeleteStatement)stmt).getFrom() != null) {
+        ((SQLDeleteStatement)stmt).getFrom().accept(new SQLASTVisitorAdapter(){
+          public boolean visit(          SQLExprTableSource x){
+            if (tables.contains(x.getAlias())) {
+              tables.remove(x.getAlias());
+              tables.add(fixName(x.toString()));
+            }
+            return super.visit(x);
+          }
+        }
+);
+      }
+    }
+ else     if (stmt instanceof SQLSelectStatement) {
+      DbType dbType=((SQLSelectStatement)stmt).getDbType();
+      if (DbType.mysql.equals(dbType)) {
+        stmt.accept(new MySqlASTVisitorAdapter(){
+          public boolean visit(          SQLExprTableSource x){
+            tables.add(fixName(x.toString()));
+            return super.visit(x);
+          }
+        }
+);
+      }
+ else {
+        stmt.accept(new SQLASTVisitorAdapter(){
+          public boolean visit(          SQLExprTableSource x){
+            tables.add(fixName(x.toString()));
+            return super.visit(x);
+          }
+        }
+);
+      }
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.error("TableStatAnalyzer err:" + sql,e);
+  }
+  return tables;
+}

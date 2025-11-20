@@ -1,0 +1,114 @@
+/** 
+ * This method handles the negotiation of the file transfer and the stream, it only returns the created stream after the negotiation has been completed.
+ * @param fileName TODO javadoc me pleaseThe name of the file that will be transmitted. It is preferable for this name to have an extension as it will be used to determine the type of file it is.
+ * @param fileSize TODO javadoc me pleaseThe size in bytes of the file that will be transmitted.
+ * @param description TODO javadoc me pleaseA description of the file that will be transmitted.
+ * @return The OutputStream that is connected to the peer to transmit thefile.
+ * @throws XMPPException if an XMPP protocol error was received.Thrown if an error occurs during the file transfer negotiation process.
+ * @throws SmackException if there was no response from the server.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public synchronized OutputStream sendFile(String fileName,long fileSize,String description) throws XMPPException, SmackException, InterruptedException {
+  if (isDone() || outputStream != null) {
+    throw new IllegalStateException("The negotiation process has already" + " been attempted on this file transfer");
+  }
+  try {
+    setFileInfo(fileName,fileSize);
+    this.outputStream=negotiateStream(fileName,fileSize,description);
+  }
+ catch (  XMPPErrorException e) {
+    handleXMPPException(e);
+    throw e;
+  }
+  return outputStream;
+}
+/** 
+ * This methods handles the transfer and stream negotiation process. It returns immediately and its progress will be updated through the {@link NegotiationProgress} callback.
+ * @param fileName TODO javadoc me pleaseThe name of the file that will be transmitted. It is preferable for this name to have an extension as it will be used to determine the type of file it is.
+ * @param fileSize TODO javadoc me pleaseThe size in bytes of the file that will be transmitted.
+ * @param description TODO javadoc me pleaseA description of the file that will be transmitted.
+ * @param progress TODO javadoc me pleaseA callback to monitor the progress of the file transfer negotiation process and to retrieve the OutputStream when it is complete.
+ */
+public synchronized void sendFile(final String fileName,final long fileSize,final String description,final NegotiationProgress progress){
+  if (progress == null) {
+    throw new IllegalArgumentException("Callback progress cannot be null.");
+  }
+  checkTransferThread();
+  if (isDone() || outputStream != null) {
+    throw new IllegalStateException("The negotiation process has already" + " been attempted for this file transfer");
+  }
+  setFileInfo(fileName,fileSize);
+  this.callback=progress;
+  transferThread=new Thread(new Runnable(){
+    @Override public void run(){
+      try {
+        OutgoingFileTransfer.this.outputStream=negotiateStream(fileName,fileSize,description);
+        progress.outputStreamEstablished(OutgoingFileTransfer.this.outputStream);
+      }
+ catch (      XMPPErrorException e) {
+        handleXMPPException(e);
+      }
+catch (      Exception e) {
+        setException(e);
+      }
+    }
+  }
+,"File Transfer Negotiation " + streamID);
+  transferThread.start();
+}
+/** 
+ * This method handles the stream negotiation process and transmits the file to the remote user. It returns immediately and the progress of the file transfer can be monitored through several methods: <UL> <LI> {@link FileTransfer#getStatus()}<LI> {@link FileTransfer#getProgress()}<LI> {@link FileTransfer#isDone()}</UL>
+ * @param file the file to transfer to the remote entity.
+ * @param description a description for the file to transfer.
+ * @throws SmackException if Smack detected an exceptional situation.If there is an error during the negotiation process or the sending of the file.
+ */
+public synchronized void sendFile(final File file,final String description) throws SmackException {
+  checkTransferThread();
+  if (file == null || !file.exists() || !file.canRead()) {
+    throw new IllegalArgumentException("Could not read file");
+  }
+ else {
+    setFileInfo(file.getAbsolutePath(),file.getName(),file.length());
+  }
+  transferThread=new Thread(new Runnable(){
+    @Override public void run(){
+      try {
+        outputStream=negotiateStream(file.getName(),file.length(),description);
+      }
+ catch (      XMPPErrorException e) {
+        handleXMPPException(e);
+        return;
+      }
+catch (      Exception e) {
+        setException(e);
+      }
+      if (outputStream == null) {
+        return;
+      }
+      if (!updateStatus(Status.negotiated,Status.in_progress)) {
+        return;
+      }
+      InputStream inputStream=null;
+      try {
+        inputStream=new FileInputStream(file);
+        writeToStream(inputStream,outputStream);
+      }
+ catch (      FileNotFoundException e) {
+        setStatus(FileTransfer.Status.error);
+        setError(Error.bad_file);
+        setException(e);
+      }
+catch (      IOException e) {
+        setStatus(FileTransfer.Status.error);
+        setException(e);
+      }
+ finally {
+        CloseableUtil.maybeClose(inputStream,LOGGER);
+        CloseableUtil.maybeClose(outputStream,LOGGER);
+      }
+      updateStatus(Status.in_progress,FileTransfer.Status.complete);
+    }
+  }
+,"File Transfer " + streamID);
+  transferThread.start();
+}

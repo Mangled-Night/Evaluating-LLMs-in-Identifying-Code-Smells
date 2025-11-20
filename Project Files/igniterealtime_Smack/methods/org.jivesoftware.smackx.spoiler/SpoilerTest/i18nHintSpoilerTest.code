@@ -1,0 +1,13 @@
+@Test public void i18nHintSpoilerTest() throws Exception {
+  final String xml="<spoiler xml:lang='de' xmlns='urn:xmpp:spoiler:0'>Der Kuchen ist eine Lüge!</spoiler>";
+  Message message=StanzaBuilder.buildMessage().build();
+  SpoilerElement.addSpoiler(message,"de","Der Kuchen ist eine Lüge!");
+  SpoilerElement i18nHint=(SpoilerElement)message.getExtensionElement(SpoilerElement.ELEMENT,SpoilerManager.NAMESPACE_0);
+  assertEquals("Der Kuchen ist eine Lüge!",i18nHint.getHint());
+  assertEquals("de",i18nHint.getLanguage());
+  assertXmlSimilar(xml,i18nHint.toXML().toString());
+  XmlPullParser parser=TestUtils.getParser(xml);
+  SpoilerElement parsed=SpoilerProvider.INSTANCE.parse(parser);
+  assertEquals(i18nHint.getLanguage(),parsed.getLanguage());
+  assertXmlSimilar(xml,parsed.toXML().toString());
+}

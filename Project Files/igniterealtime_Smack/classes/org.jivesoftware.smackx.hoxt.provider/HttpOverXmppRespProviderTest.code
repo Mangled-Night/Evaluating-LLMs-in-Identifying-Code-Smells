@@ -1,0 +1,27 @@
+/** 
+ * Tests correct attribute parsing in 'resp' element.
+ */
+public class HttpOverXmppRespProviderTest {
+  @Test public void areAllRespAttributesCorrectlyParsed() throws Exception {
+    String string="<resp xmlns='urn:xmpp:http' version='1.1' statusCode='200' statusMessage='OK'/>";
+    HttpOverXmppRespProvider provider=new HttpOverXmppRespProvider();
+    XmlPullParser parser=PacketParserUtils.getParserFor(string);
+    IQ iq=provider.parse(parser,null);
+    assertTrue(iq instanceof HttpOverXmppResp);
+    HttpOverXmppResp resp=(HttpOverXmppResp)iq;
+    assertEquals(resp.getVersion(),"1.1");
+    assertEquals(resp.getStatusCode(),200);
+    assertEquals(resp.getStatusMessage(),"OK");
+  }
+  @Test public void areRespAttributesWothoutMessageCorrectlyParsed() throws Exception {
+    String string="<resp xmlns='urn:xmpp:http' version='1.1' statusCode='200'/>";
+    HttpOverXmppRespProvider provider=new HttpOverXmppRespProvider();
+    XmlPullParser parser=PacketParserUtils.getParserFor(string);
+    IQ iq=provider.parse(parser,null);
+    assertTrue(iq instanceof HttpOverXmppResp);
+    HttpOverXmppResp resp=(HttpOverXmppResp)iq;
+    assertEquals(resp.getVersion(),"1.1");
+    assertEquals(resp.getStatusCode(),200);
+    assertNull(resp.getStatusMessage());
+  }
+}

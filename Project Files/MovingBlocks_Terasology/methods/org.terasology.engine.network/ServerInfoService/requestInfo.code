@@ -1,0 +1,30 @@
+public Future<ServerInfoMessage> requestInfo(final String address,final int port){
+  SettableFuture<ServerInfoMessage> resultFuture=SettableFuture.create();
+  InetSocketAddress remoteAddress=new InetSocketAddress(address,port);
+  ChannelFuture connectCheck=bootstrap.connect(remoteAddress).addListener(connectFuture -> {
+    if (!connectFuture.isSuccess()) {
+      if (connectFuture.cause() != null && connectFuture.cause().getCause() != null) {
+        resultFuture.setException(connectFuture.cause().getCause());
+      }
+ else       if (connectFuture.cause() != null) {
+        resultFuture.setException(connectFuture.cause());
+      }
+ else {
+        resultFuture.setException(new RuntimeException("Cannot connect to server"));
+      }
+    }
+  }
+);
+  Channel channel=connectCheck.channel();
+  channel.closeFuture().addListener(channelFuture -> {
+    if (channelFuture.isSuccess()) {
+      ServerInfoRequestHandler handler=channel.pipeline().get(ServerInfoRequestHandler.class);
+      resultFuture.set(handler.getServerInfo());
+    }
+ else {
+      resultFuture.setException(channelFuture.cause());
+    }
+  }
+);
+  return resultFuture;
+}

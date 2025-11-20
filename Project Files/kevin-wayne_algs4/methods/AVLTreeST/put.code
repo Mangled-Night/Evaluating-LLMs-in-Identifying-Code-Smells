@@ -1,0 +1,39 @@
+/** 
+ * Inserts the specified key-value pair into the symbol table, overwriting the old value with the new value if the symbol table already contains the specified key. Deletes the specified key (and its associated value) from this symbol table if the specified value is  {@code null}.
+ * @param key the key
+ * @param val the value
+ * @throws IllegalArgumentException if {@code key} is {@code null}
+ */
+public void put(Key key,Value val){
+  if (key == null)   throw new IllegalArgumentException("first argument to put() is null");
+  if (val == null) {
+    delete(key);
+    return;
+  }
+  root=put(root,key,val);
+  assert check();
+}
+/** 
+ * Inserts the key-value pair in the subtree. It overrides the old value with the new value if the symbol table already contains the specified key and deletes the specified key (and its associated value) from this symbol table if the specified value is  {@code null}.
+ * @param x the subtree
+ * @param key the key
+ * @param val the value
+ * @return the subtree
+ */
+private Node put(Node x,Key key,Value val){
+  if (x == null)   return new Node(key,val,0,1);
+  int cmp=key.compareTo(x.key);
+  if (cmp < 0) {
+    x.left=put(x.left,key,val);
+  }
+ else   if (cmp > 0) {
+    x.right=put(x.right,key,val);
+  }
+ else {
+    x.val=val;
+    return x;
+  }
+  x.size=1 + size(x.left) + size(x.right);
+  x.height=1 + Math.max(height(x.left),height(x.right));
+  return balance(x);
+}

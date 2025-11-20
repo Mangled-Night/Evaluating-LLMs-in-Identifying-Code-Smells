@@ -1,0 +1,14 @@
+/** 
+ * Explicitly cancels the stanza collector so that no more results are queued up. Once a stanza collector has been cancelled, it cannot be re-enabled. Instead, a new stanza collector must be created.
+ */
+public synchronized void cancel(){
+  if (cancelled) {
+    return;
+  }
+  cancelled=true;
+  connection.removeStanzaCollector(this);
+  notifyAll();
+  if (collectorToReset != null) {
+    collectorToReset.cancel();
+  }
+}

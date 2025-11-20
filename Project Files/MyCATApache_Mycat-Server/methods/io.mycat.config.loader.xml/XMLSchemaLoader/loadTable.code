@@ -1,0 +1,91 @@
+private void loadTable(String schemaName,Map<String,TableConfig> tables,List<Element> nodeList){
+  for (int i=0; i < nodeList.size(); i++) {
+    Element tableElement=(Element)nodeList.get(i);
+    String tableNameElement=tableElement.getAttribute("name").toUpperCase();
+    String tableNameSuffixElement=tableElement.getAttribute("nameSuffix").toUpperCase();
+    if (!"".equals(tableNameSuffixElement)) {
+      if (tableNameElement.split(",").length > 1) {
+        throw new ConfigException("nameSuffix " + tableNameSuffixElement + ", require name parameter cannot multiple breaks!");
+      }
+      tableNameElement=doTableNameSuffix(tableNameElement,tableNameSuffixElement);
+    }
+    String[] tableNames=tableNameElement.split(",");
+    String primaryKey=tableElement.hasAttribute("primaryKey") ? tableElement.getAttribute("primaryKey").toUpperCase() : null;
+    boolean autoIncrement=false;
+    if (tableElement.hasAttribute("autoIncrement")) {
+      autoIncrement=Boolean.parseBoolean(tableElement.getAttribute("autoIncrement"));
+    }
+    boolean fetchStoreNodeByJdbc=false;
+    if (tableElement.hasAttribute("fetchStoreNodeByJdbc")) {
+      fetchStoreNodeByJdbc=Boolean.parseBoolean(tableElement.getAttribute("fetchStoreNodeByJdbc"));
+    }
+    boolean needAddLimit=true;
+    if (tableElement.hasAttribute("needAddLimit")) {
+      needAddLimit=Boolean.parseBoolean(tableElement.getAttribute("needAddLimit"));
+    }
+    String tableTypeStr=tableElement.hasAttribute("type") ? tableElement.getAttribute("type") : null;
+    int tableType=TableConfig.TYPE_GLOBAL_DEFAULT;
+    if ("global".equalsIgnoreCase(tableTypeStr)) {
+      tableType=TableConfig.TYPE_GLOBAL_TABLE;
+    }
+    String dataNode=tableElement.getAttribute("dataNode");
+    TableRuleConfig tableRule=null;
+    if (tableElement.hasAttribute("rule")) {
+      String ruleName=tableElement.getAttribute("rule");
+      tableRule=tableRules.get(ruleName);
+      if (tableRule == null) {
+        throw new ConfigException("rule " + ruleName + " is not found!");
+      }
+    }
+    boolean ruleRequired=false;
+    if (tableElement.hasAttribute("ruleRequired")) {
+      ruleRequired=Boolean.parseBoolean(tableElement.getAttribute("ruleRequired"));
+    }
+    if (tableNames == null) {
+      throw new ConfigException("table name is not found!");
+    }
+    String distPrex="distribute(";
+    boolean distTableDns=dataNode.startsWith(distPrex);
+    if (distTableDns) {
+      dataNode=dataNode.substring(distPrex.length(),dataNode.length() - 1);
+    }
+    String subTables=tableElement.getAttribute("subTables");
+    for (int j=0; j < tableNames.length; j++) {
+      String tableName=tableNames[j];
+      TableRuleConfig tableRuleConfig=tableRule;
+      if (tableRuleConfig != null) {
+        RuleConfig rule=tableRuleConfig.getRule();
+        if (rule.getRuleAlgorithm() instanceof TableRuleAware) {
+          tableRuleConfig=(TableRuleConfig)ObjectUtil.copyObject(tableRuleConfig);
+          String name=tableRuleConfig.getName();
+          String newRuleName=getNewRuleName(schemaName,tableName,name);
+          tableRuleConfig.setName(newRuleName);
+          TableRuleAware tableRuleAware=(TableRuleAware)tableRuleConfig.getRule().getRuleAlgorithm();
+          tableRuleAware.setRuleName(newRuleName);
+          tableRules.put(newRuleName,tableRuleConfig);
+        }
+      }
+      TableConfig table=new TableConfig(tableName,primaryKey,autoIncrement,needAddLimit,tableType,dataNode,getDbType(dataNode),(tableRuleConfig != null) ? tableRuleConfig.getRule() : null,ruleRequired,null,false,null,null,subTables,fetchStoreNodeByJdbc);
+      if ((tableRuleConfig != null) && (tableRuleConfig.getRule().getRuleAlgorithm() instanceof TableRuleAware)) {
+        AbstractPartitionAlgorithm newRuleAlgorithm=tableRuleConfig.getRule().getRuleAlgorithm();
+        ((TableRuleAware)newRuleAlgorithm).setTableConfig(table);
+        newRuleAlgorithm.init();
+      }
+      checkDataNodeExists(table.getDataNodes());
+      if (table.getRule() != null) {
+        checkRuleSuitTable(table);
+      }
+      if (distTableDns) {
+        distributeDataNodes(table.getDataNodes());
+      }
+      if (tables.containsKey(table.getName())) {
+        throw new ConfigException("table " + tableName + " duplicated!");
+      }
+      tables.put(table.getName(),table);
+    }
+    if (tableNames.length == 1) {
+      TableConfig table=tables.get(tableNames[0]);
+      processChildTables(tables,table,dataNode,tableElement);
+    }
+  }
+}

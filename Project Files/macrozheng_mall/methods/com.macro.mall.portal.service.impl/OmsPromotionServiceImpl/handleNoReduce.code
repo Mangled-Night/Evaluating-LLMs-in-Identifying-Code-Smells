@@ -1,0 +1,18 @@
+/** 
+ * 对没满足优惠条件的商品进行处理
+ */
+private void handleNoReduce(List<CartPromotionItem> cartPromotionItemList,List<OmsCartItem> itemList,PromotionProduct promotionProduct){
+  for (  OmsCartItem item : itemList) {
+    CartPromotionItem cartPromotionItem=new CartPromotionItem();
+    BeanUtils.copyProperties(item,cartPromotionItem);
+    cartPromotionItem.setPromotionMessage("无优惠");
+    cartPromotionItem.setReduceAmount(new BigDecimal(0));
+    PmsSkuStock skuStock=getOriginalPrice(promotionProduct,item.getProductSkuId());
+    if (skuStock != null) {
+      cartPromotionItem.setRealStock(skuStock.getStock() - skuStock.getLockStock());
+    }
+    cartPromotionItem.setIntegration(promotionProduct.getGiftPoint());
+    cartPromotionItem.setGrowth(promotionProduct.getGiftGrowth());
+    cartPromotionItemList.add(cartPromotionItem);
+  }
+}

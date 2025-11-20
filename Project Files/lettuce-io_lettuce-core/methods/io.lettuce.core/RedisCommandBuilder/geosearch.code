@@ -1,0 +1,19 @@
+Command<K,V,Set<V>> geosearch(K key,GeoSearch.GeoRef<K> reference,GeoSearch.GeoPredicate predicate){
+  notNullKey(key);
+  LettuceAssert.notNull(reference,"GeoRef " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(predicate,"GeoPredicate " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key);
+  reference.build(args);
+  predicate.build(args);
+  return createCommand(GEOSEARCH,new ValueSetOutput<>(codec),args);
+}
+Command<K,V,List<GeoWithin<V>>> geosearch(K key,GeoSearch.GeoRef<K> reference,GeoSearch.GeoPredicate predicate,GeoArgs geoArgs){
+  notNullKey(key);
+  LettuceAssert.notNull(reference,"GeoRef " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(predicate,"GeoPredicate " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key);
+  reference.build(args);
+  predicate.build(args);
+  geoArgs.build(args);
+  return createCommand(GEOSEARCH,new GeoWithinListOutput<>(codec,geoArgs.isWithDistance(),geoArgs.isWithHash(),geoArgs.isWithCoordinates()),args);
+}

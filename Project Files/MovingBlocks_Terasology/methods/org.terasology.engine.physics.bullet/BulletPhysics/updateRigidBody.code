@@ -1,0 +1,25 @@
+@Override public boolean updateRigidBody(EntityRef entity){
+  LocationComponent location=entity.getComponent(LocationComponent.class);
+  RigidBodyComponent rb=entity.getComponent(RigidBodyComponent.class);
+  BulletRigidBody rigidBody=entityRigidBodies.get(entity);
+  if (location == null) {
+    logger.warn("Updating rigid body of entity that has no " + "LocationComponent?! Nothing is done, except log this" + " warning instead. Entity: {}",entity);
+    return false;
+  }
+ else   if (rigidBody != null) {
+    float scale=location.getWorldScale();
+    if (Math.abs(rigidBody.rb.getCollisionShape().getLocalScaling().x - scale) > this.getEpsilon() || rigidBody.collidesWith != combineGroups(rb.collidesWith)) {
+      removeRigidBody(rigidBody);
+      newRigidBody(entity);
+    }
+ else {
+      rigidBody.rb.setAngularFactor(rb.angularFactor);
+      rigidBody.rb.setLinearFactor(rb.linearFactor);
+      rigidBody.rb.setFriction(rb.friction);
+    }
+    return true;
+  }
+ else {
+    return false;
+  }
+}

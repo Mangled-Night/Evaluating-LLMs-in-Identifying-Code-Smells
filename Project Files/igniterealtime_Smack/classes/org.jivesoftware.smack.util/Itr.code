@@ -1,0 +1,63 @@
+private class Itr implements Iterator<E> {
+  private int nextIndex;
+  private E nextItem;
+  private int lastRet;
+  Itr(){
+    lastRet=-1;
+    if (count == 0) {
+      nextIndex=-1;
+    }
+ else {
+      nextIndex=takeIndex;
+      nextItem=items[takeIndex];
+    }
+  }
+  @Override public boolean hasNext(){
+    return nextIndex >= 0;
+  }
+  private void checkNext(){
+    if (nextIndex == putIndex) {
+      nextIndex=-1;
+      nextItem=null;
+    }
+ else {
+      nextItem=items[nextIndex];
+      if (nextItem == null) {
+        nextIndex=-1;
+      }
+    }
+  }
+  @Override public E next(){
+    lock.lock();
+    try {
+      if (nextIndex < 0) {
+        throw new NoSuchElementException();
+      }
+      lastRet=nextIndex;
+      E e=nextItem;
+      nextIndex=inc(nextIndex);
+      checkNext();
+      return e;
+    }
+  finally {
+      lock.unlock();
+    }
+  }
+  @Override public void remove(){
+    lock.lock();
+    try {
+      int i=lastRet;
+      if (i < 0) {
+        throw new IllegalStateException();
+      }
+      lastRet=-1;
+      int ti=takeIndex;
+      removeAt(i);
+      nextIndex=(i == ti) ? takeIndex : i;
+      checkNext();
+    }
+  finally {
+      lock.unlock();
+    }
+  }
+}

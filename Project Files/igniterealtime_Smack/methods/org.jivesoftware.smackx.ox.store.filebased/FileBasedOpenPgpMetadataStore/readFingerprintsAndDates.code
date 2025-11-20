@@ -1,0 +1,35 @@
+static Map<OpenPgpV4Fingerprint,Date> readFingerprintsAndDates(File source) throws IOException {
+  if (!source.exists() || source.isDirectory()) {
+    return new HashMap<>();
+  }
+  BufferedReader reader=null;
+  try {
+    InputStream inputStream=FileUtils.prepareFileInputStream(source);
+    InputStreamReader isr=new InputStreamReader(inputStream,Util.UTF8);
+    reader=new BufferedReader(isr);
+    Map<OpenPgpV4Fingerprint,Date> fingerprintDateMap=new HashMap<>();
+    String line;
+    int lineNr=0;
+    while ((line=reader.readLine()) != null) {
+      lineNr++;
+      line=line.trim();
+      String[] split=line.split(" ");
+      if (split.length != 2) {
+        LOGGER.log(Level.FINE,"Skipping invalid line " + lineNr + " in file "+ source.getAbsolutePath());
+        continue;
+      }
+      try {
+        OpenPgpV4Fingerprint fingerprint=new OpenPgpV4Fingerprint(split[0]);
+        Date date=XmppDateTime.parseXEP0082Date(split[1]);
+        fingerprintDateMap.put(fingerprint,date);
+      }
+ catch (      IllegalArgumentException|ParseException e) {
+        LOGGER.log(Level.WARNING,"Error parsing fingerprint/date touple in line " + lineNr + " of file "+ source.getAbsolutePath(),e);
+      }
+    }
+    return fingerprintDateMap;
+  }
+  finally {
+    CloseableUtil.maybeClose(reader,LOGGER);
+  }
+}

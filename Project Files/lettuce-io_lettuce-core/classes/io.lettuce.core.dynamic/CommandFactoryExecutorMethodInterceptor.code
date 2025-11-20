@@ -1,0 +1,25 @@
+/** 
+ * {@link CommandFactory}-based  {@link MethodInterceptor} to create and invoke Redis Commands using asynchronous andsynchronous execution models.
+ * @author Mark Paluch
+ */
+static class CommandFactoryExecutorMethodInterceptor implements MethodInterceptor {
+  private final Map<Method,ExecutableCommand> commandMethods=new HashMap<>();
+  CommandFactoryExecutorMethodInterceptor(  RedisCommandsMetadata redisCommandsMetadata,  ExecutableCommandLookupStrategy strategy){
+    for (    Method method : redisCommandsMetadata.getMethods()) {
+      ExecutableCommand executableCommand=strategy.resolveCommandMethod(DeclaredCommandMethod.create(method),redisCommandsMetadata);
+      commandMethods.put(method,executableCommand);
+    }
+  }
+  @Override public Object invoke(  MethodInvocation invocation) throws Throwable {
+    Method method=invocation.getMethod();
+    Object[] arguments=invocation.getArguments();
+    if (hasFactoryFor(method)) {
+      ExecutableCommand executableCommand=commandMethods.get(method);
+      return executableCommand.execute(arguments);
+    }
+    return invocation.proceed();
+  }
+  private boolean hasFactoryFor(  Method method){
+    return commandMethods.containsKey(method);
+  }
+}

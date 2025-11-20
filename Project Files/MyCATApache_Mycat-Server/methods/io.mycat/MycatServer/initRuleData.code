@@ -1,0 +1,34 @@
+public void initRuleData(){
+  if (!isUseZk())   return;
+  InterProcessMutex ruleDataLock=null;
+  try {
+    File file=new File(SystemConfig.getHomePath(),"conf" + File.separator + "ruledata");
+    if (!file.exists()) {
+      file.mkdir();
+    }
+    String path=ZKUtils.getZKBasePath() + "lock/ruledata.lock";
+    ruleDataLock=new InterProcessMutex(ZKUtils.getConnection(),path);
+    ruleDataLock.acquire(30,TimeUnit.SECONDS);
+    File[] childFiles=file.listFiles();
+    if (childFiles != null && childFiles.length > 0) {
+      String basePath=ZKUtils.getZKBasePath() + "ruledata/";
+      for (      File childFile : childFiles) {
+        CuratorFramework zk=ZKUtils.getConnection();
+        if (zk.checkExists().forPath(basePath + childFile.getName()) == null) {
+          zk.create().creatingParentsIfNeeded().forPath(basePath + childFile.getName(),Files.toByteArray(childFile));
+        }
+      }
+    }
+  }
+ catch (  Exception e) {
+    throw new RuntimeException(e);
+  }
+ finally {
+    try {
+      if (ruleDataLock != null)       ruleDataLock.release();
+    }
+ catch (    Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+}

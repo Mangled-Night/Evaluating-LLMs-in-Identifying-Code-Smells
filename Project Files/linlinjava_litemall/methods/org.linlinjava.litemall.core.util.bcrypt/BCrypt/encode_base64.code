@@ -1,0 +1,35 @@
+/** 
+ * Encode a byte array using bcrypt's slightly-modified base64 encoding scheme. Note that this is <strong>not</strong> compatible with the standard MIME-base64 encoding.
+ * @param d   the byte array to encode
+ * @param len the number of bytes to encode
+ * @param rs  the destination buffer for the base64-encoded string
+ * @throws IllegalArgumentException if the length is invalid
+ */
+static void encode_base64(byte d[],int len,StringBuilder rs) throws IllegalArgumentException {
+  int off=0;
+  int c1, c2;
+  if (len <= 0 || len > d.length) {
+    throw new IllegalArgumentException("Invalid len");
+  }
+  while (off < len) {
+    c1=d[off++] & 0xff;
+    rs.append(base64_code[(c1 >> 2) & 0x3f]);
+    c1=(c1 & 0x03) << 4;
+    if (off >= len) {
+      rs.append(base64_code[c1 & 0x3f]);
+      break;
+    }
+    c2=d[off++] & 0xff;
+    c1|=(c2 >> 4) & 0x0f;
+    rs.append(base64_code[c1 & 0x3f]);
+    c1=(c2 & 0x0f) << 2;
+    if (off >= len) {
+      rs.append(base64_code[c1 & 0x3f]);
+      break;
+    }
+    c2=d[off++] & 0xff;
+    c1|=(c2 >> 6) & 0x03;
+    rs.append(base64_code[c1 & 0x3f]);
+    rs.append(base64_code[c2 & 0x3f]);
+  }
+}

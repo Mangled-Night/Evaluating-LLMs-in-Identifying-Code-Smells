@@ -1,0 +1,26 @@
+public byte[] writeToBytes(FrontendConnection c){
+  ByteBuffer buffer=c.allocate();
+  buffer=write(buffer,c,false);
+  buffer.flip();
+  byte[] data=new byte[buffer.limit()];
+  buffer.get(data);
+  c.recycle(buffer);
+  return data;
+}
+public byte[] writeToBytes(){
+  ByteBuffer buffer=ByteBuffer.allocate(calcPacketSize() + 4);
+  int size=calcPacketSize();
+  BufferUtil.writeUB3(buffer,size);
+  buffer.put(packetId);
+  buffer.put(fieldCount);
+  BufferUtil.writeUB2(buffer,errno);
+  buffer.put(mark);
+  buffer.put(sqlState);
+  if (message != null) {
+    buffer.put(message);
+  }
+  buffer.flip();
+  byte[] data=new byte[buffer.limit()];
+  buffer.get(data);
+  return data;
+}

@@ -1,0 +1,13 @@
+@Override public void notifyException(Throwable t){
+  if (t instanceof RedisConnectionException && RedisConnectionException.isProtectedMode(t.getMessage())) {
+    connectionError=t;
+    if (connectionWatchdog != null) {
+      connectionWatchdog.setListenOnChannelInactive(false);
+      connectionWatchdog.setReconnectSuspended(false);
+    }
+    doExclusive(this::drainCommands).forEach(cmd -> cmd.completeExceptionally(t));
+  }
+  if (!isConnected()) {
+    connectionError=t;
+  }
+}

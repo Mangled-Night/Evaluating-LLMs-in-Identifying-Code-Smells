@@ -1,0 +1,14 @@
+public <T>Mono<T> thenEmit(T value){
+  return Mono.defer(() -> {
+    if (firstCloseLatch()) {
+      return Mono.fromCompletionStage(closeable.closeAsync());
+    }
+    return Mono.empty();
+  }
+).then(Mono.just(value)).doFinally(s -> {
+    if (firstCloseLatch()) {
+      closeable.closeAsync();
+    }
+  }
+);
+}

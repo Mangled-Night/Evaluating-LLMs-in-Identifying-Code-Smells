@@ -1,0 +1,17 @@
+@Override public RedisFuture<KeyScanCursor<?>> map(List<String> nodeIds,String currentNodeId,RedisFuture<KeyScanCursor<?>> cursor){
+  return new PipelinedRedisFuture<>(cursor,new Function<KeyScanCursor<?>,KeyScanCursor<?>>(){
+    @Override public KeyScanCursor<?> apply(    KeyScanCursor<?> result){
+      return new ClusterKeyScanCursor<>(nodeIds,currentNodeId,result);
+    }
+  }
+);
+}
+@Override public RedisFuture<StreamScanCursor> map(List<String> nodeIds,String currentNodeId,RedisFuture<StreamScanCursor> cursor){
+  return new PipelinedRedisFuture<>(cursor,new Function<StreamScanCursor,StreamScanCursor>(){
+    @Override public StreamScanCursor apply(    StreamScanCursor result){
+      return new ClusterStreamScanCursor(nodeIds,currentNodeId,result);
+    }
+  }
+);
+}
+T map(List<String> nodeIds,String currentNodeId,T cursor);

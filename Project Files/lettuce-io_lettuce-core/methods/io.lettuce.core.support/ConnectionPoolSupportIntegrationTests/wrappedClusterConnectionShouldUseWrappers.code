@@ -1,0 +1,15 @@
+@Test void wrappedClusterConnectionShouldUseWrappers() throws Exception {
+  RedisClusterClient redisClusterClient=RedisClusterClient.create(TestClientResources.get(),RedisURI.create(TestSettings.host(),7379));
+  GenericObjectPool<StatefulRedisClusterConnection<String,String>> pool=ConnectionPoolSupport.createGenericObjectPool(redisClusterClient::connect,new GenericObjectPoolConfig<>());
+  StatefulRedisClusterConnection<String,String> connection=pool.borrowObject();
+  RedisAdvancedClusterCommands<String,String> sync=connection.sync();
+  assertThat(connection).isInstanceOf(StatefulRedisClusterConnection.class).isNotInstanceOf(StatefulRedisClusterConnectionImpl.class);
+  assertThat(Proxy.isProxyClass(connection.getClass())).isTrue();
+  assertThat(sync).isInstanceOf(RedisAdvancedClusterCommands.class);
+  assertThat(connection.async()).isInstanceOf(RedisAdvancedClusterAsyncCommands.class).isNotInstanceOf(RedisAdvancedClusterAsyncCommandsImpl.class);
+  assertThat(connection.reactive()).isInstanceOf(RedisAdvancedClusterReactiveCommands.class).isNotInstanceOf(RedisAdvancedClusterReactiveCommandsImpl.class);
+  assertThat(sync.getStatefulConnection()).isInstanceOf(StatefulRedisClusterConnection.class).isNotInstanceOf(StatefulRedisClusterConnectionImpl.class).isSameAs(connection);
+  connection.close();
+  pool.close();
+  FastShutdown.shutdown(redisClusterClient);
+}

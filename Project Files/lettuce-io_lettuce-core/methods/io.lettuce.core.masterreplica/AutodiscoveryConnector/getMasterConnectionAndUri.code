@@ -1,0 +1,12 @@
+private Mono<Tuple2<RedisURI,StatefulRedisConnection<K,V>>> getMasterConnectionAndUri(List<RedisNodeDescription> nodes,Tuple2<RedisURI,StatefulRedisConnection<K,V>> connectionTuple,RedisCodec<K,V> codec){
+  RedisNodeDescription node=getConnectedNode(redisURI,nodes);
+  if (!node.getRole().isUpstream()) {
+    RedisNodeDescription master=lookupMaster(nodes);
+    ConnectionFuture<StatefulRedisConnection<K,V>> masterConnection=redisClient.connectAsync(codec,master.getUri());
+    return Mono.just(master.getUri()).zipWith(Mono.fromCompletionStage(masterConnection)).doOnNext(it -> {
+      initialConnections.put(it.getT1(),it.getT2());
+    }
+);
+  }
+  return Mono.just(connectionTuple);
+}

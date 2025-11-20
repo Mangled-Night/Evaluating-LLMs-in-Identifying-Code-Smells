@@ -1,0 +1,11 @@
+@Test public void testParseFailedWithTExt() throws XmlPullParserException, IOException {
+  final String failedNonza="<failed h='20' xmlns='urn:xmpp:sm:3'>" + "<item-not-found xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>" + "<text xml:lang='en' xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'>"+ "Previous session timed out"+ "</text>"+ "</failed>";
+  XmlPullParser parser=PacketParserUtils.getParserFor(failedNonza);
+  StreamManagement.Failed failed=ParseStreamManagement.failed(parser);
+  assertEquals(StanzaError.Condition.item_not_found,failed.getStanzaErrorCondition());
+  List<StanzaErrorTextElement> textElements=failed.getTextElements();
+  assertEquals(1,textElements.size());
+  StanzaErrorTextElement textElement=textElements.get(0);
+  assertEquals("Previous session timed out",textElement.getText());
+  assertEquals("en",textElement.getLanguage());
+}

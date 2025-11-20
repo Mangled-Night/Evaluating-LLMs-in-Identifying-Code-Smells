@@ -1,0 +1,21 @@
+public UnsafeRowGrouper(Map<String,ColMeta> columToIndx,String[] columns,MergeCol[] mergCols,HavingCols havingCols){
+  super();
+  assert columns != null;
+  assert columToIndx != null;
+  assert mergCols != null;
+  this.columToIndx=columToIndx;
+  this.columns=columns;
+  this.mergCols=mergCols;
+  this.havingCols=havingCols;
+  this.sortColumnsByIndex=columns != null ? toSortColumnsByIndex(columns,columToIndx) : null;
+  this.groupKeyfieldCount=columns != null ? columns.length : 0;
+  this.valuefieldCount=columToIndx != null ? columToIndx.size() : 0;
+  this.myCatMemory=MycatServer.getInstance().getMyCatMemory();
+  this.memoryManager=myCatMemory.getResultMergeMemoryManager();
+  this.conf=myCatMemory.getConf();
+  logger.debug("columToIndx :" + (columToIndx != null ? columToIndx.toString() : "null"));
+  initGroupKey();
+  initEmptyValueKey();
+  DataNodeMemoryManager dataNodeMemoryManager=new DataNodeMemoryManager(memoryManager,Thread.currentThread().getId());
+  aggregationMap=new UnsafeFixedWidthAggregationMap(emptyAggregationBuffer,aggBufferSchema,groupKeySchema,dataNodeMemoryManager,1024,conf.getSizeAsBytes("mycat.buffer.pageSize","32k"),false);
+}

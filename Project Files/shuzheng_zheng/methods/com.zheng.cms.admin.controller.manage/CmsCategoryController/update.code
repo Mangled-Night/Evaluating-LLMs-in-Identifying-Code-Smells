@@ -1,0 +1,14 @@
+@ApiOperation(value="修改类目") @RequiresPermissions("cms:category:update") @RequestMapping(value="/update/{id}",method=RequestMethod.GET) public String update(@PathVariable("id") int id,ModelMap modelMap){
+  CmsCategory category=cmsCategoryService.selectByPrimaryKey(id);
+  modelMap.put("category",category);
+  return "/manage/category/update.jsp";
+}
+@ApiOperation(value="修改类目") @RequiresPermissions("cms:category:update") @RequestMapping(value="/update/{id}",method=RequestMethod.POST) @ResponseBody public Object update(@PathVariable("id") int id,CmsCategory cmsCategory){
+  ComplexResult result=FluentValidator.checkAll().on(cmsCategory.getName(),new LengthValidator(1,20,"名称")).doValidate().result(ResultCollectors.toComplex());
+  if (!result.isSuccess()) {
+    return new CmsResult(CmsResultConstant.INVALID_LENGTH,result.getErrors());
+  }
+  cmsCategory.setCategoryId(id);
+  int count=cmsCategoryService.updateByPrimaryKeySelective(cmsCategory);
+  return new CmsResult(CmsResultConstant.SUCCESS,count);
+}

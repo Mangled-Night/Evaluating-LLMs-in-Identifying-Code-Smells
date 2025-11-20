@@ -1,0 +1,22 @@
+/** 
+ * Use the symmetric key in cipherAndAuthTag to decrypt the payload of the omemoMessage. The decrypted payload will be the body of the returned Message.
+ * @param element omemoElement containing a payload.
+ * @param cipherAndAuthTag cipher and authentication tag.
+ * @return decrypted plain text.
+ * @throws CryptoFailedException if decryption using AES key fails.
+ */
+static String decryptMessageElement(OmemoElement element,CipherAndAuthTag cipherAndAuthTag) throws CryptoFailedException {
+  if (!element.isMessageElement()) {
+    throw new IllegalArgumentException("decryptMessageElement cannot decrypt OmemoElement which is no MessageElement!");
+  }
+  if (cipherAndAuthTag.getAuthTag() == null || cipherAndAuthTag.getAuthTag().length != 16) {
+    throw new CryptoFailedException("AuthenticationTag is null or has wrong length: " + (cipherAndAuthTag.getAuthTag() == null ? "null" : cipherAndAuthTag.getAuthTag().length));
+  }
+  byte[] encryptedBody=payloadAndAuthTag(element,cipherAndAuthTag.getAuthTag());
+  try {
+    return cipherAndAuthTag.decrypt(encryptedBody);
+  }
+ catch (  IllegalBlockSizeException|BadPaddingException|InvalidKeyException|NoSuchAlgorithmException|NoSuchPaddingException|InvalidAlgorithmParameterException e) {
+    throw new CryptoFailedException("decryptMessageElement could not decipher message body",e);
+  }
+}

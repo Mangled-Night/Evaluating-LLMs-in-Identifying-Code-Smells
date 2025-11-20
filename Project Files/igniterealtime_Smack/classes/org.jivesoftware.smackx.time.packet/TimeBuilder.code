@@ -1,0 +1,43 @@
+public class TimeBuilder extends IqBuilder<TimeBuilder,Time> implements TimeView {
+  private String utc;
+  private String tzo;
+  TimeBuilder(  IqData iqCommon){
+    super(iqCommon);
+  }
+  TimeBuilder(  XMPPConnection connection){
+    super(connection);
+  }
+  TimeBuilder(  String stanzaId){
+    super(stanzaId);
+  }
+  /** 
+ * Sets the time using UTC formatted String, in the format CCYY-MM-DDThh:mm:ssZ, and the provided timezone definition in the format (+|-)hh:mm.
+ * @param utc the time using a formatted String.
+ * @param tzo the time zone definition.
+ * @return a reference to this builder.
+ * @throws ParseException if the provided string is not parsable (e.g. because it does not follow the expectedformat).
+ */
+  public TimeBuilder setUtcAndTzo(  String utc,  String tzo) throws ParseException {
+    this.utc=StringUtils.requireNotNullNorEmpty(utc,"Must provide utc argument");
+    XmppDateTime.parseDate(utc);
+    this.tzo=StringUtils.requireNotNullNorEmpty(tzo,"Must provide tzo argument");
+    return getThis();
+  }
+  public TimeBuilder setTime(  Calendar calendar){
+    utc=XmppDateTime.formatXEP0082Date(calendar.getTime());
+    tzo=XmppDateTime.asString(calendar.getTimeZone());
+    return getThis();
+  }
+  @Override public String getUtc(){
+    return utc;
+  }
+  @Override public String getTzo(){
+    return tzo;
+  }
+  @Override public Time build(){
+    return new Time(this);
+  }
+  @Override public TimeBuilder getThis(){
+    return this;
+  }
+}

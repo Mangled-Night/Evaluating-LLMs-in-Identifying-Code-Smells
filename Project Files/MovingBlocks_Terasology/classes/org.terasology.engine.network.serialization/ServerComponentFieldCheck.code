@@ -1,0 +1,26 @@
+/** 
+ * Determines which fields should be sent and received by the server
+ */
+public class ServerComponentFieldCheck implements FieldSerializeCheck<Component> {
+  private boolean owned;
+  private boolean entityInitial;
+  public ServerComponentFieldCheck(  boolean owned,  boolean entityInitial){
+    this.owned=owned;
+    this.entityInitial=entityInitial;
+  }
+  @Override public boolean shouldSerializeField(  ReplicatedFieldMetadata<?,?> field,  Component object){
+    return shouldSerializeField(field,object,false);
+  }
+  @Override public boolean shouldSerializeField(  ReplicatedFieldMetadata<?,?> field,  Component component,  boolean componentInitial){
+    boolean initial=entityInitial || componentInitial;
+    boolean result=field.isReplicated() && (initial || !field.getReplicationInfo().initialOnly() && (field.getReplicationInfo().value() == FieldReplicateType.SERVER_TO_CLIENT || (field.getReplicationInfo().value() == FieldReplicateType.SERVER_TO_OWNER && owned) || (field.getReplicationInfo().value().isReplicateFromOwner() && !owned)));
+    if (result && component instanceof ReplicationCheck) {
+      return ((ReplicationCheck)component).shouldReplicate(field,initial,owned);
+    }
+    return result;
+  }
+  @Override public boolean shouldDeserialize(  ClassMetadata<?,?> classMetadata,  FieldMetadata<?,?> fieldMetadata){
+    ReplicatedFieldMetadata<?,?> replicatedFieldMetadata=(ReplicatedFieldMetadata<?,?>)fieldMetadata;
+    return replicatedFieldMetadata.isReplicated() && replicatedFieldMetadata.getReplicationInfo().value().isReplicateFromOwner();
+  }
+}

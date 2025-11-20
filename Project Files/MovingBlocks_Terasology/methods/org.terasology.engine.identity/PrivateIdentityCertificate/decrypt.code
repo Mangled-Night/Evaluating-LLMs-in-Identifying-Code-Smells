@@ -1,0 +1,25 @@
+/** 
+ * Decrypts data encrypted by the paired public certificate
+ * @param data
+ * @return The decrypted data
+ * @throws BadEncryptedDataException If the data could not be decrypted due to an error with the data.
+ */
+public byte[] decrypt(byte[] data) throws BadEncryptedDataException {
+  RSAPrivateKeySpec keySpec=new RSAPrivateKeySpec(modulus,exponent);
+  try {
+    KeyFactory keyFactory=KeyFactory.getInstance(IdentityConstants.CERTIFICATE_ALGORITHM);
+    PrivateKey key=keyFactory.generatePrivate(keySpec);
+    Cipher cipher=Cipher.getInstance(IdentityConstants.CERTIFICATE_ALGORITHM);
+    cipher.init(Cipher.DECRYPT_MODE,key);
+    return cipher.doFinal(data);
+  }
+ catch (  NoSuchAlgorithmException|NoSuchPaddingException e) {
+    throw new RuntimeException("Insufficient support for '" + IdentityConstants.CERTIFICATE_ALGORITHM + "', required for identity management",e);
+  }
+catch (  InvalidKeySpecException|InvalidKeyException e) {
+    throw new RuntimeException("Unexpected error during encryption",e);
+  }
+catch (  BadPaddingException|IllegalBlockSizeException e) {
+    throw new BadEncryptedDataException("Invalid encrypted data",e);
+  }
+}

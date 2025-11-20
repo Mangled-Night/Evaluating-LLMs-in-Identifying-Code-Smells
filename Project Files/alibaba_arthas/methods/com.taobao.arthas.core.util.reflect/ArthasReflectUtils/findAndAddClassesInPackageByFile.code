@@ -1,0 +1,30 @@
+/** 
+ * 以文件的形式来获取包下的所有Class <p/> <p> 代码摘抄自 http://www.oschina.net/code/snippet_129830_8767</p>
+ */
+private static void findAndAddClassesInPackageByFile(String packageName,String packagePath,final boolean recursive,Set<Class<?>> classes){
+  File dir=new File(packagePath);
+  if (!dir.exists() || !dir.isDirectory()) {
+    return;
+  }
+  File[] dirfiles=dir.listFiles(new FileFilter(){
+    @Override public boolean accept(    File file){
+      return (recursive && file.isDirectory()) || (file.getName().endsWith(".class"));
+    }
+  }
+);
+  if (dirfiles != null) {
+    for (    File file : dirfiles) {
+      if (file.isDirectory()) {
+        findAndAddClassesInPackageByFile(packageName + "." + file.getName(),file.getAbsolutePath(),recursive,classes);
+      }
+ else {
+        String className=file.getName().substring(0,file.getName().length() - 6);
+        try {
+          classes.add(Thread.currentThread().getContextClassLoader().loadClass(packageName + '.' + className));
+        }
+ catch (        ClassNotFoundException e) {
+        }
+      }
+    }
+  }
+}

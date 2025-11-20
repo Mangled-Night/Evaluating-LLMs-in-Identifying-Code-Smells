@@ -1,0 +1,80 @@
+/** 
+ * 修复DDL路由
+ * @return RouteResultset
+ * @author aStoneGod
+ */
+public static RouteResultset routeToDDLNode(RouteResultset rrs,int sqlType,String stmt,SchemaConfig schema) throws SQLSyntaxErrorException {
+  stmt=getFixedSql(stmt);
+  String tablename="";
+  stmt=stmt.replaceFirst("\\/\\*.*\\*\\/\\s*","");
+  final String upStmt=stmt.toUpperCase();
+  String rrsStmt=new String(upStmt);
+  if (upStmt.startsWith("CREATE")) {
+    if (upStmt.contains("CREATE INDEX ") || upStmt.contains("CREATE UNIQUE INDEX ")) {
+      tablename=RouterUtil.getTableName(stmt,RouterUtil.getCreateIndexPos(upStmt,0));
+      if (!"oracle".equalsIgnoreCase(schema.getDefaultDataNodeDbType())) {
+        int onInd=upStmt.indexOf("ON",0);
+        rrsStmt=upStmt.substring(0,onInd);
+      }
+    }
+ else {
+      tablename=RouterUtil.getTableName(stmt,RouterUtil.getCreateTablePos(upStmt,0));
+    }
+  }
+ else   if (upStmt.startsWith("DROP")) {
+    if (upStmt.contains("DROP INDEX ")) {
+      tablename=RouterUtil.getTableName(stmt,RouterUtil.getDropIndexPos(upStmt,0));
+    }
+ else {
+      tablename=RouterUtil.getTableName(stmt,RouterUtil.getDropTablePos(upStmt,0));
+    }
+  }
+ else   if (upStmt.startsWith("ALTER")) {
+    tablename=RouterUtil.getTableName(stmt,RouterUtil.getAlterTablePos(upStmt,0));
+  }
+ else   if (upStmt.startsWith("TRUNCATE")) {
+    tablename=RouterUtil.getTableName(stmt,RouterUtil.getTruncateTablePos(upStmt,0));
+  }
+  tablename=tablename.toUpperCase();
+  if (schema.getTables().containsKey(tablename)) {
+    if (ServerParse.DDL == sqlType) {
+      List<String> dataNodes=new ArrayList<>();
+      Map<String,TableConfig> tables=schema.getTables();
+      TableConfig tc=tables.get(tablename);
+      if (tables != null && (tc != null)) {
+        dataNodes=tc.getDataNodes();
+      }
+      boolean isSlotFunction=tc.getRule() != null && tc.getRule().getRuleAlgorithm() instanceof SlotFunction;
+      Iterator<String> iterator1=dataNodes.iterator();
+      int nodeSize=dataNodes.size();
+      RouteResultsetNode[] nodes=new RouteResultsetNode[nodeSize];
+      if (isSlotFunction) {
+        stmt=changeCreateTable(schema,tablename,stmt);
+      }
+      for (int i=0; i < nodeSize; i++) {
+        String name=iterator1.next();
+        nodes[i]=new RouteResultsetNode(name,sqlType,stmt);
+        nodes[i].setSource(rrs);
+        if (rrs.getDataNodeSlotMap().containsKey(name)) {
+          nodes[i].setSlot(rrs.getDataNodeSlotMap().get(name));
+        }
+ else         if (isSlotFunction) {
+          nodes[i].setSlot(-1);
+        }
+        nodes[i].setStatement(rrsStmt);
+      }
+      rrs.setNodes(nodes);
+    }
+    rrs.setStatement(rrsStmt);
+    return rrs;
+  }
+ else   if (schema.getDataNode() != null) {
+    RouteResultsetNode[] nodes=new RouteResultsetNode[1];
+    nodes[0]=new RouteResultsetNode(schema.getDataNode(),sqlType,stmt);
+    nodes[0].setSource(rrs);
+    rrs.setNodes(nodes);
+    return rrs;
+  }
+  LOGGER.error("table not in schema----" + tablename);
+  throw new SQLSyntaxErrorException("op table not in schema----" + tablename);
+}

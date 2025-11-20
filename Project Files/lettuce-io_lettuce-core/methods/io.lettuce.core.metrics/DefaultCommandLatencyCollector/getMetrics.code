@@ -1,0 +1,16 @@
+private Map<CommandLatencyId,CommandMetrics> getMetrics(Map<CommandLatencyId,Latencies> latencyMetrics){
+  Map<CommandLatencyId,CommandMetrics> result=new TreeMap<>();
+  for (  Map.Entry<CommandLatencyId,Latencies> entry : latencyMetrics.entrySet()) {
+    Latencies latencies=entry.getValue();
+    Histogram firstResponse=latencies.getFirstResponseHistogram();
+    Histogram completion=latencies.getCompletionHistogram();
+    if (firstResponse.getTotalCount() == 0 && completion.getTotalCount() == 0) {
+      continue;
+    }
+    CommandLatency firstResponseLatency=getMetric(firstResponse);
+    CommandLatency completionLatency=getMetric(completion);
+    CommandMetrics metrics=new CommandMetrics(firstResponse.getTotalCount(),options.targetUnit(),firstResponseLatency,completionLatency);
+    result.put(entry.getKey(),metrics);
+  }
+  return result;
+}

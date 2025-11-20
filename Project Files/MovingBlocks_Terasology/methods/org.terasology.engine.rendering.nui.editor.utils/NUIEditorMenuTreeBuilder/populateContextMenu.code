@@ -1,0 +1,50 @@
+private void populateContextMenu(JsonTree node,MenuTree addTree,boolean isSkin){
+  NUIEditorNodeUtils.NodeInfo nodeInfo;
+  if (isSkin) {
+    nodeInfo=NUIEditorNodeUtils.getSkinNodeInfo(node);
+  }
+ else {
+    nodeInfo=NUIEditorNodeUtils.getNodeInfo(node,nuiManager);
+  }
+  if (nodeInfo != null) {
+    Class clazz=nodeInfo.getNodeClass();
+    if (clazz != null) {
+      for (      Field field : ReflectionUtils.getAllFields(clazz)) {
+        if ((!UIWidget.class.isAssignableFrom(clazz) || field.isAnnotationPresent(LayoutConfig.class)) && !(Modifier.isFinal(field.getModifiers()) && Modifier.isStatic(field.getModifiers()))) {
+          field.setAccessible(true);
+          String name=getNodeName(field);
+          if (!node.hasChildWithKey(name)) {
+            addTree.addOption(name,n -> {
+              try {
+                JsonTree child=createChild(name,node,field,clazz);
+                for (                Consumer<JsonTree> listener : addContextMenuListeners) {
+                  listener.accept(child);
+                }
+              }
+ catch (              IllegalAccessException|InstantiationException e) {
+                logger.warn("Could not add child",e);
+              }
+            }
+,node);
+          }
+        }
+      }
+      if (!node.isRoot() && !node.getParent().isRoot()) {
+        String layoutInfo="layoutInfo";
+        String contents="contents";
+        Class parentParentClass=NUIEditorNodeUtils.getNodeInfo((JsonTree)node.getParent().getParent(),nuiManager).getNodeClass();
+        if (!node.hasChildWithKey(layoutInfo) && UIWidget.class.isAssignableFrom(clazz) && node.getParent().getValue() != null && node.getParent().getValue().getKey() != null && node.getParent().getValue().getKey().equals(contents) && UILayout.class.isAssignableFrom(parentParentClass)) {
+          addTree.addOption(layoutInfo,n -> {
+            JsonTree child=new JsonTree(new JsonTreeValue(layoutInfo,null,JsonTreeValue.Type.OBJECT));
+            child.setExpanded(true);
+            n.addChild(child);
+          }
+,node);
+        }
+      }
+    }
+  }
+ else {
+    logger.warn("Could not get class for node {}",node.getValue().toString());
+  }
+}

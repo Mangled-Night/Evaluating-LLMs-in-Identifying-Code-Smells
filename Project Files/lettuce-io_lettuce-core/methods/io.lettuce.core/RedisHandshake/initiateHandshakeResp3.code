@@ -1,0 +1,13 @@
+/** 
+ * Perform a RESP3 Handshake: Issue a  {@code HELLO}.
+ * @param channel
+ * @param credentialsProvider
+ * @return
+ */
+private CompletionStage<Map<String,Object>> initiateHandshakeResp3(Channel channel,RedisCredentialsProvider credentialsProvider){
+  if (credentialsProvider instanceof RedisCredentialsProvider.ImmediateRedisCredentialsProvider) {
+    return dispatchHello(channel,((RedisCredentialsProvider.ImmediateRedisCredentialsProvider)credentialsProvider).resolveCredentialsNow());
+  }
+  CompletableFuture<RedisCredentials> credentialsFuture=credentialsProvider.resolveCredentials().toFuture();
+  return credentialsFuture.thenComposeAsync(credentials -> dispatchHello(channel,credentials));
+}

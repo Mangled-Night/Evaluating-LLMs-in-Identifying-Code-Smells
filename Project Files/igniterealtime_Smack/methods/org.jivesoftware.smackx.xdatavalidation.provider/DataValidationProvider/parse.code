@@ -1,0 +1,51 @@
+@Override public ValidateElement parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  final String dataType=parser.getAttributeValue("","datatype");
+  ValidateElement dataValidation=null;
+  ListRange listRange=null;
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String name=parser.getName();
+switch (name) {
+case OpenValidateElement.METHOD:
+      dataValidation=new OpenValidateElement(dataType);
+    break;
+case BasicValidateElement.METHOD:
+  dataValidation=new BasicValidateElement(dataType);
+break;
+case RangeValidateElement.METHOD:
+dataValidation=new RangeValidateElement(dataType,parser.getAttributeValue("","min"),parser.getAttributeValue("","max"));
+break;
+case RegexValidateElement.METHOD:
+dataValidation=new RegexValidateElement(dataType,parser.nextText());
+break;
+case ListRange.ELEMENT:
+UInt32 min=ParserUtils.getUInt32Attribute(parser,"min");
+UInt32 max=ParserUtils.getUInt32Attribute(parser,"max");
+if (min != null || max != null) {
+listRange=new ListRange(min,max);
+}
+ else {
+LOGGER.fine("Ignoring list-range element without min or max attribute");
+}
+break;
+default :
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+if (dataValidation == null) {
+dataValidation=new BasicValidateElement(dataType);
+}
+dataValidation.setListRange(listRange);
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return dataValidation;
+}

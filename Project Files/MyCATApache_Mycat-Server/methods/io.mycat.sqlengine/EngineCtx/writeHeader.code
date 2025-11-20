@@ -1,0 +1,53 @@
+public void writeHeader(List<byte[]> afields,List<byte[]> bfields){
+  if (headerWrited.compareAndSet(false,true)) {
+    try {
+      writeLock.lock();
+      ResultSetHeaderPacket headerPkg=new ResultSetHeaderPacket();
+      headerPkg.fieldCount=afields.size() + bfields.size() - 1;
+      headerPkg.packetId=incPackageId();
+      LOGGER.debug("packge id " + headerPkg.packetId);
+      ServerConnection sc=session.getSource();
+      ByteBuffer buf=headerPkg.write(sc.allocate(),sc,true);
+      for (      byte[] field : afields) {
+        field[3]=incPackageId();
+        buf=sc.writeToBuffer(field,buf);
+      }
+      for (int i=1; i < bfields.size(); i++) {
+        byte[] bfield=bfields.get(i);
+        bfield[3]=incPackageId();
+        buf=sc.writeToBuffer(bfield,buf);
+      }
+      EOFPacket eofPckg=new EOFPacket();
+      eofPckg.packetId=incPackageId();
+      buf=eofPckg.write(buf,sc,true);
+      sc.write(buf);
+    }
+  finally {
+      writeLock.unlock();
+    }
+  }
+}
+public void writeHeader(List<byte[]> afields){
+  if (headerWrited.compareAndSet(false,true)) {
+    try {
+      writeLock.lock();
+      ResultSetHeaderPacket headerPkg=new ResultSetHeaderPacket();
+      headerPkg.fieldCount=afields.size();
+      headerPkg.packetId=incPackageId();
+      LOGGER.debug("packge id " + headerPkg.packetId);
+      ServerConnection sc=session.getSource();
+      ByteBuffer buf=headerPkg.write(sc.allocate(),sc,true);
+      for (      byte[] field : afields) {
+        field[3]=incPackageId();
+        buf=sc.writeToBuffer(field,buf);
+      }
+      EOFPacket eofPckg=new EOFPacket();
+      eofPckg.packetId=incPackageId();
+      buf=eofPckg.write(buf,sc,true);
+      sc.write(buf);
+    }
+  finally {
+      writeLock.unlock();
+    }
+  }
+}

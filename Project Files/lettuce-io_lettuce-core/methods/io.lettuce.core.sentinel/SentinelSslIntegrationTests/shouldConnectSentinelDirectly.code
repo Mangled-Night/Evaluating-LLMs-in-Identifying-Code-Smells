@@ -1,0 +1,9 @@
+@Test void shouldConnectSentinelDirectly(){
+  RedisURI redisURI=RedisURI.create("rediss://" + TestSettings.host() + ":"+ RedisURI.DEFAULT_SENTINEL_PORT);
+  redisURI.setVerifyPeer(false);
+  RedisClient client=RedisClient.create(clientResources);
+  StatefulRedisSentinelConnection<String,String> connection=client.connectSentinel(redisURI);
+  assertThat(connection.sync().getMasterAddrByName("mymaster")).isNotNull();
+  connection.close();
+  FastShutdown.shutdown(client);
+}

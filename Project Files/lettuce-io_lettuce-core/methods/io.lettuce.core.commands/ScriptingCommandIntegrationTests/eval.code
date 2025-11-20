@@ -1,0 +1,14 @@
+@Test void eval(){
+  redis.set(key,"true");
+  assertThat((Boolean)redis.eval("return 1 + 1 == 4",BOOLEAN)).isEqualTo(false);
+  assertThat((Boolean)redis.eval("return redis.call('GET', KEYS[1])",BOOLEAN,key)).isEqualTo(true);
+  redis.set(key,"1");
+  assertThat((Boolean)redis.eval("return 1 + 1 == 4",BOOLEAN)).isEqualTo(false);
+  assertThat((Number)redis.eval("return 1 + 1",INTEGER)).isEqualTo(2L);
+  assertThat((String)redis.eval("return redis.call('GET', KEYS[1])",VALUE,key)).isEqualTo("1");
+  assertThat((Long)redis.eval("return redis.call('GET', KEYS[1])",INTEGER,key)).isEqualTo(1L);
+  assertThat((String)redis.eval("return {ok='status'}",STATUS)).isEqualTo("status");
+  assertThat((String)redis.eval("return 'one'",VALUE)).isEqualTo("one");
+  assertThat((List<?>)redis.eval("return {1, 'one', {2}}",MULTI)).isEqualTo(list(1L,"one",list(2L)));
+  assertThatThrownBy(() -> redis.eval("return {err='Oops!'}",STATUS)).hasMessageContaining("Oops!");
+}

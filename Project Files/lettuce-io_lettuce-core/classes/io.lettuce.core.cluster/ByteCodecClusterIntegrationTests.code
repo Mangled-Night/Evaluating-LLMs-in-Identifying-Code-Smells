@@ -1,0 +1,10 @@
+/** 
+ * @author Mark Paluch
+ */
+@ExtendWith(LettuceExtension.class) class ByteCodecClusterIntegrationTests extends TestSupport {
+  @Test @Inject void testByteCodec(  RedisClusterClient clusterClient){
+    StatefulRedisClusterConnection<byte[],byte[]> connection=clusterClient.connect(new ByteArrayCodec());
+    connection.sync().set(key.getBytes(),value.getBytes());
+    assertThat(connection.sync().get(key.getBytes())).isEqualTo(value.getBytes());
+  }
+}

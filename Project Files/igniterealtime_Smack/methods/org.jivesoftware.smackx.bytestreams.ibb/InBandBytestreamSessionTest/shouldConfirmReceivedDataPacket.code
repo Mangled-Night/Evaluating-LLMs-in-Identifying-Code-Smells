@@ -1,0 +1,15 @@
+/** 
+ * Valid data packets should be confirmed.
+ * @throws Exception should not happen
+ */
+@Test public void shouldConfirmReceivedDataPacket() throws Exception {
+  protocol.addResponse(null,Verification.requestTypeRESULT);
+  InBandBytestreamSession session=new InBandBytestreamSession(connection,initBytestream,initiatorJID);
+  InputStream inputStream=session.getInputStream();
+  StanzaListener listener=Whitebox.getInternalState(inputStream,"dataPacketListener",StanzaListener.class);
+  String base64Data=Base64.encode("Data");
+  DataPacketExtension dpe=new DataPacketExtension(sessionID,0,base64Data);
+  Data data=new Data(dpe);
+  listener.processStanza(data);
+  protocol.verifyAll();
+}

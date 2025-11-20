@@ -1,0 +1,16 @@
+@Override public void begin(InterpretationContext context,String elementName,Attributes attributes) throws ActionException {
+  if (peekFilterContainer(context) == null) {
+    return;
+  }
+  var evaluator=evaluatorConstructor.apply(findAndSubst(context,attributes,PREFIX_ATTRIBUTE),findAndSubst(context,attributes,MESSAGE_ATTRIBUTE));
+  EvaluatorFilter<E> filter=new RegexFilter<>(getContext(),evaluator,makeFilterName(context,attributes));
+  if (elementName.startsWith(REQUIRE_ELEMENT)) {
+    filter.setOnMatch(FilterReply.NEUTRAL);
+    filter.setOnMismatch(FilterReply.DENY);
+  }
+ else   if (elementName.startsWith(DENY_ELEMENT)) {
+    filter.setOnMatch(FilterReply.DENY);
+    filter.setOnMismatch(FilterReply.NEUTRAL);
+  }
+  context.pushObject(filter);
+}

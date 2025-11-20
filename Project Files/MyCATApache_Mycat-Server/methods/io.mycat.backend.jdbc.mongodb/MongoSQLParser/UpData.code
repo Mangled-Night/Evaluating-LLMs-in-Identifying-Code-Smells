@@ -1,0 +1,13 @@
+private int UpData(SQLUpdateStatement state){
+  SQLTableSource table=state.getTableSource();
+  DBCollection coll=this._db.getCollection(table.toString());
+  SQLExpr expr=state.getWhere();
+  DBObject query=parserWhere(expr);
+  BasicDBObject set=new BasicDBObject();
+  for (  SQLUpdateSetItem col : state.getItems()) {
+    set.put(getFieldName2(col.getColumn()),getExpValue(col.getValue()));
+  }
+  DBObject mod=new BasicDBObject("$set",set);
+  WriteResult result=coll.updateMulti(query,mod);
+  return result.getN();
+}

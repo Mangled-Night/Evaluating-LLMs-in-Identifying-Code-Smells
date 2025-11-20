@@ -1,0 +1,62 @@
+@Override public Slot parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  final String namespace=parser.getNamespace();
+  final UploadService.Version version=HttpFileUploadManager.namespaceToVersion(namespace);
+  assert version != null;
+  URL putUrl=null;
+  URL getUrl=null;
+  PutElement_V0_4_Content putElementV04Content=null;
+  outerloop:   while (true) {
+    XmlPullParser.Event event=parser.next();
+switch (event) {
+case START_ELEMENT:
+      String name=parser.getName();
+switch (name) {
+case "put":
+{
+switch (version) {
+case v0_2:
+          String putUrlString=parser.nextText();
+        putUrl=new URL(putUrlString);
+      break;
+case v0_3:
+    putElementV04Content=parsePutElement_V0_4(parser);
+  break;
+default :
+throw new AssertionError();
+}
+break;
+}
+case "get":
+String getUrlString;
+switch (version) {
+case v0_2:
+getUrlString=parser.nextText();
+break;
+case v0_3:
+getUrlString=parser.getAttributeValue(null,"url");
+break;
+default :
+throw new AssertionError();
+}
+getUrl=new URL(getUrlString);
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+switch (version) {
+case v0_3:
+return new Slot(putElementV04Content.putUrl,getUrl,putElementV04Content.headers);
+case v0_2:
+return new Slot_V0_2(putUrl,getUrl);
+default :
+throw new AssertionError();
+}
+}

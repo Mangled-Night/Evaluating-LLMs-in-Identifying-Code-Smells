@@ -1,0 +1,18 @@
+private static void checkValidRedisURI(RedisURI redisURI){
+  LettuceAssert.notNull(redisURI,"A valid RedisURI is required");
+  if (redisURI.getSentinels().isEmpty()) {
+    if (isEmpty(redisURI.getHost()) && isEmpty(redisURI.getSocket())) {
+      throw new IllegalArgumentException("RedisURI for Redis Standalone does not contain a host or a socket");
+    }
+  }
+ else {
+    if (isEmpty(redisURI.getSentinelMasterId())) {
+      throw new IllegalArgumentException("RedisURI for Redis Sentinel requires a masterId");
+    }
+    for (    RedisURI sentinel : redisURI.getSentinels()) {
+      if (isEmpty(sentinel.getHost()) && isEmpty(sentinel.getSocket())) {
+        throw new IllegalArgumentException("RedisURI for Redis Sentinel does not contain a host or a socket");
+      }
+    }
+  }
+}

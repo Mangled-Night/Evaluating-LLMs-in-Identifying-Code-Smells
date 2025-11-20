@@ -1,0 +1,23 @@
+private static void testTransaction(Connection theCon) throws SQLException {
+  System.out.println("testTransaction begin");
+  theCon.setAutoCommit(false);
+  String sql="select id,name from company limit 1";
+  String oldName=null;
+  String upSQL=null;
+  ResultSet rs=theCon.createStatement().executeQuery(sql);
+  if (rs.next()) {
+    long id=rs.getLong(1);
+    oldName=rs.getString(2);
+    upSQL="update company set name='updatedname' where id=" + id;
+  }
+  int count=theCon.createStatement().executeUpdate(upSQL);
+  Assert.assertEquals(true,count > 0);
+  theCon.rollback();
+  rs=theCon.createStatement().executeQuery(sql);
+  String newName=null;
+  if (rs.next()) {
+    newName=rs.getString(2);
+  }
+  Assert.assertEquals(true,oldName.equals(newName));
+  System.out.println("testTransaction passed");
+}

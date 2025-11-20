@@ -1,0 +1,32 @@
+private void propagateSweep(Chunk fromChunk,Chunk toChunk,int[] depth,int[] startingRegen){
+  Vector3i pos=new Vector3i();
+  for (int z=0; z < Chunks.SIZE_Z; ++z) {
+    for (int x=0; x < Chunks.SIZE_X; ++x) {
+      int depthIndex=x + Chunks.SIZE_X * z;
+      startingRegen[depthIndex]=regenRules.getValue(fromChunk,new Vector3i(x,0,z));
+      byte expectedValue=(byte)Math.min(startingRegen[depthIndex] + 1,Chunks.MAX_SUNLIGHT_REGEN);
+      Block fromBlock=fromChunk.getBlock(x,0,z);
+      Block toBlock=toChunk.getBlock(x,Chunks.SIZE_Y - 1,z);
+      if (!(regenRules.canSpreadOutOf(fromBlock,Side.BOTTOM) && regenRules.canSpreadInto(toBlock,Side.TOP))) {
+        continue;
+      }
+      byte predictedValue=0;
+      pos.set(x,Chunks.SIZE_Y - 1,z);
+      int currentValue=regenRules.getValue(toChunk,pos);
+      while (currentValue == predictedValue && expectedValue > currentValue) {
+        regenRules.setValue(toChunk,pos,expectedValue);
+        depth[depthIndex]++;
+        byte sunlight=(byte)(expectedValue - Chunks.SUNLIGHT_REGEN_THRESHOLD);
+        if (sunlight > 0 && sunlight > toChunk.getSunlight(pos)) {
+          toChunk.setSunlight(pos,sunlight);
+        }
+        if (expectedValue < Chunks.MAX_SUNLIGHT_REGEN) {
+          expectedValue++;
+        }
+        predictedValue++;
+        pos.y--;
+        currentValue=regenRules.getValue(toChunk,pos);
+      }
+    }
+  }
+}

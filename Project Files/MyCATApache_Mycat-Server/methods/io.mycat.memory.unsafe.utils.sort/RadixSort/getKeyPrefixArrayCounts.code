@@ -1,0 +1,25 @@
+/** 
+ * Specialization of getCounts() for key-prefix arrays. We could probably combine this with getCounts with some added parameters but that seems to hurt in benchmarks.
+ */
+private static long[][] getKeyPrefixArrayCounts(LongArray array,int numRecords,int startByteIndex,int endByteIndex){
+  long[][] counts=new long[8][];
+  long bitwiseMax=0;
+  long bitwiseMin=-1L;
+  long limit=array.getBaseOffset() + numRecords * 16;
+  Object baseObject=array.getBaseObject();
+  for (long offset=array.getBaseOffset(); offset < limit; offset+=16) {
+    long value=Platform.getLong(baseObject,offset + 8);
+    bitwiseMax|=value;
+    bitwiseMin&=value;
+  }
+  long bitsChanged=bitwiseMin ^ bitwiseMax;
+  for (int i=startByteIndex; i <= endByteIndex; i++) {
+    if (((bitsChanged >>> (i * 8)) & 0xff) != 0) {
+      counts[i]=new long[256];
+      for (long offset=array.getBaseOffset(); offset < limit; offset+=16) {
+        counts[i][(int)((Platform.getLong(baseObject,offset + 8) >>> (i * 8)) & 0xff)]++;
+      }
+    }
+  }
+  return counts;
+}

@@ -1,0 +1,28 @@
+public static void handle(String stmt,ServerConnection c,int offset){
+  try {
+    stmt=stmt.substring(offset);
+    if (!stmt.toLowerCase().contains("datanode=") || !stmt.toLowerCase().contains("sql=")) {
+      showerror(stmt,c,"explain2 datanode=? sql=?");
+      return;
+    }
+    String dataNode=stmt.substring(stmt.indexOf("datanode=") + "datanode=".length(),stmt.indexOf("sql=")).trim();
+    boolean isJsonFormat=stmt.toUpperCase().contains(FORMAT_JSON);
+    String formatStr=isJsonFormat ? FORMAT_JSON : "";
+    String sql="explain " + formatStr + " "+ stmt.substring(stmt.indexOf("sql=") + 4,stmt.length()).trim();
+    if (dataNode == null || dataNode.isEmpty() || sql == null || sql.isEmpty()) {
+      showerror(stmt,c,"dataNode or sql is null or empty");
+      return;
+    }
+    RouteResultsetNode node=new RouteResultsetNode(dataNode,ServerParse.SELECT,sql);
+    RouteResultset rrs=new RouteResultset(sql,ServerParse.SELECT);
+    node.setSource(rrs);
+    EMPTY_ARRAY[0]=node;
+    rrs.setNodes(EMPTY_ARRAY);
+    SingleNodeHandler singleNodeHandler=new SingleNodeHandler(rrs,c.getSession2());
+    singleNodeHandler.execute();
+  }
+ catch (  Exception e) {
+    logger.error(e.getMessage(),e.getCause());
+    showerror(stmt,c,e.getMessage());
+  }
+}

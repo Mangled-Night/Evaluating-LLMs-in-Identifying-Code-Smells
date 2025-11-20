@@ -1,0 +1,14 @@
+@Test public void testDeltaChangedComponent() throws Exception {
+  EntityRef entity=entityManager.create(prefab);
+  StringComponent comp=entity.getComponent(StringComponent.class);
+  comp.value="Delta";
+  entity.saveComponent(comp);
+  EntityData.Entity entityData=entitySerializer.serialize(entity);
+  assertEquals(entity.getId(),entityData.getId());
+  assertEquals(prefab.getName(),entityData.getParentPrefab());
+  assertEquals(1,entityData.getComponentCount());
+  assertEquals(0,entityData.getRemovedComponentCount());
+  EntityData.Component componentData=entityData.getComponent(0);
+  assertEquals("test:string",componentData.getType());
+  assertEquals(Lists.newArrayList(EntityData.NameValue.newBuilder().setName("value").setValue(EntityData.Value.newBuilder().addString("Delta").build()).build()),componentData.getFieldList());
+}

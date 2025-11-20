@@ -1,0 +1,18 @@
+private Vector3f extractResidualMovement(Vector3f hitNormal,Vector3f direction){
+  return extractResidualMovement(hitNormal,direction,1f);
+}
+private Vector3f extractResidualMovement(Vector3f hitNormal,Vector3f direction,float normalMag){
+  float movementLength=direction.length();
+  if (movementLength > physics.getEpsilon()) {
+    direction.normalize();
+    Vector3f reflectDir=direction.reflect(hitNormal,new Vector3f());
+    reflectDir.normalize();
+    Vector3f perpendicularDir=hitNormal.mul(reflectDir.dot(hitNormal),new Vector3f()).mul(-1).add(reflectDir);
+    if (normalMag != 0.0f) {
+      Vector3f perpComponent=new Vector3f(perpendicularDir);
+      perpComponent.mul(normalMag * movementLength);
+      direction.set(perpComponent);
+    }
+  }
+  return direction;
+}

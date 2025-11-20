@@ -1,0 +1,30 @@
+/** 
+ * Create a Jingle stanza where we announce our transport candidates.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+private void sendTransportCandidatesOffer() throws XMPPException, SmackException, InterruptedException {
+  List<TransportCandidate> notOffered=resolver.getCandidatesList();
+  notOffered.removeAll(offeredCandidates);
+  for (  Object aNotOffered : notOffered) {
+    sendTransportCandidateOffer((TransportCandidate)aNotOffered);
+  }
+  if (resolverListener == null) {
+    resolverListener=new TransportResolverListener.Resolver(){
+      @Override public void candidateAdded(      TransportCandidate cand) throws NotConnectedException, InterruptedException {
+        sendTransportCandidateOffer(cand);
+      }
+      @Override public void end(){
+      }
+      @Override public void init(){
+      }
+    }
+;
+    resolver.addListener(resolverListener);
+  }
+  if (!(resolver.isResolving() || resolver.isResolved())) {
+    LOGGER.fine("RESOLVER CALLED");
+    resolver.resolve(session);
+  }
+}

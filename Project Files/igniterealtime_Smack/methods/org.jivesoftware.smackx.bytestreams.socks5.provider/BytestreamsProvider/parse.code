@@ -1,0 +1,53 @@
+@Override public Bytestream parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  boolean done=false;
+  Bytestream toReturn=new Bytestream();
+  String id=parser.getAttributeValue("","sid");
+  String mode=parser.getAttributeValue("","mode");
+  Jid JID=null;
+  String host=null;
+  String port=null;
+  XmlPullParser.Event eventType;
+  String elementName;
+  while (!done) {
+    eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      elementName=parser.getName();
+      if (elementName.equals(Bytestream.StreamHost.ELEMENT)) {
+        JID=ParserUtils.getJidAttribute(parser);
+        host=parser.getAttributeValue("","host");
+        port=parser.getAttributeValue("","port");
+      }
+ else       if (elementName.equals(Bytestream.StreamHostUsed.ELEMENT)) {
+        toReturn.setUsedHost(ParserUtils.getJidAttribute(parser));
+      }
+ else       if (elementName.equals(Bytestream.Activate.ELEMENT)) {
+        toReturn.setToActivate(ParserUtils.getJidAttribute(parser));
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      elementName=parser.getName();
+      if (elementName.equals("streamhost")) {
+        if (port == null) {
+          toReturn.addStreamHost(JID,host);
+        }
+ else {
+          toReturn.addStreamHost(JID,host,Integer.parseInt(port));
+        }
+        JID=null;
+        host=null;
+        port=null;
+      }
+ else       if (elementName.equals("query")) {
+        done=true;
+      }
+    }
+  }
+  if (mode == null) {
+    toReturn.setMode(Mode.tcp);
+  }
+ else {
+    toReturn.setMode(Bytestream.Mode.fromName(mode));
+  }
+  toReturn.setSessionID(id);
+  return toReturn;
+}

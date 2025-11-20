@@ -1,0 +1,23 @@
+private List<DataNode> getDataNodes(TableConfig tableConfig,Map<String,DataNodeConfig> dnConfig,Map<String,DataHostConfig> dhConfig){
+  List<DataNode> dataNodes=new ArrayList<DataNode>();
+  ArrayList<String> dataNodeNames=tableConfig.getDataNodes();
+  int i=0;
+  for (  String name : dataNodeNames) {
+    DataNodeConfig config=dnConfig.get(name);
+    String db=config.getDatabase();
+    String dataHost=config.getDataHost();
+    DataHostConfig dh=dhConfig.get(dataHost);
+    String dbType=dh.getDbType();
+    DBHostConfig[] writeHosts=dh.getWriteHosts();
+    DBHostConfig currentWriteHost;
+    if (isAwaysUseMaster) {
+      currentWriteHost=writeHosts[0];
+    }
+ else {
+      currentWriteHost=writeHosts[Integer.valueOf(dnIndexProps.getProperty(dh.getName()))];
+    }
+    DataNode dn=new DataNode(name,currentWriteHost.getIp(),currentWriteHost.getPort(),currentWriteHost.getUser(),currentWriteHost.getPassword(),db,dbType,i++);
+    dataNodes.add(dn);
+  }
+  return dataNodes;
+}

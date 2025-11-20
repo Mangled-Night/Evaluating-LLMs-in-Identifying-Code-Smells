@@ -1,0 +1,41 @@
+/** 
+ * Test presence management.<p> 1. Log in user0 from a client and user1 from 2 clients 2. Create presence subscription of type BOTH between 2 users 3. Check that presence is correctly delivered to both users 4. User1 logs out from a client 5. Check that presence for each connected resource is correct
+ */
+public void testRosterPresences() throws Exception {
+  Presence presence;
+  ConnectionConfiguration connectionConfiguration=new ConnectionConfiguration(getHost(),getPort(),getXMPPServiceDomain());
+  XMPPTCPConnection conn4=new XMPPConnection(connectionConfiguration);
+  conn4.connect();
+  conn4.login(getUsername(1),getPassword(1),"Home");
+  Roster roster=getConnection(0).getRoster();
+  roster.createEntry(getBareJID(1),"gato11",null);
+  long initial=System.currentTimeMillis();
+  while (System.currentTimeMillis() - initial < 2000 && (roster.getPresence(getBareJID(1)).getType() == Presence.Type.unavailable)) {
+    Thread.sleep(100);
+  }
+  presence=roster.getPresence(getBareJID(1));
+  assertTrue("Returned a null Presence for an existing user",presence.isAvailable());
+  presence=roster.getPresenceResource(getUsername(1) + "@" + conn4.getXMPPServiceDomain()+ "/Home");
+  assertEquals("Returned the wrong Presence","Home",StringUtils.parseResource(presence.getFrom()));
+  presence=roster.getPresenceResource(getFullJID(1));
+  assertTrue("Presence not found for user " + getFullJID(1),presence.isAvailable());
+  assertEquals("Returned the wrong Presence","Smack",StringUtils.parseResource(presence.getFrom()));
+  presence=roster.getPresenceResource("noname@" + getXMPPServiceDomain() + "/Smack");
+  assertFalse("Available presence was returned for a non-existing user",presence.isAvailable());
+  assertEquals("Returned Presence for a non-existing user has the incorrect type",Presence.Type.unavailable,presence.getType());
+  Iterator<Presence> presences=roster.getPresences(getBareJID(1));
+  int count=0;
+  while (presences.hasNext()) {
+    count++;
+    presences.next();
+  }
+  assertEquals("Wrong number of returned presences",count,2);
+  conn4.disconnect();
+  presences=roster.getPresences(getBareJID(1));
+  count=0;
+  while (presences.hasNext()) {
+    count++;
+    presences.next();
+  }
+  assertEquals("Wrong number of returned presences",count,1);
+}

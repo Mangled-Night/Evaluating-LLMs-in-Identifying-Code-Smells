@@ -1,0 +1,47 @@
+/** 
+ * Acquire N bytes of memory for a consumer. If there is no enough memory, it will call spill() of consumers to release more memory.
+ * @return number of bytes successfully granted (<= N).
+ */
+public long acquireExecutionMemory(long required,MemoryMode mode,MemoryConsumer consumer) throws InterruptedException {
+  assert (required >= 0);
+synchronized (this) {
+    long got=memoryManager.acquireExecutionMemory(required,connectionAttemptId,mode);
+    if (got < required) {
+      for (      MemoryConsumer c : consumers) {
+        if (c != consumer && c.getUsed() > 0) {
+          try {
+            long released=c.spill(required - got,consumer);
+            if (released > 0 && mode == tungstenMemoryMode) {
+              logger.info("Thread " + connectionAttemptId + " released "+ JavaUtils.bytesToString(released)+ " from "+ c+ " for"+ consumer);
+              got+=memoryManager.acquireExecutionMemory(required - got,connectionAttemptId,mode);
+              if (got >= required) {
+                break;
+              }
+            }
+          }
+ catch (          IOException e) {
+            logger.error("error while calling spill() on " + c,e);
+            throw new OutOfMemoryError("error while calling spill() on " + c + " : "+ e.getMessage());
+          }
+        }
+      }
+    }
+    if (got < required && consumer != null) {
+      try {
+        long released=consumer.spill(required - got,consumer);
+        if (released > 0 && mode == tungstenMemoryMode) {
+          logger.info("Thread " + connectionAttemptId + " released "+ JavaUtils.bytesToString(released)+ "from itself ("+ consumer+ ")");
+          got+=memoryManager.acquireExecutionMemory(required - got,connectionAttemptId,mode);
+        }
+      }
+ catch (      IOException e) {
+        logger.error("error while calling spill() on " + consumer,e);
+        throw new OutOfMemoryError("error while calling spill() on " + consumer + " : "+ e.getMessage());
+      }
+    }
+    if (consumer != null) {
+      consumers.add(consumer);
+    }
+    return got;
+  }
+}

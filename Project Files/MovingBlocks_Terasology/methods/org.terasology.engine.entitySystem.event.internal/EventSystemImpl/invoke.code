@@ -1,0 +1,23 @@
+void invoke(EntityRef entity,Event event);
+@Override public void invoke(EntityRef entity,Event event){
+  Object[] params=new Object[2 + componentParams.size()];
+  params[0]=event;
+  params[1]=entity;
+  for (int i=0; i < componentParams.size(); ++i) {
+    params[i + 2]=entity.getComponent(componentParams.get(i));
+  }
+  if (activity != null) {
+    PerformanceMonitor.startActivity(activity);
+  }
+  try {
+    methodAccess.invoke(handler,methodIndex,params);
+  }
+  finally {
+    if (activity != null) {
+      PerformanceMonitor.endActivity();
+    }
+  }
+}
+@Override public void invoke(EntityRef entity,Event event){
+  receiver.onEvent((T)event,entity);
+}

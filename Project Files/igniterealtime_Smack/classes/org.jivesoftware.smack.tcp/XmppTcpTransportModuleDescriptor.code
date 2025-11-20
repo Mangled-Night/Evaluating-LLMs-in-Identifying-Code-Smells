@@ -1,0 +1,46 @@
+public class XmppTcpTransportModuleDescriptor extends ModularXmppClientToServerConnectionModuleDescriptor {
+  private final boolean startTls;
+  private final boolean directTls;
+  public XmppTcpTransportModuleDescriptor(  Builder builder){
+    startTls=builder.startTls;
+    directTls=builder.directTls;
+  }
+  @Override protected Set<Class<? extends StateDescriptor>> getStateDescriptors(){
+    Set<Class<? extends StateDescriptor>> res=new HashSet<>();
+    res.add(EstablishingTcpConnectionStateDescriptor.class);
+    if (startTls) {
+      res.add(EstablishTlsStateDescriptor.class);
+    }
+    if (directTls) {
+      throw new IllegalArgumentException("DirectTLS is not implemented yet");
+    }
+    return res;
+  }
+  @Override protected XmppTcpTransportModule constructXmppConnectionModule(  ModularXmppClientToServerConnectionInternal connectionInternal){
+    return new XmppTcpTransportModule(this,connectionInternal);
+  }
+  public boolean isStartTlsEnabled(){
+    return startTls;
+  }
+  public boolean isDirectTlsEnabled(){
+    return directTls;
+  }
+public static final class Builder extends ModularXmppClientToServerConnectionModuleDescriptor.Builder {
+    private Builder(    ModularXmppClientToServerConnectionConfiguration.Builder connectionConfigurationBuilder){
+      super(connectionConfigurationBuilder);
+    }
+    private boolean startTls=true;
+    private boolean directTls=false;
+    public Builder disableDirectTls(){
+      directTls=false;
+      return this;
+    }
+    public Builder disableStartTls(){
+      startTls=false;
+      return this;
+    }
+    @Override protected XmppTcpTransportModuleDescriptor build(){
+      return new XmppTcpTransportModuleDescriptor(this);
+    }
+  }
+}

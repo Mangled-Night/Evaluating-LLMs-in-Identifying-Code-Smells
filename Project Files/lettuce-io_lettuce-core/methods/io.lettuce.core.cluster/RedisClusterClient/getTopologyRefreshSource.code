@@ -1,0 +1,19 @@
+/** 
+ * Returns the seed  {@link RedisURI} for the topology refreshing. This method is called before each topology refresh toprovide an  {@link Iterable} of {@link RedisURI} that is used to perform the next topology refresh.<p> Subclasses of  {@link RedisClusterClient} may override that method.
+ * @return {@link Iterable} of {@link RedisURI} for the next topology refresh.
+ */
+protected Iterable<RedisURI> getTopologyRefreshSource(){
+  boolean initialSeedNodes=!useDynamicRefreshSources();
+  Iterable<RedisURI> seed;
+  if (initialSeedNodes || partitions == null || partitions.isEmpty()) {
+    seed=this.initialUris;
+  }
+ else {
+    List<RedisURI> uris=new ArrayList<>();
+    for (    RedisClusterNode partition : TopologyComparators.sortByUri(partitions)) {
+      uris.add(partition.getUri());
+    }
+    seed=uris;
+  }
+  return seed;
+}

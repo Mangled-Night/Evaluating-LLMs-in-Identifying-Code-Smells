@@ -1,0 +1,32 @@
+/** 
+ * Test the input stream read(byte[], int, int) method.
+ * @throws Exception should not happen
+ */
+@Test public void shouldReadAllReceivedData1() throws Exception {
+  Random rand=new Random();
+  byte[] controlData=new byte[3 * blockSize];
+  rand.nextBytes(controlData);
+  IQ resultIQ=IBBPacketUtils.createResultIQ(initiatorJID,targetJID);
+  InBandBytestreamSession session=new InBandBytestreamSession(connection,initBytestream,initiatorJID);
+  InputStream inputStream=session.getInputStream();
+  StanzaListener listener=Whitebox.getInternalState(inputStream,"dataPacketListener",StanzaListener.class);
+  for (int i=0; i < controlData.length / blockSize; i++) {
+    protocol.addResponse(resultIQ);
+    String base64Data=Base64.encodeToString(controlData,i * blockSize,blockSize);
+    DataPacketExtension dpe=new DataPacketExtension(sessionID,i,base64Data);
+    Data data=new Data(dpe);
+    listener.processStanza(data);
+  }
+  byte[] bytes=new byte[3 * blockSize];
+  int read;
+  read=inputStream.read(bytes,0,blockSize);
+  assertEquals(blockSize,read);
+  read=inputStream.read(bytes,10,blockSize);
+  assertEquals(blockSize,read);
+  read=inputStream.read(bytes,20,blockSize);
+  assertEquals(blockSize,read);
+  for (int i=0; i < bytes.length; i++) {
+    assertEquals(controlData[i],bytes[i]);
+  }
+  protocol.verifyAll();
+}

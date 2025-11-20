@@ -1,0 +1,57 @@
+protected StateDescriptor(){
+  this(NoOpState.class,(Property)null);
+}
+protected StateDescriptor(Property... properties){
+  this(NoOpState.class,properties);
+}
+protected StateDescriptor(Class<? extends State> stateClass){
+  this(stateClass,-1,null,Collections.emptySet());
+}
+protected StateDescriptor(Class<? extends State> stateClass,Property... properties){
+  this(stateClass,-1,null,new HashSet<>(Arrays.asList(properties)));
+}
+protected StateDescriptor(Class<? extends State> stateClass,int xepNum){
+  this(stateClass,xepNum,null,Collections.emptySet());
+}
+protected StateDescriptor(Class<? extends State> stateClass,int xepNum,Property... properties){
+  this(stateClass,xepNum,null,new HashSet<>(Arrays.asList(properties)));
+}
+protected StateDescriptor(Class<? extends State> stateClass,String rfcSection){
+  this(stateClass,-1,rfcSection,Collections.emptySet());
+}
+@SuppressWarnings("unchecked") private StateDescriptor(Class<? extends State> stateClass,int xepNum,String rfcSection,Set<Property> properties){
+  this.stateClass=stateClass;
+  if (rfcSection != null && xepNum > 0) {
+    throw new IllegalArgumentException("Must specify either RFC or XEP");
+  }
+  this.xepNum=xepNum;
+  this.rfcSection=rfcSection;
+  this.properties=properties;
+  Constructor<? extends State> selectedConstructor=null;
+  Constructor<?>[] constructors=stateClass.getDeclaredConstructors();
+  for (  Constructor<?> constructor : constructors) {
+    Class<?>[] parameterTypes=constructor.getParameterTypes();
+    if (parameterTypes.length != 3) {
+      continue;
+    }
+    if (!ModularXmppClientToServerConnection.class.isAssignableFrom(parameterTypes[0])) {
+      continue;
+    }
+    if (!StateDescriptor.class.isAssignableFrom(parameterTypes[1])) {
+      continue;
+    }
+    if (!ModularXmppClientToServerConnectionInternal.class.isAssignableFrom(parameterTypes[2])) {
+      continue;
+    }
+    selectedConstructor=(Constructor<? extends State>)constructor;
+    break;
+  }
+  stateClassConstructor=selectedConstructor;
+  if (stateClassConstructor != null) {
+    stateClassConstructor.setAccessible(true);
+  }
+ else {
+  }
+  String className=getClass().getSimpleName();
+  stateName=className.replaceFirst("StateDescriptor","");
+}

@@ -1,0 +1,48 @@
+@Override public void parseAndProcessElement(String wrappedCompleteElement){
+  ModularXmppClientToServerConnection.this.parseAndProcessElement(wrappedCompleteElement);
+}
+private void parseAndProcessElement(String element){
+  try {
+    XmlPullParser parser=PacketParserUtils.getParserFor(element);
+    parser.next();
+    XmlPullParser.Event event=parser.getEventType();
+    outerloop:     while (true) {
+switch (event) {
+case START_ELEMENT:
+        final String name=parser.getName();
+switch (name) {
+case Message.ELEMENT:
+case IQ.IQ_ELEMENT:
+case Presence.ELEMENT:
+        try {
+          parseAndProcessStanza(parser);
+        }
+  finally {
+        }
+      break;
+case "error":
+    StreamError streamError=PacketParserUtils.parseStreamError(parser,null);
+  StreamErrorException streamErrorException=new StreamErrorException(streamError);
+currentXmppException=streamErrorException;
+notifyWaitingThreads();
+throw streamErrorException;
+case "features":
+parseFeatures(parser);
+afterFeaturesReceived();
+break;
+default :
+parseAndProcessNonza(parser);
+break;
+}
+break;
+case END_DOCUMENT:
+break outerloop;
+default :
+}
+event=parser.next();
+}
+}
+ catch (XmlPullParserException|IOException|InterruptedException|StreamErrorException|SmackParsingException e) {
+notifyConnectionError(e);
+}
+}

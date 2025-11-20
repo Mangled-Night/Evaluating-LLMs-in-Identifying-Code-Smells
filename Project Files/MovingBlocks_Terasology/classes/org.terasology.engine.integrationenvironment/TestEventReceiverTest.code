@@ -1,0 +1,66 @@
+@IntegrationEnvironment public class TestEventReceiverTest {
+  @In private ModuleTestingHelper helper;
+  @In private EntityManager entityManager;
+  @Test public void componentFilterTest(){
+    EntityRef entityWithDummy=entityManager.create(new DummyComponent());
+    EntityRef entityWithDummyAndLocation=entityManager.create(new DummyComponent(),new LocationComponent());
+    AtomicInteger callbackInvocations=new AtomicInteger();
+    BiConsumer<DummyEvent,EntityRef> callback=(event,entity) -> callbackInvocations.addAndGet(1);
+    try (TestEventReceiver<DummyEvent> receiver=new TestEventReceiver<>(getHostContext(),DummyEvent.class,callback,DummyComponent.class,LocationComponent.class)){
+      entityWithDummy.send(new DummyEvent());
+      entityWithDummyAndLocation.send(new DummyEvent());
+      List<EntityRef> actualEntities=receiver.getEntityRefs();
+      Assertions.assertEquals(1,callbackInvocations.get());
+      Assertions.assertTrue(actualEntities.contains(entityWithDummyAndLocation));
+      Assertions.assertFalse(actualEntities.contains(entityWithDummy));
+    }
+     entityWithDummy.destroy();
+    entityWithDummyAndLocation.destroy();
+  }
+  @Test public void repeatedEventTest(){
+    final List<EntityRef> expectedEntities=new ArrayList<>();
+    try (TestEventReceiver<DummyEvent> receiver=new TestEventReceiver<>(getHostContext(),DummyEvent.class)){
+      List<EntityRef> actualEntities=receiver.getEntityRefs();
+      Assertions.assertTrue(actualEntities.isEmpty());
+      for (int i=0; i < 5; i++) {
+        expectedEntities.add(sendEvent());
+        Assertions.assertEquals(i + 1,actualEntities.size());
+        Assertions.assertEquals(expectedEntities.get(i),actualEntities.get(i));
+      }
+    }
+   }
+  @Test public void properClosureTest(){
+    final List<EntityRef> entities;
+    try (TestEventReceiver<DummyEvent> receiver=new TestEventReceiver<>(getHostContext(),DummyEvent.class)){
+      entities=receiver.getEntityRefs();
+    }
+     sendEvent();
+    Assertions.assertTrue(entities.isEmpty());
+  }
+  @Test public void userCallbackTest(){
+    final List<DummyEvent> events=new ArrayList<>();
+    TestEventReceiver<DummyEvent> receiver=new TestEventReceiver<>(getHostContext(),DummyEvent.class,(event,entity) -> {
+      events.add(event);
+    }
+);
+    for (int i=0; i < 3; i++) {
+      sendEvent();
+    }
+    Assertions.assertEquals(3,events.size());
+    receiver.close();
+    sendEvent();
+    Assertions.assertEquals(3,events.size());
+  }
+  /** 
+ * Drops a generic item into the world.
+ * @return the item
+ */
+  private EntityRef sendEvent(){
+    final EntityRef entityRef=getHostContext().get(EntityManager.class).create(new DummyComponent());
+    entityRef.send(new DummyEvent());
+    return entityRef;
+  }
+  private Context getHostContext(){
+    return helper.getHostContext();
+  }
+}

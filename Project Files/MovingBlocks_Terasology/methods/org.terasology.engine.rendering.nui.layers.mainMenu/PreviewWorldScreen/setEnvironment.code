@@ -1,0 +1,30 @@
+public void setEnvironment() throws Exception {
+  SimpleUri worldGenUri=config.getWorldGeneration().getDefaultGenerator();
+  DependencyResolver resolver=new DependencyResolver(moduleManager.getRegistry());
+  ResolutionResult result=resolver.resolve(config.getDefaultModSelection().listModules());
+  if (result.isSuccess()) {
+    subContext=new ContextImpl(context);
+    CoreRegistry.setContext(subContext);
+    environment=moduleManager.loadEnvironment(result.getModules(),false);
+    subContext.put(WorldGeneratorPluginLibrary.class,new TempWorldGeneratorPluginLibrary(environment,subContext));
+    EnvironmentSwitchHandler environmentSwitchHandler=context.get(EnvironmentSwitchHandler.class);
+    environmentSwitchHandler.handleSwitchToPreviewEnvironment(subContext,environment);
+    genTexture();
+    worldGenerator=WorldGeneratorManager.createWorldGenerator(worldGenUri,subContext,environment);
+    worldGenerator.setWorldSeed(seed.getText());
+    List<Zone> previewZones=Lists.newArrayList(worldGenerator.getZones()).stream().filter(z -> !z.getPreviewLayers().isEmpty()).collect(Collectors.toList());
+    if (previewZones.isEmpty()) {
+      zoneSelector.setVisible(false);
+      previewGen=new FacetLayerPreview(environment,worldGenerator);
+    }
+ else {
+      zoneSelector.setVisible(true);
+      zoneSelector.setOptions(previewZones);
+      zoneSelector.setSelection(previewZones.get(0));
+    }
+    configureProperties();
+  }
+ else {
+    throw new UnresolvedDependencyException("Unable to resolve dependencies for " + worldGenUri);
+  }
+}

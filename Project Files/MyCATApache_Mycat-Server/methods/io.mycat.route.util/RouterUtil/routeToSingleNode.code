@@ -1,0 +1,28 @@
+/** 
+ * 获取第一个节点作为路由
+ * @param rrs		          数据路由集合
+ * @param dataNode  	数据库所在节点
+ * @param stmt   		执行语句
+ * @return 				数据路由集合
+ * @author mycat
+ */
+public static RouteResultset routeToSingleNode(RouteResultset rrs,String dataNode,String stmt){
+  if (dataNode == null) {
+    return rrs;
+  }
+  RouteResultsetNode[] nodes=new RouteResultsetNode[1];
+  nodes[0]=new RouteResultsetNode(dataNode,rrs.getSqlType(),stmt);
+  nodes[0].setSource(rrs);
+  rrs.setNodes(nodes);
+  rrs.setFinishedRoute(true);
+  if (rrs.getDataNodeSlotMap().containsKey(dataNode)) {
+    nodes[0].setSlot(rrs.getDataNodeSlotMap().get(dataNode));
+  }
+  if (rrs.getCanRunInReadDB() != null) {
+    nodes[0].setCanRunInReadDB(rrs.getCanRunInReadDB());
+  }
+  if (rrs.getRunOnSlave() != null) {
+    nodes[0].setRunOnSlave(rrs.getRunOnSlave());
+  }
+  return rrs;
+}

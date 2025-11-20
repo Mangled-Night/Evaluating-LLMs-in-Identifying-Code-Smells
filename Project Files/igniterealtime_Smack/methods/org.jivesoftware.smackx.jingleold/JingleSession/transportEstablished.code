@@ -1,0 +1,16 @@
+@Override public void transportEstablished(TransportCandidate local,TransportCandidate remote) throws NotConnectedException, InterruptedException, NoResponseException, XMPPErrorException {
+  if (isFullyEstablished()) {
+    setSessionState(JingleSessionStateActive.getInstance());
+    for (    ContentNegotiator contentNegotiator : contentNegotiators) {
+      if (contentNegotiator.getNegotiatorState() == JingleNegotiatorState.SUCCEEDED)       contentNegotiator.triggerContentEstablished();
+    }
+    if (getSessionState().equals(JingleSessionStatePending.getInstance())) {
+      Jingle jout=new Jingle(JingleActionEnum.SESSION_ACCEPT);
+      for (      ContentNegotiator contentNegotiator : contentNegotiators) {
+        if (contentNegotiator.getNegotiatorState() == JingleNegotiatorState.SUCCEEDED)         jout.addContent(contentNegotiator.getJingleContent());
+      }
+      addExpectedId(jout.getStanzaId());
+      sendStanza(jout);
+    }
+  }
+}

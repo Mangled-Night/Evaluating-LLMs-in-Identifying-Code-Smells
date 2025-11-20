@@ -1,0 +1,20 @@
+private TableStat getTableStat(String tableName){
+  TableStat userStat=tableStatMap.get(tableName);
+  if (userStat == null) {
+    if (lock.tryLock()) {
+      try {
+        userStat=new TableStat(tableName);
+        tableStatMap.put(tableName,userStat);
+      }
+  finally {
+        lock.unlock();
+      }
+    }
+ else {
+      while (userStat == null) {
+        userStat=tableStatMap.get(tableName);
+      }
+    }
+  }
+  return userStat;
+}

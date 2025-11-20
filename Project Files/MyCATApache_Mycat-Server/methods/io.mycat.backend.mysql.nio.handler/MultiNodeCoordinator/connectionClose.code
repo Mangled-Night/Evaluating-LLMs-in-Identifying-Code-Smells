@@ -1,0 +1,36 @@
+@Override public void connectionClose(BackendConnection conn,String reason){
+  if (LOGGER.isInfoEnabled()) {
+    LOGGER.info("======================" + "connectionClose from {} msg: {}",conn,reason);
+  }
+  if (session.getXaTXID() != null) {
+    if (conn instanceof MySQLConnection) {
+      MySQLConnection mysqlCon=(MySQLConnection)conn;
+      if (coorXaStatus == TxState.TX_STARTED_STATE) {
+        this.setFail(reason);
+        LOGGER.error("XA prepare failure in :xa end;xa prepare; XA id is:" + session.getXaTXID() + " errmsg {},current conn:{}",reason,conn);
+        if (prepareCount.decrementAndGet() == 0) {
+          this.tryErrorFinished(true);
+        }
+        return;
+      }
+      if (coorXaStatus == TxState.TX_PREPARED_STATE) {
+        String xaTxId=session.getXaTXID();
+        if (xaTxId != null) {
+          xaTxId+=",'" + mysqlCon.getSchema() + "'";
+          String cmd="XA COMMIT " + xaTxId;
+          LOGGER.error("XA Comit failure in :" + cmd + " errmsg {},current conn:{}",reason,conn);
+        }
+      }
+    }
+  }
+  if (this.cmdHandler.releaseConOnErr()) {
+    session.releaseConnection(conn);
+  }
+ else {
+    session.releaseConnectionIfSafe(conn,LOGGER.isDebugEnabled(),false);
+  }
+  this.setFail("close back conn reason:" + reason);
+  if (this.finished()) {
+    this.tryErrorFinished(true);
+  }
+}

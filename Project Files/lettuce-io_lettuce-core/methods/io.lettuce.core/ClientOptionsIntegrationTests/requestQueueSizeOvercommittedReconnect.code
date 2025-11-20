@@ -1,0 +1,22 @@
+@Test void requestQueueSizeOvercommittedReconnect(){
+  client.setOptions(ClientOptions.builder().requestQueueSize(10).build());
+  StatefulRedisConnection<String,String> connection=client.connect();
+  ConnectionWatchdog watchdog=getConnectionWatchdog(connection);
+  watchdog.setListenOnChannelInactive(false);
+  Queue<Object> buffer=getStack(connection);
+  List<RedisFuture<String>> pings=new ArrayList<>();
+  for (int i=0; i < 11; i++) {
+    AsyncCommand<String,String,String> command=new AsyncCommand<>(new Command<>(CommandType.PING,new StatusOutput<>(StringCodec.UTF8)));
+    pings.add(command);
+    buffer.add(command);
+  }
+  getChannel(connection).disconnect();
+  Wait.untilTrue(() -> !connection.isOpen()).waitOrTimeout();
+  watchdog.setListenOnChannelInactive(true);
+  watchdog.scheduleReconnect();
+  for (int i=0; i < 10; i++) {
+    assertThat(TestFutures.getOrTimeout(pings.get(i))).isEqualTo("PONG");
+  }
+  assertThatThrownBy(() -> TestFutures.awaitOrTimeout(pings.get(10))).hasCauseInstanceOf(IllegalStateException.class).hasMessage("java.lang.IllegalStateException: Queue full");
+  connection.close();
+}

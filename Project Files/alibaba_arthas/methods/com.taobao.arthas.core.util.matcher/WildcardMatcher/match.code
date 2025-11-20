@@ -1,0 +1,68 @@
+/** 
+ * Internal matching recursive function.
+ */
+private boolean match(String target,String pattern,int stringStartNdx,int patternStartNdx){
+  if (target == null || pattern == null) {
+    return false;
+  }
+  int pNdx=patternStartNdx;
+  int sNdx=stringStartNdx;
+  int pLen=pattern.length();
+  if (pLen == 1) {
+    if (pattern.charAt(0) == ASTERISK) {
+      return true;
+    }
+  }
+  int sLen=target.length();
+  boolean nextIsNotWildcard=false;
+  while (true) {
+    if ((sNdx >= sLen)) {
+      while ((pNdx < pLen) && (pattern.charAt(pNdx) == ASTERISK)) {
+        pNdx++;
+      }
+      return pNdx >= pLen;
+    }
+    if (pNdx >= pLen) {
+      return false;
+    }
+    char p=pattern.charAt(pNdx);
+    if (!nextIsNotWildcard) {
+      if (p == ESCAPE) {
+        pNdx++;
+        nextIsNotWildcard=true;
+        continue;
+      }
+      if (p == QUESTION_MARK) {
+        sNdx++;
+        pNdx++;
+        continue;
+      }
+      if (p == ASTERISK) {
+        char pnext=0;
+        if (pNdx + 1 < pLen) {
+          pnext=pattern.charAt(pNdx + 1);
+        }
+        if (pnext == ASTERISK) {
+          pNdx++;
+          continue;
+        }
+        int i;
+        pNdx++;
+        for (i=target.length(); i >= sNdx; i--) {
+          if (match(target,pattern,i,pNdx)) {
+            return true;
+          }
+        }
+        return false;
+      }
+    }
+ else {
+      nextIsNotWildcard=false;
+    }
+    if (p != target.charAt(sNdx)) {
+      return false;
+    }
+    sNdx++;
+    pNdx++;
+  }
+}

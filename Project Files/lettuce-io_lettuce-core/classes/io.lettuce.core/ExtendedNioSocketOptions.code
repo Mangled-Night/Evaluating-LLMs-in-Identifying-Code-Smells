@@ -1,0 +1,35 @@
+/** 
+ * Utility to support Java 11  {@link ExtendedSocketOptions extended keepalive options}.
+ */
+@SuppressWarnings("unchecked") static class ExtendedNioSocketOptions {
+  private static final SocketOption<Integer> TCP_KEEPCOUNT;
+  private static final SocketOption<Integer> TCP_KEEPIDLE;
+  private static final SocketOption<Integer> TCP_KEEPINTERVAL;
+static {
+    SocketOption<Integer> keepCount=null;
+    SocketOption<Integer> keepIdle=null;
+    SocketOption<Integer> keepInterval=null;
+    try {
+      keepCount=(SocketOption<Integer>)ExtendedSocketOptions.class.getDeclaredField("TCP_KEEPCOUNT").get(null);
+      keepIdle=(SocketOption<Integer>)ExtendedSocketOptions.class.getDeclaredField("TCP_KEEPIDLE").get(null);
+      keepInterval=(SocketOption<Integer>)ExtendedSocketOptions.class.getDeclaredField("TCP_KEEPINTERVAL").get(null);
+    }
+ catch (    ReflectiveOperationException e) {
+      logger.trace("Cannot extract ExtendedSocketOptions for KeepAlive",e);
+    }
+    TCP_KEEPCOUNT=keepCount;
+    TCP_KEEPIDLE=keepIdle;
+    TCP_KEEPINTERVAL=keepInterval;
+  }
+  public static boolean isAvailable(){
+    return TCP_KEEPCOUNT != null && TCP_KEEPIDLE != null && TCP_KEEPINTERVAL != null;
+  }
+  /** 
+ * Apply Keep-Alive options.
+ */
+  public static void applyKeepAlive(  Bootstrap bootstrap,  int count,  Duration idle,  Duration interval){
+    bootstrap.option(NioChannelOption.of(TCP_KEEPCOUNT),count);
+    bootstrap.option(NioChannelOption.of(TCP_KEEPIDLE),Math.toIntExact(idle.getSeconds()));
+    bootstrap.option(NioChannelOption.of(TCP_KEEPINTERVAL),Math.toIntExact(interval.getSeconds()));
+  }
+}

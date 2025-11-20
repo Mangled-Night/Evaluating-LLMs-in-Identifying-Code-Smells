@@ -1,0 +1,21 @@
+@Override public void visit(MethodDeclaration parsedDeclaration,Object arg){
+  if (!methodFilter.test(parsedDeclaration)) {
+    return;
+  }
+  Type returnType=getMethodReturnType(parsedDeclaration);
+  MethodDeclaration method=new MethodDeclaration(parsedDeclaration.getModifiers(),parsedDeclaration.getAnnotations(),parsedDeclaration.getTypeParameters(),returnType,parsedDeclaration.getName(),parsedDeclaration.getParameters(),parsedDeclaration.getThrownExceptions(),null);
+  if (methodCommentMutator != null) {
+    method.setComment(methodCommentMutator.apply(method,parsedDeclaration.getComment().orElse(null)));
+  }
+ else {
+    method.setComment(parsedDeclaration.getComment().orElse(null));
+  }
+  onMethod.accept(method);
+  resultType.addMember(method);
+}
+@Override public void visit(MethodDeclaration method,Object arg){
+  if (!contains(KEEP_DEPRECATED_METHODS.keySet(),method) && (method.isAnnotationPresent(Deprecated.class) || contains(SKIP_METHODS,method) || method.getParameters().stream().anyMatch(p -> p.getType().asString().contains("StreamingChannel")))) {
+    return;
+  }
+  result.append(FORMATTING_INDENT).append(extractJavadoc(method.getJavadoc().get()).replace("\n","\n" + FORMATTING_INDENT)).append(extractAnnotations(method)).append(contains(NON_SUSPENDABLE_METHODS,method) || isFlowable(method) ? "" : "suspend ").append("fun ").append(method.getTypeParameters().isNonEmpty() ? extractTypeParams(method.getTypeParameters(),"Any").concat(" ") : "").append(method.getNameAsString()).append("(").append(extractParameters(method)).append(")").append(customResultType(method).orElse(toKotlinType(method.getType(),isFlowable(method),contains(NON_NULLABLE_RESULT_METHODS,method)))).append("\n\n");
+}

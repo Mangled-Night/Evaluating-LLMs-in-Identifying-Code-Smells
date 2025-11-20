@@ -1,0 +1,9 @@
+@Test void observeChannelsUnsubscribe(){
+  block(pubsub.subscribe(channel));
+  BlockingQueue<ChannelMessage<String,String>> channelMessages=LettuceFactories.newBlockingQueue();
+  pubsub.observeChannels().doOnNext(channelMessages::add).subscribe().dispose();
+  block(redis.getStatefulConnection().reactive().publish(channel,message));
+  block(redis.getStatefulConnection().reactive().publish(channel,message));
+  Delay.delay(Duration.ofMillis(500));
+  assertThat(channelMessages).isEmpty();
+}

@@ -1,0 +1,78 @@
+/** 
+ * Represents timestamp information about data stored for later delivery. A DelayInformation will always includes the timestamp when the stanza was originally sent and may include more information such as the JID of the entity that originally sent the stanza as well as the reason for the delay.<p> For more information see <a href="http://xmpp.org/extensions/xep-0091.html">XEP-0091</a> and <a href="http://xmpp.org/extensions/xep-0203.html">XEP-0203</a>.
+ * @author Gaston Dombiak
+ * @author Florian Schmaus
+ */
+public class DelayInformation implements ExtensionElement {
+  public static final String ELEMENT="delay";
+  public static final String NAMESPACE="urn:xmpp:delay";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  private final Date stamp;
+  private final String from;
+  private final String reason;
+  /** 
+ * Creates a new instance with the specified timestamp.
+ * @param stamp the timestamp
+ * @param from sender
+ * @param reason reason of delay.
+ */
+  public DelayInformation(  Date stamp,  String from,  String reason){
+    this.stamp=stamp;
+    this.from=from;
+    this.reason=reason;
+  }
+  public DelayInformation(  Date stamp){
+    this(stamp,null,null);
+  }
+  /** 
+ * Returns the JID of the entity that originally sent the stanza or that delayed the delivery of the stanza or <code>null</code> if this information is not available.
+ * @return the JID of the entity that originally sent the stanza or that delayed thedelivery of the packet.
+ */
+  public String getFrom(){
+    return from;
+  }
+  /** 
+ * Returns the timestamp when the stanza was originally sent. The returned Date is be understood as UTC.
+ * @return the timestamp when the stanza was originally sent.
+ */
+  public Date getStamp(){
+    return stamp;
+  }
+  /** 
+ * Returns a natural-language description of the reason for the delay or <code>null</code> if this information is not available.
+ * @return a natural-language description of the reason for the delay or <code>null</code>.
+ */
+  public String getReason(){
+    return reason;
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this,enclosingNamespace);
+    xml.attribute("stamp",XmppDateTime.formatXEP0082Date(stamp));
+    xml.optAttribute("from",from);
+    xml.optTextChild(reason,this);
+    return xml;
+  }
+  /** 
+ * Return delay information from the given stanza.
+ * @param packet TODO javadoc me please
+ * @return the DelayInformation or null
+ * @deprecated use {@link #from(Stanza)} instead
+ */
+  @Deprecated public static DelayInformation getFrom(  Stanza packet){
+    return from(packet);
+  }
+  /** 
+ * Return delay information from the given stanza.
+ * @param packet TODO javadoc me please
+ * @return the DelayInformation or null
+ */
+  public static DelayInformation from(  Stanza packet){
+    return packet.getExtension(DelayInformation.class);
+  }
+}

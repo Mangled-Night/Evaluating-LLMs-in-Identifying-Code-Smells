@@ -1,0 +1,51 @@
+@Override public float noise(float x,float y){
+  float xMod=TeraMath.modulus(x,sampleRate);
+  float yMod=TeraMath.modulus(y,sampleRate);
+  float x0=x - xMod;
+  float x1=x0 + sampleRate;
+  float y0=y - yMod;
+  float y1=y0 + sampleRate;
+  float q00=source.noise(x0 * zoom.x,y0 * zoom.y);
+  float q10=source.noise(x1 * zoom.x,y0 * zoom.y);
+  float q01=source.noise(x0 * zoom.x,y1 * zoom.y);
+  float q11=source.noise(x1 * zoom.x,y1 * zoom.y);
+  return TeraMath.biLerp(q00,q10,q01,q11,xMod / sampleRate,yMod / sampleRate);
+}
+public float[] noise(BlockAreac area){
+  return noise(area,1);
+}
+public float[] noise(BlockAreac area,float scale){
+  BlockArea fullRegion=determineRequiredRegion(area);
+  float[] keyData=getKeyValues(fullRegion,scale);
+  float[] fullData=mapExpand(keyData,fullRegion);
+  return getSubset(fullData,fullRegion,area);
+}
+@Override public float noise(float x,float y,float z){
+  float xMod=TeraMath.modulus(x,sampleRate);
+  float yMod=TeraMath.modulus(y,sampleRate);
+  float zMod=TeraMath.modulus(z,sampleRate);
+  float x0=x - xMod;
+  float x1=x0 + sampleRate;
+  float y0=y - yMod;
+  float y1=y0 + sampleRate;
+  float z0=z - zMod;
+  float z1=z0 + sampleRate;
+  float q000=source.noise(x0 * zoom.x,y0 * zoom.y,z0 * zoom.z);
+  float q100=source.noise(x1 * zoom.x,y0 * zoom.y,z0 * zoom.z);
+  float q010=source.noise(x0 * zoom.x,y1 * zoom.y,z0 * zoom.z);
+  float q110=source.noise(x1 * zoom.x,y1 * zoom.y,z0 * zoom.z);
+  float q001=source.noise(x0 * zoom.x,y0 * zoom.y,z1 * zoom.z);
+  float q101=source.noise(x1 * zoom.x,y0 * zoom.y,z1 * zoom.z);
+  float q011=source.noise(x0 * zoom.x,y1 * zoom.y,z1 * zoom.z);
+  float q111=source.noise(x1 * zoom.x,y1 * zoom.y,z1 * zoom.z);
+  return TeraMath.triLerp(q000,q100,q010,q110,q001,q101,q011,q111,xMod / sampleRate,yMod / sampleRate,zMod / sampleRate);
+}
+public float[] noise(BlockRegion region){
+  return noise(region,1);
+}
+public float[] noise(BlockRegion region,float scale){
+  BlockRegion fullRegion=determineRequiredRegion(region);
+  float[] keyData=getKeyValues(fullRegion,scale);
+  float[] fullData=mapExpand(keyData,fullRegion);
+  return getSubset(fullData,fullRegion,region);
+}

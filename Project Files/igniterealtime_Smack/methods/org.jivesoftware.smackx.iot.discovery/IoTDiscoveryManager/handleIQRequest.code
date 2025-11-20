@@ -1,0 +1,57 @@
+@Override public IQ handleIQRequest(IQ iqRequest){
+  if (!isRegistry(iqRequest.getFrom())) {
+    LOGGER.log(Level.SEVERE,"Received control stanza from non-registry entity: " + iqRequest);
+    return null;
+  }
+  IoTClaimed iotClaimed=(IoTClaimed)iqRequest;
+  Jid owner=iotClaimed.getJid();
+  NodeInfo nodeInfo=iotClaimed.getNodeInfo();
+  ThingState state=getStateFor(nodeInfo);
+  state.setOwner(owner.asBareJid());
+  LOGGER.info("Our thing got claimed by " + owner + ". "+ iotClaimed);
+  IoTProvisioningManager iotProvisioningManager=IoTProvisioningManager.getInstanceFor(connection());
+  try {
+    iotProvisioningManager.sendFriendshipRequest(owner.asBareJid());
+  }
+ catch (  NotConnectedException|InterruptedException e) {
+    LOGGER.log(Level.WARNING,"Could not friendship owner",e);
+  }
+  return IQ.createResultIQ(iqRequest);
+}
+@SuppressWarnings("ObjectToString") @Override public IQ handleIQRequest(IQ iqRequest){
+  if (!isRegistry(iqRequest.getFrom())) {
+    LOGGER.log(Level.SEVERE,"Received control stanza from non-registry entity: " + iqRequest);
+    return null;
+  }
+  IoTDisowned iotDisowned=(IoTDisowned)iqRequest;
+  Jid from=iqRequest.getFrom();
+  NodeInfo nodeInfo=iotDisowned.getNodeInfo();
+  ThingState state=getStateFor(nodeInfo);
+  if (!from.equals(state.getRegistry())) {
+    LOGGER.severe("Received <disowned/> for " + nodeInfo + " from "+ from+ " but this is not the registry "+ state.getRegistry()+ " of the thing.");
+    return null;
+  }
+  if (state.isOwned()) {
+    state.setUnowned();
+  }
+ else {
+    LOGGER.fine("Received <disowned/> for " + nodeInfo + " but thing was not owned.");
+  }
+  return IQ.createResultIQ(iqRequest);
+}
+@Override public IQ handleIQRequest(IQ iqRequest){
+  if (!isRegistry(iqRequest.getFrom())) {
+    LOGGER.log(Level.SEVERE,"Received control stanza from non-registry entity: " + iqRequest);
+    return null;
+  }
+  IoTRemoved iotRemoved=(IoTRemoved)iqRequest;
+  ThingState state=getStateFor(iotRemoved.getNodeInfo());
+  state.setRemoved();
+  try {
+    IoTProvisioningManager.getInstanceFor(connection()).unfriend(iotRemoved.getFrom());
+  }
+ catch (  NotConnectedException|InterruptedException e) {
+    LOGGER.log(Level.SEVERE,"Could not unfriend registry after <removed/>",e);
+  }
+  return IQ.createResultIQ(iqRequest);
+}

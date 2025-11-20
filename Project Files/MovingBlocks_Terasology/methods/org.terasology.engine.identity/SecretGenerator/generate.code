@@ -1,0 +1,24 @@
+/** 
+ * Generates a secret from another secret, a seed, and a label
+ * @param secret
+ * @param label
+ * @param seed
+ * @param targetLength The desired length of the generated secret.
+ * @return The generated secret
+ */
+public static byte[] generate(byte[] secret,String label,byte[] seed,int targetLength){
+  int partLength=TeraMath.ceilToInt(secret.length / 2.0f);
+  byte[] part1=Arrays.copyOfRange(secret,0,partLength);
+  byte[] part2=Arrays.copyOfRange(secret,secret.length - partLength,secret.length);
+  byte[] labelBytes=label.getBytes(Charset.forName("US-ASCII"));
+  byte[] combinedLabelSeed=new byte[labelBytes.length + seed.length];
+  System.arraycopy(labelBytes,0,combinedLabelSeed,0,labelBytes.length);
+  System.arraycopy(seed,0,combinedLabelSeed,labelBytes.length,seed.length);
+  byte[] md5Result=phashMD5(part1,combinedLabelSeed,targetLength);
+  byte[] sha1Result=phashSHA1(part2,combinedLabelSeed,targetLength);
+  byte[] masterSecret=new byte[md5Result.length];
+  for (int i=0; i < masterSecret.length; ++i) {
+    masterSecret[i]=(byte)(md5Result[i] ^ sha1Result[i]);
+  }
+  return masterSecret;
+}

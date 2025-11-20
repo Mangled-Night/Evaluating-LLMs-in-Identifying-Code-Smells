@@ -1,0 +1,19 @@
+/** 
+ * Returns true, if a rotation of the signed preKey is necessary.
+ * @param userDevice our OmemoDevice
+ * @return true if rotation is necessary
+ * @throws IOException if an I/O error occurred.
+ */
+private boolean shouldRotateSignedPreKey(OmemoDevice userDevice) throws IOException {
+  if (!OmemoConfiguration.getRenewOldSignedPreKeys()) {
+    return false;
+  }
+  Date now=new Date();
+  Date lastRenewal=getOmemoStoreBackend().getDateOfLastSignedPreKeyRenewal(userDevice);
+  if (lastRenewal == null) {
+    lastRenewal=new Date();
+    getOmemoStoreBackend().setDateOfLastSignedPreKeyRenewal(userDevice,lastRenewal);
+  }
+  long allowedAgeMillis=MILLIS_PER_HOUR * OmemoConfiguration.getRenewOldSignedPreKeysAfterHours();
+  return now.getTime() - lastRenewal.getTime() > allowedAgeMillis;
+}

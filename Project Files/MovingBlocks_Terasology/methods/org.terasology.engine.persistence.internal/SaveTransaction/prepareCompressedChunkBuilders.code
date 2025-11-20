@@ -1,0 +1,19 @@
+/** 
+ * @param unsavedEntities currently loaded persistent entities without owner that have not been saved yet.This method removes entities it saves.
+ */
+private void prepareCompressedChunkBuilders(Set<EntityRef> unsavedEntities){
+  Map<Vector3i,Collection<EntityRef>> chunkPosToEntitiesMap=createChunkPosToUnsavedOwnerLessEntitiesMap();
+  allChunks=Maps.newHashMap();
+  allChunks.putAll(unloadedChunks);
+  for (  Map.Entry<Vector3i,ChunkImpl> chunkEntry : loadedChunks.entrySet()) {
+    Collection<EntityRef> entitiesToStore=chunkPosToEntitiesMap.get(chunkEntry.getKey());
+    if (entitiesToStore == null) {
+      entitiesToStore=Collections.emptySet();
+    }
+    ChunkImpl chunk=chunkEntry.getValue();
+    unsavedEntities.removeAll(entitiesToStore);
+    CompressedChunkBuilder compressedChunkBuilder=new CompressedChunkBuilder(privateEntityManager,chunk,entitiesToStore,false);
+    unsavedEntities.removeAll(compressedChunkBuilder.getStoredEntities());
+    allChunks.put(chunkEntry.getKey(),compressedChunkBuilder);
+  }
+}

@@ -1,0 +1,22 @@
+@Override protected TeraSparseArray16Bit internalDeserialize(int sizeX,int sizeY,int sizeZ,ByteBuffer buffer){
+  final byte hasData=buffer.get();
+  final TeraSparseArray16Bit array=new TeraSparseArray16Bit(sizeX,sizeY,sizeZ);
+  if (hasData == 0) {
+    array.fill=buffer.getShort();
+    return array;
+  }
+  final int rowSize=array.getSizeXZ();
+  array.inflated=new short[sizeY][];
+  array.deflated=new short[sizeY];
+  for (int y=0; y < sizeY; y++) {
+    final byte hasRow=buffer.get();
+    if (hasRow == 0) {
+      array.deflated[y]=buffer.getShort();
+    }
+ else {
+      array.inflated[y]=new short[rowSize];
+      getRow(array.inflated[y],rowSize,buffer);
+    }
+  }
+  return array;
+}

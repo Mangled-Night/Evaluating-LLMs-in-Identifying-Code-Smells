@@ -1,0 +1,21 @@
+private void processClassLoader(CommandProcess process,Instrumentation inst,ClassLoader targetClassLoader){
+  RowAffect affect=new RowAffect();
+  if (targetClassLoader != null) {
+    URL[] classLoaderUrls=ClassLoaderUtils.getUrls(targetClassLoader);
+    if (classLoaderUrls != null) {
+      affect.rCnt(classLoaderUrls.length);
+      if (classLoaderUrls.length == 0) {
+        process.appendResult(new MessageModel("urls is empty."));
+      }
+ else {
+        process.appendResult(new ClassLoaderModel().setUrls(StringUtils.toStringList(classLoaderUrls)));
+        affect.rCnt(classLoaderUrls.length);
+      }
+    }
+ else {
+      process.appendResult(new MessageModel("not a URLClassLoader."));
+    }
+  }
+  process.appendResult(new RowAffectModel(affect));
+  process.end();
+}

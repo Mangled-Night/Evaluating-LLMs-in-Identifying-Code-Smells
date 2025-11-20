@@ -1,0 +1,24 @@
+/** 
+ * Test for the OpenIQProvider class.
+ * @author Henning Staib
+ */
+public class OpenIQProviderTest extends SmackTestSuite {
+  private static final Properties outputProperties=new Properties();
+{
+    outputProperties.put(javax.xml.transform.OutputKeys.OMIT_XML_DECLARATION,"yes");
+  }
+  @Test public void shouldCorrectlyParseIQStanzaAttribute() throws Exception {
+    String control=XMLBuilder.create("open").a("xmlns","http://jabber.org/protocol/ibb").a("block-size","4096").a("sid","i781hf64").a("stanza","iq").asString(outputProperties);
+    OpenIQProvider oip=new OpenIQProvider();
+    XmlPullParser parser=PacketParserUtils.getParserFor(control);
+    Open open=oip.parse(parser,null);
+    assertEquals(StanzaType.IQ,open.getStanza());
+  }
+  @Test public void shouldCorrectlyParseMessageStanzaAttribute() throws Exception {
+    String control=XMLBuilder.create("open").a("xmlns","http://jabber.org/protocol/ibb").a("block-size","4096").a("sid","i781hf64").a("stanza","message").asString(outputProperties);
+    OpenIQProvider oip=new OpenIQProvider();
+    XmlPullParser parser=PacketParserUtils.getParserFor(control);
+    Open open=oip.parse(parser,null);
+    assertEquals(StanzaType.MESSAGE,open.getStanza());
+  }
+}

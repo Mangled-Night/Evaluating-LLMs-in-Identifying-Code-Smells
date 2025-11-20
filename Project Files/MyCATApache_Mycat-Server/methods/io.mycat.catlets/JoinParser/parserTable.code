@@ -1,0 +1,19 @@
+private void parserTable(SQLTableSource table,TableFilter tFilter,boolean isOutJoin){
+  if (table instanceof SQLJoinTableSource) {
+    SQLJoinTableSource table1=(SQLJoinTableSource)table;
+    joinType=table1.getJoinType().toString();
+    if ((table1.getJoinType() == JoinType.COMMA) || (table1.getJoinType() == JoinType.JOIN) || (table1.getJoinType() == JoinType.INNER_JOIN)|| (table1.getJoinType() == JoinType.LEFT_OUTER_JOIN)) {
+      tFilter=setTableFilter(tFilter,getTableFilter(table1.getLeft(),isOutJoin));
+      if (tableFilter == null) {
+        tableFilter=tFilter;
+      }
+    }
+    parserTable(table1.getRight(),tFilter,true);
+    SQLExpr expr=table1.getCondition();
+    parserJoinKey(expr);
+  }
+ else {
+    tFilter=setTableFilter(tFilter,getTableFilter(table,isOutJoin));
+    LOGGER.info("table " + table.toString() + " Alias:"+ table.getAlias()+ " Hints:"+ table.getHints());
+  }
+}

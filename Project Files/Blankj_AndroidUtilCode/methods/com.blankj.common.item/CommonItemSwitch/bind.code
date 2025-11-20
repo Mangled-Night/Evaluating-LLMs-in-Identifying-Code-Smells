@@ -1,0 +1,26 @@
+@SuppressLint("ClickableViewAccessibility") @Override public void bind(@NonNull final ItemViewHolder holder,int position){
+  super.bind(holder,position);
+  ClickUtils.applyPressedBgDark(holder.itemView);
+  final TextView titleTv=holder.findViewById(R.id.commonItemTitleTv);
+  final TextView contentTv=holder.findViewById(R.id.commonItemContentTv);
+  titleTv.setText(mTitle);
+  contentTv.setText(mContent);
+  final Switch switchView=holder.findViewById(R.id.commonItemSwitch);
+  switchView.setChecked(mState);
+  switchView.setOnTouchListener(new View.OnTouchListener(){
+    @Override public boolean onTouch(    View v,    MotionEvent event){
+      holder.itemView.onTouchEvent(event);
+      return true;
+    }
+  }
+);
+  holder.itemView.setOnClickListener(new View.OnClickListener(){
+    @Override public void onClick(    View v){
+      mSetStateConsumer.accept(!mState);
+      mState=mGetStateSupplier.get();
+      contentTv.setText(String.valueOf(mState));
+      switchView.setChecked(mState);
+    }
+  }
+);
+}

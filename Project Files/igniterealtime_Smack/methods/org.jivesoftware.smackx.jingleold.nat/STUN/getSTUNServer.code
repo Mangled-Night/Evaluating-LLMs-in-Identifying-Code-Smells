@@ -1,0 +1,25 @@
+/** 
+ * Get a new STUN Server Address and port from the server. If a error occurs or the server don't support STUN Service, null is returned.
+ * @param connection TODO javadoc me please
+ * @return the STUN server address
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ */
+public static STUN getSTUNServer(XMPPConnection connection) throws NotConnectedException, InterruptedException, NoResponseException, XMPPErrorException {
+  if (!connection.isConnected()) {
+    return null;
+  }
+  STUN stunPacket=new STUN();
+  DomainBareJid jid;
+  try {
+    jid=JidCreate.domainBareFrom(DOMAIN + "." + connection.getXMPPServiceDomain());
+  }
+ catch (  XmppStringprepException e) {
+    throw new AssertionError(e);
+  }
+  stunPacket.setTo(jid);
+  STUN response=connection.sendIqRequestAndWaitForResponse(stunPacket);
+  return response;
+}

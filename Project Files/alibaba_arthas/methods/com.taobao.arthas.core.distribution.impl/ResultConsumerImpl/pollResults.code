@@ -1,0 +1,46 @@
+@Override public List<ResultModel> pollResults(){
+  try {
+    lastAccessTime=System.currentTimeMillis();
+    long accessTime=lastAccessTime;
+    if (lock.tryLock(500,TimeUnit.MILLISECONDS)) {
+      polling=true;
+      sendingItemCount=0;
+      long firstResultTime=0;
+      long sendingDelay=0;
+      long waitingTime=0;
+      List<ResultModel> sendingResults=new ArrayList<ResultModel>(resultBatchSizeLimit);
+      while (!closed && sendingResults.size() < resultBatchSizeLimit && sendingDelay < 100 && waitingTime < pollTimeLimit) {
+        ResultModel aResult=resultQueue.poll(100,TimeUnit.MILLISECONDS);
+        if (aResult != null) {
+          sendingResults.add(aResult);
+          if (firstResultTime == 0) {
+            firstResultTime=System.currentTimeMillis();
+          }
+          if (shouldFlush(sendingResults,aResult)) {
+            break;
+          }
+        }
+ else {
+          if (firstResultTime > 0) {
+            sendingDelay=System.currentTimeMillis() - firstResultTime;
+          }
+          waitingTime=System.currentTimeMillis() - accessTime;
+        }
+      }
+      if (logger.isDebugEnabled()) {
+        logger.debug("pollResults: {}, results: {}",sendingResults.size(),JSON.toJSONString(sendingResults));
+      }
+      return sendingResults;
+    }
+  }
+ catch (  InterruptedException e) {
+  }
+ finally {
+    if (lock.isHeldByCurrentThread()) {
+      lastAccessTime=System.currentTimeMillis();
+      polling=false;
+      lock.unlock();
+    }
+  }
+  return Collections.emptyList();
+}

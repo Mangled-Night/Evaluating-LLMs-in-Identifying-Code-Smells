@@ -1,0 +1,31 @@
+@Override public V get(K key){
+  V value=cacheAccessor.get(key);
+  if (value == null) {
+    value=redisCache.get(key);
+    if (value != null) {
+      cacheAccessor.put(key,value);
+    }
+  }
+  return value;
+}
+@Override public V get(K key,Callable<V> valueLoader){
+  V value=cacheAccessor.get(key);
+  if (value == null) {
+    value=redisCache.get(key);
+    if (value == null) {
+      try {
+        value=valueLoader.call();
+      }
+ catch (      Exception e) {
+        throw new ValueRetrievalException(String.format("Value loader %s failed with an exception for key %s",valueLoader,key),e);
+      }
+      if (value == null) {
+        throw new ValueRetrievalException(String.format("Value loader %s returned a null value for key %s",valueLoader,key));
+      }
+      redisCache.put(key,value);
+      redisCache.get(key);
+    }
+    cacheAccessor.put(key,value);
+  }
+  return value;
+}

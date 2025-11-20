@@ -1,0 +1,48 @@
+public class AbstractMultiFormField extends FormField {
+  private final List<Value> values;
+  protected AbstractMultiFormField(  Builder<?,?> builder){
+    super(builder);
+    values=CollectionUtil.cloneAndSeal(builder.values);
+  }
+  @Override public final List<Value> getRawValues(){
+    return values;
+  }
+public abstract static class Builder<F extends AbstractMultiFormField,B extends FormField.Builder<F,B>> extends FormField.Builder<F,B> {
+    private List<Value> values;
+    protected Builder(    AbstractMultiFormField formField){
+      super(formField);
+      values=CollectionUtil.newListWith(formField.getRawValues());
+    }
+    protected Builder(    String fieldName,    FormField.Type type){
+      super(fieldName,type);
+    }
+    private void ensureValuesAreInitialized(){
+      if (values == null) {
+        values=new ArrayList<>();
+      }
+    }
+    @Override protected void resetInternal(){
+      values=null;
+    }
+    public abstract B addValue(    CharSequence value);
+    public B addValueVerbatim(    CharSequence value){
+      return addValueVerbatim(new Value(value));
+    }
+    public B addValueVerbatim(    Value value){
+      ensureValuesAreInitialized();
+      values.add(value);
+      return getThis();
+    }
+    public final B addValue(    Date date){
+      String dateString=XmppDateTime.formatXEP0082Date(date);
+      return addValueVerbatim(dateString);
+    }
+    public final B addValues(    Collection<? extends CharSequence> values){
+      ensureValuesAreInitialized();
+      for (      CharSequence value : values) {
+        addValueVerbatim(value);
+      }
+      return getThis();
+    }
+  }
+}

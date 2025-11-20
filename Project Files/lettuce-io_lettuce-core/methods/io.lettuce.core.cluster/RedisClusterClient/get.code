@@ -1,0 +1,14 @@
+private static <T>T get(CompletableFuture<T> future,Function<RedisException,RedisException> mapper){
+  try {
+    return future.get();
+  }
+ catch (  ExecutionException e) {
+    if (e.getCause() instanceof RedisException) {
+      throw mapper.apply((RedisException)e.getCause());
+    }
+    throw Exceptions.bubble(e);
+  }
+catch (  Exception e) {
+    throw Exceptions.bubble(e);
+  }
+}

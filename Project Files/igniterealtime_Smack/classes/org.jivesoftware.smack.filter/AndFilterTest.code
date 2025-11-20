@@ -1,0 +1,34 @@
+/** 
+ * A test case for the AndFilter class.
+ */
+public class AndFilterTest extends TestCase {
+  public void testNullArgs(){
+    PacketFilter filter=null;
+    try {
+      new AndFilter(filter,filter);
+      fail("Should have thrown IllegalArgumentException");
+    }
+ catch (    IllegalArgumentException e) {
+      assertTrue(true);
+    }
+  }
+  public void testAccept(){
+    MockPacketFilter trueFilter=new MockPacketFilter(true);
+    MockPacketFilter falseFilter=new MockPacketFilter(false);
+    MockPacket packet=new MockPacket();
+    AndFilter andFilter=new AndFilter(trueFilter,trueFilter);
+    assertTrue(andFilter.accept(packet));
+    andFilter=new AndFilter(trueFilter,falseFilter);
+    assertFalse(andFilter.accept(packet));
+    andFilter=new AndFilter(falseFilter,trueFilter);
+    assertFalse(andFilter.accept(packet));
+    andFilter=new AndFilter(falseFilter,falseFilter);
+    assertFalse(andFilter.accept(packet));
+    andFilter=new AndFilter();
+    andFilter.addFilter(trueFilter);
+    andFilter.addFilter(trueFilter);
+    andFilter.addFilter(falseFilter);
+    andFilter.addFilter(trueFilter);
+    assertFalse(andFilter.accept(packet));
+  }
+}

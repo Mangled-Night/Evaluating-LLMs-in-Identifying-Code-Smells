@@ -1,0 +1,55 @@
+@Override protected synchronized void loginInternal(String username,String password,Resourcepart resource) throws XMPPException, SmackException, IOException, InterruptedException {
+  SSLSession sslSession=secureSocket != null ? secureSocket.getSession() : null;
+  streamFeaturesAfterAuthenticationReceived=false;
+  authenticate(username,password,config.getAuthzid(),sslSession);
+  waitForConditionOrThrowConnectionException(() -> streamFeaturesAfterAuthenticationReceived,"compress features from server");
+  maybeEnableCompression();
+  smResumedSyncPoint=SyncPointState.initial;
+  smResumptionFailed=null;
+  if (isSmResumptionPossible()) {
+    smResumedSyncPoint=SyncPointState.request_sent;
+    sendNonza(new Resume(clientHandledStanzasCount,smSessionId));
+    waitForConditionOrThrowConnectionException(() -> smResumedSyncPoint == SyncPointState.successful || smResumptionFailed != null,"resume previous stream");
+    if (smResumedSyncPoint == SyncPointState.successful) {
+      afterSuccessfulLogin(true);
+      return;
+    }
+    assert smResumptionFailed != null;
+    LOGGER.fine("Stream resumption failed, continuing with normal stream establishment process: " + smResumptionFailed);
+  }
+  smEnabledSyncPoint=false;
+  List<Stanza> previouslyUnackedStanzas=new LinkedList<Stanza>();
+  if (unacknowledgedStanzas != null) {
+    unacknowledgedStanzas.drainTo(previouslyUnackedStanzas);
+    dropSmState();
+  }
+  bindResourceAndEstablishSession(resource);
+  if (isSmAvailable() && useSm) {
+    serverHandledStanzasCount=0;
+    sendNonza(new Enable(useSmResumption,smClientMaxResumptionTime));
+    waitForConditionOrThrowConnectionException(() -> smEnabledSyncPoint,"enabling stream mangement");
+synchronized (requestAckPredicates) {
+      if (requestAckPredicates.isEmpty()) {
+        requestAckPredicates.add(Predicate.forMessagesOrAfter5Stanzas());
+      }
+    }
+  }
+  if (!stanzaDroppedListeners.isEmpty()) {
+    for (    Stanza stanza : previouslyUnackedStanzas) {
+      for (      StanzaListener listener : stanzaDroppedListeners) {
+        try {
+          listener.processStanza(stanza);
+        }
+ catch (        InterruptedException|NotConnectedException|NotLoggedInException e) {
+          LOGGER.log(Level.FINER,"StanzaDroppedListener received exception",e);
+        }
+      }
+    }
+  }
+ else {
+    for (    Stanza stanza : previouslyUnackedStanzas) {
+      sendInternal(stanza);
+    }
+  }
+  afterSuccessfulLogin(false);
+}

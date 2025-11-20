@@ -1,0 +1,14 @@
+@Test void auth(){
+  WithPassword.run(client,() -> {
+    client.setOptions(ClientOptions.builder().pingBeforeActivateConnection(false).protocolVersion(ProtocolVersion.RESP2).build());
+    RedisCommands<String,String> connection=client.connect().sync();
+    assertThatThrownBy(connection::ping).isInstanceOf(RedisException.class).hasMessageContaining("NOAUTH");
+    assertThat(connection.auth(passwd)).isEqualTo("OK");
+    assertThat(connection.set(key,value)).isEqualTo("OK");
+    RedisURI redisURI=RedisURI.Builder.redis(host,port).withDatabase(2).withPassword(passwd).build();
+    RedisCommands<String,String> authConnection=client.connect(redisURI).sync();
+    authConnection.ping();
+    authConnection.getStatefulConnection().close();
+  }
+);
+}

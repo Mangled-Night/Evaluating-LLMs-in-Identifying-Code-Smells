@@ -1,0 +1,20 @@
+@Test void shouldFailIfAllReadCandidateNodesFail(){
+  CompletableFuture<StatefulRedisConnection<String,String>> failed1=new CompletableFuture<>();
+  failed1.completeExceptionally(new IllegalStateException());
+  CompletableFuture<StatefulRedisConnection<String,String>> failed2=new CompletableFuture<>();
+  failed2.completeExceptionally(new IllegalStateException());
+  when(clientMock.connectToNodeAsync(eq(StringCodec.UTF8),eq("localhost:1"),any(),any())).thenReturn(ConnectionFuture.from(socketAddressMock,failed2));
+  when(clientMock.connectToNodeAsync(eq(StringCodec.UTF8),eq("localhost:2"),any(),any())).thenReturn(ConnectionFuture.from(socketAddressMock,failed2));
+  AsyncCommand<String,String,String> async=new AsyncCommand<>(new Command<>(CommandType.READONLY,null,null));
+  async.complete("OK");
+  sut.setReadFrom(ReadFrom.UPSTREAM_PREFERRED);
+  try {
+    sut.getConnection(ConnectionIntent.READ,1);
+    fail("Missing RedisException");
+  }
+ catch (  RedisException e) {
+    assertThat(e).isInstanceOf(RedisConnectionException.class).hasRootCauseExactlyInstanceOf(IllegalStateException.class);
+  }
+  verify(clientMock).connectToNodeAsync(eq(StringCodec.UTF8),eq("localhost:1"),any(),any());
+  verify(clientMock).connectToNodeAsync(eq(StringCodec.UTF8),eq("localhost:2"),any(),any());
+}

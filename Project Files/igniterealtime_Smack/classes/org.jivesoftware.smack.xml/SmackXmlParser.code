@@ -1,0 +1,37 @@
+public class SmackXmlParser {
+  private static final ServiceLoader<XmlPullParserFactory> xmlPullParserFactoryServiceLoader;
+static {
+    xmlPullParserFactoryServiceLoader=ServiceLoader.load(XmlPullParserFactory.class);
+  }
+  private static XmlPullParserFactory xmlPullParserFactory;
+  public static XmlPullParserFactory getXmlPullParserFactory(){
+    final XmlPullParserFactory xmlPullParserFactory=SmackXmlParser.xmlPullParserFactory;
+    if (xmlPullParserFactory != null) {
+      return xmlPullParserFactory;
+    }
+    Iterator<XmlPullParserFactory> iterator=xmlPullParserFactoryServiceLoader.iterator();
+    if (!iterator.hasNext()) {
+      throw new IllegalStateException("No XmlPullParserFactory registered with Service Provider Interface (SPI). Is smack-xmlparser-xpp3 or smack-xmlparser-stax in classpath?");
+    }
+    return iterator.next();
+  }
+  public static void setXmlPullParserFactory(  XmlPullParserFactory xmlPullParserFactory){
+    SmackXmlParser.xmlPullParserFactory=xmlPullParserFactory;
+  }
+  /** 
+ * Creates a new XmlPullParser suitable for parsing XMPP. This means in particular that FEATURE_PROCESS_NAMESPACES is enabled. <p> Note that not all XmlPullParser implementations will return a String on <code>getText()</code> if the parser is on START_ELEMENT or END_ELEMENT. So you must not rely on this behavior when using the parser. </p>
+ * @param reader a reader to read the XML data from.
+ * @return A suitable XmlPullParser for XMPP parsing.
+ * @throws XmlPullParserException in case of an XmlPullParserException.
+ */
+  public static XmlPullParser newXmlParser(  Reader reader) throws XmlPullParserException {
+    XmlPullParserFactory xmlPullParserFactory=getXmlPullParserFactory();
+    return xmlPullParserFactory.newXmlPullParser(reader);
+  }
+  public static XmlPullParser newXmlParser(  InputStream inputStream) throws XmlPullParserException {
+    CharsetDecoder utf8Decoder=StandardCharsets.UTF_8.newDecoder();
+    InputStreamReader inputStreamReader=new InputStreamReader(inputStream,utf8Decoder);
+    Reader reader=new BufferedReader(inputStreamReader);
+    return newXmlParser(reader);
+  }
+}

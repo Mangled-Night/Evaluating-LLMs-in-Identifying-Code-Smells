@@ -1,0 +1,22 @@
+private List<List<Condition>> getConditionList(String sql){
+  SQLStatementParser parser=null;
+  parser=new MySqlStatementParser(sql);
+  MycatSchemaStatVisitor visitor=null;
+  SQLStatement statement=null;
+  try {
+    statement=parser.parseStatement();
+    visitor=new MycatSchemaStatVisitor();
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+  }
+  statement.accept(visitor);
+  List<List<Condition>> mergedConditionList=new ArrayList<List<Condition>>();
+  if (visitor.hasOrCondition()) {
+    mergedConditionList=visitor.splitConditions();
+  }
+ else {
+    mergedConditionList.add(visitor.getConditions());
+  }
+  return mergedConditionList;
+}

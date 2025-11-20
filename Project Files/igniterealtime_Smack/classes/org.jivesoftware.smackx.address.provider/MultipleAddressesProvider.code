@@ -1,0 +1,37 @@
+/** 
+ * The MultipleAddressesProvider parses  {@link MultipleAddresses} packets.
+ * @author Gaston Dombiak
+ */
+public class MultipleAddressesProvider extends ExtensionElementProvider<MultipleAddresses> {
+  @Override public MultipleAddresses parse(  XmlPullParser parser,  int initialDepth,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    MultipleAddresses multipleAddresses=new MultipleAddresses();
+    outerloop:     while (true) {
+      XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+        String name=parser.getName();
+switch (name) {
+case MultipleAddresses.Address.ELEMENT:
+        String typeString=parser.getAttributeValue("","type");
+      MultipleAddresses.Type type=MultipleAddresses.Type.valueOf(typeString);
+    Jid jid=ParserUtils.getJidAttribute(parser,"jid");
+  String node=parser.getAttributeValue("","node");
+String desc=parser.getAttributeValue("","desc");
+boolean delivered="true".equals(parser.getAttributeValue("","delivered"));
+String uri=parser.getAttributeValue("","uri");
+multipleAddresses.addAddress(type,jid,node,desc,delivered,uri);
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return multipleAddresses;
+}
+}

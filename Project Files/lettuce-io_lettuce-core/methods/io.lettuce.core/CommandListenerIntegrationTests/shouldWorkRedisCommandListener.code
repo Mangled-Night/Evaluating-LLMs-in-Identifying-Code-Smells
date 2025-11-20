@@ -1,0 +1,36 @@
+@Test void shouldWorkRedisCommandListener(){
+  List<CommandStartedEvent> startedEvents=Collections.synchronizedList(new ArrayList<>());
+  List<CommandSucceededEvent> succeededEvents=Collections.synchronizedList(new ArrayList<>());
+  List<CommandFailedEvent> failedEvents=Collections.synchronizedList(new ArrayList<>());
+  CommandListener listener=new CommandListener(){
+    @Override public void commandStarted(    CommandStartedEvent event){
+      event.getContext().put(key,value);
+      startedEvents.add(event);
+      assertThat(event.getStartedAt()).isNotNull();
+    }
+    @Override public void commandSucceeded(    CommandSucceededEvent event){
+      succeededEvents.add(event);
+      assertThat(event.getContext()).containsEntry(key,value);
+      assertThat(event.getDuration()).isPositive();
+    }
+    @Override public void commandFailed(    CommandFailedEvent event){
+      failedEvents.add(event);
+      assertThat(event.getContext()).containsEntry(key,value);
+      assertThat(event.getCause()).isInstanceOf(RedisCommandExecutionException.class);
+    }
+  }
+;
+  client.addListener(listener);
+  RedisCommands<String,String> sync=client.connect().sync();
+  sync.set(key,value);
+  sync.get(key);
+  try {
+    sync.llen(key);
+  }
+ catch (  RedisCommandExecutionException ignored) {
+  }
+  assertThat(startedEvents).hasSize(3);
+  assertThat(succeededEvents).hasSize(2);
+  assertThat(failedEvents).hasSize(1);
+  client.removeListener(listener);
+}

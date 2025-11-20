@@ -1,0 +1,15 @@
+/** 
+ * Target should respond with not-acceptable error if no listeners for incoming Socks5 bytestream requests are registered.
+ * @throws XMPPException should not happen
+ */
+public void testRespondWithErrorOnSocks5BytestreamRequest() throws XMPPException {
+  XMPPConnection targetConnection=getConnection(0);
+  XMPPConnection initiatorConnection=getConnection(1);
+  Bytestream bytestreamInitiation=Socks5PacketUtils.createBytestreamInitiation(initiatorConnection.getUser(),targetConnection.getUser(),"session_id");
+  bytestreamInitiation.addStreamHost("proxy.localhost","127.0.0.1",7777);
+  StanzaCollector collector=initiatorConnection.createStanzaCollector(new PacketIDFilter(bytestreamInitiation.getStanzaId()));
+  initiatorConnection.sendStanza(bytestreamInitiation);
+  Packet result=collector.nextResult();
+  assertNotNull(result.getError());
+  assertEquals(XMPPError.Condition.no_acceptable.toString(),result.getError().getCondition());
+}

@@ -1,0 +1,59 @@
+Command<K,V,List<V>> zrangebyscore(K key,double min,double max){
+  return zrangebyscore(key,string(min),string(max));
+}
+Command<K,V,List<V>> zrangebyscore(K key,String min,String max){
+  notNullKey(key);
+  notNullMinMax(min,max);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key).add(min).add(max);
+  return createCommand(ZRANGEBYSCORE,new ValueListOutput<>(codec),args);
+}
+Command<K,V,List<V>> zrangebyscore(K key,double min,double max,long offset,long count){
+  return zrangebyscore(key,string(min),string(max),offset,count);
+}
+Command<K,V,List<V>> zrangebyscore(K key,String min,String max,long offset,long count){
+  notNullKey(key);
+  notNullMinMax(min,max);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  args.addKey(key).add(min).add(max).add(LIMIT).add(offset).add(count);
+  return createCommand(ZRANGEBYSCORE,new ValueListOutput<>(codec),args);
+}
+Command<K,V,List<V>> zrangebyscore(K key,Range<? extends Number> range,Limit limit){
+  notNullKey(key);
+  notNullRange(range);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  args.addKey(key).add(min(range)).add(max(range));
+  if (limit.isLimited()) {
+    args.add(LIMIT).add(limit.getOffset()).add(limit.getCount());
+  }
+  return createCommand(ZRANGEBYSCORE,new ValueListOutput<>(codec),args);
+}
+Command<K,V,Long> zrangebyscore(ValueStreamingChannel<V> channel,K key,double min,double max){
+  return zrangebyscore(channel,key,string(min),string(max));
+}
+Command<K,V,Long> zrangebyscore(ValueStreamingChannel<V> channel,K key,String min,String max){
+  notNullKey(key);
+  notNullMinMax(min,max);
+  LettuceAssert.notNull(channel,"ScoredValueStreamingChannel " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key).add(min).add(max);
+  return createCommand(ZRANGEBYSCORE,new ValueStreamingOutput<>(codec,channel),args);
+}
+Command<K,V,Long> zrangebyscore(ValueStreamingChannel<V> channel,K key,double min,double max,long offset,long count){
+  return zrangebyscore(channel,key,string(min),string(max),offset,count);
+}
+Command<K,V,Long> zrangebyscore(ValueStreamingChannel<V> channel,K key,String min,String max,long offset,long count){
+  notNullKey(key);
+  notNullMinMax(min,max);
+  LettuceAssert.notNull(channel,"ScoredValueStreamingChannel " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  addLimit(args.addKey(key).add(min).add(max),Limit.create(offset,count));
+  return createCommand(ZRANGEBYSCORE,new ValueStreamingOutput<>(codec,channel),args);
+}
+Command<K,V,Long> zrangebyscore(ValueStreamingChannel<V> channel,K key,Range<? extends Number> range,Limit limit){
+  notNullKey(key);
+  notNullRange(range);
+  notNullLimit(limit);
+  LettuceAssert.notNull(channel,"ScoredValueStreamingChannel " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  addLimit(args.addKey(key).add(min(range)).add(max(range)),limit);
+  return createCommand(ZRANGEBYSCORE,new ValueStreamingOutput<>(codec,channel),args);
+}

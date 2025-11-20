@@ -1,0 +1,18 @@
+/** 
+ * Prepare an unchecked  {@link RuntimeException} that will bubble upstream for synchronization usage (i.e. on calling{@link Future#get()}).
+ * @param t the root cause
+ * @return an unchecked exception that should choose bubbling up over error callback path.
+ */
+public static RuntimeException fromSynchronization(Throwable t){
+  Throwable throwableToUse=unwrap(t);
+  if (throwableToUse instanceof RedisCommandTimeoutException) {
+    return new RedisCommandTimeoutException(throwableToUse);
+  }
+  if (throwableToUse instanceof RedisCommandExecutionException) {
+    return bubble(throwableToUse);
+  }
+  if (throwableToUse instanceof RuntimeException) {
+    return new RedisException(throwableToUse);
+  }
+  return bubble(throwableToUse);
+}

@@ -1,0 +1,29 @@
+/** 
+ * Verifies the request/response pairs by checking if their numbers match and executes the verification for each pair.
+ */
+@SuppressWarnings("unchecked") public void verifyAll(){
+  assertEquals(requests.size(),responsesList.size());
+  if (printProtocol)   System.out.println("=================== Start ===============\n");
+  for (int i=0; i < requests.size(); i++) {
+    Stanza request=requests.get(i);
+    Stanza response=responsesList.get(i);
+    if (printProtocol) {
+      System.out.println("------------------- Request -------------\n");
+      System.out.println(XmlUtil.prettyFormatXml(request.toXML()));
+      System.out.println("------------------- Response ------------\n");
+      if (response != null) {
+        System.out.println(XmlUtil.prettyFormatXml(response.toXML()));
+      }
+ else {
+        System.out.println("No response");
+      }
+    }
+    Verification<Stanza,Stanza>[] verifications=(Verification<Stanza,Stanza>[])verificationList.get(i);
+    if (verifications != null) {
+      for (      Verification<Stanza,Stanza> verification : verifications) {
+        verification.verify(request,response);
+      }
+    }
+  }
+  if (printProtocol)   System.out.println("=================== End =================\n");
+}

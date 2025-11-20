@@ -1,0 +1,24 @@
+@Test public void testPropagateSunlightAppearingMidChunk(){
+  Chunk topChunk=new ChunkImpl(new Vector3i(0,1,0),blockManager,extraDataManager);
+  Chunk bottomChunk=new ChunkImpl(new Vector3i(0,0,0),blockManager,extraDataManager);
+  provider.addChunk(topChunk);
+  provider.addChunk(bottomChunk);
+  for (  Vector3ic pos : new BlockRegion(0,0,0).setSize(Chunks.SIZE_X,1,Chunks.SIZE_Z)) {
+    topChunk.setSunlight(pos,(byte)0);
+    topChunk.setSunlightRegen(pos,(byte)0);
+  }
+  for (  Vector3ic pos : new BlockRegion(8,0,8).setSize(Chunks.SIZE_X - 16,1,Chunks.SIZE_Z - 16)) {
+    topChunk.setSunlight(pos,(byte)0);
+    topChunk.setSunlightRegen(pos,(byte)32);
+  }
+  InternalLightProcessor.generateInternalLighting(bottomChunk);
+  propagator.propagateBetween(topChunk,bottomChunk,Side.BOTTOM,false);
+  propagator.process();
+  sunlightPropagator.process();
+  for (int i=0; i < 15; ++i) {
+    assertEquals(14 - i,bottomChunk.getSunlight(7,33 + i,16),"Incorrect value at " + (33 + i));
+  }
+  for (int i=2; i < 33; ++i) {
+    assertEquals(14,bottomChunk.getSunlight(7,i,16),"Incorrect value at " + i);
+  }
+}

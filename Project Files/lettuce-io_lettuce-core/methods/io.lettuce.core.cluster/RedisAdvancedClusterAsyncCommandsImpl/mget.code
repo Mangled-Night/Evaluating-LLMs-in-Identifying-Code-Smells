@@ -1,0 +1,50 @@
+@Override public RedisFuture<List<KeyValue<K,V>>> mget(K... keys){
+  return mget(Arrays.asList(keys));
+}
+@Override public RedisFuture<List<KeyValue<K,V>>> mget(Iterable<K> keys){
+  Map<Integer,List<K>> partitioned=SlotHash.partition(codec,keys);
+  if (partitioned.size() < 2) {
+    return super.mget(keys);
+  }
+  Map<Integer,Map<K,Integer>> partitionedKeysToIndexes=new HashMap<>(partitioned.size());
+  for (  Integer partition : partitioned.keySet()) {
+    List<K> keysForPartition=partitioned.get(partition);
+    Map<K,Integer> keysToIndexes=new HashMap<>(keysForPartition.size());
+    for (int i=0; i < keysForPartition.size(); i++) {
+      keysToIndexes.put(keysForPartition.get(i),i);
+    }
+    partitionedKeysToIndexes.put(partition,keysToIndexes);
+  }
+  Map<K,Integer> slots=SlotHash.getSlots(partitioned);
+  Map<Integer,RedisFuture<List<KeyValue<K,V>>>> executions=new HashMap<>(partitioned.size());
+  for (  Map.Entry<Integer,List<K>> entry : partitioned.entrySet()) {
+    RedisFuture<List<KeyValue<K,V>>> mget=super.mget(entry.getValue());
+    executions.put(entry.getKey(),mget);
+  }
+  return new PipelinedRedisFuture<>(executions,objectPipelinedRedisFuture -> {
+    List<KeyValue<K,V>> result=new ArrayList<>(slots.size());
+    for (    K opKey : keys) {
+      int slot=slots.get(opKey);
+      int position=partitionedKeysToIndexes.get(slot).get(opKey);
+      RedisFuture<List<KeyValue<K,V>>> listRedisFuture=executions.get(slot);
+      result.add(MultiNodeExecution.execute(() -> listRedisFuture.get().get(position)));
+    }
+    return result;
+  }
+);
+}
+@Override public RedisFuture<Long> mget(KeyValueStreamingChannel<K,V> channel,K... keys){
+  return mget(channel,Arrays.asList(keys));
+}
+@Override public RedisFuture<Long> mget(KeyValueStreamingChannel<K,V> channel,Iterable<K> keys){
+  Map<Integer,List<K>> partitioned=SlotHash.partition(codec,keys);
+  if (partitioned.size() < 2) {
+    return super.mget(channel,keys);
+  }
+  Map<Integer,RedisFuture<Long>> executions=new HashMap<>();
+  for (  Map.Entry<Integer,List<K>> entry : partitioned.entrySet()) {
+    RedisFuture<Long> del=super.mget(channel,entry.getValue());
+    executions.put(entry.getKey(),del);
+  }
+  return MultiNodeExecution.aggregateAsync(executions);
+}

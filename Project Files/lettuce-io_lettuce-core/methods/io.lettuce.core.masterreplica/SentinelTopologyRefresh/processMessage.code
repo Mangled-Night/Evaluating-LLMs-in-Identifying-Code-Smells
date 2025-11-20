@@ -1,0 +1,29 @@
+private void processMessage(String source,String channel,String message){
+  topologyRefresh.processMessage(source,channel,message,() -> {
+    LOG.debug("Received topology changed signal from Redis Sentinel ({}), scheduling topology update",channel);
+    return () -> refreshRunnables.forEach(Runnable::run);
+  }
+);
+  sentinelReconnect.processMessage(source,channel,message,() -> {
+    LOG.debug("Received sentinel state changed signal from Redis Sentinel, scheduling sentinel reconnect attempts");
+    return this::initializeSentinels;
+  }
+);
+}
+void processMessage(String source,String channel,String message,Supplier<Runnable> runnableSupplier){
+  if (!processingAllowed(channel,message)) {
+    return;
+  }
+  timedSemaphore.onEvent(timeout -> {
+    Runnable runnable=runnableSupplier.get();
+    if (timeout == null) {
+      EventRecorder.getInstance().record(new SentinelTopologyRefreshEvent(source,message,0));
+      eventExecutors.submit(runnable);
+    }
+ else {
+      EventRecorder.getInstance().record(new SentinelTopologyRefreshEvent(source,message,timeout.remaining()));
+      eventExecutors.schedule(runnable,timeout.remaining(),TimeUnit.MILLISECONDS);
+    }
+  }
+);
+}

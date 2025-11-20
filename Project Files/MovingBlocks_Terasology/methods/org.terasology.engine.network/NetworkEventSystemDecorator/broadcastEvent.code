@@ -1,0 +1,17 @@
+private <T extends Event>void broadcastEvent(EntityRef entity,T event,EventMetadata<T> metadata){
+  if (networkSystem.getMode().isServer()) {
+    NetworkComponent netComp=entity.getComponent(NetworkComponent.class);
+    BlockComponent blockComp=entity.getComponent(BlockComponent.class);
+    if (netComp != null || blockComp != null) {
+      Client instigatorClient=null;
+      if (metadata.isSkipInstigator() && event instanceof NetworkEvent) {
+        instigatorClient=networkSystem.getOwner(((NetworkEvent)event).getInstigator());
+      }
+      for (      Client client : networkSystem.getPlayers()) {
+        if (!client.equals(instigatorClient)) {
+          client.send(event,entity);
+        }
+      }
+    }
+  }
+}

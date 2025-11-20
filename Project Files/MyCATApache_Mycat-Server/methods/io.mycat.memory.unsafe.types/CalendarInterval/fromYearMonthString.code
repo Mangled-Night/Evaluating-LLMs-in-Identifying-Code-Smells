@@ -1,0 +1,26 @@
+/** 
+ * Parse YearMonth string in form: [-]YYYY-MM adapted from HiveIntervalYearMonth.valueOf
+ */
+public static CalendarInterval fromYearMonthString(String s) throws IllegalArgumentException {
+  CalendarInterval result=null;
+  if (s == null) {
+    throw new IllegalArgumentException("Interval year-month string was null");
+  }
+  s=s.trim();
+  Matcher m=yearMonthPattern.matcher(s);
+  if (!m.matches()) {
+    throw new IllegalArgumentException("Interval string does not match year-month format of 'y-m': " + s);
+  }
+ else {
+    try {
+      int sign=m.group(1) != null && m.group(1).equals("-") ? -1 : 1;
+      int years=(int)toLongWithRange("year",m.group(2),0,Integer.MAX_VALUE);
+      int months=(int)toLongWithRange("month",m.group(3),0,11);
+      result=new CalendarInterval(sign * (years * 12 + months),0);
+    }
+ catch (    Exception e) {
+      throw new IllegalArgumentException("Error parsing interval year-month string: " + e.getMessage(),e);
+    }
+  }
+  return result;
+}

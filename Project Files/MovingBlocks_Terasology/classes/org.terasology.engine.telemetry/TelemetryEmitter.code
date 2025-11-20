@@ -1,0 +1,71 @@
+/** 
+ * TelemetryEmitter emit metrics to the telemetry server.
+ * @see <a href="https://github.com/snowplow/snowplow/wiki/Java-Tracker#emitters">https://github.com/snowplow/snowplow/wiki/Java-Tracker#emitterss</a>
+ */
+public class TelemetryEmitter extends BatchEmitter {
+  public static final String DEFAULT_COLLECTOR_PROTOCOL="http";
+  public static final String DEFAULT_COLLECTOR_HOST="utility.terasology.org";
+  public static final String DEFAULT_COLLECTOR_OWNER="Terasology Community";
+  public static final String DEFAULT_COLLECTOR_NAME="TelemetryCollector";
+  public static final int DEFAULT_COLLECTOR_PORT=14654;
+  private static final Logger logger=LoggerFactory.getLogger(TelemetryEmitter.class);
+  private long closeTimeout=5;
+  protected TelemetryEmitter(  Builder<?> builder){
+    super(builder);
+  }
+  public static Builder<?> builder(){
+    return new Builder2();
+  }
+  public static URL getDefaultCollectorURL(  String protocol,  String host,  int port){
+    URL url=null;
+    try {
+      url=new URL(protocol,host,port,"");
+    }
+ catch (    MalformedURLException e) {
+      logger.error("Telemetry server URL mal formed",e);
+    }
+    return url;
+  }
+  private static HttpClientAdapter getDefaultAdapter(  URL url){
+    PoolingHttpClientConnectionManager manager=new PoolingHttpClientConnectionManager();
+    manager.setDefaultMaxPerRoute(50);
+    CloseableHttpClient client=HttpClients.custom().setConnectionManager(manager).build();
+    return ApacheHttpClientAdapter.builder().url(url.toString()).httpClient(client).build();
+  }
+  public void changeUrl(  URL url){
+    HttpClientAdapter httpClientAdapter=getDefaultAdapter(url);
+    this.httpClientAdapter=httpClientAdapter;
+  }
+  @Override public void close(){
+    flushBuffer();
+    if (executor != null) {
+      executor.shutdown();
+      try {
+        if (!executor.awaitTermination(closeTimeout,TimeUnit.SECONDS)) {
+          executor.shutdownNow();
+          if (!executor.awaitTermination(closeTimeout,TimeUnit.SECONDS)) {
+            logger.warn("Executor did not terminate");
+          }
+        }
+      }
+ catch (      InterruptedException ie) {
+        executor.shutdownNow();
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+public abstract static class Builder<T extends Builder<T>> extends BatchEmitter.Builder<T> {
+    public TelemetryEmitter build(){
+      URL url=getDefaultCollectorURL(DEFAULT_COLLECTOR_PROTOCOL,DEFAULT_COLLECTOR_HOST,DEFAULT_COLLECTOR_PORT);
+      HttpClientAdapter httpClientAdapter=getDefaultAdapter(url);
+      this.httpClientAdapter(httpClientAdapter);
+      this.batchSize(1);
+      return new TelemetryEmitter(this);
+    }
+  }
+private static class Builder2 extends Builder<Builder2> {
+    @Override protected Builder2 self(){
+      return this;
+    }
+  }
+}

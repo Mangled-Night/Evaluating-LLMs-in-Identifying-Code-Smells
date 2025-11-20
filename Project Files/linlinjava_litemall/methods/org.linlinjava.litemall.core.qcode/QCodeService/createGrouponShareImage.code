@@ -1,0 +1,20 @@
+public String createGrouponShareImage(String goodName,String goodPicUrl,LitemallGroupon groupon){
+  try {
+    File file=wxMaService.getQrcodeService().createWxaCodeUnlimit("groupon," + groupon.getId(),"pages" + "/index/index");
+    FileInputStream inputStream=new FileInputStream(file);
+    byte[] imageData=drawPicture(inputStream,goodPicUrl,goodName);
+    ByteArrayInputStream inputStream2=new ByteArrayInputStream(imageData);
+    LitemallStorage storageInfo=storageService.store(inputStream2,imageData.length,"image/jpeg",getKeyName(groupon.getId().toString()));
+    return storageInfo.getUrl();
+  }
+ catch (  WxErrorException e) {
+    logger.error(e.getMessage(),e);
+  }
+catch (  FileNotFoundException e) {
+    logger.error(e.getMessage(),e);
+  }
+catch (  IOException e) {
+    logger.error(e.getMessage(),e);
+  }
+  return "";
+}

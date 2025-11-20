@@ -1,0 +1,22 @@
+public void registerTraceAdviceListener(String className,String owner,String methodName,String methodDesc,AdviceListener listener){
+  className=className.replace('/','.');
+  String key=keyForTrace(className,owner,methodName,methodDesc);
+  List<AdviceListener> listeners=map.get(key);
+  if (listeners == null) {
+    listeners=new ArrayList<AdviceListener>();
+    map.put(key,listeners);
+  }
+  if (!listeners.contains(listener)) {
+    listeners.add(listener);
+  }
+}
+public static void registerTraceAdviceListener(ClassLoader classLoader,String className,String owner,String methodName,String methodDesc,AdviceListener listener){
+  classLoader=wrap(classLoader);
+  className=className.replace('/','.');
+  ClassLoaderAdviceListenerManager manager=adviceListenerMap.get(classLoader);
+  if (manager == null) {
+    manager=new ClassLoaderAdviceListenerManager();
+    adviceListenerMap.put(classLoader,manager);
+  }
+  manager.registerTraceAdviceListener(className,owner,methodName,methodDesc,listener);
+}

@@ -1,0 +1,27 @@
+/** 
+ * Creates a new  {@link RedisPublisher} for a static command.
+ * @param staticCommand static command, must not be {@code null}.
+ * @param connection the connection, must not be {@code null}.
+ * @param dissolve dissolve collections into particular elements.
+ * @param publishOn executor to use for publishOn signals.
+ */
+public RedisPublisher(RedisCommand<K,V,T> staticCommand,StatefulConnection<K,V> connection,boolean dissolve,Executor publishOn){
+  this(() -> staticCommand,connection,dissolve,publishOn);
+}
+/** 
+ * Creates a new  {@link RedisPublisher} for a command supplier.
+ * @param commandSupplier command supplier, must not be {@code null}.
+ * @param connection the connection, must not be {@code null}.
+ * @param dissolve dissolve collections into particular elements.
+ * @param publishOn executor to use for publishOn signals.
+ */
+public RedisPublisher(Supplier<RedisCommand<K,V,T>> commandSupplier,StatefulConnection<K,V> connection,boolean dissolve,Executor publishOn){
+  LettuceAssert.notNull(commandSupplier,"CommandSupplier must not be null");
+  LettuceAssert.notNull(connection,"StatefulConnection must not be null");
+  LettuceAssert.notNull(publishOn,"Executor must not be null");
+  this.commandSupplier=commandSupplier;
+  this.connection=connection;
+  this.dissolve=dissolve;
+  this.executor=publishOn;
+  this.ref=new AtomicReference<>(commandSupplier.get());
+}

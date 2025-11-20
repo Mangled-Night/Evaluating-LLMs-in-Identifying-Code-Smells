@@ -1,0 +1,10 @@
+@Test void testRegularClientPublish() throws Exception {
+  String nodeId=pubSubConnection.sync().clusterMyId();
+  RedisClusterNode otherNode=getOtherThan(nodeId);
+  pubSubConnection.sync().subscribe(key);
+  pubSubConnection.addListener(connectionListener);
+  connection.getConnection(nodeId).sync().publish(key,value);
+  assertThat(connectionListener.getMessages().take()).isEqualTo(value);
+  connection.getConnection(otherNode.getNodeId()).sync().publish(key,value);
+  assertThat(connectionListener.getMessages().take()).isEqualTo(value);
+}

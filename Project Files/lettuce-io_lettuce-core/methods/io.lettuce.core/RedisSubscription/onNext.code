@@ -1,0 +1,35 @@
+/** 
+ * Called by  {@link StreamingOutput} to dispatch data (push).
+ * @param t element
+ */
+@Override public void onNext(T t){
+  LettuceAssert.notNull(t,"Data must not be null");
+  State state=state();
+  if (state == State.COMPLETED) {
+    return;
+  }
+  if (data.isEmpty() && state() == State.DEMAND) {
+    long initial=getDemand();
+    if (initial > 0) {
+      try {
+        DEMAND.decrementAndGet(this);
+        this.subscriber.onNext(t);
+      }
+ catch (      Exception e) {
+        onError(e);
+      }
+      return;
+    }
+  }
+  if (!data.offer(t)) {
+    Subscriber<?> subscriber=this.subscriber;
+    Context context=Context.empty();
+    if (subscriber instanceof CoreSubscriber) {
+      context=((CoreSubscriber)subscriber).currentContext();
+    }
+    Throwable e=Operators.onOperatorError(this,Exceptions.failWithOverflow(),t,context);
+    onError(e);
+    return;
+  }
+  onDataAvailable();
+}

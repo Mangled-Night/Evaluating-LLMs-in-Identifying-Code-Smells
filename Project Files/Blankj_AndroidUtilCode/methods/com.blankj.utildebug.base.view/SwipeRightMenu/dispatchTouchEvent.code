@@ -1,0 +1,91 @@
+@Override public boolean dispatchTouchEvent(MotionEvent event){
+  int x=(int)event.getRawX();
+  int y=(int)event.getRawY();
+switch (event.getAction()) {
+case MotionEvent.ACTION_DOWN:
+    if (isTouching) {
+      return false;
+    }
+  isTouching=true;
+close(this);
+mDownX=x;
+mDownY=y;
+mLastX=x;
+mLastY=y;
+mState=STATE_DOWN;
+slideDirection=SLIDE_INIT;
+super.dispatchTouchEvent(event);
+break;
+case MotionEvent.ACTION_MOVE:
+if (mState == STATE_DOWN && Math.abs(x - mDownX) < MIN_DISTANCE_MOVE && Math.abs(y - mDownY) < MIN_DISTANCE_MOVE) {
+break;
+}
+if (slideDirection == SLIDE_INIT) {
+if (Math.abs(x - mDownX) > Math.abs(y - mDownY)) {
+slideDirection=SLIDE_HORIZONTAL;
+cancelChildViewTouch();
+requestDisallowInterceptTouchEvent(true);
+}
+ else {
+slideDirection=SLIDE_VERTICAL;
+}
+}
+if (slideDirection == SLIDE_VERTICAL) {
+return super.dispatchTouchEvent(event);
+}
+scrollTo(Math.max(Math.min(getScrollX() - x + mLastX,mMenusWidth),0),0);
+float percent=getScrollX() / (float)mMenusWidth;
+updateLeftMarginByPercent(percent);
+mLastX=x;
+mLastY=y;
+mState=STATE_MOVE;
+break;
+case MotionEvent.ACTION_UP:
+case MotionEvent.ACTION_CANCEL:
+try {
+if (event.getAction() == MotionEvent.ACTION_UP) {
+if (mState == STATE_DOWN) {
+if (isOpen()) {
+if (isTouchPointInView(mContentView,x,y)) {
+close(true);
+final long now=SystemClock.elapsedRealtime();
+final MotionEvent cancelEvent=MotionEvent.obtain(now,now,MotionEvent.ACTION_CANCEL,0.0f,0.0f,0);
+super.dispatchTouchEvent(cancelEvent);
+return true;
+}
+}
+super.dispatchTouchEvent(event);
+close(true);
+return true;
+}
+}
+ else {
+super.dispatchTouchEvent(event);
+}
+if (swipeMenuOpened != null && swipeMenuOpened.get() == this) {
+if (getScrollX() < mMenusWidth - THRESHOLD_DISTANCE) {
+close(true);
+}
+ else {
+open(true);
+}
+}
+ else {
+if (getScrollX() > THRESHOLD_DISTANCE) {
+open(true);
+}
+ else {
+close(true);
+}
+}
+}
+  finally {
+isTouching=false;
+mState=STATE_STOP;
+}
+break;
+default :
+break;
+}
+return true;
+}

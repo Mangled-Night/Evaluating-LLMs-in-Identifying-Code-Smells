@@ -1,0 +1,207 @@
+/** 
+ * 数据迁移统一调度类，支持扩容缩容 原理：读取需要迁移的数据节点表所有拆分字段数据，按照扩容或缩容后的配置对拆分字段重新计算路由节点， 将需要迁移的数据导出，然后导入到扩容或缩容后对应的数据节点
+ * @author haonan108
+ */
+public class DataMigrator {
+  private static final Logger LOGGER=LoggerFactory.getLogger(DataMigrator.class);
+  public static DataMigratorArgs margs;
+  private List<TableMigrateInfo> migrateTables;
+  private ExecutorService executor;
+  private List<DataNodeClearGroup> clearGroup=new ArrayList<>();
+  public DataMigrator(  String[] args){
+    margs=new DataMigratorArgs(args);
+    executor=new ThreadPoolExecutor(margs.getThreadCount(),margs.getThreadCount(),0L,TimeUnit.MILLISECONDS,new LinkedBlockingQueue<Runnable>(),new ThreadPoolExecutor.CallerRunsPolicy());
+    try {
+      createTempParentDir(margs.getTempFileDir());
+      ConfigComparer loader=new ConfigComparer(margs.isAwaysUseMaster());
+      migrateTables=loader.getMigratorTables();
+      for (      TableMigrateInfo table : migrateTables) {
+        table.setTableStructure();
+        table.createTableToNewDataNodes();
+      }
+    }
+ catch (    Exception e) {
+      LOGGER.error(e.getMessage(),e);
+      System.out.println(e.getMessage());
+      System.exit(-1);
+    }
+  }
+  public static void main(  String[] args) throws SQLException {
+    long start=System.currentTimeMillis();
+    DateFormat format=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
+    System.out.println("\n" + format.format(new Date()) + " [1]-> creating migrator schedule and temp files for migrate...");
+    DataMigrator migrator=new DataMigrator(args);
+    migrator.createTempFiles();
+    migrator.changeSize();
+    migrator.printInfo();
+    System.out.println("\n" + format.format(new Date()) + " [2]-> start migrate data...");
+    migrator.migrateData();
+    System.out.println("\n" + format.format(new Date()) + " [3]-> cleaning redundant data...");
+    migrator.clear();
+    System.out.println("\n" + format.format(new Date()) + " [4]-> validating tables migrate result...");
+    migrator.validate();
+    migrator.clearTempFiles();
+    long end=System.currentTimeMillis();
+    System.out.println("\n" + format.format(new Date()) + " migrate data complete in "+ (end - start)+ "ms");
+  }
+  private void printInfo(){
+    for (    TableMigrateInfo table : migrateTables) {
+      table.printMigrateInfo();
+      table.printMigrateSchedule();
+    }
+  }
+  private void clearTempFiles(){
+    File tempFileDir=new File(margs.getTempFileDir());
+    if (tempFileDir.exists() && margs.isDeleteTempDir()) {
+      DataMigratorUtil.deleteDir(tempFileDir);
+    }
+  }
+  private void createTempFiles(){
+    for (    TableMigrateInfo table : migrateTables) {
+      createTableTempFiles(table);
+    }
+    executor.shutdown();
+    while (true) {
+      if (executor.isTerminated()) {
+        break;
+      }
+      try {
+        Thread.sleep(200);
+      }
+ catch (      InterruptedException e) {
+        LOGGER.error("error",e);
+      }
+    }
+  }
+  private void migrateData() throws SQLException {
+    executor=new ThreadPoolExecutor(margs.getThreadCount(),margs.getThreadCount(),0L,TimeUnit.MILLISECONDS,new LinkedBlockingQueue<Runnable>(),new ThreadPoolExecutor.CallerRunsPolicy());
+    for (    TableMigrateInfo table : migrateTables) {
+      if (!table.isError()) {
+        List<DataNodeMigrateInfo> detailList=table.getDataNodesDetail();
+        for (        DataNodeMigrateInfo info : detailList) {
+          LOGGER.info("{}",info);
+          executor.execute(new DataMigrateRunner(table,info.getSrc(),info.getTarget(),table.getTableName(),info.getTempFile()));
+        }
+      }
+    }
+    executor.shutdown();
+    while (true) {
+      if (executor.isTerminated()) {
+        break;
+      }
+      try {
+        Thread.sleep(200);
+      }
+ catch (      InterruptedException e) {
+        LOGGER.error("error",e);
+      }
+    }
+  }
+  private void changeSize() throws SQLException {
+    for (    TableMigrateInfo table : migrateTables) {
+      if (!table.isExpantion()) {
+        List<DataNode> oldDn=table.getOldDataNodes();
+        long size=0L;
+        for (        DataNode dn : oldDn) {
+          size+=DataMigratorUtil.querySize(dn,table.getTableName());
+        }
+        table.setSize(size);
+      }
+    }
+  }
+  private void validate() throws SQLException {
+    for (    TableMigrateInfo table : migrateTables) {
+      if (table.isError()) {
+        continue;
+      }
+      long size=table.getSize().get();
+      long factSize=0L;
+      for (      DataNode dn : table.getNewDataNodes()) {
+        factSize+=DataMigratorUtil.querySize(dn,table.getTableName());
+      }
+      if (factSize != size) {
+        String message="migrate error!after migrate should be:" + size + " but fact is:"+ factSize;
+        table.setError(true);
+        table.setErrMessage(message);
+      }
+    }
+    String title="migrate result";
+    Map<String,String> result=new HashMap<String,String>();
+    for (    TableMigrateInfo table : migrateTables) {
+      String resultMessage=table.isError() ? "fail! reason: " + table.getErrMessage() : "success";
+      result.put(table.getSchemaAndTableName(),resultMessage);
+    }
+    String info=DataMigratorUtil.printMigrateInfo(title,result,"->");
+    System.out.println(info);
+  }
+  private void clear(){
+    for (    TableMigrateInfo table : migrateTables) {
+      makeClearDataGroup(table);
+    }
+    for (    DataNodeClearGroup group : clearGroup) {
+      clearData(group.getTempFiles(),group.getTableInfo());
+    }
+  }
+  private void makeClearDataGroup(  TableMigrateInfo table){
+    List<DataNodeMigrateInfo> list=table.getDataNodesDetail();
+    for (    DataNodeMigrateInfo dnInfo : list) {
+      DataNode src=dnInfo.getSrc();
+      String ip=src.getIp();
+      File f=dnInfo.getTempFile();
+      DataNodeClearGroup group=getDataNodeClearGroup(ip,table);
+      if (group == null) {
+        group=new DataNodeClearGroup(ip,table);
+        clearGroup.add(group);
+      }
+      group.getTempFiles().put(f,src);
+    }
+  }
+  private DataNodeClearGroup getDataNodeClearGroup(  String ip,  TableMigrateInfo table){
+    DataNodeClearGroup result=null;
+    for (    DataNodeClearGroup group : clearGroup) {
+      if (group.getIp().equals(ip) && group.getTableInfo().equals(table)) {
+        result=group;
+      }
+    }
+    return result;
+  }
+  private void clearData(  Map<File,DataNode> map,  TableMigrateInfo table){
+    if (table.isError()) {
+      return;
+    }
+    ExecutorService executor=new ThreadPoolExecutor(margs.getThreadCount(),margs.getThreadCount(),0L,TimeUnit.MILLISECONDS,new LinkedBlockingQueue<Runnable>(),new ThreadPoolExecutor.CallerRunsPolicy());
+    Iterator<Entry<File,DataNode>> it=map.entrySet().iterator();
+    while (it.hasNext()) {
+      Entry<File,DataNode> et=it.next();
+      File f=et.getKey();
+      DataNode srcDn=et.getValue();
+      executor.execute(new DataClearRunner(table,srcDn,f));
+    }
+    executor.shutdown();
+    while (true) {
+      if (executor.isTerminated()) {
+        break;
+      }
+      try {
+        Thread.sleep(200);
+      }
+ catch (      InterruptedException e) {
+        LOGGER.error("error",e);
+      }
+    }
+  }
+  private void createTempParentDir(  String dir){
+    File outputDir=new File(dir);
+    if (outputDir.exists()) {
+      DataMigratorUtil.deleteDir(outputDir);
+    }
+    outputDir.mkdirs();
+    outputDir.setWritable(true);
+  }
+  private void createTableTempFiles(  TableMigrateInfo table){
+    List<DataNode> oldDn=table.getOldDataNodes();
+    for (    DataNode dn : oldDn) {
+      executor.execute(new MigratorConditonFilesMaker(table,dn,margs.getTempFileDir(),margs.getQueryPageSize()));
+    }
+  }
+}

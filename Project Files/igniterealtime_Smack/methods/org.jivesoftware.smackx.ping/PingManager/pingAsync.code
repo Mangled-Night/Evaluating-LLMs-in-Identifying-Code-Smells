@@ -1,0 +1,35 @@
+public SmackFuture<Boolean,Exception> pingAsync(Jid jid){
+  return pingAsync(jid,connection().getReplyTimeout());
+}
+public SmackFuture<Boolean,Exception> pingAsync(final Jid jid,long pongTimeout){
+  final InternalProcessStanzaSmackFuture<Boolean,Exception> future=new InternalProcessStanzaSmackFuture<Boolean,Exception>(){
+    @Override public void handleStanza(    Stanza packet){
+      setResult(true);
+    }
+    @Override public boolean isNonFatalException(    Exception exception){
+      if (exception instanceof XMPPErrorException) {
+        XMPPErrorException xmppErrorException=(XMPPErrorException)exception;
+        if (isValidErrorPong(jid,xmppErrorException)) {
+          setResult(true);
+          return true;
+        }
+      }
+      return false;
+    }
+  }
+;
+  XMPPConnection connection=connection();
+  Ping ping=new Ping(connection,jid);
+  connection.sendIqRequestAsync(ping,pongTimeout).onSuccess(new SuccessCallback<IQ>(){
+    @Override public void onSuccess(    IQ result){
+      future.processStanza(result);
+    }
+  }
+).onError(new ExceptionCallback<Exception>(){
+    @Override public void processException(    Exception exception){
+      future.processException(exception);
+    }
+  }
+);
+  return future;
+}

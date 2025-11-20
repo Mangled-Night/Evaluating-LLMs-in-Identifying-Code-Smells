@@ -1,0 +1,20 @@
+private String getModulesText(Future<ServerInfoMessage> info){
+  try {
+    ServerInfoMessage serverInfoMessage=info.get();
+    if (serverInfoMessage == null) {
+      return FontColor.getColored(translationSystem.translate("${engine:menu#connection-failed}"),Color.RED);
+    }
+    List<String> codedModInfo=new ArrayList<>();
+    ModuleRegistry reg=moduleManager.getRegistry();
+    for (    NameVersion entry : serverInfoMessage.getModuleList()) {
+      boolean isInstalled=reg.getModule(entry.getName(),entry.getVersion()) != null;
+      Color color=isInstalled ? Color.GREEN : Color.RED;
+      codedModInfo.add(FontColor.getColored(entry.toString(),color));
+    }
+    Collections.sort(codedModInfo,String.CASE_INSENSITIVE_ORDER);
+    return Joiner.on('\n').join(codedModInfo);
+  }
+ catch (  ExecutionException|InterruptedException e) {
+    return FontColor.getColored(translationSystem.translate("${engine:menu#connection-failed}"),Color.RED);
+  }
+}

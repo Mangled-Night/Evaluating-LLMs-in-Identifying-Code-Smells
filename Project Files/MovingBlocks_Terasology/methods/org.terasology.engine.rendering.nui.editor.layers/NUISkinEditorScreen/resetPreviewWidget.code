@@ -1,0 +1,32 @@
+/** 
+ * {@inheritDoc}
+ */
+@Override public void resetPreviewWidget(){
+  if (selectedScreen != null) {
+    try {
+      JsonElement skinElement=JsonTreeConverter.deserialize(getEditor().getRoot());
+      UISkinData data=new UISkinFormat().load(skinElement);
+      Optional<UIElement> sourceAsset=assetManager.getAsset(selectedScreen,UIElement.class);
+      if (!sourceAsset.isPresent()) {
+        throw new FileNotFoundException(String.format("Asset %s not found",selectedScreen));
+      }
+      AssetDataFile source=sourceAsset.get().getSource();
+      String content;
+      try (JsonReader reader=new JsonReader(new InputStreamReader(source.openStream(),Charsets.UTF_8))){
+        reader.setLenient(true);
+        content=new JsonParser().parse(reader).toString();
+      }
+       if (content != null) {
+        JsonTree node=JsonTreeConverter.serialize(new JsonParser().parse(content));
+        JsonElement screenElement=JsonTreeConverter.deserialize(node);
+        UIWidget widget=new UIFormat().load(screenElement,alternativeLocale).getRootWidget();
+        widget.setSkin(Assets.generateAsset(data,UISkinAsset.class).getSkin());
+        selectedScreenBox.setContent(widget);
+      }
+    }
+ catch (    Throwable t) {
+      String truncatedStackTrace=Joiner.on(System.lineSeparator()).join(Arrays.copyOfRange(ExceptionUtils.getStackFrames(t),0,10));
+      selectedScreenBox.setContent(new UILabel(truncatedStackTrace));
+    }
+  }
+}

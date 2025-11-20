@@ -1,0 +1,37 @@
+/** 
+ * 方法追加文件：使用FileWriter
+ */
+private static synchronized void appendFile(String fileName,String content){
+  Calendar calendar=Calendar.getInstance();
+  DateFormat dateFormat=new SimpleDateFormat("yyyy-MM-dd");
+  String dayFile=dateFormat.format(calendar.getTime());
+  FileWriter writer=null;
+  try {
+    String newFileName=fileName;
+    String[] title=newFileName.split("\\.");
+    if (title.length == 2) {
+      newFileName=title[0] + dayFile + "."+ title[1];
+    }
+    File file=new File(newFileName);
+    if (!file.exists()) {
+      file.createNewFile();
+    }
+    writer=new FileWriter(file,true);
+    String newContent=content.replaceAll("[\\t\\n\\r]","") + System.getProperty("line.separator");
+    writer.write(newContent);
+    writer.flush();
+  }
+ catch (  IOException e) {
+    LOGGER.error("appendFile error:" + e.getMessage(),e);
+  }
+ finally {
+    if (writer != null) {
+      try {
+        writer.close();
+      }
+ catch (      IOException e) {
+        LOGGER.error("close file error:" + e.getMessage(),e);
+      }
+    }
+  }
+}

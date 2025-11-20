@@ -1,0 +1,91 @@
+/** 
+ * Builder for  {@link BraveTracing}.
+ * @since 5.2
+ */
+public static class Builder {
+  private brave.Tracing tracing;
+  private String serviceName="redis";
+  private Consumer<zipkin2.Endpoint.Builder> endpointCustomizer=it -> {
+  }
+;
+  private BiConsumer<RedisCommand<Object,Object,Object>,Span> spanCustomizer=(command,span) -> {
+  }
+;
+  private boolean includeCommandArgsInSpanTags=true;
+  private Builder(){
+  }
+  /** 
+ * Sets the  {@link Tracing}.
+ * @param tracing the Brave {@link brave.Tracing} object, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ */
+  public Builder tracing(  brave.Tracing tracing){
+    LettuceAssert.notNull(tracing,"Tracing must not be null!");
+    this.tracing=tracing;
+    return this;
+  }
+  /** 
+ * Sets the name used in the  {@link zipkin2.Endpoint}.
+ * @param serviceName the name for the {@link zipkin2.Endpoint}, must not be  {@code null}.
+ * @return {@code this} {@link Builder}.
+ */
+  public Builder serviceName(  String serviceName){
+    LettuceAssert.notEmpty(serviceName,"Service name must not be null!");
+    this.serviceName=serviceName;
+    return this;
+  }
+  /** 
+ * Excludes command arguments from  {@link Span} tags. Enabled by default.
+ * @return {@code this} {@link Builder}.
+ */
+  public Builder excludeCommandArgsFromSpanTags(){
+    return includeCommandArgsInSpanTags(false);
+  }
+  /** 
+ * Controls the inclusion of command arguments in  {@link Span} tags. Enabled by default.
+ * @param includeCommandArgsInSpanTags the flag to enable or disable the inclusion of command args in {@link Span} tags.
+ * @return {@code this} {@link Builder}.
+ */
+  public Builder includeCommandArgsInSpanTags(  boolean includeCommandArgsInSpanTags){
+    this.includeCommandArgsInSpanTags=includeCommandArgsInSpanTags;
+    return this;
+  }
+  /** 
+ * Sets an  {@link zipkin2.Endpoint} customizer to customize the {@link zipkin2.Endpoint} through its{@link zipkin2.Endpoint.Builder}. The customizer is invoked before  {@link zipkin2.Endpoint.Builder#build() building}the endpoint.
+ * @param endpointCustomizer must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ */
+  public Builder endpointCustomizer(  Consumer<zipkin2.Endpoint.Builder> endpointCustomizer){
+    LettuceAssert.notNull(endpointCustomizer,"Endpoint customizer must not be null!");
+    this.endpointCustomizer=endpointCustomizer;
+    return this;
+  }
+  /** 
+ * Sets an  {@link brave.Span} customizer to customize the {@link brave.Span}. The customizer is invoked before {@link Span#finish()} finishing} the span.
+ * @param spanCustomizer must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ */
+  public Builder spanCustomizer(  Consumer<brave.Span> spanCustomizer){
+    LettuceAssert.notNull(spanCustomizer,"Span customizer must not be null!");
+    this.spanCustomizer=(command,span) -> spanCustomizer.accept(span);
+    return this;
+  }
+  /** 
+ * Sets an  {@link brave.Span} customizer to customize the {@link brave.Span} based on the underlying{@link RedisCommand}. The customizer is invoked before  {@link Span#finish()} finishing} the span.
+ * @param spanCustomizer must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ * @since 6.0
+ */
+  public Builder spanCustomizer(  BiConsumer<RedisCommand<Object,Object,Object>,brave.Span> spanCustomizer){
+    LettuceAssert.notNull(spanCustomizer,"Span customizer must not be null!");
+    this.spanCustomizer=spanCustomizer;
+    return this;
+  }
+  /** 
+ * @return a new instance of {@link BraveTracing}
+ */
+  public BraveTracing build(){
+    LettuceAssert.notNull(this.tracing,"Brave Tracing must not be null!");
+    return new BraveTracing(this);
+  }
+}

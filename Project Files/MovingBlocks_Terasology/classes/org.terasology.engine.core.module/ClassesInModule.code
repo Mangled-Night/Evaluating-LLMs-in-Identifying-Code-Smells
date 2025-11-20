@@ -1,0 +1,29 @@
+static class ClassesInModule implements Predicate<Class<?>> {
+  private final Set<URL> classpaths;
+  private final ClassLoader[] classLoaders;
+  private final String name;
+  ClassesInModule(  Module module){
+    classpaths=module.getClasspaths().stream().map(f -> {
+      try {
+        URL url=f.toURI().toURL();
+        if (f.getName().endsWith(".jar")) {
+          return new URL("jar",null,url.toString() + "!/");
+        }
+        return url;
+      }
+ catch (      MalformedURLException e) {
+        throw new RuntimeException(e);
+      }
+    }
+).collect(ImmutableSet.toImmutableSet());
+    classLoaders=module.getModuleManifest().getConfiguration().getClassLoaders();
+    name=module.getId().toString();
+  }
+  @Override public boolean test(  Class<?> aClass){
+    URL classUrl=ClasspathHelper.forClass(aClass,classLoaders);
+    return classpaths.contains(classUrl);
+  }
+  @Override public String toString(){
+    return MoreObjects.toStringHelper(this).add("name",name).toString();
+  }
+}

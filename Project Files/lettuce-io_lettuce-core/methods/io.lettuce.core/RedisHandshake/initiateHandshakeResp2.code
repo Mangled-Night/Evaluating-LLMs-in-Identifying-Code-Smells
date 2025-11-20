@@ -1,0 +1,13 @@
+/** 
+ * Perform a RESP2 Handshake: Issue a  {@code PING} or {@code AUTH}.
+ * @param channel
+ * @param credentialsProvider
+ * @return
+ */
+private CompletableFuture<?> initiateHandshakeResp2(Channel channel,RedisCredentialsProvider credentialsProvider){
+  if (credentialsProvider instanceof RedisCredentialsProvider.ImmediateRedisCredentialsProvider) {
+    return dispatchAuthOrPing(channel,((RedisCredentialsProvider.ImmediateRedisCredentialsProvider)credentialsProvider).resolveCredentialsNow());
+  }
+  CompletableFuture<RedisCredentials> credentialsFuture=credentialsProvider.resolveCredentials().toFuture();
+  return credentialsFuture.thenComposeAsync(credentials -> dispatchAuthOrPing(channel,credentials));
+}

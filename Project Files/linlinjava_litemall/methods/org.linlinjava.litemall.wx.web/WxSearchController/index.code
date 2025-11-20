@@ -1,0 +1,21 @@
+/** 
+ * 搜索页面信息 <p> 如果用户已登录，则给出用户历史搜索记录； 如果没有登录，则给出空历史搜索记录。
+ * @param userId 用户ID，可选
+ * @return 搜索页面信息
+ */
+@GetMapping("index") public Object index(@LoginUser Integer userId){
+  LitemallKeyword defaultKeyword=keywordsService.queryDefault();
+  List<LitemallKeyword> hotKeywordList=keywordsService.queryHots();
+  List<LitemallSearchHistory> historyList=null;
+  if (userId != null) {
+    historyList=searchHistoryService.queryByUid(userId);
+  }
+ else {
+    historyList=new ArrayList<>(0);
+  }
+  Map<String,Object> data=new HashMap<String,Object>();
+  data.put("defaultKeyword",defaultKeyword);
+  data.put("historyKeywordList",historyList);
+  data.put("hotKeywordList",hotKeywordList);
+  return ResponseUtil.ok(data);
+}

@@ -1,0 +1,28 @@
+protected final void parseAndProcessNonza(XmlPullParser parser) throws IOException, XmlPullParserException, SmackParsingException {
+  ParserUtils.assertAtStartTag(parser);
+  final int initialDepth=parser.getDepth();
+  final String element=parser.getName();
+  final String namespace=parser.getNamespace();
+  final QName key=new QName(namespace,element);
+  NonzaProvider<? extends Nonza> nonzaProvider=ProviderManager.getNonzaProvider(key);
+  if (nonzaProvider == null) {
+    LOGGER.severe("Unknown nonza: " + key);
+    ParserUtils.forwardToEndTagOfDepth(parser,initialDepth);
+    return;
+  }
+  List<NonzaCallback> nonzaCallbacks;
+synchronized (nonzaCallbacksMap) {
+    nonzaCallbacks=nonzaCallbacksMap.getAll(key);
+    nonzaCallbacks=CollectionUtil.newListWith(nonzaCallbacks);
+  }
+  if (nonzaCallbacks == null) {
+    LOGGER.info("No nonza callback for " + key);
+    ParserUtils.forwardToEndTagOfDepth(parser,initialDepth);
+    return;
+  }
+  Nonza nonza=nonzaProvider.parse(parser,incomingStreamXmlEnvironment);
+  maybeNotifyDebuggerAboutIncoming(nonza);
+  for (  NonzaCallback nonzaCallback : nonzaCallbacks) {
+    nonzaCallback.onNonzaReceived(nonza);
+  }
+}

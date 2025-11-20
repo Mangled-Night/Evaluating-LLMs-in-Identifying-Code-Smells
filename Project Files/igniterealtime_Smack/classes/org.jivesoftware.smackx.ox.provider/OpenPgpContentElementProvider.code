@@ -1,0 +1,100 @@
+/** 
+ * Abstract  {@link ExtensionElementProvider} implementation for the also abstract {@link OpenPgpContentElement}.
+ * @param < O > Specialized subclass of {@link OpenPgpContentElement}.
+ */
+public abstract class OpenPgpContentElementProvider<O extends OpenPgpContentElement> extends ExtensionElementProvider<O> {
+  private static final Logger LOGGER=Logger.getLogger(OpenPgpContentElementProvider.class.getName());
+  public static OpenPgpContentElement parseOpenPgpContentElement(  String element) throws XmlPullParserException, IOException {
+    XmlPullParser parser=PacketParserUtils.getParserFor(element);
+    return parseOpenPgpContentElement(parser);
+  }
+  public static OpenPgpContentElement parseOpenPgpContentElement(  XmlPullParser parser) throws XmlPullParserException {
+    try {
+switch (parser.getName()) {
+case SigncryptElement.ELEMENT:
+        return SigncryptElementProvider.INSTANCE.parse(parser);
+case SignElement.ELEMENT:
+      return SignElementProvider.INSTANCE.parse(parser);
+case CryptElement.ELEMENT:
+    return CryptElementProvider.INSTANCE.parse(parser);
+default :
+  throw new XmlPullParserException("Expected <crypt/>, <sign/> or <signcrypt/> element, " + "but got neither of them.");
+}
+}
+ catch (Exception e) {
+throw new XmlPullParserException(e.getMessage());
+}
+}
+@Override public abstract O parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException, ParseException ;
+protected static OpenPgpContentElementData parseOpenPgpContentElementData(XmlPullParser parser,int initialDepth) throws XmlPullParserException, IOException, SmackParsingException, ParseException {
+Set<Jid> to=new HashSet<>();
+Date timestamp=null;
+String rpad=null;
+List<ExtensionElement> payload=new LinkedList<>();
+outerloop: while (true) {
+XmlPullParser.Event tag=parser.next();
+String name=parser.getName();
+switch (tag) {
+case START_ELEMENT:
+switch (name) {
+case OpenPgpContentElement.ELEM_TIME:
+  String stamp=parser.getAttributeValue("",OpenPgpContentElement.ATTR_STAMP);
+timestamp=ParserUtils.getDateFromXep82String(stamp);
+break;
+case OpenPgpContentElement.ELEM_TO:
+String jid=parser.getAttributeValue("",OpenPgpContentElement.ATTR_JID);
+to.add(JidCreate.bareFrom(jid));
+break;
+case EncryptedOpenPgpContentElement.ELEM_RPAD:
+rpad=parser.nextText();
+break;
+case OpenPgpContentElement.ELEM_PAYLOAD:
+innerloop: while (true) {
+XmlPullParser.Event ptag=parser.next();
+String pname=parser.getName();
+String pns=parser.getNamespace();
+switch (ptag) {
+case START_ELEMENT:
+ExtensionElementProvider<ExtensionElement> provider=ProviderManager.getExtensionProvider(pname,pns);
+if (provider == null) {
+LOGGER.log(Level.INFO,"No provider found for " + pname + " "+ pns);
+continue innerloop;
+}
+payload.add(provider.parse(parser));
+break;
+case END_ELEMENT:
+break innerloop;
+default :
+break;
+}
+}
+break;
+}
+break;
+case END_ELEMENT:
+switch (name) {
+case CryptElement.ELEMENT:
+case SigncryptElement.ELEMENT:
+case SignElement.ELEMENT:
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return new OpenPgpContentElementData(to,timestamp,rpad,payload);
+}
+protected static final class OpenPgpContentElementData {
+final Set<Jid> to;
+final Date timestamp;
+final String rpad;
+final List<ExtensionElement> payload;
+private OpenPgpContentElementData(Set<Jid> to,Date timestamp,String rpad,List<ExtensionElement> payload){
+this.to=to;
+this.timestamp=timestamp;
+this.rpad=rpad;
+this.payload=payload;
+}
+}
+}

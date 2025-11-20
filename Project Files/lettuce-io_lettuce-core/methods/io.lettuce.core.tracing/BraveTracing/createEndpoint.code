@@ -1,0 +1,11 @@
+@Override public Endpoint createEndpoint(SocketAddress socketAddress){
+  zipkin2.Endpoint.Builder builder=zipkin2.Endpoint.newBuilder().serviceName(tracingOptions.serviceName);
+  if (socketAddress instanceof InetSocketAddress) {
+    InetSocketAddress inetSocketAddress=(InetSocketAddress)socketAddress;
+    builder.ip(inetSocketAddress.getAddress()).port(inetSocketAddress.getPort());
+    tracingOptions.customizeEndpoint(builder);
+    return new BraveEndpoint(builder.build());
+  }
+  tracingOptions.customizeEndpoint(builder);
+  return new BraveEndpoint(builder.build());
+}

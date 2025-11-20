@@ -1,0 +1,224 @@
+/** 
+ * 提交订单 <p> 1. 创建订单表项和订单商品表项; 2. 购物车清空; 3. 优惠券设置已用; 4. 商品货品库存减少; 5. 如果是团购商品，则创建团购活动表项。
+ * @param userId 用户ID
+ * @param body   订单信息，{ cartId：xxx, addressId: xxx, couponId: xxx, message: xxx, grouponRulesId: xxx,  grouponLinkId: xxx}
+ * @return 提交订单操作结果
+ */
+@Transactional public Object submit(Integer userId,String body){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  if (body == null) {
+    return ResponseUtil.badArgument();
+  }
+  Integer cartId=JacksonUtil.parseInteger(body,"cartId");
+  Integer addressId=JacksonUtil.parseInteger(body,"addressId");
+  Integer couponId=JacksonUtil.parseInteger(body,"couponId");
+  Integer userCouponId=JacksonUtil.parseInteger(body,"userCouponId");
+  String message=JacksonUtil.parseString(body,"message");
+  Integer grouponRulesId=JacksonUtil.parseInteger(body,"grouponRulesId");
+  Integer grouponLinkId=JacksonUtil.parseInteger(body,"grouponLinkId");
+  if (grouponRulesId != null && grouponRulesId > 0) {
+    LitemallGrouponRules rules=grouponRulesService.findById(grouponRulesId);
+    if (rules == null) {
+      return ResponseUtil.badArgument();
+    }
+    if (rules.getStatus().equals(GrouponConstant.RULE_STATUS_DOWN_EXPIRE)) {
+      return ResponseUtil.fail(GROUPON_EXPIRED,"团购已过期!");
+    }
+    if (rules.getStatus().equals(GrouponConstant.RULE_STATUS_DOWN_ADMIN)) {
+      return ResponseUtil.fail(GROUPON_OFFLINE,"团购已下线!");
+    }
+    if (grouponLinkId != null && grouponLinkId > 0) {
+      if (grouponService.countGroupon(grouponLinkId) >= (rules.getDiscountMember() - 1)) {
+        return ResponseUtil.fail(GROUPON_FULL,"团购活动人数已满!");
+      }
+      if (grouponService.hasJoin(userId,grouponLinkId)) {
+        return ResponseUtil.fail(GROUPON_JOIN,"团购活动已经参加!");
+      }
+      LitemallGroupon groupon=grouponService.queryById(userId,grouponLinkId);
+      if (groupon != null) {
+        if (groupon.getCreatorUserId().equals(userId)) {
+          return ResponseUtil.fail(GROUPON_JOIN,"团购活动已经参加!");
+        }
+      }
+    }
+  }
+  if (cartId == null || addressId == null || couponId == null) {
+    return ResponseUtil.badArgument();
+  }
+  LitemallAddress checkedAddress=addressService.query(userId,addressId);
+  if (checkedAddress == null) {
+    return ResponseUtil.badArgument();
+  }
+  BigDecimal grouponPrice=new BigDecimal(0);
+  LitemallGrouponRules grouponRules=grouponRulesService.findById(grouponRulesId);
+  if (grouponRules != null) {
+    grouponPrice=grouponRules.getDiscount();
+  }
+  List<LitemallCart> checkedGoodsList=null;
+  if (cartId.equals(0)) {
+    checkedGoodsList=cartService.queryByUidAndChecked(userId);
+  }
+ else {
+    LitemallCart cart=cartService.findById(cartId);
+    checkedGoodsList=new ArrayList<>(1);
+    checkedGoodsList.add(cart);
+  }
+  if (checkedGoodsList.size() == 0) {
+    return ResponseUtil.badArgumentValue();
+  }
+  BigDecimal checkedGoodsPrice=new BigDecimal(0);
+  for (  LitemallCart checkGoods : checkedGoodsList) {
+    if (grouponRules != null && grouponRules.getGoodsId().equals(checkGoods.getGoodsId())) {
+      checkedGoodsPrice=checkedGoodsPrice.add(checkGoods.getPrice().subtract(grouponPrice).multiply(new BigDecimal(checkGoods.getNumber())));
+    }
+ else {
+      checkedGoodsPrice=checkedGoodsPrice.add(checkGoods.getPrice().multiply(new BigDecimal(checkGoods.getNumber())));
+    }
+  }
+  BigDecimal couponPrice=new BigDecimal(0);
+  if (couponId != 0 && couponId != -1) {
+    LitemallCoupon coupon=couponVerifyService.checkCoupon(userId,couponId,userCouponId,checkedGoodsPrice,checkedGoodsList);
+    if (coupon == null) {
+      return ResponseUtil.badArgumentValue();
+    }
+    couponPrice=coupon.getDiscount();
+  }
+  BigDecimal freightPrice=new BigDecimal(0);
+  if (checkedGoodsPrice.compareTo(SystemConfig.getFreightLimit()) < 0) {
+    freightPrice=SystemConfig.getFreight();
+  }
+  BigDecimal integralPrice=new BigDecimal(0);
+  BigDecimal orderTotalPrice=checkedGoodsPrice.add(freightPrice).subtract(couponPrice).max(new BigDecimal(0));
+  BigDecimal actualPrice=orderTotalPrice.subtract(integralPrice);
+  Integer orderId=null;
+  LitemallOrder order=null;
+  order=new LitemallOrder();
+  order.setUserId(userId);
+  order.setOrderSn(orderService.generateOrderSn(userId));
+  order.setOrderStatus(OrderUtil.STATUS_CREATE);
+  order.setConsignee(checkedAddress.getName());
+  order.setMobile(checkedAddress.getTel());
+  order.setMessage(message);
+  String detailedAddress=checkedAddress.getProvince() + checkedAddress.getCity() + checkedAddress.getCounty()+ " "+ checkedAddress.getAddressDetail();
+  order.setAddress(detailedAddress);
+  order.setGoodsPrice(checkedGoodsPrice);
+  order.setFreightPrice(freightPrice);
+  order.setCouponPrice(couponPrice);
+  order.setIntegralPrice(integralPrice);
+  order.setOrderPrice(orderTotalPrice);
+  order.setActualPrice(actualPrice);
+  if (grouponRules != null) {
+    order.setGrouponPrice(grouponPrice);
+  }
+ else {
+    order.setGrouponPrice(new BigDecimal(0));
+  }
+  orderService.add(order);
+  orderId=order.getId();
+  for (  LitemallCart cartGoods : checkedGoodsList) {
+    LitemallOrderGoods orderGoods=new LitemallOrderGoods();
+    orderGoods.setOrderId(order.getId());
+    orderGoods.setGoodsId(cartGoods.getGoodsId());
+    orderGoods.setGoodsSn(cartGoods.getGoodsSn());
+    orderGoods.setProductId(cartGoods.getProductId());
+    orderGoods.setGoodsName(cartGoods.getGoodsName());
+    orderGoods.setPicUrl(cartGoods.getPicUrl());
+    orderGoods.setPrice(cartGoods.getPrice());
+    orderGoods.setNumber(cartGoods.getNumber());
+    orderGoods.setSpecifications(cartGoods.getSpecifications());
+    orderGoods.setAddTime(LocalDateTime.now());
+    orderGoodsService.add(orderGoods);
+  }
+  if (cartId.equals(0)) {
+    cartService.clearGoods(userId);
+  }
+ else {
+    cartService.deleteById(cartId);
+  }
+  for (  LitemallCart checkGoods : checkedGoodsList) {
+    Integer productId=checkGoods.getProductId();
+    LitemallGoodsProduct product=productService.findById(productId);
+    int remainNumber=product.getNumber() - checkGoods.getNumber();
+    if (remainNumber < 0) {
+      throw new RuntimeException("下单的商品货品数量大于库存量");
+    }
+    if (productService.reduceStock(productId,checkGoods.getNumber()) == 0) {
+      throw new RuntimeException("商品货品库存减少失败");
+    }
+  }
+  if (couponId != 0 && couponId != -1) {
+    LitemallCouponUser couponUser=couponUserService.findById(userCouponId);
+    couponUser.setStatus(CouponUserConstant.STATUS_USED);
+    couponUser.setUsedTime(LocalDateTime.now());
+    couponUser.setOrderId(orderId);
+    couponUserService.update(couponUser);
+  }
+  if (grouponRulesId != null && grouponRulesId > 0) {
+    LitemallGroupon groupon=new LitemallGroupon();
+    groupon.setOrderId(orderId);
+    groupon.setStatus(GrouponConstant.STATUS_NONE);
+    groupon.setUserId(userId);
+    groupon.setRulesId(grouponRulesId);
+    if (grouponLinkId != null && grouponLinkId > 0) {
+      LitemallGroupon baseGroupon=grouponService.queryById(grouponLinkId);
+      groupon.setCreatorUserId(baseGroupon.getCreatorUserId());
+      groupon.setGrouponId(grouponLinkId);
+      groupon.setShareUrl(baseGroupon.getShareUrl());
+      grouponService.createGroupon(groupon);
+    }
+ else {
+      groupon.setCreatorUserId(userId);
+      groupon.setCreatorUserTime(LocalDateTime.now());
+      groupon.setGrouponId(0);
+      grouponService.createGroupon(groupon);
+      grouponLinkId=groupon.getId();
+    }
+  }
+  boolean payed=false;
+  if (order.getActualPrice().equals(new BigDecimal("0.00"))) {
+    payed=true;
+    LitemallOrder o=new LitemallOrder();
+    o.setId(orderId);
+    o.setOrderStatus(OrderUtil.STATUS_PAY);
+    orderService.updateSelective(o);
+    LitemallGroupon groupon=grouponService.queryByOrderId(order.getId());
+    if (groupon != null) {
+      grouponRules=grouponRulesService.findById(groupon.getRulesId());
+      if (groupon.getGrouponId() == 0) {
+        String url=qCodeService.createGrouponShareImage(grouponRules.getGoodsName(),grouponRules.getPicUrl(),groupon);
+        groupon.setShareUrl(url);
+      }
+      groupon.setStatus(GrouponConstant.STATUS_ON);
+      if (grouponService.updateById(groupon) == 0) {
+        throw new RuntimeException("更新数据已失效");
+      }
+      List<LitemallGroupon> grouponList=grouponService.queryJoinRecord(groupon.getGrouponId());
+      if (groupon.getGrouponId() != 0 && (grouponList.size() >= grouponRules.getDiscountMember() - 1)) {
+        for (        LitemallGroupon grouponActivity : grouponList) {
+          grouponActivity.setStatus(GrouponConstant.STATUS_SUCCEED);
+          grouponService.updateById(grouponActivity);
+        }
+        LitemallGroupon grouponSource=grouponService.queryById(groupon.getGrouponId());
+        grouponSource.setStatus(GrouponConstant.STATUS_SUCCEED);
+        grouponService.updateById(grouponSource);
+      }
+    }
+    notifyService.notifyMail("新订单通知",order.toString());
+    notifyService.notifySmsTemplateSync(order.getMobile(),NotifyType.PAY_SUCCEED,new String[]{order.getOrderSn().substring(8,14)});
+  }
+ else {
+    taskService.addTask(new OrderUnpaidTask(orderId));
+  }
+  Map<String,Object> data=new HashMap<>();
+  data.put("orderId",orderId);
+  data.put("payed",payed);
+  if (grouponRulesId != null && grouponRulesId > 0) {
+    data.put("grouponLinkId",grouponLinkId);
+  }
+ else {
+    data.put("grouponLinkId",0);
+  }
+  return ResponseUtil.ok(data);
+}

@@ -1,0 +1,39 @@
+/** 
+ * Registers a new command with this command manager, which is related to a connection. The <code>node</code> is an unique identifier of that command for the connection related to this command manager. The <code>name</code> is the human readable name of the command. The <code>class</code> is the class of the command, which must extend  {@link LocalCommand} and have a defaultconstructor.
+ * @param node the unique identifier of the command.
+ * @param name the human readable name of the command.
+ * @param clazz the class of the command, which must extend {@link LocalCommand}.
+ */
+public void registerCommand(String node,String name,final Class<? extends LocalCommand> clazz){
+  registerCommand(node,name,new LocalCommandFactory(){
+    @Override public LocalCommand getInstance() throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+      return clazz.getConstructor().newInstance();
+    }
+  }
+);
+}
+/** 
+ * Registers a new command with this command manager, which is related to a connection. The <code>node</code> is an unique identifier of that command for the connection related to this command manager. The <code>name</code> is the human readable name of the command. The <code>factory</code> generates new instances of the command.
+ * @param node the unique identifier of the command.
+ * @param name the human readable name of the command.
+ * @param factory a factory to create new instances of the command.
+ */
+public void registerCommand(String node,final String name,LocalCommandFactory factory){
+  AdHocCommandInfo commandInfo=new AdHocCommandInfo(node,name,connection().getUser(),factory);
+  commands.put(node,commandInfo);
+  serviceDiscoveryManager.setNodeInformationProvider(node,new AbstractNodeInformationProvider(){
+    @Override public List<String> getNodeFeatures(){
+      List<String> answer=new ArrayList<>();
+      answer.add(NAMESPACE);
+      answer.add("jabber:x:data");
+      return answer;
+    }
+    @Override public List<DiscoverInfo.Identity> getNodeIdentities(){
+      List<DiscoverInfo.Identity> answer=new ArrayList<>();
+      DiscoverInfo.Identity identity=new DiscoverInfo.Identity("automation",name,"command-node");
+      answer.add(identity);
+      return answer;
+    }
+  }
+);
+}

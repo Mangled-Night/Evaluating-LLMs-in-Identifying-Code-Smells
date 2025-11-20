@@ -1,0 +1,12 @@
+@SuppressWarnings("UnusedVariable") private static void testSimpleDirectoryCache(StringEncoder<String> stringEncoder) throws IOException {
+  EntityCapsPersistentCache cache=new SimpleDirectoryPersistentCache(createTempDirectory());
+  EntityCapsManager.setPersistentCache(cache);
+  DiscoverInfo di=createComplexSamplePacket();
+  CapsVersionAndHash versionAndHash=EntityCapsManager.generateVerificationString(di,StringUtils.SHA1);
+  String nodeVer=di.getNode() + "#" + versionAndHash.version;
+  EntityCapsManager.addDiscoverInfoByNode(nodeVer,di);
+  EntityCapsManager.clearMemoryCache();
+  DiscoverInfo restored_di=EntityCapsManager.getDiscoveryInfoByNodeVer(nodeVer);
+  assertNotNull(restored_di);
+  assertEquals(di.toXML().toString(),restored_di.toXML().toString());
+}

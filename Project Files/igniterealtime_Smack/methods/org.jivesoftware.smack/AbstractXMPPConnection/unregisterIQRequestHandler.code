@@ -1,0 +1,35 @@
+@Override public final IQRequestHandler unregisterIQRequestHandler(IQRequestHandler iqRequestHandler){
+  return unregisterIQRequestHandler(iqRequestHandler.getElement(),iqRequestHandler.getNamespace(),iqRequestHandler.getType());
+}
+@Override public IQRequestHandler unregisterIQRequestHandler(String element,String namespace,IQ.Type type){
+  IQRequestHandler unregisteredHandler;
+  final QName key=new QName(namespace,element);
+switch (type) {
+case set:
+synchronized (setIqRequestHandler) {
+      unregisteredHandler=setIqRequestHandler.remove(key);
+    }
+  break;
+case get:
+synchronized (getIqRequestHandler) {
+  unregisteredHandler=getIqRequestHandler.remove(key);
+}
+break;
+default :
+throw new IllegalArgumentException("Only IQ type of 'get' and 'set' allowed");
+}
+if (unregisteredHandler == null) {
+return null;
+}
+synchronized (iqRequestHandlerNamespacesReferenceCounters) {
+int newValue=iqRequestHandlerNamespacesReferenceCounters.get(namespace).intValue() - 1;
+if (newValue == 0) {
+iqRequestHandlerNamespacesReferenceCounters.remove(namespace);
+iqRequestHandlerNamespaces.remove(namespace);
+}
+ else {
+iqRequestHandlerNamespacesReferenceCounters.put(namespace,newValue);
+}
+}
+return unregisteredHandler;
+}

@@ -1,0 +1,44 @@
+/** 
+ * Returns a random simple bipartite graph on  {@code V1} and {@code V2} verticeswith  {@code E} edges.
+ * @param V1 the number of vertices in one partition
+ * @param V2 the number of vertices in the other partition
+ * @param E the number of edges
+ * @return a random simple bipartite graph on {@code V1} and {@code V2} vertices,containing a total of  {@code E} edges
+ * @throws IllegalArgumentException if no such simple bipartite graph exists
+ */
+public static Graph bipartite(int V1,int V2,int E){
+  if (E > (long)V1 * V2)   throw new IllegalArgumentException("Too many edges");
+  if (E < 0)   throw new IllegalArgumentException("Too few edges");
+  Graph G=new Graph(V1 + V2);
+  int[] vertices=new int[V1 + V2];
+  for (int i=0; i < V1 + V2; i++)   vertices[i]=i;
+  StdRandom.shuffle(vertices);
+  SET<Edge> set=new SET<Edge>();
+  while (G.E() < E) {
+    int i=StdRandom.uniformInt(V1);
+    int j=V1 + StdRandom.uniformInt(V2);
+    Edge e=new Edge(vertices[i],vertices[j]);
+    if (!set.contains(e)) {
+      set.add(e);
+      G.addEdge(vertices[i],vertices[j]);
+    }
+  }
+  return G;
+}
+/** 
+ * Returns a random simple bipartite graph on  {@code V1} and {@code V2} vertices,containing each possible edge with probability  {@code p}.
+ * @param V1 the number of vertices in one partition
+ * @param V2 the number of vertices in the other partition
+ * @param p the probability that the graph contains an edge with one endpoint in either side
+ * @return a random simple bipartite graph on {@code V1} and {@code V2} vertices,containing each possible edge with probability  {@code p}
+ * @throws IllegalArgumentException if probability is not between 0 and 1
+ */
+public static Graph bipartite(int V1,int V2,double p){
+  if (p < 0.0 || p > 1.0)   throw new IllegalArgumentException("Probability must be between 0 and 1");
+  int[] vertices=new int[V1 + V2];
+  for (int i=0; i < V1 + V2; i++)   vertices[i]=i;
+  StdRandom.shuffle(vertices);
+  Graph G=new Graph(V1 + V2);
+  for (int i=0; i < V1; i++)   for (int j=0; j < V2; j++)   if (StdRandom.bernoulli(p))   G.addEdge(vertices[i],vertices[V1 + j]);
+  return G;
+}

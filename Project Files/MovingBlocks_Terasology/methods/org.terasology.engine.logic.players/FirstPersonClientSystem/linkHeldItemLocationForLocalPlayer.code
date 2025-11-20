@@ -1,0 +1,35 @@
+/** 
+ * Changes held item entity. <p>Detaches old held item and removes it's components. Adds components to new held item and attaches it to the mount point entity.</p>
+ */
+private void linkHeldItemLocationForLocalPlayer(EntityRef newItem){
+  if (!newItem.equals(currentHeldItem)) {
+    EntityRef camera=localPlayer.getCameraEntity();
+    FirstPersonHeldItemMountPointComponent mountPointComponent=camera.getComponent(FirstPersonHeldItemMountPointComponent.class);
+    if (mountPointComponent != null) {
+      if (currentHeldItem != EntityRef.NULL) {
+        currentHeldItem.destroy();
+      }
+      EntityRef newHeldItem;
+      if (newItem == EntityRef.NULL) {
+        newHeldItem=getHandEntity();
+      }
+ else {
+        newHeldItem=newItem;
+      }
+      currentHeldItem=entityManager.create();
+      for (      Component component : newHeldItem.iterateComponents()) {
+        if (component instanceof VisualComponent) {
+          currentHeldItem.addComponent(component);
+        }
+      }
+      currentHeldItem.addComponent(new LocationComponent());
+      currentHeldItem.addComponent(new ItemIsHeldComponent());
+      FirstPersonHeldItemTransformComponent heldItemTransformComponent=currentHeldItem.getComponent(FirstPersonHeldItemTransformComponent.class);
+      if (heldItemTransformComponent == null) {
+        heldItemTransformComponent=new FirstPersonHeldItemTransformComponent();
+        currentHeldItem.addComponent(heldItemTransformComponent);
+      }
+      Location.attachChild(mountPointComponent.mountPointEntity,currentHeldItem,heldItemTransformComponent.translate,new Quaternionf().rotationYXZ(TeraMath.DEG_TO_RAD * heldItemTransformComponent.rotateDegrees.y,TeraMath.DEG_TO_RAD * heldItemTransformComponent.rotateDegrees.x,TeraMath.DEG_TO_RAD * heldItemTransformComponent.rotateDegrees.z),heldItemTransformComponent.scale);
+    }
+  }
+}

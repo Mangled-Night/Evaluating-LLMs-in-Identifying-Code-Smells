@@ -1,0 +1,41 @@
+/** 
+ * This constructor initializes the engine by initializing its systems, subsystems and managers. It also verifies that some required systems are up and running after they have been initialized.
+ * @param timeSubsystem the timer subsystem
+ * @param subsystems other typical subsystems, e.g., graphics, audio and input subsystems.
+ */
+public TerasologyEngine(TimeSubsystem timeSubsystem,Collection<EngineSubsystem> subsystems){
+  PathManager.getInstance();
+  Bullet.init(true,false);
+  this.rootContext=new ContextImpl();
+  rootContext.put(GameEngine.class,this);
+  this.timeSubsystem=timeSubsystem;
+  RecordAndReplayCurrentStatus recordAndReplayCurrentStatus=new RecordAndReplayCurrentStatus();
+  rootContext.put(RecordAndReplayCurrentStatus.class,recordAndReplayCurrentStatus);
+  RecordAndReplayUtils recordAndReplayUtils=new RecordAndReplayUtils();
+  rootContext.put(RecordAndReplayUtils.class,recordAndReplayUtils);
+  CharacterStateEventPositionMap characterStateEventPositionMap=new CharacterStateEventPositionMap();
+  rootContext.put(CharacterStateEventPositionMap.class,characterStateEventPositionMap);
+  DirectionAndOriginPosRecorderList directionAndOriginPosRecorderList=new DirectionAndOriginPosRecorderList();
+  rootContext.put(DirectionAndOriginPosRecorderList.class,directionAndOriginPosRecorderList);
+  CoreRegistry.setContext(rootContext);
+  this.allSubsystems=Queues.newArrayDeque();
+  this.allSubsystems.add(new ConfigurationSubsystem());
+  this.allSubsystems.add(timeSubsystem);
+  this.allSubsystems.addAll(subsystems);
+  this.allSubsystems.add(new MonitoringSubsystem());
+  this.allSubsystems.add(new PhysicsSubsystem());
+  this.allSubsystems.add(new CommandSubsystem());
+  this.allSubsystems.add(new NetworkSubsystem());
+  this.allSubsystems.add(new WorldGenerationSubsystem());
+  this.allSubsystems.add(new GameSubsystem());
+  this.allSubsystems.add(new I18nSubsystem());
+  this.allSubsystems.add(new TelemetrySubSystem());
+  for (  EngineSubsystem subsystem : allSubsystems) {
+    if (LEGACY_ENGINE_MODULE_POLLUTERS.contains(subsystem.getClass().getName())) {
+      addToClassesOnClasspathsToAddToEngine(subsystem.getClass());
+    }
+  }
+  addToClassesOnClasspathsToAddToEngine(TypeHandler.class);
+  addToClassesOnClasspathsToAddToEngine(UIWidget.class);
+  addToClassesOnClasspathsToAddToEngine(ResourceUrn.class);
+}

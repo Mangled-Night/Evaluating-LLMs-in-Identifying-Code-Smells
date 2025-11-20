@@ -1,0 +1,54 @@
+/** 
+ * Command that emits it data after completion to a  {@link RedisSubscription}.
+ * @param < K > key type
+ * @param < V > value type
+ * @param < T > response type
+ */
+static class SubscriptionCommand<K,V,T> extends CommandWrapper<K,V,T> implements DemandAware.Sink {
+  private final boolean dissolve;
+  private final RedisSubscription<T> subscription;
+  private volatile DemandAware.Source source;
+  public SubscriptionCommand(  RedisCommand<K,V,T> command,  RedisSubscription<T> subscription,  boolean dissolve){
+    super(command);
+    this.subscription=subscription;
+    this.dissolve=dissolve;
+  }
+  @Override public boolean hasDemand(){
+    return isDone() || subscription.state() == State.COMPLETED || subscription.data.isEmpty();
+  }
+  @Override @SuppressWarnings({"unchecked","CastCanBeRemovedNarrowingVariableType"}) protected void doOnComplete(){
+    if (getOutput() != null) {
+      Object result=getOutput().get();
+      if (getOutput().hasError()) {
+        onError(ExceptionFactory.createExecutionException(getOutput().getError()));
+        return;
+      }
+      if (!(getOutput() instanceof StreamingOutput<?>) && result != null) {
+        if (dissolve && result instanceof Collection) {
+          Collection<T> collection=(Collection<T>)result;
+          for (          T t : collection) {
+            if (t != null) {
+              subscription.onNext(t);
+            }
+          }
+        }
+ else {
+          subscription.onNext((T)result);
+        }
+      }
+    }
+    subscription.onAllDataRead();
+  }
+  @Override public void setSource(  DemandAware.Source source){
+    this.source=source;
+  }
+  @Override public void removeSource(){
+    this.source=null;
+  }
+  @Override protected void doOnError(  Throwable throwable){
+    onError(throwable);
+  }
+  private void onError(  Throwable throwable){
+    subscription.onError(throwable);
+  }
+}

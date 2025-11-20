@@ -1,0 +1,30 @@
+/** 
+ * 用于导出clazz这个JavaBean的所有属性的PropertyDescriptor
+ * @param clazz
+ * @return
+ */
+private static PropertyDescriptor[] getDescriptors(Class<?> clazz){
+  PropertyDescriptor[] pds;
+  List<PropertyDescriptor> list;
+  PropertyDescriptor[] pds2=descriptors.get(clazz);
+  if (null == pds2) {
+    try {
+      BeanInfo beanInfo=Introspector.getBeanInfo(clazz);
+      pds=beanInfo.getPropertyDescriptors();
+      list=new ArrayList<PropertyDescriptor>();
+      for (int i=0; i < pds.length; i++) {
+        if (null != pds[i].getPropertyType()) {
+          list.add(pds[i]);
+        }
+      }
+      pds2=new PropertyDescriptor[list.size()];
+      list.toArray(pds2);
+    }
+ catch (    IntrospectionException ie) {
+      LOGGER.error("ParameterMappingError",ie);
+      pds2=new PropertyDescriptor[0];
+    }
+  }
+  descriptors.put(clazz,pds2);
+  return (pds2);
+}

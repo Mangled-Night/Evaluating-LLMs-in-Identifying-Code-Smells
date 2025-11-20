@@ -1,0 +1,28 @@
+/** 
+ * An accurate sync method that will attempt to run at a constant frame rate. It should be called once every frame.
+ * @param fps - the desired frame rate, in frames per second
+ */
+public static void sync(int fps){
+  if (fps <= 0) {
+    return;
+  }
+  if (!initialised) {
+    initialise();
+  }
+  try {
+    for (long t0=getTime(), t1; (nextFrame - t0) > SLEEP_DURATIONS.avg(); t0=t1) {
+      Thread.sleep(1);
+      t1=getTime();
+      SLEEP_DURATIONS.add(t1 - t0);
+    }
+    SLEEP_DURATIONS.dampenForLowResTicker();
+    for (long t0=getTime(), t1; (nextFrame - t0) > YIELD_DURATIONS.avg(); t0=t1) {
+      Thread.yield();
+      t1=getTime();
+      YIELD_DURATIONS.add(t1 - t0);
+    }
+  }
+ catch (  InterruptedException ignored) {
+  }
+  nextFrame=Math.max(nextFrame + NANOS_IN_SECOND / fps,getTime());
+}

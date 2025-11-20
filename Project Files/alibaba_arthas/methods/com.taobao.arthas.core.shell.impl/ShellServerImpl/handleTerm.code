@@ -1,0 +1,15 @@
+public void handleTerm(Term term){
+synchronized (this) {
+    if (closed) {
+      term.close();
+      return;
+    }
+  }
+  ShellImpl session=createShell(term);
+  tryUpdateWelcomeMessage();
+  session.setWelcome(welcomeMessage);
+  session.closedFuture.setHandler(new SessionClosedHandler(this,session));
+  session.init();
+  sessions.put(session.id,session);
+  session.readline();
+}

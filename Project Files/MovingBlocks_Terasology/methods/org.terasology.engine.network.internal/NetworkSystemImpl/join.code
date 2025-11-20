@@ -1,0 +1,50 @@
+@Override public JoinStatus join(String address,int port) throws InterruptedException {
+  if (mode == NetworkMode.NONE) {
+    if (hibernationSettings.isPresent()) {
+      hibernationSettings.get().setHibernationAllowed(false);
+    }
+    ChannelFuture connectCheck=null;
+    clientGroup=new NioEventLoopGroup();
+    try {
+      Bootstrap clientBootstrap=new Bootstrap();
+      clientBootstrap.group(clientGroup);
+      clientBootstrap.channel(NioSocketChannel.class);
+      clientBootstrap.option(ChannelOption.SO_KEEPALIVE,true);
+      clientBootstrap.option(ChannelOption.TCP_NODELAY,true);
+      clientBootstrap.remoteAddress(new InetSocketAddress(address,port));
+      clientBootstrap.handler(createWithConstructorInjection(TerasologyClientPipelineFactory.class,context));
+      connectCheck=clientBootstrap.connect();
+      connectCheck.sync();
+      if (connectCheck.isDone()) {
+        if (connectCheck.isSuccess()) {
+          allChannels.add(connectCheck.channel());
+          ClientConnectionHandler connectionHandler=connectCheck.channel().pipeline().get(ClientConnectionHandler.class);
+          if (connectionHandler == null) {
+            JoinStatusImpl status=new JoinStatusImpl();
+            status.setComplete();
+            return status;
+          }
+ else {
+            return connectionHandler.getJoinStatus();
+          }
+        }
+ else {
+          logger.warn("Failed to connect to server",connectCheck.cause());
+          connectCheck.channel().closeFuture().awaitUninterruptibly();
+          clientGroup.shutdownGracefully(shutdownQuietMs,shutdownTimeoutMs,TimeUnit.MILLISECONDS).syncUninterruptibly();
+          return new JoinStatusImpl("Failed to connect to server - " + connectCheck.cause().getMessage());
+        }
+      }
+      connectCheck.channel().closeFuture().sync();
+    }
+ catch (    Exception e) {
+      shutdown();
+      if (connectCheck != null) {
+        connectCheck.cancel(true);
+        connectCheck.channel().closeFuture().awaitUninterruptibly();
+      }
+      throw e;
+    }
+  }
+  return new JoinStatusImpl("Network system already active");
+}

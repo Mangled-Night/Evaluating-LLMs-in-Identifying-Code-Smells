@@ -1,0 +1,30 @@
+private void generateVBO(ChunkMesh.RenderType type){
+  VertexElements elements=vertexElements[type.ordinal()];
+  int id=type.getIndex();
+  if (!disposed && elements.buffer.elements() > 0) {
+    vertexBuffers[id]=GL30.glGenBuffers();
+    idxBuffers[id]=GL30.glGenBuffers();
+    vaoCount[id]=GL30.glGenVertexArrays();
+    GL30.glBindVertexArray(vaoCount[id]);
+    GL30.glBindBuffer(GL30.GL_ARRAY_BUFFER,vertexBuffers[id]);
+    elements.buffer.writeBuffer(buffer -> GL30.glBufferData(GL30.GL_ARRAY_BUFFER,buffer,GL30.GL_STATIC_DRAW));
+    for (    VertexResource.VertexDefinition definition : elements.buffer.definitions()) {
+      GL30.glEnableVertexAttribArray(definition.location);
+      if (definition.location == VertexElements.FLAGS_INDEX) {
+        GL30.glVertexAttribIPointer(definition.location,definition.attribute.count,definition.attribute.mapping.glType,elements.buffer.inStride(),definition.offset);
+      }
+ else {
+        GL30.glVertexAttribPointer(definition.location,definition.attribute.count,definition.attribute.mapping.glType,false,elements.buffer.inStride(),definition.offset);
+      }
+    }
+    GL30.glBindBuffer(GL30.GL_ELEMENT_ARRAY_BUFFER,idxBuffers[id]);
+    elements.indices.writeBuffer((buffer) -> GL30.glBufferData(GL30.GL_ELEMENT_ARRAY_BUFFER,buffer,GL30.GL_STATIC_DRAW));
+    vertexCount[id]=elements.indices.indices();
+    GL30.glBindVertexArray(0);
+  }
+ else {
+    vertexBuffers[id]=0;
+    idxBuffers[id]=0;
+    vertexCount[id]=0;
+  }
+}

@@ -1,0 +1,64 @@
+private void connectUsingConfiguration() throws ConnectionException, IOException, InterruptedException {
+  RemoteXmppTcpConnectionEndpoints.Result<Rfc6120TcpRemoteConnectionEndpoint> result=RemoteXmppTcpConnectionEndpoints.lookup(config);
+  List<RemoteConnectionException<Rfc6120TcpRemoteConnectionEndpoint>> connectionExceptions=new ArrayList<>();
+  SocketFactory socketFactory=config.getSocketFactory();
+  ProxyInfo proxyInfo=config.getProxyInfo();
+  int timeout=config.getConnectTimeout();
+  if (socketFactory == null) {
+    socketFactory=SocketFactory.getDefault();
+  }
+  for (  Rfc6120TcpRemoteConnectionEndpoint endpoint : result.discoveredRemoteConnectionEndpoints) {
+    Iterator<? extends InetAddress> inetAddresses;
+    String host=endpoint.getHost().toString();
+    UInt16 portUint16=endpoint.getPort();
+    int port=portUint16.intValue();
+    if (proxyInfo == null) {
+      inetAddresses=endpoint.getInetAddresses().iterator();
+      assert inetAddresses.hasNext();
+      innerloop:       while (inetAddresses.hasNext()) {
+        SmackFuture.SocketFuture socketFuture=new SmackFuture.SocketFuture(socketFactory);
+        final InetAddress inetAddress=inetAddresses.next();
+        final InetSocketAddress inetSocketAddress=new InetSocketAddress(inetAddress,port);
+        LOGGER.finer("Trying to establish TCP connection to " + inetSocketAddress);
+        socketFuture.connectAsync(inetSocketAddress,timeout);
+        try {
+          socket=socketFuture.getOrThrow();
+        }
+ catch (        IOException e) {
+          RemoteConnectionException<Rfc6120TcpRemoteConnectionEndpoint> rce=new RemoteConnectionException<>(endpoint,inetAddress,e);
+          connectionExceptions.add(rce);
+          if (inetAddresses.hasNext()) {
+            continue innerloop;
+          }
+ else {
+            break innerloop;
+          }
+        }
+        LOGGER.finer("Established TCP connection to " + inetSocketAddress);
+        this.host=host;
+        this.port=portUint16;
+        return;
+      }
+    }
+ else {
+      socket=socketFactory.createSocket();
+      StringUtils.requireNotNullNorEmpty(host,"Host of endpoint " + endpoint + " must not be null when using a Proxy");
+      final String hostAndPort=host + " at port " + port;
+      LOGGER.finer("Trying to establish TCP connection via Proxy to " + hostAndPort);
+      try {
+        proxyInfo.getProxySocketConnection().connect(socket,host,port,timeout);
+      }
+ catch (      IOException e) {
+        CloseableUtil.maybeClose(socket,LOGGER);
+        RemoteConnectionException<Rfc6120TcpRemoteConnectionEndpoint> rce=new RemoteConnectionException<>(endpoint,null,e);
+        connectionExceptions.add(rce);
+        continue;
+      }
+      LOGGER.finer("Established TCP connection to " + hostAndPort);
+      this.host=host;
+      this.port=portUint16;
+      return;
+    }
+  }
+  throw EndpointConnectionException.from(result.lookupFailures,connectionExceptions);
+}

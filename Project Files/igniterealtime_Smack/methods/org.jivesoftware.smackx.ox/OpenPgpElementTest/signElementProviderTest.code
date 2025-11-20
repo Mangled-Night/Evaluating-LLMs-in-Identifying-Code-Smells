@@ -1,0 +1,12 @@
+@SuppressWarnings("UndefinedEquals") @Test public void signElementProviderTest() throws Exception {
+  String expected="<sign xmlns='urn:xmpp:openpgp:0'>" + "<to jid='alice@wonderland.lit'/>" + "<to jid='bob@builder.lit'/>"+ "<time stamp='2014-07-10T15:06:00.000+00:00'/>"+ "<payload>"+ "<body xmlns='jabber:client' xml:lang='en'>Hello World!</body>"+ "</payload>"+ "</sign>";
+  List<ExtensionElement> payload=new ArrayList<>();
+  payload.add(new Message.Body("en","Hello World!"));
+  SignElement element=new SignElement(recipients,testDate,payload);
+  assertXmlSimilar(expected,element.toXML().toString());
+  XmlPullParser parser=TestUtils.getParser(expected);
+  SignElement parsed=(SignElement)OpenPgpContentElementProvider.parseOpenPgpContentElement(parser);
+  assertEquals(element.getTimestamp(),parsed.getTimestamp());
+  assertEquals(element.getTo(),parsed.getTo());
+  assertEquals(element.getExtensions(),parsed.getExtensions());
+}

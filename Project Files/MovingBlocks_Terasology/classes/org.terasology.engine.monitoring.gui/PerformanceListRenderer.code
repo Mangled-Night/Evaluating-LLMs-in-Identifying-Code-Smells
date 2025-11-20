@@ -1,0 +1,57 @@
+private static class PerformanceListRenderer implements ListCellRenderer {
+  private final MyRenderer renderer;
+  PerformanceListRenderer(  HeaderPanel header){
+    renderer=new MyRenderer(header);
+  }
+  @Override public Component getListCellRendererComponent(  JList list,  Object value,  int index,  boolean isSelected,  boolean cellHasFocus){
+    if (value instanceof Entry) {
+      renderer.setEntry((Entry)value);
+    }
+ else {
+      renderer.setEntry(null);
+    }
+    return renderer;
+  }
+private static class MyRenderer extends JPanel {
+    private final HeaderPanel header;
+    private final DecimalFormat format=new DecimalFormat("#####0.00");
+    private final JLabel lName=new JLabel();
+    private final JLabel lMean=new JLabel();
+    private final JLabel lSpike=new JLabel();
+    private Dimension dName=new Dimension(0,0);
+    MyRenderer(    HeaderPanel header){
+      this.header=Preconditions.checkNotNull(header,"The parameter 'header' must not be null");
+      setBackground(Color.WHITE);
+      setLayout(new FlowLayout(FlowLayout.LEFT,4,2));
+      lMean.setHorizontalAlignment(SwingConstants.RIGHT);
+      lMean.setForeground(Color.GRAY);
+      lMean.setPreferredSize(header.lMean.getPreferredSize());
+      lSpike.setHorizontalAlignment(SwingConstants.RIGHT);
+      lSpike.setForeground(Color.GRAY);
+      lSpike.setPreferredSize(header.lSpike.getPreferredSize());
+      add(lName);
+      add(lMean);
+      add(lSpike);
+    }
+    public void setEntry(    Entry entry){
+      if (entry != null) {
+        lName.setPreferredSize(null);
+        lName.setForeground(entry.active ? Color.BLUE : Color.GRAY);
+        lName.setText(entry.name);
+        Dimension tmp=lName.getPreferredSize();
+        if (tmp.width > dName.width || tmp.height > dName.height) {
+          dName=tmp;
+          header.setNameSize(dName);
+        }
+        lName.setPreferredSize(dName);
+        lMean.setText("  " + format.format(entry.mean) + " ms");
+        lSpike.setText("  " + format.format(entry.spike) + " ms");
+      }
+ else {
+        lName.setText("");
+        lMean.setText("");
+        lSpike.setText("");
+      }
+    }
+  }
+}

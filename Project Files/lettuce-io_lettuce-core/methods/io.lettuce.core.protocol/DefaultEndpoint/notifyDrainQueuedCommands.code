@@ -1,0 +1,42 @@
+@Override public void notifyDrainQueuedCommands(HasQueuedCommands queuedCommands){
+  if (isClosed()) {
+    RedisException closed=new RedisException("Connection closed");
+    cancelCommands(closed.getMessage(),queuedCommands.drainQueue(),it -> it.completeExceptionally(closed));
+    cancelCommands(closed.getMessage(),drainCommands(),it -> it.completeExceptionally(closed));
+    return;
+  }
+ else   if (reliability == Reliability.AT_MOST_ONCE && rejectCommandsWhileDisconnected) {
+    RedisException disconnected=new RedisException("Connection disconnected");
+    cancelCommands(disconnected.getMessage(),queuedCommands.drainQueue(),it -> it.completeExceptionally(disconnected));
+    cancelCommands(disconnected.getMessage(),drainCommands(),it -> it.completeExceptionally(disconnected));
+    return;
+  }
+  sharedLock.doExclusive(() -> {
+    Collection<RedisCommand<?,?,?>> commands=queuedCommands.drainQueue();
+    if (debugEnabled) {
+      logger.debug("{} notifyQueuedCommands adding {} command(s) to buffer",logPrefix(),commands.size());
+    }
+    commands.addAll(drainCommands(disconnectedBuffer));
+    for (    RedisCommand<?,?,?> command : commands) {
+      if (command instanceof DemandAware.Sink) {
+        ((DemandAware.Sink)command).removeSource();
+      }
+    }
+    try {
+      disconnectedBuffer.addAll(commands);
+    }
+ catch (    RuntimeException e) {
+      if (debugEnabled) {
+        logger.debug("{} notifyQueuedCommands Queue overcommit. Cannot add all commands to buffer (disconnected).",logPrefix(),commands.size());
+      }
+      commands.removeAll(disconnectedBuffer);
+      for (      RedisCommand<?,?,?> command : commands) {
+        command.completeExceptionally(e);
+      }
+    }
+    if (isConnected()) {
+      flushCommands(disconnectedBuffer);
+    }
+  }
+);
+}

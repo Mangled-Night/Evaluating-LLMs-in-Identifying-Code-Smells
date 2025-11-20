@@ -1,0 +1,12 @@
+@Test public void clusterSetSlots(){
+  ClusterSetup.setup2Masters(clusterHelper);
+  redis1.clusterSetSlotNode(6,getNodeId(redis2));
+  waitForSlots(redis1,11999);
+  waitForSlots(redis2,4384);
+  Partitions partitions=ClusterPartitionParser.parse(redis1.clusterNodes());
+  for (  RedisClusterNode redisClusterNode : partitions.getPartitions()) {
+    if (redisClusterNode.getFlags().contains(RedisClusterNode.NodeFlag.MYSELF)) {
+      assertThat(redisClusterNode.getSlots()).contains(1,2,3,4,5).doesNotContain(6);
+    }
+  }
+}

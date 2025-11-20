@@ -1,0 +1,11 @@
+/** 
+ * Register stanza listeners needed for OMEMO. This method is called automatically in the constructor and should only be used to restore the previous state after  {@link #stopStanzaAndPEPListeners()} was called.
+ */
+public void resumeStanzaAndPEPListeners(){
+  CarbonManager carbonManager=CarbonManager.getInstanceFor(connection());
+  connection().removeAsyncStanzaListener(this::internalOmemoMessageStanzaListener);
+  carbonManager.removeCarbonCopyReceivedListener(this::internalOmemoCarbonCopyListener);
+  pepManager.addPepEventListener(OmemoConstants.PEP_NODE_DEVICE_LIST,OmemoDeviceListElement.class,pepOmemoDeviceListEventListener);
+  connection().addAsyncStanzaListener(this::internalOmemoMessageStanzaListener,OmemoManager::isOmemoMessage);
+  carbonManager.addCarbonCopyReceivedListener(this::internalOmemoCarbonCopyListener);
+}

@@ -1,0 +1,12 @@
+@Test void pingWithTrace(){
+  ScopedSpan foo=clientTracing.tracer().startScopedSpan("foo");
+  StatefulRedisConnection<String,String> connect=client.connect();
+  connect.sync().ping();
+  Wait.untilNotEquals(true,spans::isEmpty).waitOrTimeout();
+  foo.finish();
+  List<Span> spans=new ArrayList<>(BraveTracingIntegrationTests.spans);
+  assertThat(spans.get(0).name()).isEqualTo("hello");
+  assertThat(spans.get(0).remoteEndpoint()).isNotNull();
+  assertThat(spans.get(1).name()).isEqualTo("ping");
+  assertThat(spans.get(1).remoteEndpoint().port()).isEqualTo(port);
+}

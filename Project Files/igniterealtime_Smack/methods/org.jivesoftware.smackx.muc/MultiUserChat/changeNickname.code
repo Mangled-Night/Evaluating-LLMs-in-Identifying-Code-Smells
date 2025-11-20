@@ -1,0 +1,21 @@
+/** 
+ * Changes the occupant's nickname to a new nickname within the room. Each room occupant will receive two presence packets. One of type "unavailable" for the old nickname and one indicating availability for the new nickname. The unavailable presence will contain the new nickname and an appropriate status code (namely 303) as extended presence information. The status code 303 indicates that the occupant is changing his/her nickname.
+ * @param nickname the new nickname within the room.
+ * @throws XMPPErrorException if the new nickname is already in use by another occupant.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws MucNotJoinedException if not joined to the Multi-User Chat.
+ */
+public synchronized void changeNickname(Resourcepart nickname) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException, MucNotJoinedException {
+  Objects.requireNonNull(nickname,"Nickname must not be null or blank.");
+  if (!isJoined()) {
+    throw new MucNotJoinedException(this);
+  }
+  final EntityFullJid jid=JidCreate.entityFullFrom(room,nickname);
+  Presence joinPresence=connection.getStanzaFactory().buildPresenceStanza().to(jid).ofType(Presence.Type.available).build();
+  StanzaFilter responseFilter=new AndFilter(FromMatchesFilter.createFull(jid),new StanzaTypeFilter(Presence.class));
+  StanzaCollector response=connection.createStanzaCollectorAndSend(responseFilter,joinPresence);
+  response.nextResultOrThrow();
+  setNickname(nickname);
+}

@@ -1,0 +1,19 @@
+/** 
+ * Run a command on all available nodes that match  {@code filter}.
+ * @param function function producing the command
+ * @param filter filter function for the node selection
+ * @param < T > result type
+ * @return map of a key (counter) and commands.
+ */
+protected <T>Map<String,Publisher<T>> executeOnNodes(Function<RedisClusterReactiveCommands<K,V>,? extends Publisher<T>> function,Predicate<RedisClusterNode> filter){
+  Map<String,Publisher<T>> executions=new HashMap<>();
+  for (  RedisClusterNode redisClusterNode : getStatefulConnection().getPartitions()) {
+    if (!filter.test(redisClusterNode)) {
+      continue;
+    }
+    RedisURI uri=redisClusterNode.getUri();
+    Mono<RedisClusterReactiveCommands<K,V>> connection=getConnectionReactive(uri.getHost(),uri.getPort());
+    executions.put(redisClusterNode.getNodeId(),connection.flatMapMany(function::apply));
+  }
+  return executions;
+}

@@ -1,0 +1,10 @@
+@Test void clientSetname(){
+  String name="test-cluster-client";
+  assertThat(clusterClient.getPartitions().size()).isGreaterThan(0);
+  sync.clientSetname(name);
+  for (  RedisClusterNode redisClusterNode : clusterClient.getPartitions()) {
+    RedisClusterCommands<String,String> nodeConnection=async.getStatefulConnection().sync().getConnection(redisClusterNode.getNodeId());
+    assertThat(nodeConnection.clientList()).contains(name);
+  }
+  assertThat(sync.clientGetname()).isEqualTo(name);
+}

@@ -1,0 +1,27 @@
+@Test void commandNotExecutedFailsOnEncode(){
+  StatefulRedisConnection<String,String> connection=client.connect();
+  RedisCommands<String,String> sync=client.connect().sync();
+  RedisChannelWriter channelWriter=ConnectionTestUtil.getChannelWriter(connection);
+  sync.set(key,"1");
+  AsyncCommand<String,String,String> working=new AsyncCommand<>(new Command<String,String,String>(CommandType.INCR,new IntegerOutput(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).addKey(key)));
+  channelWriter.write(working);
+  assertThat(working.await(2,TimeUnit.SECONDS)).isTrue();
+  assertThat(sync.get(key)).isEqualTo("2");
+  AsyncCommand<String,String,Object> command=new AsyncCommand<String,String,Object>(new Command<String,String,Object>(CommandType.INCR,new IntegerOutput(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).addKey(key))){
+    @Override public void encode(    ByteBuf buf){
+      throw new IllegalStateException("I want to break free");
+    }
+  }
+;
+  channelWriter.write(command);
+  assertThat(command.await(2,TimeUnit.SECONDS)).isTrue();
+  assertThat(command.isCancelled()).isFalse();
+  assertThat(getException(command)).isInstanceOf(EncoderException.class);
+  Wait.untilTrue(() -> !ConnectionTestUtil.getStack(connection).isEmpty()).waitOrTimeout();
+  assertThat(ConnectionTestUtil.getStack(connection)).isNotEmpty();
+  ConnectionTestUtil.getStack(connection).clear();
+  assertThat(sync.get(key)).isEqualTo("2");
+  assertThat(ConnectionTestUtil.getStack(connection)).isEmpty();
+  assertThat(ConnectionTestUtil.getCommandBuffer(connection)).isEmpty();
+  connection.close();
+}

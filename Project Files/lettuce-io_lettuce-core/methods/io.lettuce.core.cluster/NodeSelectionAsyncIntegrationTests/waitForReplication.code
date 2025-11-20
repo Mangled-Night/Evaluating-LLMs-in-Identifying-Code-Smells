@@ -1,0 +1,17 @@
+void waitForReplication(String key,int port){
+  waitForReplication(commands,key,port);
+}
+static void waitForReplication(RedisAdvancedClusterAsyncCommands<String,String> commands,String key,int port){
+  AsyncNodeSelection<String,String> selection=commands.replicas(redisClusterNode -> redisClusterNode.getUri().getPort() == port);
+  Wait.untilNotEquals(null,() -> {
+    for (    CompletableFuture<String> future : selection.commands().get(key).futures()) {
+      TestFutures.awaitOrTimeout(future);
+      String result=TestFutures.getOrTimeout((Future<String>)future);
+      if (result != null) {
+        return result;
+      }
+    }
+    return null;
+  }
+).waitOrTimeout();
+}

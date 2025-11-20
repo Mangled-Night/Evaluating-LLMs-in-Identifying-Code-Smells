@@ -1,0 +1,18 @@
+/** 
+ * Allocates a LongArray of `size`.
+ */
+public LongArray allocateLongArray(long size){
+  long required=size * 8L;
+  MemoryBlock page=dataNodeMemoryManager.allocatePage(required,this);
+  if (page == null || page.size() < required) {
+    long got=0;
+    if (page != null) {
+      got=page.size();
+      dataNodeMemoryManager.freePage(page,this);
+    }
+    dataNodeMemoryManager.showMemoryUsage();
+    throw new OutOfMemoryError("Unable to acquire " + required + " bytes of memory, got "+ got);
+  }
+  used+=required;
+  return new LongArray(page);
+}

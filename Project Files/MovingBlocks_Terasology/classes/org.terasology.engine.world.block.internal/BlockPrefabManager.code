@@ -1,0 +1,40 @@
+public class BlockPrefabManager implements BlockRegistrationListener {
+  private EntityManager entityManager;
+  private BlockManager blockManager;
+  public BlockPrefabManager(  EntityManager entityManager,  BlockManager blockManager){
+    this.entityManager=entityManager;
+    this.blockManager=blockManager;
+    updateExistingBlocks();
+  }
+  @Override public void onBlockFamilyRegistered(  BlockFamily family){
+    for (    Block block : family.getBlocks()) {
+      updateBlock(block);
+    }
+  }
+  private void updateExistingBlocks(){
+    for (    BlockFamily blockFamily : blockManager.listRegisteredBlockFamilies()) {
+      for (      Block block : blockFamily.getBlocks()) {
+        updateBlock(block);
+      }
+    }
+  }
+  private void updateBlock(  Block block){
+    Optional<Prefab> prefab=block.getPrefab();
+    boolean keepActive=block.isKeepActive();
+    boolean requiresLifecycleEvents=false;
+    if (prefab.isPresent()) {
+      for (      Component comp : prefab.get().iterateComponents()) {
+        ComponentMetadata<?> metadata=entityManager.getComponentLibrary().getMetadata(comp.getClass());
+        if (metadata.isForceBlockActive()) {
+          keepActive=true;
+          break;
+        }
+        if (metadata.isBlockLifecycleEventsRequired()) {
+          requiresLifecycleEvents=true;
+        }
+      }
+    }
+    block.setKeepActive(keepActive);
+    block.setLifecycleEventsRequired(requiresLifecycleEvents && !keepActive);
+  }
+}

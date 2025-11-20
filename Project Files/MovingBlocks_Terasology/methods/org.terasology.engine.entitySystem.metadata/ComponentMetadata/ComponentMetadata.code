@@ -1,0 +1,30 @@
+/** 
+ * @param uri            The uri to identify the component with.
+ * @param type           The type to create the metadata for
+ * @param factory        A reflection library to provide class construction and field get/set functionality
+ * @param copyStrategies A copy strategy library
+ * @throws NoSuchMethodException If the component has no default constructor
+ */
+public ComponentMetadata(ResourceUrn uri,Class<T> type,ReflectFactory factory,CopyStrategyLibrary copyStrategies) throws NoSuchMethodException {
+  super(uri.toString(),type,factory,copyStrategies,Predicates.<Field>alwaysTrue());
+  persisted=type.getAnnotation(DoNotPersist.class) == null;
+  replicated=type.getAnnotation(Replicate.class) != null;
+  blockLifecycleEventsRequired=type.getAnnotation(RequiresBlockLifecycleEvents.class) != null;
+  ForceBlockActive forceBlockActiveAnnotation=type.getAnnotation(ForceBlockActive.class);
+  if (forceBlockActiveAnnotation != null) {
+    forceBlockActive=true;
+    retainUnalteredOnBlockChange=forceBlockActiveAnnotation.retainUnalteredOnBlockChange();
+  }
+  for (  ComponentFieldMetadata<T,?> field : getFields()) {
+    if (field.isReplicated()) {
+      replicated=true;
+      if (field.getReplicationInfo().value().isReplicateFromOwner()) {
+        replicatedFromOwner=true;
+      }
+    }
+    if (field.isOwnedReference()) {
+      referenceOwner=true;
+    }
+  }
+  annotations=Lists.newArrayList(type.getAnnotations());
+}

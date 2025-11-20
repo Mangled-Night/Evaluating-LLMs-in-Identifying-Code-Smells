@@ -1,0 +1,23 @@
+public static class BlockingStringWriter extends Writer {
+  private boolean blocked=true;
+  @Override public void write(  char[] cbuf,  int off,  int len) throws IOException {
+synchronized (this) {
+      while (blocked) {
+        try {
+          wait();
+        }
+ catch (        InterruptedException e) {
+          throw new AssertionError(e);
+        }
+      }
+    }
+  }
+  public synchronized void unblock(){
+    blocked=false;
+    notify();
+  }
+  @Override public void flush() throws IOException {
+  }
+  @Override public void close() throws IOException {
+  }
+}

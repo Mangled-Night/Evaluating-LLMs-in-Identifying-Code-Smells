@@ -1,0 +1,23 @@
+public OpenALManager(AudioConfig config) throws OpenALException {
+  logger.info("Initializing OpenAL audio manager");
+  config.musicVolume.subscribe((setting,oldValue) -> setMusicVolume(setting.get()));
+  config.soundVolume.subscribe((setting,oldValue) -> setSoundVolume(setting.get()));
+  long device=ALC10.alcOpenDevice((java.lang.CharSequence)null);
+  long context=ALC10.alcCreateContext(device,(int[])null);
+  ALC10.alcMakeContextCurrent(context);
+  ALCCapabilities alcCapabilities=ALC.createCapabilities(device);
+  ALCapabilities alCapabilities=AL.createCapabilities(alcCapabilities);
+  logger.info("OpenAL {} initialized!",AL10.alGetString(AL10.AL_VERSION));
+  logger.info("Using OpenAL: {} by {}",AL10.alGetString(AL10.AL_RENDERER),AL10.alGetString(AL10.AL_VENDOR));
+  logger.info("Using device: {}",ALC10.alcGetString(device,ALC10.ALC_DEVICE_SPECIFIER));
+  logger.info("Available AL extensions: {}",AL10.alGetString(AL10.AL_EXTENSIONS));
+  logger.info("Available ALC extensions: {}",ALC10.alcGetString(device,ALC10.ALC_EXTENSIONS));
+  logger.info("Max mono sources: {}",ALC10.alcGetInteger(device,ALC11.ALC_MONO_SOURCES));
+  logger.info("Max stereo sources: {}",ALC10.alcGetInteger(device,ALC11.ALC_STEREO_SOURCES));
+  logger.info("Mixer frequency: {}",ALC10.alcGetInteger(device,ALC10.ALC_FREQUENCY));
+  AL10.alDistanceModel(AL10.AL_INVERSE_DISTANCE_CLAMPED);
+  pools.put("sfx",new OpenALSoundPool(30));
+  pools.put("music",new OpenALStreamingSoundPool(2));
+  pools.get("sfx").setVolume(config.soundVolume.get());
+  pools.get("music").setVolume(config.musicVolume.get());
+}

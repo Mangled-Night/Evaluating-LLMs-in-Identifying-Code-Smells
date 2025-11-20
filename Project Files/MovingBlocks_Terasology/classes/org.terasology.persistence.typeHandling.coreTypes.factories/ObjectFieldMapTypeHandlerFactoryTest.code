@@ -1,0 +1,21 @@
+public class ObjectFieldMapTypeHandlerFactoryTest {
+  private final TypeHandlerLibrary typeHandlerLibrary=mock(TypeHandlerLibrary.class);
+  private final ConstructorLibrary constructorLibrary=new ConstructorLibrary(Maps.newHashMap());
+  private final ObjectFieldMapTypeHandlerFactory typeHandlerFactory=new ObjectFieldMapTypeHandlerFactory(constructorLibrary);
+  private final TypeHandlerContext context=new TypeHandlerContext(typeHandlerLibrary,mock(SerializationSandbox.class));
+private static class SomeClass<T> {
+    private T t;
+    private List<T> list;
+  }
+  @Test public void testObject(){
+    Optional<TypeHandler<SomeClass<Integer>>> typeHandler=typeHandlerFactory.create(new TypeInfo<SomeClass<Integer>>(){
+    }
+,context);
+    assertTrue(typeHandler.isPresent());
+    assertTrue(typeHandler.get() instanceof ObjectFieldMapTypeHandler);
+    verify(typeHandlerLibrary).getTypeHandler(eq(TypeInfo.of(Integer.class).getType()));
+    verify(typeHandlerLibrary).getTypeHandler(eq(new TypeInfo<List<Integer>>(){
+    }
+.getType()));
+  }
+}

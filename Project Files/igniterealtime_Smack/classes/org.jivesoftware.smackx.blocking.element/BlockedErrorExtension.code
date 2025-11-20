@@ -1,0 +1,36 @@
+/** 
+ * Blocked error extension class.
+ * @author Fernando Ramirez
+ * @see <a href="http://xmpp.org/extensions/xep-0191.html">XEP-0191: Blocking
+ *      Command</a>
+ */
+public class BlockedErrorExtension implements ExtensionElement {
+  public static final String ELEMENT="blocked";
+  public static final String NAMESPACE=BlockingCommandManager.NAMESPACE + ":errors";
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  @Override public CharSequence toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this);
+    xml.closeEmptyElement();
+    return xml;
+  }
+  public static BlockedErrorExtension from(  Message message){
+    StanzaError error=message.getError();
+    if (error == null) {
+      return null;
+    }
+    return error.getExtension(ELEMENT,NAMESPACE);
+  }
+  /** 
+ * Check if a message contains a BlockedErrorExtension, which means that a message was blocked because the JID blocked the sender, and that was reflected back as an error message.
+ * @param message TODO javadoc me please
+ * @return true if the message contains a BlockedErrorExtension, false ifnot
+ */
+  public static boolean isInside(  Message message){
+    return from(message) != null;
+  }
+}

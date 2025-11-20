@@ -1,0 +1,13 @@
+@Override InputStream negotiateIncomingStream(Stanza streamInitiation) throws InterruptedException, SmackException, XMPPErrorException {
+  Socks5BytestreamRequest request=new ByteStreamRequest(this.manager,(Bytestream)streamInitiation);
+  Socks5BytestreamSession session=request.accept();
+  try {
+    PushbackInputStream stream=new PushbackInputStream(session.getInputStream());
+    int firstByte=stream.read();
+    stream.unread(firstByte);
+    return stream;
+  }
+ catch (  IOException e) {
+    throw new SmackException.SmackWrappedException("Error establishing input stream",e);
+  }
+}

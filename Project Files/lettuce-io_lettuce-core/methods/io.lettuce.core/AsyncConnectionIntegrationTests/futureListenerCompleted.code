@@ -1,0 +1,15 @@
+@Test void futureListenerCompleted(){
+  final List<Object> run=new ArrayList<>();
+  Runnable listener=new Runnable(){
+    @Override public void run(){
+      run.add(new Object());
+    }
+  }
+;
+  RedisAsyncCommands<String,String> connection=client.connect().async();
+  RedisFuture<String> set=connection.set(key,value);
+  TestFutures.awaitOrTimeout(set);
+  set.thenRun(listener);
+  assertThat(run).hasSize(1);
+  connection.getStatefulConnection().close();
+}

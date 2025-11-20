@@ -1,0 +1,22 @@
+@SuppressWarnings("serial") static class CannotRetrieveClusterPartitions extends RedisException {
+  private final Map<RedisURI,String> failure;
+  public CannotRetrieveClusterPartitions(  Iterable<RedisURI> seedNodes,  Map<RedisURI,String> failure){
+    super(String.format("Cannot retrieve cluster partitions from %s",seedNodes));
+    this.failure=failure;
+  }
+  @Override public String getMessage(){
+    StringJoiner joiner=new StringJoiner(SystemPropertyUtil.get("line.separator","\n"));
+    if (!failure.isEmpty()) {
+      joiner.add(super.getMessage()).add("");
+      joiner.add("Details:");
+      for (      Map.Entry<RedisURI,String> entry : failure.entrySet()) {
+        joiner.add(String.format("\t[%s]: %s",entry.getKey(),entry.getValue()));
+      }
+      joiner.add("");
+    }
+    return joiner.toString();
+  }
+  @Override public synchronized Throwable fillInStackTrace(){
+    return this;
+  }
+}

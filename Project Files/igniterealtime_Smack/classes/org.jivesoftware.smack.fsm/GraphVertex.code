@@ -1,0 +1,42 @@
+public static final class GraphVertex<E> {
+  private final E element;
+  private final List<GraphVertex<E>> outgoingEdges=new ArrayList<>();
+  private VertexColor color=VertexColor.white;
+  private GraphVertex(  E element){
+    this.element=element;
+  }
+  private void addOutgoingEdge(  GraphVertex<E> vertex){
+    assert vertex != null;
+    if (outgoingEdges.contains(vertex)) {
+      throw new IllegalArgumentException("This " + this + " already has an outgoing edge to "+ vertex);
+    }
+    outgoingEdges.add(vertex);
+  }
+  public E getElement(){
+    return element;
+  }
+  public List<GraphVertex<E>> getOutgoingEdges(){
+    return Collections.unmodifiableList(outgoingEdges);
+  }
+  private enum VertexColor {  white,   grey,   black}
+  @Override public String toString(){
+    return toString(true);
+  }
+  public String toString(  boolean includeOutgoingEdges){
+    StringBuilder sb=new StringBuilder();
+    sb.append("GraphVertex " + element + " [color="+ color+ ", identityHashCode="+ System.identityHashCode(this)+ ", outgoingEdgeCount="+ outgoingEdges.size());
+    if (includeOutgoingEdges) {
+      sb.append(", outgoingEdges={");
+      for (Iterator<GraphVertex<E>> it=outgoingEdges.iterator(); it.hasNext(); ) {
+        GraphVertex<E> outgoingEdgeVertex=it.next();
+        sb.append(outgoingEdgeVertex.toString(false));
+        if (it.hasNext()) {
+          sb.append(", ");
+        }
+      }
+      sb.append('}');
+    }
+    sb.append(']');
+    return sb.toString();
+  }
+}

@@ -1,0 +1,24 @@
+/** 
+ * Publish data using PEP, and block until the server has echoed the publication back to the publishing user.
+ * @param geoManager The GeoLocationManager instance for the connection that is expected to publish data.
+ * @param discoManager The ServiceDiscoveryManager instance for the connection that is expected to publish data.
+ * @param data The data to be published.
+ * @throws Exception if the test fails
+ */
+public void publishAndWait(GeoLocationManager geoManager,ServiceDiscoveryManager discoManager,GeoLocation data) throws Exception {
+  final SimpleResultSyncPoint publicationEchoReceived=new SimpleResultSyncPoint();
+  final PepEventListener<GeoLocation> publicationEchoListener=(jid,geoLocation,id,message) -> {
+    if (geoLocation.equals(data)) {
+      publicationEchoReceived.signal();
+    }
+  }
+;
+  try {
+    registerListenerAndWait(geoManager,discoManager,publicationEchoListener);
+    geoManager.addGeoLocationListener(publicationEchoListener);
+    geoManager.publishGeoLocation(data);
+  }
+  finally {
+    geoManager.removeGeoLocationListener(publicationEchoListener);
+  }
+}

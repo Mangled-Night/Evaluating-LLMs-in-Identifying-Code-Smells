@@ -1,0 +1,16 @@
+@Test public void undecidedOmemoIdentityExceptionTest() throws XmppStringprepException {
+  OmemoDevice alice=new OmemoDevice(JidCreate.bareFrom("alice@server.tld"),1234);
+  OmemoDevice bob=new OmemoDevice(JidCreate.bareFrom("bob@server.tld"),5678);
+  OmemoDevice mallory=new OmemoDevice(JidCreate.bareFrom("mallory@server.tld"),9876);
+  UndecidedOmemoIdentityException u=new UndecidedOmemoIdentityException(alice);
+  assertTrue(u.getUndecidedDevices().contains(alice));
+  assertTrue(u.getUndecidedDevices().size() == 1);
+  UndecidedOmemoIdentityException v=new UndecidedOmemoIdentityException(bob);
+  v.getUndecidedDevices().add(mallory);
+  assertTrue(v.getUndecidedDevices().size() == 2);
+  assertTrue(v.getUndecidedDevices().contains(bob));
+  assertTrue(v.getUndecidedDevices().contains(mallory));
+  u.getUndecidedDevices().add(bob);
+  u.join(v);
+  assertTrue(u.getUndecidedDevices().size() == 3);
+}

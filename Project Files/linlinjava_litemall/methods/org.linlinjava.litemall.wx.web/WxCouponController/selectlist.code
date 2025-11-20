@@ -1,0 +1,45 @@
+/** 
+ * 当前购物车下单商品订单可用优惠券
+ * @param userId
+ * @param cartId
+ * @param grouponRulesId
+ * @return
+ */
+@GetMapping("selectlist") public Object selectlist(@LoginUser Integer userId,Integer cartId,Integer grouponRulesId){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  BigDecimal grouponPrice=new BigDecimal(0.00);
+  LitemallGrouponRules grouponRules=grouponRulesService.findById(grouponRulesId);
+  if (grouponRules != null) {
+    grouponPrice=grouponRules.getDiscount();
+  }
+  List<LitemallCart> checkedGoodsList=null;
+  if (cartId == null || cartId.equals(0)) {
+    checkedGoodsList=cartService.queryByUidAndChecked(userId);
+  }
+ else {
+    LitemallCart cart=cartService.findById(userId,cartId);
+    if (cart == null) {
+      return ResponseUtil.badArgumentValue();
+    }
+    checkedGoodsList=new ArrayList<>(1);
+    checkedGoodsList.add(cart);
+  }
+  BigDecimal checkedGoodsPrice=new BigDecimal(0.00);
+  for (  LitemallCart cart : checkedGoodsList) {
+    if (grouponRules != null && grouponRules.getGoodsId().equals(cart.getGoodsId())) {
+      checkedGoodsPrice=checkedGoodsPrice.add(cart.getPrice().subtract(grouponPrice).multiply(new BigDecimal(cart.getNumber())));
+    }
+ else {
+      checkedGoodsPrice=checkedGoodsPrice.add(cart.getPrice().multiply(new BigDecimal(cart.getNumber())));
+    }
+  }
+  List<LitemallCouponUser> couponUserList=couponUserService.queryAll(userId);
+  List<CouponVo> couponVoList=change(couponUserList);
+  for (  CouponVo cv : couponVoList) {
+    LitemallCoupon coupon=couponVerifyService.checkCoupon(userId,cv.getCid(),cv.getId(),checkedGoodsPrice,checkedGoodsList);
+    cv.setAvailable(coupon != null);
+  }
+  return ResponseUtil.okList(couponVoList);
+}

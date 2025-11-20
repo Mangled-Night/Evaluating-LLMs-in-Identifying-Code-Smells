@@ -1,0 +1,19 @@
+@Override public void initialise(){
+  defaultBinds=bindsManager.getDefaultBindsConfig();
+  bindButton=find("new-binding",UIInputBind.class);
+  WidgetUtil.trySubscribe(this,"remove",button -> bindButton.setNewInput(null));
+  WidgetUtil.trySubscribe(this,"ok",button -> {
+    Input newInput=bindButton.getNewInput();
+    currBinds=bindsManager.getBindsConfig();
+    if (currBinds.isBound(newInput) && !newInput.equals(bindButton.getInput())) {
+      ConfirmChangePopup popup=getManager().pushScreen(ConfirmChangePopup.ASSET_URI,ConfirmChangePopup.class);
+      popup.setButtonData(bindButton);
+    }
+ else {
+      bindButton.saveInput();
+      getManager().popScreen();
+    }
+  }
+);
+  WidgetUtil.trySubscribe(this,"cancel",button -> getManager().popScreen());
+}

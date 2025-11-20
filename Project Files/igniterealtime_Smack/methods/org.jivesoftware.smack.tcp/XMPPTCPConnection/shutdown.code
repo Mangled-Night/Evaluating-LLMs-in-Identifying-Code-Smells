@@ -1,0 +1,74 @@
+/** 
+ * Shuts the current connection down. After this method returns, the connection must be ready for re-use by connect.
+ */
+@Override protected void shutdown(){
+  if (isSmEnabled()) {
+    try {
+      sendSmAcknowledgementInternal();
+    }
+ catch (    InterruptedException|NotConnectedException e) {
+      LOGGER.log(Level.FINE,"Can not send final SM ack as connection is not connected",e);
+    }
+  }
+  shutdown(false);
+}
+private void shutdown(boolean instant){
+  if (!packetWriter.done()) {
+    LOGGER.finer(packetWriter.threadName + " shutdown()");
+    packetWriter.shutdown(instant);
+    LOGGER.finer(packetWriter.threadName + " shutdown() returned");
+    if (!instant) {
+      waitForClosingStreamTagFromServer();
+    }
+  }
+  LOGGER.finer(packetReader.threadName + " shutdown()");
+  packetReader.shutdown();
+  LOGGER.finer(packetReader.threadName + " shutdown() returned");
+  CloseableUtil.maybeClose(socket,LOGGER);
+  setWasAuthenticated();
+  try {
+    boolean readerAndWriterThreadsTermianted=waitFor(() -> !packetWriter.running && !packetReader.running);
+    if (!readerAndWriterThreadsTermianted) {
+      LOGGER.severe("Reader and/or writer threads did not terminate timely. Writer running: " + packetWriter.running + ", Reader running: "+ packetReader.running);
+    }
+ else {
+      LOGGER.fine("Reader and writer threads terminated");
+    }
+  }
+ catch (  InterruptedException e) {
+    LOGGER.log(Level.FINE,"Interrupted while waiting for reader and writer threads to terminate",e);
+  }
+  if (disconnectedButResumeable) {
+    return;
+  }
+  if (instant) {
+    disconnectedButResumeable=isSmResumptionPossible();
+    if (!disconnectedButResumeable) {
+      smSessionId=null;
+    }
+  }
+ else {
+    disconnectedButResumeable=false;
+    dropSmState();
+  }
+  authenticated=false;
+  connected=false;
+  secureSocket=null;
+  reader=null;
+  writer=null;
+  initState();
+}
+/** 
+ * Shuts the stanza reader down. This method simply sets the 'done' flag to true.
+ */
+void shutdown(){
+  done=true;
+}
+/** 
+ * Shuts down the stanza writer. Once this method has been called, no further packets will be written to the server.
+ */
+void shutdown(boolean instant){
+  instantShutdown=instant;
+  queue.shutdown();
+  shutdownTimestamp=System.currentTimeMillis();
+}

@@ -1,0 +1,20 @@
+private void handlePendingSelectionKeys(){
+  final int pendingSelectionKeysSize=pendingSelectionKeys.size();
+  if (pendingSelectionKeysSize == 0) {
+    return;
+  }
+  int currentReactorThreadCount=reactorThreads.size();
+  int myKeyCount=pendingSelectionKeysSize / currentReactorThreadCount;
+  Collection<SelectionKey> selectedKeys=new ArrayList<>(myKeyCount);
+  for (int i=0; i < myKeyCount; i++) {
+    SelectionKey selectionKey=pendingSelectionKeys.poll();
+    if (selectionKey == null) {
+      break;
+    }
+    selectedKeys.add(selectionKey);
+  }
+  if (!pendingSelectionKeys.isEmpty()) {
+    selector.wakeup();
+  }
+  handleSelectedKeys(selectedKeys);
+}

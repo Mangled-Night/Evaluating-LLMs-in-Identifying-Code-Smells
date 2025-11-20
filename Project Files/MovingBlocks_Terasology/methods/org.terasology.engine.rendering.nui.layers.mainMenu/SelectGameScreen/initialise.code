@@ -1,0 +1,61 @@
+@Override public void initialise(){
+  setAnimationSystem(MenuAnimationSystems.createDefaultSwipeAnimation());
+  initWidgets();
+  if (isValidScreen()) {
+    if (gameTypeTitle != null) {
+      gameTypeTitle.bindText(new ReadOnlyBinding<String>(){
+        @Override public String get(){
+          if (isLoadingAsServer()) {
+            return translationSystem.translate("${engine:menu#select-multiplayer-game-sub-title}");
+          }
+ else {
+            return translationSystem.translate("${engine:menu#select-singleplayer-game-sub-title}");
+          }
+        }
+      }
+);
+    }
+    initSaveGamePathWidget(PathManager.getInstance().getSavesPath());
+    getGameInfos().subscribeSelection((widget,item) -> {
+      load.setEnabled(item != null);
+      delete.setEnabled(item != null);
+      details.setEnabled(item != null);
+      updateDescription(item);
+    }
+);
+    getGameInfos().subscribe((widget,item) -> loadGame(item));
+    load.subscribe(e -> {
+      final GameInfo gameInfo=getGameInfos().getSelection();
+      if (gameInfo != null) {
+        loadGame(gameInfo);
+      }
+    }
+);
+    delete.subscribe(e -> {
+      TwoButtonPopup confirmationPopup=getManager().pushScreen(TwoButtonPopup.ASSET_URI,TwoButtonPopup.class);
+      confirmationPopup.setMessage(translationSystem.translate("${engine:menu#remove-confirmation-popup" + "-title}"),translationSystem.translate("${engine:menu#remove-confirmation-popup-message}"));
+      confirmationPopup.setLeftButton(translationSystem.translate("${engine:menu#dialog-yes}"),this::removeSelectedGame);
+      confirmationPopup.setRightButton(translationSystem.translate("${engine:menu#dialog-no}"),() -> {
+      }
+);
+    }
+);
+    final NewGameScreen newGameScreen=getManager().createScreen(NewGameScreen.ASSET_URI,NewGameScreen.class);
+    create.subscribe(e -> {
+      newGameScreen.setUniverseWrapper(universeWrapper);
+      triggerForwardAnimation(newGameScreen);
+    }
+);
+    close.subscribe(e -> triggerBackAnimation());
+    details.subscribe(e -> {
+      final GameInfo gameInfo=getGameInfos().getSelection();
+      if (gameInfo != null) {
+        final GameDetailsScreen detailsScreen=getManager().createScreen(GameDetailsScreen.ASSET_URI,GameDetailsScreen.class);
+        detailsScreen.setGameInfo(gameInfo);
+        detailsScreen.setPreviews(previewSlideshow.getImages());
+        getManager().pushScreen(detailsScreen);
+      }
+    }
+);
+  }
+}

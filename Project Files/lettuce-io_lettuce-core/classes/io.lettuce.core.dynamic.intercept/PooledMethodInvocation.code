@@ -1,0 +1,46 @@
+/** 
+ * Stateful  {@link MethodInvocation} using {@link MethodInterceptorChain}. The state is only valid throughout a call.
+ */
+static class PooledMethodInvocation implements MethodInvocation, InvocationTargetProvider {
+  private Object target;
+  private Method method;
+  private Object args[];
+  private MethodInterceptorChain current;
+  PooledMethodInvocation(){
+  }
+  /** 
+ * Initialize state from the method call.
+ * @param target
+ * @param method
+ * @param args
+ * @param head
+ */
+  public void initialize(  Object target,  Method method,  Object[] args,  MethodInterceptorChain head){
+    this.target=target;
+    this.method=method;
+    this.args=args;
+    this.current=head;
+  }
+  /** 
+ * Clear invocation state.
+ */
+  public void clear(){
+    this.target=null;
+    this.method=null;
+    this.args=null;
+    this.current=null;
+  }
+  @Override public Object proceed() throws Throwable {
+    current=current.next;
+    return current.proceed(this);
+  }
+  @Override public Object getInvocationTarget(){
+    return target;
+  }
+  @Override public Method getMethod(){
+    return method;
+  }
+  @Override public Object[] getArguments(){
+    return args;
+  }
+}

@@ -1,0 +1,49 @@
+@Override public void onOmemoCarbonCopyReceived(CarbonExtension.Direction direction,Message carbonCopy,Message wrappingMessage,OmemoManager.LoggedInOmemoManager managerGuard) throws IOException {
+  OmemoManager manager=managerGuard.get();
+synchronized (manager) {
+    OmemoDevice userDevice=manager.getOwnDevice();
+    OmemoElement element=(OmemoElement)carbonCopy.getExtensionElement(OmemoElement.NAME_ENCRYPTED,OmemoElement_VAxolotl.NAMESPACE);
+    if (element == null) {
+      return;
+    }
+    OmemoMessage.Received decrypted;
+    BareJid sender=carbonCopy.getFrom().asBareJid();
+    try {
+      decrypted=decryptMessage(managerGuard,sender,element);
+      manager.notifyOmemoCarbonCopyReceived(direction,carbonCopy,wrappingMessage,decrypted);
+      if (decrypted.isPreKeyMessage() && OmemoConfiguration.getCompleteSessionWithEmptyMessage()) {
+        LOGGER.log(Level.FINE,"Received a preKeyMessage in a carbon copy from " + decrypted.getSenderDevice() + ".\n"+ "Complete the session by sending an empty response message.");
+        try {
+          sendRatchetUpdate(managerGuard,decrypted.getSenderDevice());
+        }
+ catch (        CannotEstablishOmemoSessionException e) {
+          throw new AssertionError("Since we successfully received a message, we MUST be able to " + "establish a session. " + e);
+        }
+catch (        NoSuchAlgorithmException|InterruptedException|SmackException.NotConnectedException|SmackException.NoResponseException e) {
+          LOGGER.log(Level.WARNING,"Cannot send a ratchet update message.",e);
+        }
+      }
+    }
+ catch (    NoRawSessionException e) {
+      OmemoDevice device=e.getDeviceWithoutSession();
+      LOGGER.log(Level.WARNING,"No raw session found for contact " + device + ". ",e);
+      if (OmemoConfiguration.getRepairBrokenSessionsWithPreKeyMessages()) {
+        repairBrokenSessionWithPreKeyMessage(managerGuard,device);
+      }
+    }
+catch (    CorruptedOmemoKeyException|CryptoFailedException e) {
+      LOGGER.log(Level.WARNING,"Could not decrypt incoming carbon copy: ",e);
+    }
+    if (getOmemoStoreBackend().loadOmemoPreKeys(userDevice).size() < OmemoConstants.PRE_KEY_COUNT_PER_BUNDLE) {
+      LOGGER.log(Level.FINE,"We used up a preKey. Upload a fresh bundle.");
+      try {
+        getOmemoStoreBackend().replenishKeys(userDevice);
+        OmemoBundleElement bundleElement=getOmemoStoreBackend().packOmemoBundle(userDevice);
+        publishBundle(manager.getConnection(),userDevice,bundleElement);
+      }
+ catch (      CorruptedOmemoKeyException|InterruptedException|SmackException.NoResponseException|SmackException.NotConnectedException|XMPPException.XMPPErrorException|NotALeafNodeException e) {
+        LOGGER.log(Level.WARNING,"Could not republish replenished bundle.",e);
+      }
+    }
+  }
+}

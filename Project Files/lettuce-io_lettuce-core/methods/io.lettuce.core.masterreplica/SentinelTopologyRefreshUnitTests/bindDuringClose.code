@@ -1,0 +1,17 @@
+@Test void bindDuringClose(){
+  sut=new SentinelTopologyRefresh(redisClient,"mymaster",Arrays.asList(host1,host2));
+  StatefulRedisPubSubConnection<String,String> connection2=mock(StatefulRedisPubSubConnection.class);
+  when(connection.closeAsync()).thenReturn(CompletableFuture.completedFuture(null));
+  when(connection2.closeAsync()).thenReturn(CompletableFuture.completedFuture(null));
+  when(redisClient.connectPubSubAsync(any(StringCodec.class),eq(host2))).thenAnswer(invocation -> {
+    sut.closeAsync();
+    return ConnectionFuture.completed(null,connection2);
+  }
+);
+  sut.bind(refreshRunnable);
+  verify(redisClient).connectPubSubAsync(any(),eq(host2));
+  verify(connection).closeAsync();
+  verify(connection2).closeAsync();
+  Map<RedisURI,StatefulRedisPubSubConnection<String,String>> connections=(Map)ReflectionTestUtils.getField(sut,"pubSubConnections");
+  assertThat(connections).isEmpty();
+}

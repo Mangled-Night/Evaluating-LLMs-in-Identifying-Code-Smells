@@ -1,0 +1,71 @@
+public static Presence parsePresence(XmlPullParser parser) throws XmlPullParserException, IOException, SmackParsingException {
+  return parsePresence(parser,XmlEnvironment.EMPTY);
+}
+/** 
+ * Parses a presence packet.
+ * @param parser the XML parser, positioned at the start of a presence packet.
+ * @param outerXmlEnvironment the outer XML environment (optional).
+ * @return a Presence packet.
+ * @throws IOException if an I/O error occurred.
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ * @throws SmackParsingException if the Smack parser (provider) encountered invalid input.
+ */
+public static Presence parsePresence(XmlPullParser parser,XmlEnvironment outerXmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+  ParserUtils.assertAtStartTag(parser);
+  final int initialDepth=parser.getDepth();
+  XmlEnvironment presenceXmlEnvironment=XmlEnvironment.from(parser,outerXmlEnvironment);
+  PresenceBuilder presence=parseCommonStanzaAttributes(stanzaId -> StanzaBuilder.buildPresence(stanzaId),parser,outerXmlEnvironment);
+  Presence.Type type=Presence.Type.available;
+  String typeString=parser.getAttributeValue("","type");
+  if (typeString != null && !typeString.equals("")) {
+    type=Presence.Type.fromString(typeString);
+  }
+  presence.ofType(type);
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String elementName=parser.getName();
+    String namespace=parser.getNamespace();
+switch (elementName) {
+case "status":
+    presence.setStatus(parser.nextText());
+  break;
+case "priority":
+Byte priority=ParserUtils.getByteAttributeFromNextText(parser);
+presence.setPriority(priority);
+break;
+case "show":
+String modeText=parser.nextText();
+if (StringUtils.isNotEmpty(modeText)) {
+presence.setMode(Presence.Mode.fromString(modeText));
+}
+ else {
+LOGGER.warning("Empty or null mode text in presence show element form " + presence + "' which is invalid according to RFC6121 4.7.2.1");
+}
+break;
+case "error":
+presence.setError(parseError(parser,presenceXmlEnvironment));
+break;
+default :
+try {
+XmlElement extensionElement=parseExtensionElement(elementName,namespace,parser,presenceXmlEnvironment);
+presence.addExtension(extensionElement);
+}
+ catch (Exception e) {
+LOGGER.log(Level.WARNING,"Failed to parse extension element in Presence stanza: " + presence,e);
+}
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return presence.build();
+}

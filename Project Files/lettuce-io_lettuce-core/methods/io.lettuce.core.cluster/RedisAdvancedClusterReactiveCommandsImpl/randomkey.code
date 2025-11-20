@@ -1,0 +1,9 @@
+@Override public Mono<K> randomkey(){
+  Partitions partitions=getStatefulConnection().getPartitions();
+  if (partitions.isEmpty()) {
+    return super.randomkey();
+  }
+  int index=ThreadLocalRandom.current().nextInt(partitions.size());
+  Mono<RedisClusterReactiveCommands<K,V>> connection=getConnectionReactive(partitions.getPartition(index).getNodeId());
+  return connection.flatMap(RedisKeyReactiveCommands::randomkey);
+}

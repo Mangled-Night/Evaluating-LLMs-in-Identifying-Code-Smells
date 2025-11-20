@@ -1,0 +1,46 @@
+public abstract class AbstractSmackIntTest {
+  protected static final Logger LOGGER=Logger.getLogger(AbstractSmackIntTest.class.getName());
+  protected static final Random INSECURE_RANDOM=new Random();
+  protected final String testRunId;
+  protected final long timeout;
+  protected final Configuration sinttestConfiguration;
+  protected AbstractSmackIntTest(  SmackIntegrationTestEnvironment environment){
+    this.testRunId=environment.testRunId;
+    this.sinttestConfiguration=environment.configuration;
+    this.timeout=environment.configuration.replyTimeout;
+  }
+  protected void performActionAndWaitUntilStanzaReceived(  Runnable action,  XMPPConnection connection,  StanzaFilter filter) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    StanzaCollector.Configuration configuration=StanzaCollector.newConfiguration().setStanzaFilter(filter).setSize(1);
+    try (StanzaCollector collector=connection.createStanzaCollector(configuration)){
+      action.run();
+      collector.nextResultOrThrow(timeout);
+    }
+   }
+  protected void waitUntilTrue(  Condition condition) throws TimeoutException, NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    final long deadline=System.currentTimeMillis() + timeout;
+    do {
+      if (condition.evaluate()) {
+        return;
+      }
+      Thread.sleep(15);
+    }
+ while (System.currentTimeMillis() <= deadline);
+    throw new TimeoutException("Timeout waiting for condition to become true. Timeout was " + timeout + " ms.");
+  }
+protected interface Condition {
+    boolean evaluate() throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException ;
+  }
+  protected File createNewTempFile() throws IOException {
+    File file=File.createTempFile("smack-integration-test-" + testRunId + "-temp-file",null);
+    file.deleteOnExit();
+    return file;
+  }
+  protected HttpURLConnection getHttpUrlConnectionFor(  URL url) throws IOException {
+    HttpURLConnection urlConnection=(HttpURLConnection)url.openConnection();
+    if (sinttestConfiguration.sslContextFactory != null && urlConnection instanceof HttpsURLConnection) {
+      HttpsURLConnection httpsUrlConnection=(HttpsURLConnection)urlConnection;
+      httpsUrlConnection.setSSLSocketFactory(sinttestConfiguration.sslContextFactory.createSslContext().getSocketFactory());
+    }
+    return urlConnection;
+  }
+}

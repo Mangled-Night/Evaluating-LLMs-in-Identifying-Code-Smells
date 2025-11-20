@@ -1,0 +1,13 @@
+@Test @EnabledOnCommand("ACL") void messageAsPushMessage() throws Exception {
+  pubsub.subscribe(channel);
+  assertThat(counts.take()).isNotNull();
+  AtomicReference<PushMessage> messageRef=new AtomicReference<>();
+  pubsub.getStatefulConnection().addListener(messageRef::set);
+  redis.publish(channel,message);
+  assertThat(messages.take()).isEqualTo(message);
+  Wait.untilTrue(() -> messageRef.get() != null).waitOrTimeout();
+  PushMessage pushMessage=messageRef.get();
+  assertThat(pushMessage).isNotNull();
+  assertThat(pushMessage.getType()).isEqualTo("message");
+  assertThat(pushMessage.getContent()).contains(ByteBuffer.wrap("message".getBytes()),ByteBuffer.wrap(message.getBytes()));
+}

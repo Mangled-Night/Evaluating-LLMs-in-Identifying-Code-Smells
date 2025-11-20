@@ -1,0 +1,34 @@
+/** 
+ * Listening for  {@link OnPlayerSpawnedEvent} does not work, as it is anauthority event that does not get processed at clients. That is why we listen for the activation.
+ */
+@ReceiveEvent(components=CharacterComponent.class) public void onCharacterActivation(OnActivatedComponent event,EntityRef characterEntity,CharacterComponent characterComponent){
+  EntityRef ownerEntity=networkSystem.getOwnerEntity(characterEntity);
+  if (ownerEntity == null) {
+    return;
+  }
+  ClientComponent clientComponent=ownerEntity.getComponent(ClientComponent.class);
+  if (clientComponent == null) {
+    return;
+  }
+  if (clientComponent.local) {
+    return;
+  }
+  EntityRef clientInfoEntity=clientComponent.clientInfo;
+  DisplayNameComponent displayNameComponent=clientInfoEntity.getComponent(DisplayNameComponent.class);
+  if (displayNameComponent == null) {
+    logger.debug("Cannot create name tag for client without DisplayNameComponent");
+    return;
+  }
+  String name=displayNameComponent.name;
+  float yOffset=characterComponent.nameTagOffset;
+  ColorComponent colorComponent=clientInfoEntity.getComponent(ColorComponent.class);
+  final Color color=colorComponent != null ? colorComponent.color : Color.WHITE;
+  characterEntity.upsertComponent(NameTagComponent.class,maybeNameTag -> {
+    NameTagComponent nameTagComponent=maybeNameTag.orElse(new NameTagComponent());
+    nameTagComponent.text=name;
+    nameTagComponent.textColor=color;
+    nameTagComponent.yOffset=yOffset;
+    return nameTagComponent;
+  }
+);
+}

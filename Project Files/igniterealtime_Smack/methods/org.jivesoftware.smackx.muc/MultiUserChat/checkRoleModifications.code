@@ -1,0 +1,81 @@
+/** 
+ * Fires notification events if the role of a room occupant has changed. If the occupant that changed his role is your occupant then the <code>UserStatusListeners</code> added to this <code>MultiUserChat</code> will be fired. On the other hand, if the occupant that changed his role is not yours then the <code>ParticipantStatusListeners</code> added to this <code>MultiUserChat</code> will be fired. The following table shows the events that will be fired depending on the previous and new role of the occupant. <pre> <table border="1"> <tr><td><b>Old</b></td><td><b>New</b></td><td><b>Events</b></td></tr> <tr><td>None</td><td>Visitor</td><td>--</td></tr> <tr><td>Visitor</td><td>Participant</td><td>voiceGranted</td></tr> <tr><td>Participant</td><td>Moderator</td><td>moderatorGranted</td></tr> <tr><td>None</td><td>Participant</td><td>voiceGranted</td></tr> <tr><td>None</td><td>Moderator</td><td>voiceGranted + moderatorGranted</td></tr> <tr><td>Visitor</td><td>Moderator</td><td>voiceGranted + moderatorGranted</td></tr> <tr><td>Moderator</td><td>Participant</td><td>moderatorRevoked</td></tr> <tr><td>Participant</td><td>Visitor</td><td>voiceRevoked</td></tr> <tr><td>Visitor</td><td>None</td><td>kicked</td></tr> <tr><td>Moderator</td><td>Visitor</td><td>voiceRevoked + moderatorRevoked</td></tr> <tr><td>Moderator</td><td>None</td><td>kicked</td></tr> <tr><td>Participant</td><td>None</td><td>kicked</td></tr> </table> </pre>
+ * @param oldRole the previous role of the user in the room before receiving the new presence
+ * @param newRole the new role of the user in the room after receiving the new presence
+ * @param isUserModification whether the received presence is about your user in the room or not
+ * @param from the occupant whose role in the room has changed(e.g. room@conference.jabber.org/nick).
+ */
+private void checkRoleModifications(MUCRole oldRole,MUCRole newRole,boolean isUserModification,EntityFullJid from){
+  if ((MUCRole.visitor.equals(oldRole) || MUCRole.none.equals(oldRole)) && MUCRole.participant.equals(newRole)) {
+    if (isUserModification) {
+      for (      UserStatusListener listener : userStatusListeners) {
+        listener.voiceGranted();
+      }
+    }
+ else {
+      for (      ParticipantStatusListener listener : participantStatusListeners) {
+        listener.voiceGranted(from);
+      }
+    }
+  }
+ else   if (MUCRole.participant.equals(oldRole) && (MUCRole.visitor.equals(newRole) || MUCRole.none.equals(newRole))) {
+    if (isUserModification) {
+      for (      UserStatusListener listener : userStatusListeners) {
+        listener.voiceRevoked();
+      }
+    }
+ else {
+      for (      ParticipantStatusListener listener : participantStatusListeners) {
+        listener.voiceRevoked(from);
+      }
+    }
+  }
+  if (!MUCRole.moderator.equals(oldRole) && MUCRole.moderator.equals(newRole)) {
+    if (MUCRole.visitor.equals(oldRole) || MUCRole.none.equals(oldRole)) {
+      if (isUserModification) {
+        for (        UserStatusListener listener : userStatusListeners) {
+          listener.voiceGranted();
+        }
+      }
+ else {
+        for (        ParticipantStatusListener listener : participantStatusListeners) {
+          listener.voiceGranted(from);
+        }
+      }
+    }
+    if (isUserModification) {
+      for (      UserStatusListener listener : userStatusListeners) {
+        listener.moderatorGranted();
+      }
+    }
+ else {
+      for (      ParticipantStatusListener listener : participantStatusListeners) {
+        listener.moderatorGranted(from);
+      }
+    }
+  }
+ else   if (MUCRole.moderator.equals(oldRole) && !MUCRole.moderator.equals(newRole)) {
+    if (MUCRole.visitor.equals(newRole) || MUCRole.none.equals(newRole)) {
+      if (isUserModification) {
+        for (        UserStatusListener listener : userStatusListeners) {
+          listener.voiceRevoked();
+        }
+      }
+ else {
+        for (        ParticipantStatusListener listener : participantStatusListeners) {
+          listener.voiceRevoked(from);
+        }
+      }
+    }
+    if (isUserModification) {
+      for (      UserStatusListener listener : userStatusListeners) {
+        listener.moderatorRevoked();
+      }
+    }
+ else {
+      for (      ParticipantStatusListener listener : participantStatusListeners) {
+        listener.moderatorRevoked(from);
+      }
+    }
+  }
+}

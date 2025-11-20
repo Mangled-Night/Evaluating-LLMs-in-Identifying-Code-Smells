@@ -1,0 +1,19 @@
+private void updateBlock(Block block){
+  Optional<Prefab> prefab=block.getPrefab();
+  boolean keepActive=block.isKeepActive();
+  boolean requiresLifecycleEvents=false;
+  if (prefab.isPresent()) {
+    for (    Component comp : prefab.get().iterateComponents()) {
+      ComponentMetadata<?> metadata=entityManager.getComponentLibrary().getMetadata(comp.getClass());
+      if (metadata.isForceBlockActive()) {
+        keepActive=true;
+        break;
+      }
+      if (metadata.isBlockLifecycleEventsRequired()) {
+        requiresLifecycleEvents=true;
+      }
+    }
+  }
+  block.setKeepActive(keepActive);
+  block.setLifecycleEventsRequired(requiresLifecycleEvents && !keepActive);
+}

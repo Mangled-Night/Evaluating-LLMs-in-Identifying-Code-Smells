@@ -1,0 +1,40 @@
+private void processEvents(NetData.NetMessage message){
+  boolean lagCompensated=false;
+  for (  NetData.EventMessage eventMessage : message.getEventList()) {
+    try {
+      Event event=eventSerializer.deserialize(eventMessage.getEvent());
+      EventMetadata<?> metadata=eventLibrary.getMetadata(event.getClass());
+      if (metadata.getNetworkEventType() != NetworkEventType.SERVER) {
+        logger.warn("Received non-server event '{}' from client '{}'",metadata,getName());
+        continue;
+      }
+      if (!lagCompensated && metadata.isLagCompensated()) {
+        if (predictionSystem != null) {
+          predictionSystem.lagCompensate(getEntity(),lastReceivedTime);
+        }
+        lagCompensated=true;
+      }
+      EntityRef target=EntityRef.NULL;
+      if (eventMessage.hasTargetId()) {
+        target=networkSystem.getEntity(eventMessage.getTargetId());
+      }
+      if (target.exists()) {
+        if (Objects.equal(networkSystem.getOwner(target),this)) {
+          target.send(event);
+        }
+ else {
+          logger.warn("Received event {} for non-owned entity {} from {}",event,target,this);
+        }
+      }
+    }
+ catch (    DeserializationException e) {
+      logger.error("Failed to deserialize event",e);
+    }
+catch (    RuntimeException e) {
+      logger.error("Error processing event",e);
+    }
+  }
+  if (lagCompensated && predictionSystem != null) {
+    predictionSystem.restoreToPresent();
+  }
+}

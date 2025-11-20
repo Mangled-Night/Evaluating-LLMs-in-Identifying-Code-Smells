@@ -1,0 +1,23 @@
+/** 
+ * If applyLanguage not work, try to call it in  {@link Activity#attachBaseContext(Context)}.
+ * @param context The baseContext.
+ * @return the context with language
+ */
+public static Context attachBaseContext(Context context){
+  String spLocaleStr=UtilsBridge.getSpUtils4Utils().getString(KEY_LOCALE);
+  if (TextUtils.isEmpty(spLocaleStr) || VALUE_FOLLOW_SYSTEM.equals(spLocaleStr)) {
+    return context;
+  }
+  Locale settingsLocale=string2Locale(spLocaleStr);
+  if (settingsLocale == null)   return context;
+  Resources resources=context.getResources();
+  Configuration config=resources.getConfiguration();
+  setLocal(config,settingsLocale);
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+    return context.createConfigurationContext(config);
+  }
+ else {
+    resources.updateConfiguration(config,resources.getDisplayMetrics());
+    return context;
+  }
+}

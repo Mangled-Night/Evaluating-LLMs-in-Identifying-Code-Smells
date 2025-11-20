@@ -1,0 +1,24 @@
+private void markForPropagation(Chunk toChunk,int[] depth,int[] startingRegen,int[] adjDepths,int[] adjStartingRegen){
+  Vector3i pos=new Vector3i();
+  for (int z=0; z < Chunks.SIZE_Z; ++z) {
+    for (int x=0; x < Chunks.SIZE_X; ++x) {
+      int depthIndex=x + Chunks.SIZE_X * z;
+      int start=startingRegen[depthIndex];
+      int adjStart=adjStartingRegen[depthIndex];
+      int initialDepth;
+      if (start - adjStart > 1) {
+        initialDepth=Math.max(Chunks.SUNLIGHT_REGEN_THRESHOLD - start,0);
+      }
+ else {
+        initialDepth=Math.max(Chunks.SUNLIGHT_REGEN_THRESHOLD - start,adjDepths[depthIndex]);
+      }
+      byte strength=(byte)Math.min(Chunks.MAX_SUNLIGHT,start + initialDepth - Chunks.SUNLIGHT_REGEN_THRESHOLD + 1);
+      for (int i=initialDepth; i <= depth[depthIndex]; ++i) {
+        sunlightPropagator.propagateFrom(toChunk.chunkToWorldPosition(x,Chunks.SIZE_Y - i - 1,z,pos),strength);
+        if (strength < Chunks.MAX_SUNLIGHT) {
+          strength++;
+        }
+      }
+    }
+  }
+}

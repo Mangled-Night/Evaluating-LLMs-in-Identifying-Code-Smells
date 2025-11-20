@@ -1,0 +1,27 @@
+/** 
+ * Representation for the  {@code SET} subcommand for {@code BITFIELD}.
+ */
+private static class Set extends SubCommand {
+  private final BitFieldType bitFieldType;
+  private final boolean bitOffset;
+  private final long offset;
+  private final long value;
+  private Set(  BitFieldType bitFieldType,  boolean bitOffset,  int offset,  long value){
+    LettuceAssert.notNull(bitFieldType,"BitFieldType must not be null");
+    LettuceAssert.isTrue(offset > -1,"Offset must be greater or equal to 0");
+    this.bitFieldType=bitFieldType;
+    this.bitOffset=bitOffset;
+    this.offset=offset;
+    this.value=value;
+  }
+  @Override <K,V>void build(  CommandArgs<K,V> args){
+    args.add(CommandType.SET).add(bitFieldType.asString());
+    if (bitOffset) {
+      args.add("#" + offset);
+    }
+ else {
+      args.add(offset);
+    }
+    args.add(value);
+  }
+}

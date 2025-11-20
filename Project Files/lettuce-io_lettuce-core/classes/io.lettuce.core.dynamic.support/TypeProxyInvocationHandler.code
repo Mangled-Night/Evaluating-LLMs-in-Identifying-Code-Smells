@@ -1,0 +1,40 @@
+/** 
+ * {@link Serializable} {@link InvocationHandler} used by the proxied {@link Type}. Provides serialization support and enhances any methods that return  {@code Type} or {@code Type[]}.
+ */
+@SuppressWarnings("serial") private static class TypeProxyInvocationHandler implements InvocationHandler, Serializable {
+  private final TypeProvider provider;
+  public TypeProxyInvocationHandler(  TypeProvider provider){
+    this.provider=provider;
+  }
+  @Override public Object invoke(  Object proxy,  Method method,  Object[] args) throws Throwable {
+    if (method.getName().equals("equals")) {
+      Object other=args[0];
+      if (other instanceof Type) {
+        other=unwrap((Type)other);
+      }
+      return this.provider.getType().equals(other);
+    }
+ else     if (method.getName().equals("hashCode")) {
+      return this.provider.getType().hashCode();
+    }
+ else     if (method.getName().equals("getTypeProvider")) {
+      return this.provider;
+    }
+    if (Type.class == method.getReturnType()) {
+      return forTypeProvider(new MethodInvokeTypeProvider(this.provider,method,-1));
+    }
+ else     if (Type[].class == method.getReturnType()) {
+      Type[] result=new Type[((Type[])method.invoke(this.provider.getType(),args)).length];
+      for (int i=0; i < result.length; i++) {
+        result[i]=forTypeProvider(new MethodInvokeTypeProvider(this.provider,method,i));
+      }
+      return result;
+    }
+    try {
+      return method.invoke(this.provider.getType(),args);
+    }
+ catch (    InvocationTargetException ex) {
+      throw ex.getTargetException();
+    }
+  }
+}

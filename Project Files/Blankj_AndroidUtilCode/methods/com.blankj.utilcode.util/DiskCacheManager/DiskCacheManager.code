@@ -1,0 +1,30 @@
+private DiskCacheManager(final File cacheDir,final long sizeLimit,final int countLimit){
+  this.cacheDir=cacheDir;
+  this.sizeLimit=sizeLimit;
+  this.countLimit=countLimit;
+  cacheSize=new AtomicLong();
+  cacheCount=new AtomicInteger();
+  mThread=new Thread(new Runnable(){
+    @Override public void run(){
+      int size=0;
+      int count=0;
+      final File[] cachedFiles=cacheDir.listFiles(new FilenameFilter(){
+        @Override public boolean accept(        File dir,        String name){
+          return name.startsWith(CACHE_PREFIX);
+        }
+      }
+);
+      if (cachedFiles != null) {
+        for (        File cachedFile : cachedFiles) {
+          size+=cachedFile.length();
+          count+=1;
+          lastUsageDates.put(cachedFile,cachedFile.lastModified());
+        }
+        cacheSize.getAndAdd(size);
+        cacheCount.getAndAdd(count);
+      }
+    }
+  }
+);
+  mThread.start();
+}

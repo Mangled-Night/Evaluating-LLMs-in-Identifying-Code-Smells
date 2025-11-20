@@ -1,0 +1,20 @@
+private void updateSkeleton(SkeletalMeshComponent skeletalMeshComp,MeshAnimationFrame frameA,MeshAnimationFrame frameB,float interpolationVal){
+  for (int i=0; i < skeletalMeshComp.animation.getBoneCount(); ++i) {
+    String boneName=skeletalMeshComp.animation.getBoneName(i);
+    Bone bone=skeletalMeshComp.mesh.getBone(boneName);
+    EntityRef boneEntity=skeletalMeshComp.boneEntities.get(boneName);
+    if (boneEntity == null || bone == null) {
+      continue;
+    }
+    LocationComponent boneLoc=boneEntity.getComponent(LocationComponent.class);
+    if (boneLoc != null) {
+      Vector3f newPos=frameA.getPosition(i).lerp(frameB.getPosition(i),interpolationVal,new Vector3f());
+      boneLoc.setLocalPosition(newPos);
+      Quaternionf newRot=frameA.getRotation(i).slerp(frameB.getRotation(i),interpolationVal,new Quaternionf());
+      newRot.normalize();
+      boneLoc.setLocalRotation(newRot);
+      boneLoc.setLocalScale(frameA.getBoneScale(i).lerp(frameB.getBoneScale(i),interpolationVal,new Vector3f()).x);
+      boneEntity.saveComponent(boneLoc);
+    }
+  }
+}

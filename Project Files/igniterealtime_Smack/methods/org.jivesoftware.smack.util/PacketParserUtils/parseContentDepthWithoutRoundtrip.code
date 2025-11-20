@@ -1,0 +1,55 @@
+private static CharSequence parseContentDepthWithoutRoundtrip(XmlPullParser parser,int depth,boolean fullNamespaces) throws XmlPullParserException, IOException {
+  XmlStringBuilder xml=new XmlStringBuilder();
+  XmlPullParser.Event event=parser.getEventType();
+  String namespaceElement=null;
+  boolean startElementJustSeen=false;
+  outerloop:   while (true) {
+switch (event) {
+case START_ELEMENT:
+      if (startElementJustSeen) {
+        xml.rightAngleBracket();
+      }
+ else {
+        startElementJustSeen=true;
+      }
+    xml.halfOpenElement(parser.getName());
+  if (namespaceElement == null || fullNamespaces) {
+    String namespace=parser.getNamespace();
+    if (StringUtils.isNotEmpty(namespace)) {
+      xml.attribute("xmlns",namespace);
+      namespaceElement=parser.getName();
+    }
+  }
+for (int i=0; i < parser.getAttributeCount(); i++) {
+  xml.attribute(parser.getAttributeName(i),parser.getAttributeValue(i));
+}
+break;
+case END_ELEMENT:
+if (startElementJustSeen) {
+xml.closeEmptyElement();
+startElementJustSeen=false;
+}
+ else {
+xml.closeElement(parser.getName());
+}
+if (namespaceElement != null && namespaceElement.equals(parser.getName())) {
+namespaceElement=null;
+}
+if (parser.getDepth() <= depth) {
+break outerloop;
+}
+break;
+case TEXT_CHARACTERS:
+if (startElementJustSeen) {
+startElementJustSeen=false;
+xml.rightAngleBracket();
+}
+xml.escape(parser.getText());
+break;
+default :
+break;
+}
+event=parser.next();
+}
+return xml;
+}

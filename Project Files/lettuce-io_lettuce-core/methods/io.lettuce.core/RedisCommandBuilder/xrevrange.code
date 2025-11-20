@@ -1,0 +1,11 @@
+public Command<K,V,List<StreamMessage<K,V>>> xrevrange(K key,Range<String> range,Limit limit){
+  notNullKey(key);
+  LettuceAssert.notNull(range,"Range " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(limit,"Limit " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key);
+  args.add(getUpperValue(range)).add(getLowerValue(range));
+  if (limit.isLimited()) {
+    args.add(COUNT).add(limit.getCount());
+  }
+  return createCommand(XREVRANGE,new StreamMessageListOutput<>(codec,key),args);
+}

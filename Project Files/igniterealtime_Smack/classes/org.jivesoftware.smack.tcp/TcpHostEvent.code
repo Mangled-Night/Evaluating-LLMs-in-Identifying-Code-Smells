@@ -1,0 +1,38 @@
+public abstract class TcpHostEvent extends DetailedTransitionIntoInformation {
+  protected final RemoteConnectionEndpoint.InetSocketAddressCoupling<Rfc6120TcpRemoteConnectionEndpoint> address;
+  protected TcpHostEvent(  State state,  RemoteConnectionEndpoint.InetSocketAddressCoupling<Rfc6120TcpRemoteConnectionEndpoint> address){
+    super(state);
+    this.address=address;
+  }
+  public RemoteConnectionEndpoint.InetSocketAddressCoupling<Rfc6120TcpRemoteConnectionEndpoint> getAddress(){
+    return address;
+  }
+  @Override public String toString(){
+    return super.toString() + ": " + address;
+  }
+public static final class ConnectingToHostEvent extends TcpHostEvent {
+    ConnectingToHostEvent(    State state,    RemoteConnectionEndpoint.InetSocketAddressCoupling<Rfc6120TcpRemoteConnectionEndpoint> address){
+      super(state,address);
+    }
+  }
+public static final class ConnectedToHostEvent extends TcpHostEvent {
+    private final boolean connectionEstablishedImmediately;
+    ConnectedToHostEvent(    State state,    RemoteConnectionEndpoint.InetSocketAddressCoupling<Rfc6120TcpRemoteConnectionEndpoint> address,    boolean immediately){
+      super(state,address);
+      this.connectionEstablishedImmediately=immediately;
+    }
+    @Override public String toString(){
+      return super.toString() + (connectionEstablishedImmediately ? "" : " not") + " connected immediately";
+    }
+  }
+public static final class ConnectionToHostFailedEvent extends TcpHostEvent {
+    private final IOException ioException;
+    ConnectionToHostFailedEvent(    State state,    RemoteConnectionEndpoint.InetSocketAddressCoupling<Rfc6120TcpRemoteConnectionEndpoint> address,    IOException ioException){
+      super(state,address);
+      this.ioException=ioException;
+    }
+    @Override public String toString(){
+      return super.toString() + ioException;
+    }
+  }
+}

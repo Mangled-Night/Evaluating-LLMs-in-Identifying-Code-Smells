@@ -1,0 +1,16 @@
+/** 
+ * 强制退出
+ * @param ids
+ * @return
+ */
+public int forceout(String ids){
+  String[] sessionIds=ids.split(",");
+  for (  String sessionId : sessionIds) {
+    String session=RedisUtil.get(ZHENG_UPMS_SHIRO_SESSION_ID + "_" + sessionId);
+    UpmsSession upmsSession=(UpmsSession)SerializableUtil.deserialize(session);
+    upmsSession.setStatus(UpmsSession.OnlineStatus.force_logout);
+    upmsSession.setAttribute("FORCE_LOGOUT","FORCE_LOGOUT");
+    RedisUtil.set(ZHENG_UPMS_SHIRO_SESSION_ID + "_" + sessionId,SerializableUtil.serialize(upmsSession),(int)upmsSession.getTimeout() / 1000);
+  }
+  return sessionIds.length;
+}

@@ -1,0 +1,29 @@
+@Test void clientCachingResp2(){
+  ClientOptions resp2=ClientOptions.builder().protocolVersion(ProtocolVersion.RESP2).build();
+  redisClient.setOptions(resp2);
+  StatefulRedisConnection<String,String> data=redisClient.connect();
+  RedisCommands<String,String> commands=data.sync();
+  StatefulRedisPubSubConnection<String,String> pubSub=redisClient.connectPubSub();
+  List<String> invalidations=new CopyOnWriteArrayList<>();
+  commands.clientTracking(TrackingArgs.Builder.enabled().redirect(pubSub.sync().clientId()));
+  pubSub.addListener(new RedisPubSubAdapter<String,String>(){
+    @Override public void message(    String channel,    String message){
+      if (channel.equals("__redis__:invalidate")) {
+        invalidations.add(message);
+      }
+    }
+  }
+);
+  pubSub.sync().subscribe("__redis__:invalidate");
+  commands.get("key1");
+  commands.get("key2");
+  assertThat(invalidations).isEmpty();
+  Map<String,String> keys=new HashMap<>();
+  keys.put("key1","value1");
+  keys.put("key2","value2");
+  commands.mset(keys);
+  Wait.untilEquals(2,invalidations::size).waitOrTimeout();
+  assertThat(invalidations).contains("key1","key2");
+  data.close();
+  pubSub.close();
+}

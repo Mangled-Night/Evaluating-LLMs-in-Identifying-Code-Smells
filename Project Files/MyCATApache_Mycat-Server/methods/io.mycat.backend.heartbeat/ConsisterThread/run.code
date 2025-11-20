@@ -1,0 +1,35 @@
+public void run(){
+  int count=sendTime.incrementAndGet();
+  if (count > handler.getRetryTime()) {
+    handler.cancelTask();
+    ConsistenCollectHandler.LOGGER.info(" table check consistence job send finish");
+    return;
+  }
+  try {
+    MycatConfig config=MycatServer.getInstance().getConfig();
+    TableConfig table=config.getSchemas().get(schemaName).getTables().get(tableName.toUpperCase());
+    List<String> dataNodeList=table.getDataNodes();
+    for (    String nodeName : dataNodeList) {
+      Map<String,PhysicalDBNode> map=config.getDataNodes();
+      for (      String k2 : map.keySet()) {
+        PhysicalDBNode dBnode=map.get(k2);
+        if (nodeName.equals(dBnode.getName())) {
+          PhysicalDBPool pool=dBnode.getDbPool();
+          Collection<PhysicalDatasource> allDS=pool.genAllDataSources();
+          for (          PhysicalDatasource pds : allDS) {
+            if (pds instanceof MySQLDataSource) {
+              MySQLDataSource mds=(MySQLDataSource)pds;
+              MySQLConsistencyChecker checker=new MySQLConsistencyCheckerHandler(dBnode,mds,table.getName(),handler);
+              checker.checkMaxTimeStamp();
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+ catch (  Exception e) {
+    ConsistenCollectHandler.LOGGER.error("check consisten err: {}",e);
+    handler.onError("ConsisterThread err:" + e.getMessage());
+  }
+}

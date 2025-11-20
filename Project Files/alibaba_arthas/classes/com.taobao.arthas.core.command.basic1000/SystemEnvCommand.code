@@ -1,0 +1,33 @@
+/** 
+ * @author hengyunabc 2018-11-09
+ */
+@Name("sysenv") @Summary("Display the system env.") @Description(Constants.EXAMPLE + "  sysenv\n" + "  sysenv USER\n"+ Constants.WIKI+ Constants.WIKI_HOME+ "sysenv") public class SystemEnvCommand extends AnnotatedCommand {
+  private String envName;
+  @Argument(index=0,argName="env-name",required=false) @Description("env name") public void setOptionName(  String envName){
+    this.envName=envName;
+  }
+  @Override public void process(  CommandProcess process){
+    try {
+      SystemEnvModel result=new SystemEnvModel();
+      if (StringUtils.isBlank(envName)) {
+        result.putAll(System.getenv());
+      }
+ else {
+        String value=System.getenv(envName);
+        result.put(envName,value);
+      }
+      process.appendResult(result);
+      process.end();
+    }
+ catch (    Throwable t) {
+      process.end(-1,"Error during setting system env: " + t.getMessage());
+    }
+  }
+  /** 
+ * First, try to complete with the sysenv command scope. If completion is failed, delegates to super class.
+ * @param completion the completion object
+ */
+  @Override public void complete(  Completion completion){
+    CompletionUtils.complete(completion,System.getenv().keySet());
+  }
+}

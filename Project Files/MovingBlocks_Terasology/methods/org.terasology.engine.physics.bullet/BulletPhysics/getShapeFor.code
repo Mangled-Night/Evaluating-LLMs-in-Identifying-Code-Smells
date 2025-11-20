@@ -1,0 +1,44 @@
+/** 
+ * Returns the shape belonging to the given entity. It currently knows 4 different shapes: Sphere, Capsule, Cylinder or arbitrary. The shape is determined based on the shape component of the given entity. If the entity has somehow got multiple shapes, only one is picked. The order of priority is: Sphere, Capsule, Cylinder, arbitrary. <br><br> TODO: Flyweight this (take scale as parameter)
+ * @param entityRef the entity to get the shape of.
+ * @return the shape of the entity, ready to be used by Bullet.
+ */
+private btCollisionShape getShapeFor(EntityRef entityRef){
+  BoxShapeComponent box=entityRef.getComponent(BoxShapeComponent.class);
+  if (box != null) {
+    Vector3f halfExtents=new Vector3f(box.extents);
+    return new btBoxShape(halfExtents.mul(.5f));
+  }
+  SphereShapeComponent sphere=entityRef.getComponent(SphereShapeComponent.class);
+  if (sphere != null) {
+    return new btSphereShape(sphere.radius);
+  }
+  CapsuleShapeComponent capsule=entityRef.getComponent(CapsuleShapeComponent.class);
+  if (capsule != null) {
+    return new btCapsuleShape(capsule.radius,capsule.height);
+  }
+  CylinderShapeComponent cylinder=entityRef.getComponent(CylinderShapeComponent.class);
+  if (cylinder != null) {
+    return new btCylinderShape(new Vector3f(cylinder.radius,0.5f * cylinder.height,cylinder.radius));
+  }
+  HullShapeComponent hull=entityRef.getComponent(HullShapeComponent.class);
+  if (hull != null) {
+    VertexAttributeBinding<Vector3fc,Vector3f> positions=hull.sourceMesh.vertices();
+    final int numVertices=hull.sourceMesh.elementCount();
+    FloatBuffer buffer=BufferUtils.createFloatBuffer(numVertices * 3);
+    Vector3f pos=new Vector3f();
+    for (int i=0; i < numVertices; i++) {
+      positions.get(i,pos);
+      buffer.put(pos.x);
+      buffer.put(pos.y);
+      buffer.put(pos.z);
+    }
+    return new btConvexHullShape(buffer,numVertices,3 * Float.BYTES);
+  }
+  CharacterMovementComponent characterMovementComponent=entityRef.getComponent(CharacterMovementComponent.class);
+  if (characterMovementComponent != null) {
+    return new btCapsuleShape(characterMovementComponent.pickupRadius,characterMovementComponent.height - 2 * characterMovementComponent.radius);
+  }
+  logger.error("Creating physics object that requires a ShapeComponent or CharacterMovementComponent, but has " + "neither. Entity: {}",entityRef);
+  throw new IllegalArgumentException("Creating physics object that requires a ShapeComponent or " + "CharacterMovementComponent, but has neither. Entity: " + entityRef);
+}

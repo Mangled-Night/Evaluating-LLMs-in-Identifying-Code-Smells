@@ -1,0 +1,23 @@
+/** 
+ * Perform an action and wait for an event. <p> The event is signaled with  {@link #signalEvent(Object,Object)}. </p>
+ * @param eventKey the event key, must not be null.
+ * @param timeout the timeout to wait for the event in milliseconds.
+ * @param action the action to perform prior waiting for the event, must not be null.
+ * @return the event value, may be null.
+ * @throws InterruptedException if interrupted while waiting for the event.
+ * @throws E depending on the concrete use case.
+ */
+public R performActionAndWaitForEvent(K eventKey,long timeout,Callback<E> action) throws InterruptedException, E {
+  final Reference<R> reference=new Reference<>();
+  events.put(eventKey,reference);
+  try {
+synchronized (reference) {
+      action.action();
+      reference.wait(timeout);
+    }
+    return reference.eventResult;
+  }
+  finally {
+    events.remove(eventKey);
+  }
+}

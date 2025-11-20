@@ -1,0 +1,44 @@
+/** 
+ * Creates a new account using the specified username and password. The server may require a number of extra account attributes such as an email address and phone number. In that case, Smack will attempt to automatically set all required attributes with blank values, which may or may not be accepted by the server. Therefore, it's recommended to check the required account attributes and to let the end-user populate them with real values instead.
+ * @param username the username.
+ * @param password the password.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void createAccount(Localpart username,String password) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  Map<String,String> attributes=new HashMap<>();
+  for (  String attributeName : getAccountAttributes()) {
+    attributes.put(attributeName,"");
+  }
+  createAccount(username,password,attributes);
+}
+/** 
+ * Creates a new account using the specified username, password and account attributes. The attributes Map must contain only String name/value pairs and must also have values for all required attributes.
+ * @param username the username.
+ * @param password the password.
+ * @param attributes the account attributes.
+ * @throws XMPPErrorException if an error occurs creating the account.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @see #getAccountAttributes()
+ */
+public void createAccount(Localpart username,String password,Map<String,String> attributes) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  if (!connection().isSecureConnection() && !allowSensitiveOperationOverInsecureConnection) {
+    throw new IllegalStateException("Creating account over insecure connection");
+  }
+  if (username == null) {
+    throw new IllegalArgumentException("Username must not be null");
+  }
+  if (StringUtils.isNullOrEmpty(password)) {
+    throw new IllegalArgumentException("Password must not be null");
+  }
+  attributes.put("username",username.toString());
+  attributes.put("password",password);
+  Registration reg=new Registration(attributes);
+  reg.setType(IQ.Type.set);
+  reg.setTo(connection().getXMPPServiceDomain());
+  createStanzaCollectorAndSend(reg).nextResultOrThrow();
+}

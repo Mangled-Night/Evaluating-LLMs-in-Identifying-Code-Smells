@@ -1,0 +1,47 @@
+private static final class RangesIterator implements Iterator<Integer> {
+  private Iterator<Map.Entry<Integer,Integer>> rangesIterator;
+  private Integer next;
+  private Integer rangeMax;
+  private RangesIterator(  Map<Integer,Integer> iterator){
+    this.rangesIterator=iterator.entrySet().iterator();
+    goToNextRange();
+  }
+  @Override public boolean hasNext(){
+    return next != null;
+  }
+  @Override public Integer next(){
+    if (next == null) {
+      throw new NoSuchElementException("You have reached the end of the iterator");
+    }
+    int result=next;
+    if (next < rangeMax) {
+      next++;
+    }
+ else {
+      goToNextRange();
+    }
+    return result;
+  }
+  private void goToNextRange(){
+    Integer newNext=null;
+    Integer newRangeMax=null;
+    while (rangesIterator.hasNext()) {
+      Map.Entry<Integer,Integer> nextRange=rangesIterator.next();
+      int tempNext=nextRange.getKey();
+      int tempRangeMax=nextRange.getValue();
+      if (rangeMax != null && rangeMax == Integer.MAX_VALUE) {
+        break;
+      }
+      if (rangeMax != null && tempNext <= rangeMax) {
+        tempNext=rangeMax + 1;
+      }
+      if (tempNext <= tempRangeMax) {
+        newNext=tempNext;
+        newRangeMax=tempRangeMax;
+        break;
+      }
+    }
+    next=newNext;
+    rangeMax=newRangeMax;
+  }
+}

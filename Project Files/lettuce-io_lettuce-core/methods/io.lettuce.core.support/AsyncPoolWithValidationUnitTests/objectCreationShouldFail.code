@@ -1,0 +1,9 @@
+@Test void objectCreationShouldFail(){
+  when(factory.create()).thenReturn(failed(new RedisException("foo")));
+  BoundedAsyncPool<String> pool=new BoundedAsyncPool<>(factory,BoundedPoolConfig.create());
+  CompletableFuture<String> acquire=pool.acquire();
+  assertThat(pool.getIdle()).isZero();
+  assertThat(pool.getObjectCount()).isZero();
+  assertThat(pool.getCreationInProgress()).isZero();
+  assertThat(acquire).isCompletedExceptionally();
+}

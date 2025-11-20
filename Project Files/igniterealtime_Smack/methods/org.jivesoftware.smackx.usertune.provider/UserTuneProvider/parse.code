@@ -1,0 +1,49 @@
+@Override public UserTuneElement parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+  UserTuneElement.Builder builder=UserTuneElement.getBuilder();
+  XmlPullParser.TagEvent tag=parser.nextTag();
+  outerloop:   while (true) {
+switch (tag) {
+case START_ELEMENT:
+      String name=parser.getName();
+    String namespace=parser.getNamespace();
+  if (!UserTuneElement.NAMESPACE.equals(namespace)) {
+    continue outerloop;
+  }
+while (tag == XmlPullParser.TagEvent.START_ELEMENT) {
+switch (name) {
+case "artist":
+    builder.setArtist(parser.nextText());
+  break;
+case "length":
+builder.setLength(ParserUtils.getIntegerFromNextText(parser));
+break;
+case "rating":
+builder.setRating(ParserUtils.getIntegerFromNextText(parser));
+break;
+case "source":
+builder.setSource(parser.nextText());
+break;
+case "title":
+builder.setTitle(parser.nextText());
+break;
+case "track":
+builder.setTrack(parser.nextText());
+break;
+case "uri":
+URI uri=ParserUtils.getUriFromNextText(parser);
+builder.setUri(uri);
+break;
+}
+tag=parser.nextTag();
+name=parser.getName();
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+}
+}
+return builder.build();
+}

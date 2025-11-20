@@ -1,0 +1,36 @@
+public StandardBatchPropagator(PropagationRules rules,PropagatorWorldView world){
+  this(rules,world,1);
+}
+public StandardBatchPropagator(PropagationRules rules,PropagatorWorldView world,int scale){
+  this.world=world;
+  this.rules=rules;
+  this.scale=scale;
+  for (  Side side : Side.values()) {
+    Vector3i delta=new Vector3i(side.direction());
+    if (delta.x < 0) {
+      delta.x+=Chunks.SIZE_X;
+    }
+ else     if (delta.x > 0) {
+      delta.x-=Chunks.SIZE_X;
+    }
+    if (delta.y < 0) {
+      delta.y+=Chunks.SIZE_Y;
+    }
+ else     if (delta.y > 0) {
+      delta.y-=Chunks.SIZE_Y;
+    }
+    if (delta.z < 0) {
+      delta.z+=Chunks.SIZE_Z;
+    }
+ else     if (delta.z > 0) {
+      delta.z-=Chunks.SIZE_Z;
+    }
+    chunkEdgeDeltas.put(side,delta);
+  }
+  increaseQueues=new Set[rules.getMaxValue()];
+  reduceQueues=new Set[rules.getMaxValue()];
+  for (int i=0; i < rules.getMaxValue(); ++i) {
+    increaseQueues[i]=Sets.newLinkedHashSet();
+    reduceQueues[i]=Sets.newLinkedHashSet();
+  }
+}

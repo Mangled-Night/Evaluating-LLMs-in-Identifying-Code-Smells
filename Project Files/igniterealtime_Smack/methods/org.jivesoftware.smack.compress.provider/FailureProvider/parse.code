@@ -1,0 +1,40 @@
+@Override public Failure parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+  Failure.CompressFailureError compressFailureError=null;
+  StanzaError stanzaError=null;
+  XmlEnvironment failureXmlEnvironment=XmlEnvironment.from(parser,xmlEnvironment);
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String name=parser.getName();
+    String namespace=parser.getNamespace();
+switch (namespace) {
+case Failure.NAMESPACE:
+    compressFailureError=Failure.CompressFailureError.valueOf(name.replace("-","_"));
+  if (compressFailureError == null) {
+    LOGGER.warning("Unknown element in " + Failure.NAMESPACE + ": "+ name);
+  }
+break;
+case StreamOpen.CLIENT_NAMESPACE:
+case StreamOpen.SERVER_NAMESPACE:
+switch (name) {
+case StanzaError.ERROR:
+stanzaError=PacketParserUtils.parseError(parser,failureXmlEnvironment);
+break;
+default :
+LOGGER.warning("Unknown element in " + namespace + ": "+ name);
+break;
+}
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+}
+}
+return new Failure(compressFailureError,stanzaError);
+}

@@ -1,0 +1,36 @@
+public static class TestDnsDataSource implements DnsDataSource {
+  private final AtomicBoolean wasQueried=new AtomicBoolean();
+  public boolean getAndResetWasQueried(){
+    return wasQueried.getAndSet(false);
+  }
+  private void setWasQueried(){
+    wasQueried.set(true);
+  }
+  @Override public DnsQueryResult query(  DnsMessage query,  InetAddress address,  int port) throws IOException {
+    setWasQueried();
+    return new TestDnsQueryResult(query);
+  }
+  @Override public MiniDnsFuture<DnsQueryResult,IOException> queryAsync(  DnsMessage query,  InetAddress address,  int port,  OnResponseCallback onResponseCallback){
+    setWasQueried();
+    DnsQueryResult result=new TestDnsQueryResult(query);
+    return MiniDnsFuture.from(result);
+  }
+  @Override public int getUdpPayloadSize(){
+    return 0;
+  }
+  @Override public int getTimeout(){
+    return 0;
+  }
+  @Override public void setTimeout(  int timeout){
+  }
+private static class TestDnsQueryResult extends DnsQueryResult {
+    protected TestDnsQueryResult(    DnsMessage query){
+      super(QueryMethod.testWorld,query,createNxDomainAnswerFor(query));
+    }
+    private static DnsMessage createNxDomainAnswerFor(    DnsMessage query){
+      Question question=query.getQuestion();
+      DnsMessage response=DnsMessage.builder().setQuestion(question).setRecursionAvailable(true).setResponseCode(RESPONSE_CODE.NX_DOMAIN).build();
+      return response;
+    }
+  }
+}

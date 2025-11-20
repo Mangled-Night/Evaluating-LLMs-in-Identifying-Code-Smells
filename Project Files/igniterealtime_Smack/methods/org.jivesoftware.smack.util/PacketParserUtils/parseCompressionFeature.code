@@ -1,0 +1,40 @@
+/** 
+ * Parse the Compression Feature reported from the server.
+ * @param parser the XML parser, positioned at the start of the compression stanza.
+ * @return The CompressionFeature stream element
+ * @throws IOException if an I/O error occurred.
+ * @throws XmlPullParserException if an exception occurs while parsing the stanza.
+ */
+public static Compress.Feature parseCompressionFeature(XmlPullParser parser) throws IOException, XmlPullParserException {
+  assert parser.getEventType() == XmlPullParser.Event.START_ELEMENT;
+  String name;
+  final int initialDepth=parser.getDepth();
+  List<String> methods=new LinkedList<>();
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      name=parser.getName();
+switch (name) {
+case "method":
+      methods.add(parser.nextText());
+    break;
+}
+break;
+case END_ELEMENT:
+name=parser.getName();
+switch (name) {
+case Compress.Feature.ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+}
+break;
+default :
+break;
+}
+}
+assert parser.getEventType() == XmlPullParser.Event.END_ELEMENT;
+assert parser.getDepth() == initialDepth;
+return new Compress.Feature(methods);
+}

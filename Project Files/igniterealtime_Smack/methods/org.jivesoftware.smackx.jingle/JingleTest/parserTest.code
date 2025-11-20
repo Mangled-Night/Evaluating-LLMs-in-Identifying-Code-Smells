@@ -1,0 +1,18 @@
+@Test public void parserTest() throws XmppStringprepException {
+  String sessionId="testSessionId";
+  Jingle.Builder builder=Jingle.builder("id");
+  builder.setSessionId(sessionId);
+  builder.setAction(JingleAction.session_initiate);
+  FullJid romeo=JidCreate.fullFrom("romeo@montague.lit/orchard");
+  FullJid juliet=JidCreate.fullFrom("juliet@capulet.lit/balcony");
+  builder.setInitiator(romeo);
+  builder.setResponder(juliet);
+  Jingle jingle=builder.build();
+  assertNotNull(jingle);
+  assertEquals(romeo,jingle.getInitiator());
+  assertEquals(juliet,jingle.getResponder());
+  assertEquals(jingle.getAction(),JingleAction.session_initiate);
+  assertEquals(sessionId,jingle.getSid());
+  String xml="<jingle xmlns='urn:xmpp:jingle:1' " + "initiator='romeo@montague.lit/orchard' " + "responder='juliet@capulet.lit/balcony' "+ "action='session-initiate' "+ "sid='" + sessionId + "'>"+ "</jingle>";
+  assertTrue(jingle.toXML().toString().contains(xml));
+}

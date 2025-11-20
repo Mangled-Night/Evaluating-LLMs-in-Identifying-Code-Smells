@@ -1,0 +1,23 @@
+@Override public OutputStream getOutputStream(OutputStream outputStream){
+  final int flushMethodInt;
+switch (flushMethod) {
+case SYNC_FLUSH:
+    flushMethodInt=Deflater.SYNC_FLUSH;
+  break;
+case FULL_FLUSH:
+flushMethodInt=Deflater.FULL_FLUSH;
+break;
+default :
+throw new AssertionError();
+}
+return new DeflaterOutputStream(outputStream,new Deflater(compressionLevel)){
+@Override public void flush() throws IOException {
+int count;
+while ((count=def.deflate(buf,0,buf.length,flushMethodInt)) > 0) {
+out.write(buf,0,count);
+}
+super.flush();
+}
+}
+;
+}

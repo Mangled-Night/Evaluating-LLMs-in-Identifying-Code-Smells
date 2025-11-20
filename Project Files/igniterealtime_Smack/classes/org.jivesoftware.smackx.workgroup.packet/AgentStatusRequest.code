@@ -1,0 +1,94 @@
+/** 
+ * Agent status request packet. This stanza is used by agents to request the list of agents in a workgroup. The response stanza contains a list of packets. Presence packets from individual agents follow.
+ * @author Matt Tucker
+ */
+public class AgentStatusRequest extends IQ {
+  /** 
+ * Element name of the stanza extension.
+ */
+  public static final String ELEMENT_NAME="agent-status-request";
+  /** 
+ * Namespace of the stanza extension.
+ */
+  public static final String NAMESPACE="http://jabber.org/protocol/workgroup";
+  private final Set<Item> agents=new HashSet<>();
+  public AgentStatusRequest(){
+    super(ELEMENT_NAME,NAMESPACE);
+  }
+  public int getAgentCount(){
+    return agents.size();
+  }
+  public Set<Item> getAgents(){
+    return Collections.unmodifiableSet(agents);
+  }
+  @Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(  IQChildElementXmlStringBuilder buf){
+    buf.rightAngleBracket();
+synchronized (agents) {
+      for (Iterator<Item> i=agents.iterator(); i.hasNext(); ) {
+        Item item=i.next();
+        buf.append("<agent jid=\"").append(item.getJID()).append("\">");
+        if (item.getName() != null) {
+          buf.append("<name xmlns=\"" + AgentInfo.NAMESPACE + "\">");
+          buf.append(item.getName());
+          buf.append("</name>");
+        }
+        buf.append("</agent>");
+      }
+    }
+    return buf;
+  }
+public static class Item {
+    private final EntityBareJid jid;
+    private final String type;
+    private final String name;
+    public Item(    EntityBareJid jid,    String type,    String name){
+      this.jid=jid;
+      this.type=type;
+      this.name=name;
+    }
+    public EntityBareJid getJID(){
+      return jid;
+    }
+    public String getType(){
+      return type;
+    }
+    public String getName(){
+      return name;
+    }
+  }
+  /** 
+ * Stanza extension provider for AgentStatusRequest packets.
+ */
+public static class Provider extends IqProvider<AgentStatusRequest> {
+    @Override public AgentStatusRequest parse(    XmlPullParser parser,    int initialDepth,    IqData iqData,    XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+      AgentStatusRequest statusRequest=new AgentStatusRequest();
+      boolean done=false;
+      while (!done) {
+        XmlPullParser.Event eventType=parser.next();
+        if (eventType == XmlPullParser.Event.START_ELEMENT && "agent".equals(parser.getName())) {
+          statusRequest.agents.add(parseAgent(parser));
+        }
+ else         if (eventType == XmlPullParser.Event.END_ELEMENT && "agent-status-request".equals(parser.getName())) {
+          done=true;
+        }
+      }
+      return statusRequest;
+    }
+    private static Item parseAgent(    XmlPullParser parser) throws XmlPullParserException, IOException {
+      boolean done=false;
+      EntityBareJid jid=ParserUtils.getBareJidAttribute(parser);
+      String type=parser.getAttributeValue("","type");
+      String name=null;
+      while (!done) {
+        XmlPullParser.Event eventType=parser.next();
+        if (eventType == XmlPullParser.Event.START_ELEMENT && "name".equals(parser.getName())) {
+          name=parser.nextText();
+        }
+ else         if (eventType == XmlPullParser.Event.END_ELEMENT && "agent".equals(parser.getName())) {
+          done=true;
+        }
+      }
+      return new Item(jid,type,name);
+    }
+  }
+}

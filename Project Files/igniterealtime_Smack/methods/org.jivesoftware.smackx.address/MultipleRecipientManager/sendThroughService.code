@@ -1,0 +1,32 @@
+private static void sendThroughService(XMPPConnection connection,Stanza packet,Collection<? extends Jid> to,Collection<? extends Jid> cc,Collection<? extends Jid> bcc,Jid replyTo,Jid replyRoom,boolean noReply,DomainBareJid serviceAddress) throws NotConnectedException, InterruptedException {
+  MultipleAddresses multipleAddresses=new MultipleAddresses();
+  if (to != null) {
+    for (    Jid jid : to) {
+      multipleAddresses.addAddress(MultipleAddresses.Type.to,jid,null,null,false,null);
+    }
+  }
+  if (cc != null) {
+    for (    Jid jid : cc) {
+      multipleAddresses.addAddress(MultipleAddresses.Type.to,jid,null,null,false,null);
+    }
+  }
+  if (bcc != null) {
+    for (    Jid jid : bcc) {
+      multipleAddresses.addAddress(MultipleAddresses.Type.bcc,jid,null,null,false,null);
+    }
+  }
+  if (noReply) {
+    multipleAddresses.setNoReply();
+  }
+ else {
+    if (replyTo != null) {
+      multipleAddresses.addAddress(MultipleAddresses.Type.replyto,replyTo,null,null,false,null);
+    }
+    if (replyRoom != null) {
+      multipleAddresses.addAddress(MultipleAddresses.Type.replyroom,replyRoom,null,null,false,null);
+    }
+  }
+  packet.setTo(serviceAddress);
+  packet.addExtension(multipleAddresses);
+  connection.sendStanza(packet);
+}

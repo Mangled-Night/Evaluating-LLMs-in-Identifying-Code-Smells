@@ -1,0 +1,10 @@
+@Test void isChangedShouldReturnTrueBecauseHostWasMigrated(){
+  RedisMasterReplicaNode upstream=new RedisMasterReplicaNode("host",1234,RedisURI.create("host",111),RedisInstance.Role.UPSTREAM);
+  RedisMasterReplicaNode replica=new RedisMasterReplicaNode("host",234,RedisURI.create("host",234),RedisInstance.Role.REPLICA);
+  RedisMasterReplicaNode newupstream=new RedisMasterReplicaNode("host",1234,RedisURI.create("host",555),RedisInstance.Role.UPSTREAM);
+  RedisMasterReplicaNode newslave=new RedisMasterReplicaNode("newhost",234,RedisURI.create("newhost",666),RedisInstance.Role.REPLICA);
+  assertThat(ReplicaUtils.isChanged(Arrays.asList(upstream,replica),Arrays.asList(newupstream,newslave))).isTrue();
+  assertThat(ReplicaUtils.isChanged(Arrays.asList(replica,upstream),Arrays.asList(newupstream,newslave))).isTrue();
+  assertThat(ReplicaUtils.isChanged(Arrays.asList(newupstream,newslave),Arrays.asList(upstream,replica))).isTrue();
+  assertThat(ReplicaUtils.isChanged(Arrays.asList(newslave,newupstream),Arrays.asList(upstream,replica))).isTrue();
+}

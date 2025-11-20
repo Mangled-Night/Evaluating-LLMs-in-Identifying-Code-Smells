@@ -1,0 +1,12 @@
+@Test void genericPoolShouldWorkWithWrappedConnections() throws Exception {
+  GenericObjectPool<StatefulRedisConnection<String,String>> pool=ConnectionPoolSupport.createGenericObjectPool(() -> client.connect(),new GenericObjectPoolConfig<>());
+  borrowAndReturn(pool);
+  borrowAndClose(pool);
+  borrowAndCloseTryWithResources(pool);
+  pool.returnObject(pool.borrowObject().sync().getStatefulConnection());
+  pool.returnObject(pool.borrowObject().async().getStatefulConnection());
+  assertThat(channels).hasSize(1);
+  pool.close();
+  Wait.untilTrue(channels::isEmpty).waitOrTimeout();
+  assertThat(channels).isEmpty();
+}

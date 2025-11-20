@@ -1,0 +1,21 @@
+/** 
+ * Return whether mobile data is enabled.
+ * @return {@code true}: enabled<br> {@code false}: disabled
+ */
+public static boolean getMobileDataEnabled(){
+  try {
+    TelephonyManager tm=(TelephonyManager)Utils.getApp().getSystemService(Context.TELEPHONY_SERVICE);
+    if (tm == null)     return false;
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      return tm.isDataEnabled();
+    }
+    @SuppressLint("PrivateApi") Method getMobileDataEnabledMethod=tm.getClass().getDeclaredMethod("getDataEnabled");
+    if (null != getMobileDataEnabledMethod) {
+      return (boolean)getMobileDataEnabledMethod.invoke(tm);
+    }
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+  }
+  return false;
+}

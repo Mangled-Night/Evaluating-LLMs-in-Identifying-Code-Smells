@@ -1,0 +1,22 @@
+private Runnable xaTaskCheck(){
+  return new Runnable(){
+    @Override public void run(){
+      Collection<CoordinatorLogEntry> coordinatorLogEntries=MultiNodeCoordinator.inMemoryRepository.getAllCoordinatorLogEntries();
+      long sqlTimeout=MycatServer.getInstance().getConfig().getSystem().getSqlExecuteTimeout() * 1000L;
+      List<CoordinatorLogEntry> CoordinatorLogEntryList=null;
+      long currentTime=TimeUtil.currentTimeMillis();
+      for (      CoordinatorLogEntry coordinatorLogEntry : coordinatorLogEntries) {
+        if (currentTime > sqlTimeout + 20 * 1000 + coordinatorLogEntry.createTime) {
+          if (CoordinatorLogEntryList == null) {
+            CoordinatorLogEntryList=new ArrayList<CoordinatorLogEntry>();
+          }
+          CoordinatorLogEntryList.add(coordinatorLogEntry);
+        }
+      }
+      if (CoordinatorLogEntryList != null) {
+        performXARecoveryLog((CoordinatorLogEntry[])CoordinatorLogEntryList.toArray());
+      }
+    }
+  }
+;
+}

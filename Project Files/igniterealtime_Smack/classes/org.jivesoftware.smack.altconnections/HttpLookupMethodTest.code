@@ -1,0 +1,16 @@
+public class HttpLookupMethodTest {
+  private static final String XRD_XML="<XRD xmlns='http://docs.oasis-open.org/ns/xri/xrd-1.0'>" + "<Link rel='urn:xmpp:alt-connections:xbosh' href='https://igniterealtime.org:443/http-bind/'/>" + "<Link rel='urn:xmpp:alt-connections:websocket' href='wss://xmpp.igniterealtime.org:7483/ws/'/>"+ "<Link rel='urn:xmpp:alt-connections:websocket' href='ws://xmpp.igniterealtime.org:7070/ws/'/>"+ "</XRD>";
+  @Test public void parseXrdLinkReferencesForWebsockets() throws XmppStringprepException, IOException, XmlPullParserException, URISyntaxException {
+    List<URI> endpoints=new ArrayList<>();
+    endpoints.add(new URI("wss://xmpp.igniterealtime.org:7483/ws/"));
+    endpoints.add(new URI("ws://xmpp.igniterealtime.org:7070/ws/"));
+    List<URI> expectedEndpoints=HttpLookupMethod.parseXrdLinkReferencesFor(PacketParserUtils.getParserFor(XRD_XML),LinkRelation.WEBSOCKET);
+    assertEquals(expectedEndpoints,endpoints);
+  }
+  @Test public void parseXrdLinkReferencesForBosh() throws URISyntaxException, IOException, XmlPullParserException {
+    List<URI> endpoints=new ArrayList<>();
+    endpoints.add(new URI("https://igniterealtime.org:443/http-bind/"));
+    List<URI> expectedEndpoints=HttpLookupMethod.parseXrdLinkReferencesFor(PacketParserUtils.getParserFor(XRD_XML),LinkRelation.BOSH);
+    assertEquals(expectedEndpoints,endpoints);
+  }
+}

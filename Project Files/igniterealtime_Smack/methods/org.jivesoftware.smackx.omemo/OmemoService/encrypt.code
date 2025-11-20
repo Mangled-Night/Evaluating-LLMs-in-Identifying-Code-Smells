@@ -1,0 +1,70 @@
+/** 
+ * Encrypt a message with a messageKey and an IV and create an OmemoMessage from it.
+ * @param managerGuard authenticated OmemoManager
+ * @param contactsDevices set of recipient OmemoDevices
+ * @param messageKey AES key to encrypt the message
+ * @param iv iv to be used with the messageKey
+ * @return OmemoMessage object which contains the OmemoElement and some information.
+ * @throws SmackException.NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws SmackException.NoResponseException if there was no response from the remote entity.
+ * @throws UndecidedOmemoIdentityException if the list of recipient devices contains undecided devices
+ * @throws CryptoFailedException if we are lacking some crypto primitives
+ * @throws IOException if an I/O error occurred.
+ */
+private OmemoMessage.Sent encrypt(OmemoManager.LoggedInOmemoManager managerGuard,Set<OmemoDevice> contactsDevices,byte[] messageKey,byte[] iv,String message) throws SmackException.NotConnectedException, InterruptedException, SmackException.NoResponseException, UndecidedOmemoIdentityException, CryptoFailedException, IOException {
+  OmemoManager manager=managerGuard.get();
+  OmemoDevice userDevice=manager.getOwnDevice();
+  removeOurDevice(userDevice,contactsDevices);
+  buildMissingSessionsWithDevices(manager.getConnection(),userDevice,contactsDevices);
+  Set<OmemoDevice> undecidedDevices=getUndecidedDevices(userDevice,manager.getTrustCallback(),contactsDevices);
+  if (!undecidedDevices.isEmpty()) {
+    throw new UndecidedOmemoIdentityException(undecidedDevices);
+  }
+  HashMap<OmemoDevice,Throwable> skippedRecipients=new HashMap<>();
+  OmemoMessageBuilder<T_IdKeyPair,T_IdKey,T_PreKey,T_SigPreKey,T_Sess,T_Addr,T_ECPub,T_Bundle,T_Ciph> builder;
+  try {
+    builder=new OmemoMessageBuilder<>(userDevice,manager.getTrustCallback(),getOmemoRatchet(managerGuard.get()),messageKey,iv,message);
+  }
+ catch (  BadPaddingException|IllegalBlockSizeException|NoSuchPaddingException|InvalidAlgorithmParameterException|InvalidKeyException|NoSuchAlgorithmException e) {
+    throw new CryptoFailedException(e);
+  }
+  for (  OmemoDevice contactsDevice : contactsDevices) {
+    if (!hasSession(userDevice,contactsDevice)) {
+      try {
+        buildFreshSessionWithDevice(manager.getConnection(),userDevice,contactsDevice);
+      }
+ catch (      CorruptedOmemoKeyException|CannotEstablishOmemoSessionException e) {
+        LOGGER.log(Level.WARNING,"Could not build session with " + contactsDevice + ".",e);
+        skippedRecipients.put(contactsDevice,e);
+        continue;
+      }
+    }
+    int messageCounter=omemoStore.loadOmemoMessageCounter(userDevice,contactsDevice);
+    if (OmemoConfiguration.getIgnoreReadOnlyDevices()) {
+      boolean readOnly=messageCounter >= OmemoConfiguration.getMaxReadOnlyMessageCount();
+      if (readOnly) {
+        LOGGER.log(Level.FINE,"Device " + contactsDevice + " seems to be read-only (We sent "+ messageCounter+ " messages without getting a reply back (max allowed is "+ OmemoConfiguration.getMaxReadOnlyMessageCount()+ "). Ignoring the device.");
+        skippedRecipients.put(contactsDevice,new ReadOnlyDeviceException(contactsDevice));
+        continue;
+      }
+    }
+    try {
+      builder.addRecipient(contactsDevice);
+    }
+ catch (    NoIdentityKeyException|CorruptedOmemoKeyException e) {
+      LOGGER.log(Level.WARNING,"Encryption failed for device " + contactsDevice + ".",e);
+      skippedRecipients.put(contactsDevice,e);
+    }
+catch (    UndecidedOmemoIdentityException e) {
+      throw new AssertionError("Recipients device seems to be undecided, even though we should have thrown" + " an exception earlier in that case. " + e);
+    }
+catch (    UntrustedOmemoIdentityException e) {
+      LOGGER.log(Level.WARNING,"Device " + contactsDevice + " is untrusted. Message is not encrypted for it.");
+      skippedRecipients.put(contactsDevice,e);
+    }
+    omemoStore.storeOmemoMessageCounter(userDevice,contactsDevice,messageCounter + 1);
+  }
+  OmemoElement element=builder.finish();
+  return new OmemoMessage.Sent(element,messageKey,iv,contactsDevices,skippedRecipients);
+}

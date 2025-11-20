@@ -1,0 +1,14 @@
+private void putInternal(E e,boolean signalNotEmpty) throws InterruptedException {
+  assert lock.isHeldByCurrentThread();
+  while (isFull()) {
+    try {
+      notFull.await();
+      checkNotShutdown();
+    }
+ catch (    InterruptedException ie) {
+      notFull.signal();
+      throw ie;
+    }
+  }
+  insert(e,signalNotEmpty);
+}

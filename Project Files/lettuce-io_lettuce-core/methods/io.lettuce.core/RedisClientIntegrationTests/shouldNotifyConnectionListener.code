@@ -1,0 +1,19 @@
+@Test void shouldNotifyConnectionListener(){
+  TestConnectionListener listener=new TestConnectionListener();
+  RedisClient client=RedisClient.create(clientResources,RedisURI.Builder.redis(host,port).build());
+  client.addListener(listener);
+  assertThat(listener.onConnected).isNull();
+  assertThat(listener.onDisconnected).isNull();
+  assertThat(listener.onException).isNull();
+  StatefulRedisConnection<String,String> connection=client.connect();
+  Wait.untilTrue(() -> listener.onConnected != null).waitOrTimeout();
+  assertThat(listener.onConnectedSocketAddress).isNotNull();
+  assertThat(listener.onConnected).isEqualTo(connection);
+  assertThat(listener.onDisconnected).isNull();
+  connection.sync().set(key,value);
+  connection.close();
+  Wait.untilTrue(() -> listener.onDisconnected != null).waitOrTimeout();
+  assertThat(listener.onConnected).isEqualTo(connection);
+  assertThat(listener.onDisconnected).isEqualTo(connection);
+  FastShutdown.shutdown(client);
+}

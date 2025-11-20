@@ -1,0 +1,11 @@
+@Test public void areReqHeadersParsedCorrectly() throws Exception {
+  String string="<req xmlns='urn:xmpp:http' method='GET' resource='/rdf/xep' version='1.1'>" + "<headers xmlns='http://jabber.org/protocol/shim'>" + "<header name='Host'>clayster.com</header>"+ "</headers>"+ "</req>";
+  Map<String,String> expectedHeaders=new HashMap<String,String>();
+  expectedHeaders.put("Host","clayster.com");
+  HttpOverXmppReqProvider provider=new HttpOverXmppReqProvider();
+  XmlPullParser parser=PacketParserUtils.getParserFor(string);
+  IQ iq=provider.parse(parser,null);
+  assertTrue(iq instanceof HttpOverXmppReq);
+  HttpOverXmppReq body=(HttpOverXmppReq)iq;
+  checkHeaders(body.getHeaders(),expectedHeaders);
+}

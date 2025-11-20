@@ -1,0 +1,26 @@
+private boolean initializeOpenVRLibrary(){
+  if (initialized) {
+    return true;
+  }
+  String target="";
+switch (OS.get()) {
+case WINDOWS:
+    target="win32-" + (OS.IS_64 ? "x86-64" : "x86");
+  break;
+case MACOSX:
+target="darwin";
+break;
+case LINUX:
+target="linux-" + (OS.IS_64 ? "x86-64" : "x86");
+break;
+}
+String path=Paths.get(OS.USER_DIRECTORY,"openvr_natives",target).toString();
+logger.info("Adding OpenVR search path: " + path);
+NativeLibrary.addSearchPath("openvr_api",path);
+if (jopenvr.JOpenVRLibrary.VR_IsHmdPresent() != 1) {
+logger.info("VR Headset not detected.");
+return false;
+}
+logger.info("VR Headset detected.");
+return true;
+}

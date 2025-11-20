@@ -1,0 +1,16 @@
+/** 
+ * Given a memory page and offset within that page, encode this address into a 64-bit long. This address will remain valid as long as the corresponding page has not been freed.
+ * @param page a data page allocated by {@link DataNodeMemoryManager#allocatePage}/
+ * @param offsetInPage an offset in this page which incorporates the base offset. In other words,this should be the value that you would pass as the base offset into an UNSAFE call (e.g. page.baseOffset() + something).
+ * @return an encoded page address.
+ */
+public long encodePageNumberAndOffset(MemoryBlock page,long offsetInPage){
+  if (tungstenMemoryMode == MemoryMode.OFF_HEAP) {
+    offsetInPage-=page.getBaseOffset();
+  }
+  return encodePageNumberAndOffset(page.pageNumber,offsetInPage);
+}
+@VisibleForTesting public static long encodePageNumberAndOffset(int pageNumber,long offsetInPage){
+  assert (pageNumber != -1) : "encodePageNumberAndOffset called with invalid page";
+  return (((long)pageNumber) << OFFSET_BITS) | (offsetInPage & MASK_LONG_LOWER_51_BITS);
+}

@@ -1,0 +1,74 @@
+/** 
+ * @param columToIndx
+ * @param fieldCount
+ */
+public void onRowMetaData(Map<String,ColMeta> columToIndx,int fieldCount){
+  if (LOGGER.isDebugEnabled()) {
+    LOGGER.debug("field metadata keys:" + columToIndx.keySet());
+    LOGGER.debug("field metadata values:" + columToIndx.values());
+  }
+  int[] groupColumnIndexs=null;
+  this.fieldCount=fieldCount;
+  if (rrs.getGroupByCols() != null) {
+    groupColumnIndexs=toColumnIndex(rrs.getGroupByCols(),columToIndx);
+  }
+  if (rrs.getHavingCols() != null) {
+    ColMeta colMeta=columToIndx.get(rrs.getHavingCols().getLeft().toUpperCase());
+    if (colMeta != null) {
+      rrs.getHavingCols().setColMeta(colMeta);
+    }
+  }
+  if (rrs.isHasAggrColumn()) {
+    List<MergeCol> mergCols=new LinkedList<MergeCol>();
+    Map<String,Integer> mergeColsMap=rrs.getMergeCols();
+    if (mergeColsMap != null) {
+      for (      Map.Entry<String,Integer> mergEntry : mergeColsMap.entrySet()) {
+        String colName=mergEntry.getKey().toUpperCase();
+        int type=mergEntry.getValue();
+        if (MergeCol.MERGE_AVG == type) {
+          ColMeta sumColMeta=columToIndx.get(colName + "SUM");
+          ColMeta countColMeta=columToIndx.get(colName + "COUNT");
+          if (sumColMeta != null && countColMeta != null) {
+            ColMeta colMeta=new ColMeta(sumColMeta.colIndex,countColMeta.colIndex,sumColMeta.getColType());
+            colMeta.decimals=sumColMeta.decimals;
+            mergCols.add(new MergeCol(colMeta,mergEntry.getValue()));
+          }
+        }
+ else {
+          ColMeta colMeta=columToIndx.get(SQLUtils.normalize(colName));
+          mergCols.add(new MergeCol(colMeta,mergEntry.getValue()));
+        }
+      }
+    }
+    for (    Map.Entry<String,ColMeta> fieldEntry : columToIndx.entrySet()) {
+      String colName=fieldEntry.getKey();
+      int result=MergeCol.tryParseAggCol(colName);
+      if (result != MergeCol.MERGE_UNSUPPORT && result != MergeCol.MERGE_NOMERGE) {
+        mergCols.add(new MergeCol(fieldEntry.getValue(),result));
+      }
+    }
+    grouper=new RowDataPacketGrouper(groupColumnIndexs,mergCols.toArray(new MergeCol[mergCols.size()]),rrs.getHavingCols());
+  }
+  if (rrs.getOrderByCols() != null) {
+    LinkedHashMap<String,Integer> orders=rrs.getOrderByCols();
+    OrderCol[] orderCols=new OrderCol[orders.size()];
+    int i=0;
+    for (    Map.Entry<String,Integer> entry : orders.entrySet()) {
+      String key=StringUtil.removeBackquote(entry.getKey().toUpperCase());
+      ColMeta colMeta=columToIndx.get(key);
+      if (colMeta == null) {
+        throw new IllegalArgumentException("all columns in order by clause should be in the selected column list!" + entry.getKey());
+      }
+      orderCols[i++]=new OrderCol(colMeta,entry.getValue());
+    }
+    RowDataSorter tmp=new RowDataSorter(orderCols);
+    tmp.setLimit(rrs.getLimitStart(),rrs.getLimitSize());
+    sorter=tmp;
+  }
+  if (MycatServer.getInstance().getConfig().getSystem().getUseStreamOutput() == 1 && grouper == null && sorter == null) {
+    setStreamOutputResult(true);
+  }
+ else {
+    setStreamOutputResult(false);
+  }
+}

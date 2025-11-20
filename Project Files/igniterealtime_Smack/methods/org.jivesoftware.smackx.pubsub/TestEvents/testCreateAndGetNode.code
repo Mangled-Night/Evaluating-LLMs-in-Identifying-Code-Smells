@@ -1,0 +1,15 @@
+public void testCreateAndGetNode() throws Exception {
+  String nodeId="MyTestNode";
+  PubSubManager creatorMgr=new PubSubManager(getConnection(0),getService());
+  LeafNode creatorNode=null;
+  try {
+    creatorNode=(LeafNode)creatorMgr.getNode(nodeId);
+  }
+ catch (  XMPPException e) {
+    if (e.getStanzaError().getType() == Type.CANCEL && e.getXMPPError().getCondition().equals("item-not-found"))     creatorNode=creatorMgr.createNode(nodeId);
+ else     throw e;
+  }
+  PubSubManager subMgr=new PubSubManager(getConnection(1),getService());
+  LeafNode subNode=(LeafNode)subMgr.getNode(nodeId);
+  assertNotNull(subNode);
+}

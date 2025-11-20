@@ -1,0 +1,25 @@
+protected static Object synchronize(BatchTasks batchTasks,StatefulConnection<Object,Object> connection){
+  if (batchTasks == BatchTasks.EMPTY) {
+    return null;
+  }
+  Duration timeout=connection.getTimeout();
+  BatchException exception=null;
+  List<RedisCommand<?,?,?>> failures=null;
+  for (  RedisCommand<?,?,?> batchTask : batchTasks) {
+    try {
+      Futures.await(timeout,(RedisFuture)batchTask);
+    }
+ catch (    Exception e) {
+      if (exception == null) {
+        failures=new ArrayList<>();
+        exception=new BatchException(failures);
+      }
+      failures.add(batchTask);
+      exception.addSuppressed(e);
+    }
+  }
+  if (exception != null) {
+    throw exception;
+  }
+  return null;
+}

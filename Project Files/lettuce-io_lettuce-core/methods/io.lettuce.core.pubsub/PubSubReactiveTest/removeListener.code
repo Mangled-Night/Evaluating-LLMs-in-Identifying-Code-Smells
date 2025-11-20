@@ -1,0 +1,11 @@
+@Test void removeListener() throws Exception {
+  StepVerifier.create(pubsub.subscribe(channel)).verifyComplete();
+  assertThat(channels.take()).isEqualTo(channel);
+  StepVerifier.create(pubsub2.publish(channel,message)).expectNextCount(1).verifyComplete();
+  assertThat(channels.take()).isEqualTo(channel);
+  assertThat(messages.take()).isEqualTo(message);
+  pubsub.getStatefulConnection().removeListener(this);
+  StepVerifier.create(pubsub2.publish(channel,message)).expectNextCount(1).verifyComplete();
+  assertThat(channels.poll(10,TimeUnit.MILLISECONDS)).isNull();
+  assertThat(messages.poll(10,TimeUnit.MILLISECONDS)).isNull();
+}

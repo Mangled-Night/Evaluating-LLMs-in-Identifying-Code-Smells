@@ -1,0 +1,86 @@
+/** 
+ * A Time IQ packet, which is used by XMPP clients to exchange their respective local times. Clients that wish to fully support the entity time protocol should register a PacketListener for incoming time requests that then respond with the local time.
+ * @see <a href="http://www.xmpp.org/extensions/xep-0202.html">XEP-202</a>
+ * @author Florian Schmaus
+ */
+public class Time extends IQ implements TimeView {
+  public static final String NAMESPACE="urn:xmpp:time";
+  public static final String ELEMENT="time";
+  private static final Logger LOGGER=Logger.getLogger(Time.class.getName());
+  private final String utc;
+  private final String tzo;
+  public Time(  TimeBuilder timeBuilder){
+    super(timeBuilder,ELEMENT,NAMESPACE);
+    utc=timeBuilder.getUtc();
+    tzo=timeBuilder.getTzo();
+    Type type=getType();
+switch (type) {
+case get:
+      if (utc != null) {
+        throw new IllegalArgumentException("Time requests must not have utc set");
+      }
+    if (tzo != null) {
+      throw new IllegalArgumentException("Time requests must not have tzo set");
+    }
+  break;
+case result:
+StringUtils.requireNotNullNorEmpty(utc,"Must have set a utc value");
+StringUtils.requireNotNullNorEmpty(tzo,"Must have set a tzo value");
+break;
+case error:
+break;
+case set:
+throw new IllegalArgumentException("Invalid IQ type");
+}
+}
+/** 
+ * Returns the local time or <code>null</code> if the time hasn't been set.
+ * @return the local time.
+ */
+public Date getTime(){
+if (utc == null) {
+return null;
+}
+Date date=null;
+try {
+date=XmppDateTime.parseDate(utc);
+}
+ catch (Exception e) {
+LOGGER.log(Level.SEVERE,"Error getting local time",e);
+}
+return date;
+}
+@Override public String getUtc(){
+return utc;
+}
+@Override public String getTzo(){
+return tzo;
+}
+@Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(IQChildElementXmlStringBuilder buf){
+if (utc != null) {
+buf.rightAngleBracket();
+buf.element("utc",utc);
+buf.element("tzo",tzo);
+}
+ else {
+buf.setEmptyElement();
+}
+return buf;
+}
+public static TimeBuilder builder(XMPPConnection connection){
+return new TimeBuilder(connection);
+}
+public static TimeBuilder builder(IqData iqData){
+return new TimeBuilder(iqData);
+}
+public static TimeBuilder builder(String stanzaId){
+return new TimeBuilder(stanzaId);
+}
+public static TimeBuilder builder(Time timeRequest,Calendar calendar){
+IqData iqData=IqData.createResponseData(timeRequest);
+return builder(iqData).setTime(calendar);
+}
+public static TimeBuilder builder(Time timeRequest){
+return builder(timeRequest,Calendar.getInstance());
+}
+}

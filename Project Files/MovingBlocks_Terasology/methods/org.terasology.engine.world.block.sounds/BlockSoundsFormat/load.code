@@ -1,0 +1,18 @@
+@Override public BlockSoundsData load(ResourceUrn resourceUrn,List<AssetDataFile> list) throws IOException {
+  JsonElement rawJson=readJson(list.get(0));
+  JsonObject blockDefJson=rawJson.getAsJsonObject();
+  BlockSoundsData data=new BlockSoundsData();
+  if (blockDefJson.has("basedOn")) {
+    Optional<BlockSounds> parentBlockSounds=assetManager.getAsset(blockDefJson.get("basedOn").getAsString(),BlockSounds.class);
+    if (parentBlockSounds.isPresent()) {
+      data.getStepSounds().addAll(parentBlockSounds.get().getStepSounds());
+      data.getStepSounds().addAll(parentBlockSounds.get().getDestroySounds());
+      data.getStepSounds().addAll(parentBlockSounds.get().getDigSounds());
+    }
+ else {
+      throw new IOException("Unable to resolve parent '" + blockDefJson.get("basedOn").getAsString() + "'");
+    }
+  }
+  loadBlockSounds(blockDefJson,data);
+  return data;
+}

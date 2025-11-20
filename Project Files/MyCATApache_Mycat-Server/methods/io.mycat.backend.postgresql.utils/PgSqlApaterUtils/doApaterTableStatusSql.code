@@ -1,0 +1,43 @@
+/** 
+ * 进行表结构语句适配
+ * @param sql
+ * @return
+ */
+private static String doApaterTableStatusSql(String sql){
+  String tableName=sql.substring(SHOW_TABLE_STATUS_SQL_PREFIX.length());
+  StringBuilder sb=new StringBuilder();
+  sb.append("SELECT").append(" ");
+  sb.append("	attname AS NAME,").append(" ");
+  sb.append("	'InnoDB' AS Engine,").append(" ");
+  sb.append("	10 AS VERSION,").append(" ");
+  sb.append("	'Compact' AS Row_format,").append(" ");
+  sb.append("	0 AS ROWS,").append(" ");
+  sb.append("	10000 AS Avg_row_length,").append(" ");
+  sb.append("	10000 AS Data_length,").append(" ");
+  sb.append("	0 AS Max_data_length,").append(" ");
+  sb.append("	0 AS Index_length,").append(" ");
+  sb.append("	0 AS Data_free,").append(" ");
+  sb.append("	NULL AS Auto_increment,").append(" ");
+  sb.append("	NULL AS Create_time,").append(" ");
+  sb.append("	NULL AS Update_time,").append(" ");
+  sb.append("	NULL AS Check_time,").append(" ");
+  sb.append("	'utf8_general_ci' AS COLLATION,").append(" ");
+  sb.append("	NULL AS Checksum,").append(" ");
+  sb.append("	'' AS Create_options,").append(" ");
+  sb.append("	'' AS COMMENT").append(" ");
+  sb.append("FROM").append(" ");
+  sb.append("	pg_attribute").append(" ");
+  sb.append("INNER JOIN pg_class ON pg_attribute.attrelid = pg_class.oid").append(" ");
+  sb.append("INNER JOIN pg_type ON pg_attribute.atttypid = pg_type.oid").append(" ");
+  sb.append("LEFT OUTER JOIN pg_attrdef ON pg_attrdef.adrelid = pg_class.oid").append(" ");
+  sb.append("AND pg_attrdef.adnum = pg_attribute.attnum").append(" ");
+  sb.append("LEFT OUTER JOIN pg_description ON pg_description.objoid = pg_class.oid").append(" ");
+  sb.append("AND pg_description.objsubid = pg_attribute.attnum").append(" ");
+  sb.append("WHERE").append(" ");
+  sb.append("	pg_attribute.attnum > 0").append(" ");
+  sb.append("AND attisdropped <> 't'").append(" ");
+  sb.append("AND pg_class.relname =").append(tableName).append(" ");
+  sb.append("ORDER BY").append(" ");
+  sb.append("	pg_attribute.attnum").append(" ");
+  return sb.toString();
+}

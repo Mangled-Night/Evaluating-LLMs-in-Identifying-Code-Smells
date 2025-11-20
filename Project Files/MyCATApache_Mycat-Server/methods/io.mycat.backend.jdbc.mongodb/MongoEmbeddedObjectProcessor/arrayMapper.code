@@ -1,0 +1,34 @@
+/** 
+ * 将mongodb的数据对象列表<code>basicDBList</code>转换成对应类型<code>arrayClass</code>的数组。<br/> 基本类型直接转换，对象类型使用  {@link #beanMapper(BasicDBObject,Class)}。
+ * @param basicDBList mongodb数据对象列表
+ * @param arrayClass  目标数组对象类
+ * @return 转换后的数组对象
+ * @see MongoEmbeddedObjectProcessor#beanMapper(BasicDBObject,Class)
+ */
+private static Object arrayMapper(BasicDBList basicDBList,Class<?> arrayClass){
+  Class<?> clazzToMapper;
+  try {
+    clazzToMapper=Class.forName(arrayClass.getName().replace("[L","").replace(";",""));
+  }
+ catch (  ClassNotFoundException e) {
+    LOG.warn("实例化:[{}]对象异常.",arrayClass,e);
+    return null;
+  }
+  Object array=Array.newInstance(clazzToMapper,basicDBList.size());
+  int i=0;
+  for (  Object basicDbObj : basicDBList) {
+    Object value;
+    if (clazzToMapper.isPrimitive()) {
+      value=basicDbObj;
+    }
+ else     if (clazzToMapper.getName().startsWith("java.lang")) {
+      value=basicDbObj;
+    }
+ else {
+      value=beanMapper((BasicDBObject)basicDbObj,clazzToMapper);
+    }
+    Array.set(array,i,value);
+    i++;
+  }
+  return array;
+}

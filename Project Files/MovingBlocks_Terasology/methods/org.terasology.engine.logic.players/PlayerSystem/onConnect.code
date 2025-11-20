@@ -1,0 +1,34 @@
+@ReceiveEvent(components=ClientComponent.class) public void onConnect(ConnectedEvent connected,EntityRef entity){
+  LocationComponent loc=entity.getComponent(LocationComponent.class);
+  PlayerStore playerStore=connected.getPlayerStore();
+  Client owner=networkSystem.getOwner(entity);
+  Vector3ic minViewDist=ViewDistance.LEGALLY_BLIND.getChunkDistance();
+  if (playerStore.hasCharacter()) {
+    Vector3fc storedLocation=playerStore.getRelevanceLocation();
+    loc.setWorldPosition(storedLocation);
+    entity.saveComponent(loc);
+    if (worldProvider.isBlockRelevant(storedLocation)) {
+      playerStore.restoreEntities();
+      EntityRef character=playerStore.getCharacter();
+      Vector3ic viewDist=owner.getViewDistance().getChunkDistance();
+      addRelevanceEntity(entity,viewDist,owner);
+      restoreCharacter(entity,character);
+    }
+ else {
+      addRelevanceEntity(entity,minViewDist,owner);
+      clientsPreparingToSpawn.add(new SpawningClientInfo(entity,storedLocation,playerStore));
+    }
+  }
+ else {
+    Vector3fc spawnPosition=worldGenerator.getSpawnPosition(entity);
+    loc.setWorldPosition(spawnPosition);
+    entity.saveComponent(loc);
+    addRelevanceEntity(entity,minViewDist,owner);
+    if (worldProvider.isBlockRelevant(spawnPosition)) {
+      spawnPlayer(entity);
+    }
+ else {
+      clientsPreparingToSpawn.add(new SpawningClientInfo(entity,spawnPosition));
+    }
+  }
+}

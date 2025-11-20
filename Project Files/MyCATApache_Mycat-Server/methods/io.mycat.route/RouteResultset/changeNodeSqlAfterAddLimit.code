@@ -1,0 +1,25 @@
+public void changeNodeSqlAfterAddLimit(SchemaConfig schemaConfig,String sourceDbType,String sql,int offset,int count,boolean isNeedConvert){
+  if (nodes != null) {
+    Map<String,String> dataNodeDbTypeMap=schemaConfig.getDataNodeDbTypeMap();
+    Map<String,String> sqlMapCache=new HashMap<>();
+    for (    RouteResultsetNode node : nodes) {
+      String dbType=dataNodeDbTypeMap.get(node.getName());
+      if (dbType.equalsIgnoreCase("mysql")) {
+        node.setStatement(sql);
+      }
+ else       if (sqlMapCache.containsKey(dbType)) {
+        node.setStatement(sqlMapCache.get(dbType));
+      }
+ else       if (isNeedConvert) {
+        String nativeSql=PageSQLUtil.convertLimitToNativePageSql(dbType,sql,offset,count);
+        sqlMapCache.put(dbType,nativeSql);
+        node.setStatement(nativeSql);
+      }
+ else {
+        node.setStatement(sql);
+      }
+      node.setLimitStart(offset);
+      node.setLimitSize(count);
+    }
+  }
+}

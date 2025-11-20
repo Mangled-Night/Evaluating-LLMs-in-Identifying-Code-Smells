@@ -1,0 +1,17 @@
+@Override protected PersistedData serializeNonNull(ChunkMesh value,PersistedDataSerializer serializer){
+  if (!value.hasVertexElements()) {
+    throw new IllegalStateException("Attempting to serialize a ChunkMesh whose data has already been discarded.");
+  }
+  List<PersistedData> data=new ArrayList<>();
+  for (  ChunkMesh.RenderType renderType : ChunkMesh.RenderType.values()) {
+    value.getVertexElements(renderType).buffer.writeBuffer(buffer -> {
+      data.add(serializer.serialize(buffer));
+    }
+);
+    value.getVertexElements(renderType).indices.writeBuffer(buffer -> {
+      data.add(serializer.serialize(buffer));
+    }
+);
+  }
+  return serializer.serialize(data);
+}

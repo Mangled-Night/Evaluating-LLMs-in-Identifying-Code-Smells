@@ -1,0 +1,18 @@
+private ModularXmppClientToServerConnectionConfiguration(Builder builder){
+  super(builder);
+  moduleDescriptors=Collections.unmodifiableSet(CollectionUtil.newSetWith(builder.modulesDescriptors.values()));
+  Set<Class<? extends StateDescriptor>> backwardEdgeStateDescriptors=new HashSet<>();
+  for (  ModularXmppClientToServerConnectionModuleDescriptor moduleDescriptor : moduleDescriptors) {
+    Set<Class<? extends StateDescriptor>> moduleStateDescriptors=moduleDescriptor.getStateDescriptors();
+    backwardEdgeStateDescriptors.addAll(moduleStateDescriptors);
+  }
+  try {
+    initialStateDescriptorVertex=StateDescriptorGraph.constructStateDescriptorGraph(backwardEdgeStateDescriptors,builder.failOnUnknownStates);
+  }
+ catch (  InstantiationException|IllegalAccessException|IllegalArgumentException|InvocationTargetException|NoSuchMethodException|SecurityException e) {
+    throw new IllegalStateException(e);
+  }
+  for (  ModularXmppClientToServerConnectionModuleDescriptor moduleDescriptor : moduleDescriptors) {
+    moduleDescriptor.validateConfiguration(this);
+  }
+}

@@ -1,0 +1,92 @@
+/** 
+ * write data here,still return not null just to know succeeded.
+ * @param dir
+ * @param path
+ * @param request
+ * @param ctx
+ * @return
+ * @throws IOException
+ */
+public static DefaultFullHttpResponse directView(File dir,String path,FullHttpRequest request,ChannelHandlerContext ctx) throws IOException {
+  if (path.startsWith("/")) {
+    path=path.substring(1);
+  }
+  File file=new File(dir.getParent(),path);
+  HttpVersion version=request.protocolVersion();
+  if (isSubFile(dir,file)) {
+    DefaultFullHttpResponse fullResp=new DefaultFullHttpResponse(version,HttpResponseStatus.OK);
+    if (file.isDirectory()) {
+      if (!path.endsWith("/")) {
+        fullResp.setStatus(HttpResponseStatus.FOUND).headers().set(HttpHeaderNames.LOCATION,"/" + path + "/");
+      }
+      String renderResult=renderDir(file,!isSameFile(dir,file));
+      fullResp.content().writeBytes(renderResult.getBytes("utf-8"));
+      fullResp.headers().set(HttpHeaderNames.CONTENT_TYPE,"text/html; charset=utf-8");
+      ctx.write(fullResp);
+      ChannelFuture future=ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+      future.addListener(ChannelFutureListener.CLOSE);
+      return fullResp;
+    }
+ else {
+      logger.info("get file now. file:" + file.getPath());
+      if (file.isHidden() || !file.exists() || file.isDirectory()|| !file.isFile()) {
+        return null;
+      }
+      long fileLength=file.length();
+      if (fileLength < MIN_NETTY_DIRECT_SEND_SIZE) {
+        FileInputStream fileInputStream=new FileInputStream(file);
+        try {
+          byte[] content=IOUtils.getBytes(fileInputStream);
+          fullResp.content().writeBytes(content);
+          HttpUtil.setContentLength(fullResp,fullResp.content().readableBytes());
+        }
+  finally {
+          IOUtils.close(fileInputStream);
+        }
+        ctx.write(fullResp);
+        ChannelFuture future=ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+        future.addListener(ChannelFutureListener.CLOSE);
+        return fullResp;
+      }
+      logger.info("file {} size bigger than {}, send by future.",file.getName(),MIN_NETTY_DIRECT_SEND_SIZE);
+      HttpResponse response=new DefaultHttpResponse(HTTP_1_1,OK);
+      HttpUtil.setContentLength(response,fileLength);
+      setContentTypeHeader(response,file);
+      setDateAndCacheHeaders(response,file);
+      if (HttpUtil.isKeepAlive(request)) {
+        response.headers().set(HttpHeaderNames.CONNECTION,HttpHeaderValues.KEEP_ALIVE);
+      }
+      ctx.write(response);
+      ChannelFuture sendFileFuture;
+      ChannelFuture lastContentFuture;
+      RandomAccessFile raf=new RandomAccessFile(file,"r");
+      if (ctx.pipeline().get(SslHandler.class) == null) {
+        sendFileFuture=ctx.write(new DefaultFileRegion(raf.getChannel(),0,fileLength),ctx.newProgressivePromise());
+        lastContentFuture=ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+      }
+ else {
+        sendFileFuture=ctx.writeAndFlush(new HttpChunkedInput(new ChunkedFile(raf,0,fileLength,8192)),ctx.newProgressivePromise());
+        lastContentFuture=sendFileFuture;
+      }
+      sendFileFuture.addListener(new ChannelProgressiveFutureListener(){
+        @Override public void operationProgressed(        ChannelProgressiveFuture future,        long progress,        long total){
+          if (total < 0) {
+            logger.info(future.channel() + " Transfer progress: " + progress);
+          }
+ else {
+            logger.info(future.channel() + " Transfer progress: " + progress+ " / "+ total);
+          }
+        }
+        @Override public void operationComplete(        ChannelProgressiveFuture future){
+          logger.info(future.channel() + " Transfer complete.");
+        }
+      }
+);
+      if (!HttpUtil.isKeepAlive(request)) {
+        lastContentFuture.addListener(ChannelFutureListener.CLOSE);
+      }
+      return fullResp;
+    }
+  }
+  return null;
+}

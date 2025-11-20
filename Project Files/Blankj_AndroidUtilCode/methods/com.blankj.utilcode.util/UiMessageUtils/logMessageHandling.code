@@ -1,0 +1,45 @@
+private void logMessageHandling(@NonNull final UiMessage msg){
+  final List<UiMessageCallback> idListeners=mListenersSpecific.get(msg.getId());
+  if ((idListeners == null || idListeners.size() == 0) && mListenersUniversal.size() == 0) {
+    Log.w(TAG,"Delivering FAILED for message ID " + msg.getId() + ". No listeners. "+ msg.toString());
+  }
+ else {
+    final StringBuilder stringBuilder=new StringBuilder();
+    stringBuilder.append("Delivering message ID ");
+    stringBuilder.append(msg.getId());
+    stringBuilder.append(", Specific listeners: ");
+    if (idListeners == null || idListeners.size() == 0) {
+      stringBuilder.append(0);
+    }
+ else {
+      stringBuilder.append(idListeners.size());
+      stringBuilder.append(" [");
+      for (int i=0; i < idListeners.size(); i++) {
+        stringBuilder.append(idListeners.get(i).getClass().getSimpleName());
+        if (i < idListeners.size() - 1) {
+          stringBuilder.append(",");
+        }
+      }
+      stringBuilder.append("]");
+    }
+    stringBuilder.append(", Universal listeners: ");
+synchronized (mListenersUniversal) {
+      if (mListenersUniversal.size() == 0) {
+        stringBuilder.append(0);
+      }
+ else {
+        stringBuilder.append(mListenersUniversal.size());
+        stringBuilder.append(" [");
+        for (int i=0; i < mListenersUniversal.size(); i++) {
+          stringBuilder.append(mListenersUniversal.get(i).getClass().getSimpleName());
+          if (i < mListenersUniversal.size() - 1) {
+            stringBuilder.append(",");
+          }
+        }
+        stringBuilder.append("], Message: ");
+      }
+    }
+    stringBuilder.append(msg.toString());
+    Log.v(TAG,stringBuilder.toString());
+  }
+}

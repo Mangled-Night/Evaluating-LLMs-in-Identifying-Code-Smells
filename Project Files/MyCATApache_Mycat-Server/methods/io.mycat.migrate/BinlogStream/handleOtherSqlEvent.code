@@ -1,0 +1,12 @@
+private void handleOtherSqlEvent(Event event){
+  QueryEventData queryEventData=event.getData();
+  logger.debug("receve sql:",queryEventData.getSql());
+  SchemaUtil.SchemaInfo schemaInfo=SchemaUtil.parseSchema(queryEventData.getSql());
+  if (isShouldBeFilter(queryEventData.getDatabase(),schemaInfo.table))   return;
+  String query=queryEventData.getSql();
+  for (  MigrateTask migrateTask : migrateTaskList) {
+    if (schemaInfo.table.equalsIgnoreCase(migrateTask.getTable()) && queryEventData.getDatabase().equalsIgnoreCase(MigrateUtils.getDatabaseFromDataNode(migrateTask.getFrom()))) {
+      exeSql(migrateTask,query);
+    }
+  }
+}

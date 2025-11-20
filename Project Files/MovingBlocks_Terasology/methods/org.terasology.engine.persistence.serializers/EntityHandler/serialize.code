@@ -1,0 +1,26 @@
+@Override public JsonElement serialize(EntityData.Entity src,Type typeOfSrc,JsonSerializationContext context){
+  JsonObject result=new JsonObject();
+  if (src.hasId()) {
+    result.addProperty("id",src.getId());
+  }
+  if (src.hasParentPrefab() && !src.getParentPrefab().isEmpty()) {
+    result.addProperty("parentPrefab",src.getParentPrefab());
+  }
+  if (src.hasAlwaysRelevant()) {
+    result.addProperty("alwaysRelevant",src.getAlwaysRelevant());
+  }
+  if (src.hasOwner()) {
+    result.addProperty("owner",src.getOwner());
+  }
+  for (  EntityData.Component component : src.getComponentList()) {
+    result.add(component.getType(),context.serialize(component));
+  }
+  if (src.getRemovedComponentCount() > 0) {
+    JsonArray removedComponentArray=new JsonArray();
+    for (    String removedComponent : src.getRemovedComponentList()) {
+      removedComponentArray.add(new JsonPrimitive(removedComponent));
+    }
+    result.add("removedComponent",removedComponentArray);
+  }
+  return result;
+}

@@ -1,0 +1,9 @@
+protected Object dispatch(Object[] arguments){
+  if (ReactiveTypes.isSingleValueType(commandMethod.getReturnType().getRawClass())) {
+    return redisReactiveCommands.createMono(() -> commandFactory.createCommand(arguments));
+  }
+  if (commandFactory.isStreamingExecution()) {
+    return redisReactiveCommands.createDissolvingFlux(() -> commandFactory.createCommand(arguments));
+  }
+  return redisReactiveCommands.createFlux(() -> commandFactory.createCommand(arguments));
+}

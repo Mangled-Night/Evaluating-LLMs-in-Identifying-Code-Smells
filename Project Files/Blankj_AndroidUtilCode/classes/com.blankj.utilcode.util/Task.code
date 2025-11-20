@@ -1,0 +1,165 @@
+public abstract static class Task<T> implements Runnable {
+  private static final int NEW=0;
+  private static final int RUNNING=1;
+  private static final int EXCEPTIONAL=2;
+  private static final int COMPLETING=3;
+  private static final int CANCELLED=4;
+  private static final int INTERRUPTED=5;
+  private static final int TIMEOUT=6;
+  private final AtomicInteger state=new AtomicInteger(NEW);
+  private volatile boolean isSchedule;
+  private volatile Thread runner;
+  private Timer mTimer;
+  private long mTimeoutMillis;
+  private OnTimeoutListener mTimeoutListener;
+  private Executor deliver;
+  public abstract T doInBackground() throws Throwable ;
+  public abstract void onSuccess(  T result);
+  public abstract void onCancel();
+  public abstract void onFail(  Throwable t);
+  @Override public void run(){
+    if (isSchedule) {
+      if (runner == null) {
+        if (!state.compareAndSet(NEW,RUNNING))         return;
+        runner=Thread.currentThread();
+        if (mTimeoutListener != null) {
+          Log.w("ThreadUtils","Scheduled task doesn't support timeout.");
+        }
+      }
+ else {
+        if (state.get() != RUNNING)         return;
+      }
+    }
+ else {
+      if (!state.compareAndSet(NEW,RUNNING))       return;
+      runner=Thread.currentThread();
+      if (mTimeoutListener != null) {
+        mTimer=new Timer();
+        mTimer.schedule(new TimerTask(){
+          @Override public void run(){
+            if (!isDone() && mTimeoutListener != null) {
+              timeout();
+              mTimeoutListener.onTimeout();
+              onDone();
+            }
+          }
+        }
+,mTimeoutMillis);
+      }
+    }
+    try {
+      final T result=doInBackground();
+      if (isSchedule) {
+        if (state.get() != RUNNING)         return;
+        getDeliver().execute(new Runnable(){
+          @Override public void run(){
+            onSuccess(result);
+          }
+        }
+);
+      }
+ else {
+        if (!state.compareAndSet(RUNNING,COMPLETING))         return;
+        getDeliver().execute(new Runnable(){
+          @Override public void run(){
+            onSuccess(result);
+            onDone();
+          }
+        }
+);
+      }
+    }
+ catch (    InterruptedException ignore) {
+      state.compareAndSet(CANCELLED,INTERRUPTED);
+    }
+catch (    final Throwable throwable) {
+      if (!state.compareAndSet(RUNNING,EXCEPTIONAL))       return;
+      getDeliver().execute(new Runnable(){
+        @Override public void run(){
+          onFail(throwable);
+          onDone();
+        }
+      }
+);
+    }
+  }
+  public void cancel(){
+    cancel(true);
+  }
+  public void cancel(  boolean mayInterruptIfRunning){
+synchronized (state) {
+      if (state.get() > RUNNING)       return;
+      state.set(CANCELLED);
+    }
+    if (mayInterruptIfRunning) {
+      if (runner != null) {
+        runner.interrupt();
+      }
+    }
+    getDeliver().execute(new Runnable(){
+      @Override public void run(){
+        onCancel();
+        onDone();
+      }
+    }
+);
+  }
+  private void timeout(){
+synchronized (state) {
+      if (state.get() > RUNNING)       return;
+      state.set(TIMEOUT);
+    }
+    if (runner != null) {
+      runner.interrupt();
+    }
+  }
+  public boolean isCanceled(){
+    return state.get() >= CANCELLED;
+  }
+  public boolean isDone(){
+    return state.get() > RUNNING;
+  }
+  public Task<T> setDeliver(  Executor deliver){
+    this.deliver=deliver;
+    return this;
+  }
+  /** 
+ * Scheduled task doesn't support timeout.
+ */
+  public Task<T> setTimeout(  final long timeoutMillis,  final OnTimeoutListener listener){
+    mTimeoutMillis=timeoutMillis;
+    mTimeoutListener=listener;
+    return this;
+  }
+  private void setSchedule(  boolean isSchedule){
+    this.isSchedule=isSchedule;
+  }
+  private Executor getDeliver(){
+    if (deliver == null) {
+      return getGlobalDeliver();
+    }
+    return deliver;
+  }
+  @CallSuper protected void onDone(){
+    TASK_POOL_MAP.remove(this);
+    if (mTimer != null) {
+      mTimer.cancel();
+      mTimer=null;
+      mTimeoutListener=null;
+    }
+  }
+public interface OnTimeoutListener {
+    void onTimeout();
+  }
+}
+public abstract static class Task<Result> extends ThreadUtils.SimpleTask<Result> {
+  private Consumer<Result> mConsumer;
+  public Task(  final Consumer<Result> consumer){
+    mConsumer=consumer;
+  }
+  @Override public void onSuccess(  Result result){
+    if (mConsumer != null) {
+      mConsumer.accept(result);
+    }
+  }
+}

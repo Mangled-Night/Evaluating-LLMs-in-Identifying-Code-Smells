@@ -1,0 +1,25 @@
+/** 
+ * A player statistic metric for blocks destroyed in a game.
+ */
+@TelemetryCategory(id="blockDestroyed",displayName="${engine:menu#telemetry-block-destroyed}",isOneMapMetric=true) public final class BlockDestroyedMetric extends Metric {
+  public static final String SCHEMA_BLOCK_DESTROYED="iglu:org.terasology/blockDestroyed/jsonschema/1-0-0";
+  private LocalPlayer localPlayer;
+  @TelemetryField private Map blockDestroyedMap;
+  @Override public Optional<Unstructured> getUnstructuredMetric(){
+    createTelemetryFieldToValue();
+    return getUnstructuredMetric(SCHEMA_BLOCK_DESTROYED,telemetryFieldToValue);
+  }
+  @Override public Map<String,?> createTelemetryFieldToValue(){
+    localPlayer=CoreRegistry.get(LocalPlayer.class);
+    EntityRef playerEntity=localPlayer.getCharacterEntity();
+    if (playerEntity.hasComponent(GamePlayStatsComponent.class)) {
+      GamePlayStatsComponent gamePlayStatsComponent=playerEntity.getComponent(GamePlayStatsComponent.class);
+      telemetryFieldToValue.clear();
+      telemetryFieldToValue.putAll(gamePlayStatsComponent.blockDestroyedMap);
+      return telemetryFieldToValue;
+    }
+ else {
+      return telemetryFieldToValue;
+    }
+  }
+}

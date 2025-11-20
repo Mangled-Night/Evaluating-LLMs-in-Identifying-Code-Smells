@@ -1,0 +1,10 @@
+@Test void shouldApplyTimeoutOptionsToClusterConnection() throws InterruptedException {
+  clusterClient.setOptions(ClusterClientOptions.builder().timeoutOptions(TimeoutOptions.enabled(Duration.ofMillis(100))).build());
+  try (StatefulRedisClusterConnection<String,String> connection=clusterClient.connect()){
+    connection.setTimeout(Duration.ZERO);
+    connection.async().clientPause(300);
+    RedisFuture<String> future=connection.async().ping();
+    assertThatThrownBy(future::get).isInstanceOf(ExecutionException.class).hasCauseInstanceOf(RedisCommandTimeoutException.class).hasMessageContaining("100 milli");
+  }
+   Thread.sleep(300);
+}

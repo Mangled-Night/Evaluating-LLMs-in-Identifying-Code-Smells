@@ -1,0 +1,77 @@
+@Override public void handle(byte[] data){
+  if (source.getLoadDataInfileHandler() != null && source.getLoadDataInfileHandler().isStartLoadData()) {
+    MySQLMessage mm=new MySQLMessage(data);
+    int packetLength=mm.readUB3();
+    if (packetLength + 4 == data.length) {
+      source.loadDataInfileData(data);
+    }
+    return;
+  }
+switch (data[4]) {
+case MySQLPacket.COM_INIT_DB:
+    commands.doInitDB();
+  source.initDB(data);
+break;
+case MySQLPacket.COM_QUERY:
+commands.doQuery();
+source.query(data);
+break;
+case MySQLPacket.COM_PING:
+commands.doPing();
+source.ping();
+break;
+case MySQLPacket.COM_QUIT:
+commands.doQuit();
+source.close("quit cmd");
+break;
+case MySQLPacket.COM_PROCESS_KILL:
+commands.doKill();
+source.kill(data);
+break;
+case MySQLPacket.COM_STMT_PREPARE:
+commands.doStmtPrepare();
+source.stmtPrepare(data);
+break;
+case MySQLPacket.COM_STMT_SEND_LONG_DATA:
+commands.doStmtSendLongData();
+source.stmtSendLongData(data);
+break;
+case MySQLPacket.COM_STMT_RESET:
+commands.doStmtReset();
+source.stmtReset(data);
+break;
+case MySQLPacket.COM_STMT_EXECUTE:
+commands.doStmtExecute();
+source.stmtExecute(data);
+break;
+case MySQLPacket.COM_STMT_CLOSE:
+commands.doStmtClose();
+source.stmtClose(data);
+break;
+case MySQLPacket.COM_HEARTBEAT:
+commands.doHeartbeat();
+source.heartbeat(data);
+break;
+case MySQLPacket.COM_FIELD_LIST:
+source.fieldList(data);
+break;
+case MySQLPacket.COM_SET_OPTION:
+commands.doSetOption();
+source.setOption(data);
+break;
+case MySQLPacket.COM_RESET_CONNECTION:
+source.resetConnection();
+break;
+default :
+commands.doOther();
+MycatConfig config=MycatServer.getInstance().getConfig();
+if (config.getSystem().getIgnoreUnknownCommand() == 1) {
+LOGGER.warn("Unknown command:{}",data[4]);
+source.ping();
+}
+ else {
+LOGGER.error("Unknown command:{}",new String(data));
+source.writeErrMessage(ErrorCode.ER_UNKNOWN_COM_ERROR,"Unknown command");
+}
+}
+}

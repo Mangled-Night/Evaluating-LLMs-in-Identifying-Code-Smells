@@ -1,0 +1,32 @@
+/** 
+ * Rules for how standard light should propagate. Also provides implementation for setting and getting values
+ */
+public class LightPropagationRules extends CommonLightPropagationRules {
+  /** 
+ * Any luminance from the block is a constant <p> {@inheritDoc}
+ */
+  @Override public byte getFixedValue(  Block block,  Vector3ic pos){
+    return block.getLuminance();
+  }
+  /** 
+ * When the light propagates it's light level reduces by one <p> {@inheritDoc}
+ */
+  @Override public byte propagateValue(  byte existingValue,  Side side,  Block from,  int scale){
+    return (byte)Math.max(existingValue - scale,0);
+  }
+  /** 
+ * The maximum light level is a full byte of 15 <p> {@inheritDoc}
+ */
+  @Override public byte getMaxValue(){
+    return Chunks.MAX_LIGHT;
+  }
+  @Override public byte getValue(  Chunk chunk,  Vector3ic pos){
+    return getValue(chunk,pos.x(),pos.y(),pos.z());
+  }
+  @Override public byte getValue(  Chunk chunk,  int x,  int y,  int z){
+    return chunk.getLight(x,y,z);
+  }
+  @Override public void setValue(  Chunk chunk,  Vector3ic pos,  byte value){
+    chunk.setLight(pos,value);
+  }
+}

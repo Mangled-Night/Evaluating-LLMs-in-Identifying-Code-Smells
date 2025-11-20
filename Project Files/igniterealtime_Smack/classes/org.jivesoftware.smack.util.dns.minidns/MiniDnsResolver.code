@@ -1,0 +1,136 @@
+/** 
+ * This implementation uses the <a href="https://github.com/rtreffer/minidns/">MiniDNS</a> implementation for resolving DNS addresses.
+ */
+public class MiniDnsResolver extends DNSResolver implements SmackInitializer {
+  private static final MiniDnsResolver INSTANCE=new MiniDnsResolver();
+  private static final ResolverApi DNSSEC_RESOLVER=DnssecResolverApi.INSTANCE;
+  private static final ResolverApi NON_DNSSEC_RESOLVER=ResolverApi.INSTANCE;
+  public static DNSResolver getInstance(){
+    return INSTANCE;
+  }
+  public MiniDnsResolver(){
+    super(true);
+  }
+  @Override protected Set<SRV> lookupSrvRecords0(  final DnsName name,  List<RemoteConnectionEndpointLookupFailure> lookupFailures,  DnssecMode dnssecMode){
+    final ResolverApi resolver=getResolver(dnssecMode);
+    SrvResolverResult result;
+    try {
+      result=resolver.resolveSrv(name);
+    }
+ catch (    IOException e) {
+      RemoteConnectionEndpointLookupFailure failure=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,e);
+      lookupFailures.add(failure);
+      return null;
+    }
+    ResolutionUnsuccessfulException resolutionUnsuccessfulException=result.getResolutionUnsuccessfulException();
+    if (resolutionUnsuccessfulException != null) {
+      RemoteConnectionEndpointLookupFailure failure=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,resolutionUnsuccessfulException);
+      lookupFailures.add(failure);
+      return null;
+    }
+    if (shouldAbortIfNotAuthentic(name,dnssecMode,result,lookupFailures)) {
+      return null;
+    }
+    return result.getAnswers();
+  }
+  @Override protected List<InetAddress> lookupHostAddress0(  final DnsName name,  List<RemoteConnectionEndpointLookupFailure> lookupFailures,  DnssecMode dnssecMode){
+    final ResolverApi resolver=getResolver(dnssecMode);
+    final ResolverResult<A> aResult;
+    final ResolverResult<AAAA> aaaaResult;
+    try {
+      aResult=resolver.resolve(name,A.class);
+      aaaaResult=resolver.resolve(name,AAAA.class);
+    }
+ catch (    IOException e) {
+      RemoteConnectionEndpointLookupFailure failure=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,e);
+      lookupFailures.add(failure);
+      return null;
+    }
+    if (!aResult.wasSuccessful() && !aaaaResult.wasSuccessful()) {
+      RemoteConnectionEndpointLookupFailure failureA=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,getExceptionFrom(aResult));
+      lookupFailures.add(failureA);
+      RemoteConnectionEndpointLookupFailure failureAaaa=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,getExceptionFrom(aaaaResult));
+      lookupFailures.add(failureAaaa);
+      return null;
+    }
+    if (shouldAbortIfNotAuthentic(name,dnssecMode,aResult,lookupFailures) || shouldAbortIfNotAuthentic(name,dnssecMode,aaaaResult,lookupFailures)) {
+      return null;
+    }
+    Set<A> aResults;
+    if (aResult.wasSuccessful()) {
+      aResults=aResult.getAnswers();
+    }
+ else {
+      aResults=Collections.emptySet();
+    }
+    Set<AAAA> aaaaResults;
+    if (aaaaResult.wasSuccessful()) {
+      aaaaResults=aaaaResult.getAnswers();
+    }
+ else {
+      aaaaResults=Collections.emptySet();
+    }
+    List<InetAddress> inetAddresses=new ArrayList<>(aResults.size() + aaaaResults.size());
+    for (    A a : aResults) {
+      InetAddress inetAddress;
+      try {
+        inetAddress=InetAddress.getByAddress(a.getIp());
+      }
+ catch (      UnknownHostException e) {
+        continue;
+      }
+      inetAddresses.add(inetAddress);
+    }
+    for (    AAAA aaaa : aaaaResults) {
+      InetAddress inetAddress;
+      try {
+        inetAddress=InetAddress.getByAddress(name.ace,aaaa.getIp());
+      }
+ catch (      UnknownHostException e) {
+        continue;
+      }
+      inetAddresses.add(inetAddress);
+    }
+    return inetAddresses;
+  }
+  public static void setup(){
+    DNSUtil.setDNSResolver(getInstance());
+  }
+  @Override public List<Exception> initialize(){
+    setup();
+    MiniDnsDane.setup();
+    return null;
+  }
+  private static ResolverApi getResolver(  DnssecMode dnssecMode){
+    if (dnssecMode == DnssecMode.disabled) {
+      return NON_DNSSEC_RESOLVER;
+    }
+ else {
+      return DNSSEC_RESOLVER;
+    }
+  }
+  private static boolean shouldAbortIfNotAuthentic(  DnsName name,  DnssecMode dnssecMode,  ResolverResult<?> result,  List<RemoteConnectionEndpointLookupFailure> lookupFailures){
+switch (dnssecMode) {
+case needsDnssec:
+case needsDnssecAndDane:
+      DnssecResultNotAuthenticException exception=result.getDnssecResultNotAuthenticException();
+    if (exception != null) {
+      RemoteConnectionEndpointLookupFailure failure=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,exception);
+      lookupFailures.add(failure);
+      return true;
+    }
+  break;
+case disabled:
+break;
+default :
+throw new IllegalStateException("Unknown DnssecMode: " + dnssecMode);
+}
+return false;
+}
+private static ResolutionUnsuccessfulException getExceptionFrom(ResolverResult<?> result){
+Question question=result.getQuestion();
+RESPONSE_CODE responseCode=result.getResponseCode();
+ResolutionUnsuccessfulException resolutionUnsuccessfulException=new ResolutionUnsuccessfulException(question,responseCode);
+return resolutionUnsuccessfulException;
+}
+}

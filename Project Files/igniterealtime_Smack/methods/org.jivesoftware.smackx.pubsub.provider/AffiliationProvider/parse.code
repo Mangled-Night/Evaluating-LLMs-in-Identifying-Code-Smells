@@ -1,0 +1,22 @@
+@Override public Affiliation parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws IOException {
+  String node=parser.getAttributeValue(null,"node");
+  BareJid jid=ParserUtils.getBareJidAttribute(parser);
+  String namespaceString=parser.getNamespace();
+  AffiliationNamespace namespace=AffiliationNamespace.fromXmlns(namespaceString);
+  String affiliationString=parser.getAttributeValue(null,"affiliation");
+  Affiliation.Type affiliationType=null;
+  if (affiliationString != null) {
+    affiliationType=Affiliation.Type.valueOf(affiliationString);
+  }
+  Affiliation affiliation;
+  if (node != null && jid == null) {
+    affiliation=new Affiliation(node,affiliationType,namespace);
+  }
+ else   if (node == null && jid != null) {
+    affiliation=new Affiliation(jid,affiliationType,namespace);
+  }
+ else {
+    throw new IOException("Invalid affililation. Either one of 'node' or 'jid' must be set" + ". Node: " + node + ". Jid: "+ jid+ '.');
+  }
+  return affiliation;
+}

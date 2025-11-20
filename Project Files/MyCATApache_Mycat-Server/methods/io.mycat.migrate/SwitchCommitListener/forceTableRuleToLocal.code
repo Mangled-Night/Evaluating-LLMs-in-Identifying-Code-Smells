@@ -1,0 +1,17 @@
+private void forceTableRuleToLocal(String path,TaskNode taskNode) throws Exception {
+  Path localPath=Paths.get(this.getClass().getClassLoader().getResource(ZookeeperPath.ZK_LOCAL_WRITE_PATH.getKey()).toURI());
+  XmlProcessBase xmlProcess=new XmlProcessBase();
+  try {
+    forceTableToLocal(localPath,xmlProcess);
+    forceRulesToLocal(localPath,xmlProcess);
+    forceRuleDataToLocal(taskNode);
+    ReloadConfig.reload();
+    LOGGER.error("migrate 中 reload 配置成功");
+  }
+ catch (  Exception e) {
+    taskNode.addException(e.getLocalizedMessage());
+    ZKUtils.getConnection().setData().forPath(path,JSON.toJSONBytes(taskNode));
+    LOGGER.error("migrate 中 强制更新本地文件失败");
+    LOGGER.error("error:",e);
+  }
+}

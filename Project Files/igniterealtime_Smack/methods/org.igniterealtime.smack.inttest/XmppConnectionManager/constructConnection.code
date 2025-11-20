@@ -1,0 +1,38 @@
+AbstractXMPPConnection constructConnection() throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  return constructConnection(defaultConnectionDescriptor);
+}
+<C extends AbstractXMPPConnection>C constructConnection(XmppConnectionDescriptor<C,? extends ConnectionConfiguration,? extends ConnectionConfiguration.Builder<?,?>> connectionDescriptor) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  return constructConnection(connectionDescriptor,null);
+}
+private <C extends AbstractXMPPConnection>C constructConnection(XmppConnectionDescriptor<C,? extends ConnectionConfiguration,? extends ConnectionConfiguration.Builder<?,?>> connectionDescriptor,Collection<ConnectionConfigurationBuilderApplier> customConnectionConfigurationAppliers) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  String username="sinttest-" + testRunId + '-'+ (connections.size() + 1);
+  String password=StringUtils.randomString(24);
+  return constructConnection(username,password,connectionDescriptor,customConnectionConfigurationAppliers);
+}
+private <C extends AbstractXMPPConnection>C constructConnection(final String username,final String password,XmppConnectionDescriptor<C,? extends ConnectionConfiguration,? extends ConnectionConfiguration.Builder<?,?>> connectionDescriptor,Collection<ConnectionConfigurationBuilderApplier> customConnectionConfigurationAppliers) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  try {
+    registerAccount(username,password);
+  }
+ catch (  XmppStringprepException e) {
+    throw new IllegalArgumentException(e);
+  }
+  ConnectionConfigurationBuilderApplier usernameAndPasswordApplier=configurationBuilder -> {
+    configurationBuilder.setUsernameAndPassword(username,password);
+  }
+;
+  if (customConnectionConfigurationAppliers == null) {
+    customConnectionConfigurationAppliers=Collections.singleton(usernameAndPasswordApplier);
+  }
+ else {
+    customConnectionConfigurationAppliers.add(usernameAndPasswordApplier);
+  }
+  C connection;
+  try {
+    connection=connectionDescriptor.construct(sinttestConfiguration,customConnectionConfigurationAppliers);
+  }
+ catch (  InstantiationException|IllegalAccessException|IllegalArgumentException|InvocationTargetException e) {
+    throw new IllegalStateException(e);
+  }
+  connections.put(connection,connectionDescriptor);
+  return connection;
+}

@@ -1,0 +1,50 @@
+/** 
+ * @param at
+ * @param numPoints Should be &le; 5. The number of points to return
+ * @return
+ */
+public VoronoiResult[] getClosestPoints(Vector2f at,int numPoints){
+  VoronoiResult[] results=new VoronoiResult[numPoints];
+  for (  VoronoiResult result : results) {
+    result.distance=Float.MAX_VALUE;
+  }
+  at.mul(DENSITY_ADJUSTMENT);
+  at.add(offset);
+  int cellX=Math.roundUsing(at.x,RoundingMode.FLOOR);
+  int cellY=Math.roundUsing(at.y,RoundingMode.FLOOR);
+  processCell(cellX,cellY,at,results);
+  Vector2f cellPos=new Vector2f(at);
+  cellPos.x-=cellX;
+  cellPos.y-=cellY;
+  Vector2f distMax=new Vector2f(standardDistanceFunction(new Vector2f(1 - cellPos.x,0)),standardDistanceFunction(new Vector2f(0,1 - cellPos.y)));
+  Vector2f distMin=new Vector2f(standardDistanceFunction(new Vector2f(cellPos.x,0)),standardDistanceFunction(new Vector2f(0,cellPos.y)));
+  if (distMin.x < results[results.length - 1].distance) {
+    processCell(cellX - 1,cellY,at,results);
+  }
+  if (distMin.y < results[results.length - 1].distance) {
+    processCell(cellX,cellY - 1,at,results);
+  }
+  if (distMax.x < results[results.length - 1].distance) {
+    processCell(cellX + 1,cellY,at,results);
+  }
+  if (distMax.y < results[results.length - 1].distance) {
+    processCell(cellX,cellY + 1,at,results);
+  }
+  if (distMin.x + distMin.y < results[results.length - 1].distance) {
+    processCell(cellX - 1,cellY - 1,at,results);
+  }
+  if (distMax.x + distMax.y < results[results.length - 1].distance) {
+    processCell(cellX + 1,cellY + 1,at,results);
+  }
+  if (distMin.x + distMax.y < results[results.length - 1].distance) {
+    processCell(cellX - 1,cellY + 1,at,results);
+  }
+  if (distMax.x + distMin.y < results[results.length - 1].distance) {
+    processCell(cellX + 1,cellY - 1,at,results);
+  }
+  for (  VoronoiResult result : results) {
+    result.delta.mul(INVERSE_DENSITY_ADJUSTMENT);
+    result.distance*=INVERSE_DENSITY_ADJUSTMENT * INVERSE_DENSITY_ADJUSTMENT;
+  }
+  return results;
+}

@@ -1,0 +1,25 @@
+/** 
+ * Provides a lexicographical comparer implementation; either a Java implementation or a faster implementation based on  {@link Unsafe}. <p/> <p>Uses reflection to gracefully fall back to the Java implementation if {@code Unsafe} isn't available.
+ */
+private static class BestHolder {
+  static final String UNSAFE_COMPARER_NAME=FastByteOperations.class.getName() + "$UnsafeOperations";
+  static final ByteOperations BEST=getBest();
+  /** 
+ * Returns the Unsafe-using Comparer, or falls back to the pure-Java implementation if unable to do so.
+ */
+  static ByteOperations getBest(){
+    String arch=System.getProperty("os.arch");
+    boolean unaligned=arch.equals("i386") || arch.equals("x86") || arch.equals("amd64")|| arch.equals("x86_64");
+    if (!unaligned) {
+      return new PureJavaOperations();
+    }
+    try {
+      Class<?> theClass=Class.forName(UNSAFE_COMPARER_NAME);
+      @SuppressWarnings("unchecked") ByteOperations comparer=(ByteOperations)theClass.getConstructor().newInstance();
+      return comparer;
+    }
+ catch (    Throwable t) {
+      return new PureJavaOperations();
+    }
+  }
+}

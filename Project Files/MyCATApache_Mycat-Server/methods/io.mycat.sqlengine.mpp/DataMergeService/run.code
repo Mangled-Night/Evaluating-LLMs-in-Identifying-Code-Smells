@@ -1,0 +1,51 @@
+@Override public void run(){
+  if (!running.compareAndSet(false,true)) {
+    return;
+  }
+  boolean nulpack=false;
+  try {
+    for (; ; ) {
+      final PackWraper pack=packs.poll();
+      if (pack == null) {
+        nulpack=true;
+        break;
+      }
+      if (pack == END_FLAG_PACK) {
+        final int warningCount=0;
+        final EOFPacket eofp=new EOFPacket();
+        final ByteBuffer eof=ByteBuffer.allocate(9);
+        BufferUtil.writeUB3(eof,eofp.calcPacketSize());
+        eof.put(eofp.packetId);
+        eof.put(eofp.fieldCount);
+        BufferUtil.writeUB2(eof,warningCount);
+        BufferUtil.writeUB2(eof,eofp.status);
+        final ServerConnection source=multiQueryHandler.getSession().getSource();
+        final byte[] array=eof.array();
+        multiQueryHandler.outputMergeResult(source,array,getResults(array));
+        break;
+      }
+      final RowDataPacket row=new RowDataPacket(fieldCount);
+      row.read(pack.rowData);
+      if (grouper != null) {
+        grouper.addRow(row);
+      }
+ else       if (sorter != null) {
+        if (!sorter.addRow(row)) {
+          canDiscard.put(pack.dataNode,true);
+        }
+      }
+ else {
+        result.get(pack.dataNode).add(row);
+      }
+    }
+  }
+ catch (  final Exception e) {
+    multiQueryHandler.handleDataProcessException(e);
+  }
+ finally {
+    running.set(false);
+  }
+  if (nulpack && !packs.isEmpty()) {
+    this.run();
+  }
+}

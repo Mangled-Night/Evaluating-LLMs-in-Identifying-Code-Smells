@@ -1,0 +1,15 @@
+private void sendEntities(NetData.NetMessage.Builder message){
+  TIntIterator dirtyIterator=netDirty.iterator();
+  while (dirtyIterator.hasNext()) {
+    int netId=dirtyIterator.next();
+    EntityRef entity=networkSystem.getEntity(netId);
+    if (isOwned(entity)) {
+      Set<Class<? extends Component>> emptyComponentClassSet=Collections.emptySet();
+      EntityData.PackedEntity entityData=entitySerializer.serialize(entity,emptyComponentClassSet,changedComponents.get(netId),emptyComponentClassSet,new ClientComponentFieldCheck());
+      if (entityData != null) {
+        message.addUpdateEntity(NetData.UpdateEntityMessage.newBuilder().setEntity(entityData).setNetId(netId));
+      }
+    }
+  }
+  netDirty.clear();
+}

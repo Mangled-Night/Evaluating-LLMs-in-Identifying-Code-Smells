@@ -1,0 +1,29 @@
+@Override public void initialise(){
+  setAnimationSystem(MenuAnimationSystems.createDefaultSwipeAnimation());
+  WidgetUtil.trySubscribe(this,"close",button -> triggerBackAnimation());
+  WidgetUtil.trySubscribe(this,"play",button -> {
+    universeWrapper.setTargetWorld(targetWorld);
+    final GameManifest gameManifest=GameManifestProvider.createGameManifest(universeWrapper,moduleManager,config);
+    if (gameManifest != null) {
+      gameEngine.changeState(new StateLoading(gameManifest,(universeWrapper.getLoadingAsServer()) ? NetworkMode.DEDICATED_SERVER : NetworkMode.NONE));
+    }
+ else {
+      getManager().createScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage("Error","Can't create new game!");
+    }
+    SimpleUri uri;
+    WorldInfo worldInfo;
+    int i=0;
+    for (    WorldSetupWrapper world : worldSetupWrappers) {
+      if (world != targetWorld) {
+        i++;
+        uri=world.getWorldGeneratorInfo().getUri();
+        worldInfo=new WorldInfo(TerasologyConstants.MAIN_WORLD + i,world.getWorldName().toString(),world.getWorldGenerator().getWorldSeed(),(long)(WorldTime.DAY_LENGTH * WorldTime.NOON_OFFSET),uri);
+        gameManifest.addWorld(worldInfo);
+        config.getUniverseConfig().addWorldManager(worldInfo);
+      }
+    }
+    gameEngine.changeState(new StateLoading(gameManifest,(universeWrapper.getLoadingAsServer()) ? NetworkMode.DEDICATED_SERVER : NetworkMode.NONE));
+  }
+);
+  WidgetUtil.trySubscribe(this,"mainMenu",button -> getManager().pushScreen("engine:mainMenuScreen"));
+}

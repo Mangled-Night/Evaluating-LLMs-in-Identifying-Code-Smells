@@ -1,0 +1,58 @@
+public class JingleIBBTransportSession extends JingleTransportSession<JingleIBBTransport> {
+  private static final Logger LOGGER=Logger.getLogger(JingleIBBTransportSession.class.getName());
+  private final JingleIBBTransportManager transportManager;
+  public JingleIBBTransportSession(  JingleSession session){
+    super(session);
+    transportManager=JingleIBBTransportManager.getInstanceFor(session.getConnection());
+  }
+  @Override public JingleIBBTransport createTransport(){
+    if (theirProposal == null) {
+      return new JingleIBBTransport();
+    }
+ else {
+      return new JingleIBBTransport(theirProposal.getBlockSize(),theirProposal.getSessionId());
+    }
+  }
+  @Override public void setTheirProposal(  JingleContentTransport transport){
+    theirProposal=(JingleIBBTransport)transport;
+  }
+  @Override public void initiateOutgoingSession(  JingleTransportInitiationCallback callback){
+    LOGGER.log(Level.INFO,"Initiate Jingle InBandBytestream session.");
+    BytestreamSession session;
+    try {
+      session=InBandBytestreamManager.getByteStreamManager(jingleSession.getConnection()).establishSession(jingleSession.getRemote(),theirProposal.getSessionId());
+      callback.onSessionInitiated(session);
+    }
+ catch (    SmackException.NoResponseException|InterruptedException|SmackException.NotConnectedException|XMPPException.XMPPErrorException e) {
+      callback.onException(e);
+    }
+  }
+  @Override public void initiateIncomingSession(  final JingleTransportInitiationCallback callback){
+    LOGGER.log(Level.INFO,"Await Jingle InBandBytestream session.");
+    InBandBytestreamManager.getByteStreamManager(jingleSession.getConnection()).addIncomingBytestreamListener(new BytestreamListener(){
+      @Override public void incomingBytestreamRequest(      BytestreamRequest request){
+        if (request.getFrom().asFullJidIfPossible().equals(jingleSession.getRemote()) && request.getSessionID().equals(theirProposal.getSessionId())) {
+          BytestreamSession session;
+          try {
+            session=request.accept();
+          }
+ catch (          InterruptedException|SmackException|XMPPException.XMPPErrorException e) {
+            callback.onException(e);
+            return;
+          }
+          callback.onSessionInitiated(session);
+        }
+      }
+    }
+);
+  }
+  @Override public String getNamespace(){
+    return transportManager.getNamespace();
+  }
+  @Override public IQ handleTransportInfo(  Jingle transportInfo){
+    return IQ.createResultIQ(transportInfo);
+  }
+  @Override public JingleTransportManager<JingleIBBTransport> transportManager(){
+    return JingleIBBTransportManager.getInstanceFor(jingleSession.getConnection());
+  }
+}

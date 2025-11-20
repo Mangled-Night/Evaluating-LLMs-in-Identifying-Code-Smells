@@ -1,0 +1,31 @@
+@Override public RosterPacket parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  RosterPacket roster=new RosterPacket();
+  String version=parser.getAttributeValue("","ver");
+  roster.setVersion(version);
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String startTag=parser.getName();
+switch (startTag) {
+case "item":
+      RosterPacket.Item item=parseItem(parser);
+    roster.addRosterItem(item);
+  break;
+}
+break;
+case END_ELEMENT:
+String endTag=parser.getName();
+switch (endTag) {
+case IQ.QUERY_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+}
+break;
+default :
+break;
+}
+}
+return roster;
+}

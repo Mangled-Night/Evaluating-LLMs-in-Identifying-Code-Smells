@@ -1,0 +1,114 @@
+/** 
+ * 该方法，返回是否是ER子表
+ * @param schema
+ * @param origSQL
+ * @param sc
+ * @return
+ * @throws SQLNonTransientException 备注说明： edit by ding.w at 2017.4.28, 主要处理 CLIENT_MULTI_STATEMENTS(insert into ; insert into)的情况 目前仅支持mysql,并COM_QUERY请求包中的所有insert语句要么全部是er表，要么全部不是
+ */
+public static boolean processERChildTable(final SchemaConfig schema,final String origSQL,final ServerConnection sc) throws SQLNonTransientException {
+  MySqlStatementParser parser=new MySqlStatementParser(origSQL);
+  List<SQLStatement> statements=parser.parseStatementList();
+  if (statements == null || statements.isEmpty()) {
+    throw new SQLNonTransientException(String.format("无效的SQL语句:%s",origSQL));
+  }
+  boolean erFlag=false;
+  for (  SQLStatement stmt : statements) {
+    MySqlInsertStatement insertStmt=(MySqlInsertStatement)stmt;
+    String tableName=insertStmt.getTableName().getSimpleName().toUpperCase();
+    final TableConfig tc=schema.getTables().get(tableName);
+    if (null != tc && tc.isChildTable()) {
+      erFlag=true;
+      String sql=insertStmt.toString();
+      final RouteResultset rrs=new RouteResultset(sql,ServerParse.INSERT);
+      String joinKey=tc.getJoinKey();
+      int joinKeyIndex=getJoinKeyIndex(insertStmt.getColumns(),joinKey);
+      if (joinKeyIndex == -1) {
+        String inf="joinKey not provided :" + tc.getJoinKey() + ","+ insertStmt;
+        LOGGER.warn(inf);
+        throw new SQLNonTransientException(inf);
+      }
+      if (isMultiInsert(insertStmt)) {
+        String msg="ChildTable multi insert not provided";
+        LOGGER.warn(msg);
+        throw new SQLNonTransientException(msg);
+      }
+      String joinKeyVal=insertStmt.getValues().getValues().get(joinKeyIndex).toString();
+      String realVal=joinKeyVal;
+      if (joinKeyVal.startsWith("'") && joinKeyVal.endsWith("'") && joinKeyVal.length() > 2) {
+        realVal=joinKeyVal.substring(1,joinKeyVal.length() - 1);
+      }
+      RouteResultset theRrs=RouterUtil.routeByERParentKey(sc,schema,ServerParse.INSERT,sql,rrs,tc,realVal);
+      if (theRrs != null) {
+        boolean processedInsert=false;
+        if (sc != null && tc.isAutoIncrement()) {
+          String primaryKey=tc.getPrimaryKey();
+          processedInsert=processInsert(sc,schema,ServerParse.INSERT,sql,tc.getName(),primaryKey);
+        }
+        if (processedInsert == false) {
+          rrs.setFinishedRoute(true);
+          sc.getSession2().execute(rrs,ServerParse.INSERT);
+        }
+        continue;
+      }
+      final String findRootTBSql=tc.getLocateRTableKeySql().toLowerCase() + joinKeyVal;
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("find root parent's node sql " + findRootTBSql);
+      }
+      ListenableFuture<String> listenableFuture=MycatServer.getInstance().getListeningExecutorService().submit(new Callable<String>(){
+        @Override public String call() throws Exception {
+          if (tc.getRootParent().getFetchStoreNodeByJdbc()) {
+            JDBCFetchStoreNodeOfChildTableHandler jdbcFetchStoreNodeOfChildTableHandler=new JDBCFetchStoreNodeOfChildTableHandler();
+            return jdbcFetchStoreNodeOfChildTableHandler.execute(schema.getName(),findRootTBSql,tc.getRootParent().getDataNodes());
+          }
+ else {
+            FetchStoreNodeOfChildTableHandler fetchHandler=new FetchStoreNodeOfChildTableHandler();
+            return fetchHandler.execute(schema.getName(),findRootTBSql,tc.getRootParent().getDataNodes(),sc);
+          }
+        }
+      }
+);
+      Futures.addCallback(listenableFuture,new FutureCallback<String>(){
+        @Override public void onSuccess(        String result){
+          if (Strings.isNullOrEmpty(result)) {
+            StringBuilder s=new StringBuilder();
+            LOGGER.warn(s.append(sc.getSession2()).append(origSQL).toString() + " err:" + "can't find (root) parent sharding node for sql:"+ origSQL);
+            if (!sc.isAutocommit()) {
+              sc.setTxInterrupt("can't find (root) parent sharding node for sql:" + origSQL);
+            }
+            sc.writeErrMessage(ErrorCode.ER_PARSE_ERROR,"can't find (root) parent sharding node for sql:" + origSQL);
+            return;
+          }
+          if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("found partion node for child table to insert " + result + " sql :"+ origSQL);
+          }
+          boolean processedInsert=false;
+          if (sc != null && tc.isAutoIncrement()) {
+            try {
+              String primaryKey=tc.getPrimaryKey();
+              processedInsert=processInsert(sc,schema,ServerParse.INSERT,origSQL,tc.getName(),primaryKey);
+            }
+ catch (            SQLNonTransientException e) {
+              LOGGER.warn("sequence processInsert error,",e);
+              sc.writeErrMessage(ErrorCode.ER_PARSE_ERROR,"sequence processInsert error," + e.getMessage());
+            }
+          }
+          if (processedInsert == false) {
+            RouteResultset executeRrs=RouterUtil.routeToSingleNode(rrs,result,origSQL);
+            sc.getSession2().execute(executeRrs,ServerParse.INSERT);
+          }
+        }
+        @Override public void onFailure(        Throwable t){
+          StringBuilder s=new StringBuilder();
+          LOGGER.warn(s.append(sc.getSession2()).append(origSQL).toString() + " err:" + t.getMessage());
+          sc.writeErrMessage(ErrorCode.ER_PARSE_ERROR,t.getMessage() + " " + s.toString());
+        }
+      }
+,MycatServer.getInstance().getListeningExecutorService());
+    }
+ else     if (erFlag) {
+      throw new SQLNonTransientException(String.format("%s包含不是ER分片的表",origSQL));
+    }
+  }
+  return erFlag;
+}

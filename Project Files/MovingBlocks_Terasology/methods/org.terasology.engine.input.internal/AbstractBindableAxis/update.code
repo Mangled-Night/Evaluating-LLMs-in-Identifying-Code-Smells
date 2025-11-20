@@ -1,0 +1,15 @@
+public void update(EntityRef[] inputEntities,float delta,EntityRef target,Vector3i targetBlockPos,Vector3f hitPosition,Vector3f hitNormal){
+  float newValue=getTargetValue();
+  if (sendEventMode.shouldSendEvent(value,newValue)) {
+    event.prepare(id,newValue,delta);
+    event.setTargetInfo(target,targetBlockPos,hitPosition,hitNormal);
+    for (    EntityRef entity : inputEntities) {
+      entity.send(event);
+      if (event.isConsumed()) {
+        break;
+      }
+    }
+    sendEventToSubscribers(delta,target);
+  }
+  value=newValue;
+}

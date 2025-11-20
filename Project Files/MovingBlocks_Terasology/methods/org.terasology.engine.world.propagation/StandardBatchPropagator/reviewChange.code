@@ -1,0 +1,38 @@
+/** 
+ * Handles a single block being changed to a different type.
+ * @param blockChange The change that was made
+ */
+private void reviewChange(BlockChange blockChange){
+  Vector3ic blockChangePosition=blockChange.getPosition();
+  byte newValue=rules.getFixedValue(blockChange.getTo(),blockChangePosition);
+  byte existingValue=world.getValueAt(blockChangePosition);
+  if (newValue > existingValue) {
+    increase(blockChangePosition,newValue);
+  }
+  byte oldValue=rules.getFixedValue(blockChange.getFrom(),blockChangePosition);
+  if (newValue < oldValue) {
+    reduce(blockChangePosition,oldValue);
+  }
+  Vector3i adjPos=new Vector3i();
+  for (  Side side : Side.values()) {
+    PropagationComparison comparison=rules.comparePropagation(blockChange.getTo(),blockChange.getFrom(),side);
+    if (comparison.isRestricting() && existingValue > 0) {
+      reduce(blockChangePosition,existingValue);
+      side.getAdjacentPos(blockChangePosition,adjPos);
+      byte adjValue=world.getValueAt(adjPos);
+      if (adjValue == rules.propagateValue(existingValue,side,blockChange.getFrom(),scale)) {
+        reduce(adjPos,adjValue);
+      }
+    }
+ else     if (comparison.isPermitting()) {
+      if (existingValue > 0) {
+        queueSpreadValue(blockChangePosition,existingValue);
+      }
+      side.getAdjacentPos(blockChangePosition,adjPos);
+      byte adjValue=world.getValueAt(adjPos);
+      if (adjValue != PropagatorWorldView.UNAVAILABLE) {
+        queueSpreadValue(adjPos,adjValue);
+      }
+    }
+  }
+}

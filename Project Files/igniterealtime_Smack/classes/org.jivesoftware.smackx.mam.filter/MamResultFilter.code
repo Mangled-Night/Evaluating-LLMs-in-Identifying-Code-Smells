@@ -1,0 +1,21 @@
+/** 
+ * MAM result filter class.
+ * @see <a href="http://xmpp.org/extensions/xep-0313.html">XEP-0313: Message
+ *      Archive Management</a>
+ * @author Fernando Ramirez and Florian Schmaus
+ */
+public class MamResultFilter extends FlexibleStanzaTypeFilter<Message> {
+  private final String queryId;
+  public MamResultFilter(  MamQueryIQ mamQueryIQ){
+    super(Message.class);
+    this.queryId=mamQueryIQ.getQueryId();
+  }
+  @Override protected boolean acceptSpecific(  Message message){
+    MamResultExtension mamResultExtension=MamResultExtension.from(message);
+    if (mamResultExtension == null) {
+      return false;
+    }
+    String resultQueryId=mamResultExtension.getQueryId();
+    return (queryId == null && resultQueryId == null) || (queryId != null && queryId.equals(resultQueryId));
+  }
+}

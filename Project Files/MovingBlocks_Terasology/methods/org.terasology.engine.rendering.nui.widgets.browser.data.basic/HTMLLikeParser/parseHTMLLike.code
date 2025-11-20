@@ -1,0 +1,104 @@
+public static Collection<FlowRenderable> parseHTMLLike(String text){
+  if (text == null) {
+    return null;
+  }
+  StringReader reader=new StringReader(text);
+  int character;
+  try {
+    StringBuilder sb=new StringBuilder();
+    Font font=null;
+    Color color=null;
+    String hyperlink=null;
+    List<FlowRenderable> result=new LinkedList<>();
+    while ((character=reader.read()) != -1) {
+      char c=(char)character;
+      if (c == '\n') {
+        throw new IllegalArgumentException("Parsed text cannot contain line breaks.");
+      }
+ else       if (c == '<') {
+        char nextChar=(char)reader.read();
+        if (nextChar == '/') {
+          char id=(char)reader.read();
+          if (id == 'f') {
+            if (sb.length() > 0) {
+              result.add(new TextFlowRenderable(sb.toString(),new DefaultTextRenderStyle(font,color),hyperlink));
+              sb.setLength(0);
+            }
+            font=null;
+          }
+ else           if (id == 'c') {
+            if (sb.length() > 0) {
+              result.add(new TextFlowRenderable(sb.toString(),new DefaultTextRenderStyle(font,color),hyperlink));
+              sb.setLength(0);
+            }
+            color=null;
+          }
+ else           if (id == 'h') {
+            if (sb.length() > 0) {
+              result.add(new TextFlowRenderable(sb.toString(),new DefaultTextRenderStyle(font,color),hyperlink));
+              sb.setLength(0);
+            }
+            hyperlink=null;
+          }
+ else {
+            throw new IllegalArgumentException("Unable to parse text - " + text);
+          }
+          reader.read();
+        }
+ else         if (nextChar == 'f') {
+          if (sb.length() > 0) {
+            result.add(new TextFlowRenderable(sb.toString(),new DefaultTextRenderStyle(font,color),hyperlink));
+            sb.setLength(0);
+          }
+          reader.read();
+          font=Assets.getFont(readUntilCharacter(reader,'>')).get();
+        }
+ else         if (nextChar == 'c') {
+          if (sb.length() > 0) {
+            result.add(new TextFlowRenderable(sb.toString(),new DefaultTextRenderStyle(font,color),hyperlink));
+            sb.setLength(0);
+          }
+          reader.read();
+          color=new Color(Integer.parseInt(readUntilCharacter(reader,'>'),16));
+        }
+ else         if (nextChar == 'h') {
+          if (sb.length() > 0) {
+            result.add(new TextFlowRenderable(sb.toString(),new DefaultTextRenderStyle(font,color),hyperlink));
+            sb.setLength(0);
+          }
+          reader.read();
+          hyperlink=readUntilCharacter(reader,'>');
+        }
+ else         if (nextChar == 'l') {
+          readUntilCharacter(reader,'>');
+          sb.append('\n');
+        }
+      }
+ else       if (c == '&') {
+        String escape=readUntilCharacter(reader,';');
+        if (escape.equals("gt")) {
+          sb.append('>');
+        }
+ else         if (escape.equals("lt")) {
+          sb.append('<');
+        }
+ else         if (escape.equals("amp")) {
+          sb.append('&');
+        }
+ else {
+          throw new IllegalArgumentException("Unknown escape sequence - " + escape);
+        }
+      }
+ else {
+        sb.append(c);
+      }
+    }
+    if (sb.length() > 0) {
+      result.add(new TextFlowRenderable(sb.toString(),new DefaultTextRenderStyle(font,color),hyperlink));
+    }
+    return result;
+  }
+ catch (  IOException exp) {
+  }
+  return null;
+}

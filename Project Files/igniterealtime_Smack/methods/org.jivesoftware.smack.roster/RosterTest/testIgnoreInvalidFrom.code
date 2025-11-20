@@ -1,0 +1,19 @@
+/** 
+ * Tests that roster pushes with invalid from are ignored.
+ * @throws XmppStringprepException if the provided string is invalid.
+ * @see <a href="http://xmpp.org/rfcs/rfc6121.html#roster-syntax-actions-push">RFC 6121, Section 2.1.6</a>
+ */
+@Test public void testIgnoreInvalidFrom() throws XmppStringprepException {
+  final BareJid spammerJid=JidCreate.entityBareFrom("spam@example.com");
+  RosterPacket packet=new RosterPacket();
+  packet.setType(IQ.Type.set);
+  packet.setTo(connection.getUser());
+  packet.setFrom(JidCreate.entityBareFrom("mallory@example.com"));
+  packet.addRosterItem(new Item(spammerJid,"Cool products!"));
+  final String requestId=packet.getStanzaId();
+  connection.processStanza(packet);
+  ErrorIQ errorIQ=connection.getSentPacket();
+  assertEquals(requestId,errorIQ.getStanzaId());
+  assertEquals(Condition.service_unavailable,errorIQ.getError().getCondition());
+  assertNull("Contact was added to roster",Roster.getInstanceFor(connection).getEntry(spammerJid));
+}

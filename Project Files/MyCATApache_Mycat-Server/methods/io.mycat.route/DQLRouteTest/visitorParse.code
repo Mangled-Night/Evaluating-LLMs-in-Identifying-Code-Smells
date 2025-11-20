@@ -1,0 +1,44 @@
+@SuppressWarnings("unchecked") private List<RouteCalculateUnit> visitorParse(RouteResultset rrs,SQLStatement stmt,MycatSchemaStatVisitor visitor) throws Exception {
+  stmt.accept(visitor);
+  List<List<Condition>> mergedConditionList=new ArrayList<List<Condition>>();
+  if (visitor.hasOrCondition()) {
+    mergedConditionList=visitor.splitConditions();
+  }
+ else {
+    mergedConditionList.add(visitor.getConditions());
+  }
+  if (visitor.getAliasMap() != null) {
+    for (    Map.Entry<String,String> entry : visitor.getAliasMap().entrySet()) {
+      String key=entry.getKey();
+      String value=entry.getValue();
+      if (key != null && key.indexOf("`") >= 0) {
+        key=key.replaceAll("`","");
+      }
+      if (value != null && value.indexOf("`") >= 0) {
+        value=value.replaceAll("`","");
+      }
+      if (key != null) {
+        int pos=key.indexOf(".");
+        if (pos > 0) {
+          key=key.substring(pos + 1);
+        }
+      }
+      if (key.equals(value)) {
+        ctx.addTable(key.toUpperCase());
+      }
+      tableAliasMap.put(key.toUpperCase(),value);
+    }
+    visitor.getAliasMap().putAll(tableAliasMap);
+    ctx.setTableAliasMap(tableAliasMap);
+  }
+  Class<?> clazz=Class.forName("io.mycat.route.parser.druid.impl.DefaultDruidParser");
+  Method buildRouteCalculateUnits=clazz.getDeclaredMethod("buildRouteCalculateUnits",new Class[]{MycatSchemaStatVisitor.class,List.class});
+  Object newInstance=clazz.newInstance();
+  buildRouteCalculateUnits.setAccessible(true);
+  Object returnValue=buildRouteCalculateUnits.invoke(newInstance,new Object[]{visitor,mergedConditionList});
+  List<RouteCalculateUnit> retList=new ArrayList<RouteCalculateUnit>();
+  if (returnValue instanceof ArrayList<?>) {
+    retList.add(((ArrayList<RouteCalculateUnit>)returnValue).get(0));
+  }
+  return retList;
+}

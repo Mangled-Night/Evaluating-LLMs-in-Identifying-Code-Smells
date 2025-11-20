@@ -1,0 +1,22 @@
+/** 
+ * Accepting a SOCKS5 Bytestream request should fail if target is not able to connect to any of the provided SOCKS5 proxies.
+ * @throws Exception if an exception occurs.
+ */
+@Test public void shouldFailIfRequestHasInvalidStreamHosts() throws Exception {
+  final Protocol protocol=new Protocol();
+  final XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,targetJID);
+  assertThrows(Socks5Exception.CouldNotConnectToAnyProvidedSocks5Host.class,() -> {
+    Bytestream bytestreamInitialization=Socks5PacketUtils.createBytestreamInitiation(initiatorJID,targetJID,sessionID);
+    bytestreamInitialization.addStreamHost(proxyJID,proxyAddress,7778);
+    Socks5BytestreamManager byteStreamManager=Socks5BytestreamManager.getBytestreamManager(connection);
+    Socks5BytestreamRequest byteStreamRequest=new Socks5BytestreamRequest(byteStreamManager,bytestreamInitialization);
+    byteStreamRequest.accept();
+  }
+);
+  assertEquals(1,protocol.getRequests().size());
+  Stanza targetResponse=protocol.getRequests().remove(0);
+  assertTrue(IQ.class.isInstance(targetResponse));
+  assertEquals(initiatorJID,targetResponse.getTo());
+  assertEquals(IQ.Type.error,((IQ)targetResponse).getType());
+  assertEquals(StanzaError.Condition.item_not_found,targetResponse.getError().getCondition());
+}

@@ -1,0 +1,44 @@
+/** 
+ * Reads an api file and puts its information in a map to be used in the api comparison.
+ * @param br BufferedReader containing an api file content
+ * @return Map of api classes and interfaces as keys corresponding to lists of ApiMethods as values
+ * @throws Exception if the readLine fails.
+ */
+private static Map<String,Collection<ApiMethod>> getApi(BufferedReader br) throws Exception {
+  String line=br.readLine();
+  Map<String,Collection<ApiMethod>> api=new HashMap<>();
+  while (line != null) {
+    if (line.startsWith("*")) {
+      if (line.endsWith("(PACKAGE)")) {
+        line=br.readLine();
+        continue;
+      }
+      String className=line;
+      String aux;
+      api.put(className,new ArrayList<>());
+      ApiMethod method;
+      aux=br.readLine();
+      while ((aux != null && (aux.endsWith("(METHOD)") || aux.endsWith("(CONSTRUCTOR)") || aux.endsWith("(ABSTRACT METHOD)")|| aux.endsWith("(DEFAULT METHOD)")))) {
+        if (aux.endsWith("(METHOD)") || aux.endsWith("(ABSTRACT METHOD)") || aux.endsWith("(DEFAULT METHOD)")) {
+          String returnType=br.readLine();
+          String parameters=br.readLine();
+          String exceptionType=br.readLine();
+          method=new ApiMethod(className,aux,returnType,exceptionType,parameters);
+        }
+ else {
+          String returnType="";
+          String parameters=br.readLine();
+          String exceptionType="";
+          method=new ApiMethod(className,aux,returnType,exceptionType,parameters);
+        }
+        api.get(className).add(method);
+        aux=br.readLine();
+      }
+      line=aux;
+    }
+ else {
+      line=br.readLine();
+    }
+  }
+  return api;
+}

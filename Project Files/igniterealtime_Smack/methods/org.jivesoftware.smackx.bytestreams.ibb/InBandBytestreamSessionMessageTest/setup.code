@@ -1,0 +1,21 @@
+/** 
+ * Initialize fields used in the tests.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+@BeforeEach public void setup() throws XMPPException, SmackException, InterruptedException {
+  protocol=new Protocol();
+  connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+  initBytestream=new Open(sessionID,blockSize,StanzaType.MESSAGE);
+  initBytestream.setFrom(initiatorJID);
+  initBytestream.setTo(targetJID);
+  incrementingSequence=new Verification<Message,IQ>(){
+    long lastSeq=0;
+    @Override public void verify(    Message request,    IQ response){
+      DataPacketExtension dpe=request.getExtension(DataPacketExtension.class);
+      assertEquals(lastSeq++,dpe.getSeq().longValue());
+    }
+  }
+;
+}

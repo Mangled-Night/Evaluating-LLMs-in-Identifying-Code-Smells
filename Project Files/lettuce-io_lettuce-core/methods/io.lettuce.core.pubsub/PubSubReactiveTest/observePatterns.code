@@ -1,0 +1,14 @@
+@Test void observePatterns() throws Exception {
+  block(pubsub.psubscribe(pattern));
+  BlockingQueue<PatternMessage<String,String>> patternMessages=LettuceFactories.newBlockingQueue();
+  pubsub.observePatterns().doOnNext(patternMessages::add).subscribe();
+  redis.publish(channel,message);
+  redis.publish(channel,message);
+  redis.publish(channel,message);
+  Wait.untilTrue(() -> patternMessages.size() == 3).waitOrTimeout();
+  assertThat(patternMessages).hasSize(3);
+  PatternMessage<String,String> patternMessage=patternMessages.take();
+  assertThat(patternMessage.getChannel()).isEqualTo(channel);
+  assertThat(patternMessage.getMessage()).isEqualTo(message);
+  assertThat(patternMessage.getPattern()).isEqualTo(pattern);
+}

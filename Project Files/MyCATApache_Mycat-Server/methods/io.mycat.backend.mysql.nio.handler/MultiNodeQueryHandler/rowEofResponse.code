@@ -1,0 +1,78 @@
+@Override public void rowEofResponse(final byte[] eof,BackendConnection conn){
+  if (LOGGER.isDebugEnabled()) {
+    LOGGER.debug(this.toString() + "on row end reseponse " + conn+ "  "+ errorRepsponsed.get()+ "  "+ nodeCount);
+  }
+  this.netOutBytes+=eof.length;
+  MiddlerResultHandler middlerResultHandler=session.getMiddlerResultHandler();
+  if (errorRepsponsed.get()) {
+    return;
+  }
+  final ServerConnection source=session.getSource();
+  if (!isCallProcedure) {
+    if (clearIfSessionClosed(session)) {
+      return;
+    }
+ else     if (canClose(conn,false)) {
+      return;
+    }
+  }
+  if (decrementCountBy(1)) {
+    if (!rrs.isCallStatement() || (rrs.isCallStatement() && rrs.getProcedure().isResultSimpleValue())) {
+      if (this.autocommit && !session.getSource().isLocked()) {
+        session.releaseConnections(false);
+      }
+      if (this.isFail() || session.closed()) {
+        processFinishWork(createErrPkg(this.error).writeToBytes(),false,conn);
+        return;
+      }
+    }
+    if (dataMergeSvr != null) {
+      if (session.getMiddlerResultHandler() != null) {
+        isMiddleResultDone.set(true);
+      }
+      try {
+        dataMergeSvr.outputMergeResult(session,eof);
+      }
+ catch (      Exception e) {
+        handleDataProcessException(e);
+      }
+    }
+ else {
+      try {
+        lock.lock();
+        eof[3]=++packetId;
+        if (LOGGER.isDebugEnabled()) {
+          LOGGER.debug("last packet id:" + packetId);
+        }
+        if (middlerResultHandler == null) {
+          if (source.canResponse()) {
+            source.write(eof);
+          }
+        }
+      }
+  finally {
+        lock.unlock();
+      }
+    }
+  }
+  int currentExecCount=this.incExecCount();
+  if (middlerResultHandler != null) {
+    if (currentExecCount != rrs.getNodes().length) {
+      return;
+    }
+  }
+  if (currentExecCount == rrs.getNodes().length) {
+    int resultSize=source.getWriteQueue().size() * MycatServer.getInstance().getConfig().getSystem().getBufferPoolPageSize();
+    source.setExecuteSql(null);
+    session.getSource().getListener().fireEvent(SqlExecuteStage.END);
+    QueryResult queryResult=new QueryResult(session.getSource().getSchema(),session.getSource().getUser(),rrs.getSqlType(),rrs.getStatement(),selectRows,netInBytes,netOutBytes,startTime,System.currentTimeMillis(),resultSize,source.getHost());
+    QueryResultDispatcher.dispatchQuery(queryResult);
+    if (middlerResultHandler != null) {
+      while (!this.isMiddleResultDone.compareAndSet(false,true)) {
+        Thread.yield();
+      }
+      middlerResultHandler.secondEexcute();
+      isMiddleResultDone.set(false);
+    }
+  }
+}

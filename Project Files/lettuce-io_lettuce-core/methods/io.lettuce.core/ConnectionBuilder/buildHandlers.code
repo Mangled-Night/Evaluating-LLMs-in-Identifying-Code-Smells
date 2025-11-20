@@ -1,0 +1,19 @@
+protected List<ChannelHandler> buildHandlers(){
+  LettuceAssert.assertState(channelGroup != null,"ChannelGroup must be set");
+  LettuceAssert.assertState(connectionEvents != null,"ConnectionEvents must be set");
+  LettuceAssert.assertState(connection != null,"Connection must be set");
+  LettuceAssert.assertState(clientResources != null,"ClientResources must be set");
+  LettuceAssert.assertState(endpoint != null,"Endpoint must be set");
+  LettuceAssert.assertState(connectionInitializer != null,"ConnectionInitializer must be set");
+  List<ChannelHandler> handlers=new ArrayList<>();
+  connection.setOptions(clientOptions);
+  handlers.add(new ChannelGroupListener(channelGroup,clientResources.eventBus()));
+  handlers.add(new CommandEncoder());
+  handlers.add(getHandshakeHandler());
+  handlers.add(commandHandlerSupplier.get());
+  handlers.add(new ConnectionEventTrigger(connectionEvents,connection,clientResources.eventBus()));
+  if (clientOptions.isAutoReconnect()) {
+    handlers.add(createConnectionWatchdog());
+  }
+  return handlers;
+}

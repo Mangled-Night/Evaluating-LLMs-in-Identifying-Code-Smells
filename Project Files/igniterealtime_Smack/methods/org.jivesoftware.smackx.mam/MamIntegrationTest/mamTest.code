@@ -1,0 +1,33 @@
+@SmackIntegrationTest public void mamTest() throws TimeoutException, Exception {
+  EntityBareJid userOne=conOne.getUser().asEntityBareJid();
+  EntityBareJid userTwo=conTwo.getUser().asEntityBareJid();
+  final String messageBody="Test MAM message (" + testRunId + ')';
+  Message message=conTwo.getStanzaFactory().buildMessageStanza().to(userTwo).setBody(messageBody).build();
+  final String messageId=message.getStanzaId();
+  final SimpleResultSyncPoint messageReceived=new SimpleResultSyncPoint();
+  final StanzaListener stanzaListener=new StanzaListener(){
+    @Override public void processStanza(    Stanza stanza){
+      Message message=(Message)stanza;
+      if (message.getBody().equals(messageBody)) {
+        messageReceived.signal();
+      }
+    }
+  }
+;
+  conTwo.addAsyncStanzaListener(stanzaListener,MessageWithBodiesFilter.INSTANCE);
+  try {
+    conOne.sendStanza(message);
+    messageReceived.waitForResult(timeout);
+  }
+  finally {
+    conTwo.removeAsyncStanzaListener(stanzaListener);
+  }
+  MamQueryArgs mamQueryArgs=MamQueryArgs.builder().setResultPageSizeTo(1).limitResultsToJid(userOne).queryLastPage().build();
+  MamQuery mamQuery=mamManagerConTwo.queryArchive(mamQueryArgs);
+  assertEquals(1,mamQuery.getMessages().size());
+  Message mamMessage=mamQuery.getMessages().get(0);
+  assertEquals(messageId,mamMessage.getStanzaId());
+  assertEquals(messageBody,mamMessage.getBody());
+  assertEquals(conOne.getUser(),mamMessage.getFrom());
+  assertEquals(userTwo,mamMessage.getTo());
+}

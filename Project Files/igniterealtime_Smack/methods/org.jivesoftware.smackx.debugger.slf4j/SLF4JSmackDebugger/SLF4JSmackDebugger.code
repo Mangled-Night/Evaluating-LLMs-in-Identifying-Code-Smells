@@ -1,0 +1,20 @@
+/** 
+ * Create new SLF4J Smack Debugger instance.
+ * @param connection Smack connection to debug
+ */
+SLF4JSmackDebugger(XMPPConnection connection){
+  super(connection);
+  this.writer=new ObservableWriter(writer);
+  this.writer.addWriterListener(slf4JRawXmlListener);
+  this.reader=new ObservableReader(Validate.notNull(reader));
+  this.reader.addReaderListener(slf4JRawXmlListener);
+  final SLF4JLoggingConnectionListener loggingConnectionListener=new SLF4JLoggingConnectionListener(connection,logger);
+  this.connection.addConnectionListener(loggingConnectionListener);
+  if (connection instanceof AbstractXMPPConnection) {
+    AbstractXMPPConnection abstractXmppConnection=(AbstractXMPPConnection)connection;
+    ReconnectionManager.getInstanceFor(abstractXmppConnection).addReconnectionListener(loggingConnectionListener);
+  }
+ else {
+    LOGGER.info("The connection instance " + connection + " is not an instance of AbstractXMPPConnection, thus we can not install the ReconnectionListener");
+  }
+}

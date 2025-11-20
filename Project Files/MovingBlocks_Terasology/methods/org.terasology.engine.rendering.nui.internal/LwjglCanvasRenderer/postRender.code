@@ -1,0 +1,23 @@
+@Override public void postRender(){
+  Iterator<Map.Entry<TextCacheKey,Map<Material,Mesh>>> textIterator=cachedText.entrySet().iterator();
+  while (textIterator.hasNext()) {
+    Map.Entry<TextCacheKey,Map<Material,Mesh>> entry=textIterator.next();
+    if (!usedText.contains(entry.getKey())) {
+      entry.getValue().values().forEach(Mesh::dispose);
+      textIterator.remove();
+    }
+  }
+  usedText.clear();
+  Iterator<Map.Entry<TextureCacheKey,Mesh>> textureIterator=cachedTextures.entrySet().iterator();
+  while (textureIterator.hasNext()) {
+    Map.Entry<TextureCacheKey,Mesh> entry=textureIterator.next();
+    if (!usedTextures.contains(entry.getKey())) {
+      entry.getValue().dispose();
+      textureIterator.remove();
+    }
+  }
+  usedTextures.clear();
+  modelMatrixStack.popMatrix();
+  glEnable(GL_DEPTH_TEST);
+  glDisable(GL_BLEND);
+}

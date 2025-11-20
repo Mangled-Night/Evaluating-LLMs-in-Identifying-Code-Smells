@@ -1,0 +1,23 @@
+@Override public ChatNotes parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  ChatNotes chatNotes=new ChatNotes();
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      if (parser.getName().equals("sessionID")) {
+        chatNotes.setSessionID(parser.nextText());
+      }
+ else       if (parser.getName().equals("text")) {
+        String note=parser.nextText();
+        note=note.replaceAll("\\\\n","\n");
+        chatNotes.setNotes(note);
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getName().equals(ELEMENT_NAME)) {
+        done=true;
+      }
+    }
+  }
+  return chatNotes;
+}

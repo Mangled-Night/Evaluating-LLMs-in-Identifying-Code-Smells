@@ -1,0 +1,28 @@
+/** 
+ * Append the sub-element XML section of the IQ stanza.
+ * @param xml the XmlStringBuilder to append to.
+ */
+private void appendInnerXml(XmlStringBuilder xml){
+  if (type == Type.error) {
+    appendErrorIfExists(xml);
+    return;
+  }
+  if (childElementName == null) {
+    return;
+  }
+  IQChildElementXmlStringBuilder iqChildElement=getIQChildElementBuilder(new IQChildElementXmlStringBuilder(getChildElementName(),getChildElementNamespace(),null,xml.getXmlEnvironment()));
+  if (iqChildElement == null) {
+    return;
+  }
+  xml.append(iqChildElement);
+  List<XmlElement> extensionsXml=getExtensions();
+  if (iqChildElement.isEmptyElement) {
+    if (extensionsXml.isEmpty()) {
+      xml.closeEmptyElement();
+      return;
+    }
+    xml.rightAngleBracket();
+  }
+  xml.append(extensionsXml);
+  xml.closeElement(iqChildElement.element);
+}

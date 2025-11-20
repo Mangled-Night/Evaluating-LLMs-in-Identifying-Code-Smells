@@ -1,0 +1,7 @@
+@Test void testStaticNodeSelection(){
+  AsyncNodeSelection<String,String> selection=commands.nodes(redisClusterNode -> redisClusterNode.getFlags().contains(RedisClusterNode.NodeFlag.MYSELF),false);
+  assertThat(selection.asMap()).hasSize(1);
+  commands.getStatefulConnection().getPartitions().getPartition(2).setFlags(Collections.singleton(RedisClusterNode.NodeFlag.MYSELF));
+  assertThat(selection.asMap()).hasSize(1);
+  clusterClient.reloadPartitions();
+}

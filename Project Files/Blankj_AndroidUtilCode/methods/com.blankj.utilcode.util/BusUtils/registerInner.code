@@ -1,0 +1,25 @@
+private void registerInner(@Nullable final Object bus){
+  if (bus == null)   return;
+  Class<?> aClass=bus.getClass();
+  String className=aClass.getName();
+  boolean isNeedRecordTags=false;
+synchronized (mClassName_BusesMap) {
+    Set<Object> buses=mClassName_BusesMap.get(className);
+    if (buses == null) {
+      buses=new CopyOnWriteArraySet<>();
+      mClassName_BusesMap.put(className,buses);
+      isNeedRecordTags=true;
+    }
+    if (buses.contains(bus)) {
+      Log.w(TAG,"The bus of <" + bus + "> already registered.");
+      return;
+    }
+ else {
+      buses.add(bus);
+    }
+  }
+  if (isNeedRecordTags) {
+    recordTags(aClass,className);
+  }
+  consumeStickyIfExist(bus);
+}

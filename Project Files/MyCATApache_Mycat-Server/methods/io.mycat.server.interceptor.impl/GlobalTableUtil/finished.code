@@ -1,0 +1,56 @@
+/** 
+ * 每次处理 一种 check 的结果，不会交叉同时处理 多种不同 check 的结果
+ * @param list
+ * @return
+ */
+public static List<SQLQueryResult<Map<String,String>>> finished(List<SQLQueryResult<Map<String,String>>> list){
+  lock.lock();
+  try {
+    LOGGER.debug("list:::::::::::" + JSON.toJSONString(list));
+    for (    SQLQueryResult<Map<String,String>> map : list) {
+      Map<String,String> row=map.getResult();
+      if (row != null) {
+        if (row.containsKey(GlobalTableUtil.MAX_COLUMN)) {
+          LOGGER.info(map.getDataNode() + "." + map.getTableName()+ "."+ GlobalTableUtil.MAX_COLUMN+ ": "+ map.getResult().get(GlobalTableUtil.MAX_COLUMN));
+        }
+        if (row.containsKey(GlobalTableUtil.COUNT_COLUMN)) {
+          LOGGER.info(map.getDataNode() + "." + map.getTableName()+ "."+ GlobalTableUtil.COUNT_COLUMN+ ": "+ map.getResult().get(GlobalTableUtil.COUNT_COLUMN));
+        }
+        if (row.containsKey(GlobalTableUtil.INNER_COLUMN)) {
+          String columnsList=null;
+          try {
+            if (StringUtils.isNotBlank(row.get(GlobalTableUtil.INNER_COLUMN)))             columnsList=row.get(GlobalTableUtil.INNER_COLUMN);
+            LOGGER.debug("columnsList: " + columnsList);
+          }
+ catch (          Exception e) {
+            LOGGER.warn(row.get(GlobalTableUtil.INNER_COLUMN) + ", " + e.getMessage());
+          }
+ finally {
+            if (columnsList == null || columnsList.indexOf(GlobalTableUtil.GLOBAL_TABLE_MYCAT_COLUMN) == -1) {
+              LOGGER.warn(map.getDataNode() + "." + map.getTableName()+ " inner column: "+ GlobalTableUtil.GLOBAL_TABLE_MYCAT_COLUMN+ " is not exist.");
+              if (StringUtils.isNotBlank(map.getTableName())) {
+                for (                SQLQueryResult<Map<String,String>> sqr : innerColumnNotExist) {
+                  String name=map.getTableName();
+                  String node=map.getDataNode();
+                  if (name != null && !name.equalsIgnoreCase(sqr.getTableName()) || node != null && !node.equalsIgnoreCase(sqr.getDataNode())) {
+                    innerColumnNotExist.add(map);
+                  }
+                }
+              }
+            }
+ else {
+              LOGGER.debug("columnsList: " + columnsList);
+              tableColumsMap.put(map.getTableName().toUpperCase(),columnsList);
+            }
+          }
+        }
+      }
+    }
+  }
+  finally {
+    isInnerColumnCheckFinished=1;
+    isColumnCountCheckFinished=1;
+    lock.unlock();
+  }
+  return list;
+}

@@ -1,0 +1,10 @@
+public ComponentFieldMetadata(ClassMetadata<T,?> owner,Field field,CopyStrategyLibrary copyStrategyLibrary,ReflectFactory factory,boolean replicatedByDefault) throws InaccessibleFieldException {
+  super(owner,field,copyStrategyLibrary,factory,replicatedByDefault);
+  ownedReference=field.getAnnotation(Owns.class) != null && (EntityRef.class.isAssignableFrom(field.getType()) || isCollectionOf(EntityRef.class,field.getGenericType()));
+  if (ownedReference) {
+    copyWithOwnedEntitiesStrategy=(CopyStrategy<U>)copyStrategyLibrary.createCopyOfLibraryWithStrategy(EntityRef.class,EntityCopyStrategy.INSTANCE).getStrategy(field.getGenericType());
+  }
+ else {
+    copyWithOwnedEntitiesStrategy=copyStrategy;
+  }
+}

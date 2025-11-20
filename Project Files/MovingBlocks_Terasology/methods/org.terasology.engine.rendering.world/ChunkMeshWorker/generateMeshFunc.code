@@ -1,0 +1,13 @@
+private static Function<Chunk,Mono<Tuple2<Chunk,ChunkMesh>>> generateMeshFunc(ChunkTessellator chunkTessellator,WorldProvider worldProvider){
+  return (chunk -> {
+    chunk.setDirty(false);
+    ChunkView chunkView=worldProvider.getLocalView(chunk.getPosition());
+    if (chunkView != null && chunkView.isValidView()) {
+      ChunkMesh newMesh=chunkTessellator.generateMesh(chunkView);
+      ChunkMonitor.fireChunkTessellated(chunk,newMesh);
+      return Mono.just(Tuples.of(chunk,newMesh));
+    }
+    return Mono.empty();
+  }
+);
+}

@@ -1,0 +1,22 @@
+@Test void testReplicasWithReadOnly(){
+  AsyncNodeSelection<String,String> nodes=commands.replicas(redisClusterNode -> redisClusterNode.is(RedisClusterNode.NodeFlag.REPLICA));
+  assertThat(nodes.size()).isEqualTo(2);
+  TestFutures.awaitOrTimeout(commands.set(key,value));
+  waitForReplication(key,ClusterTestSettings.port4);
+  List<Throwable> t=new ArrayList<>();
+  List<String> strings=new ArrayList<>();
+  AsyncExecutions<String> keys=nodes.commands().get(key);
+  keys.stream().forEach(lcs -> {
+    lcs.toCompletableFuture().exceptionally(throwable -> {
+      t.add(throwable);
+      return null;
+    }
+);
+    lcs.thenAccept(strings::add);
+  }
+);
+  TestFutures.awaitOrTimeout(CompletableFuture.allOf(keys.futures()).exceptionally(throwable -> null));
+  Wait.untilEquals(1,t::size).waitOrTimeout();
+  assertThat(t).hasSize(1);
+  assertThat(strings).hasSize(1).contains(value);
+}

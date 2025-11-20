@@ -1,0 +1,29 @@
+@SuppressWarnings("rawtypes") CompletableFuture<Void> createIdle(){
+  int potentialIdle=getMinIdle() - getIdle();
+  if (potentialIdle <= 0 || !isPoolActive()) {
+    return (CompletableFuture)COMPLETED_FUTURE;
+  }
+  long totalLimit=getAvailableCapacity();
+  int toCreate=Math.toIntExact(Math.min(Math.max(0,totalLimit),potentialIdle));
+  CompletableFuture[] futures=new CompletableFuture[toCreate];
+  for (int i=0; i < toCreate; i++) {
+    if (getAvailableCapacity() <= 0) {
+      futures[i]=COMPLETED_FUTURE;
+      continue;
+    }
+    CompletableFuture<T> future=new CompletableFuture<>();
+    futures[i]=future;
+    makeObject0(future);
+    future.thenAccept(it -> {
+      if (isPoolActive()) {
+        idleCount.incrementAndGet();
+        cache.add(it);
+      }
+ else {
+        factory.destroy(it);
+      }
+    }
+);
+  }
+  return CompletableFuture.allOf(futures);
+}

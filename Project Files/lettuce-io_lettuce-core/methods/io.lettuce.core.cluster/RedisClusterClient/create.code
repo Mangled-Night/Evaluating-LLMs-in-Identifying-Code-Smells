@@ -1,0 +1,62 @@
+/** 
+ * Create a new client that connects to the supplied  {@link RedisURI uri} with default {@link ClientResources}. You can connect to different Redis servers but you must supply a  {@link RedisURI} on connecting.
+ * @param redisURI the Redis URI, must not be {@code null}
+ * @return a new instance of {@link RedisClusterClient}
+ */
+public static RedisClusterClient create(RedisURI redisURI){
+  assertNotNull(redisURI);
+  return create(Collections.singleton(redisURI));
+}
+/** 
+ * Create a new client that connects to the supplied  {@link RedisURI uri} with default {@link ClientResources}. You can connect to different Redis servers but you must supply a  {@link RedisURI} on connecting.
+ * @param redisURIs one or more Redis URI, must not be {@code null} and not empty.
+ * @return a new instance of {@link RedisClusterClient}
+ */
+public static RedisClusterClient create(Iterable<RedisURI> redisURIs){
+  assertNotEmpty(redisURIs);
+  assertSameOptions(redisURIs);
+  return new RedisClusterClient(null,redisURIs);
+}
+/** 
+ * Create a new client that connects to the supplied uri with default  {@link ClientResources}. You can connect to different Redis servers but you must supply a  {@link RedisURI} on connecting.
+ * @param uri the Redis URI, must not be empty or {@code null}.
+ * @return a new instance of {@link RedisClusterClient}
+ */
+public static RedisClusterClient create(String uri){
+  LettuceAssert.notEmpty(uri,"URI must not be empty");
+  return create(RedisClusterURIUtil.toRedisURIs(URI.create(uri)));
+}
+/** 
+ * Create a new client that connects to the supplied  {@link RedisURI uri} with shared {@link ClientResources}. You need to shut down the  {@link ClientResources} upon shutting down your application.You can connect to different Redis servers butyou must supply a  {@link RedisURI} on connecting.
+ * @param clientResources the client resources, must not be {@code null}
+ * @param redisURI the Redis URI, must not be {@code null}
+ * @return a new instance of {@link RedisClusterClient}
+ */
+public static RedisClusterClient create(ClientResources clientResources,RedisURI redisURI){
+  assertNotNull(clientResources);
+  assertNotNull(redisURI);
+  return create(clientResources,Collections.singleton(redisURI));
+}
+/** 
+ * Create a new client that connects to the supplied uri with shared  {@link ClientResources}.You need to shut down the {@link ClientResources} upon shutting down your application. You can connect to different Redis servers but you mustsupply a  {@link RedisURI} on connecting.
+ * @param clientResources the client resources, must not be {@code null}
+ * @param uri the Redis URI, must not be empty or {@code null}.
+ * @return a new instance of {@link RedisClusterClient}
+ */
+public static RedisClusterClient create(ClientResources clientResources,String uri){
+  assertNotNull(clientResources);
+  LettuceAssert.notEmpty(uri,"URI must not be empty");
+  return create(clientResources,RedisClusterURIUtil.toRedisURIs(URI.create(uri)));
+}
+/** 
+ * Create a new client that connects to the supplied  {@link RedisURI uri} with shared {@link ClientResources}. You need to shut down the  {@link ClientResources} upon shutting down your application.You can connect to different Redis servers butyou must supply a  {@link RedisURI} on connecting.
+ * @param clientResources the client resources, must not be {@code null}
+ * @param redisURIs one or more Redis URI, must not be {@code null} and not empty
+ * @return a new instance of {@link RedisClusterClient}
+ */
+public static RedisClusterClient create(ClientResources clientResources,Iterable<RedisURI> redisURIs){
+  assertNotNull(clientResources);
+  assertNotEmpty(redisURIs);
+  assertSameOptions(redisURIs);
+  return new RedisClusterClient(clientResources,redisURIs);
+}

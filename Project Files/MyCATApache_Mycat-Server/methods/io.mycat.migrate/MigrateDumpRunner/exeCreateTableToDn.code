@@ -1,0 +1,14 @@
+private void exeCreateTableToDn(String sql,String toDn,String table) throws SQLException {
+  PhysicalDBNode dbNode=MycatServer.getInstance().getConfig().getDataNodes().get(toDn);
+  PhysicalDBPool dbPool=dbNode.getDbPool();
+  PhysicalDatasource datasource=dbPool.getSources()[dbPool.getActivedIndex()];
+  DBHostConfig config=datasource.getConfig();
+  Connection con=null;
+  try {
+    con=DriverManager.getConnection("jdbc:mysql://" + config.getUrl() + "/"+ dbNode.getDatabase(),config.getUser(),config.getPassword());
+    JdbcUtils.execute(con,sql,new ArrayList<>());
+  }
+  finally {
+    JdbcUtils.close(con);
+  }
+}

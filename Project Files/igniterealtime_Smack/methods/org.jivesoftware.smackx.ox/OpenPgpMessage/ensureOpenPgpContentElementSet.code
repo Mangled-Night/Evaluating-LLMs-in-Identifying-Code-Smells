@@ -1,0 +1,22 @@
+private void ensureOpenPgpContentElementSet() throws XmlPullParserException, IOException {
+  if (openPgpContentElement != null)   return;
+  openPgpContentElement=OpenPgpContentElementProvider.parseOpenPgpContentElement(element);
+  if (openPgpContentElement == null) {
+    return;
+  }
+  if (openPgpContentElement instanceof SigncryptElement) {
+    if (state != State.signcrypt) {
+      throw new IllegalStateException("OpenPgpContentElement was signed and encrypted, but is not a SigncryptElement.");
+    }
+  }
+ else   if (openPgpContentElement instanceof SignElement) {
+    if (state != State.sign) {
+      throw new IllegalStateException("OpenPgpContentElement was signed and unencrypted, but is not a SignElement.");
+    }
+  }
+ else   if (openPgpContentElement instanceof CryptElement) {
+    if (state != State.crypt) {
+      throw new IllegalStateException("OpenPgpContentElement was unsigned and encrypted, but is not a CryptElement.");
+    }
+  }
+}

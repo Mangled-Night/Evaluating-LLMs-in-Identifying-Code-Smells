@@ -1,0 +1,17 @@
+@Override public void set(ByteBuffer bytes){
+  if (keys == null) {
+    if (key == null) {
+      key=codec.decodeKey(bytes);
+      return;
+    }
+    K key=this.key;
+    this.key=null;
+    subscriber.onNext(output,KeyValue.fromNullable(key,bytes == null ? null : codec.decodeValue(bytes)));
+  }
+ else {
+    if (keyIterator == null) {
+      keyIterator=keys.iterator();
+    }
+    subscriber.onNext(output,KeyValue.fromNullable(keyIterator.next(),bytes == null ? null : codec.decodeValue(bytes)));
+  }
+}

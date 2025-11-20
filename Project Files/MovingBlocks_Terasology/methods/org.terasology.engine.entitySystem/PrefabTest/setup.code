@@ -1,0 +1,21 @@
+@BeforeEach public void setup() throws Exception {
+  ContextImpl context=new ContextImpl();
+  context.put(RecordAndReplayCurrentStatus.class,new RecordAndReplayCurrentStatus());
+  CoreRegistry.setContext(context);
+  ModuleManager moduleManager=ModuleManagerFactory.create();
+  context.put(ModuleManager.class,moduleManager);
+  EntitySystemSetupUtil.addReflectionBasedLibraries(context);
+  ModuleAwareAssetTypeManager assetTypeManager=new ModuleAwareAssetTypeManagerImpl();
+  AssetType<Prefab,PrefabData> prefabDataAssetType=assetTypeManager.createAssetType(Prefab.class,PojoPrefab::new,"prefabs");
+  ComponentLibrary componentLibrary=context.get(ComponentLibrary.class);
+  TypeHandlerLibrary typeHandlerLibrary=context.get(TypeHandlerLibrary.class);
+  PrefabFormat prefabFormat=new PrefabFormat(componentLibrary,typeHandlerLibrary);
+  assetTypeManager.getAssetFileDataProducer(prefabDataAssetType).addAssetFormat(prefabFormat);
+  assetTypeManager.switchEnvironment(moduleManager.getEnvironment());
+  context.put(AssetManager.class,assetTypeManager.getAssetManager());
+  NetworkSystem networkSystem=mock(NetworkSystem.class);
+  when(networkSystem.getMode()).thenReturn(NetworkMode.NONE);
+  context.put(NetworkSystem.class,networkSystem);
+  EntitySystemSetupUtil.addEntityManagementRelatedClasses(context);
+  prefabManager=new PojoPrefabManager(context);
+}

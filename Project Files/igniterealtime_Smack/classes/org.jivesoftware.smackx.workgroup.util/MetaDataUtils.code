@@ -1,0 +1,57 @@
+/** 
+ * Utility class for meta-data parsing and writing.
+ * @author Matt Tucker
+ */
+public class MetaDataUtils {
+  /** 
+ * Parses any available meta-data and returns it as a Map of String name/value pairs. The parser must be positioned at an opening meta-data tag, or the an empty map will be returned.
+ * @param parser the XML parser positioned at an opening meta-data tag.
+ * @return the meta-data.
+ * @throws XmlPullParserException if an error occurs while parsing the XML.
+ * @throws IOException            if an error occurs while parsing the XML.
+ */
+  public static Map<String,List<String>> parseMetaData(  XmlPullParser parser) throws XmlPullParserException, IOException {
+    XmlPullParser.Event eventType=parser.getEventType();
+    if ((eventType == XmlPullParser.Event.START_ELEMENT) && parser.getName().equals(MetaData.ELEMENT_NAME) && parser.getNamespace().equals(MetaData.NAMESPACE)) {
+      Map<String,List<String>> metaData=new Hashtable<>();
+      eventType=parser.next();
+      while ((eventType != XmlPullParser.Event.END_ELEMENT) || !parser.getName().equals(MetaData.ELEMENT_NAME)) {
+        String name=parser.getAttributeValue(0);
+        String value=parser.nextText();
+        if (metaData.containsKey(name)) {
+          List<String> values=metaData.get(name);
+          values.add(value);
+        }
+ else {
+          List<String> values=new ArrayList<>();
+          values.add(value);
+          metaData.put(name,values);
+        }
+        eventType=parser.next();
+      }
+      return metaData;
+    }
+    return Collections.emptyMap();
+  }
+  /** 
+ * Serializes a Map of String name/value pairs into the meta-data XML format.
+ * @param metaData the Map of meta-data as Map&lt;String, List&lt;String&gt;&gt;
+ * @return the meta-data values in XML form.
+ */
+  public static String serializeMetaData(  Map<String,List<String>> metaData){
+    StringBuilder buf=new StringBuilder();
+    if (metaData != null && metaData.size() > 0) {
+      buf.append("<metadata xmlns=\"http://jivesoftware.com/protocol/workgroup\">");
+      for (      String key : metaData.keySet()) {
+        List<String> value=metaData.get(key);
+        for (        String v : value) {
+          buf.append("<value name=\"").append(key).append("\">");
+          buf.append(StringUtils.escapeForXmlText(v));
+          buf.append("</value>");
+        }
+      }
+      buf.append("</metadata>");
+    }
+    return buf.toString();
+  }
+}

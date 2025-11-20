@@ -1,0 +1,14 @@
+@Test public void testGlobalEntitiesStoredAndRestored(ReadWriteStorageManager esm,BlockManager blockManager,ExtraBlockDataManager extraDataManager,Context context) throws Exception {
+  EntityRef entity=entityManager.create(new StringComponent("Test"));
+  long entityId=entity.getId();
+  esm.waitForCompletionOfPreviousSaveAndStartSaving();
+  esm.finishSavingAndShutdown();
+  EntitySystemSetupUtil.addReflectionBasedLibraries(context);
+  EntitySystemSetupUtil.addEntityManagementRelatedClasses(context);
+  EngineEntityManager newEntityManager=context.get(EngineEntityManager.class);
+  StorageManager newSM=new ReadWriteStorageManager(savePath,moduleEnvironment,newEntityManager,blockManager,extraDataManager,esm.isStoreChunksInZips(),recordAndReplaySerializer,recordAndReplayUtils,recordAndReplayCurrentStatus);
+  newSM.loadGlobalStore();
+  List<EntityRef> entities=Lists.newArrayList(newEntityManager.getEntitiesWith(StringComponent.class));
+  assertEquals(1,entities.size());
+  assertEquals(entityId,entities.get(0).getId());
+}

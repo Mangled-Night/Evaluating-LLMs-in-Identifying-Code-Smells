@@ -1,0 +1,12 @@
+/** 
+ * Pack a OmemoBundleElement containing our key material.
+ * @param userDevice our OmemoDevice.
+ * @return OMEMO bundle element
+ * @throws CorruptedOmemoKeyException when a key could not be loaded
+ * @throws IOException if an I/O error occurred.
+ */
+OmemoBundleElement_VAxolotl packOmemoBundle(OmemoDevice userDevice) throws CorruptedOmemoKeyException, IOException {
+  int currentSignedPreKeyId=loadCurrentOmemoSignedPreKeyId(userDevice);
+  T_SigPreKey currentSignedPreKey=loadOmemoSignedPreKeys(userDevice).get(currentSignedPreKeyId);
+  return new OmemoBundleElement_VAxolotl(currentSignedPreKeyId,keyUtil().signedPreKeyPublicForBundle(currentSignedPreKey),keyUtil().signedPreKeySignatureFromKey(currentSignedPreKey),keyUtil().identityKeyForBundle(keyUtil().identityKeyFromPair(loadOmemoIdentityKeyPair(userDevice))),keyUtil().preKeyPublicKeysForBundle(loadOmemoPreKeys(userDevice)));
+}

@@ -1,0 +1,13 @@
+private MamQueryPage queryArchivePage(MamQueryIQ mamQueryIq) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException, NotLoggedInException {
+  final XMPPConnection connection=getAuthenticatedConnectionOrThrow();
+  MamFinIQ mamFinIQ;
+  StanzaCollector mamFinIQCollector=connection.createStanzaCollector(new IQReplyFilter(mamQueryIq,connection));
+  StanzaCollector.Configuration resultCollectorConfiguration=StanzaCollector.newConfiguration().setStanzaFilter(new MamResultFilter(mamQueryIq)).setCollectorToReset(mamFinIQCollector);
+  StanzaCollector cancelledResultCollector;
+  try (StanzaCollector resultCollector=connection.createStanzaCollector(resultCollectorConfiguration)){
+    connection.sendStanza(mamQueryIq);
+    mamFinIQ=mamFinIQCollector.nextResultOrThrow();
+    cancelledResultCollector=resultCollector;
+  }
+   return new MamQueryPage(cancelledResultCollector,mamFinIQ);
+}

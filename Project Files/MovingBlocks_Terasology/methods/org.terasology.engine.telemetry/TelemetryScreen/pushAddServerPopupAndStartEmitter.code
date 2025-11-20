@@ -1,0 +1,38 @@
+private void pushAddServerPopupAndStartEmitter(){
+  AddServerPopup addServerPopup=nuiManager.pushScreen(AddServerPopup.ASSET_URI,AddServerPopup.class);
+  addServerPopup.removeTip();
+  ServerInfo serverInfo;
+  TelemetryConfig telemetryConfig=config.getTelemetryConfig();
+  String telemetryDestination=telemetryConfig.getTelemetryDestination();
+  if (telemetryDestination != null) {
+    try {
+      URL url=new URL(telemetryDestination);
+      String address=url.getHost();
+      int port=url.getPort();
+      serverInfo=new ServerInfo(telemetryConfig.getTelemetryServerName(),address,port);
+      serverInfo.setOwner(telemetryConfig.getTelemetryServerOwner());
+    }
+ catch (    Exception e) {
+      logger.error("Exception when get telemetry server information",e);
+      serverInfo=new ServerInfo(TelemetryEmitter.DEFAULT_COLLECTOR_NAME,TelemetryEmitter.DEFAULT_COLLECTOR_HOST,TelemetryEmitter.DEFAULT_COLLECTOR_PORT);
+      serverInfo.setOwner(TelemetryEmitter.DEFAULT_COLLECTOR_OWNER);
+    }
+  }
+ else {
+    serverInfo=new ServerInfo(TelemetryEmitter.DEFAULT_COLLECTOR_NAME,TelemetryEmitter.DEFAULT_COLLECTOR_HOST,TelemetryEmitter.DEFAULT_COLLECTOR_PORT);
+    serverInfo.setOwner(TelemetryEmitter.DEFAULT_COLLECTOR_OWNER);
+  }
+  addServerPopup.setServerInfo(serverInfo);
+  addServerPopup.onSuccess((item) -> {
+    TelemetryEmitter telemetryEmitter=(TelemetryEmitter)emitter;
+    Optional<URL> optionalURL=item.getURL("http");
+    if (optionalURL.isPresent()) {
+      telemetryEmitter.changeUrl(optionalURL.get());
+      telemetryConfig.setTelemetryDestination(optionalURL.get().toString());
+      telemetryConfig.setTelemetryServerName(item.getName());
+      telemetryConfig.setTelemetryServerOwner(item.getOwner());
+    }
+  }
+);
+  addServerPopup.onCancel((button) -> config.getTelemetryConfig().setTelemetryEnabled(false));
+}

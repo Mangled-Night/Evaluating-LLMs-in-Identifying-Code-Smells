@@ -1,0 +1,89 @@
+/** 
+ * Return the round corner bitmap.
+ * @param src    The source of bitmap.
+ * @param radius The radius of corner.
+ * @return the round corner bitmap
+ */
+public static Bitmap toRoundCorner(final Bitmap src,final float radius){
+  return toRoundCorner(src,radius,0,0,false);
+}
+/** 
+ * Return the round corner bitmap.
+ * @param src     The source of bitmap.
+ * @param radius  The radius of corner.
+ * @param recycle True to recycle the source of bitmap, false otherwise.
+ * @return the round corner bitmap
+ */
+public static Bitmap toRoundCorner(final Bitmap src,final float radius,final boolean recycle){
+  return toRoundCorner(src,radius,0,0,recycle);
+}
+/** 
+ * Return the round corner bitmap.
+ * @param src         The source of bitmap.
+ * @param radius      The radius of corner.
+ * @param borderSize  The size of border.
+ * @param borderColor The color of border.
+ * @return the round corner bitmap
+ */
+public static Bitmap toRoundCorner(final Bitmap src,final float radius,@FloatRange(from=0) float borderSize,@ColorInt int borderColor){
+  return toRoundCorner(src,radius,borderSize,borderColor,false);
+}
+/** 
+ * Return the round corner bitmap.
+ * @param src         The source of bitmap.
+ * @param radii       Array of 8 values, 4 pairs of [X,Y] radii
+ * @param borderSize  The size of border.
+ * @param borderColor The color of border.
+ * @return the round corner bitmap
+ */
+public static Bitmap toRoundCorner(final Bitmap src,final float[] radii,@FloatRange(from=0) float borderSize,@ColorInt int borderColor){
+  return toRoundCorner(src,radii,borderSize,borderColor,false);
+}
+/** 
+ * Return the round corner bitmap.
+ * @param src         The source of bitmap.
+ * @param radius      The radius of corner.
+ * @param borderSize  The size of border.
+ * @param borderColor The color of border.
+ * @param recycle     True to recycle the source of bitmap, false otherwise.
+ * @return the round corner bitmap
+ */
+public static Bitmap toRoundCorner(final Bitmap src,final float radius,@FloatRange(from=0) float borderSize,@ColorInt int borderColor,final boolean recycle){
+  float[] radii={radius,radius,radius,radius,radius,radius,radius,radius};
+  return toRoundCorner(src,radii,borderSize,borderColor,recycle);
+}
+/** 
+ * Return the round corner bitmap.
+ * @param src         The source of bitmap.
+ * @param radii       Array of 8 values, 4 pairs of [X,Y] radii
+ * @param borderSize  The size of border.
+ * @param borderColor The color of border.
+ * @param recycle     True to recycle the source of bitmap, false otherwise.
+ * @return the round corner bitmap
+ */
+public static Bitmap toRoundCorner(final Bitmap src,final float[] radii,@FloatRange(from=0) float borderSize,@ColorInt int borderColor,final boolean recycle){
+  if (isEmptyBitmap(src))   return null;
+  int width=src.getWidth();
+  int height=src.getHeight();
+  Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+  Bitmap ret=Bitmap.createBitmap(width,height,src.getConfig());
+  BitmapShader shader=new BitmapShader(src,Shader.TileMode.CLAMP,Shader.TileMode.CLAMP);
+  paint.setShader(shader);
+  Canvas canvas=new Canvas(ret);
+  RectF rectF=new RectF(0,0,width,height);
+  float halfBorderSize=borderSize / 2f;
+  rectF.inset(halfBorderSize,halfBorderSize);
+  Path path=new Path();
+  path.addRoundRect(rectF,radii,Path.Direction.CW);
+  canvas.drawPath(path,paint);
+  if (borderSize > 0) {
+    paint.setShader(null);
+    paint.setColor(borderColor);
+    paint.setStyle(Paint.Style.STROKE);
+    paint.setStrokeWidth(borderSize);
+    paint.setStrokeCap(Paint.Cap.ROUND);
+    canvas.drawPath(path,paint);
+  }
+  if (recycle && !src.isRecycled() && ret != src)   src.recycle();
+  return ret;
+}

@@ -1,0 +1,38 @@
+public static MUCItem parseItem(XmlPullParser parser) throws XmlPullParserException, IOException {
+  int initialDepth=parser.getDepth();
+  MUCAffiliation affiliation=MUCAffiliation.fromString(parser.getAttributeValue("","affiliation"));
+  Resourcepart nick=ParserUtils.getResourcepartAttribute(parser,"nick");
+  MUCRole role=MUCRole.fromString(parser.getAttributeValue("","role"));
+  Jid jid=ParserUtils.getJidAttribute(parser);
+  Jid actor=null;
+  Resourcepart actorNick=null;
+  String reason=null;
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String name=parser.getName();
+switch (name) {
+case "actor":
+      actor=ParserUtils.getJidAttribute(parser);
+    String actorNickString=parser.getAttributeValue("","nick");
+  if (actorNickString != null) {
+    actorNick=Resourcepart.from(actorNickString);
+  }
+break;
+case "reason":
+reason=parser.nextText();
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return new MUCItem(affiliation,role,actor,reason,jid,nick,actorNick);
+}

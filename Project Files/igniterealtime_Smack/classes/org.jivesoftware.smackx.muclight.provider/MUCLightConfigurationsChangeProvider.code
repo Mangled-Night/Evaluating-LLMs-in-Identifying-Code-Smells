@@ -1,0 +1,42 @@
+/** 
+ * MUC Light configurations change provider class.
+ * @author Fernando Ramirez
+ */
+public class MUCLightConfigurationsChangeProvider extends ExtensionElementProvider<ConfigurationsChangeExtension> {
+  @Override public ConfigurationsChangeExtension parse(  XmlPullParser parser,  int initialDepth,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    String prevVersion=null;
+    String version=null;
+    String roomName=null;
+    String subject=null;
+    HashMap<String,String> customConfigs=null;
+    outerloop:     while (true) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT) {
+        if (parser.getName().equals("prev-version")) {
+          prevVersion=parser.nextText();
+        }
+ else         if (parser.getName().equals("version")) {
+          version=parser.nextText();
+        }
+ else         if (parser.getName().equals("roomname")) {
+          roomName=parser.nextText();
+        }
+ else         if (parser.getName().equals("subject")) {
+          subject=parser.nextText();
+        }
+ else {
+          if (customConfigs == null) {
+            customConfigs=new HashMap<>();
+          }
+          customConfigs.put(parser.getName(),parser.nextText());
+        }
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT) {
+        if (parser.getDepth() == initialDepth) {
+          break outerloop;
+        }
+      }
+    }
+    return new ConfigurationsChangeExtension(prevVersion,version,roomName,subject,customConfigs);
+  }
+}

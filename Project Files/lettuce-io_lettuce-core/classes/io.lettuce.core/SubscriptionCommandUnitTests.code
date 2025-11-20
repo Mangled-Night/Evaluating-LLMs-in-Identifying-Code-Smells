@@ -1,0 +1,31 @@
+/** 
+ * Unit tests for  {@link io.lettuce.core.RedisPublisher.SubscriptionCommand}.
+ * @author Mark Paluch
+ */
+class SubscriptionCommandUnitTests {
+  private RedisCodec<String,String> codec=StringCodec.UTF8;
+  private Command<String,String,String> command;
+  private RedisPublisher.RedisSubscription<String> subscription;
+  private Subscriber<String> subscriber=mock(Subscriber.class);
+  @BeforeEach final void createCommand(){
+    CommandOutput<String,String,String> output=new StatusOutput<>(codec);
+    command=new Command<>(CommandType.INFO,output,null);
+  }
+  @Test void shouldCompleteOnlyOnce(){
+    subscription=new RedisPublisher.RedisSubscription<>(mock(StatefulConnection.class),command,false,ImmediateEventExecutor.INSTANCE);
+    subscription.subscribe(subscriber);
+    subscription.changeState(RedisPublisher.State.NO_DEMAND,RedisPublisher.State.DEMAND);
+    subscription.request(1);
+    RedisPublisher.SubscriptionCommand<String,String,String> wrapper=new RedisPublisher.SubscriptionCommand<>(command,subscription,false);
+    command.getOutput().setSingle(ByteBuffer.wrap("Hello".getBytes(StandardCharsets.UTF_8)));
+    wrapper.onComplete((s,throwable) -> {
+      wrapper.completeExceptionally(new IllegalStateException());
+    }
+);
+    wrapper.complete();
+    verify(subscriber).onSubscribe(any());
+    verify(subscriber).onNext("Hello");
+    verify(subscriber).onComplete();
+    verifyNoMoreInteractions(subscriber);
+  }
+}

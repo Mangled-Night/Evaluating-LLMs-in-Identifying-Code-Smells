@@ -1,0 +1,14 @@
+@Test void sentinel_ConnectToSocket() throws Exception {
+  assumeTestSupported();
+  RedisURI uri=new RedisURI();
+  uri.getSentinels().add(getSentinelSocketRedisUri());
+  uri.setSentinelMasterId("mymaster");
+  RedisClient redisClient=RedisClient.create(TestClientResources.get());
+  StatefulRedisConnection<String,String> connection=redisClient.connect(uri);
+  someRedisAction(connection.sync());
+  connection.close();
+  StatefulRedisSentinelConnection<String,String> sentinelConnection=redisClient.connectSentinel(uri);
+  assertThat(sentinelConnection.sync().ping()).isEqualTo("PONG");
+  sentinelConnection.close();
+  FastShutdown.shutdown(redisClient);
+}

@@ -1,0 +1,38 @@
+/** 
+ * Use reflection magic to get a  {@link LeafNode} without doing a disco#info query.This method is useful for fetching nodes that are configured with the access model 'open', since some servers that announce support for that access model do not allow disco#info queries from contacts which are not subscribed to the node owner. Therefore this method fetches the node directly and puts it into the  {@link PubSubManager}s node map. Note: Due to the alck of a disco#info query, it might happen, that the node doesn't exist on the server, even though we add it to the node map.
+ * @see <a href="https://github.com/processone/ejabberd/issues/2483">Ejabberd bug tracker about the issue</a>
+ * @see <a href="https://mail.jabber.org/pipermail/standards/2018-June/035206.html">
+     *     Topic on the standards mailing list</a>
+ * @param pubSubManager pubsub manager
+ * @param nodeName name of the node
+ * @return leafNode TODO javadoc me please
+ * @throws PubSubException.NotALeafNodeException in case we already have the node cached, but it is not a LeafNode.
+ */
+@SuppressWarnings("unchecked") public static LeafNode getOpenLeafNode(PubSubManager pubSubManager,String nodeName) throws PubSubException.NotALeafNodeException {
+  try {
+    Field field=pubSubManager.getClass().getDeclaredField("nodeMap");
+    field.setAccessible(true);
+    Map<String,Node> nodeMap=(Map<String,Node>)field.get(pubSubManager);
+    Node existingNode=nodeMap.get(nodeName);
+    if (existingNode != null) {
+      if (existingNode instanceof LeafNode) {
+        return (LeafNode)existingNode;
+      }
+ else {
+        Constructor<PubSubException.NotALeafNodeException> exceptionConstructor=PubSubException.NotALeafNodeException.class.getDeclaredConstructor(String.class,BareJid.class);
+        exceptionConstructor.setAccessible(true);
+        throw exceptionConstructor.newInstance(nodeName,pubSubManager.getServiceJid());
+      }
+    }
+    Constructor<LeafNode> constructor;
+    constructor=LeafNode.class.getDeclaredConstructor(PubSubManager.class,String.class);
+    constructor.setAccessible(true);
+    LeafNode node=constructor.newInstance(pubSubManager,nodeName);
+    nodeMap.put(nodeName,node);
+    return node;
+  }
+ catch (  NoSuchMethodException|IllegalAccessException|InvocationTargetException|InstantiationException|NoSuchFieldException e) {
+    LOGGER.log(Level.SEVERE,"Using reflections to create a LeafNode and put it into PubSubManagers nodeMap failed.",e);
+    throw new AssertionError(e);
+  }
+}

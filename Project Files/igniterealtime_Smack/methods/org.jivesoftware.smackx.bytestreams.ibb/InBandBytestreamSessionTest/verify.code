@@ -1,0 +1,16 @@
+@Override public void verify(Data request,IQ response){
+  assertEquals(lastSeq++,request.getDataPacketExtension().getSeq().intValue());
+}
+@Override public void verify(Data request,IQ response){
+  byte[] decodedData=request.getDataPacketExtension().getDecodedData();
+  UInt16 seq=request.getDataPacketExtension().getSeq();
+  for (int i=0; i < decodedData.length; i++) {
+    assertEquals(controlData[(seq.intValue() * blockSize) + i],decodedData[i]);
+  }
+}
+@Override public void verify(IQ request,IQ response){
+  assertEquals(StanzaError.Condition.unexpected_request,request.getError().getCondition());
+}
+@Override public void verify(IQ request,IQ response){
+  assertEquals(StanzaError.Condition.bad_request,request.getError().getCondition());
+}

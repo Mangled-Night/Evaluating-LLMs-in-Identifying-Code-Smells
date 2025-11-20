@@ -1,0 +1,23 @@
+/** 
+ * Checks optimality conditions.
+ * @param G the edge-weighted graph
+ * @return {@code true} if optimality conditions are fine
+ */
+private boolean check(EdgeWeightedGraph G){
+  double value=Double.POSITIVE_INFINITY;
+  for (int s=0, t=1; t < G.V(); t++) {
+    FlowNetwork F=new FlowNetwork(G.V());
+    for (    Edge e : G.edges()) {
+      int v=e.either(), w=e.other(v);
+      F.addEdge(new FlowEdge(v,w,e.weight()));
+      F.addEdge(new FlowEdge(w,v,e.weight()));
+    }
+    FordFulkerson maxflow=new FordFulkerson(F,s,t);
+    value=Math.min(value,maxflow.value());
+  }
+  if (Math.abs(weight - value) > FLOATING_POINT_EPSILON) {
+    System.err.println("Min cut weight = " + weight + " , max flow value = "+ value);
+    return false;
+  }
+  return true;
+}

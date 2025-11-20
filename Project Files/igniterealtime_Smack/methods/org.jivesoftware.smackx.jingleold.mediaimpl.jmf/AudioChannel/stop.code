@@ -1,0 +1,25 @@
+/** 
+ * Stops the transmission if already started. Stops the receiver also.
+ */
+public void stop(){
+  if (!started)   return;
+synchronized (this) {
+    try {
+      started=false;
+      if (processor != null) {
+        processor.stop();
+        processor=null;
+        for (        RTPManager rtpMgr : rtpMgrs) {
+          rtpMgr.removeReceiveStreamListener(audioReceiver);
+          rtpMgr.removeSessionListener(audioReceiver);
+          rtpMgr.removeTargets("Session ended.");
+          rtpMgr.dispose();
+        }
+        sendStreams.clear();
+      }
+    }
+ catch (    Exception e) {
+      LOGGER.log(Level.WARNING,"exception",e);
+    }
+  }
+}

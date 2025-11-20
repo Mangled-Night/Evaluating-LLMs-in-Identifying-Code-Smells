@@ -1,0 +1,86 @@
+class FetchMySQLSequnceHandler implements ResponseHandler {
+  private static final Logger LOGGER=LoggerFactory.getLogger(FetchMySQLSequnceHandler.class);
+  public void execute(  SequenceVal seqVal){
+    MycatConfig conf=MycatServer.getInstance().getConfig();
+    PhysicalDBNode mysqlDN=conf.getDataNodes().get(seqVal.dataNode);
+    try {
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("execute in datanode " + seqVal.dataNode + " for fetch sequnce sql "+ seqVal.sql);
+      }
+      mysqlDN.getConnection(mysqlDN.getDatabase(),true,new RouteResultsetNode(seqVal.dataNode,ServerParse.UPDATE,seqVal.sql),this,seqVal);
+    }
+ catch (    Exception e) {
+      seqVal.dbfinished=true;
+      LOGGER.warn("get connection err " + e);
+    }
+  }
+  public String getLastestError(  String seqName){
+    return IncrSequenceMySQLHandler.latestErrors.get(seqName);
+  }
+  @Override public void connectionAcquired(  BackendConnection conn){
+    conn.setResponseHandler(this);
+    try {
+      SequenceVal sequenceVal=((SequenceVal)conn.getAttachment());
+      conn.query(sequenceVal.sql);
+    }
+ catch (    Exception e) {
+      executeException(conn,e);
+    }
+  }
+  @Override public void connectionError(  Throwable e,  BackendConnection conn){
+    ((SequenceVal)conn.getAttachment()).dbfinished=true;
+    LOGGER.warn("connectionError " + e);
+  }
+  @Override public void errorResponse(  byte[] data,  BackendConnection conn){
+    SequenceVal seqVal=((SequenceVal)conn.getAttachment());
+    seqVal.setDbfinished();
+    ErrorPacket err=new ErrorPacket();
+    err.read(data);
+    String errMsg=new String(err.message);
+    LOGGER.warn("errorResponse " + err.errno + " "+ errMsg);
+    IncrSequenceMySQLHandler.latestErrors.put(seqVal.seqName,errMsg);
+    conn.release();
+  }
+  @Override public void okResponse(  byte[] ok,  BackendConnection conn){
+    boolean executeResponse=conn.syncAndExcute();
+    if (executeResponse) {
+      ((SequenceVal)conn.getAttachment()).setDbfinished();
+      conn.release();
+    }
+  }
+  @Override public void rowResponse(  byte[] row,  BackendConnection conn){
+    RowDataPacket rowDataPkg=new RowDataPacket(1);
+    rowDataPkg.read(row);
+    byte[] columnData=rowDataPkg.fieldValues.get(0);
+    String columnVal=new String(columnData);
+    SequenceVal seqVal=(SequenceVal)conn.getAttachment();
+    if (IncrSequenceMySQLHandler.errSeqResult.equals(columnVal)) {
+      seqVal.dbretVal=IncrSequenceMySQLHandler.errSeqResult;
+      LOGGER.warn(" sequnce sql returned err value ,sequence:" + seqVal.seqName + " "+ columnVal+ " sql:"+ seqVal.sql);
+    }
+ else {
+      seqVal.dbretVal=columnVal;
+    }
+  }
+  @Override public void rowEofResponse(  byte[] eof,  BackendConnection conn){
+    SequenceVal sequenceVal=((SequenceVal)conn.getAttachment());
+    conn.release();
+    sequenceVal.setDbfinished();
+  }
+  private void executeException(  BackendConnection c,  Throwable e){
+    SequenceVal seqVal=((SequenceVal)c.getAttachment());
+    seqVal.setDbfinished();
+    String errMgs=e.toString();
+    LOGGER.error("{}",e);
+    IncrSequenceMySQLHandler.latestErrors.put(seqVal.seqName,errMgs);
+    c.close("exception:" + errMgs);
+  }
+  @Override public void writeQueueAvailable(){
+  }
+  @Override public void connectionClose(  BackendConnection conn,  String reason){
+    ((SequenceVal)conn.getAttachment()).setDbfinished();
+    LOGGER.warn("connection closed " + conn + " reason:"+ reason);
+  }
+  @Override public void fieldEofResponse(  byte[] header,  List<byte[]> fields,  byte[] eof,  BackendConnection conn){
+  }
+}

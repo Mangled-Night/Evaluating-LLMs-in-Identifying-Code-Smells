@@ -1,0 +1,22 @@
+RedisCommand<K,V,List<V>> zrangebylex(K key,String min,String max){
+  notNullKey(key);
+  notNullMinMax(min,max);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  args.addKey(key).add(min).add(max);
+  return createCommand(ZRANGEBYLEX,new ValueListOutput<>(codec),args);
+}
+RedisCommand<K,V,List<V>> zrangebylex(K key,String min,String max,long offset,long count){
+  notNullKey(key);
+  notNullMinMax(min,max);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  addLimit(args.addKey(key).add(min).add(max),Limit.create(offset,count));
+  return createCommand(ZRANGEBYLEX,new ValueListOutput<>(codec),args);
+}
+RedisCommand<K,V,List<V>> zrangebylex(K key,Range<? extends V> range,Limit limit){
+  notNullKey(key);
+  notNullRange(range);
+  notNullLimit(limit);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  addLimit(args.addKey(key).add(minValue(range)).add(maxValue(range)),limit);
+  return createCommand(ZRANGEBYLEX,new ValueListOutput<>(codec),args);
+}

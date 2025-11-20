@@ -1,0 +1,23 @@
+/** 
+ * Set animators enabled.
+ */
+private static void setAnimatorsEnabled(){
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && ValueAnimator.areAnimatorsEnabled()) {
+    return;
+  }
+  try {
+    Field sDurationScaleField=ValueAnimator.class.getDeclaredField("sDurationScale");
+    sDurationScaleField.setAccessible(true);
+    float sDurationScale=(Float)sDurationScaleField.get(null);
+    if (sDurationScale == 0f) {
+      sDurationScaleField.set(null,1f);
+      Log.i("UtilsActivityLifecycle","setAnimatorsEnabled: Animators are enabled now!");
+    }
+  }
+ catch (  NoSuchFieldException e) {
+    e.printStackTrace();
+  }
+catch (  IllegalAccessException e) {
+    e.printStackTrace();
+  }
+}

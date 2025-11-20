@@ -1,0 +1,10 @@
+private void waitForHandshakeFinished() throws InterruptedException, CertificateException, SSLException, SmackException, XMPPException {
+  connectionInternal.waitForConditionOrThrowConnectionException(() -> isHandshakeFinished(),"TLS handshake to finish");
+  if (handshakeStatus == TlsHandshakeStatus.failed) {
+    throw handshakeException;
+  }
+  assert handshakeStatus == TlsHandshakeStatus.successful;
+  if (smackTlsContext.daneVerifier != null) {
+    smackTlsContext.daneVerifier.finish(engine.getSession());
+  }
+}

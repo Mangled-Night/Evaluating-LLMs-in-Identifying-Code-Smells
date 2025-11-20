@@ -1,0 +1,16 @@
+@Test void zrangebyscoreWithScoresStreaming(){
+  redis.zadd(key,1.0,"a",2.0,"b",3.0,"c",4.0,"d");
+  ListStreamingAdapter<String> streamingAdapter=new ListStreamingAdapter<>();
+  assertThat(redis.zrangebyscoreWithScores(streamingAdapter,key,2.0,3.0).longValue()).isEqualTo(2);
+  assertThat(redis.zrangebyscoreWithScores(streamingAdapter,key,"(1.0","(4.0").longValue()).isEqualTo(2);
+  assertThat(redis.zrangebyscoreWithScores(streamingAdapter,key,NEGATIVE_INFINITY,POSITIVE_INFINITY).longValue()).isEqualTo(4);
+  assertThat(redis.zrangebyscoreWithScores(streamingAdapter,key,"-inf","+inf").longValue()).isEqualTo(4);
+  assertThat(redis.zrangebyscoreWithScores(streamingAdapter,key,"-inf","+inf").longValue()).isEqualTo(4);
+  assertThat(redis.zrangebyscoreWithScores(streamingAdapter,key,0.0,4.0,1,3).longValue()).isEqualTo(3);
+  assertThat(redis.zrangebyscoreWithScores(streamingAdapter,key,"-inf","+inf",2,2).longValue()).isEqualTo(2);
+  assertThat(redis.zrangebyscoreWithScores(streamingAdapter,key,Range.create(2.0,3.0))).isEqualTo(2);
+  assertThat(redis.zrangebyscoreWithScores(streamingAdapter,key,Range.from(Boundary.excluding(1.0),Boundary.excluding(4.0)))).isEqualTo(2);
+  assertThat(redis.zrangebyscoreWithScores(streamingAdapter,key,Range.unbounded())).isEqualTo(4);
+  assertThat(redis.zrangebyscoreWithScores(streamingAdapter,key,Range.create(0.0,4.0),Limit.create(1,3))).isEqualTo(3);
+  assertThat(redis.zrangebyscoreWithScores(streamingAdapter,key,Range.unbounded(),Limit.create(2,2))).isEqualTo(2);
+}

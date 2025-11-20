@@ -1,0 +1,31 @@
+/** 
+ * State object for a cluster-wide SCAN using streaming.
+ */
+private static class ClusterStreamScanCursor extends StreamScanCursor implements ClusterScanCursor {
+  final List<String> nodeIds;
+  final String currentNodeId;
+  final StreamScanCursor cursor;
+  public ClusterStreamScanCursor(  List<String> nodeIds,  String currentNodeId,  StreamScanCursor cursor){
+    super();
+    this.nodeIds=nodeIds;
+    this.currentNodeId=currentNodeId;
+    this.cursor=cursor;
+    setCursor(cursor.getCursor());
+    setCount(cursor.getCount());
+    if (cursor.isFinished()) {
+      int nodeIndex=nodeIds.indexOf(currentNodeId);
+      if (nodeIndex == -1 || nodeIndex == nodeIds.size() - 1) {
+        setFinished(true);
+      }
+    }
+  }
+  @Override public List<String> getNodeIds(){
+    return nodeIds;
+  }
+  @Override public String getCurrentNodeId(){
+    return currentNodeId;
+  }
+  public boolean isScanOnCurrentNodeFinished(){
+    return cursor.isFinished();
+  }
+}

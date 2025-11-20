@@ -1,0 +1,11 @@
+@Test void pubSubclusterConnectionShouldSetClientName(){
+  StatefulRedisClusterPubSubConnection<String,String> connection=clusterClient.connectPubSub();
+  assertThat(connection.sync().clientGetname()).isEqualTo("my-client");
+  Delay.delay(Duration.ofMillis(10));
+  connection.sync().quit();
+  Wait.untilTrue(connection::isOpen).waitOrTimeout();
+  assertThat(connection.sync().clientGetname()).isEqualTo("my-client");
+  StatefulRedisConnection<String,String> nodeConnection=connection.getConnection(connection.getPartitions().getPartition(0).getNodeId());
+  assertThat(nodeConnection.sync().clientGetname()).isEqualTo("my-client");
+  connection.close();
+}

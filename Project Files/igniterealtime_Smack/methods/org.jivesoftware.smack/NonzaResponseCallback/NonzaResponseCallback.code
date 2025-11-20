@@ -1,0 +1,24 @@
+private NonzaResponseCallback(Class<SN> successNonzaClass,Class<FN> failedNonzaClass,Builder builder){
+  super(builder);
+  final QName successNonzaKey=XmppElementUtil.getQNameFor(successNonzaClass);
+  final QName failedNonzaKey=XmppElementUtil.getQNameFor(failedNonzaClass);
+  final NonzaListener<SN> successListener=new NonzaListener<SN>(){
+    @Override public void accept(    SN successNonza){
+      NonzaResponseCallback.this.successNonza=successNonza;
+      notifyResponse();
+    }
+  }
+;
+  final ClassAndConsumer<SN> successClassAndConsumer=new ClassAndConsumer<>(successNonzaClass,successListener);
+  final NonzaListener<FN> failedListener=new NonzaListener<FN>(){
+    @Override public void accept(    FN failedNonza){
+      NonzaResponseCallback.this.failedNonza=failedNonza;
+      notifyResponse();
+    }
+  }
+;
+  final ClassAndConsumer<FN> failedClassAndConsumer=new ClassAndConsumer<>(failedNonzaClass,failedListener);
+  filterAndListeners.put(successNonzaKey,successClassAndConsumer);
+  filterAndListeners.put(failedNonzaKey,failedClassAndConsumer);
+  install();
+}

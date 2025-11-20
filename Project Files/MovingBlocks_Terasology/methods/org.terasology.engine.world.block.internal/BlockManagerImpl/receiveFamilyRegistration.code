@@ -1,0 +1,22 @@
+public void receiveFamilyRegistration(BlockUri familyUri,Map<String,Integer> registration){
+  Optional<BlockFamily> family=loadFamily(familyUri);
+  if (family.isPresent()) {
+    lock.lock();
+    try {
+      for (      Block block : family.get().getBlocks()) {
+        Integer id=registration.get(block.getURI().toString());
+        if (id != null) {
+          block.setId((short)id.intValue());
+        }
+ else {
+          logger.error("Missing id for block {} in registered family {}",block.getURI(),familyUri);
+          block.setId(UNKNOWN_ID);
+        }
+      }
+      registerFamily(family.get());
+    }
+  finally {
+      lock.unlock();
+    }
+  }
+}

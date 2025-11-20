@@ -1,0 +1,41 @@
+/** 
+ * Test adding a roster item according to the example in <a href="http://xmpp.org/rfcs/rfc3921.html#roster-add" >RFC3921: Adding a Roster Item</a>.
+ * @throws Throwable in case a throwable is thrown.
+ */
+@Test public void testAddRosterItem() throws Throwable {
+  final BareJid contactJID=JidCreate.entityBareFrom("nurse@example.com");
+  final String contactName="Nurse";
+  final String[] contactGroup={"Servants"};
+  assertNotNull("Can't get the roster from the provided connection!",roster);
+  initRoster();
+  rosterListener.reset();
+  final RosterUpdateResponder serverSimulator=new RosterUpdateResponder(){
+    @Override void verifyUpdateRequest(    final RosterPacket updateRequest){
+      final Item item=updateRequest.getRosterItems().iterator().next();
+      assertEquals("The provided JID doesn't match the requested!",contactJID,item.getJid());
+      assertSame("The provided name doesn't match the requested!",contactName,item.getName());
+      assertSame("The provided group number doesn't match the requested!",contactGroup.length,item.getGroupNames().size());
+      assertSame("The provided group doesn't match the requested!",contactGroup[0],item.getGroupNames().iterator().next());
+    }
+  }
+;
+  serverSimulator.start();
+  roster.createItemAndRequestSubscription(contactJID,contactName,contactGroup);
+  serverSimulator.join();
+  final Throwable exception=serverSimulator.getException();
+  if (exception != null) {
+    throw exception;
+  }
+  rosterListener.waitUntilInvocationOrTimeout();
+  final RosterEntry addedEntry=roster.getEntry(contactJID);
+  assertNotNull("The new contact wasn't added to the roster!",addedEntry);
+  assertTrue("The roster listener wasn't invoked for the new contact!",rosterListener.getAddedAddresses().contains(contactJID));
+  assertSame("Setup wrong name for the new contact!",contactName,addedEntry.getName());
+  assertSame("Setup wrong default subscription status!",ItemType.none,addedEntry.getType());
+  assertSame("The new contact should be member of exactly one group!",1,addedEntry.getGroups().size());
+  assertSame("Setup wrong group name for the added contact!",contactGroup[0],addedEntry.getGroups().iterator().next().getName());
+  verifyRomeosEntry(roster.getEntry(JidCreate.entityBareFrom("romeo@example.net")));
+  verifyMercutiosEntry(roster.getEntry(JidCreate.entityBareFrom("mercutio@example.com")));
+  verifyBenvoliosEntry(roster.getEntry(JidCreate.entityBareFrom("benvolio@example.net")));
+  assertSame("Wrong number of roster entries.",4,roster.getEntries().size());
+}

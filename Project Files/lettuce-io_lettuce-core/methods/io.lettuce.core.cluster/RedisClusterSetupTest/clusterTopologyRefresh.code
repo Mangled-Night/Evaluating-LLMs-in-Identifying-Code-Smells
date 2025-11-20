@@ -1,0 +1,9 @@
+@Test public void clusterTopologyRefresh(){
+  clusterClient.setOptions(ClusterClientOptions.builder().topologyRefreshOptions(PERIODIC_REFRESH_ENABLED).build());
+  clusterClient.reloadPartitions();
+  RedisAdvancedClusterAsyncCommands<String,String> clusterConnection=clusterClient.connect().async();
+  assertThat(clusterClient.getPartitions()).hasSize(1);
+  ClusterSetup.setup2Masters(clusterHelper);
+  assertThat(clusterClient.getPartitions()).hasSize(2);
+  clusterConnection.getStatefulConnection().close();
+}

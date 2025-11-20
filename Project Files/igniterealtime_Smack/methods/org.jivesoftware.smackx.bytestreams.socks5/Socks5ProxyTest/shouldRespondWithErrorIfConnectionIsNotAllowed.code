@@ -1,0 +1,28 @@
+/** 
+ * The SOCKS5 proxy should respond with an error message if the client is not allowed to connect with the proxy.
+ * @throws Exception should not happen
+ */
+@Test public void shouldRespondWithErrorIfConnectionIsNotAllowed() throws Exception {
+  Socks5Proxy proxy=new Socks5Proxy();
+  proxy.start();
+  try (Socket socket=new Socket(loopbackAddress,proxy.getPort())){
+    OutputStream out=socket.getOutputStream();
+    out.write(new byte[]{(byte)0x05,(byte)0x01,(byte)0x00});
+    InputStream in=socket.getInputStream();
+    assertEquals((byte)0x05,(byte)in.read());
+    assertEquals((byte)0x00,(byte)in.read());
+    out.write(new byte[]{(byte)0x05,(byte)0x00,(byte)0x00,(byte)0x03,(byte)0x01,(byte)0xAA,(byte)0x00,(byte)0x00});
+    assertEquals((byte)0x05,(byte)in.read());
+    assertFalse((byte)0x00 == (byte)in.read());
+    assertEquals((byte)0x00,(byte)in.read());
+    assertEquals((byte)0x03,(byte)in.read());
+    assertEquals((byte)0x01,(byte)in.read());
+    assertEquals((byte)0xAA,(byte)in.read());
+    assertEquals((byte)0x00,(byte)in.read());
+    assertEquals((byte)0x00,(byte)in.read());
+    assertEquals(-1,in.read());
+  }
+  finally {
+    proxy.stop();
+  }
+}

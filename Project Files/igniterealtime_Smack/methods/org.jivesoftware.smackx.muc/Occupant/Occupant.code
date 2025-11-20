@@ -1,0 +1,21 @@
+Occupant(MUCItem item){
+  this.jid=item.getJid();
+  this.affiliation=item.getAffiliation();
+  this.role=item.getRole();
+  this.nick=item.getNick();
+}
+Occupant(Presence presence){
+  MUCUser mucUser=(MUCUser)presence.getExtensionElement("x","http://jabber.org/protocol/muc#user");
+  MUCItem item=mucUser.getItem();
+  this.jid=item.getJid();
+  this.affiliation=item.getAffiliation();
+  this.role=item.getRole();
+  EntityFullJid from=presence.getFrom().asEntityFullJidIfPossible();
+  if (from == null) {
+    LOGGER.warning("Occupant presence without resource: " + presence.getFrom());
+    this.nick=null;
+  }
+ else {
+    this.nick=from.getResourcepart();
+  }
+}

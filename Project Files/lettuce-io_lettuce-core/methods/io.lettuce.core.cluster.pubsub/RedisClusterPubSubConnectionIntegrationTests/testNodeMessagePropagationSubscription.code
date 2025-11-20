@@ -1,0 +1,9 @@
+@Test void testNodeMessagePropagationSubscription() throws Exception {
+  RedisClusterNode partition=pubSubConnection.getPartitions().getPartition(0);
+  pubSubConnection.setNodeMessagePropagation(true);
+  pubSubConnection.addListener(connectionListener);
+  StatefulRedisPubSubConnection<String,String> node=pubSubConnection.getConnection(partition.getNodeId());
+  node.sync().subscribe("channel");
+  pubSubConnection2.sync().publish("channel","message");
+  assertThat(connectionListener.getMessages().take()).isEqualTo("message");
+}

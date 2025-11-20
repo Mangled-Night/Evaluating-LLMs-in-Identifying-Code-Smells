@@ -1,0 +1,13 @@
+@Test void considersDecoupledSharedStateFromMutation(){
+  ClientResources clientResources=ClientResources.create();
+  HashedWheelTimer timer=(HashedWheelTimer)clientResources.timer();
+  assertThat(timer).hasFieldOrPropertyWithValue("workerState",1);
+  ClientResources copy=clientResources.mutate().timer(new HashedWheelTimer()).build();
+  HashedWheelTimer copyTimer=(HashedWheelTimer)copy.timer();
+  assertThat(copy.timer()).isNotSameAs(timer);
+  copy.shutdown().awaitUninterruptibly();
+  assertThat(timer).hasFieldOrPropertyWithValue("workerState",1);
+  assertThat(copyTimer).hasFieldOrPropertyWithValue("workerState",0);
+  copyTimer.stop();
+  timer.stop();
+}

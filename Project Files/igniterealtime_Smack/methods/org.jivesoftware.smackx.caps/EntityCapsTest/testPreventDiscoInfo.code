@@ -1,0 +1,23 @@
+/** 
+ * Test if entity caps actually prevent a disco info request and reply.
+ * @throws Exception if exception.
+ */
+@SmackIntegrationTest public void testPreventDiscoInfo() throws Exception {
+  final String dummyFeature=getNewDummyFeature();
+  final AtomicBoolean discoInfoSend=new AtomicBoolean();
+  conOne.addStanzaSendingListener(new StanzaListener(){
+    @Override public void processStanza(    Stanza stanza){
+      discoInfoSend.set(true);
+    }
+  }
+,new AndFilter(new StanzaTypeFilter(DiscoverInfo.class),IQTypeFilter.GET));
+  addFeatureAndWaitForPresence(conOne,conTwo,dummyFeature);
+  dropCapsCache();
+  DiscoverInfo info=sdmOne.discoverInfo(conTwo.getUser());
+  assertTrue(discoInfoSend.get());
+  assertTrue(info.containsFeature(dummyFeature),"The info response '" + info + "' does not contain the expected feature '"+ dummyFeature+ '\'');
+  discoInfoSend.set(false);
+  info=sdmOne.discoverInfo(conTwo.getUser());
+  assertFalse(discoInfoSend.get());
+  assertTrue(info.containsFeature(dummyFeature));
+}

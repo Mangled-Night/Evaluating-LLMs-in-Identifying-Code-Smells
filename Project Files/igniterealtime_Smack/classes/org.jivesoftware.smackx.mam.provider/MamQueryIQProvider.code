@@ -1,0 +1,35 @@
+/** 
+ * MAM Query IQ Provider class.
+ * @see <a href="http://xmpp.org/extensions/xep-0313.html">XEP-0313: Message
+ *      Archive Management</a>
+ * @author Fernando Ramirez
+ */
+public class MamQueryIQProvider extends IqProvider<MamQueryIQ> {
+  @Override public MamQueryIQ parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+    MamElementFactory elementFactory=MamElementFactory.forParser(parser);
+    DataForm dataForm=null;
+    String queryId=parser.getAttributeValue("","queryid");
+    String node=parser.getAttributeValue("","node");
+    outerloop:     while (true) {
+      final XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+        final String name=parser.getName();
+switch (name) {
+case DataForm.ELEMENT:
+        dataForm=DataFormProvider.INSTANCE.parse(parser);
+      break;
+  }
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return elementFactory.newQueryIQ(queryId,node,dataForm);
+}
+}

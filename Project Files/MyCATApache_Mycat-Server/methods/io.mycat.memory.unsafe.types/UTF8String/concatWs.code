@@ -1,0 +1,34 @@
+/** 
+ * Concatenates input strings together into a single string using the separator. A null input is skipped. For example, concat(",", "a", null, "c") would yield "a,c".
+ */
+public static UTF8String concatWs(UTF8String separator,UTF8String... inputs){
+  if (separator == null) {
+    return null;
+  }
+  int numInputBytes=0;
+  int numInputs=0;
+  for (int i=0; i < inputs.length; i++) {
+    if (inputs[i] != null) {
+      numInputBytes+=inputs[i].numBytes;
+      numInputs++;
+    }
+  }
+  if (numInputs == 0) {
+    return fromBytes(new byte[0]);
+  }
+  final byte[] result=new byte[numInputBytes + (numInputs - 1) * separator.numBytes];
+  int offset=0;
+  for (int i=0, j=0; i < inputs.length; i++) {
+    if (inputs[i] != null) {
+      int len=inputs[i].numBytes;
+      Platform.copyMemory(inputs[i].base,inputs[i].offset,result,Platform.BYTE_ARRAY_OFFSET + offset,len);
+      offset+=len;
+      j++;
+      if (j < numInputs) {
+        Platform.copyMemory(separator.base,separator.offset,result,Platform.BYTE_ARRAY_OFFSET + offset,separator.numBytes);
+        offset+=separator.numBytes;
+      }
+    }
+  }
+  return fromBytes(result);
+}

@@ -1,0 +1,34 @@
+@Override public void processStanza(Stanza packet) throws NotConnectedException, InterruptedException {
+  final Data dataIq=(Data)packet;
+  DataPacketExtension data=dataIq.getDataPacketExtension();
+  final UInt16 seq=data.getSeq();
+  if (!expectedSequence.equals(seq)) {
+    String descriptiveEnTest=UNEXPECTED_IBB_SEQUENCE + " " + seq+ " received, expected "+ expectedSequence;
+    StanzaError stanzaError=StanzaError.getBuilder().setCondition(StanzaError.Condition.unexpected_request).setDescriptiveEnText(descriptiveEnTest).build();
+    IQ unexpectedRequest=IQ.createErrorResponse(dataIq,stanzaError);
+    connection.sendStanza(unexpectedRequest);
+    try {
+      close();
+    }
+ catch (    IOException e) {
+      LOGGER.log(Level.FINER,"Could not close session, because of IOException. Close reason: " + descriptiveEnTest);
+    }
+    return;
+  }
+  if (data.getDecodedData() == null) {
+    IQ badRequest=IQ.createErrorResponse((IQ)packet,StanzaError.Condition.bad_request);
+    connection.sendStanza(badRequest);
+    return;
+  }
+  expectedSequence=seq.incrementedByOne();
+  dataQueue.offer(data);
+  IQ confirmData=IQ.createResultIQ((IQ)packet);
+  connection.sendStanza(confirmData);
+}
+@Override public void processStanza(Stanza packet){
+  DataPacketExtension data=packet.getExtension(DataPacketExtension.class);
+  if (data.getDecodedData() == null) {
+    return;
+  }
+  dataQueue.offer(data);
+}

@@ -1,0 +1,64 @@
+@Override public boolean step(){
+  if (applyModuleThread != null) {
+    if (!applyModuleThread.isAlive()) {
+      if (oldEnvironment != null) {
+        oldEnvironment.close();
+      }
+      return true;
+    }
+    return false;
+  }
+ else   if (joinStatus.getStatus() == JoinStatus.Status.COMPLETE) {
+    Server server=networkSystem.getServer();
+    ServerInfoMessage serverInfo=networkSystem.getServer().getInfo();
+    if (serverInfo.getGameName().length() > 0) {
+      gameManifest.setTitle(serverInfo.getGameName());
+    }
+ else {
+      gameManifest.setTitle(server.getRemoteAddress());
+    }
+    for (    WorldInfo worldInfo : serverInfo.getWorldInfoList()) {
+      gameManifest.addWorld(worldInfo);
+    }
+    Map<String,Short> blockMap=Maps.newHashMap();
+    for (    Entry<Integer,String> entry : serverInfo.getBlockIds().entrySet()) {
+      String name=entry.getValue();
+      short id=entry.getKey().shortValue();
+      Short oldId=blockMap.put(name,id);
+      if (oldId != null && oldId != id) {
+        logger.warn("Overwriting Id {} for {} with Id {}",oldId,name,id);
+      }
+    }
+    gameManifest.setRegisteredBlockFamilies(serverInfo.getRegisterBlockFamilyList());
+    gameManifest.setBlockIdMap(blockMap);
+    gameManifest.setTime(networkSystem.getServer().getInfo().getTime());
+    ModuleManager moduleManager=context.get(ModuleManager.class);
+    Set<Module> moduleSet=Sets.newLinkedHashSet();
+    for (    NameVersion moduleInfo : networkSystem.getServer().getInfo().getModuleList()) {
+      Module module=moduleManager.getRegistry().getModule(moduleInfo.getName(),moduleInfo.getVersion());
+      if (module == null) {
+        StateMainMenu mainMenu=new StateMainMenu("Missing required module: " + moduleInfo);
+        context.get(GameEngine.class).changeState(mainMenu);
+        return false;
+      }
+ else {
+        logger.info("Activating module: {}:{}",moduleInfo.getName(),moduleInfo.getVersion());
+        gameManifest.addModule(module.getId(),module.getVersion());
+        moduleSet.add(module);
+      }
+    }
+    oldEnvironment=moduleManager.getEnvironment();
+    moduleManager.loadEnvironment(moduleSet,true);
+    context.get(Game.class).load(gameManifest);
+    EnvironmentSwitchHandler environmentSwitchHandler=context.get(EnvironmentSwitchHandler.class);
+    applyModuleThread=new Thread(() -> environmentSwitchHandler.handleSwitchToGameEnvironment(context));
+    applyModuleThread.start();
+    return false;
+  }
+ else   if (joinStatus.getStatus() == JoinStatus.Status.FAILED) {
+    StateMainMenu mainMenu=new StateMainMenu("Failed to connect to server: " + joinStatus.getErrorMessage());
+    context.get(GameEngine.class).changeState(mainMenu);
+    networkSystem.shutdown();
+  }
+  return false;
+}

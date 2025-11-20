@@ -1,0 +1,37 @@
+/** 
+ * Target and initiator should successfully connect to a "remote" SOCKS5 proxy and the initiator activates the bytestream.
+ * @throws Exception should not happen
+ */
+@Test public void shouldSuccessfullyEstablishConnectionAndActivateSocks5Proxy() throws Exception {
+  Protocol protocol=new Protocol();
+  XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+  IQ activationResponse=new EmptyResultIQ();
+  activationResponse.setFrom(proxyJID);
+  activationResponse.setTo(initiatorJID);
+  protocol.addResponse(activationResponse,Verification.correspondingSenderReceiver,Verification.requestTypeSET,new Verification<Bytestream,IQ>(){
+    @Override public void verify(    Bytestream request,    IQ response){
+      assertNotNull(request.getToActivate());
+      assertEquals(targetJID,request.getToActivate().getTarget());
+    }
+  }
+);
+  Socket initiatorSocket=null, targetSocket=null;
+  try (Socks5TestProxy socks5Proxy=new Socks5TestProxy()){
+    StreamHost streamHost=new StreamHost(proxyJID,loopbackAddress,socks5Proxy.getPort());
+    String digest=Socks5Utils.createDigest(sessionID,initiatorJID,targetJID);
+    Socks5ClientForInitiator socks5Client=new Socks5ClientForInitiator(streamHost,digest,connection,sessionID,targetJID);
+    initiatorSocket=socks5Client.getSocket(10000);
+    InputStream in=initiatorSocket.getInputStream();
+    targetSocket=socks5Proxy.getSocket(digest);
+    OutputStream out=targetSocket.getOutputStream();
+    for (int i=0; i < 10; i++) {
+      out.write(i);
+      assertEquals(i,in.read());
+    }
+    protocol.verifyAll();
+  }
+  finally {
+    CloseableUtil.maybeClose(initiatorSocket);
+    CloseableUtil.maybeClose(targetSocket);
+  }
+}

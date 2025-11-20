@@ -1,0 +1,41 @@
+/** 
+ * Build the color table.
+ * @return the color table
+ */
+@Override public int[] buildColorTable(){
+  int[] table=new int[colors];
+  buildColorTable(root,table,0);
+  return table;
+}
+/** 
+ * A quick way to use the quantizer. Just create a table the right size and pass in the pixels.
+ * @param inPixels the input colors
+ * @param table the output color table
+ */
+public void buildColorTable(int[] inPixels,int[] table){
+  int count=inPixels.length;
+  maximumColors=table.length;
+  for (int i=0; i < count; i++) {
+    insertColor(inPixels[i]);
+    if (colors > reduceColors)     reduceTree(reduceColors);
+  }
+  if (colors > maximumColors)   reduceTree(maximumColors);
+  buildColorTable(root,table,0);
+}
+private int buildColorTable(OctTreeNode node,int[] table,int index){
+  if (colors > maximumColors)   reduceTree(maximumColors);
+  if (node.isLeaf) {
+    int count=node.count;
+    table[index]=0xff000000 | ((node.totalRed / count) << 16) | ((node.totalGreen / count) << 8)| node.totalBlue / count;
+    node.index=index++;
+  }
+ else {
+    for (int i=0; i < 8; i++) {
+      if (node.leaf[i] != null) {
+        node.index=index;
+        index=buildColorTable(node.leaf[i],table,index);
+      }
+    }
+  }
+  return index;
+}

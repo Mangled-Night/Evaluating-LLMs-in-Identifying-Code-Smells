@@ -1,0 +1,19 @@
+/** 
+ * Creates a new  {@link ClientResources} instance and registers a shutdown hook to de-allocate the instance upon JVMshutdown.
+ * @return a new {@link ClientResources} instance.
+ */
+public static ClientResources create(){
+  final DefaultClientResources resources=DefaultClientResources.builder().eventLoopGroupProvider(new TestEventLoopGroupProvider()).build();
+  Runtime.getRuntime().addShutdownHook(new Thread(){
+    @Override public void run(){
+      try {
+        resources.shutdown(100,100,TimeUnit.MILLISECONDS).get(10,TimeUnit.SECONDS);
+      }
+ catch (      Exception e) {
+        e.printStackTrace();
+      }
+    }
+  }
+);
+  return resources;
+}

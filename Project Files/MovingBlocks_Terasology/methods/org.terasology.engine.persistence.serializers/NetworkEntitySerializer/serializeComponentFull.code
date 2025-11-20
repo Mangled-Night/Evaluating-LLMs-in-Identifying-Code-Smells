@@ -1,0 +1,21 @@
+private void serializeComponentFull(Component component,boolean ignoreIfNoFields,FieldSerializeCheck<Component> fieldCheck,EntityData.PackedEntity.Builder entityData,ByteString.Output entityFieldIds,ByteString.Output componentFieldCounts,boolean componentInitial){
+  ComponentMetadata<?> componentMetadata=componentLibrary.getMetadata(component.getClass());
+  if (componentMetadata == null) {
+    logger.error("Unregistered component type: {}",component.getClass());
+    return;
+  }
+  Serializer serializer=typeHandlerLibrary.getSerializerFor(componentMetadata);
+  byte fieldCount=0;
+  for (  ReplicatedFieldMetadata field : componentMetadata.getFields()) {
+    if (fieldCheck.shouldSerializeField(field,component,componentInitial)) {
+      PersistedData fieldValue=serializer.serialize(field,component,serializationContext);
+      entityFieldIds.write(field.getId());
+      entityData.addFieldValue(((ProtobufPersistedData)fieldValue).getValue());
+      fieldCount++;
+    }
+  }
+  if (fieldCount != 0 || !ignoreIfNoFields) {
+    entityData.addComponentId(idTable.get(component.getClass()));
+    componentFieldCounts.write(fieldCount);
+  }
+}

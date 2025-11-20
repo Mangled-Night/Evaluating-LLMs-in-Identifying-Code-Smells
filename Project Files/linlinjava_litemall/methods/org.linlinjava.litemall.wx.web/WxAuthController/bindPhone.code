@@ -1,0 +1,21 @@
+/** 
+ * 微信手机号码绑定
+ * @param userId
+ * @param body
+ * @return
+ */
+@PostMapping("bindPhone") public Object bindPhone(@LoginUser Integer userId,@RequestBody String body){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  LitemallUser user=userService.findById(userId);
+  String encryptedData=JacksonUtil.parseString(body,"encryptedData");
+  String iv=JacksonUtil.parseString(body,"iv");
+  WxMaPhoneNumberInfo phoneNumberInfo=this.wxService.getUserService().getPhoneNoInfo(user.getSessionKey(),encryptedData,iv);
+  String phone=phoneNumberInfo.getPhoneNumber();
+  user.setMobile(phone);
+  if (userService.updateById(user) == 0) {
+    return ResponseUtil.updatedDataFailed();
+  }
+  return ResponseUtil.ok();
+}

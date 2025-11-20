@@ -1,0 +1,19 @@
+private EntityRef createBlockEntity(Vector3ic blockPosition,Block block){
+  EntityBuilder builder=entityManager.newBuilder(block.getPrefab().orElse(null));
+  builder.addComponent(new LocationComponent(new Vector3f(blockPosition)));
+  builder.addComponent(new BlockComponent(block,blockPosition));
+  boolean isTemporary=isTemporaryBlock(builder,block);
+  if (!isTemporary && !builder.hasComponent(NetworkComponent.class)) {
+    builder.addComponent(new NetworkComponent());
+  }
+  EntityRef blockEntity;
+  if (isTemporary) {
+    blockEntity=builder.buildWithoutLifecycleEvents();
+    temporaryBlockEntities.add(blockEntity);
+  }
+ else {
+    blockEntity=builder.build();
+  }
+  blockEntityLookup.put(new Vector3i(blockPosition),blockEntity);
+  return blockEntity;
+}

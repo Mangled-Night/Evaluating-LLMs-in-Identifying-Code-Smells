@@ -1,0 +1,18 @@
+@Override public int permission(JSONArray datas,int id){
+  for (int i=0; i < datas.size(); i++) {
+    JSONObject json=datas.getJSONObject(i);
+    if (json.getBoolean("checked")) {
+      UpmsUserPermission upmsUserPermission=new UpmsUserPermission();
+      upmsUserPermission.setUserId(id);
+      upmsUserPermission.setPermissionId(json.getIntValue("id"));
+      upmsUserPermission.setType(json.getByte("type"));
+      upmsUserPermissionMapper.insertSelective(upmsUserPermission);
+    }
+ else {
+      UpmsUserPermissionExample upmsUserPermissionExample=new UpmsUserPermissionExample();
+      upmsUserPermissionExample.createCriteria().andPermissionIdEqualTo(json.getIntValue("id")).andTypeEqualTo(json.getByte("type"));
+      upmsUserPermissionMapper.deleteByExample(upmsUserPermissionExample);
+    }
+  }
+  return datas.size();
+}

@@ -1,0 +1,24 @@
+@Override public OpenPgpElementAndMetadata signAndEncrypt(SigncryptElement element,OpenPgpSelf self,Collection<OpenPgpContact> recipients) throws IOException, PGPException {
+  InputStream plainText=element.toInputStream();
+  ByteArrayOutputStream cipherText=new ByteArrayOutputStream();
+  EncryptionOptions encOpts=EncryptionOptions.encryptCommunications();
+  for (  OpenPgpContact contact : recipients) {
+    PGPPublicKeyRingCollection keys=contact.getTrustedAnnouncedKeys();
+    if (keys == null) {
+      LOGGER.log(Level.WARNING,"There are no suitable keys for contact " + contact.getJid());
+    }
+    encOpts.addRecipients(keys);
+  }
+  encOpts.addRecipients(self.getTrustedAnnouncedKeys());
+  SigningOptions signOpts=new SigningOptions();
+  signOpts.addInlineSignature(getStore().getKeyRingProtector(),self.getSigningKeyRing(),DocumentSignatureType.BINARY_DOCUMENT);
+  EncryptionStream cipherStream=PGPainless.encryptAndOrSign().onOutputStream(cipherText).withOptions(ProducerOptions.signAndEncrypt(encOpts,signOpts).setAsciiArmor(false));
+  Streams.pipeAll(plainText,cipherStream);
+  plainText.close();
+  cipherStream.flush();
+  cipherStream.close();
+  cipherText.close();
+  String base64=Base64.encodeToString(cipherText.toByteArray());
+  OpenPgpElement openPgpElement=new OpenPgpElement(base64);
+  return new OpenPgpElementAndMetadata(openPgpElement,cipherStream.getResult());
+}

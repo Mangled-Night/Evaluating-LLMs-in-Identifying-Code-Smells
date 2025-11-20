@@ -1,0 +1,22 @@
+/** 
+ * <p> <b>Deprecation Notice:</b> This class is deprecated, use  {@link IqProvider} instead.</p> An abstract class for parsing custom IQ packets. Each IQProvider must be registered with the ProviderManager class for it to be used. Every implementation of this abstract class <b>must</b> have a public, no-argument constructor.
+ * @author Matt Tucker
+ * @deprecated Use {@link IqProvider} instead
+ */
+@Deprecated public abstract class LegacyIQProvider<I extends IQ> extends IqProvider<I> {
+  public final I parse(  XmlPullParser parser) throws IOException, XmlPullParserException, SmackParsingException {
+    return parse(parser,(XmlEnvironment)null);
+  }
+  public final I parse(  XmlPullParser parser,  XmlEnvironment outerXmlEnvironment) throws IOException, XmlPullParserException, SmackParsingException {
+    ParserUtils.assertAtStartTag(parser);
+    final int initialDepth=parser.getDepth();
+    final XmlEnvironment xmlEnvironment=XmlEnvironment.from(parser,outerXmlEnvironment);
+    I e=wrapExceptions(() -> parse(parser,initialDepth,xmlEnvironment));
+    ParserUtils.forwardToEndTagOfDepth(parser,initialDepth);
+    return e;
+  }
+  @Override public final I parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException, ParseException {
+    return parse(parser,initialDepth,xmlEnvironment);
+  }
+  public abstract I parse(  XmlPullParser parser,  int initialDepth,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException, ParseException ;
+}

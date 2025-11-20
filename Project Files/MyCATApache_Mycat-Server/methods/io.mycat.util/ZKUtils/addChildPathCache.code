@@ -1,0 +1,13 @@
+public static void addChildPathCache(String path,PathChildrenCacheListener listener){
+  NameableExecutor businessExecutor=MycatServer.getInstance().getBusinessExecutor();
+  ExecutorService executor=businessExecutor == null ? Executors.newFixedThreadPool(5) : businessExecutor;
+  try {
+    final PathChildrenCache childrenCache=new PathChildrenCache(getConnection(),path,true);
+    childrenCache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
+    childrenCache.getListenable().addListener(listener,executor);
+    watchMap.put(path,childrenCache);
+  }
+ catch (  Exception e) {
+    throw new RuntimeException(e);
+  }
+}

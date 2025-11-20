@@ -1,0 +1,19 @@
+@ParameterizedTest @EnumSource(SmackTestUtil.XmlPullParserKind.class) public void testRange(SmackTestUtil.XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+  ValidateElement dv=new RangeValidateElement("xs:string","min-val","max-val");
+  ListRange listRange=new ListRange(111L,999L);
+  dv.setListRange(listRange);
+  String xml=dv.toXML().toString();
+  dv=SmackTestUtil.parse(xml,DataValidationProvider.class,parserKind);
+  assertNotNull(dv);
+  assertEquals("xs:string",dv.getDatatype());
+  assertTrue(dv instanceof RangeValidateElement);
+  RangeValidateElement rdv=(RangeValidateElement)dv;
+  assertEquals("min-val",rdv.getMin());
+  assertEquals("max-val",rdv.getMax());
+  assertNotNull(rdv.getListRange());
+  assertEquals(111L,rdv.getListRange().getMin().nativeRepresentation());
+  assertEquals(999L,rdv.getListRange().getMax().nativeRepresentation());
+  assertNotNull(dv.toXML());
+  xml=dv.toXML().toString();
+  assertEquals(TEST_OUTPUT_RANGE,xml);
+}

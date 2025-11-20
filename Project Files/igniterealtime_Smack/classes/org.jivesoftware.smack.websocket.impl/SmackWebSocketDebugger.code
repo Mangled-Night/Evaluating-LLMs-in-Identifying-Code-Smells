@@ -1,0 +1,29 @@
+public class SmackWebSocketDebugger {
+  private static final Logger LOGGER=Logger.getLogger(SmackWebSocketDebugger.class.getName());
+  private final SmackDebugger debugger;
+  private final XmppXmlSplitter incomingXmlSplitter;
+  private final XmppXmlSplitter outgoingXmlSplitter;
+  SmackWebSocketDebugger(  SmackDebugger smackDebugger){
+    this.debugger=smackDebugger;
+    XmlPrettyPrinter incomingTextPrinter=XmlPrettyPrinter.builder().setPrettyWriter(sb -> debugger.incomingStreamSink(sb)).setTabWidth(4).build();
+    incomingXmlSplitter=new XmppXmlSplitter(incomingTextPrinter);
+    XmlPrettyPrinter outgoingTextPrinter=XmlPrettyPrinter.builder().setPrettyWriter(sb -> debugger.outgoingStreamSink(sb)).setTabWidth(4).build();
+    outgoingXmlSplitter=new XmppXmlSplitter(outgoingTextPrinter);
+  }
+  void incoming(  String text){
+    try {
+      incomingXmlSplitter.write(text);
+    }
+ catch (    IOException e) {
+      LOGGER.log(Level.WARNING,"IOException encountered while parsing received text: " + text,e);
+    }
+  }
+  void outgoing(  String text){
+    try {
+      outgoingXmlSplitter.write(text);
+    }
+ catch (    IOException e) {
+      LOGGER.log(Level.WARNING,"IOException encountered while parsing outgoing text: " + text,e);
+    }
+  }
+}

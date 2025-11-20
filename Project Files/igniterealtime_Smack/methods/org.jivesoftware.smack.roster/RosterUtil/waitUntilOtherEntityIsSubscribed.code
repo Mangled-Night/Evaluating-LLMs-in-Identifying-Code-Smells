@@ -1,0 +1,41 @@
+public static void waitUntilOtherEntityIsSubscribed(Roster roster,BareJid otherEntity,long timeoutMillis) throws InterruptedException, TimeoutException {
+  Date deadline=new Date(System.currentTimeMillis() + timeoutMillis);
+  waitUntilOtherEntityIsSubscribed(roster,otherEntity,deadline);
+}
+public static void waitUntilOtherEntityIsSubscribed(Roster roster,final BareJid otherEntity,Date deadline) throws InterruptedException, TimeoutException {
+  final Lock lock=new ReentrantLock();
+  final Condition maybeSubscribed=lock.newCondition();
+  RosterListener rosterListener=new AbstractRosterListener(){
+    private void signal(){
+      lock.lock();
+      try {
+        maybeSubscribed.signal();
+      }
+  finally {
+        lock.unlock();
+      }
+    }
+    @Override public void entriesAdded(    Collection<Jid> addresses){
+      signal();
+    }
+    @Override public void entriesUpdated(    Collection<Jid> addresses){
+      signal();
+    }
+  }
+;
+  roster.addRosterListener(rosterListener);
+  boolean stillWaiting=true;
+  lock.lock();
+  try {
+    while (!roster.isSubscribedToMyPresence(otherEntity)) {
+      if (!stillWaiting) {
+        throw new TimeoutException();
+      }
+      stillWaiting=maybeSubscribed.awaitUntil(deadline);
+    }
+  }
+  finally {
+    lock.unlock();
+    roster.removeRosterListener(rosterListener);
+  }
+}

@@ -1,0 +1,22 @@
+public BackendConnection takeIdleCon(boolean autoCommit){
+  ConcurrentLinkedQueue<BackendConnection> f1=autoCommitCons;
+  ConcurrentLinkedQueue<BackendConnection> f2=manCommitCons;
+  if (!autoCommit) {
+    f1=manCommitCons;
+    f2=autoCommitCons;
+  }
+  BackendConnection con=f1.poll();
+  while (con != null && !con.checkAlive()) {
+    con.close("channel is closed");
+    con=f1.poll();
+  }
+  if (con == null || con.isClosedOrQuit()) {
+    con=f2.poll();
+  }
+  if (con == null || con.isClosedOrQuit()) {
+    return null;
+  }
+ else {
+    return con;
+  }
+}

@@ -1,0 +1,70 @@
+@Override protected void internalSerialize(TeraDenseArray16Bit array,ByteBuffer buffer){
+  final short[] data=array.data;
+  if (data == null) {
+    buffer.putInt(0);
+  }
+ else {
+    buffer.putInt(data.length);
+    final ShortBuffer sbuffer=buffer.asShortBuffer();
+    sbuffer.put(data);
+    buffer.position(buffer.position() + data.length * 2);
+  }
+}
+@Override protected void internalSerialize(T array,ByteBuffer buffer){
+  final byte[] data=array.data;
+  if (data == null) {
+    buffer.putInt(0);
+  }
+ else {
+    buffer.putInt(data.length);
+    buffer.put(data);
+  }
+}
+@Override protected void internalSerialize(TeraSparseArray16Bit array,ByteBuffer buffer){
+  final short[][] inf=array.inflated;
+  if (inf == null) {
+    buffer.put((byte)0);
+    buffer.putShort(array.fill);
+  }
+ else {
+    buffer.put((byte)1);
+    int sizeY=array.getSizeY();
+    int rowSize=array.getSizeXZ();
+    final short[] def=array.deflated;
+    for (int y=0; y < sizeY; y++) {
+      final short[] row=inf[y];
+      if (row == null) {
+        buffer.put((byte)0);
+        buffer.putShort(def[y]);
+      }
+ else {
+        buffer.put((byte)1);
+        putRow(row,rowSize,buffer);
+      }
+    }
+  }
+}
+@Override protected void internalSerialize(T array,ByteBuffer buffer){
+  final byte[][] inf=array.inflated;
+  if (inf == null) {
+    buffer.put((byte)0);
+    buffer.put(array.fill);
+  }
+ else {
+    buffer.put((byte)1);
+    int sizeY=array.getSizeY();
+    int rowSize=array.rowSize();
+    final byte[] def=array.deflated;
+    for (int y=0; y < sizeY; y++) {
+      final byte[] row=inf[y];
+      if (row == null) {
+        buffer.put((byte)0);
+        buffer.put(def[y]);
+      }
+ else {
+        buffer.put((byte)1);
+        buffer.put(row,0,rowSize);
+      }
+    }
+  }
+}

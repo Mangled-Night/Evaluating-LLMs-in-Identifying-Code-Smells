@@ -1,0 +1,10 @@
+@SuppressWarnings("rawtypes") private CompletableFuture<List<T>> createPublicStage(Map<RedisClusterNode,CompletableFuture<T>> map){
+  return CompletableFuture.allOf(map.values().toArray(new CompletableFuture[0])).thenApply(ignore -> {
+    List<T> results=new ArrayList<>(map.size());
+    for (    CompletionStage<? extends T> value : map.values()) {
+      results.add(value.toCompletableFuture().join());
+    }
+    return results;
+  }
+);
+}

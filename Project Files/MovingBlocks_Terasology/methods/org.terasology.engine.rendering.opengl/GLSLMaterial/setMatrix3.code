@@ -1,0 +1,42 @@
+@Override public void setMatrix3(String desc,Matrix3fc value,boolean currentOnly){
+  if (isDisposed()) {
+    return;
+  }
+  matrixBuffer.rewind();
+  value.get(matrixBuffer);
+  if (currentOnly) {
+    enable();
+    int id=getUniformLocation(getActiveShaderProgramId(),desc);
+    GL20.glUniformMatrix3fv(id,false,matrixBuffer);
+  }
+ else {
+    TIntIntIterator it=disposalAction.shaderPrograms.iterator();
+    while (it.hasNext()) {
+      it.advance();
+      GL20.glUseProgram(it.value());
+      int id=getUniformLocation(it.value(),desc);
+      GL20.glUniformMatrix3fv(id,false,matrixBuffer);
+    }
+    restoreStateAfterUniformsSet();
+  }
+}
+@Override public void setMatrix3(String desc,FloatBuffer value,boolean currentOnly){
+  if (isDisposed()) {
+    return;
+  }
+  if (currentOnly) {
+    enable();
+    int id=getUniformLocation(getActiveShaderProgramId(),desc);
+    GL20.glUniformMatrix3fv(id,false,value);
+  }
+ else {
+    TIntIntIterator it=disposalAction.shaderPrograms.iterator();
+    while (it.hasNext()) {
+      it.advance();
+      GL20.glUseProgram(it.value());
+      int id=getUniformLocation(it.value(),desc);
+      GL20.glUniformMatrix3fv(id,false,value);
+    }
+    restoreStateAfterUniformsSet();
+  }
+}

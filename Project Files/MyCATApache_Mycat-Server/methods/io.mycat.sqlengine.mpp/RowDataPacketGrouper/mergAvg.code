@@ -1,0 +1,19 @@
+private void mergAvg(RowDataPacket toRow){
+  if (mergCols == null) {
+    return;
+  }
+  TreeSet<Integer> rmIndexSet=new TreeSet<Integer>();
+  for (  MergeCol merg : mergCols) {
+    if (merg.mergeType == MergeCol.MERGE_AVG) {
+      byte[] result=mertFields(toRow.fieldValues.get(merg.colMeta.avgSumIndex),toRow.fieldValues.get(merg.colMeta.avgCountIndex),merg.colMeta.colType,merg.mergeType);
+      if (result != null) {
+        toRow.fieldValues.set(merg.colMeta.avgSumIndex,result);
+        rmIndexSet.add(merg.colMeta.avgCountIndex);
+      }
+    }
+  }
+  for (  int index : rmIndexSet.descendingSet()) {
+    toRow.fieldValues.remove(index);
+    toRow.fieldCount=toRow.fieldCount - 1;
+  }
+}

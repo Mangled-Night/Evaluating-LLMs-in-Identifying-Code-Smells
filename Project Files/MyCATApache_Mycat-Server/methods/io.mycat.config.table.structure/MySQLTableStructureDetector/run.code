@@ -1,0 +1,21 @@
+@Override public void run(){
+  for (  SchemaConfig schema : MycatServer.getInstance().getConfig().getSchemas().values()) {
+    for (    TableConfig table : schema.getTables().values()) {
+      for (      String dataNode : table.getDataNodes()) {
+        try {
+          table.getReentrantReadWriteLock().writeLock().lock();
+          ConcurrentHashMap<String,List<String>> map=new ConcurrentHashMap<>();
+          table.setDataNodeTableStructureSQLMap(map);
+        }
+  finally {
+          table.getReentrantReadWriteLock().writeLock().unlock();
+        }
+        OneRawSQLQueryResultHandler resultHandler=new OneRawSQLQueryResultHandler(MYSQL_SHOW_CREATE_TABLE_COLMS,new MySQLTableStructureListener(dataNode,table));
+        resultHandler.setMark("Table Structure");
+        PhysicalDBNode dn=MycatServer.getInstance().getConfig().getDataNodes().get(dataNode);
+        SQLJob sqlJob=new SQLJob(sqlPrefix + table.getName(),dn.getDatabase(),resultHandler,dn.getDbPool().getSource());
+        sqlJob.run();
+      }
+    }
+  }
+}

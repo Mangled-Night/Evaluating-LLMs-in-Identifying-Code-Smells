@@ -1,0 +1,16 @@
+public void initialize(int port) throws InterruptedException {
+  bossGroup=Resources.bossGroup;
+  workerGroup=Resources.workerGroup;
+  ServerBootstrap b=new ServerBootstrap();
+  b.group(bossGroup,workerGroup).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG,100).childHandler(new ChannelInitializer<SocketChannel>(){
+    @Override public void initChannel(    SocketChannel ch){
+      ChannelPipeline p=ch.pipeline();
+      for (      Supplier<? extends ChannelHandler> handler : handlers) {
+        p.addLast(handler.get());
+      }
+    }
+  }
+);
+  ChannelFuture f=b.bind(port).sync();
+  channel=f.channel();
+}

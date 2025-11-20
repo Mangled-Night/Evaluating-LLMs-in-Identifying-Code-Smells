@@ -1,0 +1,23 @@
+@Test public void testClusterConnectionStability(){
+  RedisAdvancedClusterAsyncCommandsImpl<String,String> connection=(RedisAdvancedClusterAsyncCommandsImpl<String,String>)clusterClient.connect().async();
+  RedisChannelHandler<String,String> statefulConnection=(RedisChannelHandler)connection.getStatefulConnection();
+  connection.set("a","b");
+  ClusterDistributionChannelWriter writer=(ClusterDistributionChannelWriter)statefulConnection.getChannelWriter();
+  StatefulRedisConnectionImpl<Object,Object> statefulSlotConnection=(StatefulRedisConnectionImpl)writer.getClusterConnectionProvider().getConnection(ConnectionIntent.WRITE,3300);
+  final RedisAsyncCommands<Object,Object> slotConnection=statefulSlotConnection.async();
+  slotConnection.set("a","b");
+  slotConnection.getStatefulConnection().close();
+  Wait.untilTrue(() -> !slotConnection.isOpen()).waitOrTimeout();
+  assertThat(statefulSlotConnection.isClosed()).isTrue();
+  assertThat(statefulSlotConnection.isOpen()).isFalse();
+  assertThat(connection.isOpen()).isTrue();
+  assertThat(statefulConnection.isOpen()).isTrue();
+  assertThat(statefulConnection.isClosed()).isFalse();
+  try {
+    connection.set("a","b");
+  }
+ catch (  RedisException e) {
+    assertThat(e).hasMessageContaining("Connection is closed");
+  }
+  connection.getStatefulConnection().close();
+}

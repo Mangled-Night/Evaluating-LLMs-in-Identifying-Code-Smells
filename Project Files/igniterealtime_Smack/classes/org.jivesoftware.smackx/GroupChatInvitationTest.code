@@ -1,0 +1,42 @@
+/** 
+ * @author Matt Tucker
+ */
+public class GroupChatInvitationTest extends SmackTestCase {
+  private StanzaCollector collector=null;
+  /** 
+ * Constructor for GroupChatInvitationTest.
+ * @param arg0 TODO javadoc me please
+ */
+  public GroupChatInvitationTest(  String arg0){
+    super(arg0);
+  }
+  public void testInvitation(){
+    try {
+      GroupChatInvitation invitation=new GroupChatInvitation("test@" + getChatDomain());
+      Message message=new Message(getBareJID(1));
+      message.setBody("Group chat invitation!");
+      message.addExtension(invitation);
+      getConnection(0).sendStanza(message);
+      Thread.sleep(250);
+      Message result=(Message)collector.pollResult();
+      assertNotNull("Message not delivered correctly.",result);
+      GroupChatInvitation resultInvite=(GroupChatInvitation)result.getExtension("x","jabber:x:conference");
+      assertEquals("Invitation not to correct room","test@" + getChatDomain(),resultInvite.getRoomAddress());
+    }
+ catch (    Exception e) {
+      fail(e.getMessage());
+    }
+  }
+  protected void setUp() throws Exception {
+    super.setUp();
+    PacketFilter filter=new StanzaExtensionFilter("x","jabber:x:conference");
+    collector=getConnection(1).createStanzaCollector(filter);
+  }
+  protected void tearDown() throws Exception {
+    collector.cancel();
+    super.tearDown();
+  }
+  protected int getMaxConnections(){
+    return 2;
+  }
+}

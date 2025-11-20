@@ -1,0 +1,21 @@
+@SmackIntegrationTest public void test() throws Exception {
+  final String body=StringUtils.randomString(16);
+  final SimpleResultSyncPoint syncPoint=new SimpleResultSyncPoint();
+  final IncomingChatMessageListener listener=new IncomingChatMessageListener(){
+    @Override public void newIncomingMessage(    EntityBareJid from,    Message message,    Chat chat){
+      if (body.equals(message.getBody())) {
+        syncPoint.signal();
+      }
+    }
+  }
+;
+  try {
+    chatManagerTwo.addIncomingListener(listener);
+    Chat chat=chatManagerOne.chatWith(conTwo.getUser().asEntityBareJid());
+    chat.send(body);
+    syncPoint.waitForResult(timeout);
+  }
+  finally {
+    chatManagerTwo.removeIncomingListener(listener);
+  }
+}

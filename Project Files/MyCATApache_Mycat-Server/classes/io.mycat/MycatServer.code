@@ -1,0 +1,804 @@
+/** 
+ * @author mycat
+ */
+public class MycatServer {
+  public static final String NAME="MyCat";
+  private static final long LOG_WATCH_DELAY=60000L;
+  private static final long TIME_UPDATE_PERIOD=20L;
+  private static final long DEFAULT_SQL_STAT_RECYCLE_PERIOD=5 * 1000L;
+  private static final long DEFAULT_OLD_CONNECTION_CLEAR_PERIOD=5 * 1000L;
+  private static final long DEFAULT_DATANODE_CALC_ACTIVECOUNT=1000L;
+  private static final MycatServer INSTANCE=new MycatServer();
+  private static final Logger LOGGER=LoggerFactory.getLogger("MycatServer");
+  private static final Repository fileRepository=new FileSystemRepository();
+  private final RouteService routerService;
+  private final CacheService cacheService;
+  private Properties dnIndexProperties;
+  private AsynchronousChannelGroup[] asyncChannelGroups;
+  private volatile int channelIndex=0;
+  private final DynaClassLoader catletClassLoader;
+  private final SQLInterceptor sqlInterceptor;
+  private volatile int nextProcessor;
+  private BufferPool bufferPool;
+  private boolean aio=false;
+  private final AtomicLong xaIDInc=new AtomicLong();
+  private SequenceHandler sequenceHandler;
+  /** 
+ * Mycat 内存管理类
+ */
+  private MyCatMemory myCatMemory=null;
+  public static final MycatServer getInstance(){
+    return INSTANCE;
+  }
+  private final MycatConfig config;
+  private final ScheduledExecutorService scheduler;
+  private final ScheduledExecutorService heartbeatScheduler;
+  private final SQLRecorder sqlRecorder;
+  private final AtomicBoolean isOnline;
+  private final long startupTime;
+  private NIOProcessor[] processors;
+  private SocketConnector connector;
+  private NameableExecutor businessExecutor;
+  private NameableExecutor sequenceExecutor;
+  private NameableExecutor timerExecutor;
+  private ListeningExecutorService listeningExecutorService;
+  private InterProcessMutex dnindexLock;
+  private long totalNetWorkBufferSize=0;
+  private volatile MycatLeaderLatch leaderLatch;
+  private final AtomicBoolean startup=new AtomicBoolean(false);
+  private ScheduledFuture<?> recycleSqlStatFuture=null;
+  private MycatServer(){
+    this.config=new MycatConfig();
+    scheduler=Executors.newSingleThreadScheduledExecutor();
+    heartbeatScheduler=Executors.newSingleThreadScheduledExecutor();
+    this.sqlRecorder=new SQLRecorder(config.getSystem().getSqlRecordCount());
+    this.isOnline=new AtomicBoolean(true);
+    cacheService=new CacheService();
+    routerService=new RouteService(cacheService);
+    dnIndexProperties=loadDnIndexProps();
+    try {
+      sqlInterceptor=(SQLInterceptor)Class.forName(config.getSystem().getSqlInterceptor()).newInstance();
+    }
+ catch (    Exception e) {
+      throw new RuntimeException(e);
+    }
+    catletClassLoader=new DynaClassLoader(SystemConfig.getHomePath() + File.separator + "catlet",config.getSystem().getCatletClassCheckSeconds());
+    this.startupTime=TimeUtil.currentTimeMillis();
+    if (isUseZkSwitch()) {
+      String path=ZKUtils.getZKBasePath() + "lock/dnindex.lock";
+      dnindexLock=new InterProcessMutex(ZKUtils.getConnection(),path);
+    }
+  }
+  public AtomicBoolean getStartup(){
+    return startup;
+  }
+  public long getTotalNetWorkBufferSize(){
+    return totalNetWorkBufferSize;
+  }
+  public BufferPool getBufferPool(){
+    return bufferPool;
+  }
+  public NameableExecutor getTimerExecutor(){
+    return timerExecutor;
+  }
+  public DynaClassLoader getCatletClassLoader(){
+    return catletClassLoader;
+  }
+  public MyCATSequnceProcessor getSequnceProcessor(){
+    return MyCATSequnceProcessor.getInstance();
+  }
+  public SQLInterceptor getSqlInterceptor(){
+    return sqlInterceptor;
+  }
+  public ScheduledExecutorService getScheduler(){
+    return scheduler;
+  }
+  public String genXATXID(){
+    long seq=this.xaIDInc.incrementAndGet();
+    if (seq < 0) {
+synchronized (xaIDInc) {
+        if (xaIDInc.get() < 0) {
+          xaIDInc.set(0);
+        }
+        seq=xaIDInc.incrementAndGet();
+      }
+    }
+    return "'Mycat." + this.getConfig().getSystem().getMycatNodeId() + "."+ seq+ "'";
+  }
+  public String getXATXIDGLOBAL(){
+    return "'" + getUUID() + "'";
+  }
+  public static String getUUID(){
+    String s=UUID.randomUUID().toString();
+    return s.substring(0,8) + s.substring(9,13) + s.substring(14,18)+ s.substring(19,23)+ s.substring(24);
+  }
+  public MyCatMemory getMyCatMemory(){
+    return myCatMemory;
+  }
+  /** 
+ * get next AsynchronousChannel ,first is exclude if multi AsynchronousChannelGroups
+ * @return
+ */
+  public AsynchronousChannelGroup getNextAsyncChannelGroup(){
+    if (asyncChannelGroups.length == 1) {
+      return asyncChannelGroups[0];
+    }
+ else {
+      int index=(++channelIndex) % asyncChannelGroups.length;
+      if (index == 0) {
+        ++channelIndex;
+        return asyncChannelGroups[1];
+      }
+ else {
+        return asyncChannelGroups[index];
+      }
+    }
+  }
+  public MycatConfig getConfig(){
+    return config;
+  }
+  public void beforeStart(){
+    String home=SystemConfig.getHomePath();
+  }
+  public void startup() throws IOException {
+    SystemConfig system=config.getSystem();
+    int processorCount=system.getProcessors();
+    RouteStrategyFactory.init();
+    LOGGER.info(NAME + " is ready to startup ...");
+    String inf="Startup processors ...,total processors:" + system.getProcessors() + ",aio thread pool size:"+ system.getProcessorExecutor()+ "    \r\n each process allocated socket buffer pool "+ " bytes ,a page size:"+ system.getBufferPoolPageSize()+ "  a page's chunk number(PageSize/ChunkSize) is:"+ (system.getBufferPoolPageSize() / system.getBufferPoolChunkSize())+ "  buffer page's number is:"+ system.getBufferPoolPageNumber();
+    LOGGER.info(inf);
+    LOGGER.info("sysconfig params:" + system.toString());
+    ManagerConnectionFactory mf=new ManagerConnectionFactory();
+    ServerConnectionFactory sf=new ServerConnectionFactory();
+    SocketAcceptor manager=null;
+    SocketAcceptor server=null;
+    aio=(system.getUsingAIO() == 1);
+    int threadPoolSize=system.getProcessorExecutor();
+    processors=new NIOProcessor[processorCount];
+    int bufferPoolPageSize=system.getBufferPoolPageSize();
+    short bufferPoolPageNumber=system.getBufferPoolPageNumber();
+    short bufferPoolChunkSize=system.getBufferPoolChunkSize();
+    int socketBufferLocalPercent=system.getProcessorBufferLocalPercent();
+    int bufferPoolType=system.getProcessorBufferPoolType();
+switch (bufferPoolType) {
+case 0:
+      bufferPool=new DirectByteBufferPool(bufferPoolPageSize,bufferPoolChunkSize,bufferPoolPageNumber,system.getFrontSocketSoRcvbuf());
+    totalNetWorkBufferSize=bufferPoolPageSize * bufferPoolPageNumber;
+  break;
+case 1:
+totalNetWorkBufferSize=6 * bufferPoolPageSize * bufferPoolPageNumber;
+break;
+case 2:
+bufferPool=new NettyBufferPool(bufferPoolChunkSize);
+LOGGER.info("Use Netty Buffer Pool");
+break;
+default :
+bufferPool=new DirectByteBufferPool(bufferPoolPageSize,bufferPoolChunkSize,bufferPoolPageNumber,system.getFrontSocketSoRcvbuf());
+;
+totalNetWorkBufferSize=bufferPoolPageSize * bufferPoolPageNumber;
+}
+if (system.getUseOffHeapForMerge() == 1) {
+try {
+myCatMemory=new MyCatMemory(system,totalNetWorkBufferSize);
+}
+ catch (NoSuchFieldException e) {
+LOGGER.error("NoSuchFieldException",e);
+}
+catch (IllegalAccessException e) {
+LOGGER.error("Error",e);
+}
+}
+businessExecutor=ExecutorUtil.create("BusinessExecutor",threadPoolSize);
+sequenceExecutor=ExecutorUtil.create("SequenceExecutor",threadPoolSize);
+timerExecutor=ExecutorUtil.create("Timer",system.getTimerExecutor());
+listeningExecutorService=MoreExecutors.listeningDecorator(businessExecutor);
+for (int i=0; i < processors.length; i++) {
+processors[i]=new NIOProcessor("Processor" + i,bufferPool,businessExecutor);
+}
+if (aio) {
+LOGGER.info("using aio network handler ");
+asyncChannelGroups=new AsynchronousChannelGroup[processorCount];
+connector=new AIOConnector();
+for (int i=0; i < processors.length; i++) {
+asyncChannelGroups[i]=AsynchronousChannelGroup.withFixedThreadPool(processorCount,new ThreadFactory(){
+private int inx=1;
+@Override public Thread newThread(Runnable r){
+Thread th=new Thread(r);
+th.setName(DirectByteBufferPool.LOCAL_BUF_THREAD_PREX + "AIO" + (inx++));
+LOGGER.info("created new AIO thread " + th.getName());
+return th;
+}
+}
+);
+}
+manager=new AIOAcceptor(NAME + "Manager",system.getBindIp(),system.getManagerPort(),system.getServerBacklog(),mf,this.asyncChannelGroups[0]);
+server=new AIOAcceptor(NAME + "Server",system.getBindIp(),system.getServerPort(),system.getServerBacklog(),sf,this.asyncChannelGroups[0]);
+}
+ else {
+LOGGER.info("using nio network handler ");
+NIOReactorPool reactorPool=new NIOReactorPool(DirectByteBufferPool.LOCAL_BUF_THREAD_PREX + "NIOREACTOR",processors.length);
+connector=new NIOConnector(DirectByteBufferPool.LOCAL_BUF_THREAD_PREX + "NIOConnector",reactorPool);
+((NIOConnector)connector).start();
+manager=new NIOAcceptor(DirectByteBufferPool.LOCAL_BUF_THREAD_PREX + NAME + "Manager",system.getBindIp(),system.getManagerPort(),system.getServerBacklog(),mf,reactorPool);
+server=new NIOAcceptor(DirectByteBufferPool.LOCAL_BUF_THREAD_PREX + NAME + "Server",system.getBindIp(),system.getServerPort(),system.getServerBacklog(),sf,reactorPool);
+}
+manager.start();
+LOGGER.info(manager.getName() + " is started and listening on " + manager.getPort());
+server.start();
+LOGGER.info(server.getName() + " is started and listening on " + server.getPort());
+LOGGER.info("===============================================");
+Map<String,PhysicalDBPool> dataHosts=config.getDataHosts();
+LOGGER.info("Initialize dataHost ...");
+for (PhysicalDBPool node : dataHosts.values()) {
+String index=dnIndexProperties.getProperty(node.getHostName(),"0");
+if (!"0".equals(index)) {
+LOGGER.info("init datahost: " + node.getHostName() + "  to use datasource index:"+ index);
+}
+node.init(Integer.parseInt(index));
+node.startHeartbeat();
+}
+long dataNodeIldeCheckPeriod=system.getDataNodeIdleCheckPeriod();
+heartbeatScheduler.scheduleAtFixedRate(updateTime(),0L,TIME_UPDATE_PERIOD,TimeUnit.MILLISECONDS);
+heartbeatScheduler.scheduleAtFixedRate(processorCheck(),0L,system.getProcessorCheckPeriod(),TimeUnit.MILLISECONDS);
+heartbeatScheduler.scheduleAtFixedRate(dataNodeConHeartBeatCheck(dataNodeIldeCheckPeriod),0L,dataNodeIldeCheckPeriod,TimeUnit.MILLISECONDS);
+heartbeatScheduler.scheduleAtFixedRate(dataNodeHeartbeat(),0L,system.getDataNodeHeartbeatPeriod(),TimeUnit.MILLISECONDS);
+heartbeatScheduler.scheduleAtFixedRate(dataSourceOldConsClear(),0L,DEFAULT_OLD_CONNECTION_CLEAR_PERIOD,TimeUnit.MILLISECONDS);
+heartbeatScheduler.scheduleAtFixedRate(dataNodeCalcActiveCons(),0L,DEFAULT_DATANODE_CALC_ACTIVECOUNT,TimeUnit.MILLISECONDS);
+scheduler.schedule(catletClassClear(),30000,TimeUnit.MILLISECONDS);
+if (system.getCheckTableConsistency() == 1) {
+scheduler.scheduleAtFixedRate(tableStructureCheck(),0L,system.getCheckTableConsistencyPeriod(),TimeUnit.MILLISECONDS);
+}
+ensureSqlstatRecycleFuture();
+if (system.getUseGlobleTableCheck() == 1) {
+}
+scheduler.scheduleAtFixedRate(resultSetMapClear(),0L,system.getClearBigSqLResultSetMapMs(),TimeUnit.MILLISECONDS);
+scheduler.scheduleAtFixedRate(xaTaskCheck(),0L,10 * 1000,TimeUnit.MILLISECONDS);
+LOGGER.info("===============================================");
+LOGGER.info("Perform XA recovery log ...");
+CoordinatorLogEntry[] coordinatorLogEntries=getCoordinatorLogEntries();
+putXARecoveryLogToMemory(coordinatorLogEntries);
+performXARecoveryLog(coordinatorLogEntries);
+LOGGER.info("Perform XA recovery log end...");
+if (isUseZkSwitch()) {
+initZkDnindex();
+leaderLatch=new MycatLeaderLatch("heartbeat/leader");
+try {
+leaderLatch.start();
+}
+ catch (Exception e) {
+LOGGER.error(e.getMessage(),e);
+e.printStackTrace();
+}
+}
+initRuleData();
+startup.set(true);
+}
+public void ensureSqlstatRecycleFuture(){
+if (config.getSystem().getUseSqlStat() == 1) {
+if (recycleSqlStatFuture == null) {
+recycleSqlStatFuture=scheduler.scheduleAtFixedRate(recycleSqlStat(),0L,DEFAULT_SQL_STAT_RECYCLE_PERIOD,TimeUnit.MILLISECONDS);
+}
+}
+ else {
+if (recycleSqlStatFuture != null) {
+recycleSqlStatFuture.cancel(false);
+recycleSqlStatFuture=null;
+}
+}
+}
+public void initRuleData(){
+if (!isUseZk()) return;
+InterProcessMutex ruleDataLock=null;
+try {
+File file=new File(SystemConfig.getHomePath(),"conf" + File.separator + "ruledata");
+if (!file.exists()) {
+file.mkdir();
+}
+String path=ZKUtils.getZKBasePath() + "lock/ruledata.lock";
+ruleDataLock=new InterProcessMutex(ZKUtils.getConnection(),path);
+ruleDataLock.acquire(30,TimeUnit.SECONDS);
+File[] childFiles=file.listFiles();
+if (childFiles != null && childFiles.length > 0) {
+String basePath=ZKUtils.getZKBasePath() + "ruledata/";
+for (File childFile : childFiles) {
+CuratorFramework zk=ZKUtils.getConnection();
+if (zk.checkExists().forPath(basePath + childFile.getName()) == null) {
+zk.create().creatingParentsIfNeeded().forPath(basePath + childFile.getName(),Files.toByteArray(childFile));
+}
+}
+}
+}
+ catch (Exception e) {
+throw new RuntimeException(e);
+}
+ finally {
+try {
+if (ruleDataLock != null) ruleDataLock.release();
+}
+ catch (Exception e) {
+throw new RuntimeException(e);
+}
+}
+}
+private void initZkDnindex(){
+try {
+File file=new File(SystemConfig.getHomePath(),"conf" + File.separator + "dnindex.properties");
+dnindexLock.acquire(30,TimeUnit.SECONDS);
+String path=ZKUtils.getZKBasePath() + "bindata/dnindex.properties";
+CuratorFramework zk=ZKUtils.getConnection();
+if (zk.checkExists().forPath(path) == null) {
+zk.create().creatingParentsIfNeeded().forPath(path,Files.toByteArray(file));
+}
+}
+ catch (Exception e) {
+throw new RuntimeException(e);
+}
+ finally {
+try {
+dnindexLock.release();
+}
+ catch (Exception e) {
+throw new RuntimeException(e);
+}
+}
+}
+public void reloadDnIndex(){
+if (MycatServer.getInstance().getProcessors() == null) return;
+dnIndexProperties=loadDnIndexProps();
+Map<String,PhysicalDBPool> dataHosts=config.getDataHosts();
+LOGGER.info("reInitialize dataHost ...");
+for (PhysicalDBPool node : dataHosts.values()) {
+String index=dnIndexProperties.getProperty(node.getHostName(),"0");
+if (!"0".equals(index)) {
+LOGGER.info("reinit datahost: " + node.getHostName() + "  to use datasource index:"+ index);
+}
+node.switchSource(Integer.parseInt(index),true,"reload dnindex");
+}
+}
+private Runnable catletClassClear(){
+return new Runnable(){
+@Override public void run(){
+try {
+catletClassLoader.clearUnUsedClass();
+}
+ catch (Exception e) {
+LOGGER.warn("catletClassClear err " + e);
+}
+}
+}
+;
+}
+/** 
+ * 清理 reload @@config_all 后，老的 connection 连接
+ * @return
+ */
+private Runnable dataSourceOldConsClear(){
+return new Runnable(){
+@Override public void run(){
+timerExecutor.execute(new Runnable(){
+@Override public void run(){
+long sqlTimeout=MycatServer.getInstance().getConfig().getSystem().getSqlExecuteTimeout() * 1000L;
+long currentTime=TimeUtil.currentTimeMillis();
+Iterator<BackendConnection> iter=NIOProcessor.backends_old.iterator();
+while (iter.hasNext()) {
+BackendConnection con=iter.next();
+long lastTime=con.getLastTime();
+if (currentTime - lastTime > sqlTimeout) {
+con.close("clear old backend connection ...");
+iter.remove();
+}
+}
+}
+}
+);
+}
+}
+;
+}
+/** 
+ * 在bufferpool使用率大于使用率阈值时不清理 在bufferpool使用率小于使用率阈值时清理大结果集清单内容
+ */
+private Runnable resultSetMapClear(){
+return new Runnable(){
+@Override public void run(){
+try {
+BufferPool bufferPool=getBufferPool();
+long bufferSize=bufferPool.size();
+long bufferCapacity=bufferPool.capacity();
+long bufferUsagePercent=(bufferCapacity - bufferSize) * 100 / bufferCapacity;
+if (bufferUsagePercent < config.getSystem().getBufferUsagePercent()) {
+Map<String,UserStat> map=UserStatAnalyzer.getInstance().getUserStatMap();
+Set<String> userSet=config.getUsers().keySet();
+for (String user : userSet) {
+UserStat userStat=map.get(user);
+if (userStat != null) {
+SqlResultSizeRecorder recorder=userStat.getSqlResultSizeRecorder();
+recorder.clearSqlResultSet();
+}
+}
+}
+}
+ catch (Exception e) {
+LOGGER.warn("resultSetMapClear err " + e);
+}
+}
+}
+;
+}
+private Properties loadDnIndexProps(){
+Properties prop=new Properties();
+File file=new File(SystemConfig.getHomePath(),"conf" + File.separator + "dnindex.properties");
+if (!file.exists()) {
+return prop;
+}
+FileInputStream filein=null;
+try {
+filein=new FileInputStream(file);
+prop.load(filein);
+}
+ catch (Exception e) {
+LOGGER.warn("load DataNodeIndex err:" + e);
+}
+ finally {
+if (filein != null) {
+try {
+filein.close();
+}
+ catch (IOException e) {
+}
+}
+}
+return prop;
+}
+public synchronized boolean saveDataHostIndexToZk(String dataHost,int curIndex){
+boolean result=false;
+try {
+try {
+dnindexLock.acquire(30,TimeUnit.SECONDS);
+String path=ZKUtils.getZKBasePath() + "bindata/dnindex.properties";
+Map<String,String> propertyMap=new HashMap<>();
+propertyMap.put(dataHost,String.valueOf(curIndex));
+result=ZKUtils.writeProperty(path,propertyMap);
+}
+  finally {
+dnindexLock.release();
+}
+}
+ catch (Exception e) {
+LOGGER.warn("saveDataHostIndexToZk err:",e);
+}
+return result;
+}
+/** 
+ * save cur datanode index to properties file
+ * @param
+ * @param curIndex
+ */
+public synchronized void saveDataHostIndex(String dataHost,int curIndex){
+File file=new File(SystemConfig.getHomePath(),"conf" + File.separator + "dnindex.properties");
+FileOutputStream fileOut=null;
+try {
+String oldIndex=dnIndexProperties.getProperty(dataHost);
+String newIndex=String.valueOf(curIndex);
+if (newIndex.equals(oldIndex)) {
+return;
+}
+dnIndexProperties.setProperty(dataHost,newIndex);
+LOGGER.info("save DataHost index  " + dataHost + " cur index "+ curIndex);
+File parent=file.getParentFile();
+if (parent != null && !parent.exists()) {
+parent.mkdirs();
+}
+fileOut=new FileOutputStream(file);
+dnIndexProperties.store(fileOut,"update");
+}
+ catch (Exception e) {
+LOGGER.warn("saveDataNodeIndex err:",e);
+}
+ finally {
+if (fileOut != null) {
+try {
+fileOut.close();
+}
+ catch (IOException e) {
+}
+}
+}
+}
+private boolean isUseZk(){
+String loadZk=ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_FLAG);
+return "true".equalsIgnoreCase(loadZk);
+}
+public boolean isUseZkSwitch(){
+MycatConfig mycatConfig=config;
+boolean isUseZkSwitch=mycatConfig.getSystem().isUseZKSwitch();
+String loadZk=ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_FLAG);
+return (isUseZkSwitch && "true".equalsIgnoreCase(loadZk));
+}
+public RouteService getRouterService(){
+return routerService;
+}
+public CacheService getCacheService(){
+return cacheService;
+}
+public NameableExecutor getBusinessExecutor(){
+return businessExecutor;
+}
+public RouteService getRouterservice(){
+return routerService;
+}
+public NIOProcessor nextProcessor(){
+int i=++nextProcessor;
+if (i >= processors.length) {
+i=nextProcessor=0;
+}
+return processors[i];
+}
+public NIOProcessor[] getProcessors(){
+return processors;
+}
+public SocketConnector getConnector(){
+return connector;
+}
+public SQLRecorder getSqlRecorder(){
+return sqlRecorder;
+}
+public long getStartupTime(){
+return startupTime;
+}
+public boolean isOnline(){
+return isOnline.get();
+}
+public void offline(){
+isOnline.set(false);
+}
+public void online(){
+isOnline.set(true);
+}
+private Runnable updateTime(){
+return new Runnable(){
+@Override public void run(){
+TimeUtil.update();
+}
+}
+;
+}
+private Runnable processorCheck(){
+return new Runnable(){
+@Override public void run(){
+timerExecutor.execute(new Runnable(){
+@Override public void run(){
+try {
+for (NIOProcessor p : processors) {
+p.checkBackendCons();
+}
+}
+ catch (Exception e) {
+LOGGER.warn("checkBackendCons caught err:" + e);
+}
+}
+}
+);
+timerExecutor.execute(new Runnable(){
+@Override public void run(){
+try {
+for (NIOProcessor p : processors) {
+p.checkFrontCons();
+}
+}
+ catch (Exception e) {
+LOGGER.warn("checkFrontCons caught err:" + e);
+}
+}
+}
+);
+}
+}
+;
+}
+private Runnable dataNodeConHeartBeatCheck(final long heartPeriod){
+return new Runnable(){
+@Override public void run(){
+timerExecutor.execute(new Runnable(){
+@Override public void run(){
+Map<String,PhysicalDBPool> nodes=config.getDataHosts();
+for (PhysicalDBPool node : nodes.values()) {
+node.heartbeatCheck(heartPeriod);
+}
+}
+}
+);
+}
+}
+;
+}
+private Runnable dataNodeHeartbeat(){
+return new Runnable(){
+@Override public void run(){
+timerExecutor.execute(new Runnable(){
+@Override public void run(){
+Map<String,PhysicalDBPool> nodes=config.getDataHosts();
+for (PhysicalDBPool node : nodes.values()) {
+node.doHeartbeat();
+}
+}
+}
+);
+}
+}
+;
+}
+private Runnable dataNodeCalcActiveCons(){
+return new Runnable(){
+@Override public void run(){
+timerExecutor.execute(new Runnable(){
+@Override public void run(){
+Map<String,PhysicalDBPool> nodes=config.getDataHosts();
+for (PhysicalDBPool node : nodes.values()) {
+Collection<PhysicalDatasource> dataSources=node.getAllDataSources();
+for (PhysicalDatasource ds : dataSources) {
+ds.calcTotalCount();
+}
+}
+}
+}
+);
+}
+}
+;
+}
+private Runnable recycleSqlStat(){
+return new Runnable(){
+@Override public void run(){
+Map<String,UserStat> statMap=UserStatAnalyzer.getInstance().getUserStatMap();
+for (UserStat userStat : statMap.values()) {
+userStat.getSqlLastStat().recycle();
+userStat.getSqlRecorder().recycle();
+userStat.getSqlHigh().recycle();
+userStat.getSqlLargeRowStat().recycle();
+}
+}
+}
+;
+}
+private Runnable xaTaskCheck(){
+return new Runnable(){
+@Override public void run(){
+Collection<CoordinatorLogEntry> coordinatorLogEntries=MultiNodeCoordinator.inMemoryRepository.getAllCoordinatorLogEntries();
+long sqlTimeout=MycatServer.getInstance().getConfig().getSystem().getSqlExecuteTimeout() * 1000L;
+List<CoordinatorLogEntry> CoordinatorLogEntryList=null;
+long currentTime=TimeUtil.currentTimeMillis();
+for (CoordinatorLogEntry coordinatorLogEntry : coordinatorLogEntries) {
+if (currentTime > sqlTimeout + 20 * 1000 + coordinatorLogEntry.createTime) {
+if (CoordinatorLogEntryList == null) {
+CoordinatorLogEntryList=new ArrayList<CoordinatorLogEntry>();
+}
+CoordinatorLogEntryList.add(coordinatorLogEntry);
+}
+}
+if (CoordinatorLogEntryList != null) {
+performXARecoveryLog((CoordinatorLogEntry[])CoordinatorLogEntryList.toArray());
+}
+}
+}
+;
+}
+private Runnable tableStructureCheck(){
+return new MySQLTableStructureDetector();
+}
+private Runnable glableTableConsistencyCheck(){
+return new Runnable(){
+@Override public void run(){
+timerExecutor.execute(new Runnable(){
+@Override public void run(){
+GlobalTableUtil.consistencyCheck();
+}
+}
+);
+}
+}
+;
+}
+private void putXARecoveryLogToMemory(CoordinatorLogEntry[] coordinatorLogEntries){
+for (int i=0; i < coordinatorLogEntries.length; i++) {
+MultiNodeCoordinator.inMemoryRepository.put(coordinatorLogEntries[i].id,coordinatorLogEntries[i]);
+MultiNodeCoordinator.fileRepository.writeCheckpoint(coordinatorLogEntries[i].id,MultiNodeCoordinator.inMemoryRepository.getAllCoordinatorLogEntries());
+}
+}
+private void performXARecoveryLog(CoordinatorLogEntry[] coordinatorLogEntries){
+for (int i=0; i < coordinatorLogEntries.length; i++) {
+CoordinatorLogEntry coordinatorLogEntry=coordinatorLogEntries[i];
+boolean needRollback=false;
+boolean hasCommit=false;
+for (int j=0; j < coordinatorLogEntry.participants.length; j++) {
+ParticipantLogEntry participantLogEntry=coordinatorLogEntry.participants[j];
+if (participantLogEntry.txState == TxState.TX_PREPARED_STATE || participantLogEntry.txState == TxState.TX_STARTED_STATE) {
+needRollback=true;
+}
+if (participantLogEntry.txState == TxState.TX_COMMITED_STATE) {
+hasCommit=true;
+}
+}
+if (needRollback) {
+if (!hasCommit) {
+for (int j=0; j < coordinatorLogEntry.participants.length; j++) {
+ParticipantLogEntry participantLogEntry=coordinatorLogEntry.participants[j];
+if (participantLogEntry.txState == TxState.TX_COMMITED_STATE || participantLogEntry.txState == TxState.TX_ROLLBACKED_STATE) {
+continue;
+}
+String xacmd="XA ROLLBACK " + coordinatorLogEntry.id + ",'"+ participantLogEntry.resourceName+ "'"+ ';';
+LOGGER.debug("send xaCmd : {}",xacmd);
+OneRawSQLQueryResultHandler resultHandler=new OneRawSQLQueryResultHandler(new String[0],new XARollbackCallback(coordinatorLogEntry.id,participantLogEntry));
+sendXaCmd(participantLogEntry,xacmd,resultHandler);
+}
+}
+ else {
+LOGGER.debug("some has commit in {}",coordinatorLogEntry);
+for (int j=0; j < coordinatorLogEntry.participants.length; j++) {
+ParticipantLogEntry participantLogEntry=coordinatorLogEntry.participants[j];
+if (participantLogEntry.txState == TxState.TX_COMMITED_STATE || participantLogEntry.txState == TxState.TX_ROLLBACKED_STATE) {
+continue;
+}
+String xacmd="XA COMMIT " + coordinatorLogEntry.id + ",'"+ participantLogEntry.resourceName+ "'"+ ';';
+LOGGER.debug("send xaCmd : {}",xacmd);
+OneRawSQLQueryResultHandler resultHandler=new OneRawSQLQueryResultHandler(new String[0],new XACommitCallback(coordinatorLogEntry.id,participantLogEntry));
+sendXaCmd(participantLogEntry,xacmd,resultHandler);
+}
+}
+}
+}
+}
+private void sendXaCmd(ParticipantLogEntry participantLogEntry,String xacmd,OneRawSQLQueryResultHandler resultHandler){
+for (SchemaConfig schema : MycatServer.getInstance().getConfig().getSchemas().values()) {
+for (TableConfig table : schema.getTables().values()) {
+for (String dataNode : table.getDataNodes()) {
+PhysicalDBNode dn=MycatServer.getInstance().getConfig().getDataNodes().get(dataNode);
+if (dn.getDbPool().getSource().getConfig().getIp().equals(participantLogEntry.uri) && dn.getDatabase().equals(participantLogEntry.resourceName)) {
+SQLJob sqlJob=new SQLJob(xacmd,dn.getDatabase(),resultHandler,dn.getDbPool().getSource());
+sqlJob.run();
+LOGGER.debug(String.format("[XA cmd] [%s] Host:[%s] schema:[%s]",xacmd,dn.getName(),dn.getDatabase()));
+return;
+}
+}
+}
+}
+}
+/** 
+ * covert the collection to array
+ */
+private CoordinatorLogEntry[] getCoordinatorLogEntries(){
+Collection<CoordinatorLogEntry> allCoordinatorLogEntries=fileRepository.getAllCoordinatorLogEntries();
+if (allCoordinatorLogEntries == null) {
+return new CoordinatorLogEntry[0];
+}
+if (allCoordinatorLogEntries.size() == 0) {
+return new CoordinatorLogEntry[0];
+}
+return allCoordinatorLogEntries.toArray(new CoordinatorLogEntry[allCoordinatorLogEntries.size()]);
+}
+public NameableExecutor getSequenceExecutor(){
+return sequenceExecutor;
+}
+public DirectByteBufferPool getDirectByteBufferPool(){
+return (DirectByteBufferPool)bufferPool;
+}
+public boolean isAIO(){
+return aio;
+}
+public ListeningExecutorService getListeningExecutorService(){
+return listeningExecutorService;
+}
+public ScheduledExecutorService getHeartbeatScheduler(){
+return heartbeatScheduler;
+}
+public MycatLeaderLatch getLeaderLatch(){
+return leaderLatch;
+}
+public static void main(String[] args) throws Exception {
+String path=ZKUtils.getZKBasePath() + "bindata";
+CuratorFramework zk=ZKUtils.getConnection();
+if (zk.checkExists().forPath(path) == null) ;
+byte[] data=zk.getData().forPath(path);
+System.out.println(data.length);
+}
+}

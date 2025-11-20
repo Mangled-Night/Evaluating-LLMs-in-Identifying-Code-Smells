@@ -1,0 +1,58 @@
+/** 
+ * Exception thrown always when there was no response to an request within the stanza reply timeout of the used connection instance. You can modify (e.g. increase) the stanza reply timeout with {@link XMPPConnection#setReplyTimeout(long)}.
+ */
+public static final class NoResponseException extends SmackException {
+  /** 
+ */
+  private static final long serialVersionUID=-6523363748984543636L;
+  private final StanzaFilter filter;
+  private NoResponseException(  String message){
+    this(message,null);
+  }
+  private NoResponseException(  String message,  StanzaFilter filter){
+    super(message);
+    this.filter=filter;
+  }
+  /** 
+ * Get the filter that was used to collect the response.
+ * @return the used filter or <code>null</code>.
+ */
+  public StanzaFilter getFilter(){
+    return filter;
+  }
+  public static NoResponseException newWith(  XMPPConnection connection,  String waitingFor){
+    final StringBuilder sb=getWaitingFor(connection);
+    sb.append(" While waiting for ").append(waitingFor);
+    sb.append(" [").append(connection).append(']');
+    return new NoResponseException(sb.toString());
+  }
+  public static NoResponseException newWith(  long timeout,  StanzaCollector collector,  boolean stanzaCollectorCancelled){
+    return newWith(timeout,collector.getStanzaFilter(),stanzaCollectorCancelled);
+  }
+  public static NoResponseException newWith(  XMPPConnection connection,  StanzaFilter filter){
+    return newWith(connection.getReplyTimeout(),filter,false);
+  }
+  public static NoResponseException newWith(  long timeout,  StanzaFilter filter,  boolean stanzaCollectorCancelled){
+    final StringBuilder sb=getWaitingFor(timeout);
+    if (stanzaCollectorCancelled) {
+      sb.append(" StanzaCollector has been cancelled.");
+    }
+    sb.append(" Waited for response using: ");
+    if (filter != null) {
+      sb.append(filter.toString());
+    }
+ else {
+      sb.append("No filter used or filter was 'null'");
+    }
+    sb.append('.');
+    return new NoResponseException(sb.toString(),filter);
+  }
+  private static StringBuilder getWaitingFor(  XMPPConnection connection){
+    return getWaitingFor(connection.getReplyTimeout());
+  }
+  private static StringBuilder getWaitingFor(  final long replyTimeout){
+    final StringBuilder sb=new StringBuilder(256);
+    sb.append("No response received within reply timeout. Timeout was " + replyTimeout + "ms (~"+ replyTimeout / 1000 + "s).");
+    return sb;
+  }
+}

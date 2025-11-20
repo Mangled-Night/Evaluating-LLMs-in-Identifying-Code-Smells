@@ -1,0 +1,9 @@
+@Test void clusterAsyncBatchPing(){
+  RedisCommand<String,String,String> command1=new Command<>(CustomCommandIntegrationTests.MyCommands.PING,new StatusOutput<>(StringCodec.UTF8),null);
+  RedisCommand<String,String,String> command2=new Command<>(CustomCommandIntegrationTests.MyCommands.PING,new StatusOutput<>(StringCodec.UTF8),null);
+  AsyncCommand<String,String,String> async1=new AsyncCommand<>(command1);
+  AsyncCommand<String,String,String> async2=new AsyncCommand<>(command2);
+  connection.dispatch(Arrays.asList(async1,async2));
+  assertThat(TestFutures.getOrTimeout(async1.toCompletableFuture())).isEqualTo("PONG");
+  assertThat(TestFutures.getOrTimeout(async2.toCompletableFuture())).isEqualTo("PONG");
+}

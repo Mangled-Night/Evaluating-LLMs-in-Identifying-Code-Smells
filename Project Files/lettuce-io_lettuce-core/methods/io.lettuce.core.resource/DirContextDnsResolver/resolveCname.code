@@ -1,0 +1,29 @@
+/** 
+ * Resolves  {@code CNAME} records to {@link InetAddress adresses}.
+ * @param hostname
+ * @return
+ * @throws NamingException
+ */
+@SuppressWarnings("rawtypes") private List<InetAddress> resolveCname(String hostname) throws NamingException {
+  List<InetAddress> inetAddresses=new ArrayList<>();
+  Attributes attrs=context.getAttributes(hostname,new String[]{"CNAME"});
+  Attribute attr=attrs.get("CNAME");
+  if (attr != null && attr.size() > 0) {
+    NamingEnumeration e=attr.getAll();
+    while (e.hasMore()) {
+      String h=(String)e.next();
+      if (h.endsWith(".")) {
+        h=h.substring(0,h.lastIndexOf('.'));
+      }
+      try {
+        InetAddress[] resolved=resolve(h);
+        for (        InetAddress inetAddress : resolved) {
+          inetAddresses.add(InetAddress.getByAddress(hostname,inetAddress.getAddress()));
+        }
+      }
+ catch (      UnknownHostException e1) {
+      }
+    }
+  }
+  return inetAddresses;
+}

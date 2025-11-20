@@ -1,0 +1,26 @@
+private void initiateSession(){
+  Socks5Proxy.getSocks5Proxy().addTransfer(createTransport().getDestinationAddress());
+  JingleContent content=jingleSession.getContents().get(0);
+  UsedCandidate usedCandidate=chooseFromProposedCandidates(theirProposal);
+  if (usedCandidate == null) {
+    ourChoice=CANDIDATE_FAILURE;
+    Jingle candidateError=transportManager().createCandidateError(jingleSession.getRemote(),jingleSession.getInitiator(),jingleSession.getSessionId(),content.getSenders(),content.getCreator(),content.getName(),theirProposal.getStreamId());
+    try {
+      jingleSession.getConnection().sendStanza(candidateError);
+    }
+ catch (    SmackException.NotConnectedException|InterruptedException e) {
+      LOGGER.log(Level.WARNING,"Could not send candidate-error.",e);
+    }
+  }
+ else {
+    ourChoice=usedCandidate;
+    Jingle jingle=transportManager().createCandidateUsed(jingleSession.getRemote(),jingleSession.getInitiator(),jingleSession.getSessionId(),content.getSenders(),content.getCreator(),content.getName(),theirProposal.getStreamId(),ourChoice.candidate.getCandidateId());
+    try {
+      jingleSession.getConnection().sendIqRequestAndWaitForResponse(jingle);
+    }
+ catch (    InterruptedException|XMPPException.XMPPErrorException|SmackException.NotConnectedException|SmackException.NoResponseException e) {
+      LOGGER.log(Level.WARNING,"Could not send candidate-used.",e);
+    }
+  }
+  connectIfReady();
+}

@@ -1,0 +1,46 @@
+@Override public void run(){
+  try {
+    Enumeration<NetworkInterface> ifaces=NetworkInterface.getNetworkInterfaces();
+    String candAddress;
+    int candPort;
+    while (ifaces.hasMoreElements()) {
+      NetworkInterface iface=ifaces.nextElement();
+      Enumeration<InetAddress> iaddresses=iface.getInetAddresses();
+      while (iaddresses.hasMoreElements()) {
+        InetAddress iaddress=iaddresses.nextElement();
+        if (!iaddress.isLoopbackAddress() && !iaddress.isLinkLocalAddress()) {
+          candAddress=null;
+          candPort=-1;
+          DiscoveryTest test=new DiscoveryTest(iaddress,currentServer.getHostname(),currentServer.getPort());
+          try {
+            DiscoveryInfo di=test.test();
+            candAddress=di.getPublicIP() != null ? di.getPublicIP().getHostAddress() : null;
+            if (defaultPort == 0) {
+              candPort=getFreePort();
+            }
+ else {
+              candPort=defaultPort;
+            }
+            if (candAddress != null && candPort >= 0) {
+              TransportCandidate candidate=new TransportCandidate.Fixed(candAddress,candPort);
+              candidate.setLocalIp(iaddress.getHostAddress() != null ? iaddress.getHostAddress() : iaddress.getHostName());
+              addCandidate(candidate);
+              resolvedPublicIP=candidate.getIp();
+              resolvedLocalIP=candidate.getLocalIp();
+              return;
+            }
+          }
+ catch (          Exception e) {
+            LOGGER.log(Level.SEVERE,"Exception",e);
+          }
+        }
+      }
+    }
+  }
+ catch (  SocketException e) {
+    LOGGER.log(Level.SEVERE,"Exception",e);
+  }
+ finally {
+    setInitialized();
+  }
+}

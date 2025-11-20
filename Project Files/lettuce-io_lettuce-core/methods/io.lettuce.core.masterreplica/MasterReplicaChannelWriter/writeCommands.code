@@ -1,0 +1,12 @@
+@SuppressWarnings("unchecked") private static <K,V>void writeCommands(Collection<? extends RedisCommand<K,V,?>> commands,StatefulRedisConnection<K,V> connection,Throwable throwable){
+  if (throwable != null) {
+    commands.forEach(c -> c.completeExceptionally(throwable));
+    return;
+  }
+  try {
+    connection.dispatch(commands);
+  }
+ catch (  Exception e) {
+    commands.forEach(c -> c.completeExceptionally(e));
+  }
+}

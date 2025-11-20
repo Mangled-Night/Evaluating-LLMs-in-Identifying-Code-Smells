@@ -1,0 +1,45 @@
+@Override public final Set<String> suggest(final String currentValue,List<String> rawParameters,EntityRef sender) throws CommandSuggestionException {
+  Object[] processedParameters;
+  try {
+    processedParameters=processParametersMethod(rawParameters,sender);
+  }
+ catch (  CommandParameterParseException e) {
+    String warning="Invalid parameter '" + e.getParameter() + "'";
+    String message=e.getMessage();
+    if (message != null) {
+      warning+=": " + message;
+    }
+    throw new CommandSuggestionException(warning);
+  }
+  CommandParameter suggestedParameter=null;
+  Iterator<CommandParameter> paramIter=commandParameters.iterator();
+  for (  Object processedParameter : processedParameters) {
+    if (sender.equals(processedParameter)) {
+      continue;
+    }
+    if (processedParameter == null) {
+      suggestedParameter=paramIter.next();
+      break;
+    }
+    paramIter.next();
+  }
+  if (suggestedParameter == null) {
+    return Sets.newHashSet();
+  }
+  Set<Object> result=null;
+  result=suggestedParameter.suggest(sender,processedParameters);
+  if (result == null) {
+    return Sets.newHashSet();
+  }
+  Class<?> requiredClass=suggestedParameter.getType();
+  for (  Object resultComponent : result) {
+    if (resultComponent == null && requiredClass.isPrimitive()) {
+      throw new CommandSuggestionException("The 'suggest' method of command class " + getClass().getCanonicalName() + " returns a collection containing an invalid type. Required: "+ requiredClass.getCanonicalName()+ "; provided: null");
+    }
+ else     if (resultComponent != null && !requiredClass.isAssignableFrom(resultComponent.getClass())) {
+      throw new CommandSuggestionException("The 'suggest' method of command class " + getClass().getCanonicalName() + " returns a collection containing an invalid type. Required: "+ requiredClass.getCanonicalName()+ "; provided: "+ resultComponent.getClass().getCanonicalName());
+    }
+  }
+  Set<String> stringSuggestions=convertToString(result,suggestedParameter);
+  return Sets.filter(stringSuggestions,input -> input != null && (currentValue == null || input.startsWith(currentValue)));
+}

@@ -1,0 +1,11 @@
+/** 
+ * Register an listener for item delete events.  This listener gets called whenever an item is deleted from the node.
+ * @param listener The handler for the event
+ */
+public void addItemDeleteListener(ItemDeleteListener listener){
+  StanzaListener delListener=new ItemDeleteTranslator(listener);
+  itemDeleteToListenerMap.put(listener,delListener);
+  EventContentFilter deleteItem=new EventContentFilter(EventElementType.items.toString(),"retract");
+  EventContentFilter purge=new EventContentFilter(EventElementType.purge.toString());
+  pubSubManager.getConnection().addSyncStanzaListener(delListener,new OrFilter(deleteItem,purge));
+}

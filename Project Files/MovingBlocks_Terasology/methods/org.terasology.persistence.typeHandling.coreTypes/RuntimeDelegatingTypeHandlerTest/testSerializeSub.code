@@ -1,0 +1,8 @@
+@Test void testSerializeSub(){
+  PersistedDataSerializer serializer=mock(PersistedDataSerializer.class);
+  when(serializer.serialize(any(String.class))).then(invocation -> new PersistedString((String)invocation.getArguments()[0]));
+  Base sub=new Sub();
+  runtimeDelegatingTypeHandler.serialize(sub,serializer);
+  verify(subTypeHandler).serialize(any(),any());
+  verify(serializer).serialize(argThat((ArgumentMatcher<Map<String,PersistedData>>)argument -> argument.get(RuntimeDelegatingTypeHandler.TYPE_FIELD).getAsString().equals(subType.getName()) && argument.containsKey(RuntimeDelegatingTypeHandler.VALUE_FIELD)));
+}

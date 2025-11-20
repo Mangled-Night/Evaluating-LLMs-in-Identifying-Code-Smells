@@ -1,0 +1,24 @@
+@Override public void update(float delta){
+  long renderTime=time.getGameTimeInMs() - ServerCharacterPredictionSystem.RENDER_DELAY;
+  for (  Map.Entry<EntityRef,CircularBuffer<CharacterStateEvent>> entry : playerStates.entrySet()) {
+    CharacterStateEvent previous=null;
+    CharacterStateEvent next=null;
+    for (    CharacterStateEvent state : entry.getValue()) {
+      if (state.getTime() <= renderTime) {
+        previous=state;
+      }
+ else {
+        next=state;
+        break;
+      }
+    }
+    if (previous != null) {
+      if (next != null) {
+        characterMovementSystemUtility.setToInterpolateState(entry.getKey(),previous,next,renderTime);
+      }
+ else {
+        characterMovementSystemUtility.setToExtrapolateState(entry.getKey(),previous,renderTime);
+      }
+    }
+  }
+}

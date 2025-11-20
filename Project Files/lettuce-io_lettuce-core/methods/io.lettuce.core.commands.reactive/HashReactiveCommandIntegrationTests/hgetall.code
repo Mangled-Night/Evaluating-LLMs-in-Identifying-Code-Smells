@@ -1,0 +1,9 @@
+@Test public void hgetall(){
+  connection.sync().hset(key,"zero","0");
+  connection.sync().hset(key,"one","1");
+  connection.sync().hset(key,"two","2");
+  connection.reactive().hgetall(key).collect(Collectors.toMap(KeyValue::getKey,Value::getValue)).as(StepVerifier::create).assertNext(actual -> {
+    assertThat(actual).containsEntry("zero","0").containsEntry("one","1").containsEntry("two","2");
+  }
+).verifyComplete();
+}

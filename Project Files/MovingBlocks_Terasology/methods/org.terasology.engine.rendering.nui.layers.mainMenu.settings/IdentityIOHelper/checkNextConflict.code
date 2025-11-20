@@ -1,0 +1,32 @@
+private void checkNextConflict(Iterator<Map.Entry<PublicIdentityCertificate,ClientIdentity>> newIdentities,Runnable onCompletion){
+  Runnable next=() -> checkNextConflict(newIdentities,onCompletion);
+  if (newIdentities.hasNext()) {
+    Map.Entry<PublicIdentityCertificate,ClientIdentity> entry=newIdentities.next();
+    PublicIdentityCertificate server=entry.getKey();
+    ClientIdentity newClient=entry.getValue();
+    ClientIdentity oldClient=securityConfig.getIdentity(server);
+    if (oldClient != null) {
+      Runnable skip=() -> {
+        newIdentities.remove();
+        next.run();
+      }
+;
+      if (newClient.getPlayerPublicCertificate().equals(oldClient.getPlayerPublicCertificate())) {
+        skip.run();
+      }
+ else {
+        ThreeButtonPopup popup=nuiManager.pushScreen(ThreeButtonPopup.ASSET_URI,ThreeButtonPopup.class);
+        popup.setMessage(importPopupTitle,String.format(translationSystem.translate("${engine:menu#identity-import-conflict}"),server.getId(),oldClient.getPlayerPublicCertificate().getId(),newClient.getPlayerPublicCertificate().getId()));
+        popup.setLeftButton(translationSystem.translate("${engine:menu#identity-import-overwrite}"),next);
+        popup.setCenterButton(translationSystem.translate("${engine:menu#identity-import-skip}"),skip);
+        popup.setRightButton(translationSystem.translate("${engine:menu#identity-import-cancel}"),() -> nuiManager.pushScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage(importPopupTitle,translationSystem.translate("${engine:menu#identity-import-cancelled}")));
+      }
+    }
+ else {
+      next.run();
+    }
+  }
+ else {
+    onCompletion.run();
+  }
+}

@@ -1,0 +1,66 @@
+private void upload(InputStream iStream,long fileSize,Slot slot,UploadProgressListener listener) throws IOException {
+  final URL putUrl=slot.getPutUrl();
+  final XMPPConnection connection=connection();
+  final HttpURLConnection urlConnection=createURLConnection(connection,putUrl);
+  urlConnection.setRequestMethod("PUT");
+  urlConnection.setUseCaches(false);
+  urlConnection.setDoOutput(true);
+  urlConnection.setFixedLengthStreamingMode(fileSize);
+  urlConnection.setRequestProperty("Content-Type","application/octet-stream");
+  for (  Map.Entry<String,String> header : slot.getHeaders().entrySet()) {
+    urlConnection.setRequestProperty(header.getKey(),header.getValue());
+  }
+  final SSLSocketFactory tlsSocketFactory=this.tlsSocketFactory;
+  if (tlsSocketFactory != null && urlConnection instanceof HttpsURLConnection) {
+    HttpsURLConnection httpsUrlConnection=(HttpsURLConnection)urlConnection;
+    httpsUrlConnection.setSSLSocketFactory(tlsSocketFactory);
+  }
+  try {
+    OutputStream outputStream=urlConnection.getOutputStream();
+    long bytesSend=0;
+    if (listener != null) {
+      listener.onUploadProgress(0,fileSize);
+    }
+    BufferedInputStream inputStream=new BufferedInputStream(iStream);
+    byte[] buffer=new byte[4096];
+    int bytesRead;
+    try {
+      while ((bytesRead=inputStream.read(buffer)) != -1) {
+        outputStream.write(buffer,0,bytesRead);
+        bytesSend+=bytesRead;
+        if (listener != null) {
+          listener.onUploadProgress(bytesSend,fileSize);
+        }
+      }
+    }
+  finally {
+      try {
+        inputStream.close();
+      }
+ catch (      IOException e) {
+        LOGGER.log(Level.WARNING,"Exception while closing input stream",e);
+      }
+      try {
+        outputStream.close();
+      }
+ catch (      IOException e) {
+        LOGGER.log(Level.WARNING,"Exception while closing output stream",e);
+      }
+    }
+    int status=urlConnection.getResponseCode();
+switch (status) {
+case HttpURLConnection.HTTP_OK:
+case HttpURLConnection.HTTP_CREATED:
+case HttpURLConnection.HTTP_NO_CONTENT:
+      break;
+default :
+    throw new HttpUploadErrorException(status,urlConnection.getResponseMessage(),fileSize,slot);
+}
+}
+ catch (IOException e) {
+throw new HttpUploadIOException(fileSize,slot,e);
+}
+ finally {
+urlConnection.disconnect();
+}
+}

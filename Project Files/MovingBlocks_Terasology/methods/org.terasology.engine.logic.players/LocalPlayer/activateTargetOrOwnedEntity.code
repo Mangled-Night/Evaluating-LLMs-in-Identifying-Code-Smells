@@ -1,0 +1,37 @@
+/** 
+ * @param usedOwnedEntity if it does not exist it is not an item usage.
+ * @return true if an activation request got sent. Returns always true if usedItem exists.
+ */
+private boolean activateTargetOrOwnedEntity(EntityRef usedOwnedEntity){
+  EntityRef character=getCharacterEntity();
+  CharacterComponent characterComponent=character.getComponent(CharacterComponent.class);
+  Vector3f direction=getViewDirection(new Vector3f());
+  Vector3f originPos=getViewPosition(new Vector3f());
+  if (recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.RECORDING) {
+    this.directionAndOriginPosRecorderList.getTargetOrOwnedEntityDirectionAndOriginPosRecorder().add(direction,originPos);
+  }
+ else   if (recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.REPLAYING) {
+    Vector3f[] data=this.directionAndOriginPosRecorderList.getTargetOrOwnedEntityDirectionAndOriginPosRecorder().poll();
+    direction=data[0];
+    originPos=data[1];
+  }
+  boolean ownedEntityUsage=usedOwnedEntity.exists();
+  int activationId=nextActivationId++;
+  Physics physics=CoreRegistry.get(Physics.class);
+  float interactionRange;
+  if (ownedEntityUsage && usedOwnedEntity.hasComponent(RangeComponent.class)) {
+    interactionRange=Math.max(usedOwnedEntity.getComponent(RangeComponent.class).range,characterComponent.interactionRange);
+  }
+ else {
+    interactionRange=characterComponent.interactionRange;
+  }
+  HitResult result=physics.rayTrace(originPos,direction,interactionRange,Sets.newHashSet(character),CharacterSystem.DEFAULTPHYSICSFILTER);
+  boolean eventWithTarget=result.isHit();
+  if (ownedEntityUsage || eventWithTarget) {
+    EntityRef activatedObject=usedOwnedEntity.exists() ? usedOwnedEntity : result.getEntity();
+    activatedObject.send(new ActivationPredicted(character,result.getEntity(),originPos,direction,result.getHitPoint(),result.getHitNormal(),activationId));
+    character.send(new ActivationRequest(character,ownedEntityUsage,usedOwnedEntity,eventWithTarget,result.getEntity(),originPos,direction,result.getHitPoint(),result.getHitNormal(),activationId));
+    return true;
+  }
+  return false;
+}

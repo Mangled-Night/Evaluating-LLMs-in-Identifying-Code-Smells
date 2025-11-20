@@ -1,0 +1,19 @@
+/** 
+ * Return the unique device id. <p>If the version of SDK is greater than 28, it will return an empty string.</p> <p>Must hold  {@code <uses-permission android:name="android.permission.READ_PHONE_STATE" />}</p>
+ * @return the unique device id
+ */
+@SuppressLint("HardwareIds") @RequiresPermission(READ_PHONE_STATE) public static String getDeviceId(){
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+    return "";
+  }
+  TelephonyManager tm=getTelephonyManager();
+  String deviceId=tm.getDeviceId();
+  if (!TextUtils.isEmpty(deviceId))   return deviceId;
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+    String imei=tm.getImei();
+    if (!TextUtils.isEmpty(imei))     return imei;
+    String meid=tm.getMeid();
+    return TextUtils.isEmpty(meid) ? "" : meid;
+  }
+  return "";
+}

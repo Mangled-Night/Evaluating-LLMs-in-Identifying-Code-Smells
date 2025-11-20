@@ -1,0 +1,65 @@
+/** 
+ * Return the single  {@link CacheDiskUtils} instance.<p>cache directory: /data/data/package/cache/cacheUtils</p> <p>cache size: unlimited</p> <p>cache count: unlimited</p>
+ * @return the single {@link CacheDiskUtils} instance
+ */
+public static CacheDiskUtils getInstance(){
+  return getInstance("",DEFAULT_MAX_SIZE,DEFAULT_MAX_COUNT);
+}
+/** 
+ * Return the single  {@link CacheDiskUtils} instance.<p>cache directory: /data/data/package/cache/cacheUtils</p> <p>cache size: unlimited</p> <p>cache count: unlimited</p>
+ * @param cacheName The name of cache.
+ * @return the single {@link CacheDiskUtils} instance
+ */
+public static CacheDiskUtils getInstance(final String cacheName){
+  return getInstance(cacheName,DEFAULT_MAX_SIZE,DEFAULT_MAX_COUNT);
+}
+/** 
+ * Return the single  {@link CacheDiskUtils} instance.<p>cache directory: /data/data/package/cache/cacheUtils</p>
+ * @param maxSize  The max size of cache, in bytes.
+ * @param maxCount The max count of cache.
+ * @return the single {@link CacheDiskUtils} instance
+ */
+public static CacheDiskUtils getInstance(final long maxSize,final int maxCount){
+  return getInstance("",maxSize,maxCount);
+}
+/** 
+ * Return the single  {@link CacheDiskUtils} instance.<p>cache directory: /data/data/package/cache/cacheName</p>
+ * @param cacheName The name of cache.
+ * @param maxSize   The max size of cache, in bytes.
+ * @param maxCount  The max count of cache.
+ * @return the single {@link CacheDiskUtils} instance
+ */
+public static CacheDiskUtils getInstance(String cacheName,final long maxSize,final int maxCount){
+  if (UtilsBridge.isSpace(cacheName))   cacheName="cacheUtils";
+  File file=new File(Utils.getApp().getCacheDir(),cacheName);
+  return getInstance(file,maxSize,maxCount);
+}
+/** 
+ * Return the single  {@link CacheDiskUtils} instance.<p>cache size: unlimited</p> <p>cache count: unlimited</p>
+ * @param cacheDir The directory of cache.
+ * @return the single {@link CacheDiskUtils} instance
+ */
+public static CacheDiskUtils getInstance(@NonNull final File cacheDir){
+  return getInstance(cacheDir,DEFAULT_MAX_SIZE,DEFAULT_MAX_COUNT);
+}
+/** 
+ * Return the single  {@link CacheDiskUtils} instance.
+ * @param cacheDir The directory of cache.
+ * @param maxSize  The max size of cache, in bytes.
+ * @param maxCount The max count of cache.
+ * @return the single {@link CacheDiskUtils} instance
+ */
+public static CacheDiskUtils getInstance(@NonNull final File cacheDir,final long maxSize,final int maxCount){
+  final String cacheKey=cacheDir.getAbsoluteFile() + "_" + maxSize+ "_"+ maxCount;
+  CacheDiskUtils cache=CACHE_MAP.get(cacheKey);
+  if (cache == null) {
+synchronized (CacheDiskUtils.class) {
+      cache=CACHE_MAP.get(cacheKey);
+      if (cache == null) {
+        cache=new CacheDiskUtils(cacheKey,cacheDir,maxSize,maxCount);
+        CACHE_MAP.put(cacheKey,cache);
+      }
+    }
+  }
+  return cache;
+}

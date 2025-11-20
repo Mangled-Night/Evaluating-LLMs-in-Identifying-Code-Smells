@@ -1,0 +1,14 @@
+@BeforeEach void setupLocals(StorageManager storageManager,LocalPlayer player,NetworkSystem network,BlockManager blockManager,ModuleManager moduleManager,Config config,Context context){
+  assertThat(storageManager).isInstanceOf(ReadWriteStorageManager.class);
+  context.put(ReadWriteStorageManager.class,(ReadWriteStorageManager)storageManager);
+  savePath=getSavePath(config);
+  assertWithMessage("Leftover files in %s",savePath).that(savePath.resolve("global.dat").toFile().exists()).isFalse();
+  character=player.getCharacterEntity();
+  assertThat(character).isNotEqualTo(EntityRef.NULL);
+  var clients=ImmutableList.copyOf(network.getPlayers());
+  assertThat(clients).hasSize(1);
+  playerId=clients.get(0).getId();
+  testBlock=blockManager.getBlock("test:testblock");
+  testBlock2=blockManager.getBlock("test:testblock2");
+  moduleEnvironment=moduleManager.getEnvironment();
+}

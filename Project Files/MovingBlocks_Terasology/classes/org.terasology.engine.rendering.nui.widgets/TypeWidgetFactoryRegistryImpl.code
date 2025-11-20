@@ -1,0 +1,34 @@
+/** 
+ * Registers  {@link TypeWidgetFactory} instances that can be used by a {@link TypeWidgetLibrary}to generate widgets to edit objects of various types.
+ */
+public class TypeWidgetFactoryRegistryImpl implements TypeWidgetFactoryRegistry {
+  private final Context context;
+  private final List<TypeWidgetFactory> factories=new ArrayList<>();
+  private final Map<Type,InstanceCreator<?>> instanceCreators=Maps.newHashMap();
+  private final ConstructorLibrary constructorLibrary=new ConstructorLibrary(instanceCreators);
+  public TypeWidgetFactoryRegistryImpl(  Context context){
+    this.context=context;
+    addFactoriesForBuiltinTypes();
+  }
+  private void addFactoriesForBuiltinTypes(){
+    add(new ObjectWidgetFactory());
+    add(new BooleanWidgetFactory());
+    add(new ByteWidgetFactory());
+    add(new ShortWidgetFactory());
+    add(new IntegerWidgetFactory());
+    add(new LongWidgetFactory());
+    add(new FloatWidgetFactory());
+    add(new DoubleWidgetFactory());
+    add(new StringWidgetFactory());
+    add(new EnumWidgetFactory());
+    add(new CollectionWidgetFactory(constructorLibrary));
+    add(new ArrayWidgetFactory(constructorLibrary));
+  }
+  @Override public void add(  TypeWidgetFactory factory){
+    InjectionHelper.inject(factory,context);
+    factories.add(factory);
+  }
+  @Override public List<TypeWidgetFactory> getFactories(){
+    return Collections.unmodifiableList(factories);
+  }
+}

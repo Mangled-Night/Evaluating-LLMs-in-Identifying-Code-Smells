@@ -1,0 +1,30 @@
+@Override public void okResponse(byte[] ok,BackendConnection conn){
+  if (session.getXaTXID() != null) {
+    if (conn instanceof MySQLConnection) {
+      MySQLConnection mysqlCon=(MySQLConnection)conn;
+      if (!mysqlCon.batchCmdFinished()) {
+        return;
+      }
+    }
+  }
+  if (decrementCountBy(1)) {
+    session.clearResources(false);
+    session.setAutoCommitStatus();
+    if (this.isFail() || session.closed()) {
+      tryErrorFinished(true);
+    }
+ else {
+      if (session.getSource().canResponse()) {
+        if (responseData != null) {
+          session.getSource().write(responseData);
+        }
+ else {
+          OkPacket okPacket=new OkPacket();
+          okPacket.read(ok);
+          okPacket.packetId=1;
+          session.getSource().write(okPacket.writeToBytes());
+        }
+      }
+    }
+  }
+}

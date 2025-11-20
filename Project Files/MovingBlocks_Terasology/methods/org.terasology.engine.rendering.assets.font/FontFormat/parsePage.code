@@ -1,0 +1,17 @@
+private void parsePage(FontDataBuilder builder,Name moduleName,String pageInfo) throws IOException {
+  Matcher pageMatcher=pagePattern.matcher(pageInfo);
+  if (pageMatcher.matches()) {
+    int pageId=Integer.parseInt(pageMatcher.group(1));
+    Name textureName=new Name(pageMatcher.group(2).substring(0,pageMatcher.group(2).lastIndexOf('.')));
+    Optional<Material> material=assetManager.getAsset(new ResourceUrn(moduleName,new Name("font"),textureName),Material.class);
+    if (!material.isPresent()) {
+      throw new IOException("Failed to load font - unable to resolve font page '" + textureName + "'");
+    }
+ else {
+      builder.addPage(pageId,assetManager.getAsset(new ResourceUrn(moduleName,textureName),Texture.class).get(),material.get());
+    }
+  }
+ else {
+    throw new IOException("Failed to load font - invalid page line '" + pageInfo + "'");
+  }
+}

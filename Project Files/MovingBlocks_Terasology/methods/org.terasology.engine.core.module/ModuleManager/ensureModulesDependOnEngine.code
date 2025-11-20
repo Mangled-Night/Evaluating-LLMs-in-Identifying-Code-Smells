@@ -1,0 +1,11 @@
+/** 
+ * Ensure all modules declare a dependency on the engine module. <p> This is to ensure that the set of modules is a graph with a single root. We need this to ensure the engine is loaded <em>before</em> other modules when things iterate over the module list in dependency order. <p> See <a href="https://github.com/MovingBlocks/Terasology/issues/1450">#1450</a>.
+ */
+private void ensureModulesDependOnEngine(){
+  DependencyInfo engineDep=new DependencyInfo();
+  engineDep.setId(engineModule.getId());
+  engineDep.setMinVersion(engineModule.getVersion());
+  Set<Name> engineModules=Sets.newHashSet(engineModule.getId());
+  engineModules.addAll(engineModule.getMetadata().getDependencies().stream().map(DependencyInfo::getId).collect(Collectors.toList()));
+  registry.stream().filter(mod -> !engineModules.contains(mod.getId())).forEach(mod -> mod.getMetadata().getDependencies().add(engineDep));
+}

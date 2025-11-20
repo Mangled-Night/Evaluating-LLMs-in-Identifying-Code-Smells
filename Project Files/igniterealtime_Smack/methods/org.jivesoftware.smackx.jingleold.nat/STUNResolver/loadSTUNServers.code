@@ -1,0 +1,70 @@
+/** 
+ * Load the STUN configuration from a stream.
+ * @param stunConfigStream An InputStream with the configuration file.
+ * @return A list of loaded servers
+ */
+public ArrayList<STUNService> loadSTUNServers(java.io.InputStream stunConfigStream){
+  ArrayList<STUNService> serversList=new ArrayList<>();
+  String serverName;
+  int serverPort;
+  try {
+    XmlPullParser parser=PacketParserUtils.getParserFor(stunConfigStream);
+    XmlPullParser.Event eventType=parser.getEventType();
+    do {
+      if (eventType == XmlPullParser.Event.START_ELEMENT) {
+        if (parser.getName().equals("stunServer")) {
+          serverName=null;
+          serverPort=-1;
+          parser.next();
+          parser.next();
+          serverName=parser.nextText();
+          parser.next();
+          parser.next();
+          serverPort=Integer.parseInt(parser.nextText());
+          if (serverName != null && serverPort != -1) {
+            STUNService service=new STUNService(serverName,serverPort);
+            serversList.add(service);
+          }
+        }
+      }
+      eventType=parser.next();
+    }
+ while (eventType != XmlPullParser.Event.END_DOCUMENT);
+  }
+ catch (  XmlPullParserException e) {
+    LOGGER.log(Level.SEVERE,"Exception",e);
+  }
+catch (  IOException e) {
+    LOGGER.log(Level.SEVERE,"Exception",e);
+  }
+  currentServer=bestSTUNServer(serversList);
+  return serversList;
+}
+/** 
+ * Load a list of services: STUN servers and ports. Some public STUN servers are: <pre> iphone-stun.freenet.de:3478 larry.gloo.net:3478 stun.xten.net:3478 stun.fwdnet.net stun.fwd.org (no DNS SRV record) stun01.sipphone.com (no DNS SRV record) stun.softjoys.com (no DNS SRV record) stun.voipbuster.com (no DNS SRV record) stun.voxgratia.org (no DNS SRV record) stun.noc.ams-ix.net </pre> This list should be contained in a file in the "META-INF" directory
+ * @return a list of services
+ */
+public ArrayList<STUNService> loadSTUNServers(){
+  ArrayList<STUNService> serversList=new ArrayList<>();
+  try {
+    ClassLoader[] classLoaders=new ClassLoader[2];
+    classLoaders[0]=new STUNResolver(){
+    }
+.getClass().getClassLoader();
+    classLoaders[1]=Thread.currentThread().getContextClassLoader();
+    for (int i=0; i < classLoaders.length; i++) {
+      Enumeration<URL> stunConfigEnum=classLoaders[i].getResources(STUNSERVERS_FILENAME);
+      while (stunConfigEnum.hasMoreElements() && serversList.isEmpty()) {
+        URL url=stunConfigEnum.nextElement();
+        java.io.InputStream stunConfigStream;
+        stunConfigStream=url.openStream();
+        serversList.addAll(loadSTUNServers(stunConfigStream));
+        stunConfigStream.close();
+      }
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.log(Level.SEVERE,"Exception",e);
+  }
+  return serversList;
+}

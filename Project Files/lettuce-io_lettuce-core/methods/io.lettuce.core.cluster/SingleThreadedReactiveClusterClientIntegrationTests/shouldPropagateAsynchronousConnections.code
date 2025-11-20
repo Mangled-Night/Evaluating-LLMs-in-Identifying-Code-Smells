@@ -1,0 +1,6 @@
+@Test void shouldPropagateAsynchronousConnections(){
+  StatefulRedisClusterConnection<String,String> connect=client.connect();
+  connect.sync().flushall();
+  List<String> keys=connect.reactive().set("key","value").flatMap(s -> connect.reactive().set("foo","bar")).flatMapMany(s -> connect.reactive().keys("*")).doOnError(Throwable::printStackTrace).collectList().block();
+  assertThat(keys).contains("key","foo");
+}

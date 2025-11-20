@@ -1,0 +1,26 @@
+/** 
+ * Create a  {@link PubkeyElement} which contains the OpenPGP public key of {@code owner} which belongs tothe  {@link OpenPgpV4Fingerprint} {@code fingerprint}.
+ * @param owner owner of the public key
+ * @param fingerprint fingerprint of the key
+ * @param date date of creation of the element
+ * @return {@link PubkeyElement} containing the key
+ * @throws MissingOpenPgpKeyException if the public key notated by the fingerprint cannot be found
+ */
+private PubkeyElement createPubkeyElement(BareJid owner,OpenPgpV4Fingerprint fingerprint,Date date) throws MissingOpenPgpKeyException, IOException, PGPException {
+  PGPPublicKeyRing ring=provider.getStore().getPublicKeyRing(owner,fingerprint);
+  if (ring != null) {
+    byte[] keyBytes=ring.getEncoded(true);
+    return createPubkeyElement(keyBytes,date);
+  }
+  throw new MissingOpenPgpKeyException(owner,fingerprint);
+}
+/** 
+ * Create a  {@link PubkeyElement} which contains the given {@code date} base64 encoded.
+ * @param bytes byte representation of an OpenPGP public key
+ * @param date date of creation of the element
+ * @return {@link PubkeyElement} containing the key
+ */
+private static PubkeyElement createPubkeyElement(byte[] bytes,Date date){
+  String base64EncodedOpenPgpPubKey=Base64.encodeToString(bytes);
+  return new PubkeyElement(new PubkeyElement.PubkeyDataElement(base64EncodedOpenPgpPubKey),date);
+}

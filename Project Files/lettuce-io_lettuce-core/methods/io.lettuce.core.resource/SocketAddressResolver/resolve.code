@@ -1,0 +1,31 @@
+/** 
+ * Resolve a  {@link RedisURI} to a {@link SocketAddress}.
+ * @param redisURI must not be {@code null}.
+ * @return the resolved {@link SocketAddress}.
+ * @since 5.1
+ */
+public SocketAddress resolve(RedisURI redisURI){
+  LettuceAssert.notNull(redisURI,"RedisURI must not be null");
+  return resolve(redisURI,dnsResolver);
+}
+/** 
+ * Resolves a  {@link io.lettuce.core.RedisURI} to a {@link java.net.SocketAddress}.
+ * @param redisURI must not be {@code null}.
+ * @param dnsResolver must not be {@code null}.
+ * @return the resolved {@link SocketAddress}.
+ */
+public static SocketAddress resolve(RedisURI redisURI,DnsResolver dnsResolver){
+  if (redisURI.getSocket() != null) {
+    return getDomainSocketAddress(redisURI);
+  }
+  try {
+    InetAddress[] inetAddress=dnsResolver.resolve(redisURI.getHost());
+    if (inetAddress.length == 0) {
+      return InetSocketAddress.createUnresolved(redisURI.getHost(),redisURI.getPort());
+    }
+    return new InetSocketAddress(inetAddress[0],redisURI.getPort());
+  }
+ catch (  UnknownHostException e) {
+    return new InetSocketAddress(redisURI.getHost(),redisURI.getPort());
+  }
+}

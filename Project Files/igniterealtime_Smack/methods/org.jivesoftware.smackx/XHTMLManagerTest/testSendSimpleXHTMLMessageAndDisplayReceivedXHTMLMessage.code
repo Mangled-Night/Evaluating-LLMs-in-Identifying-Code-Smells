@@ -1,0 +1,41 @@
+/** 
+ * High level API test. 1. User_1 will send a message with XHTML to user_2 2. User_2 will receive the message and iterate over the XHTML bodies to check if everything is fine 3. User_1 will wait several seconds for an ACK from user_2, if none is received then something is wrong
+ */
+public void testSendSimpleXHTMLMessageAndDisplayReceivedXHTMLMessage(){
+  Chat chat1=getConnection(0).getChatManager().createChat(getBareJID(1),null);
+  final StanzaCollector chat2=getConnection(1).createStanzaCollector(new ThreadFilter(chat1.getThreadID()));
+  Message msg=new Message();
+  msg.setSubject("Any subject you want");
+  msg.setBody("Hey John, this is my new green!!!!");
+  XHTMLText xhtmlText=new XHTMLText(null,null);
+  xhtmlText.appendOpenParagraphTag("font-size:large");
+  xhtmlText.append("Hey John, this is my new ");
+  xhtmlText.appendOpenSpanTag("color:green");
+  xhtmlText.append("green");
+  xhtmlText.appendCloseSpanTag();
+  xhtmlText.appendOpenEmTag();
+  xhtmlText.append("!!!!");
+  xhtmlText.appendCloseEmTag();
+  xhtmlText.appendCloseParagraphTag();
+  XHTMLManager.addBody(msg,xhtmlText.toString());
+  try {
+    chat1.sendMessage(msg);
+  }
+ catch (  Exception e) {
+    fail("An error occurred sending the message with XHTML");
+  }
+  Packet packet=chat2.nextResult(2000);
+  Message message=(Message)packet;
+  assertTrue("The received message is not an XHTML Message",XHTMLManager.isXHTMLMessage(message));
+  try {
+    assertTrue("Message without XHTML bodies",XHTMLManager.getBodies(message).hasNext());
+    for (Iterator<String> it=XHTMLManager.getBodies(message); it.hasNext(); ) {
+      String body=it.next();
+      System.out.println(body);
+    }
+  }
+ catch (  ClassCastException e) {
+    fail("ClassCastException - Most probable cause is that smack providers is misconfigured");
+  }
+  assertNotNull("No reply received",msg);
+}

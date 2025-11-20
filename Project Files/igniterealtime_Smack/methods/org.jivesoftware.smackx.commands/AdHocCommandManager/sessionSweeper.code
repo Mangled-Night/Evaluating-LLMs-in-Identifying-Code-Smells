@@ -1,0 +1,17 @@
+private void sessionSweeper(){
+  final long currentTime=System.currentTimeMillis();
+synchronized (this) {
+    for (Iterator<Map.Entry<String,LocalCommand>> it=executingCommands.entrySet().iterator(); it.hasNext(); ) {
+      Map.Entry<String,LocalCommand> entry=it.next();
+      LocalCommand command=entry.getValue();
+      long creationStamp=command.getCreationDate();
+      if (currentTime - creationStamp > SESSION_TIMEOUT * 1000 * 2) {
+        it.remove();
+      }
+    }
+    sessionSweeperScheduled=false;
+  }
+  if (!executingCommands.isEmpty()) {
+    maybeWindUpSessionSweeper();
+  }
+}

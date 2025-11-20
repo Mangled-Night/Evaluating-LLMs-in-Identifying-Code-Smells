@@ -1,0 +1,32 @@
+public void testroute() throws Exception {
+  SchemaConfig schema=schemaMap.get("cndb");
+  String sql="select * from independent where member='abc'";
+  RouteResultset rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(true,rrs.isCacheAble());
+  Map<String,RouteResultsetNode> nodeMap=getNodeMap(rrs,128);
+  IndexedNodeNameAsserter nameAsserter=new IndexedNodeNameAsserter("independent_dn",0,128);
+  nameAsserter.assertRouteNodeNames(nodeMap.keySet());
+  SimpleSQLAsserter sqlAsserter=new SimpleSQLAsserter();
+  for (int i=0; i < 128; ++i) {
+    sqlAsserter.addExpectSQL(i,"select * from independent where member='abc'");
+  }
+  RouteNodeAsserter asserter=new RouteNodeAsserter(nameAsserter,sqlAsserter);
+  for (  RouteResultsetNode node : nodeMap.values()) {
+    asserter.assertNode(node);
+  }
+  sql="select * from cndb.independent A  where a.member='abc'";
+  schema=schemaMap.get("cndb");
+  rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(true,rrs.isCacheAble());
+  nodeMap=getNodeMap(rrs,128);
+  nameAsserter=new IndexedNodeNameAsserter("independent_dn",0,128);
+  nameAsserter.assertRouteNodeNames(nodeMap.keySet());
+  sqlAsserter=new SimpleSQLAsserter();
+  for (int i=0; i < 128; ++i) {
+    sqlAsserter.addExpectSQL(i,"select * from independent A  where a.member='abc'");
+  }
+  asserter=new RouteNodeAsserter(nameAsserter,sqlAsserter);
+  for (  RouteResultsetNode node : nodeMap.values()) {
+    asserter.assertNode(node);
+  }
+}

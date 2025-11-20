@@ -1,0 +1,34 @@
+@RegisterAssetDataProducer public class FontMaterialProducer implements AssetDataProducer<MaterialData> {
+  private static final Logger logger=LoggerFactory.getLogger(FontMaterialProducer.class);
+  private static final Name RESOURCE_NAME=new Name("font");
+  private static final ResourceUrn FONT_SHADER_URN=new ResourceUrn("engine","font");
+  private AssetManager assetManager;
+  public FontMaterialProducer(  AssetManager assetManager){
+    this.assetManager=assetManager;
+  }
+  @Override public Set<ResourceUrn> getAvailableAssetUrns(){
+    return Collections.emptySet();
+  }
+  @Override public Set<Name> getModulesProviding(  Name resourceName){
+    return Collections.emptySet();
+  }
+  @Override public ResourceUrn redirect(  ResourceUrn urn){
+    return urn;
+  }
+  @Override public Optional<MaterialData> getAssetData(  ResourceUrn urn) throws IOException {
+    if (RESOURCE_NAME.equals(urn.getResourceName()) && !urn.getFragmentName().isEmpty()) {
+      Optional<? extends Shader> fontShader=assetManager.getAsset(FONT_SHADER_URN,Shader.class);
+      if (!fontShader.isPresent()) {
+        logger.error("Unable to resolve font shader");
+        return Optional.empty();
+      }
+      Optional<Texture> texture=assetManager.getAsset(new ResourceUrn(urn.getModuleName(),urn.getFragmentName()),Texture.class);
+      if (texture.isPresent()) {
+        MaterialData materialData=new MaterialData(fontShader.get());
+        materialData.setParam("tex",texture.get());
+        return Optional.of(materialData);
+      }
+    }
+    return Optional.empty();
+  }
+}

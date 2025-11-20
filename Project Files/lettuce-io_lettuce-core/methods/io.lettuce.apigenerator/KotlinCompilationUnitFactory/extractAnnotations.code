@@ -1,0 +1,14 @@
+private String extractAnnotations(MethodDeclaration method){
+  return method.getAnnotations().stream().map(a -> {
+    String annotation=a.getNameAsString();
+    if (annotation.equals("Deprecated")) {
+      String identifier=method.getName().getIdentifier();
+      String replacement=KEEP_DEPRECATED_METHODS.get(identifier);
+      return "@" + annotation + "(\"Use ["+ replacement+ "] instead.\", ReplaceWith(\""+ replacement+ "\"))\n"+ FORMATTING_INDENT;
+    }
+ else {
+      return "@" + annotation + "\n"+ FORMATTING_INDENT;
+    }
+  }
+).collect(joining());
+}

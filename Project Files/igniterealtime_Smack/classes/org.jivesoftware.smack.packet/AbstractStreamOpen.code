@@ -1,0 +1,55 @@
+/** 
+ * AbstractStreamOpen is actually a  {@link TopLevelStreamElement}, however we implement  {@link Nonza} here. This is because, {@link XMPPConnection} doesn'tyet support sending  {@link TopLevelStreamElement} directly and the same can onlybe achieved through  {@link XMPPConnection#sendNonza(Nonza)}.
+ */
+public abstract class AbstractStreamOpen implements Nonza {
+  public static final String ETHERX_JABBER_STREAMS_NAMESPACE="http://etherx.jabber.org/streams";
+  public static final String CLIENT_NAMESPACE="jabber:client";
+  public static final String SERVER_NAMESPACE="jabber:server";
+  /** 
+ * RFC 6120 § 4.7.5.
+ */
+  public static final String VERSION="1.0";
+  /** 
+ * RFC 6120 § 4.7.1.
+ */
+  protected final String from;
+  /** 
+ * RFC 6120 § 4.7.2.
+ */
+  protected final String to;
+  /** 
+ * RFC 6120 § 4.7.3.
+ */
+  protected final String id;
+  /** 
+ * RFC 6120 § 4.7.4.
+ */
+  protected final String lang;
+  /** 
+ * RFC 6120 § 4.8.2.
+ */
+  protected final String contentNamespace;
+  public AbstractStreamOpen(  CharSequence to,  CharSequence from,  String id,  String lang){
+    this(to,from,id,lang,StreamContentNamespace.client);
+  }
+  public AbstractStreamOpen(  CharSequence to,  CharSequence from,  String id,  String lang,  StreamContentNamespace ns){
+    this.to=StringUtils.maybeToString(to);
+    this.from=StringUtils.maybeToString(from);
+    this.id=id;
+    this.lang=lang;
+switch (ns) {
+case client:
+      this.contentNamespace=CLIENT_NAMESPACE;
+    break;
+case server:
+  this.contentNamespace=SERVER_NAMESPACE;
+break;
+default :
+throw new IllegalStateException();
+}
+}
+protected final void addCommonAttributes(XmlStringBuilder xml){
+xml.optAttribute("to",to);
+xml.optAttribute("version",VERSION);
+}
+}

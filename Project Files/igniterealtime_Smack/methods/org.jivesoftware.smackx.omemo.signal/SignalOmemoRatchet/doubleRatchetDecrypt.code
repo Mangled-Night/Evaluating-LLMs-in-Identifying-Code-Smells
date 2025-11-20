@@ -1,0 +1,51 @@
+@Override public byte[] doubleRatchetDecrypt(OmemoDevice sender,byte[] encryptedKey) throws CorruptedOmemoKeyException, NoRawSessionException, CryptoFailedException, UntrustedOmemoIdentityException, IOException {
+  SessionCipher cipher=getCipher(sender);
+  byte[] decryptedKey;
+  try {
+    PreKeySignalMessage preKeyMessage=new PreKeySignalMessage(encryptedKey);
+    if (!preKeyMessage.getPreKeyId().isPresent()) {
+      throw new CryptoFailedException("PreKeyMessage did not contain a preKeyId.");
+    }
+    IdentityKey messageIdentityKey=preKeyMessage.getIdentityKey();
+    IdentityKey previousIdentityKey=store.loadOmemoIdentityKey(storeConnector.getOurDevice(),sender);
+    if (previousIdentityKey != null && !previousIdentityKey.getFingerprint().equals(messageIdentityKey.getFingerprint())) {
+      throw new UntrustedOmemoIdentityException(sender,store.keyUtil().getFingerprintOfIdentityKey(previousIdentityKey),store.keyUtil().getFingerprintOfIdentityKey(messageIdentityKey));
+    }
+    try {
+      decryptedKey=cipher.decrypt(preKeyMessage);
+    }
+ catch (    UntrustedIdentityException e) {
+      throw new AssertionError("Signals trust management MUST be disabled.");
+    }
+catch (    LegacyMessageException|InvalidKeyException e) {
+      throw new CryptoFailedException(e);
+    }
+catch (    InvalidKeyIdException e) {
+      throw new NoRawSessionException(sender,e);
+    }
+catch (    DuplicateMessageException e) {
+      LOGGER.log(Level.INFO,"Decryption of PreKeyMessage from " + sender + " failed, since the message has been decrypted before.");
+      return null;
+    }
+  }
+ catch (  InvalidVersionException|InvalidMessageException noPreKeyMessage) {
+    try {
+      SignalMessage message=new SignalMessage(encryptedKey);
+      decryptedKey=getCipher(sender).decrypt(message);
+    }
+ catch (    UntrustedIdentityException e) {
+      throw new AssertionError("Signals trust management MUST be disabled.");
+    }
+catch (    InvalidMessageException|NoSessionException e) {
+      throw new NoRawSessionException(sender,e);
+    }
+catch (    LegacyMessageException e) {
+      throw new CryptoFailedException(e);
+    }
+catch (    DuplicateMessageException e1) {
+      LOGGER.log(Level.INFO,"Decryption of SignalMessage from " + sender + " failed, since the message has been decrypted before.");
+      return null;
+    }
+  }
+  return decryptedKey;
+}

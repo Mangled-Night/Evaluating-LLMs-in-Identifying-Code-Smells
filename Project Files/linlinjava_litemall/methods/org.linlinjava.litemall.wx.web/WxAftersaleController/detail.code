@@ -1,0 +1,21 @@
+/** 
+ * 售后详情
+ * @param orderId 订单ID
+ * @return 售后详情
+ */
+@GetMapping("detail") public Object detail(@LoginUser Integer userId,@NotNull Integer orderId){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  LitemallOrder order=orderService.findById(userId,orderId);
+  if (order == null) {
+    return ResponseUtil.badArgumentValue();
+  }
+  List<LitemallOrderGoods> orderGoodsList=orderGoodsService.queryByOid(orderId);
+  LitemallAftersale aftersale=aftersaleService.findByOrderId(userId,orderId);
+  Map<String,Object> data=new HashMap<String,Object>();
+  data.put("aftersale",aftersale);
+  data.put("order",order);
+  data.put("orderGoods",orderGoodsList);
+  return ResponseUtil.ok(data);
+}

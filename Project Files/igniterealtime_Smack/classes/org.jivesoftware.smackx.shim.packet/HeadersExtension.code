@@ -1,0 +1,43 @@
+/** 
+ * Extension representing a list of headers as specified in <a href="http://xmpp.org/extensions/xep-0131">Stanza Headers and Internet Metadata (SHIM)</a>.
+ * @see Header
+ * @author Robin Collier
+ */
+public class HeadersExtension implements ExtensionElement {
+  public static final String ELEMENT="headers";
+  public static final String NAMESPACE="http://jabber.org/protocol/shim";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  private final List<Header> headers;
+  public HeadersExtension(  List<Header> headerList){
+    if (headerList != null) {
+      headers=Collections.unmodifiableList(headerList);
+    }
+ else {
+      headers=Collections.emptyList();
+    }
+  }
+  public List<Header> getHeaders(){
+    return headers;
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this);
+    xml.rightAngleBracket();
+    xml.append(headers);
+    xml.closeElement(this);
+    return xml;
+  }
+  /** 
+ * Return the SHIM headers extension of this stanza or null if there is none.
+ * @param packet TODO javadoc me please
+ * @return the headers extension or null.
+ */
+  public static HeadersExtension from(  Stanza packet){
+    return packet.getExtension(HeadersExtension.class);
+  }
+}

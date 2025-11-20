@@ -1,0 +1,8 @@
+@Test void nodeConnections(){
+  assertThat(clusterClient.getPartitions()).hasSize(4);
+  for (  RedisClusterNode redisClusterNode : clusterClient.getPartitions()) {
+    RedisClusterAsyncCommands<String,String> nodeConnection=async.getConnection(redisClusterNode.getNodeId());
+    String myid=TestFutures.getOrTimeout(nodeConnection.clusterMyId());
+    assertThat(myid).isEqualTo(redisClusterNode.getNodeId());
+  }
+}

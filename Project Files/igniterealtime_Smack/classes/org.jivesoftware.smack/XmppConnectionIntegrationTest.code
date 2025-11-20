@@ -1,0 +1,25 @@
+public class XmppConnectionIntegrationTest extends AbstractSmackLowLevelIntegrationTest {
+  public XmppConnectionIntegrationTest(  SmackIntegrationTestEnvironment environment){
+    super(environment);
+  }
+  @SmackIntegrationTest(connectionCount=4) public void allToAllMessageSendTest(  List<AbstractXMPPConnection> connections) throws InterruptedException, NotAllMessagesReceivedException, ErrorsWhileSendingOrReceivingException {
+    final long seed=42;
+    final int messagesPerConnection=3;
+    final int maxPayloadChunkSize=16;
+    final int maxPayloadChunks=4;
+    final boolean intermixMessages=false;
+    XmppConnectionStressTest.Configuration stressTestConfiguration=new XmppConnectionStressTest.Configuration(seed,messagesPerConnection,maxPayloadChunkSize,maxPayloadChunks,intermixMessages);
+    XmppConnectionStressTest stressTest=new XmppConnectionStressTest(stressTestConfiguration);
+    stressTest.run(connections,timeout);
+    final Level connectionStatsLogLevel=Level.FINE;
+    if (LOGGER.isLoggable(connectionStatsLogLevel)) {
+      if (connections.get(0) instanceof ModularXmppClientToServerConnection) {
+        for (        XMPPConnection connection : connections) {
+          ModularXmppClientToServerConnection xmppC2sConnection=(ModularXmppClientToServerConnection)connection;
+          ModularXmppClientToServerConnection.Stats stats=xmppC2sConnection.getStats();
+          LOGGER.log(connectionStatsLogLevel,"Connections stats for " + xmppC2sConnection + ":\n{}",stats);
+        }
+      }
+    }
+  }
+}

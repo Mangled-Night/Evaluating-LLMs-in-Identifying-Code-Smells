@@ -1,0 +1,29 @@
+/** 
+ * @author mycat
+ */
+public class ManagerConnection extends FrontendConnection {
+  private long authTimeout=SystemConfig.DEFAULT_AUTH_TIMEOUT;
+  public ManagerConnection(  NetworkChannel channel) throws IOException {
+    super(channel);
+  }
+  @Override public boolean isIdleTimeout(){
+    if (isAuthenticated) {
+      return super.isIdleTimeout();
+    }
+ else {
+      return TimeUtil.currentTimeMillis() > Math.max(lastWriteTime,lastReadTime) + this.authTimeout;
+    }
+  }
+  public long getAuthTimeout(){
+    return authTimeout;
+  }
+  public void setAuthTimeout(  long authTimeout){
+    this.authTimeout=authTimeout;
+  }
+  @Override public void handle(  final byte[] data){
+    this.executeSqlId++;
+    handler.handle(data);
+  }
+  @Override public void checkQueueFlow(){
+  }
+}

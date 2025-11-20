@@ -1,0 +1,14 @@
+@Override public int updateBrand(Long id,PmsBrandParam pmsBrandParam){
+  PmsBrand pmsBrand=new PmsBrand();
+  BeanUtils.copyProperties(pmsBrandParam,pmsBrand);
+  pmsBrand.setId(id);
+  if (StrUtil.isEmpty(pmsBrand.getFirstLetter())) {
+    pmsBrand.setFirstLetter(pmsBrand.getName().substring(0,1));
+  }
+  PmsProduct product=new PmsProduct();
+  product.setBrandName(pmsBrand.getName());
+  PmsProductExample example=new PmsProductExample();
+  example.createCriteria().andBrandIdEqualTo(id);
+  productMapper.updateByExampleSelective(product,example);
+  return brandMapper.updateByPrimaryKeySelective(pmsBrand);
+}

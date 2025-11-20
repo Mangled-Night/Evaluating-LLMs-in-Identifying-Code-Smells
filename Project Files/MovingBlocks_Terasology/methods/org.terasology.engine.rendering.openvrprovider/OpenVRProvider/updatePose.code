@@ -1,0 +1,29 @@
+private void updatePose(){
+  vrCompositor.WaitGetPoses.apply(hmdTrackedDevicePoseReference,JOpenVRLibrary.k_unMaxTrackedDeviceCount,null,0);
+  for (int nDevice=0; nDevice < JOpenVRLibrary.k_unMaxTrackedDeviceCount; ++nDevice) {
+    hmdTrackedDevicePoses[nDevice].read();
+  }
+  if (hmdTrackedDevicePoses[JOpenVRLibrary.k_unTrackedDeviceIndex_Hmd].bPoseIsValid != 0) {
+    for (int nEye=0; nEye < 2; nEye++) {
+      HmdMatrix34_t matPose=vrSystem.GetEyeToHeadTransform.apply(nEye);
+      VR_STATE.setEyePoseWRTHead(matPose,nEye);
+      HmdMatrix44_t matProjection=vrSystem.GetProjectionMatrix.apply(nEye,nearClip,farClip,JOpenVRLibrary.EGraphicsAPIConvention.EGraphicsAPIConvention_API_OpenGL);
+      VR_STATE.setProjectionMatrix(matProjection,nEye);
+    }
+    VR_STATE.setHeadPose(hmdTrackedDevicePoses[JOpenVRLibrary.k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking);
+    headIsTracking=true;
+  }
+ else {
+    headIsTracking=false;
+  }
+  findControllerDevices();
+  for (int handIndex=0; handIndex < 2; handIndex++) {
+    if (controllerDeviceIndex[handIndex] != -1) {
+      controllerTracking[handIndex]=true;
+      VR_STATE.setControllerPose(hmdTrackedDevicePoses[controllerDeviceIndex[handIndex]].mDeviceToAbsoluteTracking,handIndex);
+    }
+ else {
+      controllerTracking[handIndex]=false;
+    }
+  }
+}

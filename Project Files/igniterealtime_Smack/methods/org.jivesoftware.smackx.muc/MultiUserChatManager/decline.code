@@ -1,0 +1,17 @@
+/** 
+ * Informs the sender of an invitation that the invitee declines the invitation. The rejection will be sent to the room which in turn will forward the rejection to the inviter.
+ * @param room the room that sent the original invitation.
+ * @param inviter the inviter of the declined invitation.
+ * @param reason the reason why the invitee is declining the invitation.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void decline(EntityBareJid room,EntityBareJid inviter,String reason) throws NotConnectedException, InterruptedException {
+  XMPPConnection connection=connection();
+  MessageBuilder messageBuilder=connection.getStanzaFactory().buildMessageStanza().to(room);
+  MUCUser mucUser=new MUCUser();
+  MUCUser.Decline decline=new MUCUser.Decline(reason,inviter);
+  mucUser.setDecline(decline);
+  messageBuilder.addExtension(mucUser);
+  connection.sendStanza(messageBuilder.build());
+}

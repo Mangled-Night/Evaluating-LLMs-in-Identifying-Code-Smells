@@ -1,0 +1,34 @@
+@Override public void run(){
+  try {
+    while (true) {
+      final Stanza packet=connection.getSentPacket();
+      if (packet instanceof RosterPacket && ((IQ)packet).getType() == IQ.Type.set) {
+        final RosterPacket rosterRequest=(RosterPacket)packet;
+        final RosterPacket rosterPush=new RosterPacket();
+        final Item item=rosterRequest.getRosterItems().iterator().next();
+        if (item.getItemType() != ItemType.remove) {
+          item.setItemType(ItemType.none);
+        }
+        rosterPush.setType(IQ.Type.set);
+        rosterPush.setTo(connection.getUser());
+        rosterPush.addRosterItem(item);
+        connection.processStanza(rosterPush);
+        final IQ response=IQ.createResultIQ(rosterRequest);
+        connection.processStanza(response);
+        if (rosterRequest.getRosterItemCount() != 1) {
+          throw new AssertionError("A roster set MUST contain one and only one <item/> element.");
+        }
+        verifyRosterUpdateRequest(rosterRequest);
+        break;
+      }
+ else       if (packet instanceof Presence && ((Presence)packet).getType() == Presence.Type.subscribed) {
+        final Presence approval=(Presence)packet;
+        verifyPreApprovalRequest(approval);
+      }
+    }
+  }
+ catch (  Throwable e) {
+    exception=e;
+    fail(e.getMessage());
+  }
+}

@@ -1,0 +1,26 @@
+public void saveSlotMapping(Map<Integer,List<Range>> rangeMap){
+  this.rangeMap=rangeMap;
+  Properties prop=new Properties();
+  File file=getFile();
+  if (file.exists())   file.delete();
+  for (  Map.Entry<Integer,List<Range>> integerListEntry : rangeMap.entrySet()) {
+    String key=String.valueOf(integerListEntry.getKey());
+    List<String> values=new ArrayList<>();
+    for (    Range range : integerListEntry.getValue()) {
+      values.add(range.start + "-" + range.end);
+    }
+    prop.setProperty(key,Joiner.on(",").join(values));
+  }
+  try {
+    Files.createParentDirs(file);
+  }
+ catch (  IOException e) {
+    throw new RuntimeException(e);
+  }
+  try (FileOutputStream out=new FileOutputStream(file)){
+    prop.store(out,"WARNING   !!!Please do not modify or delete this file!!!");
+  }
+ catch (  IOException e) {
+    throw new RuntimeException(e);
+  }
+}

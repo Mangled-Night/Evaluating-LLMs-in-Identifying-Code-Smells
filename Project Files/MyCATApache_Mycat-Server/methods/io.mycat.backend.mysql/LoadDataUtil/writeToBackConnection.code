@@ -1,0 +1,25 @@
+public static byte writeToBackConnection(byte packID,InputStream inputStream,BackendAIOConnection backendAIOConnection) throws IOException {
+  try {
+    int packSize=MycatServer.getInstance().getConfig().getSystem().getBufferPoolChunkSize() - 5;
+    byte[] buffer=new byte[packSize];
+    int len=-1;
+    while ((len=inputStream.read(buffer)) != -1) {
+      byte[] temp=null;
+      if (len == packSize) {
+        temp=buffer;
+      }
+ else {
+        temp=new byte[len];
+        System.arraycopy(buffer,0,temp,0,len);
+      }
+      BinaryPacket packet=new BinaryPacket();
+      packet.packetId=++packID;
+      packet.data=temp;
+      packet.write(backendAIOConnection);
+    }
+  }
+  finally {
+    inputStream.close();
+  }
+  return packID;
+}

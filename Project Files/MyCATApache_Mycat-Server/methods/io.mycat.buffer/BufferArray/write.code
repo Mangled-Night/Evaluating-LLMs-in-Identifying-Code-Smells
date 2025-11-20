@@ -1,0 +1,20 @@
+public ByteBuffer write(byte[] src){
+  int offset=0;
+  int remains=src.length;
+  while (remains > 0) {
+    int writeable=curWritingBlock.remaining();
+    if (writeable >= remains) {
+      curWritingBlock.put(src,offset,remains);
+      break;
+    }
+ else {
+      curWritingBlock.put(src,offset,writeable);
+      offset+=writeable;
+      remains-=writeable;
+      addtoBlock(curWritingBlock);
+      curWritingBlock=bufferPool.allocate(bufferPool.getChunkSize());
+      continue;
+    }
+  }
+  return curWritingBlock;
+}

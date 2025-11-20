@@ -1,0 +1,15 @@
+@Test void testUnsubscribe(){
+  int subscriberCount=10;
+  List<SettingChangeListener<Integer>> listeners=Lists.newArrayListWithCapacity(subscriberCount);
+  for (int i=0; i < subscriberCount; i++) {
+    SettingChangeListener<Integer> listener=(setting1,oldValue) -> eventCallCount++;
+    listeners.add(listener);
+    setting.subscribe(listener);
+  }
+  for (int i=0; i < new FastRandom().nextInt(subscriberCount / 2); i++) {
+    setting.unsubscribe(listeners.get(i));
+    subscriberCount--;
+  }
+  setting.set(30);
+  assertEquals(subscriberCount,eventCallCount);
+}

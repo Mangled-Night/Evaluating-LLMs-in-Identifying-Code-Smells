@@ -1,0 +1,38 @@
+public MultiNodeQueryHandler(int sqlType,RouteResultset rrs,boolean autocommit,NonBlockingSession session){
+  super(session);
+  this.isMiddleResultDone=new AtomicBoolean(false);
+  if (rrs.getNodes() == null) {
+    throw new IllegalArgumentException("routeNode is null!");
+  }
+  if (LOGGER.isDebugEnabled()) {
+    LOGGER.debug("execute mutinode query " + rrs.getStatement());
+  }
+  this.rrs=rrs;
+  isOffHeapuseOffHeapForMerge=MycatServer.getInstance().getConfig().getSystem().getUseOffHeapForMerge();
+  if (ServerParse.SELECT == sqlType && rrs.needMerge()) {
+    if (isOffHeapuseOffHeapForMerge == 1) {
+      dataMergeSvr=new DataNodeMergeManager(this,rrs,isMiddleResultDone);
+    }
+ else {
+      dataMergeSvr=new DataMergeService(this,rrs);
+    }
+  }
+ else {
+    dataMergeSvr=null;
+  }
+  isCallProcedure=rrs.isCallStatement();
+  this.autocommit=session.getSource().isAutocommit();
+  this.session=session;
+  this.limitStart=rrs.getLimitStart();
+  this.limitSize=rrs.getLimitSize();
+  this.end=limitStart + rrs.getLimitSize();
+  if (this.limitStart < 0)   this.limitStart=0;
+  if (rrs.getLimitSize() < 0)   end=Integer.MAX_VALUE;
+  if ((dataMergeSvr != null) && LOGGER.isDebugEnabled()) {
+    LOGGER.debug("has data merge logic ");
+  }
+  if (rrs != null && rrs.getStatement() != null) {
+    netInBytes+=rrs.getStatement().getBytes().length;
+  }
+  this.errConnections=new ArrayList<>();
+}

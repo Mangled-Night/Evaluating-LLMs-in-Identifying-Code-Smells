@@ -1,0 +1,18 @@
+@RequiresPermissions("admin:admin:create") @RequiresPermissionsDesc(menu={"系统管理","管理员管理"},button="添加") @PostMapping("/create") public Object create(@RequestBody LitemallAdmin admin){
+  Object error=validate(admin);
+  if (error != null) {
+    return error;
+  }
+  String username=admin.getUsername();
+  List<LitemallAdmin> adminList=adminService.findAdmin(username);
+  if (adminList.size() > 0) {
+    return ResponseUtil.fail(ADMIN_NAME_EXIST,"管理员已经存在");
+  }
+  String rawPassword=admin.getPassword();
+  BCryptPasswordEncoder encoder=new BCryptPasswordEncoder();
+  String encodedPassword=encoder.encode(rawPassword);
+  admin.setPassword(encodedPassword);
+  adminService.add(admin);
+  logHelper.logAuthSucceed("添加管理员",username);
+  return ResponseUtil.ok(admin);
+}

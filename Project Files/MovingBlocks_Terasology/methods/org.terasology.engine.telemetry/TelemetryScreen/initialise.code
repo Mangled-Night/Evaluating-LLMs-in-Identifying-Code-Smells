@@ -1,0 +1,24 @@
+@Override public void initialise(){
+  setAnimationSystem(MenuAnimationSystems.createDefaultSwipeAnimation());
+  refreshContent();
+  WidgetUtil.trySubscribe(this,"back",button -> triggerBackAnimation());
+  WidgetUtil.tryBindCheckBoxWithListener(this,"telemetryEnabled",BindHelper.bindBeanProperty("telemetryEnabled",config.getTelemetryConfig(),Boolean.TYPE),(checkbox) -> {
+    if (config.getTelemetryConfig().isTelemetryEnabled()) {
+      pushAddServerPopupAndStartEmitter();
+    }
+  }
+);
+  WidgetUtil.tryBindCheckBoxWithListener(this,"errorReportingEnabled",BindHelper.bindBeanProperty("errorReportingEnabled",config.getTelemetryConfig(),Boolean.TYPE),(checkbox) -> {
+    if (config.getTelemetryConfig().isErrorReportingEnabled()) {
+      pushAddServerPopupAndStartLogBackAppender();
+    }
+ else {
+      TelemetryLogstashAppender telemetryLogstashAppender=TelemetryUtils.fetchTelemetryLogstashAppender();
+      if (telemetryLogstashAppender != null) {
+        telemetryLogstashAppender.stop();
+      }
+    }
+  }
+);
+  addEnablingAllTelemetryListener();
+}

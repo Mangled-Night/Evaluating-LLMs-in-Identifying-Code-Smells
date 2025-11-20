@@ -1,0 +1,29 @@
+protected FormField(Builder<?,?> builder){
+  fieldName=builder.fieldName;
+  label=builder.label;
+  type=builder.type;
+  if (builder.formFieldChildElements != null) {
+    formFieldChildElements=Collections.unmodifiableList(builder.formFieldChildElements);
+  }
+ else {
+    formFieldChildElements=Collections.emptyList();
+  }
+  if (fieldName == null && type != Type.fixed) {
+    throw new IllegalArgumentException("The variable can only be null if the form is of type fixed");
+  }
+  String description=null;
+  boolean requiredElementAsChild=false;
+  ArrayList<CharSequence> values=new ArrayList<>(formFieldChildElements.size());
+  for (  FormFieldChildElement formFieldChildElement : formFieldChildElements) {
+    if (formFieldChildElement instanceof Description) {
+      description=((Description)formFieldChildElement).getDescription();
+    }
+ else     if (formFieldChildElement instanceof Required) {
+      requiredElementAsChild=true;
+    }
+  }
+  values.trimToSize();
+  this.description=description;
+  required=requiredElementAsChild;
+  formFieldChildElementsMap=createChildElementsMap();
+}

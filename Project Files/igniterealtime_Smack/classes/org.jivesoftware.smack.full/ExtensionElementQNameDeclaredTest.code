@@ -1,0 +1,21 @@
+public class ExtensionElementQNameDeclaredTest {
+  @Test public void qnameOrElementNamespaceDeclaredTest(){
+    String[] smackPackages=new String[]{"org.jivesoftware.smack","org.igniterealtime.smack"};
+    Reflections reflections=new Reflections(smackPackages,new SubTypesScanner());
+    Set<Class<? extends ExtensionElement>> extensionElementClasses=reflections.getSubTypesOf(ExtensionElement.class);
+    Map<Class<? extends ExtensionElement>,IllegalArgumentException> exceptions=new HashMap<>();
+    for (    Class<? extends ExtensionElement> extensionElementClass : extensionElementClasses) {
+      if (Modifier.isAbstract(extensionElementClass.getModifiers())) {
+        continue;
+      }
+      try {
+        XmppElementUtil.getQNameFor(extensionElementClass);
+      }
+ catch (      IllegalArgumentException e) {
+        exceptions.put(extensionElementClass,e);
+      }
+    }
+    Set<Class<? extends ExtensionElement>> failedClasses=exceptions.keySet();
+    assertThat(failedClasses).withFailMessage("The following " + failedClasses.size() + " classes are missing QNAME declaration: "+ failedClasses).isEmpty();
+  }
+}

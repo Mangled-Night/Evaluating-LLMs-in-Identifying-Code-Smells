@@ -1,0 +1,27 @@
+/** 
+ * macbook上运行结果如下 allLoadedClasses->1050 arthas.VmTool@5bb21b69 arthas.VmTool@6b9651f3 before instances->[arthas.VmTool@5bb21b69, arthas.VmTool@6b9651f3] size->16 count->2 sum size->32 null null after instances->[]
+ */
+@Test public void testIsSnapshot(){
+  try {
+    VmTool vmtool=initVmTool();
+    Class<?>[] allLoadedClasses=vmtool.getAllLoadedClasses();
+    System.out.println("allLoadedClasses->" + allLoadedClasses.length);
+    WeakReference<VmToolTest> weakReference1=new WeakReference<VmToolTest>(new VmToolTest());
+    WeakReference<VmToolTest> weakReference2=new WeakReference<VmToolTest>(new VmToolTest());
+    System.out.println(weakReference1.get() + " " + weakReference2.get());
+    VmTool[] beforeInstances=vmtool.getInstances(VmTool.class);
+    System.out.println("before instances->" + beforeInstances);
+    System.out.println("size->" + vmtool.getInstanceSize(weakReference1.get()));
+    System.out.println("count->" + vmtool.countInstances(VmTool.class));
+    System.out.println("sum size->" + vmtool.sumInstanceSize(VmTool.class));
+    beforeInstances=null;
+    vmtool.forceGc();
+    Thread.sleep(100);
+    System.out.println(weakReference1.get() + " " + weakReference2.get());
+    VmTool[] afterInstances=vmtool.getInstances(VmTool.class);
+    System.out.println("after instances->" + afterInstances);
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+  }
+}

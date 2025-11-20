@@ -1,0 +1,77 @@
+/** 
+ * This is a full test in the Jingle API.
+ */
+public void testMediaManager(){
+  resetCounter();
+  XMPPTCPConnection x0=getConnection(0);
+  XMPPTCPConnection x1=getConnection(1);
+  FixedResolver tr0=new FixedResolver("127.0.0.1",20004);
+  FixedTransportManager ftm0=new FixedTransportManager(tr0);
+  FixedResolver tr1=new FixedResolver("127.0.0.1",20040);
+  FixedTransportManager ftm1=new FixedTransportManager(tr1);
+  try {
+    JingleMediaManager jingleMediaManager=new JingleMediaManager(ftm0){
+      public JingleMediaSession createMediaSession(      final PayloadType payloadType,      final TransportCandidate remote,      final TransportCandidate local,      final JingleSession jingleSession){
+        return new JingleMediaSession(payloadType,remote,local,null,null){
+          public void initialize(){
+          }
+          public void startTrasmit(){
+            incCounter();
+            System.out.println("Transmit");
+          }
+          public void startReceive(){
+            incCounter();
+            System.out.println("Receive");
+          }
+          public void setTrasmit(          boolean active){
+          }
+          public void stopTrasmit(){
+            incCounter();
+            System.out.println("Stop Transmit");
+          }
+          public void stopReceive(){
+            incCounter();
+            System.out.println("Stop Receive");
+          }
+        }
+;
+      }
+      public List<PayloadType> getPayloads(){
+        return getTestPayloads1();
+      }
+      public PayloadType.Audio getPreferredAudioPayloadType(){
+        return (PayloadType.Audio)getTestPayloads1().get(0);
+      }
+    }
+;
+    List<JingleMediaManager> trl0=new ArrayList<JingleMediaManager>();
+    trl0.add(jingleMediaManager);
+    List<JingleMediaManager> trl1=new ArrayList<JingleMediaManager>();
+    trl1.add(jingleMediaManager);
+    JingleManager jm0=new JingleManager(x0,trl0);
+    JingleManager jm1=new JingleManager(x1,trl1);
+    jm1.addJingleSessionRequestListener(new JingleSessionRequestListener(){
+      public void sessionRequested(      final JingleSessionRequest request){
+        try {
+          JingleSession session=request.accept();
+          session.startIncoming();
+        }
+ catch (        XMPPException e) {
+          LOGGER.log(Level.WARNING,"exception",e);
+        }
+      }
+    }
+);
+    JingleSession js0=jm0.createOutgoingJingleSession(x1.getUser());
+    js0.startOutgoing();
+    Thread.sleep(10000);
+    js0.terminate();
+    Thread.sleep(3000);
+    System.out.println(valCounter());
+    assertTrue(valCounter() == 8);
+    Thread.sleep(15000);
+  }
+ catch (  Exception e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+}

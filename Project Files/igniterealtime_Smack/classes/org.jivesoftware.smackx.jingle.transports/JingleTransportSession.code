@@ -1,0 +1,24 @@
+public abstract class JingleTransportSession<T extends JingleContentTransport> {
+  protected final JingleSession jingleSession;
+  protected T ourProposal, theirProposal;
+  public JingleTransportSession(  JingleSession session){
+    this.jingleSession=session;
+  }
+  public abstract T createTransport();
+  public void processJingle(  Jingle jingle){
+    if (jingle.getContents().size() == 0) {
+      return;
+    }
+    JingleContent content=jingle.getContents().get(0);
+    JingleContentTransport t=content.getTransport();
+    if (t != null && t.getNamespace().equals(getNamespace())) {
+      setTheirProposal(t);
+    }
+  }
+  public abstract void setTheirProposal(  JingleContentTransport transport);
+  public abstract void initiateOutgoingSession(  JingleTransportInitiationCallback callback);
+  public abstract void initiateIncomingSession(  JingleTransportInitiationCallback callback);
+  public abstract String getNamespace();
+  public abstract IQ handleTransportInfo(  Jingle transportInfo);
+  public abstract JingleTransportManager<T> transportManager();
+}

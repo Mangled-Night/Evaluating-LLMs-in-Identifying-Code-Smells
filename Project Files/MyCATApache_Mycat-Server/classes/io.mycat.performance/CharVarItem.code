@@ -1,0 +1,42 @@
+class CharVarItem extends StringItem {
+  List<char[]> rang=new ArrayList<char[]>();
+  int minLen=1;
+  int maxLen=256;
+  public void initString(  String content){
+    int start=content.indexOf('[');
+    int end=content.indexOf(']');
+    String[] items=content.substring(start + 1,end).split(",");
+    for (    String itemStr : items) {
+      if (itemStr.indexOf('-') > 0) {
+        String[] pair=itemStr.split("-");
+        char[] curRange=new char[2];
+        curRange[0]=pair[0].charAt(0);
+        curRange[1]=pair[1].charAt(0);
+        rang.add(curRange);
+      }
+    }
+    int splitPos=content.indexOf(':');
+    if (splitPos > 0) {
+      int splitStart=(end == -1) ? content.indexOf('(') : end;
+      int splitEnd=content.indexOf(')');
+      String[] pair=content.substring(splitStart + 1,splitEnd).split(":");
+      minLen=Integer.valueOf(pair[0]);
+      maxLen=Integer.valueOf(pair[1]);
+    }
+  }
+  public String getValue(){
+    int lenth=Math.abs(rand.nextInt()) % (maxLen - minLen + 1) + minLen;
+    char[] chars=new char[lenth];
+    for (int i=0; i < chars.length; i++) {
+      int randInt=Math.abs(rand.nextInt());
+      int choise=randInt % rang.size();
+      char[] choisedRange=rang.get(choise);
+      char randChar=(char)(randInt % (choisedRange[1] - choisedRange[0] + 1) + choisedRange[0]);
+      chars[i]=randChar;
+    }
+    return new String(chars);
+  }
+  @Override public String toString(){
+    return "CharVarItem [rang=" + rang + ", minLen="+ minLen+ ", maxLen="+ maxLen+ "]";
+  }
+}

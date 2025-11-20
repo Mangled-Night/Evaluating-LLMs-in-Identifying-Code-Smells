@@ -1,0 +1,24 @@
+@RequiresPermissions("admin:groupon:update") @RequiresPermissionsDesc(menu={"推广管理","团购管理"},button="编辑") @PostMapping("/update") public Object update(@RequestBody LitemallGrouponRules grouponRules){
+  Object error=validate(grouponRules);
+  if (error != null) {
+    return error;
+  }
+  LitemallGrouponRules rules=rulesService.findById(grouponRules.getId());
+  if (rules == null) {
+    return ResponseUtil.badArgumentValue();
+  }
+  if (!rules.getStatus().equals(GrouponConstant.RULE_STATUS_ON)) {
+    return ResponseUtil.fail(AdminResponseCode.GROUPON_GOODS_OFFLINE,"团购已经下线");
+  }
+  Integer goodsId=grouponRules.getGoodsId();
+  LitemallGoods goods=goodsService.findById(goodsId);
+  if (goods == null) {
+    return ResponseUtil.badArgumentValue();
+  }
+  grouponRules.setGoodsName(goods.getName());
+  grouponRules.setPicUrl(goods.getPicUrl());
+  if (rulesService.updateById(grouponRules) == 0) {
+    return ResponseUtil.updatedDataFailed();
+  }
+  return ResponseUtil.ok();
+}

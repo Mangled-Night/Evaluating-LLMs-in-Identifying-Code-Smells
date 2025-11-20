@@ -1,0 +1,39 @@
+@Test public void iteratingOverDataPagesWithWastedSpace() throws Exception {
+  final int NUM_ENTRIES=1000 * 1000;
+  final int KEY_LENGTH=24;
+  final int VALUE_LENGTH=40;
+  final BytesToBytesMap map=new BytesToBytesMap(dataNodeMemoryManager,NUM_ENTRIES,PAGE_SIZE_BYTES);
+  try {
+    for (int i=0; i < NUM_ENTRIES; i++) {
+      final long[] key=new long[]{i,i,i};
+      final long[] value=new long[]{i,i,i,i,i};
+      final BytesToBytesMap.Location loc=map.lookup(key,Platform.LONG_ARRAY_OFFSET,KEY_LENGTH);
+      Assert.assertFalse(loc.isDefined());
+      Assert.assertTrue(loc.append(key,Platform.LONG_ARRAY_OFFSET,KEY_LENGTH,value,Platform.LONG_ARRAY_OFFSET,VALUE_LENGTH));
+    }
+    Assert.assertEquals(2,map.getNumDataPages());
+    final BitSet valuesSeen=new BitSet(NUM_ENTRIES);
+    final Iterator<BytesToBytesMap.Location> iter=map.iterator();
+    final long[] key=new long[KEY_LENGTH / 8];
+    final long[] value=new long[VALUE_LENGTH / 8];
+    while (iter.hasNext()) {
+      final BytesToBytesMap.Location loc=iter.next();
+      Assert.assertTrue(loc.isDefined());
+      Assert.assertEquals(KEY_LENGTH,loc.getKeyLength());
+      Assert.assertEquals(VALUE_LENGTH,loc.getValueLength());
+      Platform.copyMemory(loc.getKeyBase(),loc.getKeyOffset(),key,Platform.LONG_ARRAY_OFFSET,KEY_LENGTH);
+      Platform.copyMemory(loc.getValueBase(),loc.getValueOffset(),value,Platform.LONG_ARRAY_OFFSET,VALUE_LENGTH);
+      for (      long j : key) {
+        Assert.assertEquals(key[0],j);
+      }
+      for (      long j : value) {
+        Assert.assertEquals(key[0],j);
+      }
+      valuesSeen.set((int)key[0]);
+    }
+    Assert.assertEquals(NUM_ENTRIES,valuesSeen.cardinality());
+  }
+  finally {
+    map.free();
+  }
+}

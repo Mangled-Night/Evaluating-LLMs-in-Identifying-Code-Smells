@@ -1,0 +1,15 @@
+private String doKaptcha(HttpServletRequest request){
+  String text=kaptchaProducer.createText();
+  BufferedImage image=kaptchaProducer.createImage(text);
+  HttpSession session=request.getSession();
+  session.setAttribute("kaptcha",text);
+  try {
+    ByteArrayOutputStream outputStream=new ByteArrayOutputStream();
+    ImageIO.write(image,"jpeg",outputStream);
+    String base64=Base64.getEncoder().encodeToString(outputStream.toByteArray());
+    return "data:image/jpeg;base64," + base64.replaceAll("\r\n","");
+  }
+ catch (  IOException e) {
+    return null;
+  }
+}

@@ -1,0 +1,29 @@
+/** 
+ * Parse a iq/jingle/transport element.
+ * @param parser the structure to parse
+ * @return a transport element.
+ * @throws IOException if an I/O error occurred.
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ */
+@Override public JingleTransport parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  JingleTransport trans=getInstance();
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      String name=parser.getName();
+      if (name.equals(JingleTransportCandidate.NODENAME)) {
+        JingleTransportCandidate jtc=parseCandidate(parser);
+        if (jtc != null)         trans.addCandidate(jtc);
+      }
+ else {
+        throw new IOException("Unknown tag \"" + name + "\" in transport element.");
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getDepth() == initialDepth) {
+        break outerloop;
+      }
+    }
+  }
+  return trans;
+}

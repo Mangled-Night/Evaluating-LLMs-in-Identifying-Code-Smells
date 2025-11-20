@@ -1,0 +1,21 @@
+boolean isInSubnet(String ipAddress);
+/** 
+ * return  {@code true} if the {@code ipAddress} is in this subnet. If {@code ipAddress} is not valid IPv4 style(e.g., IPv6 style)  {@code false} is always returned.
+ */
+@Override public boolean isInSubnet(String ipAddress){
+  if (LettuceStrings.isEmpty(ipAddress) || !NetUtil.isValidIpV4Address(ipAddress)) {
+    return false;
+  }
+  Integer address=ipv4AddressCache.get(ipAddress);
+  return (address & subnetMask) == networkAddress;
+}
+/** 
+ * return  {@code true} if the {@code ipAddress} is in this subnet. If {@code ipAddress} is not valid IPv6 style(e.g., IPv4 style)  {@code false} is always returned.
+ */
+@Override public boolean isInSubnet(String ipAddress){
+  if (LettuceStrings.isEmpty(ipAddress) || !NetUtil.isValidIpV6Address(ipAddress)) {
+    return false;
+  }
+  BigInteger address=ipv6AddressCache.get(ipAddress);
+  return address.and(subnetMask).equals(networkAddress);
+}

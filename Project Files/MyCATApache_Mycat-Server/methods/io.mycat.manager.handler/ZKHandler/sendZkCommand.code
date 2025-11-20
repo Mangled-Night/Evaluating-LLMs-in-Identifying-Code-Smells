@@ -1,0 +1,23 @@
+/** 
+ * 向节点发送命令
+ * @param myId 节点的id信息
+ * @param command 命令内容 
+ * @throws Exception 异常信息
+ */
+private static void sendZkCommand(String myId,String command) throws Exception {
+  CuratorFramework zkConn=ZKUtils.getConnection();
+  String basePath=ZKUtils.getZKBasePath();
+  String nodePath=ZKPaths.makePath(basePath,ZK_NODE_PATH + "/" + myId);
+  Stat stat;
+  try {
+    stat=zkConn.checkExists().forPath(nodePath);
+    if (null == stat) {
+      ZKPaths.mkdirs(zkConn.getZookeeperClient().getZooKeeper(),nodePath);
+    }
+    zkConn.setData().inBackground().forPath(nodePath,command.getBytes());
+  }
+ catch (  Exception e) {
+    LOGGER.error("ZKHandler sendZkCommand exception",e);
+    throw e;
+  }
+}

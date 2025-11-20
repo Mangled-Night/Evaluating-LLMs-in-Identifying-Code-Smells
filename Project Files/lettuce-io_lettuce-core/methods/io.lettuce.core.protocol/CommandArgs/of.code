@@ -1,0 +1,36 @@
+static BytesArgument of(byte[] val){
+  return new BytesArgument(val);
+}
+static BytesArgument of(ProtocolKeyword protocolKeyword){
+  if (protocolKeyword instanceof CommandType) {
+    return CommandTypeCache.cache[((Enum)protocolKeyword).ordinal()];
+  }
+  if (protocolKeyword instanceof CommandKeyword) {
+    return CommandKeywordCache.cache[((Enum)protocolKeyword).ordinal()];
+  }
+  return ProtocolKeywordArgument.of(protocolKeyword.getBytes());
+}
+static IntegerArgument of(long val){
+  if (val >= 0 && val < IntegerCache.cache.length) {
+    return IntegerCache.cache[(int)val];
+  }
+  if (val < 0 && val > Integer.MIN_VALUE && -val < IntegerCache.cache.length) {
+    return IntegerCache.negativeCache[(int)-val];
+  }
+  return new IntegerArgument(val);
+}
+static DoubleArgument of(double val){
+  return new DoubleArgument(val);
+}
+static StringArgument of(String val){
+  return new StringArgument(val);
+}
+static CharArrayArgument of(char[] val){
+  return new CharArrayArgument(val);
+}
+static <K,V>KeyArgument<K,V> of(K key,RedisCodec<K,V> codec){
+  return new KeyArgument<>(key,codec);
+}
+static <K,V>ValueArgument<K,V> of(V val,RedisCodec<K,V> codec){
+  return new ValueArgument<>(val,codec);
+}

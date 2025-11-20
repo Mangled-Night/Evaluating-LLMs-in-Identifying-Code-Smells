@@ -1,0 +1,12 @@
+Command<K,V,Long> zunionstore(K destination,K... keys){
+  notEmpty(keys);
+  LettuceAssert.notNull(destination,"Destination " + MUST_NOT_BE_NULL);
+  return zunionstore(destination,new ZAggregateArgs(),keys);
+}
+Command<K,V,Long> zunionstore(K destination,ZAggregateArgs aggregateArgs,K... keys){
+  notEmpty(keys);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  args.addKey(destination).add(keys.length).addKeys(keys);
+  aggregateArgs.build(args);
+  return createCommand(ZUNIONSTORE,new IntegerOutput<>(codec),args);
+}

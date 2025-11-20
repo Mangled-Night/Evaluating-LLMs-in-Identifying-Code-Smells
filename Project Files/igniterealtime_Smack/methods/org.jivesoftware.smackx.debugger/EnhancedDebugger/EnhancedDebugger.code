@@ -1,0 +1,55 @@
+public EnhancedDebugger(XMPPConnection connection){
+  super(connection);
+  reconnectionListener=new ReconnectionListener(){
+    @Override public void reconnectingIn(    final int seconds){
+      SwingUtilities.invokeLater(new Runnable(){
+        @Override public void run(){
+          statusField.setValue("Attempt to reconnect in " + seconds + " seconds");
+        }
+      }
+);
+    }
+    @Override public void reconnectionFailed(    Exception e){
+      SwingUtilities.invokeLater(new Runnable(){
+        @Override public void run(){
+          statusField.setValue("Reconnection failed");
+        }
+      }
+);
+    }
+  }
+;
+  if (connection instanceof AbstractXMPPConnection) {
+    AbstractXMPPConnection abstractXmppConnection=(AbstractXMPPConnection)connection;
+    ReconnectionManager.getInstanceFor(abstractXmppConnection).addReconnectionListener(reconnectionListener);
+  }
+ else {
+    LOGGER.info("The connection instance " + connection + " is not an instance of AbstractXMPPConnection, thus we can not install the ReconnectionListener");
+  }
+  tabbedPane=new JTabbedPane();
+  addBasicPanels();
+  addAdhocPacketPanel();
+  addInformationPanel();
+  connListener=new ConnectionListener(){
+    @Override public void connectionClosed(){
+      SwingUtilities.invokeLater(new Runnable(){
+        @Override public void run(){
+          statusField.setValue("Closed");
+          EnhancedDebuggerWindow.connectionClosed(EnhancedDebugger.this);
+        }
+      }
+);
+    }
+    @Override public void connectionClosedOnError(    final Exception e){
+      SwingUtilities.invokeLater(new Runnable(){
+        @Override public void run(){
+          statusField.setValue("Closed due to an exception");
+          EnhancedDebuggerWindow.connectionClosedOnError(EnhancedDebugger.this,e);
+        }
+      }
+);
+    }
+  }
+;
+  EnhancedDebuggerWindow.addDebugger(this);
+}

@@ -1,0 +1,57 @@
+/** 
+ * Modifies the remote players' held item mount points to show and move their held items at their location. Clean up no longer needed held item entities. <p> TODO: Also responsible for catching characters without current held item entities and then create them. Should be moved elsewhere
+ */
+@Override public void update(float delta){
+  Set<EntityRef> heldItemsForReview=Sets.newHashSet(entityManager.getEntitiesWith(ItemIsRemotelyHeldComponent.class));
+  for (  EntityRef remotePlayer : entityManager.getEntitiesWith(CharacterComponent.class,PlayerCharacterComponent.class)) {
+    if (relatesToLocalPlayer(remotePlayer)) {
+      continue;
+    }
+    EntityRef currentHeldItem=EntityRef.NULL;
+    Iterator<EntityRef> heldItermsIterator=heldItemsForReview.iterator();
+    while (heldItermsIterator.hasNext()) {
+      EntityRef heldItemCandidate=heldItermsIterator.next();
+      ItemIsRemotelyHeldComponent itemIsRemotelyHeldComponent=heldItemCandidate.getComponent(ItemIsRemotelyHeldComponent.class);
+      if (itemIsRemotelyHeldComponent.remotePlayer.equals(remotePlayer)) {
+        currentHeldItem=heldItemCandidate;
+        heldItermsIterator.remove();
+        break;
+      }
+    }
+    if (currentHeldItem == EntityRef.NULL) {
+      if (remotePlayer.hasComponent(CharacterHeldItemComponent.class)) {
+        CharacterHeldItemComponent characterHeldItemComponent=remotePlayer.getComponent(CharacterHeldItemComponent.class);
+        if (characterHeldItemComponent != null && !characterHeldItemComponent.selectedItem.equals(EntityRef.NULL)) {
+          linkHeldItemLocationForRemotePlayer(remotePlayer.getComponent(CharacterHeldItemComponent.class).selectedItem,remotePlayer);
+        }
+      }
+    }
+    CharacterHeldItemComponent characterHeldItemComponent=remotePlayer.getComponent(CharacterHeldItemComponent.class);
+    RemotePersonHeldItemMountPointComponent mountPointComponent=remotePlayer.getComponent(RemotePersonHeldItemMountPointComponent.class);
+    if (characterHeldItemComponent == null || mountPointComponent == null) {
+      continue;
+    }
+    LocationComponent locationComponent=mountPointComponent.mountPointEntity.getComponent(LocationComponent.class);
+    if (locationComponent == null) {
+      continue;
+    }
+    long timeElapsedSinceLastUsed=time.getGameTimeInMs() - characterHeldItemComponent.lastItemUsedTime;
+    float animateAmount=0f;
+    if (timeElapsedSinceLastUsed < USEANIMATIONLENGTH) {
+      animateAmount=1f - Math.abs(((float)timeElapsedSinceLastUsed / (float)USEANIMATIONLENGTH) - 0.5f);
+    }
+    float addPitch=15f * animateAmount;
+    float addYaw=10f * animateAmount;
+    locationComponent.setLocalRotation(new Quaternionf().rotationYXZ(Math.toRadians(mountPointComponent.rotateDegrees.y + addYaw),Math.toRadians(mountPointComponent.rotateDegrees.x + addPitch),Math.toRadians(mountPointComponent.rotateDegrees.z)));
+    Vector3f offset=new Vector3f(0.05f * animateAmount,-0.24f * animateAmount,0f);
+    offset.add(mountPointComponent.translate);
+    locationComponent.setLocalPosition(offset);
+    mountPointComponent.mountPointEntity.saveComponent(locationComponent);
+  }
+  heldItemsForReview.forEach(remainingHeldItem -> {
+    if (remainingHeldItem.exists()) {
+      remainingHeldItem.destroy();
+    }
+  }
+);
+}

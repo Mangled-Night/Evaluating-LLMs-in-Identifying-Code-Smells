@@ -1,0 +1,52 @@
+private void addTomcatInfo(DashboardModel dashboardModel){
+  if (!NetUtils.request("http://localhost:8006").isSuccess()) {
+    return;
+  }
+  TomcatInfoVO tomcatInfoVO=new TomcatInfoVO();
+  dashboardModel.setTomcatInfo(tomcatInfoVO);
+  String threadPoolPath="http://localhost:8006/connector/threadpool";
+  String connectorStatPath="http://localhost:8006/connector/stats";
+  Response connectorStatResponse=NetUtils.request(connectorStatPath);
+  if (connectorStatResponse.isSuccess()) {
+    List<TomcatInfoVO.ConnectorStats> connectorStats=new ArrayList<TomcatInfoVO.ConnectorStats>();
+    List<JSONObject> tomcatConnectorStats=JSON.parseArray(connectorStatResponse.getContent(),JSONObject.class);
+    for (    JSONObject stat : tomcatConnectorStats) {
+      String connectorName=stat.getString("name").replace("\"","");
+      long bytesReceived=stat.getLongValue("bytesReceived");
+      long bytesSent=stat.getLongValue("bytesSent");
+      long processingTime=stat.getLongValue("processingTime");
+      long requestCount=stat.getLongValue("requestCount");
+      long errorCount=stat.getLongValue("errorCount");
+      tomcatRequestCounter.update(requestCount);
+      tomcatErrorCounter.update(errorCount);
+      tomcatReceivedBytesCounter.update(bytesReceived);
+      tomcatSentBytesCounter.update(bytesSent);
+      double qps=tomcatRequestCounter.rate();
+      double rt=processingTime / (double)requestCount;
+      double errorRate=tomcatErrorCounter.rate();
+      long receivedBytesRate=Double.valueOf(tomcatReceivedBytesCounter.rate()).longValue();
+      long sentBytesRate=Double.valueOf(tomcatSentBytesCounter.rate()).longValue();
+      TomcatInfoVO.ConnectorStats connectorStat=new TomcatInfoVO.ConnectorStats();
+      connectorStat.setName(connectorName);
+      connectorStat.setQps(qps);
+      connectorStat.setRt(rt);
+      connectorStat.setError(errorRate);
+      connectorStat.setReceived(receivedBytesRate);
+      connectorStat.setSent(sentBytesRate);
+      connectorStats.add(connectorStat);
+    }
+    tomcatInfoVO.setConnectorStats(connectorStats);
+  }
+  Response threadPoolResponse=NetUtils.request(threadPoolPath);
+  if (threadPoolResponse.isSuccess()) {
+    List<TomcatInfoVO.ThreadPool> threadPools=new ArrayList<TomcatInfoVO.ThreadPool>();
+    List<JSONObject> threadPoolInfos=JSON.parseArray(threadPoolResponse.getContent(),JSONObject.class);
+    for (    JSONObject info : threadPoolInfos) {
+      String name=info.getString("name").replace("\"","");
+      long busy=info.getLongValue("threadBusy");
+      long total=info.getLongValue("threadCount");
+      threadPools.add(new TomcatInfoVO.ThreadPool(name,busy,total));
+    }
+    tomcatInfoVO.setThreadPools(threadPools);
+  }
+}

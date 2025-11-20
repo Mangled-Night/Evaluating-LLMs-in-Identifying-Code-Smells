@@ -1,0 +1,38 @@
+/** 
+ * This method blocks until a data stanza is received, the stream is closed or the current thread is interrupted.
+ * @return <code>true</code> if data was received, otherwise <code>false</code>
+ * @throws IOException if data packets are out of sequence
+ */
+private synchronized boolean loadBuffer() throws IOException {
+  DataPacketExtension data=null;
+  try {
+    if (this.readTimeout == 0) {
+      while (data == null) {
+        if (isClosed && this.dataQueue.isEmpty()) {
+          return false;
+        }
+        data=this.dataQueue.poll(1000,TimeUnit.MILLISECONDS);
+      }
+    }
+ else {
+      data=this.dataQueue.poll(this.readTimeout,TimeUnit.MILLISECONDS);
+      if (data == null) {
+        throw new SocketTimeoutException();
+      }
+    }
+  }
+ catch (  InterruptedException e) {
+    Thread.currentThread().interrupt();
+    return false;
+  }
+  final UInt16 dataSeq=data.getSeq();
+  if (!expectedSeq.equals(dataSeq)) {
+    InBandBytestreamSession.this.close();
+    String message=UNEXPECTED_IBB_SEQUENCE + " " + dataSeq+ " received, expected "+ expectedSeq;
+    throw new IOException(message);
+  }
+  expectedSeq=dataSeq.incrementedByOne();
+  buffer=data.getDecodedData();
+  bufferPointer=0;
+  return true;
+}

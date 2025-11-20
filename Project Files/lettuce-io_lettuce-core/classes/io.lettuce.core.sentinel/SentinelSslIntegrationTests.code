@@ -1,0 +1,37 @@
+/** 
+ * Integration tests for Sentinel usage.
+ * @author Mark Paluch
+ */
+@ExtendWith(LettuceExtension.class) class SentinelSslIntegrationTests extends TestSupport {
+  private static final File TRUSTSTORE_FILE=new File("work/truststore.jks");
+  private final ClientResources clientResources;
+  @Inject SentinelSslIntegrationTests(  ClientResources clientResources){
+    this.clientResources=clientResources.mutate().socketAddressResolver(MappingSocketAddressResolver.create(DnsResolver.jvmDefault(),hostAndPort -> {
+      return HostAndPort.of(hostAndPort.getHostText(),hostAndPort.getPort() + 443);
+    }
+)).build();
+  }
+  @BeforeAll static void beforeAll(){
+    assumeTrue(CanConnect.to(TestSettings.host(),sslPort()),"Assume that stunnel runs on port 6443");
+    assertThat(TRUSTSTORE_FILE).exists();
+  }
+  @Test void shouldConnectSentinelDirectly(){
+    RedisURI redisURI=RedisURI.create("rediss://" + TestSettings.host() + ":"+ RedisURI.DEFAULT_SENTINEL_PORT);
+    redisURI.setVerifyPeer(false);
+    RedisClient client=RedisClient.create(clientResources);
+    StatefulRedisSentinelConnection<String,String> connection=client.connectSentinel(redisURI);
+    assertThat(connection.sync().getMasterAddrByName("mymaster")).isNotNull();
+    connection.close();
+    FastShutdown.shutdown(client);
+  }
+  @Test void shouldConnectToMasterUsingSentinel(){
+    RedisURI redisURI=RedisURI.create("rediss-sentinel://" + TestSettings.host() + ":"+ RedisURI.DEFAULT_SENTINEL_PORT+ "?sentinelMasterId=mymaster");
+    SslOptions options=SslOptions.builder().truststore(TRUSTSTORE_FILE).build();
+    RedisClient client=RedisClient.create(clientResources);
+    client.setOptions(ClientOptions.builder().sslOptions(options).build());
+    StatefulRedisConnection<String,String> connection=client.connect(redisURI);
+    assertThat(connection.sync().ping()).isNotNull();
+    connection.close();
+    FastShutdown.shutdown(client);
+  }
+}

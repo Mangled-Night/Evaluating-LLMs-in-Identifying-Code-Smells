@@ -1,0 +1,35 @@
+private void load(){
+  InputStream dtd=null;
+  InputStream xml=null;
+  try {
+    dtd=XMLServerLoader.class.getResourceAsStream("/server.dtd");
+    xml=XMLServerLoader.class.getResourceAsStream("/server.xml");
+    Element root=ConfigUtil.getDocument(dtd,xml).getDocumentElement();
+    loadSystem(root);
+    loadUsers(root);
+    this.cluster=new ClusterConfig(root,system.getServerPort());
+    loadFirewall(root);
+  }
+ catch (  ConfigException e) {
+    throw e;
+  }
+catch (  Exception e) {
+    throw new ConfigException(e);
+  }
+ finally {
+    if (dtd != null) {
+      try {
+        dtd.close();
+      }
+ catch (      IOException e) {
+      }
+    }
+    if (xml != null) {
+      try {
+        xml.close();
+      }
+ catch (      IOException e) {
+      }
+    }
+  }
+}

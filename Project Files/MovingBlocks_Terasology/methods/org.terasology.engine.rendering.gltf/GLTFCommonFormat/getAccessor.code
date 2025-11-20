@@ -1,0 +1,20 @@
+protected GLTFAccessor getAccessor(String name,GLTFPrimitive gltfPrimitive,GLTF gltf) throws IOException {
+  Integer accessorIndex=gltfPrimitive.getAttributes().get(name);
+  if (accessorIndex != null) {
+    return gltf.getAccessors().get(accessorIndex);
+  }
+  return null;
+}
+protected GLTFAccessor getAccessor(MeshAttributeSemantic semantic,GLTFPrimitive gltfPrimitive,GLTF gltf) throws IOException {
+  GLTFAccessor gltfAccessor=getAccessor(semantic.getName(),gltfPrimitive,gltf);
+  if (gltfAccessor != null) {
+    if (!semantic.getSupportedAccessorTypes().contains(gltfAccessor.getType())) {
+      throw new IOException("Accessor type " + gltfAccessor.getType() + " is not supported for attribute "+ semantic);
+    }
+    if (!semantic.getSupportedComponentTypes().contains(gltfAccessor.getComponentType())) {
+      throw new IOException("Component type " + gltfAccessor.getComponentType() + " is not supported for attribute "+ semantic);
+    }
+    return gltfAccessor;
+  }
+  return null;
+}

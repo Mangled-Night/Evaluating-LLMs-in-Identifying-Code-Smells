@@ -1,0 +1,23 @@
+@Override public Set<String> suggest(EntityRef sender,Object... resolvedParameters){
+  Map<String,Set<ResourceUrn>> resourceMap=Maps.newHashMap();
+  Set<String> suggestions=Sets.newHashSet();
+  for (  ResourceUrn resolvedParameter : assetManager.getAvailableAssets(assetType)) {
+    String resourceName=resolvedParameter.getResourceName().toString();
+    if (!resourceMap.containsKey(resourceName)) {
+      resourceMap.put(resourceName,Sets.newHashSet());
+    }
+    resourceMap.get(resourceName).add(resolvedParameter);
+  }
+  for (  String key : resourceMap.keySet()) {
+    Set<ResourceUrn> set=resourceMap.get(key);
+    if (set.size() == 1) {
+      suggestions.add(set.iterator().next().getResourceName().toString());
+    }
+ else {
+      for (      ResourceUrn resourceUrn : set) {
+        suggestions.add(resourceUrn.toString());
+      }
+    }
+  }
+  return suggestions;
+}

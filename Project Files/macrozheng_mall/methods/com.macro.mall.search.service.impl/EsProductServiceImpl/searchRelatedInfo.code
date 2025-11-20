@@ -1,0 +1,16 @@
+@Override public EsProductRelatedInfo searchRelatedInfo(String keyword){
+  NativeSearchQueryBuilder builder=new NativeSearchQueryBuilder();
+  if (StrUtil.isEmpty(keyword)) {
+    builder.withQuery(QueryBuilders.matchAllQuery());
+  }
+ else {
+    builder.withQuery(QueryBuilders.multiMatchQuery(keyword,"name","subTitle","keywords"));
+  }
+  builder.withAggregations(AggregationBuilders.terms("brandNames").field("brandName"));
+  builder.withAggregations(AggregationBuilders.terms("productCategoryNames").field("productCategoryName"));
+  AbstractAggregationBuilder aggregationBuilder=AggregationBuilders.nested("allAttrValues","attrValueList").subAggregation(AggregationBuilders.filter("productAttrs",QueryBuilders.termQuery("attrValueList.type",1)).subAggregation(AggregationBuilders.terms("attrIds").field("attrValueList.productAttributeId").subAggregation(AggregationBuilders.terms("attrValues").field("attrValueList.value")).subAggregation(AggregationBuilders.terms("attrNames").field("attrValueList.name"))));
+  builder.withAggregations(aggregationBuilder);
+  NativeSearchQuery searchQuery=builder.build();
+  SearchHits<EsProduct> searchHits=elasticsearchRestTemplate.search(searchQuery,EsProduct.class);
+  return convertProductRelatedInfo(searchHits);
+}

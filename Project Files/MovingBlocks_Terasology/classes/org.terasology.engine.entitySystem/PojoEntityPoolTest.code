@@ -1,0 +1,39 @@
+public class PojoEntityPoolTest {
+  private static Context context;
+  private PojoEntityPool pool;
+  private PojoEntityManager entityManager;
+  @BeforeAll public static void setupClass() throws Exception {
+    context=new ContextImpl();
+    ModuleManager moduleManager=ModuleManagerFactory.create();
+    context.put(ModuleManager.class,moduleManager);
+    ModuleAwareAssetTypeManager assetTypeManager=new ModuleAwareAssetTypeManagerImpl();
+    assetTypeManager.createAssetType(Prefab.class,PojoPrefab::new,"prefabs");
+    assetTypeManager.switchEnvironment(moduleManager.getEnvironment());
+    context.put(AssetManager.class,assetTypeManager.getAssetManager());
+    context.put(RecordAndReplayCurrentStatus.class,new RecordAndReplayCurrentStatus());
+    CoreRegistry.setContext(context);
+  }
+  @BeforeEach public void setup(){
+    NetworkSystem networkSystem=mock(NetworkSystem.class);
+    when(networkSystem.getMode()).thenReturn(NetworkMode.NONE);
+    context.put(NetworkSystem.class,networkSystem);
+    EntitySystemSetupUtil.addReflectionBasedLibraries(context);
+    EntitySystemSetupUtil.addEntityManagementRelatedClasses(context);
+    entityManager=(PojoEntityManager)context.get(EntityManager.class);
+    pool=new PojoEntityPool(entityManager);
+  }
+  @Test public void testContains(){
+    assertFalse(pool.contains(PojoEntityManager.NULL_ID));
+    assertFalse(pool.contains(1000000));
+    EntityRef ref=entityManager.create();
+    entityManager.moveToPool(ref.getId(),pool);
+    assertTrue(pool.contains(ref.getId()));
+  }
+  @Test public void testRemove(){
+    EntityRef ref=entityManager.create();
+    entityManager.moveToPool(ref.getId(),pool);
+    assertTrue(pool.contains(ref.getId()));
+    pool.remove(ref.getId());
+    assertFalse(pool.contains(ref.getId()));
+  }
+}

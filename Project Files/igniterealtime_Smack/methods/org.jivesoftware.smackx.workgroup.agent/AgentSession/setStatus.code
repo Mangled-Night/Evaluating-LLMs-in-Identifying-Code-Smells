@@ -1,0 +1,68 @@
+/** 
+ * Sets the agent's current status with the workgroup. The presence mode affects how offers are routed to the agent. The possible presence modes with their meanings are as follows:<ul> <li>Presence.Mode.AVAILABLE -- (Default) the agent is available for more chats (equivalent to Presence.Mode.CHAT). <li>Presence.Mode.DO_NOT_DISTURB -- the agent is busy and should not be disturbed. However, special case, or extreme urgency chats may still be offered to the agent. <li>Presence.Mode.AWAY -- the agent is not available and should not have a chat routed to them (equivalent to Presence.Mode.EXTENDED_AWAY).</ul> The max chats value is the maximum number of chats the agent is willing to have routed to them at once. Some servers may be configured to only accept max chat values in a certain range; for example, between two and five. In that case, the maxChats value the agent sends may be adjusted by the server to a value within that range.
+ * @param presenceMode the presence mode of the agent.
+ * @param maxChats     the maximum number of chats the agent is willing to accept.
+ * @throws XMPPException         if an error occurs setting the agent status.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws IllegalStateException if the agent is not online with the workgroup.
+ */
+public void setStatus(Presence.Mode presenceMode,int maxChats) throws XMPPException, SmackException, InterruptedException {
+  setStatus(presenceMode,maxChats,null);
+}
+/** 
+ * Sets the agent's current status with the workgroup. The presence mode affects how offers are routed to the agent. The possible presence modes with their meanings are as follows:<ul> <li>Presence.Mode.AVAILABLE -- (Default) the agent is available for more chats (equivalent to Presence.Mode.CHAT). <li>Presence.Mode.DO_NOT_DISTURB -- the agent is busy and should not be disturbed. However, special case, or extreme urgency chats may still be offered to the agent. <li>Presence.Mode.AWAY -- the agent is not available and should not have a chat routed to them (equivalent to Presence.Mode.EXTENDED_AWAY).</ul> The max chats value is the maximum number of chats the agent is willing to have routed to them at once. Some servers may be configured to only accept max chat values in a certain range; for example, between two and five. In that case, the maxChats value the agent sends may be adjusted by the server to a value within that range.
+ * @param presenceMode the presence mode of the agent.
+ * @param maxChats     the maximum number of chats the agent is willing to accept.
+ * @param status       sets the status message of the presence update.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws IllegalStateException if the agent is not online with the workgroup.
+ */
+public void setStatus(Presence.Mode presenceMode,int maxChats,String status) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  if (!online) {
+    throw new IllegalStateException("Cannot set status when the agent is not online.");
+  }
+  if (presenceMode == null) {
+    presenceMode=Presence.Mode.available;
+  }
+  this.presenceMode=presenceMode;
+  this.maxChats=maxChats;
+  PresenceBuilder presenceBuilder=connection.getStanzaFactory().buildPresenceStanza().ofType(Presence.Type.available).setMode(presenceMode).to(workgroupJID).setStatus(status);
+  StandardExtensionElement.Builder builder=StandardExtensionElement.builder(AgentStatus.ELEMENT_NAME,AgentStatus.NAMESPACE);
+  builder.addElement("max_chats",Integer.toString(maxChats));
+  presenceBuilder.addExtension(builder.build());
+  presenceBuilder.addExtension(new MetaData(this.metaData));
+  Presence presence=presenceBuilder.build();
+  StanzaCollector collector=this.connection.createStanzaCollectorAndSend(new AndFilter(new StanzaTypeFilter(Presence.class),FromMatchesFilter.create(workgroupJID)),presence);
+  collector.nextResultOrThrow();
+}
+/** 
+ * Sets the agent's current status with the workgroup. The presence mode affects how offers are routed to the agent. The possible presence modes with their meanings are as follows:<ul> <li>Presence.Mode.AVAILABLE -- (Default) the agent is available for more chats (equivalent to Presence.Mode.CHAT). <li>Presence.Mode.DO_NOT_DISTURB -- the agent is busy and should not be disturbed. However, special case, or extreme urgency chats may still be offered to the agent. <li>Presence.Mode.AWAY -- the agent is not available and should not have a chat routed to them (equivalent to Presence.Mode.EXTENDED_AWAY).</ul>
+ * @param presenceMode the presence mode of the agent.
+ * @param status       sets the status message of the presence update.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws IllegalStateException if the agent is not online with the workgroup.
+ */
+public void setStatus(Presence.Mode presenceMode,String status) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  if (!online) {
+    throw new IllegalStateException("Cannot set status when the agent is not online.");
+  }
+  if (presenceMode == null) {
+    presenceMode=Presence.Mode.available;
+  }
+  this.presenceMode=presenceMode;
+  PresenceBuilder presenceBuilder=connection.getStanzaFactory().buildPresenceStanza().ofType(Presence.Type.available).setMode(presenceMode).to(getWorkgroupJID());
+  if (status != null) {
+    presenceBuilder.setStatus(status);
+  }
+  Presence presence=presenceBuilder.build();
+  presence.addExtension(new MetaData(this.metaData));
+  StanzaCollector collector=this.connection.createStanzaCollectorAndSend(new AndFilter(new StanzaTypeFilter(Presence.class),FromMatchesFilter.create(workgroupJID)),presence);
+  collector.nextResultOrThrow();
+}

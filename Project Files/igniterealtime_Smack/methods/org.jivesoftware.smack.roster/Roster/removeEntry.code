@@ -1,0 +1,21 @@
+/** 
+ * Removes a roster entry from the roster. The roster entry will also be removed from the unfiled entries or from any roster group where it could belong and will no longer be part of the roster. Note that this is a synchronous call -- Smack must wait for the server to send an updated subscription status.
+ * @param entry a roster entry.
+ * @throws XMPPErrorException if an XMPP error occurs.
+ * @throws NotLoggedInException if not logged in.
+ * @throws NoResponseException SmackException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void removeEntry(RosterEntry entry) throws NotLoggedInException, NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  final XMPPConnection connection=getAuthenticatedConnectionOrThrow();
+  if (!entries.containsKey(entry.getJid())) {
+    return;
+  }
+  RosterPacket packet=new RosterPacket();
+  packet.setType(IQ.Type.set);
+  RosterPacket.Item item=RosterEntry.toRosterItem(entry);
+  item.setItemType(RosterPacket.ItemType.remove);
+  packet.addRosterItem(item);
+  connection.sendIqRequestAndWaitForResponse(packet);
+}

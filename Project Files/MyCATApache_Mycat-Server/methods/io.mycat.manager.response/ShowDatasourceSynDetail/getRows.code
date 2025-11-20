@@ -1,0 +1,31 @@
+private static List<RowDataPacket> getRows(String name,String charset){
+  List<RowDataPacket> list=new LinkedList<RowDataPacket>();
+  MycatConfig conf=MycatServer.getInstance().getConfig();
+  Map<String,PhysicalDBPool> dataHosts=conf.getDataHosts();
+  for (  PhysicalDBPool pool : dataHosts.values()) {
+    for (    PhysicalDatasource ds : pool.getAllDataSources()) {
+      DBHeartbeat hb=ds.getHeartbeat();
+      DataSourceSyncRecorder record=hb.getAsynRecorder();
+      Map<String,String> states=record.getRecords();
+      if (name.equals(ds.getName())) {
+        List<Record> data=record.getAsynRecords();
+        for (        Record r : data) {
+          RowDataPacket row=new RowDataPacket(FIELD_COUNT);
+          row.add(StringUtil.encode(ds.getName(),charset));
+          row.add(StringUtil.encode(ds.getConfig().getIp(),charset));
+          row.add(LongUtil.toBytes(ds.getConfig().getPort()));
+          row.add(StringUtil.encode(states.get("Master_Host"),charset));
+          row.add(LongUtil.toBytes(Long.valueOf(states.get("Master_Port"))));
+          row.add(StringUtil.encode(states.get("Master_Use"),charset));
+          SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+          String time=sdf.format(new Date(r.getTime()));
+          row.add(StringUtil.encode(time,charset));
+          row.add(LongUtil.toBytes((Long)r.getValue()));
+          list.add(row);
+        }
+        break;
+      }
+    }
+  }
+  return list;
+}

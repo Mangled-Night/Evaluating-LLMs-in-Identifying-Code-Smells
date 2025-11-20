@@ -1,0 +1,16 @@
+@Test void upstream(){
+  List<List<String>> slaves=LettuceLists.newList(LettuceLists.newList(LOCALHOST,"9001","" + REPLICATION_OFFSET_2),LettuceLists.newList(LOCALHOST,"9002","3129543"));
+  List<Object> input=LettuceLists.newList("master",REPLICATION_OFFSET_1,slaves);
+  RedisInstance result=RoleParser.parse(input);
+  assertThat(result.getRole().isUpstream()).isTrue();
+  assertThat(result instanceof RedisMasterInstance).isTrue();
+  RedisMasterInstance instance=(RedisMasterInstance)result;
+  assertThat(instance.getReplicationOffset()).isEqualTo(REPLICATION_OFFSET_1);
+  assertThat(instance.getSlaves()).hasSize(2);
+  ReplicationPartner replica1=instance.getSlaves().get(0);
+  assertThat(replica1.getHost().getHostText()).isEqualTo(LOCALHOST);
+  assertThat(replica1.getHost().getPort()).isEqualTo(9001);
+  assertThat(replica1.getReplicationOffset()).isEqualTo(REPLICATION_OFFSET_2);
+  assertThat(instance.toString()).startsWith(RedisMasterInstance.class.getSimpleName());
+  assertThat(replica1.toString()).startsWith(ReplicationPartner.class.getSimpleName());
+}

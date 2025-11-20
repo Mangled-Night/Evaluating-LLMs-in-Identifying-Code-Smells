@@ -1,0 +1,21 @@
+@Override public BehaviorState execute(Actor actor){
+  if (action == null) {
+    runChild(actor);
+    return lastState;
+  }
+  if (!action.prune(actor)) {
+    runChild(actor);
+  }
+  BehaviorState modifiedState;
+  try {
+    modifiedState=action.modify(actor,lastState);
+  }
+ catch (  Exception e) {
+    logger.info("Exception while running action {} from entity {}: {}",action,actor.getEntity(),e.getStackTrace());
+    return BehaviorState.FAILURE;
+  }
+  if (modifiedState != BehaviorState.RUNNING && lastState == BehaviorState.RUNNING) {
+    child.destruct(actor);
+  }
+  return modifiedState;
+}

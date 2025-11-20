@@ -1,0 +1,34 @@
+/** 
+ * A "no permanent store" hint. Messages with this hint should not be stored in permanent stores or archives.
+ * @see <a href="https://xmpp.org/extensions/xep-0334.html#no-permanent-store">XEP-0334 § 4.1 No permanent store</a>
+ */
+public final class NoPermanentStoreHint extends MessageProcessingHint {
+  public static final NoPermanentStoreHint INSTANCE=new NoPermanentStoreHint();
+  public static final String ELEMENT="no-permanent-store";
+  private NoPermanentStoreHint(){
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    return '<' + ELEMENT + " xmlns='"+ NAMESPACE+ "'/>";
+  }
+  @Override public MessageProcessingHintType getHintType(){
+    return MessageProcessingHintType.no_permanent_store;
+  }
+  public static NoPermanentStoreHint from(  Message message){
+    return (NoPermanentStoreHint)message.getExtensionElement(ELEMENT,NAMESPACE);
+  }
+  public static boolean hasHint(  Message message){
+    return from(message) != null;
+  }
+  public static void set(  Message message){
+    if (StoreHint.hasHint(message)) {
+      return;
+    }
+    message.overrideExtension(INSTANCE);
+  }
+  public static void setExplicitly(  Message message){
+    message.addExtension(INSTANCE);
+  }
+}

@@ -1,0 +1,28 @@
+public class LowLevelRosterIntegrationTest extends AbstractSmackLowLevelIntegrationTest {
+  public LowLevelRosterIntegrationTest(  SmackIntegrationTestEnvironment environment){
+    super(environment);
+  }
+  @SmackIntegrationTest public void testPresenceEventListenersOffline(  final AbstractXMPPConnection conOne,  final AbstractXMPPConnection conTwo) throws TimeoutException, Exception {
+    IntegrationTestRosterUtil.ensureBothAccountsAreNotInEachOthersRoster(conOne,conTwo);
+    final Roster rosterOne=Roster.getInstanceFor(conOne);
+    final Roster rosterTwo=Roster.getInstanceFor(conTwo);
+    rosterOne.createItem(conTwo.getUser().asBareJid(),"Con Two",null);
+    rosterTwo.createItem(conOne.getUser().asBareJid(),"Con One",null);
+    IntegrationTestRosterUtil.ensureBothAccountsAreSubscribedToEachOther(conOne,conTwo,timeout);
+    final SimpleResultSyncPoint offlineTriggered=new SimpleResultSyncPoint();
+    rosterOne.addPresenceEventListener(new AbstractPresenceEventListener(){
+      @Override public void presenceUnavailable(      FullJid jid,      Presence presence){
+        if (!jid.equals(conTwo.getUser())) {
+          return;
+        }
+        offlineTriggered.signal();
+      }
+    }
+);
+    conTwo.disconnect();
+    Boolean result=offlineTriggered.waitForResult(timeout);
+    if (!result) {
+      throw new Exception("presenceUnavailable() was not called");
+    }
+  }
+}

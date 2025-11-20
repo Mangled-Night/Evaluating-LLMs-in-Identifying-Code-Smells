@@ -1,0 +1,19 @@
+@Override public ByteBuffer write(ByteBuffer buffer,FrontendConnection c,boolean writeSocketIfFull){
+  int size=calcPacketSize();
+  buffer=c.checkWriteBuffer(buffer,c.getPacketHeaderSize() + size,writeSocketIfFull);
+  BufferUtil.writeUB3(buffer,size);
+  buffer.put(packetId);
+  buffer.put(fieldCount);
+  BufferUtil.writeUB2(buffer,errno);
+  buffer.put(mark);
+  buffer.put(sqlState);
+  if (message != null) {
+    buffer=c.writeToBuffer(message,buffer);
+  }
+  return buffer;
+}
+public void write(FrontendConnection c){
+  ByteBuffer buffer=c.allocate();
+  buffer=this.write(buffer,c,true);
+  c.write(buffer);
+}

@@ -1,0 +1,20 @@
+/** 
+ * Creates a new  {@link SslContextBuilder} object that is pre-configured with values from this {@link SslOptions} object.
+ * @return a new {@link SslContextBuilder}.
+ * @throws IOException thrown when loading the keystore or the truststore fails.
+ * @throws GeneralSecurityException thrown when loading the keystore or the truststore fails.
+ * @since 5.3
+ */
+public SslContextBuilder createSslContextBuilder() throws IOException, GeneralSecurityException {
+  SslContextBuilder sslContextBuilder=SslContextBuilder.forClient().sslProvider(this.sslProvider).keyStoreType(keyStoreType);
+  if (protocols != null && protocols.length > 0) {
+    sslContextBuilder.protocols(protocols);
+  }
+  if (cipherSuites != null && cipherSuites.length > 0) {
+    sslContextBuilder.ciphers(Arrays.asList(cipherSuites));
+  }
+  keymanager.accept(sslContextBuilder,this.keyStoreType);
+  trustmanager.accept(sslContextBuilder,this.keyStoreType);
+  sslContextBuilderCustomizer.accept(sslContextBuilder);
+  return sslContextBuilder;
+}

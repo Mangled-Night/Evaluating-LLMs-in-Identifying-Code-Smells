@@ -1,0 +1,44 @@
+/** 
+ * Fetch metric in  {@link org.terasology.engine.context.Context} and send to the server.This method could be used in the modules.
+ * @param context The game context
+ * @param metricClass The class of the metric which we want to track
+ * @param nameSpace The name the class tracking this metric.
+ */
+public static void fetchMetricAndSend(Context context,Class metricClass,String nameSpace){
+  Emitter emitter=context.get(Emitter.class);
+  Metrics metrics=context.get(Metrics.class);
+  TelemetryConfiguration telemetryConfiguration=context.get(TelemetryConfiguration.class);
+  if (emitter != null && metrics != null && telemetryConfiguration != null) {
+    Optional<Metric> metricOptional=metrics.getMetric(metricClass);
+    if (metricOptional.isPresent()) {
+      Metric metric=metricOptional.get();
+      Optional<Unstructured> unstructuredOptional=metric.getUnstructuredMetric();
+      if (unstructuredOptional.isPresent()) {
+        Unstructured unstructured=unstructuredOptional.get();
+        trackMetric(emitter,nameSpace,unstructured,metric,telemetryConfiguration);
+      }
+    }
+  }
+ else {
+    logger.error("Emitter or metrics or telemetryConfiguration is not in context");
+  }
+}
+/** 
+ * fetch metric in  {@link org.terasology.engine.telemetry.Metrics} and send to the server.
+ * @param metrics Metrics class in the game context.
+ * @param metricClass The class of metric.
+ * @param emitter Emitter sending telemetry to the server.
+ * @param nameSpace The name the class tracking this metric.
+ * @param bindingMap the binding map contains fields who has user's permission.
+ */
+public static void fetchMetricAndSend(Metrics metrics,Class metricClass,Emitter emitter,String nameSpace,Map<String,Boolean> bindingMap){
+  Optional<Metric> optional=metrics.getMetric(metricClass);
+  if (optional.isPresent()) {
+    Metric metric=optional.get();
+    Optional<Unstructured> unstructuredOptional=metric.getUnstructuredMetric();
+    if (unstructuredOptional.isPresent()) {
+      Unstructured unstructured=unstructuredOptional.get();
+      trackMetric(emitter,nameSpace,unstructured,metric,bindingMap);
+    }
+  }
+}

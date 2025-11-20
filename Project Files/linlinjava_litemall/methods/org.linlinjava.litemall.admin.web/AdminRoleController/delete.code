@@ -1,0 +1,17 @@
+@RequiresPermissions("admin:role:delete") @RequiresPermissionsDesc(menu={"系统管理","角色管理"},button="角色删除") @PostMapping("/delete") public Object delete(@RequestBody LitemallRole role){
+  Integer id=role.getId();
+  if (id == null) {
+    return ResponseUtil.badArgument();
+  }
+  List<LitemallAdmin> adminList=adminService.all();
+  for (  LitemallAdmin admin : adminList) {
+    Integer[] roleIds=admin.getRoleIds();
+    for (    Integer roleId : roleIds) {
+      if (id.equals(roleId)) {
+        return ResponseUtil.fail(ROLE_USER_EXIST,"当前角色存在管理员，不能删除");
+      }
+    }
+  }
+  roleService.deleteById(id);
+  return ResponseUtil.ok();
+}

@@ -1,0 +1,18 @@
+@RequiresPermissions("admin:aftersale:batch-reject") @RequiresPermissionsDesc(menu={"商城管理","售后管理"},button="批量拒绝") @PostMapping("/batch-reject") public Object batchReject(@RequestBody String body){
+  List<Integer> ids=JacksonUtil.parseIntegerList(body,"ids");
+  for (  Integer id : ids) {
+    LitemallAftersale aftersale=aftersaleService.findById(id);
+    if (aftersale == null) {
+      continue;
+    }
+    Short status=aftersale.getStatus();
+    if (!status.equals(AftersaleConstant.STATUS_REQUEST)) {
+      continue;
+    }
+    aftersale.setStatus(AftersaleConstant.STATUS_REJECT);
+    aftersale.setHandleTime(LocalDateTime.now());
+    aftersaleService.updateById(aftersale);
+    orderService.updateAftersaleStatus(aftersale.getOrderId(),AftersaleConstant.STATUS_REJECT);
+  }
+  return ResponseUtil.ok();
+}

@@ -1,0 +1,32 @@
+private Exception tryFail(Requests requestedTopology,ConnectionTracker tracker,Iterable<RedisURI> seed){
+  Map<RedisURI,String> failures=new LinkedHashMap<>();
+  CannotRetrieveClusterPartitions exception=new CannotRetrieveClusterPartitions(seed,failures);
+  for (  RedisURI node : requestedTopology.nodes()) {
+    TimedAsyncCommand<String,String,String> request=requestedTopology.getRequest(node);
+    if (request == null || !request.isCompletedExceptionally()) {
+      continue;
+    }
+    Throwable cause=getException(request);
+    if (cause != null) {
+      failures.put(node,getExceptionDetail(cause));
+      exception.addSuppressed(cause);
+    }
+  }
+  for (  Map.Entry<RedisURI,CompletableFuture<StatefulRedisConnection<String,String>>> entry : tracker.connections.entrySet()) {
+    CompletableFuture<StatefulRedisConnection<String,String>> future=entry.getValue();
+    if (!future.isDone() || !future.isCompletedExceptionally()) {
+      continue;
+    }
+    try {
+      future.join();
+    }
+ catch (    CompletionException e) {
+      Throwable cause=e.getCause();
+      if (cause != null) {
+        failures.put(entry.getKey(),getExceptionDetail(cause));
+        exception.addSuppressed(cause);
+      }
+    }
+  }
+  return exception;
+}

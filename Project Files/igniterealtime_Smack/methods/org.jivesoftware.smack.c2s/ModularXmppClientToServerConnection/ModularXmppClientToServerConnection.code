@@ -1,0 +1,77 @@
+public ModularXmppClientToServerConnection(ModularXmppClientToServerConnectionConfiguration configuration){
+  super(configuration);
+  this.configuration=configuration;
+  connectionInternal=new ModularXmppClientToServerConnectionInternal(this,getReactor(),debugger,outgoingElementsQueue){
+    @Override public void parseAndProcessElement(    String wrappedCompleteElement){
+      ModularXmppClientToServerConnection.this.parseAndProcessElement(wrappedCompleteElement);
+    }
+    @Override public void notifyConnectionError(    Exception e){
+      ModularXmppClientToServerConnection.this.notifyConnectionError(e);
+    }
+    @Override public String onStreamOpen(    XmlPullParser parser){
+      return ModularXmppClientToServerConnection.this.onStreamOpen(parser);
+    }
+    @Override public void onStreamClosed(){
+      ModularXmppClientToServerConnection.this.closingStreamReceived=true;
+      notifyWaitingThreads();
+    }
+    @Override public void fireFirstLevelElementSendListeners(    TopLevelStreamElement element){
+      ModularXmppClientToServerConnection.this.firePacketSendingListeners(element);
+    }
+    @Override public void invokeConnectionStateMachineListener(    ConnectionStateEvent connectionStateEvent){
+      ModularXmppClientToServerConnection.this.invokeConnectionStateMachineListener(connectionStateEvent);
+    }
+    @Override public XmlEnvironment getOutgoingStreamXmlEnvironment(){
+      return outgoingStreamXmlEnvironment;
+    }
+    @Override public void addXmppInputOutputFilter(    XmppInputOutputFilter xmppInputOutputFilter){
+      inputOutputFilters.add(0,xmppInputOutputFilter);
+    }
+    @Override public ListIterator<XmppInputOutputFilter> getXmppInputOutputFilterBeginIterator(){
+      return inputOutputFilters.listIterator();
+    }
+    @Override public ListIterator<XmppInputOutputFilter> getXmppInputOutputFilterEndIterator(){
+      return inputOutputFilters.listIterator(inputOutputFilters.size());
+    }
+    @Override public void waitForFeaturesReceived(    String waitFor) throws InterruptedException, SmackException, XMPPException {
+      ModularXmppClientToServerConnection.this.waitForFeaturesReceived(waitFor);
+    }
+    @Override public void newStreamOpenWaitForFeaturesSequence(    String waitFor) throws InterruptedException, SmackException, XMPPException {
+      ModularXmppClientToServerConnection.this.newStreamOpenWaitForFeaturesSequence(waitFor);
+    }
+    @Override public SmackTlsContext getSmackTlsContext(){
+      return ModularXmppClientToServerConnection.this.getSmackTlsContext();
+    }
+    @Override public <SN extends Nonza,FN extends Nonza>SN sendAndWaitForResponse(    Nonza nonza,    Class<SN> successNonzaClass,    Class<FN> failedNonzaClass) throws NoResponseException, NotConnectedException, FailedNonzaException, InterruptedException {
+      return ModularXmppClientToServerConnection.this.sendAndWaitForResponse(nonza,successNonzaClass,failedNonzaClass);
+    }
+    @Override public void asyncGo(    Runnable runnable){
+      AbstractXMPPConnection.asyncGo(runnable);
+    }
+    @Override public void waitForConditionOrThrowConnectionException(    Supplier<Boolean> condition,    String waitFor) throws InterruptedException, SmackException, XMPPException {
+      ModularXmppClientToServerConnection.this.waitForConditionOrThrowConnectionException(condition,waitFor);
+    }
+    @Override public void notifyWaitingThreads(){
+      ModularXmppClientToServerConnection.this.notifyWaitingThreads();
+    }
+    @Override public void setCompressionEnabled(    boolean compressionEnabled){
+      ModularXmppClientToServerConnection.this.compressionEnabled=compressionEnabled;
+    }
+    @Override public void setTransport(    XmppClientToServerTransport xmppTransport){
+      ModularXmppClientToServerConnection.this.activeTransport=xmppTransport;
+      ModularXmppClientToServerConnection.this.connected=true;
+    }
+  }
+;
+  for (  ModularXmppClientToServerConnectionModuleDescriptor moduleDescriptor : configuration.moduleDescriptors) {
+    Class<? extends ModularXmppClientToServerConnectionModuleDescriptor> moduleDescriptorClass=moduleDescriptor.getClass();
+    ModularXmppClientToServerConnectionModule<? extends ModularXmppClientToServerConnectionModuleDescriptor> connectionModule=moduleDescriptor.constructXmppConnectionModule(connectionInternal);
+    connectionModules.put(moduleDescriptorClass,connectionModule);
+    XmppClientToServerTransport transport=connectionModule.getTransport();
+    if (transport != null) {
+      transports.put(moduleDescriptorClass,transport);
+    }
+  }
+  GraphVertex<StateDescriptor> initialStateDescriptorVertex=configuration.initialStateDescriptorVertex;
+  currentStateVertex=StateDescriptorGraph.convertToStateGraph(initialStateDescriptorVertex,connectionInternal);
+}

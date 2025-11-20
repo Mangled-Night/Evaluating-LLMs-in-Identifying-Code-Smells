@@ -1,0 +1,33 @@
+/** 
+ * Return a new  {@link RedisURI.Builder} to construct a {@link RedisURI}.
+ * @return a new {@link RedisURI.Builder} to construct a {@link RedisURI}.
+ */
+public static RedisURI.Builder builder(){
+  return new Builder();
+}
+/** 
+ * Create a new  {@link RedisURI.Builder} that is initialized from a plain {@link RedisURI}.
+ * @param source the initialization source, must not be {@code null}.
+ * @return the initialized builder.
+ * @since 6.0
+ */
+public static Builder builder(RedisURI source){
+  LettuceAssert.notNull(source,"Source RedisURI must not be null");
+  Builder builder=builder();
+  builder.withSsl(source).withAuthentication(source).withTimeout(source.getTimeout()).withDatabase(source.getDatabase());
+  if (source.getClientName() != null) {
+    builder.withClientName(source.getClientName());
+  }
+  if (source.socket != null) {
+    builder.socket=source.getSocket();
+  }
+ else {
+    if (source.getHost() != null) {
+      builder.withHost(source.getHost());
+      builder.withPort(source.getPort());
+    }
+  }
+  return builder;
+}
+private Builder(){
+}

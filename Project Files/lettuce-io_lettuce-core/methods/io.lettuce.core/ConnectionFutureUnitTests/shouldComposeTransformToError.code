@@ -1,0 +1,14 @@
+@Test void shouldComposeTransformToError(){
+  CompletableFuture<String> foo=new CompletableFuture<>();
+  ConnectionFuture<Object> transformed=ConnectionFuture.from(null,foo).thenCompose((s,t) -> {
+    if (t != null) {
+      return Futures.failed(new IllegalStateException(t));
+    }
+    return Futures.failed(new IllegalStateException());
+  }
+);
+  foo.complete("foo");
+  assertThat(transformed.toCompletableFuture()).isDone();
+  assertThat(transformed.toCompletableFuture()).isCompletedExceptionally();
+  assertThatThrownBy(transformed::join).hasRootCauseInstanceOf(IllegalStateException.class);
+}

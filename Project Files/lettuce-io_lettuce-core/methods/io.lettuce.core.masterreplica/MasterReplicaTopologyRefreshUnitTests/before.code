@@ -1,0 +1,12 @@
+@BeforeEach void before(){
+  executorService=new ScheduledThreadPoolExecutor(1,new DefaultThreadFactory(getClass().getSimpleName(),true));
+  when(connection.closeAsync()).thenReturn(CompletableFuture.completedFuture(null));
+  when(connection.async()).thenReturn(async);
+  when(connection.dispatch(any(RedisCommand.class))).then(invocation -> {
+    RedisCommand command=invocation.getArgument(0);
+    command.complete();
+    return null;
+  }
+);
+  provider=() -> Arrays.asList(UPSTREAM,REPLICA);
+}

@@ -1,0 +1,14 @@
+/** 
+ * unsupported: <p> case1: thread|grep xxx [thread|grep, xxx] -> [thread|grep, xxx] case2: trace -E classA|classB methodA|methodB|grep classA [trace, -E, classA|classB, methodA|methodB|grep, classA] -> [trace, -E, classA|classB, methodA|methodB|grep, classA] case3: trace -E classA|classB| methodA|methodB | grep classA [trace, -E, classA|classB|, methodA|methodB, |, grep, classA] -> [trace, -E, classA|classB，|, methodA|methodB, |, grep, classA]
+ */
+@Test public void testUnSupportedPipeChar(){
+  String[] expectedTextTokenValue=new String[]{"thread|grep","xxx"};
+  List<CliToken> actualTokens=CliTokenImpl.tokenize("thread|grep xxx");
+  assertEquals(expectedTextTokenValue,actualTokens);
+  expectedTextTokenValue=new String[]{"trace","-E","classA|classB","methodA|methodB|grep","classA"};
+  actualTokens=CliTokenImpl.tokenize("trace -E classA|classB methodA|methodB|grep classA");
+  assertEquals(expectedTextTokenValue,actualTokens);
+  expectedTextTokenValue=new String[]{"trace","-E","classA|classB","|","methodA|methodB","|","grep","classA"};
+  actualTokens=CliTokenImpl.tokenize("trace -E classA|classB| methodA|methodB | grep classA");
+  assertEquals(expectedTextTokenValue,actualTokens);
+}

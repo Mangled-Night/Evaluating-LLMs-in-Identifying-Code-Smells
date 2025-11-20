@@ -1,0 +1,30 @@
+public void testPrivateChat(){
+  try {
+    MultiUserChat muc2=new MultiUserChat(getConnection(1),room);
+    muc2.join("testbot2");
+    getConnection(0).getChatManager().addChatListener(new ChatManagerListener(){
+      public void chatCreated(      Chat chat2,      boolean createdLocally){
+        assertEquals("Sender of chat is incorrect",room + "/testbot2",chat2.getParticipant());
+        try {
+          chat2.sendMessage("ACK");
+        }
+ catch (        XMPPException e) {
+          fail(e.getMessage());
+        }
+      }
+    }
+);
+    Chat chat=muc2.createPrivateChat(room + "/testbot",null);
+    StanzaCollector collector=chat.createCollector();
+    chat.sendMessage("Hello there");
+    Message response=(Message)collector.nextResult(2000);
+    assertNotNull("No response",response);
+    assertEquals("Sender of response is incorrect",room + "/testbot",response.getFrom());
+    assertEquals("Body of response is incorrect","ACK",response.getBody());
+    muc2.leave();
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

@@ -1,0 +1,35 @@
+private static int getSlaveIdFromZKForDataNode(String dataNode){
+  PhysicalDBNode dbNode=MycatServer.getInstance().getConfig().getDataNodes().get(dataNode);
+  String slaveIDs=dbNode.getDbPool().getSlaveIDs();
+  if (Strings.isNullOrEmpty(slaveIDs))   throw new RuntimeException("dataHost:" + dbNode.getDbPool().getHostName() + " do not config the salveIDs field");
+  List<Integer> allSlaveIDList=parseSlaveIDs(slaveIDs);
+  String taskPath=ZKUtils.getZKBasePath() + "slaveIDs/" + dbNode.getDbPool().getHostName();
+  try {
+    slaveIDsLock.acquire(30,TimeUnit.SECONDS);
+    Set<Integer> zkSlaveIdsSet=new HashSet<>();
+    if (ZKUtils.getConnection().checkExists().forPath(taskPath) != null) {
+      List<String> zkHasSlaveIDs=ZKUtils.getConnection().getChildren().forPath(taskPath);
+      for (      String zkHasSlaveID : zkHasSlaveIDs) {
+        zkSlaveIdsSet.add(Integer.parseInt(zkHasSlaveID));
+      }
+    }
+    for (    Integer integer : allSlaveIDList) {
+      if (!zkSlaveIdsSet.contains(integer)) {
+        ZKUtils.getConnection().create().creatingParentsIfNeeded().forPath(taskPath + "/" + integer);
+        return integer;
+      }
+    }
+  }
+ catch (  Exception e) {
+    throw new RuntimeException(e);
+  }
+ finally {
+    try {
+      slaveIDsLock.release();
+    }
+ catch (    Exception e) {
+      LOGGER.error("error:",e);
+    }
+  }
+  throw new RuntimeException("cannot get the slaveID  for dataHost :" + dbNode.getDbPool().getHostName());
+}

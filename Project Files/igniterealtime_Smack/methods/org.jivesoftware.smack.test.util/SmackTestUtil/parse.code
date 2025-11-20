@@ -1,0 +1,40 @@
+public static <E extends Element,P extends AbstractProvider<E>>E parse(CharSequence xml,Class<P> providerClass,XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+  P provider=providerClassToProvider(providerClass);
+  return parse(xml,provider,parserKind);
+}
+public static <E extends Element,P extends AbstractProvider<E>>E parse(InputStream inputStream,Class<P> providerClass,XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+  P provider=providerClassToProvider(providerClass);
+  return parse(inputStream,provider,parserKind);
+}
+public static <E extends Element,P extends AbstractProvider<E>>E parse(Reader reader,Class<P> providerClass,XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+  P provider=providerClassToProvider(providerClass);
+  return parse(reader,provider,parserKind);
+}
+public static <E extends Element>E parse(CharSequence xml,AbstractProvider<E> provider,XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+  String xmlString=xml.toString();
+  Reader reader=new StringReader(xmlString);
+  return parse(reader,provider,parserKind);
+}
+public static <E extends Element>E parse(InputStream inputStream,AbstractProvider<E> provider,XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+  InputStreamReader inputStreamReader=new InputStreamReader(inputStream,StandardCharsets.UTF_8);
+  return parse(inputStreamReader,provider,parserKind);
+}
+@SuppressWarnings("unchecked") public static <E extends Element>E parse(Reader reader,AbstractProvider<E> abstractProvider,XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+  XmlPullParser parser=getParserFor(reader,parserKind);
+  final E element;
+  if (abstractProvider instanceof Provider) {
+    Provider<E> provider=(Provider<E>)abstractProvider;
+    element=provider.parse(parser);
+  }
+ else   if (abstractProvider instanceof IqProvider) {
+    IqData iqData=PacketParserUtils.parseIqData(parser);
+    parser.next();
+    ParserUtils.forwardToStartElement(parser);
+    IqProvider<?> iqProvider=(IqProvider<?>)abstractProvider;
+    element=(E)iqProvider.parse(parser,iqData);
+  }
+ else {
+    throw new AssertionError();
+  }
+  return element;
+}

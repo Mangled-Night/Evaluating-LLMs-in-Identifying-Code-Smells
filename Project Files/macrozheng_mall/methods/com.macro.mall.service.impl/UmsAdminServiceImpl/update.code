@@ -1,0 +1,18 @@
+@Override public int update(Long id,UmsAdmin admin){
+  admin.setId(id);
+  UmsAdmin rawAdmin=adminMapper.selectByPrimaryKey(id);
+  if (rawAdmin.getPassword().equals(admin.getPassword())) {
+    admin.setPassword(null);
+  }
+ else {
+    if (StrUtil.isEmpty(admin.getPassword())) {
+      admin.setPassword(null);
+    }
+ else {
+      admin.setPassword(passwordEncoder.encode(admin.getPassword()));
+    }
+  }
+  int count=adminMapper.updateByPrimaryKeySelective(admin);
+  getCacheService().delAdmin(id);
+  return count;
+}

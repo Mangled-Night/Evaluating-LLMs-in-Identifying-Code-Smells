@@ -1,0 +1,22 @@
+private MycatServer(){
+  this.config=new MycatConfig();
+  scheduler=Executors.newSingleThreadScheduledExecutor();
+  heartbeatScheduler=Executors.newSingleThreadScheduledExecutor();
+  this.sqlRecorder=new SQLRecorder(config.getSystem().getSqlRecordCount());
+  this.isOnline=new AtomicBoolean(true);
+  cacheService=new CacheService();
+  routerService=new RouteService(cacheService);
+  dnIndexProperties=loadDnIndexProps();
+  try {
+    sqlInterceptor=(SQLInterceptor)Class.forName(config.getSystem().getSqlInterceptor()).newInstance();
+  }
+ catch (  Exception e) {
+    throw new RuntimeException(e);
+  }
+  catletClassLoader=new DynaClassLoader(SystemConfig.getHomePath() + File.separator + "catlet",config.getSystem().getCatletClassCheckSeconds());
+  this.startupTime=TimeUtil.currentTimeMillis();
+  if (isUseZkSwitch()) {
+    String path=ZKUtils.getZKBasePath() + "lock/dnindex.lock";
+    dnindexLock=new InterProcessMutex(ZKUtils.getConnection(),path);
+  }
+}

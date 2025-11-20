@@ -1,0 +1,16 @@
+@Override public Collection<String> allAgentIds(){
+  ValueOperations<String,String> opsForValue=redisTemplate.opsForValue();
+  int length=prefix.length();
+  final Set<String> redisValues=opsForValue.getOperations().keys(prefix + "*");
+  if (redisValues != null) {
+    final ArrayList<String> result=new ArrayList<>(redisValues.size());
+    for (    String value : redisValues) {
+      result.add(value.substring(length));
+    }
+    return result;
+  }
+ else {
+    logger.error("try to get allAgentIds error. redis returned null.");
+    return Collections.emptyList();
+  }
+}

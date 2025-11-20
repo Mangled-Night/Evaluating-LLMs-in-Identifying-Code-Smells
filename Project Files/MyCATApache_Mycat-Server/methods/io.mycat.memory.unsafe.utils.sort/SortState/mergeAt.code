@@ -1,0 +1,32 @@
+/** 
+ * Merges the two runs at stack indices i and i+1.  Run i must be the penultimate or antepenultimate run on the stack.  In other words, i must be equal to stackSize-2 or stackSize-3.
+ * @param i stack index of the first of the two runs to merge
+ */
+private void mergeAt(int i){
+  assert stackSize >= 2;
+  assert i >= 0;
+  assert i == stackSize - 2 || i == stackSize - 3;
+  int base1=runBase[i];
+  int len1=runLen[i];
+  int base2=runBase[i + 1];
+  int len2=runLen[i + 1];
+  assert len1 > 0 && len2 > 0;
+  assert base1 + len1 == base2;
+  runLen[i]=len1 + len2;
+  if (i == stackSize - 3) {
+    runBase[i + 1]=runBase[i + 2];
+    runLen[i + 1]=runLen[i + 2];
+  }
+  stackSize--;
+  K key0=s.newKey();
+  int k=gallopRight(s.getKey(a,base2,key0),a,base1,len1,0,c);
+  assert k >= 0;
+  base1+=k;
+  len1-=k;
+  if (len1 == 0)   return;
+  len2=gallopLeft(s.getKey(a,base1 + len1 - 1,key0),a,base2,len2,len2 - 1,c);
+  assert len2 >= 0;
+  if (len2 == 0)   return;
+  if (len1 <= len2)   mergeLo(base1,len1,base2,len2);
+ else   mergeHi(base1,len1,base2,len2);
+}

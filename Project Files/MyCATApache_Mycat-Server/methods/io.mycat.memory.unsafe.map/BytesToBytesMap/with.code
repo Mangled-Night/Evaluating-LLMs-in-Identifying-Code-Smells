@@ -1,0 +1,30 @@
+private Location with(int pos,int keyHashcode,boolean isDefined){
+  assert (longArray != null);
+  this.pos=pos;
+  this.isDefined=isDefined;
+  this.keyHashcode=keyHashcode;
+  if (isDefined) {
+    final long fullKeyAddress=longArray.get(pos * 2);
+    updateAddressesAndSizes(fullKeyAddress);
+  }
+  return this;
+}
+private Location with(MemoryBlock page,long offsetInPage){
+  this.isDefined=true;
+  this.memoryPage=page;
+  updateAddressesAndSizes(page.getBaseObject(),offsetInPage);
+  return this;
+}
+/** 
+ * This is only used for spilling
+ */
+private Location with(Object base,long offset,int length){
+  this.isDefined=true;
+  this.memoryPage=null;
+  baseObject=base;
+  keyOffset=offset + 4;
+  keyLength=Platform.getInt(base,offset);
+  valueOffset=offset + 4 + keyLength;
+  valueLength=length - 4 - keyLength;
+  return this;
+}

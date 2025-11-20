@@ -1,0 +1,10 @@
+@Test void shouldRetrieveTopologyWithFailedNode(){
+  MasterReplicaTopologyRefresh refresh=new MasterReplicaTopologyRefresh(connectionFactory,executorService,provider);
+  CompletableFuture<StatefulRedisConnection<String,String>> connected=CompletableFuture.completedFuture(connection);
+  CompletableFuture<StatefulRedisConnection<String,String>> pending=new CompletableFuture<>();
+  when(connectionFactory.connectToNodeAsync(any(),any())).thenReturn((CompletableFuture)connected,(CompletableFuture)pending);
+  RedisURI redisURI=new RedisURI();
+  redisURI.setTimeout(Duration.ofMillis(1));
+  List<RedisNodeDescription> nodes=refresh.getNodes(redisURI).block();
+  assertThat(nodes).hasSize(1).containsOnly(UPSTREAM);
+}

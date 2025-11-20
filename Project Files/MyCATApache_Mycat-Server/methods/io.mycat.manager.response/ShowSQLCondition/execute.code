@@ -1,0 +1,34 @@
+public static void execute(ManagerConnection c){
+  ByteBuffer buffer=c.allocate();
+  buffer=header.write(buffer,c,true);
+  for (  FieldPacket field : fields) {
+    buffer=field.write(buffer,c,true);
+  }
+  buffer=eof.write(buffer,c,true);
+  byte packetId=eof.packetId;
+  String key=QueryConditionAnalyzer.getInstance().getKey();
+  List<Map.Entry<Object,AtomicLong>> list=QueryConditionAnalyzer.getInstance().getValues();
+  if (list != null) {
+    int size=list.size();
+    long total=0L;
+    for (int i=0; i < size; i++) {
+      Map.Entry<Object,AtomicLong> entry=list.get(i);
+      Object value=entry.getKey();
+      Long count=entry.getValue().get();
+      total+=count;
+      RowDataPacket row=getRow(i,key,value.toString(),count,c.getCharset());
+      row.packetId=++packetId;
+      buffer=row.write(buffer,c,true);
+    }
+    RowDataPacket vk_row=getRow(size + 1,key + ".valuekey","size",size,c.getCharset());
+    vk_row.packetId=++packetId;
+    buffer=vk_row.write(buffer,c,true);
+    RowDataPacket vc_row=getRow(size + 2,key + ".valuecount","total",total,c.getCharset());
+    vc_row.packetId=++packetId;
+    buffer=vc_row.write(buffer,c,true);
+  }
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

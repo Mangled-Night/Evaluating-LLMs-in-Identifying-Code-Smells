@@ -1,0 +1,23 @@
+@Override public void childEvent(CuratorFramework client,PathChildrenCacheEvent event) throws Exception {
+switch (event.getType()) {
+case CHILD_ADDED:
+    String path=event.getData().getPath();
+  String basePath=ZKUtils.getZKBasePath() + ZKHandler.ZK_NODE_PATH + "/";
+String node=path.substring(basePath.length());
+if (node.equals(ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_MYID))) {
+if (ZKHandler.RELOAD_FROM_ZK.equals(new String(client.getData().forPath(path)))) {
+  ZktoXmlMain.ZKLISTENER.notifly(ZkNofiflyCfg.ZK_NOTIFLY_LOAD_ALL.getKey());
+  reload(path);
+  client.delete().forPath(event.getData().getPath());
+  LOGGER.info("CommandPathListener path:" + path + " reload success");
+}
+}
+break;
+case CHILD_UPDATED:
+break;
+case CHILD_REMOVED:
+break;
+default :
+break;
+}
+}

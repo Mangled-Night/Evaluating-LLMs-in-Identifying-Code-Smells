@@ -1,0 +1,25 @@
+/** 
+ * Range Sum Query Time-Complexity: O(log(n))
+ * @param from from index
+ * @param to to index
+ * @return sum
+ */
+public int rsq(int from,int to){
+  return rsq(1,from,to);
+}
+private int rsq(int v,int from,int to){
+  Node n=heap[v];
+  if (n.pendingVal != null && contains(n.from,n.to,from,to)) {
+    return (to - from + 1) * n.pendingVal;
+  }
+  if (contains(from,to,n.from,n.to)) {
+    return heap[v].sum;
+  }
+  if (intersects(from,to,n.from,n.to)) {
+    propagate(v);
+    int leftSum=rsq(2 * v,from,to);
+    int rightSum=rsq(2 * v + 1,from,to);
+    return leftSum + rightSum;
+  }
+  return 0;
+}

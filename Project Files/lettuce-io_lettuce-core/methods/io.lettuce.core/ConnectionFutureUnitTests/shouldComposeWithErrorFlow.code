@@ -1,0 +1,25 @@
+@Test void shouldComposeWithErrorFlow(){
+  CompletableFuture<String> foo=new CompletableFuture<>();
+  CompletableFuture<String> exceptional=new CompletableFuture<>();
+  ConnectionFuture<Object> transformed1=ConnectionFuture.from(null,foo).thenCompose((s,t) -> {
+    if (t != null) {
+      return Futures.failed(new IllegalStateException(t));
+    }
+    return CompletableFuture.completedFuture(s);
+  }
+);
+  ConnectionFuture<Object> transformed2=ConnectionFuture.from(null,exceptional).thenCompose((s,t) -> {
+    if (t != null) {
+      return Futures.failed(new IllegalStateException(t));
+    }
+    return CompletableFuture.completedFuture(s);
+  }
+);
+  foo.complete("foo");
+  exceptional.completeExceptionally(new IllegalArgumentException("foo"));
+  assertThat(transformed1.toCompletableFuture()).isDone();
+  assertThat(transformed1.toCompletableFuture()).isCompletedWithValue("foo");
+  assertThat(transformed2.toCompletableFuture()).isDone();
+  assertThat(transformed2.toCompletableFuture()).isCompletedExceptionally();
+  assertThatThrownBy(transformed2::join).hasCauseInstanceOf(IllegalStateException.class).hasRootCauseInstanceOf(IllegalArgumentException.class);
+}

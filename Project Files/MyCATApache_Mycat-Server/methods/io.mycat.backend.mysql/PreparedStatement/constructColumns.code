@@ -1,0 +1,28 @@
+public void constructColumns(){
+  String[] columnNames;
+  try {
+    SQLStatementParser sqlStatementParser=SQLParserUtils.createSQLStatementParser(statement,JdbcUtils.MYSQL);
+    SQLStatement statement=sqlStatementParser.parseStatement();
+    if (statement instanceof SQLSelectStatement) {
+      SQLSelect select=((SQLSelectStatement)statement).getSelect();
+      com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlSelectQueryBlock query=(com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlSelectQueryBlock)select.getQuery();
+      int size=query.getSelectList().size();
+      if (size == 1) {
+        if ("*".equalsIgnoreCase(query.getSelectList().get(0).toString())) {
+          throw new Exception("unsupport * in select items:" + statement);
+        }
+      }
+{
+        columnNames=new String[size];
+        for (int i=0; i < size; i++) {
+          columnNames[i]=query.getSelectList().get(i).toString();
+        }
+        this.columnNames=columnNames;
+      }
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.error("can not get column count",e);
+  }
+  this.columnNames=new String[]{};
+}

@@ -1,0 +1,15 @@
+/** 
+ * Test accept() method.
+ * @throws Exception should not happen
+ */
+@Test public void shouldReturnSessionIfRequestIsAccepted() throws Exception {
+  InBandBytestreamRequest ibbRequest=new InBandBytestreamRequest(byteStreamManager,initBytestream);
+  InBandBytestreamSession session=ibbRequest.accept();
+  ArgumentCaptor<IQ> argument=ArgumentCaptor.forClass(IQ.class);
+  verify(connection).sendStanza(argument.capture());
+  assertEquals(initiatorJID,argument.getValue().getTo());
+  assertEquals(IQ.Type.result,argument.getValue().getType());
+  assertNotNull(session);
+  assertNotNull(session.getInputStream());
+  assertNotNull(session.getOutputStream());
+}

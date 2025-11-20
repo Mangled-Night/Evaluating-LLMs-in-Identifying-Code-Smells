@@ -1,0 +1,29 @@
+/** 
+ * As the given provisioning server is the given JID is a friend.
+ * @param provisioningServer the provisioning server to ask.
+ * @param friendInQuestion the JID to ask about.
+ * @return <code>true</code> if the JID is a friend, <code>false</code> otherwise.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public boolean isFriend(Jid provisioningServer,BareJid friendInQuestion) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  LruCache<BareJid,Void> cache=negativeFriendshipRequestCache.lookup(provisioningServer);
+  if (cache != null && cache.containsKey(friendInQuestion)) {
+    return false;
+  }
+  IoTIsFriend iotIsFriend=new IoTIsFriend(friendInQuestion);
+  iotIsFriend.setTo(provisioningServer);
+  IoTIsFriendResponse response=connection().sendIqRequestAndWaitForResponse(iotIsFriend);
+  assert response.getJid().equals(friendInQuestion);
+  boolean isFriend=response.getIsFriendResult();
+  if (!isFriend) {
+    if (cache == null) {
+      cache=new LruCache<>(1024);
+      negativeFriendshipRequestCache.put(provisioningServer,cache);
+    }
+    cache.put(friendInQuestion,null);
+  }
+  return isFriend;
+}

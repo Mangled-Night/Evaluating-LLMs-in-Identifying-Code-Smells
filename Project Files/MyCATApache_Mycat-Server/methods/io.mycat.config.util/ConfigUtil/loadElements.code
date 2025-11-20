@@ -1,0 +1,28 @@
+/** 
+ * 获取节点下所有property
+ * @param parent
+ * @return key-value property键值对
+ */
+public static Map<String,Object> loadElements(Element parent){
+  Map<String,Object> map=new HashMap<String,Object>();
+  NodeList children=parent.getChildNodes();
+  for (int i=0; i < children.getLength(); i++) {
+    Node node=children.item(i);
+    if (node instanceof Element) {
+      Element e=(Element)node;
+      String name=e.getNodeName();
+      if ("property".equals(name)) {
+        String key=e.getAttribute("name");
+        NodeList nl=e.getElementsByTagName("bean");
+        if (nl.getLength() == 0) {
+          String value=e.getTextContent();
+          map.put(key,StringUtil.isEmpty(value) ? null : value.trim());
+        }
+ else {
+          map.put(key,loadBean((Element)nl.item(0)));
+        }
+      }
+    }
+  }
+  return map;
+}

@@ -1,0 +1,9 @@
+@Test void georadiusbymemberStoreDistWithCountAndSort(){
+  prepareGeo();
+  String resultKey="38o54";
+  Long result=redis.georadiusbymember(key,"Bahn",5,GeoArgs.Unit.km,new GeoRadiusStoreArgs<>().withCount(1).desc().withStoreDist("38o54"));
+  assertThat(result).isEqualTo(1);
+  List<ScoredValue<String>> dist=redis.zrangeWithScores(resultKey,0,-1);
+  assertThat(dist).hasSize(1);
+  assertThat(dist.get(0).getScore()).isBetween(2d,3d);
+}

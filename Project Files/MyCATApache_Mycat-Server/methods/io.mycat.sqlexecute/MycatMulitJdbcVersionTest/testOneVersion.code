@@ -1,0 +1,45 @@
+private static void testOneVersion(String mysqlJdbcFile){
+  System.out.println("start test mysql jdbc version : " + mysqlJdbcFile);
+  try {
+    dynamicLoadJdbc(mysqlJdbcFile);
+  }
+ catch (  Exception e1) {
+    e1.printStackTrace();
+  }
+  Connection conn=null;
+  try {
+    conn=DriverManager.getConnection(JDBC_URL,USER,PASSWORD);
+    Statement stmt=conn.createStatement();
+    ResultSet rs=stmt.executeQuery("select user()");
+    System.out.println("select user() output : ");
+    while (rs.next()) {
+      System.out.println(rs.getObject(1));
+    }
+    rs=stmt.executeQuery("show tables");
+    System.out.println("show tables output : ");
+    while (rs.next()) {
+      System.out.println(rs.getObject(1));
+    }
+  }
+ catch (  SQLException e) {
+    e.printStackTrace();
+  }
+ finally {
+    if (conn != null) {
+      try {
+        conn.close();
+      }
+ catch (      SQLException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+  try {
+    dynamicUnLoadJdbc(mysqlJdbcFile);
+  }
+ catch (  SQLException e) {
+    e.printStackTrace();
+  }
+  System.out.println("end !!!");
+  System.out.println();
+}

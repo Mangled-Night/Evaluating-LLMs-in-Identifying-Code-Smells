@@ -1,0 +1,34 @@
+/** 
+ * Entry point for Smacks API for XEP-0118: User Tune. <br> To publish a UserTune, please use  {@link #publishUserTune(UserTuneElement)} method. This will publish the node.<br> To stop publishing a UserTune, please use  {@link #clearUserTune()} method. This will send a disabling publish signal.<br> To add a UserTune listener in order to remain updated with other users UserTune, use  {@link #addUserTuneListener(PepEventListener)} method.<br> To link a UserTuneElement with  {@link Message}, use 'message.addExtension(userTuneElement)'. <br> An example to illustrate is provided inside UserTuneElementTest inside the test package. <br>
+ * @see <a href="https://xmpp.org/extensions/xep-0118.html">
+ *     XEP-0118: User Tune</a>
+ */
+public final class UserTuneManager extends Manager {
+  public static final String USERTUNE_NODE="http://jabber.org/protocol/tune";
+  private static final Map<XMPPConnection,UserTuneManager> INSTANCES=new WeakHashMap<>();
+  private final PepManager pepManager;
+  public static synchronized UserTuneManager getInstanceFor(  XMPPConnection connection) throws NotLoggedInException {
+    UserTuneManager manager=INSTANCES.get(connection);
+    if (manager == null) {
+      manager=new UserTuneManager(connection);
+      INSTANCES.put(connection,manager);
+    }
+    return manager;
+  }
+  private UserTuneManager(  XMPPConnection connection){
+    super(connection);
+    pepManager=PepManager.getInstanceFor(connection);
+  }
+  public void clearUserTune() throws NotLoggedInException, NotALeafNodeException, NoResponseException, NotConnectedException, XMPPErrorException, InterruptedException {
+    publishUserTune(UserTuneElement.EMPTY_USER_TUNE);
+  }
+  public void publishUserTune(  UserTuneElement userTuneElement) throws NotLoggedInException, NotALeafNodeException, NoResponseException, NotConnectedException, XMPPErrorException, InterruptedException {
+    pepManager.publish(USERTUNE_NODE,new PayloadItem<>(userTuneElement));
+  }
+  public boolean addUserTuneListener(  PepEventListener<UserTuneElement> listener){
+    return pepManager.addPepEventListener(USERTUNE_NODE,UserTuneElement.class,listener);
+  }
+  public boolean removeUserTuneListener(  PepEventListener<UserTuneElement> listener){
+    return pepManager.removePepEventListener(listener);
+  }
+}

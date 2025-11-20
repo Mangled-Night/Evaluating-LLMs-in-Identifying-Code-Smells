@@ -1,0 +1,36 @@
+private SASLMechanism selectMechanism(EntityBareJid authzid,String password) throws SmackException.SmackSaslException {
+  final boolean passwordAvailable=StringUtils.isNotEmpty(password);
+  Iterator<SASLMechanism> it=REGISTERED_MECHANISMS.iterator();
+  final List<String> serverMechanisms=getServerMechanisms();
+  if (serverMechanisms.isEmpty()) {
+    LOGGER.warning("Server did not report any SASL mechanisms");
+  }
+  List<String> skipReasons=new ArrayList<>();
+  while (it.hasNext()) {
+    SASLMechanism mechanism=it.next();
+    String mechanismName=mechanism.getName();
+    if (!serverMechanisms.contains(mechanismName)) {
+      continue;
+    }
+synchronized (BLACKLISTED_MECHANISMS) {
+      if (BLACKLISTED_MECHANISMS.contains(mechanismName)) {
+        continue;
+      }
+    }
+    if (!configuration.isEnabledSaslMechanism(mechanismName)) {
+      continue;
+    }
+    if (authzid != null && !mechanism.authzidSupported()) {
+      skipReasons.add("Skipping " + mechanism + " because authzid is required by not supported by this SASL mechanism");
+      continue;
+    }
+    if (mechanism.requiresPassword() && !passwordAvailable) {
+      skipReasons.add("Skipping " + mechanism + " because a password is required for it, but none was provided to the connection configuration");
+      continue;
+    }
+    return mechanism.instanceForAuthentication(connection,configuration);
+  }
+synchronized (BLACKLISTED_MECHANISMS) {
+    throw new SmackException.SmackSaslException("No supported and enabled SASL Mechanism provided by server. " + "Server announced mechanisms: " + serverMechanisms + ". "+ "Registered SASL mechanisms with Smack: "+ REGISTERED_MECHANISMS+ ". "+ "Enabled SASL mechanisms for this connection: "+ configuration.getEnabledSaslMechanisms()+ ". "+ "Blacklisted SASL mechanisms: "+ BLACKLISTED_MECHANISMS+ ". "+ "Skip reasons: "+ skipReasons);
+  }
+}

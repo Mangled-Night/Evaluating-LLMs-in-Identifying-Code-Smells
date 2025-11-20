@@ -1,0 +1,22 @@
+@Test public void forcedSpillingWithoutComparator() throws Exception {
+  final UnsafeExternalSorter sorter=UnsafeExternalSorter.create(DATA_NODE_MEMORY_MANAGER,blockManager,serializerManager,null,null,1024,pageSizeBytes,shouldUseRadixSort(),true);
+  long[] record=new long[100];
+  int recordSize=record.length * 8;
+  int n=(int)pageSizeBytes / recordSize * 3;
+  int batch=n / 4;
+  for (int i=0; i < n; i++) {
+    record[0]=(long)i;
+    sorter.insertRecord(record,Platform.LONG_ARRAY_OFFSET,recordSize,0);
+    if (i % batch == batch - 1) {
+      sorter.spill();
+    }
+  }
+  UnsafeSorterIterator iter=sorter.getIterator();
+  for (int i=0; i < n; i++) {
+    iter.hasNext();
+    iter.loadNext();
+    assertEquals(i,Platform.getLong(iter.getBaseObject(),iter.getBaseOffset()));
+  }
+  sorter.cleanupResources();
+  assertSpillFilesWereCleanedUp();
+}

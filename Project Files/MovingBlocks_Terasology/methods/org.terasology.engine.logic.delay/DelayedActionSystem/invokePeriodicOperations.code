@@ -1,0 +1,30 @@
+private void invokePeriodicOperations(long currentWorldTime){
+  List<EntityRef> operationsToInvoke=new LinkedList<>();
+  Iterator<Long> scheduledOperationsIterator=periodicOperationsSortedByTime.keySet().iterator();
+  long processedTime;
+  while (scheduledOperationsIterator.hasNext()) {
+    processedTime=scheduledOperationsIterator.next();
+    if (processedTime > currentWorldTime) {
+      break;
+    }
+    operationsToInvoke.addAll(periodicOperationsSortedByTime.get(processedTime));
+    scheduledOperationsIterator.remove();
+  }
+  operationsToInvoke.stream().filter(EntityRef::exists).forEach(periodicEntity -> {
+    final PeriodicActionComponent periodicActionComponent=periodicEntity.getComponent(PeriodicActionComponent.class);
+    if (periodicActionComponent != null) {
+      final Set<String> actionIds=periodicActionComponent.getTriggeredActionsAndReschedule(currentWorldTime);
+      saveOrRemoveComponent(periodicEntity,periodicActionComponent);
+      if (!periodicActionComponent.isEmpty()) {
+        periodicOperationsSortedByTime.put(periodicActionComponent.getLowestWakeUp(),periodicEntity);
+      }
+      for (      String actionId : actionIds) {
+        periodicEntity.send(new PeriodicActionTriggeredEvent(actionId));
+      }
+    }
+ else {
+      logger.error("ERROR: This entity is missing a DelayedActionComponent: {}. " + "So skipping delayed actions for this entity",periodicEntity);
+    }
+  }
+);
+}

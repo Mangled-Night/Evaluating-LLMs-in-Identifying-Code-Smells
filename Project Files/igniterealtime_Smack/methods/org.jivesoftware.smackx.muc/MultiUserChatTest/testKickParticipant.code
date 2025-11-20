@@ -1,0 +1,46 @@
+public void testKickParticipant(){
+  final String[] answer=new String[3];
+  try {
+    MultiUserChat muc2=new MultiUserChat(getConnection(1),room);
+    muc2.join("testbot2");
+    muc2.addUserStatusListener(new DefaultUserStatusListener(){
+      public void kicked(      String actor,      String reason){
+        super.kicked(actor,reason);
+        answer[0]=actor;
+        answer[1]=reason;
+      }
+    }
+);
+    MultiUserChat muc3=new MultiUserChat(getConnection(2),room);
+    muc3.join("testbot3");
+    muc3.addParticipantStatusListener(new DefaultParticipantStatusListener(){
+      public void kicked(      String participant,      String actor,      String reason){
+        super.kicked(participant,actor,reason);
+        answer[2]=participant;
+      }
+    }
+);
+    try {
+      muc2.kickParticipant("testbot","Because I'm bad");
+      fail("User2 was able to kick a room owner");
+    }
+ catch (    XMPPException e) {
+      XMPPError xmppError=e.getStanzaError();
+      assertNotNull("No XMPPError was received when kicking a room owner",xmppError);
+      assertEquals("A simple participant was able to kick another participant from the room",403,xmppError.getCode());
+    }
+    muc.kickParticipant("testbot2","Because I'm the owner");
+    Thread.sleep(300);
+    assertNull("User2 wasn't kicked from the room",muc.getOccupant(room + "/testbot2"));
+    assertFalse("User2 thinks that he's still in the room",muc2.isJoined());
+    assertEquals("User2 didn't receive the correct initiator of the kick",getBareJID(0),answer[0]);
+    assertEquals("User2 didn't receive the correct reason for the kick","Because I'm the owner",answer[1]);
+    assertEquals("User3 didn't receive the correct kicked participant",room + "/testbot2",answer[2]);
+    muc2.leave();
+    muc3.leave();
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

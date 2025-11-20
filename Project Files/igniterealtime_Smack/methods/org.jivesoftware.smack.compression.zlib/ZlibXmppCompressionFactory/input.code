@@ -1,0 +1,46 @@
+@Override public ByteBuffer input(ByteBuffer inputData) throws IOException {
+  int bytesRemaining=inputData.remaining();
+  final byte[] inputBytes;
+  final int offset, length;
+  if (inputData.hasArray()) {
+    inputBytes=inputData.array();
+    offset=inputData.arrayOffset();
+    length=inputData.remaining();
+  }
+ else {
+    inputBytes=new byte[bytesRemaining];
+    inputData.get(inputBytes);
+    offset=0;
+    length=inputBytes.length;
+  }
+  decompressorInBytes+=length;
+  decompressor.setInput(inputBytes,offset,length);
+  int bytesInflated;
+  ByteBuffer outputBuffer=ByteBuffer.allocate(2 * length);
+  while (true) {
+    byte[] inflateOutputBuffer=outputBuffer.array();
+    int inflateOutputBufferOffset=outputBuffer.position();
+    int inflateOutputBufferLength=outputBuffer.limit() - inflateOutputBufferOffset;
+    try {
+      bytesInflated=decompressor.inflate(inflateOutputBuffer,inflateOutputBufferOffset,inflateOutputBufferLength);
+    }
+ catch (    DataFormatException e) {
+      throw new IOException(e);
+    }
+    outputBuffer.position(inflateOutputBufferOffset + bytesInflated);
+    decompressorOutBytes+=bytesInflated;
+    if (decompressor.needsInput()) {
+      break;
+    }
+    int increasedBufferSize=outputBuffer.capacity() * 2;
+    ByteBuffer increasedOutputBuffer=ByteBuffer.allocate(increasedBufferSize);
+    outputBuffer.flip();
+    increasedOutputBuffer.put(outputBuffer);
+    outputBuffer=increasedOutputBuffer;
+  }
+  if (bytesInflated == 0) {
+    return null;
+  }
+  maxInputOutput=Math.max(outputBuffer.position(),maxInputOutput);
+  return outputBuffer;
+}

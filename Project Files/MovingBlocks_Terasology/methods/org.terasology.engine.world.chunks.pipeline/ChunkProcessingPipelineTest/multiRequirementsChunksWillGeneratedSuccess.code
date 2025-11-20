@@ -1,0 +1,16 @@
+/** 
+ * Imagine that we have task, which requires neighbors with same Z level. neighbor will generated.
+ */
+@Test void multiRequirementsChunksWillGeneratedSuccess() throws ExecutionException, InterruptedException, TimeoutException {
+  Vector3i positionToGenerate=new Vector3i(0,0,0);
+  Map<Vector3ic,Chunk> chunkToGenerate=getNearChunkPositions(positionToGenerate).stream().filter((p) -> !p.equals(positionToGenerate)).map(this::createChunkAt).collect(Collectors.toMap(ChunkImpl::getPosition,Function.identity()));
+  pipeline=new ChunkProcessingPipeline((p) -> null,(o1,o2) -> 0);
+  pipeline.addStage(ChunkTaskProvider.createMulti("flat merging task",(chunks) -> chunks.stream().filter((c) -> c.getPosition().equals(positionToGenerate)).findFirst().get(),this::getNearChunkPositions));
+  Chunk chunk=createChunkAt(positionToGenerate);
+  Future<Chunk> chunkFuture=pipeline.invokeGeneratorTask(new Vector3i(0,0,0),() -> chunk);
+  Thread.sleep(1_000);
+  Assertions.assertFalse(chunkFuture.isDone(),"Chunk must be not generated, because ChunkTask have not exists " + "neighbors in requirements");
+  chunkToGenerate.forEach((position,neighborChunk) -> pipeline.invokeGeneratorTask(position,() -> neighborChunk));
+  Chunk chunkAfterProcessing=chunkFuture.get(1,TimeUnit.SECONDS);
+  Assertions.assertEquals(chunkAfterProcessing.getPosition(),chunk.getPosition(),"Chunk after processing must have equals position, probably pipeline lost you chunk");
+}

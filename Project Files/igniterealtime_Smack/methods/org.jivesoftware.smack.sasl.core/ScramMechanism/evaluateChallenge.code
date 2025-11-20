@@ -1,0 +1,71 @@
+@Override protected byte[] evaluateChallenge(byte[] challenge) throws SmackSaslException {
+  String challengeString=new String(challenge,StandardCharsets.UTF_8);
+switch (state) {
+case AUTH_TEXT_SENT:
+    final String serverFirstMessage=challengeString;
+  Map<Character,String> attributes=parseAttributes(challengeString);
+String rvalue=attributes.get('r');
+if (rvalue == null) {
+throw new SmackSaslException("Server random ASCII is null");
+}
+if (rvalue.length() <= clientRandomAscii.length()) {
+throw new SmackSaslException("Server random ASCII is shorter then client random ASCII");
+}
+String receivedClientRandomAscii=rvalue.substring(0,clientRandomAscii.length());
+if (!receivedClientRandomAscii.equals(clientRandomAscii)) {
+throw new SmackSaslException("Received client random ASCII does not match client random ASCII");
+}
+int iterations;
+String iterationsString=attributes.get('i');
+if (iterationsString == null) {
+throw new SmackSaslException("Iterations attribute not set");
+}
+try {
+iterations=Integer.parseInt(iterationsString);
+}
+ catch (NumberFormatException e) {
+throw new SmackSaslException("Exception parsing iterations",e);
+}
+String salt=attributes.get('s');
+if (salt == null) {
+throw new SmackSaslException("SALT not send");
+}
+String channelBinding="c=" + Base64.encodeToString(getCBindInput());
+String clientFinalMessageWithoutProof=channelBinding + ",r=" + rvalue;
+byte[] authMessage=toBytes(clientFirstMessageBare + ',' + serverFirstMessage+ ','+ clientFinalMessageWithoutProof);
+final String cacheKey=password + ',' + salt+ ','+ getName();
+byte[] serverKey, clientKey;
+Keys keys=CACHE.lookup(cacheKey);
+if (keys == null) {
+byte[] saltedPassword=hi(saslPrep(password),Base64.decode(salt),iterations);
+serverKey=hmac(saltedPassword,SERVER_KEY_BYTES);
+clientKey=hmac(saltedPassword,CLIENT_KEY_BYTES);
+keys=new Keys(clientKey,serverKey);
+CACHE.put(cacheKey,keys);
+}
+ else {
+serverKey=keys.serverKey;
+clientKey=keys.clientKey;
+}
+serverSignature=hmac(serverKey,authMessage);
+byte[] storedKey=SHA1.bytes(clientKey);
+byte[] clientSignature=hmac(storedKey,authMessage);
+byte[] clientProof=new byte[clientKey.length];
+for (int i=0; i < clientProof.length; i++) {
+clientProof[i]=(byte)(clientKey[i] ^ clientSignature[i]);
+}
+String clientFinalMessage=clientFinalMessageWithoutProof + ",p=" + Base64.encodeToString(clientProof);
+state=State.RESPONSE_SENT;
+return toBytes(clientFinalMessage);
+case RESPONSE_SENT:
+String clientCalculatedServerFinalMessage="v=" + Base64.encodeToString(serverSignature);
+if (!clientCalculatedServerFinalMessage.equals(challengeString)) {
+throw new SmackSaslException("Server final message does not match calculated one");
+}
+state=State.VALID_SERVER_RESPONSE;
+break;
+default :
+throw new SmackSaslException("Invalid state");
+}
+return null;
+}

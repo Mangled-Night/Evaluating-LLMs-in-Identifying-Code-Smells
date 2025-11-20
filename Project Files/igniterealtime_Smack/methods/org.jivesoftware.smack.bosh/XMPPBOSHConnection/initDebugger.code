@@ -1,0 +1,63 @@
+/** 
+ * Initialize the SmackDebugger which allows to log and debug XML traffic.
+ */
+@Override protected void initDebugger(){
+  writer=new Writer(){
+    @Override public void write(    char[] cbuf,    int off,    int len){
+    }
+    @Override public void close(){
+    }
+    @Override public void flush(){
+    }
+  }
+;
+  try {
+    readerPipe=new PipedWriter();
+    reader=new PipedReader(readerPipe);
+  }
+ catch (  IOException e) {
+  }
+  super.initDebugger();
+  client.addBOSHClientResponseListener(new BOSHClientResponseListener(){
+    @Override public void responseReceived(    BOSHMessageEvent event){
+      if (event.getBody() != null) {
+        try {
+          readerPipe.write(event.getBody().toXML());
+          readerPipe.flush();
+        }
+ catch (        Exception e) {
+        }
+      }
+    }
+  }
+);
+  client.addBOSHClientRequestListener(new BOSHClientRequestListener(){
+    @Override public void requestSent(    BOSHMessageEvent event){
+      if (event.getBody() != null) {
+        try {
+          writer.write(event.getBody().toXML());
+        }
+ catch (        Exception e) {
+        }
+      }
+    }
+  }
+);
+  readerConsumer=new Thread(){
+    private Thread thread=this;
+    private int bufferLength=1024;
+    @Override public void run(){
+      try {
+        char[] cbuf=new char[bufferLength];
+        while (readerConsumer == thread && !done) {
+          reader.read(cbuf,0,bufferLength);
+        }
+      }
+ catch (      IOException e) {
+      }
+    }
+  }
+;
+  readerConsumer.setDaemon(true);
+  readerConsumer.start();
+}

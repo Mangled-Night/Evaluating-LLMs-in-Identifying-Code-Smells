@@ -1,0 +1,14 @@
+@Test void shouldTestObjectOnBorrowFailExceptionally(){
+  mockCreation();
+  when(factory.validate(any())).thenReturn(failed(new RedisException("foo")));
+  BoundedAsyncPool<String> pool=new BoundedAsyncPool<>(factory,BoundedPoolConfig.builder().testOnAcquire().build());
+  pool.release(TestFutures.getOrTimeout(pool.acquire()));
+  assertThat(pool.getIdle()).isEqualTo(1);
+  assertThat(pool.getObjectCount()).isEqualTo(1);
+  assertThat(pool.getCreationInProgress()).isZero();
+  CompletableFuture<String> acquire=pool.acquire();
+  assertThat(acquire).isCompletedWithValue("2");
+  assertThat(pool.getIdle()).isEqualTo(0);
+  assertThat(pool.getObjectCount()).isEqualTo(1);
+  assertThat(pool.getCreationInProgress()).isZero();
+}

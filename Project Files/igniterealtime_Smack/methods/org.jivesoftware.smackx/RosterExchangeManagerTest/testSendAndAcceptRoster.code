@@ -1,0 +1,42 @@
+/** 
+ * High level API test. 1. User_1 will send his/her roster to user_2 2. User_2 will automatically add the entries that receives to his/her roster in the corresponding group 3. User_1 will wait several seconds for an ACK from user_2, if none is received then something is wrong
+ */
+public void testSendAndAcceptRoster(){
+  RosterExchangeManager rosterExchangeManager1=new RosterExchangeManager(getConnection(0));
+  RosterExchangeManager rosterExchangeManager2=new RosterExchangeManager(getConnection(1));
+  RosterExchangeListener rosterExchangeListener=new RosterExchangeListener(){
+    public void entriesReceived(    String from,    Iterator<RemoteRosterEntry> remoteRosterEntries){
+      int received=0;
+      assertNotNull("From is null",from);
+      assertNotNull("remoteRosterEntries is null",remoteRosterEntries);
+      assertTrue("Roster without entries",remoteRosterEntries.hasNext());
+      while (remoteRosterEntries.hasNext()) {
+        received++;
+        try {
+          RemoteRosterEntry remoteRosterEntry=remoteRosterEntries.next();
+          getConnection(1).getRoster().createEntry(remoteRosterEntry.getUser(),remoteRosterEntry.getName(),remoteRosterEntry.getGroupArrayNames());
+        }
+ catch (        Exception e) {
+          fail(e.toString());
+        }
+      }
+      entriesReceived=received;
+    }
+  }
+;
+  rosterExchangeManager2.addRosterListener(rosterExchangeListener);
+  try {
+    entriesSent=getConnection(0).getRoster().getEntryCount();
+    entriesReceived=0;
+    rosterExchangeManager1.send(getConnection(0).getRoster(),getBareJID(1));
+    long initial=System.currentTimeMillis();
+    while (System.currentTimeMillis() - initial < 2000 && (entriesSent != entriesReceived)) {
+      Thread.sleep(100);
+    }
+  }
+ catch (  Exception e) {
+    fail("An error occurred sending the message with the roster");
+  }
+  assertEquals("Number of sent and received entries does not match",entriesSent,entriesReceived);
+  assertTrue("Roster2 has no entries",getConnection(1).getRoster().getEntryCount() > 0);
+}

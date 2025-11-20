@@ -1,0 +1,29 @@
+@Override public Optional<T> deserialize(PersistedData data){
+  if (!data.isValueMap()) {
+    return Optional.empty();
+  }
+  try {
+    T result=constructor.construct();
+    for (    Map.Entry<String,PersistedData> entry : data.getAsValueMap().entrySet()) {
+      String fieldName=entry.getKey();
+      Field field=fieldByName.get(fieldName);
+      if (field == null) {
+        logger.error("Cound not find field with name {}",fieldName);
+        continue;
+      }
+      TypeHandler handler=mappedFields.get(field);
+      Optional<?> fieldValue=handler.deserialize(entry.getValue());
+      if (fieldValue.isPresent()) {
+        field.set(result,fieldValue.get());
+      }
+ else {
+        logger.error("Could not deserialize field {}",field.getName());
+      }
+    }
+    return Optional.ofNullable(result);
+  }
+ catch (  Exception e) {
+    logger.error("Unable to deserialize {}",data,e);
+  }
+  return Optional.empty();
+}

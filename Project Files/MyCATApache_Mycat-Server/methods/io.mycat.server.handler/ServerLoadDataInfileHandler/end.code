@@ -1,0 +1,40 @@
+@Override public void end(byte packID){
+  isStartLoadData=false;
+  this.packID=packID;
+  saveByteOrToFile(null,true);
+  List<SQLExpr> columns=statement.getColumns();
+  String tableName=statement.getTableName().getSimpleName();
+  if (isHasStoreToFile) {
+    parseFileByLine(tempFile,loadData.getCharset(),loadData.getLineTerminatedBy());
+  }
+ else {
+    String reader=new String(tempByteBuffer.toByteArray(),Charset.forName(loadData.getCharset()));
+    CSVFormat csvFormat=CSVFormat.newFormat(loadData.getFieldTerminatedBy().charAt(0)).withRecordSeparator(loadData.getLineTerminatedBy()).withSkipHeaderRecord(false).withTrim(false);
+    if (loadData.getEnclose() != null) {
+      csvFormat=csvFormat.withQuote(loadData.getEnclose().charAt(0));
+    }
+    if (loadData.getEscape() != null) {
+      csvFormat=csvFormat.withQuote(loadData.getEscape().charAt(0));
+    }
+    try {
+      Iterable<CSVRecord> records=csvFormat.parse(new StringReader(reader));
+      String[] row=null;
+      for (      CSVRecord record : records) {
+        int size=record.size();
+        row=new String[size];
+        for (int i=0; i < size; i++) {
+          row[i]=record.get(i);
+        }
+        parseOneLine(columns,tableName,row,false,null);
+      }
+    }
+ catch (    Throwable e) {
+      LOGGER.error("解析csv格式错误",e);
+    }
+  }
+  RouteResultset rrs=buildResultSet(routeResultMap);
+  if (rrs != null) {
+    flushDataToFile();
+    serverConnection.getSession2().execute(rrs,ServerParse.LOAD_DATA_INFILE_SQL);
+  }
+}

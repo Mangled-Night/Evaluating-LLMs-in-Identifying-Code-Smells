@@ -1,0 +1,26 @@
+protected final IQ initiateIncomingStream(final XMPPConnection connection,StreamInitiation initiation) throws NoResponseException, XMPPErrorException, NotConnectedException {
+  final StreamInitiation response=createInitiationAccept(initiation,getNamespace());
+  newStreamInitiation(initiation.getFrom(),initiation.getSessionID());
+  final String eventKey=initiation.getFrom().toString() + '\t' + initiation.getSessionID();
+  IQ streamMethodInitiation;
+  try {
+    streamMethodInitiation=initationSetEvents.performActionAndWaitForEvent(eventKey,connection.getReplyTimeout(),new EventManger.Callback<NotConnectedException>(){
+      @Override public void action() throws NotConnectedException {
+        try {
+          connection.sendStanza(response);
+        }
+ catch (        InterruptedException e) {
+        }
+      }
+    }
+);
+  }
+ catch (  InterruptedException e) {
+    throw new IllegalStateException(e);
+  }
+  if (streamMethodInitiation == null) {
+    throw NoResponseException.newWith(connection,"stream initiation");
+  }
+  XMPPErrorException.ifHasErrorThenThrow(streamMethodInitiation);
+  return streamMethodInitiation;
+}

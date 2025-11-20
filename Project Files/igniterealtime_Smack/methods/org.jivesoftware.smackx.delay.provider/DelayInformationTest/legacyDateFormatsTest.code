@@ -1,0 +1,23 @@
+@Test public void legacyDateFormatsTest() throws FactoryConfigurationError, XmlPullParserException, IOException, Exception {
+  LegacyDelayInformationProvider p=new LegacyDelayInformationProvider();
+  DelayInformation delayInfo;
+  String control;
+  control=XMLBuilder.create("x").a("xmlns","jabber:x:delay").a("from","capulet.com").a("stamp","20020910T23:08:25").asString(outputProperties);
+  delayInfo=p.parse(PacketParserUtils.getParserFor(control));
+  assertEquals(calendar.getTime(),delayInfo.getStamp());
+  SimpleDateFormat dateFormat=new SimpleDateFormat("yyyyMd'T'HH:mm:ss");
+  dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+  GregorianCalendar dateInPast=new GregorianCalendar();
+  if (dateInPast.get(Calendar.MONTH) >= 10) {
+    dateInPast.set(Calendar.MONTH,dateInPast.get(Calendar.MONTH) - 3);
+  }
+  dateInPast.add(Calendar.DAY_OF_MONTH,-3);
+  dateInPast.set(Calendar.MILLISECOND,0);
+  control=XMLBuilder.create("x").a("xmlns","jabber:x:delay").a("from","capulet.com").a("stamp",dateFormat.format(dateInPast.getTime())).asString(outputProperties);
+  delayInfo=p.parse(PacketParserUtils.getParserFor(control));
+  assertEquals(dateInPast.getTime(),delayInfo.getStamp());
+  control=XMLBuilder.create("x").a("xmlns","jabber:x:delay").a("from","capulet.com").a("stamp","200868T09:16:20").asString(outputProperties);
+  delayInfo=p.parse(PacketParserUtils.getParserFor(control));
+  Date controlDate=XmppDateTime.parseDate("2008-06-08T09:16:20.0Z");
+  assertEquals(controlDate,delayInfo.getStamp());
+}

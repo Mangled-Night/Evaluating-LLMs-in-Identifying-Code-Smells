@@ -1,0 +1,377 @@
+public abstract class PhysicalDatasource {
+  private static final Logger LOGGER=LoggerFactory.getLogger(PhysicalDatasource.class);
+  private final String name;
+  private final int size;
+  private final DBHostConfig config;
+  private final ConMap conMap=new ConMap();
+  private DBHeartbeat heartbeat;
+  private final boolean readNode;
+  private volatile long heartbeatRecoveryTime;
+  private final DataHostConfig hostConfig;
+  private final ConnectionHeartBeatHandler conHeartBeatHanler=new ConnectionHeartBeatHandler();
+  private PhysicalDBPool dbPool;
+  private volatile long totalConnectionCount=0L;
+  private LongAdder increamentCount=new LongAdder();
+  private long preIncrementCount=0;
+  private AtomicLong readCount=new AtomicLong(0);
+  private AtomicLong writeCount=new AtomicLong(0);
+  /** 
+ * 由于在Mycat中，returnCon被多次调用（与takeCon并没有成对调用）导致activeCount、totalConnection容易出现负数
+ */
+  public PhysicalDatasource(  DBHostConfig config,  DataHostConfig hostConfig,  boolean isReadNode){
+    this.size=config.getMaxCon();
+    this.config=config;
+    this.name=config.getHostName();
+    this.hostConfig=hostConfig;
+    heartbeat=this.createHeartBeat();
+    this.readNode=isReadNode;
+  }
+  public boolean isMyConnection(  BackendConnection con){
+    if (con instanceof MySQLConnection) {
+      return ((MySQLConnection)con).getPool() == this;
+    }
+ else {
+      return false;
+    }
+  }
+  public long getReadCount(){
+    return readCount.get();
+  }
+  public void setReadCount(){
+    readCount.addAndGet(1);
+  }
+  public long getWriteCount(){
+    return writeCount.get();
+  }
+  public void setWriteCount(){
+    writeCount.addAndGet(1);
+  }
+  public DataHostConfig getHostConfig(){
+    return hostConfig;
+  }
+  public boolean isReadNode(){
+    return readNode;
+  }
+  public int getSize(){
+    return size;
+  }
+  public void setDbPool(  PhysicalDBPool dbPool){
+    this.dbPool=dbPool;
+  }
+  public PhysicalDBPool getDbPool(){
+    return dbPool;
+  }
+  public abstract DBHeartbeat createHeartBeat();
+  public String getName(){
+    return name;
+  }
+  public long getExecuteCount(){
+    long executeCount=0;
+    for (    ConQueue queue : conMap.getAllConQueue()) {
+      executeCount+=queue.getExecuteCount();
+    }
+    return executeCount;
+  }
+  public long getExecuteCountForSchema(  String schema){
+    return conMap.getSchemaConQueue(schema).getExecuteCount();
+  }
+  public int getActiveCountForSchema(  String schema){
+    return conMap.getActiveCountForSchema(schema,this);
+  }
+  public int getIdleCountForSchema(  String schema){
+    ConQueue queue=conMap.getSchemaConQueue(schema);
+    int total=0;
+    total+=queue.getAutoCommitCons().size() + queue.getManCommitCons().size();
+    return total;
+  }
+  public DBHeartbeat getHeartbeat(){
+    return heartbeat;
+  }
+  public int getIdleCount(){
+    int total=0;
+    for (    ConQueue queue : conMap.getAllConQueue()) {
+      total+=queue.getAutoCommitCons().size() + queue.getManCommitCons().size();
+    }
+    return total;
+  }
+  /** 
+ * 是否需要继续关闭空闲连接
+ * @return
+ */
+  private boolean validSchema(  String schema){
+    String theSchema=schema;
+    return theSchema != null && !"".equals(theSchema) && !"snyn...".equals(theSchema);
+  }
+  private void checkIfNeedHeartBeat(  LinkedList<BackendConnection> heartBeatCons,  ConQueue queue,  ConcurrentLinkedQueue<BackendConnection> checkLis,  long hearBeatTime,  long hearBeatTime2){
+    int maxConsInOneCheck=10;
+    Iterator<BackendConnection> checkListItor=checkLis.iterator();
+    while (checkListItor.hasNext()) {
+      BackendConnection con=checkListItor.next();
+      if (con.isClosedOrQuit()) {
+        checkListItor.remove();
+        continue;
+      }
+      if (validSchema(con.getSchema())) {
+        if (con.getLastTime() < hearBeatTime && heartBeatCons.size() < maxConsInOneCheck) {
+          if (checkLis.remove(con)) {
+            con.setBorrowed(true);
+            heartBeatCons.add(con);
+          }
+        }
+      }
+ else       if (con.getLastTime() < hearBeatTime2) {
+        if (checkLis.remove(con)) {
+          con.close(" heart beate idle ");
+        }
+      }
+    }
+  }
+  public int getIndex(){
+    int currentIndex=0;
+    for (int i=0; i < dbPool.getSources().length; i++) {
+      PhysicalDatasource writeHostDatasource=dbPool.getSources()[i];
+      if (writeHostDatasource.getName().equals(getName())) {
+        currentIndex=i;
+        break;
+      }
+    }
+    return currentIndex;
+  }
+  public boolean isSalveOrRead(){
+    int currentIndex=getIndex();
+    if (currentIndex != dbPool.activedIndex || this.readNode) {
+      return true;
+    }
+    return false;
+  }
+  public void heatBeatCheck(  long timeout,  long conHeartBeatPeriod){
+    int maxConsInOneCheck=5;
+    LinkedList<BackendConnection> heartBeatCons=new LinkedList<BackendConnection>();
+    long hearBeatTime=TimeUtil.currentTimeMillis() - conHeartBeatPeriod;
+    long hearBeatTime2=TimeUtil.currentTimeMillis() - 2 * conHeartBeatPeriod;
+    for (    ConQueue queue : conMap.getAllConQueue()) {
+      checkIfNeedHeartBeat(heartBeatCons,queue,queue.getAutoCommitCons(),hearBeatTime,hearBeatTime2);
+      if (heartBeatCons.size() < maxConsInOneCheck) {
+        checkIfNeedHeartBeat(heartBeatCons,queue,queue.getManCommitCons(),hearBeatTime,hearBeatTime2);
+      }
+ else       if (heartBeatCons.size() >= maxConsInOneCheck) {
+        break;
+      }
+    }
+    if (!heartBeatCons.isEmpty()) {
+      for (      BackendConnection con : heartBeatCons) {
+        conHeartBeatHanler.doHeartBeat(con,hostConfig.getHearbeatSQL());
+      }
+    }
+    conHeartBeatHanler.abandTimeOuttedConns();
+    int idleCons=getIdleCount();
+    int activeCons=this.getActiveCount();
+    int createCount=(hostConfig.getMinCon() - idleCons) / 3;
+    if ((createCount > 0) && (idleCons + activeCons < size) && (idleCons < hostConfig.getMinCon())) {
+      createByIdleLitte(idleCons,createCount);
+    }
+ else     if (idleCons > hostConfig.getMinCon()) {
+      closeByIdleMany(idleCons - hostConfig.getMinCon());
+    }
+ else {
+      int activeCount=this.getActiveCount();
+      if (activeCount > size) {
+        StringBuilder s=new StringBuilder();
+        s.append(Alarms.DEFAULT).append("DATASOURCE EXCEED [name=").append(name).append(",active=");
+        s.append(activeCount).append(",size=").append(size).append(']');
+        LOGGER.warn(s.toString());
+      }
+    }
+  }
+  /** 
+ * @param ildeCloseCount 首先，从已创建的连接中选择本次心跳需要关闭的空闲连接数（由当前连接连接数-减去配置的最小连接数。 然后依次关闭这些连接。由于连接空闲心跳检测与业务是同时并发的，在心跳关闭阶段，可能有连接被使用，导致需要关闭的空闲连接数减少. 所以每次关闭新连接时，先判断当前空闲连接数是否大于配置的最少空闲连接，如果为否，则结束本次关闭空闲连接操作。 该方法修改之前： 首先从ConnMap中获取 ildeCloseCount 个连接，然后关闭；在关闭中，可能又有连接被使用，导致可能多关闭一些链接， 导致相对频繁的创建新连接和关闭连接 该方法修改之后： ildeCloseCount 为预期要关闭的连接 使用循环操作，首先在关闭之前，先再一次判断是否需要关闭连接，然后每次从ConnMap中获取一个空闲连接，然后进行关闭 edit by dingw at 2017.06.16
+ */
+  private void closeByIdleMany(  int ildeCloseCount){
+    LOGGER.info("too many ilde cons ,close some for datasouce  " + name);
+    List<BackendConnection> readyCloseCons=new ArrayList<BackendConnection>(ildeCloseCount);
+    for (    ConQueue queue : conMap.getAllConQueue()) {
+      readyCloseCons.addAll(queue.getIdleConsToClose(ildeCloseCount));
+      if (readyCloseCons.size() >= ildeCloseCount) {
+        break;
+      }
+    }
+    for (    BackendConnection idleCon : readyCloseCons) {
+      if (idleCon.isBorrowed()) {
+        LOGGER.warn("find idle con is using " + idleCon);
+      }
+      idleCon.close("too many idle con");
+    }
+  }
+  private void createByIdleLitte(  int idleCons,  int createCount){
+    LOGGER.info("create connections ,because idle connection not enough ,cur is " + idleCons + ", minCon is "+ hostConfig.getMinCon()+ " for "+ name);
+    NewConnectionRespHandler simpleHandler=new NewConnectionRespHandler();
+    final String[] schemas=dbPool.getSchemas();
+    for (int i=0; i < createCount; i++) {
+      if (this.getActiveCount() + this.getIdleCount() >= size) {
+        break;
+      }
+      try {
+        this.createNewConnection(simpleHandler,null,schemas[i % schemas.length]);
+      }
+ catch (      IOException e) {
+        LOGGER.warn("create connection err " + e);
+      }
+    }
+  }
+  public int getActiveCount(){
+    return this.conMap.getActiveCountForDs(this);
+  }
+  public long getTotalCount(){
+    return totalConnectionCount + increamentCount.intValue();
+  }
+  public void calcTotalCount(){
+    if (preIncrementCount == increamentCount.longValue()) {
+      long total=this.conMap.getTotalCountForDs(this);
+      long inc=increamentCount.sumThenReset() - preIncrementCount;
+      totalConnectionCount=total + inc;
+      preIncrementCount=0;
+    }
+ else {
+      preIncrementCount=increamentCount.longValue();
+    }
+  }
+  public void clearCons(  String reason){
+    this.conMap.clearConnections(reason,this);
+  }
+  public void startHeartbeat(){
+    heartbeat.start();
+  }
+  public void stopHeartbeat(){
+    heartbeat.stop();
+  }
+  public void doHeartbeat(){
+    if (TimeUtil.currentTimeMillis() < heartbeatRecoveryTime) {
+      return;
+    }
+    if (!heartbeat.isStop()) {
+      try {
+        heartbeat.heartbeat();
+      }
+ catch (      Exception e) {
+        LOGGER.error(name + " heartbeat error.",e);
+      }
+    }
+  }
+  private BackendConnection takeCon(  BackendConnection conn,  final ResponseHandler handler,  final Object attachment,  String schema){
+    conn.setBorrowed(true);
+    if (!conn.getSchema().equals(schema)) {
+      conn.setSchema(schema);
+    }
+    ConQueue queue=conMap.getSchemaConQueue(schema);
+    queue.incExecuteCount();
+    conn.setAttachment(attachment);
+    conn.setLastTime(System.currentTimeMillis());
+    handler.connectionAcquired(conn);
+    return conn;
+  }
+  private void createNewConnection(  final ResponseHandler handler,  final Object attachment,  final String schema) throws IOException {
+    final AtomicBoolean hasError=new AtomicBoolean(false);
+    MycatServer.getInstance().getBusinessExecutor().execute(new Runnable(){
+      public void run(){
+        try {
+          createNewConnection(new DelegateResponseHandler(handler){
+            @Override public void connectionError(            Throwable e,            BackendConnection conn){
+              if (hasError.compareAndSet(false,true)) {
+                handler.connectionError(e,conn);
+              }
+ else {
+                LOGGER.info("connection connectionError ");
+              }
+            }
+            @Override public void connectionAcquired(            BackendConnection conn){
+              LOGGER.info("connection id is " + conn.getId());
+              takeCon(conn,handler,attachment,schema);
+            }
+          }
+,schema);
+        }
+ catch (        IOException e) {
+          if (hasError.compareAndSet(false,true)) {
+            handler.connectionError(e,null);
+          }
+ else {
+            LOGGER.info("connection connectionError ");
+          }
+        }
+      }
+    }
+);
+  }
+  public void getConnection(  String schema,  boolean autocommit,  final ResponseHandler handler,  final Object attachment) throws IOException {
+    BackendConnection con=this.conMap.tryTakeCon(schema,autocommit);
+    if (con != null) {
+      takeCon(con,handler,attachment,schema);
+      return;
+    }
+ else {
+      long activeCons=increamentCount.longValue() + totalConnectionCount;
+      if (activeCons < size) {
+        increamentCount.increment();
+        LOGGER.info("no ilde connection in pool " + System.identityHashCode(this) + " ,create new connection for "+ this.name+ " of schema "+ schema+ " totalConnectionCount: "+ totalConnectionCount+ " increamentCount: "+ increamentCount);
+        createNewConnection(handler,attachment,schema);
+      }
+ else {
+        LOGGER.error("the max activeConnnections size can not be max than maxconnections");
+        throw new IOException("the max activeConnnections size can not be max than maxconnections");
+      }
+    }
+  }
+  /** 
+ * 是否超过最大连接数
+ * @return
+ */
+  private void returnCon(  BackendConnection c){
+    c.setAttachment(null);
+    c.setBorrowed(false);
+    c.setLastTime(TimeUtil.currentTimeMillis());
+    ConQueue queue=this.conMap.getSchemaConQueue(c.getSchema());
+    boolean ok=false;
+    if (c.isAutocommit()) {
+      ok=queue.getAutoCommitCons().offer(c);
+    }
+ else {
+      ok=queue.getManCommitCons().offer(c);
+    }
+    if (!ok) {
+      LOGGER.warn("can't return to pool ,so close con " + c);
+      c.close("can't return to pool ");
+    }
+  }
+  public void releaseChannel(  BackendConnection c){
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("release channel " + c);
+    }
+    returnCon(c);
+  }
+  public void connectionClosed(  BackendConnection conn){
+    ConQueue queue=this.conMap.getSchemaConQueue(conn.getSchema());
+    if (queue != null) {
+      queue.removeCon(conn);
+    }
+  }
+  /** 
+ * 创建新连接
+ */
+  public abstract void createNewConnection(  ResponseHandler handler,  String schema) throws IOException ;
+  /** 
+ * 测试连接，用于初始化及热更新配置检测
+ */
+  public abstract boolean testConnection(  String schema) throws IOException ;
+  public long getHeartbeatRecoveryTime(){
+    return heartbeatRecoveryTime;
+  }
+  public void setHeartbeatRecoveryTime(  long heartbeatRecoveryTime){
+    this.heartbeatRecoveryTime=heartbeatRecoveryTime;
+  }
+  public DBHostConfig getConfig(){
+    return config;
+  }
+  public boolean isAlive(){
+    return getHeartbeat().getStatus() == DBHeartbeat.OK_STATUS;
+  }
+}

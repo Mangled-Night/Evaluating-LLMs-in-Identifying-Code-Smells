@@ -1,0 +1,15 @@
+private void reviewChangeToTop(BlockChange blockChange){
+  PropagationComparison comparison=regenRules.comparePropagation(blockChange.getTo(),blockChange.getFrom(),Side.TOP);
+  Vector3ic blockChangePosition=blockChange.getPosition();
+  if (comparison.isPermitting()) {
+    Vector3i adjPos=Side.TOP.getAdjacentPos(blockChangePosition,new Vector3i());
+    byte adjValue=regenWorld.getValueAt(adjPos);
+    if (adjValue != PropagatorWorldView.UNAVAILABLE) {
+      queueSpreadRegen(adjPos,adjValue);
+    }
+  }
+ else   if (comparison.isRestricting()) {
+    byte existingValue=regenWorld.getValueAt(blockChangePosition);
+    reduce(blockChangePosition,existingValue);
+  }
+}

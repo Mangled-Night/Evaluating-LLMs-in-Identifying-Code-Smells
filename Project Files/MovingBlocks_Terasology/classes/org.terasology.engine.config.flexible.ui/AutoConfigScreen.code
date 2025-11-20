@@ -1,0 +1,27 @@
+public class AutoConfigScreen extends CoreScreenLayer {
+  public static final Logger logger=LoggerFactory.getLogger(AutoConfigScreen.class);
+  public static final ResourceUrn ASSET_URI=new ResourceUrn("engine:autoConfigScreen");
+  @In private TypeWidgetLibrary typeWidgetLibrary;
+  @In private ModuleManager moduleManager;
+  @In private AssetManager assetManager;
+  @In private AutoConfigManager configManager;
+  private ColumnLayout mainContainer;
+  @Override public void initialise(){
+    mainContainer=find("mainContainer",ColumnLayout.class);
+    assert mainContainer != null;
+    for (    AutoConfig config : configManager.getLoadedConfigs()) {
+      Binding<AutoConfig> configBinding=new DefaultBinding<>(config);
+      Optional<UIWidget> widget=typeWidgetLibrary.getWidget(configBinding,AutoConfig.class);
+      if (widget.isPresent()) {
+        mainContainer.addWidget(widget.get());
+      }
+ else {
+        logger.warn("Cannot create widget for config: {}",config.getId());
+      }
+    }
+    WidgetUtil.trySubscribe(this,"close",button -> triggerBackAnimation());
+  }
+  @Override public boolean isLowerLayerVisible(){
+    return false;
+  }
+}

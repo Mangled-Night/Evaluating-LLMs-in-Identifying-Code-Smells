@@ -1,0 +1,18 @@
+public FrontendConnection(NetworkChannel channel) throws IOException {
+  super(channel);
+  InetSocketAddress localAddr=(InetSocketAddress)channel.getLocalAddress();
+  InetSocketAddress remoteAddr=null;
+  if (channel instanceof SocketChannel) {
+    remoteAddr=(InetSocketAddress)((SocketChannel)channel).getRemoteAddress();
+  }
+ else   if (channel instanceof AsynchronousSocketChannel) {
+    remoteAddr=(InetSocketAddress)((AsynchronousSocketChannel)channel).getRemoteAddress();
+  }
+  this.host=remoteAddr.getHostString();
+  this.port=localAddr.getPort();
+  this.localPort=remoteAddr.getPort();
+  this.handler=new FrontendAuthenticator(this);
+  if (enableFlowController) {
+    this.flowController=new QueueFlowController(this);
+  }
+}

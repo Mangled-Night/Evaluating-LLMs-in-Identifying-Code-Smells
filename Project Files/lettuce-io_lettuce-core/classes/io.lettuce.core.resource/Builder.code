@@ -1,0 +1,375 @@
+/** 
+ * Builder for  {@link ClientResources}.
+ * @since 5.1
+ */
+interface Builder {
+  /** 
+ * Sets the  {@link AddressResolverGroup} for DNS resolution. This option is only effective if{@link DnsResolvers#UNRESOLVED} is used as {@link DnsResolver}. Defaults to {@link io.netty.resolver.DefaultAddressResolverGroup#INSTANCE} if {@literal netty-dns-resolver} is not available,otherwise defaults to  {@link io.netty.resolver.dns.DnsAddressResolverGroup}.
+ * @param addressResolverGroup the {@link AddressResolverGroup} instance, must not be {@code null}.
+ * @return {@code this} {@link Builder}
+ * @since 6.1
+ */
+  Builder addressResolverGroup(  AddressResolverGroup<?> addressResolverGroup);
+  /** 
+ * Sets the  {@link CommandLatencyCollector} that can that can be used across different instances of the RedisClient.
+ * @param commandLatencyCollector the command latency collector, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ * @deprecated since 6.0, use {@link #commandLatencyRecorder(CommandLatencyRecorder)} instead.
+ */
+  @Deprecated default Builder commandLatencyCollector(  CommandLatencyCollector commandLatencyCollector){
+    return commandLatencyRecorder(commandLatencyCollector);
+  }
+  /** 
+ * Sets the  {@link CommandLatencyRecorder} that can that can be used across different instances of the RedisClient.
+ * @param latencyRecorder the command latency recorder, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ * @since 6.0
+ */
+  Builder commandLatencyRecorder(  CommandLatencyRecorder latencyRecorder);
+  /** 
+ * Sets the  {@link CommandLatencyCollectorOptions} that can that can be used across different instances of theRedisClient. The options are only effective if no  {@code commandLatencyCollector} is provided.
+ * @param commandLatencyCollectorOptions the command latency collector options, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ * @deprecated since 6.0. Configure {@link io.lettuce.core.metrics.CommandLatencyRecorder} directly using{@link CommandLatencyCollectorOptions}.
+ */
+  @Deprecated Builder commandLatencyCollectorOptions(  CommandLatencyCollectorOptions commandLatencyCollectorOptions);
+  /** 
+ * Sets the  {@link EventPublisherOptions} to publish command latency metrics using the {@link EventBus} if the{@link CommandLatencyRecorder} is an instance of {@link CommandLatencyCollector} that allows latency metricretrieval.
+ * @param commandLatencyPublisherOptions the {@link EventPublisherOptions} to publish command latency metrics using the{@link EventBus}, must not be  {@code null}.
+ * @return {@code this} {@link Builder}.
+ */
+  Builder commandLatencyPublisherOptions(  EventPublisherOptions commandLatencyPublisherOptions);
+  /** 
+ * Sets the thread pool size (number of threads to use) for computation operations (default value is the number of CPUs). The thread pool size is only effective if no  {@code eventExecutorGroup} is provided.
+ * @param computationThreadPoolSize the thread pool size, must be greater {@code 0}.
+ * @return {@code this} {@link Builder}.
+ */
+  Builder computationThreadPoolSize(  int computationThreadPoolSize);
+  /** 
+ * Sets the  {@link DnsResolver} that is used to resolve hostnames to {@link java.net.InetAddress}. Defaults to {@link DnsResolvers#UNRESOLVED} to use netty's {@link AddressResolverGroup}.
+ * @param dnsResolver the DNS resolver, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ * @since 4.3
+ * @deprecated since 6.1. Configure {@link AddressResolverGroup} instead.
+ */
+  @Deprecated Builder dnsResolver(  DnsResolver dnsResolver);
+  /** 
+ * Sets the  {@link EventBus} that can that can be used across different instances of the RedisClient.
+ * @param eventBus the event bus, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ */
+  Builder eventBus(  EventBus eventBus);
+  /** 
+ * Sets a shared  {@link EventExecutorGroup event executor group} that can be used across different instances of{@link io.lettuce.core.RedisClient} and {@link io.lettuce.core.cluster.RedisClusterClient}. The provided {@link EventExecutorGroup} instance will not be shut down when shutting down the client resources. You have to takecare of that. This is an advanced configuration that should only be used if you know what you are doing.
+ * @param eventExecutorGroup the shared eventExecutorGroup, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ */
+  Builder eventExecutorGroup(  EventExecutorGroup eventExecutorGroup);
+  /** 
+ * Sets a shared  {@link EventLoopGroupProvider event executor provider} that can be used across different instances of{@link io.lettuce.core.RedisClient} and {@link io.lettuce.core.cluster.RedisClusterClient}. The provided {@link EventLoopGroupProvider} instance will not be shut down when shutting down the client resources. You have totake care of that. This is an advanced configuration that should only be used if you know what you are doing.
+ * @param eventLoopGroupProvider the shared eventLoopGroupProvider, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ */
+  Builder eventLoopGroupProvider(  EventLoopGroupProvider eventLoopGroupProvider);
+  /** 
+ * Sets the thread pool size (number of threads to use) for I/O operations (default value is the number of CPUs). The thread pool size is only effective if no  {@code eventLoopGroupProvider} is provided.
+ * @param ioThreadPoolSize the thread pool size, must be greater {@code 0}.
+ * @return {@code this} {@link Builder}.
+ */
+  Builder ioThreadPoolSize(  int ioThreadPoolSize);
+  /** 
+ * Sets the  {@link NettyCustomizer} instance to customize netty components during connection.
+ * @param nettyCustomizer the netty customizer instance, must not be {@code null}.
+ * @return this
+ * @since 4.4
+ */
+  Builder nettyCustomizer(  NettyCustomizer nettyCustomizer);
+  /** 
+ * Sets the stateless reconnect  {@link Delay} to delay reconnect attempts. Defaults to binary exponential delay cappedat  {@literal 30 SECONDS}.  {@code reconnectDelay} must be a stateless {@link Delay}.
+ * @param reconnectDelay the reconnect delay, must not be {@code null}.
+ * @return this
+ * @since 4.3
+ */
+  Builder reconnectDelay(  Delay reconnectDelay);
+  /** 
+ * Sets the stateful reconnect  {@link Supplier} to delay reconnect attempts. Defaults to binary exponential delay cappedat  {@literal 30 SECONDS}.
+ * @param reconnectDelay the reconnect delay, must not be {@code null}.
+ * @return this
+ * @since 4.3
+ */
+  Builder reconnectDelay(  Supplier<Delay> reconnectDelay);
+  /** 
+ * Sets the  {@link SocketAddressResolver} that is used to resolve {@link io.lettuce.core.RedisURI} to{@link java.net.SocketAddress}. Defaults to  {@link SocketAddressResolver} using the configured {@link DnsResolver}.
+ * @param socketAddressResolver the socket address resolver, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ * @since 5.1
+ */
+  Builder socketAddressResolver(  SocketAddressResolver socketAddressResolver);
+  /** 
+ * Provide a default  {@link ThreadFactoryProvider} to obtain {@link java.util.concurrent.ThreadFactory} for a{@code poolName} to create threads.<p> Applies only to threading resources created by  {@link ClientResources} when not configuring {@link #timer()}, {@link #eventExecutorGroup()}, or  {@link #eventLoopGroupProvider()}.
+ * @param threadFactoryProvider a provider to obtain a {@link java.util.concurrent.ThreadFactory} for a{@code poolName}, must not be  {@code null}.
+ * @return {@code this} {@link Builder}.
+ * @since 6.1.1
+ * @see #eventExecutorGroup(EventExecutorGroup)
+ * @see #eventLoopGroupProvider(EventLoopGroupProvider)
+ * @see #timer(Timer)
+ */
+  Builder threadFactoryProvider(  ThreadFactoryProvider threadFactoryProvider);
+  /** 
+ * Sets a shared  {@link Timer} that can be used across different instances of {@link io.lettuce.core.RedisClient} and{@link io.lettuce.core.cluster.RedisClusterClient} The provided {@link Timer} instance will not be shut down whenshutting down the client resources. You have to take care of that. This is an advanced configuration that should only be used if you know what you are doing.
+ * @param timer the shared {@link Timer}, must not be  {@code null}.
+ * @return {@code this} {@link Builder}.
+ * @since 4.3
+ */
+  Builder timer(  Timer timer);
+  /** 
+ * Sets the  {@link Tracing} instance to trace Redis calls.
+ * @param tracing the tracer infrastructure instance, must not be {@code null}.
+ * @return this
+ * @since 5.1
+ */
+  Builder tracing(  Tracing tracing);
+  /** 
+ * @return a new instance of {@link DefaultClientResources}.
+ */
+  ClientResources build();
+}
+/** 
+ * Builder for  {@link DefaultClientResources}.
+ */
+public static class Builder implements ClientResources.Builder {
+  private CommandLatencyCollectorOptions commandLatencyCollectorOptions=DefaultCommandLatencyCollectorOptions.create();
+  private CommandLatencyRecorder commandLatencyRecorder;
+  private EventPublisherOptions commandLatencyPublisherOptions=DefaultEventPublisherOptions.create();
+  private boolean sharedCommandLatencyCollector;
+  private int computationThreadPoolSize=DEFAULT_COMPUTATION_THREADS;
+  private DnsResolver dnsResolver=DnsResolvers.UNRESOLVED;
+  private EventBus eventBus;
+  private EventExecutorGroup eventExecutorGroup;
+  private boolean sharedEventExecutor;
+  private boolean sharedEventLoopGroupProvider;
+  private EventLoopGroupProvider eventLoopGroupProvider;
+  private int ioThreadPoolSize=DEFAULT_IO_THREADS;
+  private NettyCustomizer nettyCustomizer=DEFAULT_NETTY_CUSTOMIZER;
+  private SocketAddressResolver socketAddressResolver;
+  private Supplier<Delay> reconnectDelay=DEFAULT_RECONNECT_DELAY;
+  private boolean sharedTimer;
+  private ThreadFactoryProvider threadFactoryProvider=DefaultThreadFactoryProvider.INSTANCE;
+  private Timer timer;
+  private Tracing tracing=Tracing.disabled();
+  private AddressResolverGroup<?> addressResolverGroup=DEFAULT_ADDRESS_RESOLVER_GROUP;
+  private Runnable afterBuild;
+  private Builder(){
+  }
+  Builder afterBuild(  Runnable runnable){
+    if (this.afterBuild == null) {
+      this.afterBuild=runnable;
+    }
+ else {
+      Runnable previous=this.afterBuild;
+      this.afterBuild=() -> {
+        previous.run();
+        runnable.run();
+      }
+;
+    }
+    return this;
+  }
+  /** 
+ * Sets the  {@link AddressResolverGroup} for DNS resolution. This option is only effective if{@link DnsResolvers#UNRESOLVED} is used as {@link DnsResolver}. Defaults to {@link io.netty.resolver.DefaultAddressResolverGroup#INSTANCE} if {@literal netty-dns-resolver} is not available,otherwise defaults to  {@link io.netty.resolver.dns.DnsAddressResolverGroup}.
+ * @param addressResolverGroup the {@link AddressResolverGroup} instance, must not be {@code null}.
+ * @return {@code this} {@link ClientResources.Builder}
+ * @since 6.1
+ */
+  @Override public Builder addressResolverGroup(  AddressResolverGroup<?> addressResolverGroup){
+    LettuceAssert.notNull(addressResolverGroup,"AddressResolverGroup must not be null");
+    this.addressResolverGroup=addressResolverGroup;
+    return this;
+  }
+  /** 
+ * Sets the  {@link EventPublisherOptions} to publish command latency metrics using the {@link EventBus} if the{@link CommandLatencyRecorder} is an instance of {@link CommandLatencyCollector} that allows latency metricretrieval.
+ * @param commandLatencyPublisherOptions the {@link EventPublisherOptions} to publish command latency metrics using the{@link EventBus}, must not be  {@code null}.
+ * @return {@code this} {@link ClientResources.Builder}.
+ */
+  @Override public Builder commandLatencyPublisherOptions(  EventPublisherOptions commandLatencyPublisherOptions){
+    LettuceAssert.notNull(commandLatencyPublisherOptions,"EventPublisherOptions must not be null");
+    this.commandLatencyPublisherOptions=commandLatencyPublisherOptions;
+    return this;
+  }
+  /** 
+ * Sets the  {@link CommandLatencyCollectorOptions} that can that can be used across different instances of theRedisClient. The options are only effective if no  {@code commandLatencyCollector} is provided.
+ * @param commandLatencyCollectorOptions the command latency collector options, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ * @deprecated since 6.0. Configure {@link io.lettuce.core.metrics.CommandLatencyRecorder} directly using{@link CommandLatencyCollectorOptions}.
+ */
+  @Override @Deprecated public Builder commandLatencyCollectorOptions(  CommandLatencyCollectorOptions commandLatencyCollectorOptions){
+    LettuceAssert.notNull(commandLatencyCollectorOptions,"CommandLatencyCollectorOptions must not be null");
+    this.commandLatencyCollectorOptions=commandLatencyCollectorOptions;
+    return this;
+  }
+  /** 
+ * Sets the  {@link CommandLatencyRecorder} that can that can be used across different instances of the RedisClient.
+ * @param commandLatencyRecorder the command latency recorder, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ */
+  @Override public Builder commandLatencyRecorder(  CommandLatencyRecorder commandLatencyRecorder){
+    LettuceAssert.notNull(commandLatencyRecorder,"CommandLatencyRecorder must not be null");
+    this.sharedCommandLatencyCollector=true;
+    this.commandLatencyRecorder=commandLatencyRecorder;
+    return this;
+  }
+  /** 
+ * Sets the thread pool size (number of threads to use) for computation operations (default value is the number of CPUs). The thread pool size is only effective if no  {@code eventExecutorGroup} is provided.
+ * @param computationThreadPoolSize the thread pool size, must be greater than {@code 0}.
+ * @return {@code this} {@link Builder}.
+ */
+  @Override public Builder computationThreadPoolSize(  int computationThreadPoolSize){
+    LettuceAssert.isTrue(computationThreadPoolSize > 0,"Computation thread pool size must be greater than zero");
+    this.computationThreadPoolSize=computationThreadPoolSize;
+    return this;
+  }
+  /** 
+ * Sets the  {@link DnsResolver} that is used to resolve hostnames to {@link java.net.InetAddress}. Defaults to {@link DnsResolvers#JVM_DEFAULT}
+ * @param dnsResolver the DNS resolver, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ * @since 4.3
+ */
+  @Override public Builder dnsResolver(  DnsResolver dnsResolver){
+    LettuceAssert.notNull(dnsResolver,"DnsResolver must not be null");
+    this.dnsResolver=dnsResolver;
+    return this;
+  }
+  /** 
+ * Sets the  {@link EventBus} that can that can be used across different instances of the RedisClient.
+ * @param eventBus the event bus, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ */
+  @Override public Builder eventBus(  EventBus eventBus){
+    LettuceAssert.notNull(eventBus,"EventBus must not be null");
+    this.eventBus=eventBus;
+    return this;
+  }
+  /** 
+ * Sets a shared  {@link EventLoopGroupProvider event executor provider} that can be used across different instances of{@link io.lettuce.core.RedisClient} and {@link io.lettuce.core.cluster.RedisClusterClient}. The provided {@link EventLoopGroupProvider} instance will not be shut down when shutting down the client resources. You have totake care of that. This is an advanced configuration that should only be used if you know what you are doing.
+ * @param eventLoopGroupProvider the shared eventLoopGroupProvider, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ */
+  @Override public Builder eventLoopGroupProvider(  EventLoopGroupProvider eventLoopGroupProvider){
+    LettuceAssert.notNull(eventLoopGroupProvider,"EventLoopGroupProvider must not be null");
+    this.sharedEventLoopGroupProvider=true;
+    this.eventLoopGroupProvider=eventLoopGroupProvider;
+    return this;
+  }
+  /** 
+ * Sets a shared  {@link EventExecutorGroup event executor group} that can be used across different instances of{@link io.lettuce.core.RedisClient} and {@link io.lettuce.core.cluster.RedisClusterClient}. The provided {@link EventExecutorGroup} instance will not be shut down when shutting down the client resources. You have to takecare of that. This is an advanced configuration that should only be used if you know what you are doing.
+ * @param eventExecutorGroup the shared eventExecutorGroup, must not be {@code null}.
+ * @return {@code this} {@link Builder}.
+ */
+  @Override public Builder eventExecutorGroup(  EventExecutorGroup eventExecutorGroup){
+    LettuceAssert.notNull(eventExecutorGroup,"EventExecutorGroup must not be null");
+    this.sharedEventExecutor=true;
+    this.eventExecutorGroup=eventExecutorGroup;
+    return this;
+  }
+  /** 
+ * Sets the  {@link NettyCustomizer} instance to customize netty components during connection.
+ * @param nettyCustomizer the netty customizer instance, must not be {@code null}.
+ * @return this
+ * @since 4.4
+ */
+  @Override public Builder nettyCustomizer(  NettyCustomizer nettyCustomizer){
+    LettuceAssert.notNull(nettyCustomizer,"NettyCustomizer must not be null");
+    this.nettyCustomizer=nettyCustomizer;
+    return this;
+  }
+  /** 
+ * Sets the thread pool size (number of threads to use) for I/O operations (default value is the number of CPUs). The thread pool size is only effective if no  {@code eventLoopGroupProvider} is provided.
+ * @param ioThreadPoolSize the thread pool size, must be greater {@code 0}.
+ * @return {@code this} {@link Builder}.
+ */
+  @Override public Builder ioThreadPoolSize(  int ioThreadPoolSize){
+    LettuceAssert.isTrue(ioThreadPoolSize > 0,"I/O thread pool size must be greater zero");
+    this.ioThreadPoolSize=ioThreadPoolSize;
+    return this;
+  }
+  /** 
+ * Sets the stateless reconnect  {@link Delay} to delay reconnect attempts. Defaults to binary exponential delay cappedat  {@literal 30 SECONDS}.  {@code reconnectDelay} must be a stateless {@link Delay}.
+ * @param reconnectDelay the reconnect delay, must not be {@code null}.
+ * @return this
+ * @since 4.3
+ */
+  @Override public Builder reconnectDelay(  Delay reconnectDelay){
+    LettuceAssert.notNull(reconnectDelay,"Delay must not be null");
+    LettuceAssert.isTrue(!(reconnectDelay instanceof StatefulDelay),"Delay must be a stateless instance.");
+    return reconnectDelay(() -> reconnectDelay);
+  }
+  /** 
+ * Sets the stateful reconnect  {@link Supplier} to delay reconnect attempts. Defaults to binary exponential delay cappedat  {@literal 30 SECONDS}.
+ * @param reconnectDelay the reconnect delay, must not be {@code null}.
+ * @return this
+ * @since 4.3
+ */
+  @Override public Builder reconnectDelay(  Supplier<Delay> reconnectDelay){
+    LettuceAssert.notNull(reconnectDelay,"Delay must not be null");
+    this.reconnectDelay=reconnectDelay;
+    return this;
+  }
+  /** 
+ * Sets the  {@link SocketAddressResolver} that is used to resolve {@link io.lettuce.core.RedisURI} to{@link java.net.SocketAddress}. Defaults to  {@link SocketAddressResolver} using the configured {@link DnsResolver}.
+ * @param socketAddressResolver the socket address resolver, must not be {@code null}.
+ * @return {@code this} {@link ClientResources.Builder}.
+ * @since 5.1
+ */
+  @Override public ClientResources.Builder socketAddressResolver(  SocketAddressResolver socketAddressResolver){
+    LettuceAssert.notNull(socketAddressResolver,"SocketAddressResolver must not be null");
+    this.socketAddressResolver=socketAddressResolver;
+    return this;
+  }
+  /** 
+ * Provide a default  {@link ThreadFactoryProvider} to obtain {@link java.util.concurrent.ThreadFactory} for a{@code poolName}. <p> Applies only to threading resources created by  {@link DefaultClientResources} when not configuring {@link #timer()}, {@link #eventExecutorGroup()}, or  {@link #eventLoopGroupProvider()}.
+ * @param threadFactoryProvider a provider to obtain a {@link java.util.concurrent.ThreadFactory} for a{@code poolName}, must not be  {@code null}.
+ * @return {@code this} {@link ClientResources.Builder}.
+ * @since 6.1.1
+ * @see #eventExecutorGroup(EventExecutorGroup)
+ * @see #eventLoopGroupProvider(EventLoopGroupProvider)
+ * @see #timer(Timer)
+ */
+  @Override public ClientResources.Builder threadFactoryProvider(  ThreadFactoryProvider threadFactoryProvider){
+    LettuceAssert.notNull(threadFactoryProvider,"ThreadFactoryProvider must not be null");
+    this.threadFactoryProvider=threadFactoryProvider;
+    return this;
+  }
+  /** 
+ * Sets a shared  {@link Timer} that can be used across different instances of {@link io.lettuce.core.RedisClient} and{@link io.lettuce.core.cluster.RedisClusterClient} The provided {@link Timer} instance will not be shut down whenshutting down the client resources. You have to take care of that. This is an advanced configuration that should only be used if you know what you are doing.
+ * @param timer the shared {@link Timer}, must not be  {@code null}.
+ * @return {@code this} {@link Builder}.
+ * @since 4.3
+ */
+  @Override public Builder timer(  Timer timer){
+    LettuceAssert.notNull(timer,"Timer must not be null");
+    this.sharedTimer=true;
+    this.timer=timer;
+    return this;
+  }
+  /** 
+ * Sets the  {@link Tracing} instance to trace Redis calls.
+ * @param tracing the tracer infrastructure instance, must not be {@code null}.
+ * @return this
+ * @since 5.1
+ */
+  @Override public Builder tracing(  Tracing tracing){
+    LettuceAssert.notNull(tracing,"Tracing must not be null");
+    this.tracing=tracing;
+    return this;
+  }
+  /** 
+ * @return a new instance of {@link DefaultClientResources}.
+ */
+  @Override public DefaultClientResources build(){
+    DefaultClientResources resources=new DefaultClientResources(this);
+    if (this.afterBuild != null) {
+      this.afterBuild.run();
+    }
+    return resources;
+  }
+}

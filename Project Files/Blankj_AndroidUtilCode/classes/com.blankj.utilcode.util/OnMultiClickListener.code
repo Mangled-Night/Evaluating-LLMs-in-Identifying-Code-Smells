@@ -1,0 +1,41 @@
+public static abstract class OnMultiClickListener implements View.OnClickListener {
+  private static final long INTERVAL_DEFAULT_VALUE=666;
+  private final int mTriggerClickCount;
+  private final long mClickInterval;
+  private long mLastClickTime;
+  private int mClickCount;
+  public OnMultiClickListener(  int triggerClickCount){
+    this(triggerClickCount,INTERVAL_DEFAULT_VALUE);
+  }
+  public OnMultiClickListener(  int triggerClickCount,  long clickInterval){
+    this.mTriggerClickCount=triggerClickCount;
+    this.mClickInterval=clickInterval;
+  }
+  public abstract void onTriggerClick(  View v);
+  public abstract void onBeforeTriggerClick(  View v,  int count);
+  @Override public void onClick(  View v){
+    if (mTriggerClickCount <= 1) {
+      onTriggerClick(v);
+      return;
+    }
+    long curTime=System.currentTimeMillis();
+    if (curTime - mLastClickTime < mClickInterval) {
+      mClickCount++;
+      if (mClickCount == mTriggerClickCount) {
+        onTriggerClick(v);
+      }
+ else       if (mClickCount < mTriggerClickCount) {
+        onBeforeTriggerClick(v,mClickCount);
+      }
+ else {
+        mClickCount=1;
+        onBeforeTriggerClick(v,mClickCount);
+      }
+    }
+ else {
+      mClickCount=1;
+      onBeforeTriggerClick(v,mClickCount);
+    }
+    mLastClickTime=curTime;
+  }
+}

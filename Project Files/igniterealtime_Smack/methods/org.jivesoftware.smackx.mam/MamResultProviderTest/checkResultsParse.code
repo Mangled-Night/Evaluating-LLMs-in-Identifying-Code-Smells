@@ -1,0 +1,15 @@
+@Test public void checkResultsParse() throws Exception {
+  Message message=PacketParserUtils.parseStanza(exampleResultMessage);
+  MamResultExtension mamResultExtension=MamResultExtension.from(message);
+  assertEquals(mamResultExtension.getQueryId(),"f27");
+  assertEquals(mamResultExtension.getId(),"28482-98726-73623");
+  GregorianCalendar calendar=new GregorianCalendar(2010,7 - 1,10,23,8,25);
+  calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
+  Date date=calendar.getTime();
+  Forwarded<Message> forwarded=mamResultExtension.getForwarded();
+  assertEquals(forwarded.getDelayInformation().getStamp(),date);
+  Message forwardedMessage=forwarded.getForwardedStanza();
+  assertEquals(forwardedMessage.getFrom().toString(),"witch@shakespeare.lit");
+  assertEquals(forwardedMessage.getTo().toString(),"macbeth@shakespeare.lit");
+  assertEquals(forwardedMessage.getBody(),"Hail to thee");
+}

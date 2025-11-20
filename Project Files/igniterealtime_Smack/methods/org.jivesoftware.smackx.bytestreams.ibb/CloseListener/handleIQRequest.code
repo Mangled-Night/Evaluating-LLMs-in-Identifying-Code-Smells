@@ -1,0 +1,22 @@
+@Override public IQ handleIQRequest(IQ iqRequest){
+  Close closeRequest=(Close)iqRequest;
+  InBandBytestreamSession ibbSession=this.manager.getSessions().get(closeRequest.getSessionID());
+  if (ibbSession == null) {
+    try {
+      this.manager.replyItemNotFoundPacket(closeRequest);
+    }
+ catch (    InterruptedException|NotConnectedException e) {
+      return null;
+    }
+  }
+ else {
+    try {
+      ibbSession.closeByPeer(closeRequest);
+    }
+ catch (    InterruptedException|NotConnectedException e) {
+      return null;
+    }
+    this.manager.getSessions().remove(closeRequest.getSessionID());
+  }
+  return null;
+}

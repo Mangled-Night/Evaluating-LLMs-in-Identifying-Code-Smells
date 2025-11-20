@@ -1,0 +1,47 @@
+@Override public IQ handleIQRequest(IQ iqRequest){
+  final XMPPConnection connection=connection();
+  RosterPacket rosterPacket=(RosterPacket)iqRequest;
+  EntityFullJid ourFullJid=connection.getUser();
+  if (ourFullJid == null) {
+    LOGGER.warning("Ignoring roster push " + iqRequest + " while "+ connection+ " has no bound resource. This may be a server bug.");
+    return null;
+  }
+  EntityBareJid ourBareJid=ourFullJid.asEntityBareJid();
+  Jid from=rosterPacket.getFrom();
+  if (from != null) {
+    if (from.equals(ourFullJid)) {
+      LOGGER.warning("Received roster push from full JID. This behavior is since RFC 6121 not longer standard compliant. " + "Please ask your server vendor to fix this and comply to RFC 6121 § 2.1.6. IQ roster push stanza: " + iqRequest);
+    }
+ else     if (!from.equals(ourBareJid)) {
+      LOGGER.warning("Ignoring roster push with a non matching 'from' ourJid='" + ourBareJid + "' from='"+ from+ "'");
+      return IQ.createErrorResponse(iqRequest,Condition.service_unavailable);
+    }
+  }
+  Collection<Item> items=rosterPacket.getRosterItems();
+  if (items.size() != 1) {
+    LOGGER.warning("Ignoring roster push with not exactly one entry. size=" + items.size());
+    return IQ.createErrorResponse(iqRequest,Condition.bad_request);
+  }
+  Collection<Jid> addedEntries=new ArrayList<>();
+  Collection<Jid> updatedEntries=new ArrayList<>();
+  Collection<Jid> deletedEntries=new ArrayList<>();
+  Collection<Jid> unchangedEntries=new ArrayList<>();
+  Item item=items.iterator().next();
+  RosterEntry entry=new RosterEntry(item,Roster.this,connection);
+  String version=rosterPacket.getVersion();
+  if (item.getItemType().equals(RosterPacket.ItemType.remove)) {
+    deleteEntry(deletedEntries,entry);
+    if (rosterStore != null) {
+      rosterStore.removeEntry(entry.getJid(),version);
+    }
+  }
+ else   if (hasValidSubscriptionType(item)) {
+    addUpdateEntry(addedEntries,updatedEntries,unchangedEntries,item,entry);
+    if (rosterStore != null) {
+      rosterStore.addEntry(item,version);
+    }
+  }
+  removeEmptyGroups();
+  fireRosterChangedEvent(addedEntries,updatedEntries,deletedEntries);
+  return IQ.createResultIQ(rosterPacket);
+}

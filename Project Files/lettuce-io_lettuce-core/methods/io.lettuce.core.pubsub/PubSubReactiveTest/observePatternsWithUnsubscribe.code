@@ -1,0 +1,16 @@
+@Test void observePatternsWithUnsubscribe(){
+  block(pubsub.psubscribe(pattern));
+  BlockingQueue<PatternMessage<String,String>> patternMessages=LettuceFactories.newBlockingQueue();
+  Disposable subscription=pubsub.observePatterns().doOnNext(patternMessages::add).subscribe();
+  redis.publish(channel,message);
+  redis.publish(channel,message);
+  redis.publish(channel,message);
+  Wait.untilTrue(() -> patternMessages.size() == 3).waitOrTimeout();
+  assertThat(patternMessages).hasSize(3);
+  subscription.dispose();
+  redis.publish(channel,message);
+  redis.publish(channel,message);
+  redis.publish(channel,message);
+  Delay.delay(Duration.ofMillis(500));
+  assertThat(patternMessages).hasSize(3);
+}

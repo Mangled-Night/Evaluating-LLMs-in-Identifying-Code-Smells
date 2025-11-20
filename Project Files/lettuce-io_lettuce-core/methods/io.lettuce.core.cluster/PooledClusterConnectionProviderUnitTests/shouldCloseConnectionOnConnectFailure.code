@@ -1,0 +1,16 @@
+@Test void shouldCloseConnectionOnConnectFailure(){
+  when(clientMock.connectToNodeAsync(eq(StringCodec.UTF8),eq("localhost:2"),any(),any())).thenReturn(ConnectionFuture.from(socketAddressMock,CompletableFuture.completedFuture(nodeConnectionMock)));
+  AsyncCommand<String,String,String> async=new AsyncCommand<>(new Command<>(CommandType.READONLY,null,null));
+  async.completeExceptionally(new RuntimeException());
+  when(asyncCommandsMock.readOnly()).thenReturn(async);
+  sut.setReadFrom(ReadFrom.REPLICA);
+  try {
+    sut.getConnection(ConnectionIntent.READ,1);
+    fail("Missing RedisException");
+  }
+ catch (  RedisException e) {
+    assertThat(e).hasRootCauseInstanceOf(RuntimeException.class);
+  }
+  verify(nodeConnectionMock).close();
+  verify(clientMock).connectToNodeAsync(eq(StringCodec.UTF8),eq("localhost:2"),any(),any());
+}

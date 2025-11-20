@@ -1,0 +1,76 @@
+@Override public CharSequence toXML(org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+  XmlStringBuilder xml=new XmlStringBuilder(this);
+  xml.rightAngleBracket();
+  xml.optElement("prev-version",prevVersion);
+  xml.optElement("version",version);
+  Iterator<Map.Entry<Jid,MUCLightAffiliation>> it=affiliations.entrySet().iterator();
+  while (it.hasNext()) {
+    Map.Entry<Jid,MUCLightAffiliation> pair=it.next();
+    xml.append(new UserWithAffiliationElement(pair.getKey(),pair.getValue()));
+  }
+  xml.closeElement(this);
+  return xml;
+}
+@Override public CharSequence toXML(org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+  XmlStringBuilder xml=new XmlStringBuilder(this);
+  xml.rightAngleBracket();
+  xml.optElement("prev-version",prevVersion);
+  xml.optElement("version",version);
+  xml.optElement("roomname",roomName);
+  xml.optElement("subject",subject);
+  if (customConfigs != null) {
+    Iterator<Map.Entry<String,String>> it=customConfigs.entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<String,String> pair=it.next();
+      xml.element(pair.getKey(),pair.getValue());
+    }
+  }
+  xml.closeElement(this);
+  return xml;
+}
+@Override public CharSequence toXML(org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+  XmlStringBuilder xml=new XmlStringBuilder();
+  xml.openElement("configuration");
+  xml.element("roomname",configuration.getRoomName());
+  xml.optElement("subject",configuration.getSubject());
+  if (configuration.getCustomConfigs() != null) {
+    Iterator<Map.Entry<String,String>> it=configuration.getCustomConfigs().entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<String,String> pair=it.next();
+      xml.element(pair.getKey(),pair.getValue());
+    }
+  }
+  xml.closeElement("configuration");
+  return xml;
+}
+@Override public CharSequence toXML(org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+  XmlStringBuilder xml=new XmlStringBuilder();
+  xml.openElement("occupants");
+  Iterator<Map.Entry<Jid,MUCLightAffiliation>> it=occupants.entrySet().iterator();
+  while (it.hasNext()) {
+    Map.Entry<Jid,MUCLightAffiliation> pair=it.next();
+    xml.append(new UserWithAffiliationElement(pair.getKey(),pair.getValue()));
+  }
+  xml.closeElement("occupants");
+  return xml;
+}
+@Override public CharSequence toXML(org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+  XmlStringBuilder xml=new XmlStringBuilder();
+  xml.halfOpenElement("user");
+  xml.attribute("affiliation",affiliation);
+  xml.rightAngleBracket();
+  xml.escape(user);
+  xml.closeElement("user");
+  return xml;
+}
+@Override public CharSequence toXML(org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+  XmlStringBuilder xml=new XmlStringBuilder();
+  String tag=isRoom ? "room" : "user";
+  xml.halfOpenElement(tag);
+  String action=allow ? "allow" : "deny";
+  xml.attribute("action",action);
+  xml.rightAngleBracket();
+  xml.escape(jid);
+  xml.closeElement(tag);
+  return xml;
+}

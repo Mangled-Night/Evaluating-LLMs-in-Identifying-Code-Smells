@@ -1,0 +1,66 @@
+public static class Provider extends ExtensionElementProvider<OfflineMessageInfo> {
+  /** 
+ * Parses a OfflineMessageInfo stanza (extension sub-packet).
+ * @param parser the XML parser, positioned at the starting element of the extension.
+ * @return a PacketExtension.
+ * @throws IOException if an I/O error occurred.
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ */
+  @Override public OfflineMessageInfo parse(  XmlPullParser parser,  int initialDepth,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    OfflineMessageInfo info=new OfflineMessageInfo();
+    boolean done=false;
+    while (!done) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT) {
+        if (parser.getName().equals("item"))         info.setNode(parser.getAttributeValue("","node"));
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT) {
+        if (parser.getName().equals("offline")) {
+          done=true;
+        }
+      }
+    }
+    return info;
+  }
+}
+public static class Provider extends IqProvider<OfflineMessageRequest> {
+  @Override public OfflineMessageRequest parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    OfflineMessageRequest request=new OfflineMessageRequest();
+    boolean done=false;
+    while (!done) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT) {
+        if (parser.getName().equals("item")) {
+          request.addItem(parseItem(parser));
+        }
+ else         if (parser.getName().equals("purge")) {
+          request.setPurge(true);
+        }
+ else         if (parser.getName().equals("fetch")) {
+          request.setFetch(true);
+        }
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT) {
+        if (parser.getName().equals("offline")) {
+          done=true;
+        }
+      }
+    }
+    return request;
+  }
+  private static Item parseItem(  XmlPullParser parser) throws XmlPullParserException, IOException {
+    boolean done=false;
+    Item item=new Item(parser.getAttributeValue("","node"));
+    item.setAction(parser.getAttributeValue("","action"));
+    item.setJid(parser.getAttributeValue("","jid"));
+    while (!done) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.END_ELEMENT) {
+        if (parser.getName().equals("item")) {
+          done=true;
+        }
+      }
+    }
+    return item;
+  }
+}

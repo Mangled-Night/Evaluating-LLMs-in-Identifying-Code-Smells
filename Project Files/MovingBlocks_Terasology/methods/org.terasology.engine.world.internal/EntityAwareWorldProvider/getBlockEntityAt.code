@@ -1,0 +1,16 @@
+@Override public EntityRef getBlockEntityAt(Vector3fc position){
+  Vector3i pos=new Vector3i(position,RoundingMode.HALF_UP);
+  return getBlockEntityAt(pos);
+}
+@Override public EntityRef getBlockEntityAt(Vector3ic blockPosition){
+  if (GameThread.isCurrentThread()) {
+    EntityRef blockEntity=getExistingBlockEntityAt(blockPosition);
+    if ((!blockEntity.exists() || !blockEntity.hasComponent(NetworkComponent.class)) && isBlockRelevant(blockPosition.x(),blockPosition.y(),blockPosition.z())) {
+      Block block=getBlock(blockPosition.x(),blockPosition.y(),blockPosition.z());
+      blockEntity=createBlockEntity(blockPosition,block);
+    }
+    return blockEntity;
+  }
+  logger.error("Attempted to get block entity off-thread");
+  return EntityRef.NULL;
+}

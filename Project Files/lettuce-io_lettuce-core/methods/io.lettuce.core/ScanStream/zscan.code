@@ -1,0 +1,29 @@
+/** 
+ * Sequentially iterate over elements in a set identified by  {@code key}. This method uses  {@code SSCAN} to perform aniterative scan.
+ * @param commands the commands interface, must not be {@code null}.
+ * @param key the sorted set to scan.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @return a new {@link Flux}.
+ */
+public static <K,V>Flux<ScoredValue<V>> zscan(RedisSortedSetReactiveCommands<K,V> commands,K key){
+  return zscan(commands,key,Optional.empty());
+}
+/** 
+ * Sequentially iterate over elements in a set identified by  {@code key}. This method uses  {@code SSCAN} to perform aniterative scan.
+ * @param commands the commands interface, must not be {@code null}.
+ * @param key the sorted set to scan.
+ * @param scanArgs the scan arguments, must not be {@code null}.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @return a new {@link Flux}.
+ */
+public static <K,V>Flux<ScoredValue<V>> zscan(RedisSortedSetReactiveCommands<K,V> commands,K key,ScanArgs scanArgs){
+  LettuceAssert.notNull(scanArgs,"ScanArgs must not be null");
+  return zscan(commands,key,Optional.of(scanArgs));
+}
+private static <K,V>Flux<ScoredValue<V>> zscan(RedisSortedSetReactiveCommands<K,V> commands,K key,Optional<ScanArgs> scanArgs){
+  LettuceAssert.notNull(commands,"RedisSortedSetReactiveCommands must not be null");
+  LettuceAssert.notNull(key,"Key must not be null");
+  return scanArgs.map(it -> commands.zscan(key,it)).orElseGet(() -> commands.zscan(key)).expand(c -> !c.isFinished() ? scanArgs.map(it -> commands.zscan(key,c,it)).orElseGet(() -> commands.zscan(key,c)) : Mono.empty()).flatMapIterable(ScoredValueScanCursor::getValues);
+}

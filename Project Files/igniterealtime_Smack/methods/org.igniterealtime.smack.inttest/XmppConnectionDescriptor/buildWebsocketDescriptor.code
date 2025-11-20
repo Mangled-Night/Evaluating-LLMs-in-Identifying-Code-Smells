@@ -1,0 +1,17 @@
+public static XmppConnectionDescriptor<ModularXmppClientToServerConnection,ModularXmppClientToServerConnectionConfiguration,ModularXmppClientToServerConnectionConfiguration.Builder> buildWebsocketDescriptor(String nickname,Class<? extends WebSocketFactory> factoryClass) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+  WebSocketFactory factory;
+  try {
+    Field instanceField=factoryClass.getField("INSTANCE");
+    factory=(WebSocketFactory)instanceField.get(null);
+  }
+ catch (  NoSuchFieldException|IllegalArgumentException|IllegalAccessException e) {
+    factory=factoryClass.getConstructor().newInstance();
+  }
+  WebSocketFactory finalFactory=factory;
+  return XmppConnectionDescriptor.buildWith(ModularXmppClientToServerConnection.class,ModularXmppClientToServerConnectionConfiguration.class,ModularXmppClientToServerConnectionConfiguration.Builder.class).withNickname(nickname).applyExtraConfguration(cb -> {
+    cb.removeAllModules();
+    ModularXmppClientToServerConnectionModuleDescriptor webSocketModuleDescriptor=XmppWebSocketTransportModuleDescriptor.getBuilder(cb).setWebSocketFactory(finalFactory).build();
+    cb.addModule(webSocketModuleDescriptor);
+  }
+).build();
+}

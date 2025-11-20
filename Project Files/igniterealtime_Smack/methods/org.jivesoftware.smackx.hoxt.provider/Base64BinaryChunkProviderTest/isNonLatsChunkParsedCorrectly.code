@@ -1,0 +1,13 @@
+@Test public void isNonLatsChunkParsedCorrectly() throws Exception {
+  String base64Text="iVBORw0KGgoAAAANSUhEUgAAASwAAAGQCAYAA";
+  String string="<chunk xmlns='urn:xmpp:http' streamId='Stream0001' nr='0'>" + base64Text + "</chunk>";
+  Base64BinaryChunkProvider provider=new Base64BinaryChunkProvider();
+  XmlPullParser parser=PacketParserUtils.getParserFor(string);
+  ExtensionElement extension=provider.parse(parser);
+  assertTrue(extension instanceof Base64BinaryChunk);
+  Base64BinaryChunk chunk=(Base64BinaryChunk)extension;
+  assertEquals("Stream0001",chunk.getStreamId());
+  assertFalse(chunk.isLast());
+  assertEquals(base64Text,chunk.getText());
+  assertEquals(0,chunk.getNr());
+}

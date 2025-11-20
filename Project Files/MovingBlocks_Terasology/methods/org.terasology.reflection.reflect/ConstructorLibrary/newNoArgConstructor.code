@@ -1,0 +1,30 @@
+public static <T>ObjectConstructor<T> newNoArgConstructor(Class<? super T> rawType){
+  @SuppressWarnings("unchecked") Constructor<T> constructor=(Constructor<T>)Arrays.stream(rawType.getDeclaredConstructors()).min(Comparator.comparingInt(c -> c.getParameterTypes().length)).orElse(null);
+  if (constructor == null || constructor.getParameterTypes().length != 0) {
+    return null;
+  }
+  if (!constructor.isAccessible()) {
+    constructor.setAccessible(true);
+  }
+  try {
+    constructor.newInstance();
+  }
+ catch (  InstantiationException|IllegalAccessException|InvocationTargetException e) {
+    return null;
+  }
+  return () -> {
+    try {
+      return constructor.newInstance();
+    }
+ catch (    InstantiationException e) {
+      throw new RuntimeException("Failed to invoke " + constructor + " with no args",e);
+    }
+catch (    InvocationTargetException e) {
+      throw new RuntimeException("Failed to invoke " + constructor + " with no args",e.getTargetException());
+    }
+catch (    IllegalAccessException e) {
+      throw new AssertionError(e);
+    }
+  }
+;
+}

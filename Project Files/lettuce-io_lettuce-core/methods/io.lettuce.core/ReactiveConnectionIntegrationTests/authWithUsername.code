@@ -1,0 +1,12 @@
+@Test @EnabledOnCommand("ACL") void authWithUsername(){
+  try {
+    StepVerifier.create(reactive.auth(username,"error")).expectNext("OK").verifyComplete();
+    WithPassword.enableAuthentication(this.connection.sync());
+    StepVerifier.create(reactive.auth(username,"error")).expectError().verify();
+    StepVerifier.create(reactive.auth(aclUsername,aclPasswd)).expectNext("OK").verifyComplete();
+    StepVerifier.create(reactive.auth(aclUsername,"error")).expectError().verify();
+  }
+  finally {
+    WithPassword.disableAuthentication(this.connection.sync());
+  }
+}

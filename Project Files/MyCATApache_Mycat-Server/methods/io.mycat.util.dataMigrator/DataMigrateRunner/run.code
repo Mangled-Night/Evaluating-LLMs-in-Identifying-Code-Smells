@@ -1,0 +1,18 @@
+@Override public void run(){
+  if (table.isError()) {
+    return;
+  }
+  try {
+    long start=System.currentTimeMillis();
+    File loadFile=dataIO.exportData(table,src,tableName,conditionFile.getParentFile(),conditionFile);
+    dataIO.importData(table,target,tableName,loadFile);
+    long end=System.currentTimeMillis();
+    System.out.println(table.getSchemaAndTableName() + " " + src.getName()+ "->"+ target.getName()+ " completed in "+ (end - start)+ "ms");
+  }
+ catch (  Exception e) {
+    String errMessage=table.getSchemaAndTableName() + " " + src.getName()+ "->"+ target.getName()+ " migrate err! "+ e.getMessage();
+    LOGGER.error(errMessage,e);
+    table.setError(true);
+    table.getErrMessage().append(errMessage);
+  }
+}

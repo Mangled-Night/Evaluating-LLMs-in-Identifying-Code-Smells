@@ -1,0 +1,18 @@
+@Override public boolean step(){
+  try {
+    Config config=context.get(Config.class);
+    int port=config.getNetwork().getServerPort();
+    context.get(NetworkSystem.class).host(port,dedicated);
+  }
+ catch (  HostingFailedException e) {
+    NUIManager nui=context.get(NUIManager.class);
+    if (nui != null) {
+      nui.pushScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage("Failed to Host",e.getMessage() + " - Reverting to single player");
+    }
+ else {
+      logger.error("Failed to Host. NUI was also unavailable for warning popup (headless?)",e);
+      throw new RuntimeException("Cannot host game successfully from likely headless start, terminating");
+    }
+  }
+  return true;
+}

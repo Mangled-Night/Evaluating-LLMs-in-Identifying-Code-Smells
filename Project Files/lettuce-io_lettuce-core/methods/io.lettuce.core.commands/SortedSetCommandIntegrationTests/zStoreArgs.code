@@ -1,0 +1,18 @@
+@Test @SuppressWarnings({"unchecked"}) void zStoreArgs(){
+  redis.zadd("zset1",1.0,"a",2.0,"b");
+  redis.zadd("zset2",2.0,"a",3.0,"b",4.0,"c");
+  assertThat(redis.zinterstore(key,sum(),"zset1","zset2")).isEqualTo(2);
+  assertThat(redis.zrangeWithScores(key,0,-1)).isEqualTo(svlist(sv(3.0,"a"),sv(5.0,"b")));
+  assertThat(redis.zinterstore(key,min(),"zset1","zset2")).isEqualTo(2);
+  assertThat(redis.zrangeWithScores(key,0,-1)).isEqualTo(svlist(sv(1.0,"a"),sv(2.0,"b")));
+  assertThat(redis.zinterstore(key,max(),"zset1","zset2")).isEqualTo(2);
+  assertThat(redis.zrangeWithScores(key,0,-1)).isEqualTo(svlist(sv(2.0,"a"),sv(3.0,"b")));
+  assertThat(redis.zinterstore(key,weights(new long[]{2,3}),"zset1","zset2")).isEqualTo(2);
+  assertThat(redis.zrangeWithScores(key,0,-1)).isEqualTo(svlist(sv(8.0,"a"),sv(13.0,"b")));
+  assertThat(redis.zinterstore(key,weights(2,3).sum(),"zset1","zset2")).isEqualTo(2);
+  assertThat(redis.zrangeWithScores(key,0,-1)).isEqualTo(svlist(sv(8.0,"a"),sv(13.0,"b")));
+  assertThat(redis.zinterstore(key,weights(2,3).min(),"zset1","zset2")).isEqualTo(2);
+  assertThat(redis.zrangeWithScores(key,0,-1)).isEqualTo(svlist(sv(2.0,"a"),sv(4.0,"b")));
+  assertThat(redis.zinterstore(key,weights(2,3).max(),"zset1","zset2")).isEqualTo(2);
+  assertThat(redis.zrangeWithScores(key,0,-1)).isEqualTo(svlist(sv(6.0,"a"),sv(9.0,"b")));
+}

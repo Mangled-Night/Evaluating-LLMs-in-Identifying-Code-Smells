@@ -1,0 +1,24 @@
+/** 
+ * Registers a listener for User Tune data. This implicitly publishes a CAPS update to include a notification filter for the usertune node. This method blocks until the server has indicated that this update has been received.
+ * @param userTuneManager The UserTuneManager instance for the connection that is expected to receive data.
+ * @param discoManager The ServiceDiscoveryManager instance for the connection that is expected to publish data.
+ * @param listener A listener instance for UserTune data that is to be registered.
+ * @throws Exception if the test fails
+ */
+public void registerListenerAndWait(UserTuneManager userTuneManager,ServiceDiscoveryManager discoManager,PepEventListener<UserTuneElement> listener) throws Exception {
+  final SimpleResultSyncPoint notificationFilterReceived=new SimpleResultSyncPoint();
+  final EntityCapabilitiesChangedListener notificationFilterReceivedListener=info -> {
+    if (info.containsFeature(UserTuneManager.USERTUNE_NODE + "+notify")) {
+      notificationFilterReceived.signal();
+    }
+  }
+;
+  discoManager.addEntityCapabilitiesChangedListener(notificationFilterReceivedListener);
+  try {
+    userTuneManager.addUserTuneListener(listener);
+    notificationFilterReceived.waitForResult(timeout);
+  }
+  finally {
+    discoManager.removeEntityCapabilitiesChangedListener(notificationFilterReceivedListener);
+  }
+}

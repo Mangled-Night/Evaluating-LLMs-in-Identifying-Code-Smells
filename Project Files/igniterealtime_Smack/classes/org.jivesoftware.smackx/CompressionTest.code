@@ -1,0 +1,62 @@
+/** 
+ * Ensure that stream compression (XEP-138) is correctly supported by Smack.
+ * @author Gaston Dombiak
+ */
+public class CompressionTest extends SmackTestCase {
+  public CompressionTest(  String arg0){
+    super(arg0);
+  }
+  /** 
+ * Test that stream compression works fine. It is assumed that the server supports and has stream compression enabled.
+ */
+  public void testSuccessCompression() throws XMPPException {
+    ConnectionConfiguration config=new ConnectionConfiguration(getHost(),getPort());
+    config.setCompressionEnabled(true);
+    config.setSASLAuthenticationEnabled(true);
+    XMPPTCPConnection connection=new XMPPConnection(config);
+    connection.connect();
+    connection.login("user0","user0");
+    assertTrue("XMPPConnection is not using stream compression",connection.isUsingCompression());
+    Version version=new Version();
+    version.setType(IQ.Type.get);
+    version.setTo(getXMPPServiceDomain());
+    StanzaCollector collector=connection.createStanzaCollector(new PacketIDFilter(version.getStanzaId()));
+    connection.sendStanza(version);
+    IQ result=(IQ)collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
+    collector.cancel();
+    assertNotNull("No reply was received from the server",result);
+    assertEquals("Incorrect IQ type from server",IQ.Type.result,result.getType());
+    connection.disconnect();
+  }
+  protected int getMaxConnections(){
+    return 0;
+  }
+  /** 
+ * Just create an account.
+ */
+  protected void setUp() throws Exception {
+    super.setUp();
+    XMPPTCPConnection setupConnection=new XMPPConnection(getXMPPServiceDomain());
+    setupConnection.connect();
+    if (!setupConnection.getAccountManager().supportsAccountCreation())     fail("Server does not support account creation");
+    try {
+      setupConnection.getAccountManager().createAccount("user0","user0");
+    }
+ catch (    XMPPException e) {
+      if (e.getStanzaError().getCode() != 409) {
+        throw e;
+      }
+    }
+  }
+  /** 
+ * Deletes the created account for the test.
+ */
+  protected void tearDown() throws Exception {
+    super.tearDown();
+    XMPPTCPConnection setupConnection=createConnection();
+    setupConnection.connect();
+    setupConnection.login("user0","user0");
+    setupConnection.getAccountManager().deleteAccount();
+    setupConnection.disconnect();
+  }
+}

@@ -1,0 +1,14 @@
+private Strategy getNamingStrategy(CommandMethod commandMethod){
+  if (commandMethod.hasAnnotation(CommandNaming.class)) {
+    Strategy strategy=commandMethod.getMethod().getAnnotation(CommandNaming.class).strategy();
+    if (strategy != Strategy.DEFAULT) {
+      return strategy;
+    }
+  }
+  Class<?> declaringClass=commandMethod.getMethod().getDeclaringClass();
+  CommandNaming annotation=declaringClass.getAnnotation(CommandNaming.class);
+  if (annotation != null && annotation.strategy() != Strategy.DEFAULT) {
+    return annotation.strategy();
+  }
+  return Strategy.SPLIT;
+}

@@ -1,0 +1,29 @@
+private void parserWhere(SQLExpr aexpr,String Operator){
+  if (aexpr == null) {
+    return;
+  }
+  if (aexpr instanceof SQLBinaryOpExpr) {
+    SQLBinaryOpExpr expr=(SQLBinaryOpExpr)aexpr;
+    SQLExpr exprL=expr.getLeft();
+    if (!(exprL instanceof SQLBinaryOpExpr)) {
+      opSQLExpr((SQLBinaryOpExpr)aexpr,Operator);
+    }
+ else {
+      if (expr.getOperator() == SQLBinaryOperator.BooleanAnd) {
+        andorWhere(exprL,expr.getOperator().getName(),expr.getRight());
+      }
+ else       if (expr.getOperator() == SQLBinaryOperator.BooleanOr) {
+        andorWhere(exprL,expr.getOperator().getName(),expr.getRight());
+      }
+ else {
+        throw new RuntimeException("Can't identify the operation of  of where");
+      }
+    }
+  }
+ else   if (aexpr instanceof SQLInListExpr) {
+    SQLInListExpr expr=(SQLInListExpr)aexpr;
+    SQLExpr exprL=expr.getExpr();
+    String field=exprL.toString();
+    tableFilter.addWhere(field,SQLUtils.toMySqlString(expr),Operator);
+  }
+}

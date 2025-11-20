@@ -1,0 +1,41 @@
+private void setUpGameModules(){
+  gameModules.subscribeSelection((widget,moduleSelectionInfo) -> {
+    if (moduleSelectionInfo == null) {
+      return;
+    }
+    descriptionTitle.setText(translationSystem.translate("${engine:menu#game-details-module-description}"));
+    description.setText(getModuleDescription(moduleSelectionInfo));
+    gameWorlds.setSelection(null);
+    blocks.setSelection(null);
+  }
+);
+  gameModules.setItemRenderer(new AbstractItemRenderer<ModuleSelectionInfo>(){
+    String getString(    ModuleSelectionInfo value){
+      if (value.getMetadata() != null) {
+        return value.getMetadata().getDisplayName().toString();
+      }
+ else       if (value.isUnavailableVersion()) {
+        return value.getUnavailableModuleName();
+      }
+      return "";
+    }
+    @Override public void draw(    ModuleSelectionInfo value,    Canvas canvas){
+      if (value.isStrictVersion()) {
+        canvas.setMode("strict");
+      }
+ else       if (value.isLatestVersion()) {
+        canvas.setMode("latest");
+      }
+ else {
+        canvas.setMode("invalid");
+      }
+      canvas.drawText(getString(value),canvas.getRegion());
+    }
+    @Override public Vector2i getPreferredSize(    ModuleSelectionInfo value,    Canvas canvas){
+      String text=getString(value);
+      return new Vector2i(canvas.getCurrentStyle().getFont().getWidth(text),canvas.getCurrentStyle().getFont().getLineHeight());
+    }
+  }
+);
+  gameModules.subscribe(((widget,item) -> openModuleDetailsScreen()));
+}

@@ -1,0 +1,33 @@
+@Test public void testPreApproveAndCreate() throws Throwable {
+  final BareJid contactJID=JidCreate.bareFrom("preapproval@example.com");
+  final String contactName="PreApproval";
+  final String[] contactGroup={};
+  connection.enableStreamFeature(SubscriptionPreApproval.INSTANCE);
+  final PreApproveAndCreateEntryResponder serverSimulator=new PreApproveAndCreateEntryResponder(){
+    @Override void verifyRosterUpdateRequest(    final RosterPacket updateRequest){
+      final Item item=updateRequest.getRosterItems().iterator().next();
+      assertSame("The provided JID doesn't match the requested!",contactJID,item.getJid());
+      assertSame("The provided name doesn't match the requested!",contactName,item.getName());
+      assertSame("The provided group number doesn't match the requested!",0,item.getGroupNames().size());
+    }
+    @Override void verifyPreApprovalRequest(    Presence preApproval){
+      assertSame("The provided name doesn't match the requested!",contactJID,preApproval.getTo());
+      assertSame("The provided presence type is incorrect!",Presence.Type.subscribed,preApproval.getType());
+    }
+  }
+;
+  serverSimulator.start();
+  roster.preApproveAndCreateEntry(contactJID,contactName,contactGroup);
+  serverSimulator.join();
+  final Throwable exception=serverSimulator.getException();
+  if (exception != null) {
+    throw exception;
+  }
+  rosterListener.waitUntilInvocationOrTimeout();
+  final RosterEntry addedEntry=roster.getEntry(contactJID);
+  assertNotNull("The new contact wasn't added to the roster!",addedEntry);
+  assertTrue("The roster listener wasn't invoked for the new contact!",rosterListener.getAddedAddresses().contains(contactJID));
+  assertSame("Setup wrong name for the new contact!",contactName,addedEntry.getName());
+  assertSame("Setup wrong default subscription status!",ItemType.none,addedEntry.getType());
+  assertSame("The new contact should be member of exactly one group!",0,addedEntry.getGroups().size());
+}

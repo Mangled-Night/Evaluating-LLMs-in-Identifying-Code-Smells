@@ -1,0 +1,54 @@
+/** 
+ * 直接结果路由
+ * @param rrs
+ * @param ctx
+ * @param schema
+ * @param druidParser
+ * @param statement
+ * @param cachePool
+ * @return
+ * @throws SQLNonTransientException
+ */
+private RouteResultset directRoute(RouteResultset rrs,DruidShardingParseInfo ctx,SchemaConfig schema,DruidParser druidParser,SQLStatement statement,LayerCachePool cachePool) throws SQLNonTransientException {
+  druidParser.changeSql(schema,rrs,statement,cachePool);
+  if (rrs.isFinishedRoute()) {
+    return rrs;
+  }
+  if ((ctx.getTables() == null || ctx.getTables().size() == 0) && (ctx.getTableAliasMap() == null || ctx.getTableAliasMap().isEmpty())) {
+    return RouterUtil.routeToSingleNode(rrs,schema.getRandomDataNode(),druidParser.getCtx().getSql());
+  }
+  if (druidParser.getCtx().getRouteCalculateUnits().size() == 0) {
+    RouteCalculateUnit routeCalculateUnit=new RouteCalculateUnit();
+    druidParser.getCtx().addRouteCalculateUnit(routeCalculateUnit);
+  }
+  SortedSet<RouteResultsetNode> nodeSet=new TreeSet<RouteResultsetNode>();
+  boolean isAllGlobalTable=RouterUtil.isAllGlobalTable(ctx,schema);
+  for (  RouteCalculateUnit unit : druidParser.getCtx().getRouteCalculateUnits()) {
+    RouteResultset rrsTmp=RouterUtil.tryRouteForTables(schema,druidParser.getCtx(),unit,rrs,isSelect(statement),cachePool);
+    if (rrsTmp != null && rrsTmp.getNodes() != null) {
+      for (      RouteResultsetNode node : rrsTmp.getNodes()) {
+        nodeSet.add(node);
+      }
+    }
+    if (isAllGlobalTable) {
+      break;
+    }
+  }
+  RouteResultsetNode[] nodes=new RouteResultsetNode[nodeSet.size()];
+  int i=0;
+  for (  RouteResultsetNode aNodeSet : nodeSet) {
+    nodes[i]=aNodeSet;
+    if (statement instanceof MySqlInsertStatement && ctx.getTables().size() == 1 && schema.getTables().containsKey(ctx.getTables().get(0))) {
+      RuleConfig rule=schema.getTables().get(ctx.getTables().get(0)).getRule();
+      if (rule != null && rule.getRuleAlgorithm() instanceof SlotFunction) {
+        aNodeSet.setStatement(ParseUtil.changeInsertAddSlot(aNodeSet.getStatement(),aNodeSet.getSlot()));
+      }
+    }
+    i++;
+  }
+  rrs.setNodes(nodes);
+  if (rrs.isDistTable()) {
+    return this.routeDisTable(statement,rrs);
+  }
+  return rrs;
+}

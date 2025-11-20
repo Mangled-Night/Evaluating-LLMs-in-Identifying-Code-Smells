@@ -1,0 +1,32 @@
+private GameState selectNextGameState(){
+  GameState nextState;
+  GameManifest gameManifest=getLatestGameManifest();
+  if (isHeadless) {
+    nextState=new StateHeadlessSetup();
+  }
+ else   if (loadLastGame) {
+    if (gameManifest == null) {
+      logger.error("Failed --load-last-game: last game not found.");
+      return null;
+    }
+    nextState=new StateLoading(gameManifest,NetworkMode.NONE);
+  }
+ else   if (createLastGame) {
+    if (gameManifest == null) {
+      logger.error("Failed --create-last-game: last game not found.");
+      return null;
+    }
+    String title=gameManifest.getTitle();
+    if (!title.startsWith("New Created")) {
+      gameManifest.setTitle("New Created " + title + " 1");
+    }
+ else {
+      gameManifest.setTitle(getNewTitle(title));
+    }
+    nextState=new StateLoading(gameManifest,NetworkMode.NONE);
+  }
+ else {
+    nextState=new StateMainMenu();
+  }
+  return nextState;
+}

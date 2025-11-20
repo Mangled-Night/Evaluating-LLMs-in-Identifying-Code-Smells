@@ -1,0 +1,18 @@
+@Override public void process(CommandProcess process){
+  List<Counter> perfCounters=getPerfCounters();
+  if (perfCounters.isEmpty()) {
+    process.end(1,"please check arthas log. if java version >=9 , try to add jvm options when start your process: " + "--add-opens java.base/jdk.internal.perf=ALL-UNNAMED " + "--add-exports java.base/jdk.internal.perf=ALL-UNNAMED");
+    return;
+  }
+  List<PerfCounterVO> perfCounterVOs=new ArrayList<PerfCounterVO>();
+  for (  Counter counter : perfCounters) {
+    PerfCounterVO perfCounterVO=new PerfCounterVO(counter.getName(),counter.getValue());
+    if (details) {
+      perfCounterVO.setUnits(counter.getUnits().toString());
+      perfCounterVO.setVariability(counter.getVariability().toString());
+    }
+    perfCounterVOs.add(perfCounterVO);
+  }
+  process.appendResult(new PerfCounterModel(perfCounterVOs,details));
+  process.end();
+}

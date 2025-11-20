@@ -1,0 +1,38 @@
+final class PreparedTest {
+  private final AbstractSmackIntTest test;
+  private final List<ConcreteTest> concreteTests;
+  private final Method beforeClassMethod;
+  private final Method afterClassMethod;
+  private PreparedTest(  AbstractSmackIntTest test,  List<ConcreteTest> concreteTests){
+    this.test=test;
+    this.concreteTests=concreteTests;
+    Class<? extends AbstractSmackIntTest> testClass=test.getClass();
+    beforeClassMethod=getSinttestSpecialMethod(testClass,BeforeClass.class);
+    afterClassMethod=getSinttestSpecialMethod(testClass,AfterClass.class);
+  }
+  public void run() throws InterruptedException, XMPPException, IOException, SmackException {
+    try {
+      executeSinttestSpecialMethod(beforeClassMethod);
+      for (      ConcreteTest concreteTest : concreteTests) {
+        runConcreteTest(concreteTest);
+      }
+    }
+  finally {
+      executeSinttestSpecialMethod(afterClassMethod);
+    }
+  }
+  private void executeSinttestSpecialMethod(  Method method){
+    if (method == null) {
+      return;
+    }
+    try {
+      method.invoke(test);
+    }
+ catch (    InvocationTargetException|IllegalAccessException e) {
+      LOGGER.log(Level.SEVERE,"Exception executing " + method,e);
+    }
+catch (    IllegalArgumentException e) {
+      throw new AssertionError(e);
+    }
+  }
+}

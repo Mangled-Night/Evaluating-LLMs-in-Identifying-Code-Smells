@@ -1,0 +1,41 @@
+private StandardMeshData processData(List<Vector3f> rawVertices,List<Vector3f> rawNormals,List<Vector2f> rawTexCoords,List<Vector3i[]> rawIndices) throws IOException {
+  int numIndices=0;
+  int numVerts=0;
+  for (int x=0; x < rawIndices.size(); x++) {
+    numIndices+=(rawIndices.get(x).length - 2) * 3;
+    numVerts+=rawIndices.get(x).length;
+  }
+  StandardMeshData result=new StandardMeshData();
+  result.reserve(numVerts,numIndices);
+  int vertCount=0;
+  for (  Vector3i[] face : rawIndices) {
+    for (    Vector3i indexSet : face) {
+      if (indexSet.x > rawVertices.size()) {
+        throw new IOException("Vertex index out of range: " + indexSet.x);
+      }
+      Vector3f vertex=rawVertices.get(indexSet.x - 1);
+      result.position.put(vertex);
+      if (indexSet.y != -1) {
+        if (indexSet.y > rawTexCoords.size()) {
+          throw new IOException("TexCoord index out of range: " + indexSet.y);
+        }
+        Vector2f texCoord=rawTexCoords.get(indexSet.y - 1);
+        result.uv0.put(new Vector2f(texCoord.x,1 - texCoord.y));
+      }
+      if (indexSet.z != -1) {
+        if (indexSet.z > rawNormals.size()) {
+          throw new IOException("Normal index out of range: " + indexSet.z);
+        }
+        Vector3f normal=rawNormals.get(indexSet.z - 1);
+        result.normal.put(normal);
+      }
+    }
+    for (int i=0; i < face.length - 2; ++i) {
+      result.indices.put(vertCount);
+      result.indices.put(vertCount + i + 1);
+      result.indices.put(vertCount + i + 2);
+    }
+    vertCount+=face.length;
+  }
+  return result;
+}

@@ -1,0 +1,21 @@
+private String extractCreateSql(List<String> lines){
+  StringBuilder sb=new StringBuilder();
+  boolean isAdd=false;
+  for (  String line : lines) {
+    if (Strings.isNullOrEmpty(line) || line.startsWith("--") || line.startsWith("/*")|| line.startsWith("DROP")) {
+      isAdd=false;
+      continue;
+    }
+    if (line.startsWith("CREATE")) {
+      isAdd=true;
+    }
+    if (isAdd) {
+      sb.append(line).append("\n");
+    }
+  }
+  String rtn=sb.toString();
+  if (rtn.endsWith(";\n")) {
+    rtn=rtn.substring(0,rtn.length() - 2);
+  }
+  return rtn.replace("CREATE TABLE","CREATE TABLE IF not EXISTS ");
+}

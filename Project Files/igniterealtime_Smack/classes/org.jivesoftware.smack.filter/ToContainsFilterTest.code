@@ -1,0 +1,39 @@
+/** 
+ * A test case for the ToContainsFilter class.
+ */
+public class ToContainsFilterTest extends TestCase {
+  public void testNullArgs(){
+    try {
+      new ToContainsFilter(null);
+      fail("Parameter can not be null");
+    }
+ catch (    IllegalArgumentException e) {
+      assertTrue(true);
+    }
+  }
+  public void testAccept(){
+    MockToPacket packet=new MockToPacket("foo@bar.com");
+    ToContainsFilter toContainsFilter=new ToContainsFilter("");
+    assertTrue(toContainsFilter.accept(packet));
+    toContainsFilter=new ToContainsFilter("foo");
+    assertTrue(toContainsFilter.accept(packet));
+    toContainsFilter=new ToContainsFilter("foo@bar.com");
+    assertTrue(toContainsFilter.accept(packet));
+    toContainsFilter=new ToContainsFilter("bar@foo.com");
+    assertFalse(toContainsFilter.accept(packet));
+    toContainsFilter=new ToContainsFilter("blah-stuff,net");
+    assertFalse(toContainsFilter.accept(packet));
+  }
+  /** 
+ * Wraps the MockPacket class to always give an expected To field.
+ */
+private class MockToPacket extends MockPacket {
+    private String to;
+    public MockToPacket(    String to){
+      this.to=to;
+    }
+    public String getTo(){
+      return to;
+    }
+  }
+}

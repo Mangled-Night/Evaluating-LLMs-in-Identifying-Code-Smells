@@ -1,0 +1,27 @@
+private void listAttribute(final CommandProcess process){
+  Session session=process.session();
+  timer=new Timer("Timer-for-arthas-mbean-" + session.getSessionId(),true);
+  process.interruptHandler(new MBeanInterruptHandler(process,timer));
+  Handler<Void> stopHandler=new Handler<Void>(){
+    @Override public void handle(    Void event){
+      stop();
+    }
+  }
+;
+  Handler<Void> restartHandler=new Handler<Void>(){
+    @Override public void handle(    Void event){
+      restart(process);
+    }
+  }
+;
+  process.suspendHandler(stopHandler);
+  process.resumeHandler(restartHandler);
+  process.endHandler(stopHandler);
+  process.stdinHandler(new QExitHandler(process));
+  if (getInterval() > 0) {
+    timer.scheduleAtFixedRate(new MBeanTimerTask(process),0,getInterval());
+  }
+ else {
+    timer.schedule(new MBeanTimerTask(process),0);
+  }
+}

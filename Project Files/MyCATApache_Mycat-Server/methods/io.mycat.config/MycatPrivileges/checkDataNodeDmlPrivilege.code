@@ -1,0 +1,26 @@
+@Override public boolean checkDataNodeDmlPrivilege(String user,String dataNode,String sql){
+  if (dataNode == null) {
+    return true;
+  }
+  boolean isPassed=false;
+  MycatConfig conf=MycatServer.getInstance().getConfig();
+  UserConfig userConfig=conf.getUsers().get(user);
+  if (userConfig != null) {
+    UserPrivilegesConfig userPrivilege=userConfig.getPrivilegesConfig();
+    if (userPrivilege != null && userPrivilege.isCheck()) {
+      UserPrivilegesConfig.DataNodePrivilege dataNodePrivilege=userPrivilege.getDataNodePrivilege(dataNode);
+      if (dataNodePrivilege != null) {
+        if (sql != null && sql.length() == 5 && sql.equalsIgnoreCase("begin")) {
+          return true;
+        }
+        if (dataNodePrivilege.getDml()[2] > 0) {
+          isPassed=true;
+        }
+      }
+    }
+ else {
+      return true;
+    }
+  }
+  return isPassed;
+}

@@ -1,0 +1,24 @@
+private static IToast newToast(ToastUtils toastUtils){
+  if (!toastUtils.isNotUseSystemToast) {
+    if (NotificationManagerCompat.from(Utils.getApp()).areNotificationsEnabled()) {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+        return new SystemToast(toastUtils);
+      }
+      if (!UtilsBridge.isGrantedDrawOverlays()) {
+        return new SystemToast(toastUtils);
+      }
+    }
+  }
+  if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) {
+    return new WindowManagerToast(toastUtils,WindowManager.LayoutParams.TYPE_TOAST);
+  }
+ else   if (UtilsBridge.isGrantedDrawOverlays()) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      return new WindowManagerToast(toastUtils,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+    }
+ else {
+      return new WindowManagerToast(toastUtils,WindowManager.LayoutParams.TYPE_PHONE);
+    }
+  }
+  return new ActivityToast(toastUtils);
+}

@@ -1,0 +1,16 @@
+private CompletableFuture<Void> applyPostHandshake(Channel channel,ProtocolVersion negotiatedProtocolVersion){
+  List<AsyncCommand<?,?,?>> postHandshake=new ArrayList<>();
+  if (connectionState.getClientName() != null && negotiatedProtocolVersion == ProtocolVersion.RESP2) {
+    postHandshake.add(new AsyncCommand<>(this.commandBuilder.clientSetname(connectionState.getClientName())));
+  }
+  if (connectionState.getDb() > 0) {
+    postHandshake.add(new AsyncCommand<>(this.commandBuilder.select(connectionState.getDb())));
+  }
+  if (connectionState.isReadOnly()) {
+    postHandshake.add(new AsyncCommand<>(this.commandBuilder.readOnly()));
+  }
+  if (postHandshake.isEmpty()) {
+    return CompletableFuture.completedFuture(null);
+  }
+  return dispatch(channel,postHandshake);
+}

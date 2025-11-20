@@ -1,0 +1,34 @@
+private static Class getClassFromObject(final Object obj){
+  Class objClass=obj.getClass();
+  if (objClass.isAnonymousClass() || objClass.isSynthetic()) {
+    Type[] genericInterfaces=objClass.getGenericInterfaces();
+    String className;
+    if (genericInterfaces.length == 1) {
+      Type type=genericInterfaces[0];
+      while (type instanceof ParameterizedType) {
+        type=((ParameterizedType)type).getRawType();
+      }
+      className=type.toString();
+    }
+ else {
+      Type type=objClass.getGenericSuperclass();
+      while (type instanceof ParameterizedType) {
+        type=((ParameterizedType)type).getRawType();
+      }
+      className=type.toString();
+    }
+    if (className.startsWith("class ")) {
+      className=className.substring(6);
+    }
+ else     if (className.startsWith("interface ")) {
+      className=className.substring(10);
+    }
+    try {
+      return Class.forName(className);
+    }
+ catch (    ClassNotFoundException e) {
+      e.printStackTrace();
+    }
+  }
+  return objClass;
+}

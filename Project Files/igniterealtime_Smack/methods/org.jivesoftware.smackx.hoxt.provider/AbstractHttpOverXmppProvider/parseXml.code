@@ -1,0 +1,44 @@
+private static AbstractHttpOverXmpp.Xml parseXml(XmlPullParser parser) throws XmlPullParserException, IOException {
+  StringBuilder builder=new StringBuilder();
+  boolean done=false;
+  boolean startClosed=true;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if ((eventType == XmlPullParser.Event.END_ELEMENT) && parser.getName().equals(ELEMENT_XML)) {
+      done=true;
+    }
+ else {
+      if (eventType == XmlPullParser.Event.START_ELEMENT) {
+        if (!startClosed) {
+          builder.append('>');
+        }
+        builder.append('<');
+        builder.append(parser.getName());
+        appendXmlAttributes(parser,builder);
+        startClosed=false;
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT) {
+        if (startClosed) {
+          builder.append("</");
+          builder.append(parser.getName());
+          builder.append('>');
+        }
+ else {
+          builder.append("/>");
+          startClosed=true;
+        }
+      }
+ else       if (eventType == XmlPullParser.Event.TEXT_CHARACTERS) {
+        if (!startClosed) {
+          builder.append('>');
+          startClosed=true;
+        }
+        builder.append(StringUtils.escapeForXmlText(parser.getText()));
+      }
+ else {
+        throw new IllegalArgumentException("unexpected eventType: " + eventType);
+      }
+    }
+  }
+  return new AbstractHttpOverXmpp.Xml(builder.toString());
+}

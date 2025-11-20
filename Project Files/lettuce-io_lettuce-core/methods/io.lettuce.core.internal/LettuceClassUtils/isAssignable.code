@@ -1,0 +1,26 @@
+/** 
+ * Check if the right-hand side type may be assigned to the left-hand side type, assuming setting by reflection. Considers primitive wrapper classes as assignable to the corresponding primitive types.
+ * @param lhsType the target type
+ * @param rhsType the value type that should be assigned to the target type
+ * @return if the target type is assignable from the value type
+ */
+public static boolean isAssignable(Class<?> lhsType,Class<?> rhsType){
+  LettuceAssert.notNull(lhsType,"Left-hand side type must not be null");
+  LettuceAssert.notNull(rhsType,"Right-hand side type must not be null");
+  if (lhsType.isAssignableFrom(rhsType)) {
+    return true;
+  }
+  if (lhsType.isPrimitive()) {
+    Class<?> resolvedPrimitive=primitiveWrapperTypeMap.get(rhsType);
+    if (lhsType == resolvedPrimitive) {
+      return true;
+    }
+  }
+ else {
+    Class<?> resolvedWrapper=primitiveTypeToWrapperMap.get(rhsType);
+    if (resolvedWrapper != null && lhsType.isAssignableFrom(resolvedWrapper)) {
+      return true;
+    }
+  }
+  return false;
+}

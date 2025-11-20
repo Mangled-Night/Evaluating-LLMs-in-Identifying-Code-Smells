@@ -1,0 +1,17 @@
+/** 
+ * Remove the oldest signedPreKey until there are only MAX_NUMBER_OF_STORED_SIGNED_PREKEYS left.
+ * @param userDevice our OmemoDevice.
+ * @throws IOException if an I/O error occurred.
+ */
+private void removeOldSignedPreKeys(OmemoDevice userDevice) throws IOException {
+  if (OmemoConfiguration.getMaxNumberOfStoredSignedPreKeys() <= 0) {
+    return;
+  }
+  TreeMap<Integer,T_SigPreKey> signedPreKeys=loadOmemoSignedPreKeys(userDevice);
+  for (int i=0; i < signedPreKeys.keySet().size() - OmemoConfiguration.getMaxNumberOfStoredSignedPreKeys(); i++) {
+    int keyId=signedPreKeys.firstKey();
+    LOGGER.log(Level.INFO,"Remove signedPreKey " + keyId + ".");
+    removeOmemoSignedPreKey(userDevice,i);
+    signedPreKeys=loadOmemoSignedPreKeys(userDevice);
+  }
+}

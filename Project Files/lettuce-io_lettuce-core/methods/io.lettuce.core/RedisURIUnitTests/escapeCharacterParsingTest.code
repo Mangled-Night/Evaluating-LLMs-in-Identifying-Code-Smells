@@ -1,0 +1,12 @@
+@Test void escapeCharacterParsingTest() throws UnsupportedEncodingException {
+  String password="abc@#d";
+  String translatedPassword=URLEncoder.encode(password,StandardCharsets.UTF_8.name());
+  String uri="redis-sentinel://" + translatedPassword + "@h1:1234,h2:1234,h3:1234/0?sentinelMasterId=masterId";
+  RedisURI redisURI=RedisURI.create(uri);
+  assertThat(redisURI.getSentinels().get(0).getHost()).isEqualTo("h1");
+  assertThat(redisURI.getPassword()).isEqualTo(password.toCharArray());
+  uri="redis://" + translatedPassword + "@h1:1234/0";
+  redisURI=RedisURI.create(uri);
+  assertThat(redisURI.getHost()).isEqualTo("h1");
+  assertThat(redisURI.getPassword()).isEqualTo(password.toCharArray());
+}

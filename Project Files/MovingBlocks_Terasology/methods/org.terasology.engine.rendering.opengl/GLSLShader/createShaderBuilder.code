@@ -1,0 +1,83 @@
+private StringBuilder createShaderBuilder(){
+  String preProcessorPreamble="";
+  WorldAtlas worldAtlas=CoreRegistry.get(WorldAtlas.class);
+  if (worldAtlas != null) {
+    preProcessorPreamble+="#define TEXTURE_OFFSET " + worldAtlas.getRelativeTileSize() + "\n";
+  }
+ else {
+    preProcessorPreamble+="#define TEXTURE_OFFSET 0.06125\n";
+  }
+  RenderingConfig renderConfig=config.getRendering();
+  preProcessorPreamble+="#define BLOCK_LIGHT_POW " + WorldRenderer.BLOCK_LIGHT_POW + "\n";
+  preProcessorPreamble+="#define BLOCK_LIGHT_SUN_POW " + WorldRenderer.BLOCK_LIGHT_SUN_POW + "\n";
+  preProcessorPreamble+="#define BLOCK_INTENSITY_FACTOR " + WorldRenderer.BLOCK_INTENSITY_FACTOR + "\n";
+  preProcessorPreamble+="#define SHADOW_MAP_RESOLUTION " + (float)renderConfig.getShadowMapResolution() + "\n";
+  preProcessorPreamble+="#define SSAO_KERNEL_ELEMENTS " + ssaoKernelElements + "\n";
+  preProcessorPreamble+="#define SSAO_NOISE_SIZE " + ssaoNoiseSize + "\n";
+  preProcessorPreamble+="#define TEXTURE_OFFSET_EFFECTS " + 0.0625f + "\n";
+  StringBuilder builder=new StringBuilder().append(preProcessorPreamble);
+  if (renderConfig.isVolumetricFog()) {
+    builder.append("#define VOLUMETRIC_FOG \n");
+  }
+  if (renderConfig.isAnimateGrass()) {
+    builder.append("#define ANIMATED_GRASS \n");
+  }
+  if (renderConfig.isAnimateWater()) {
+    builder.append("#define ANIMATED_WATER \n");
+  }
+  if (renderConfig.getBlurIntensity() == 0) {
+    builder.append("#define NO_BLUR \n");
+  }
+  if (renderConfig.isFlickeringLight()) {
+    builder.append("#define FLICKERING_LIGHT \n");
+  }
+  if (renderConfig.isVignette()) {
+    builder.append("#define VIGNETTE \n");
+  }
+  if (renderConfig.isBloom()) {
+    builder.append("#define BLOOM \n");
+  }
+  if (renderConfig.isMotionBlur()) {
+    builder.append("#define MOTION_BLUR \n");
+  }
+  if (renderConfig.isSsao()) {
+    builder.append("#define SSAO \n");
+  }
+  if (renderConfig.isFilmGrain()) {
+    builder.append("#define FILM_GRAIN \n");
+  }
+  if (renderConfig.isOutline()) {
+    builder.append("#define OUTLINE \n");
+  }
+  if (renderConfig.isLightShafts()) {
+    builder.append("#define LIGHT_SHAFTS \n");
+  }
+  if (renderConfig.isDynamicShadows()) {
+    builder.append("#define DYNAMIC_SHADOWS \n");
+  }
+  if (renderConfig.isNormalMapping()) {
+    builder.append("#define NORMAL_MAPPING \n");
+  }
+  if (renderConfig.isParallaxMapping()) {
+    builder.append("#define PARALLAX_MAPPING \n");
+  }
+  if (renderConfig.isDynamicShadowsPcfFiltering()) {
+    builder.append("#define DYNAMIC_SHADOWS_PCF \n");
+  }
+  if (renderConfig.isCloudShadows()) {
+    builder.append("#define CLOUD_SHADOWS \n");
+  }
+  if (renderConfig.isLocalReflections()) {
+    builder.append("#define LOCAL_REFLECTIONS \n");
+  }
+  if (renderConfig.isInscattering()) {
+    builder.append("#define INSCATTERING \n");
+  }
+  if (renderConfig.isClampLighting()) {
+    builder.append("#define CLAMP_LIGHTING \n");
+  }
+  for (  ChunkVertexFlag vertexFlag : ChunkVertexFlag.values()) {
+    builder.append("#define ").append(vertexFlag.getDefineName()).append(" int(").append(vertexFlag.getValue()).append(") \n");
+  }
+  return builder;
+}

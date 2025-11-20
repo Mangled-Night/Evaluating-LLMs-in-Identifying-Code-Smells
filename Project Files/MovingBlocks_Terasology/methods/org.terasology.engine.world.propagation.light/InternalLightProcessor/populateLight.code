@@ -1,0 +1,20 @@
+/** 
+ * Propagate out light from the initial luminous blocks
+ * @param chunk The chunk to populate through
+ */
+private static void populateLight(Chunk chunk,int scale){
+  BatchPropagator lightPropagator=new StandardBatchPropagator(LIGHT_RULES,new SingleChunkView(LIGHT_RULES,chunk),scale);
+  Vector3i pos=new Vector3i();
+  for (int x=0; x < Chunks.SIZE_X; x++) {
+    for (int z=0; z < Chunks.SIZE_Z; z++) {
+      for (int y=0; y < Chunks.SIZE_Y; y++) {
+        Block block=chunk.getBlock(x,y,z);
+        if (block.getLuminance() > 0) {
+          chunk.setLight(x,y,z,block.getLuminance());
+          lightPropagator.propagateFrom(pos.set(x,y,z),block.getLuminance());
+        }
+      }
+    }
+  }
+  lightPropagator.process();
+}

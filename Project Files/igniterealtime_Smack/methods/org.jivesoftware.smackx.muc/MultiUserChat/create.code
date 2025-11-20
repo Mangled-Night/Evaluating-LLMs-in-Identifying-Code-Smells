@@ -1,0 +1,28 @@
+/** 
+ * Creates the room according to some default configuration, assign the requesting user as the room owner, and add the owner to the room but not allow anyone else to enter the room (effectively "locking" the room). The requesting user will join the room under the specified nickname as soon as the room has been created. <p> To create an "Instant Room", that means a room with some default configuration that is available for immediate access, the room's owner should send an empty form after creating the room. Simply call  {@link MucCreateConfigFormHandle#makeInstant()} on the returned {@link MucCreateConfigFormHandle}. </p> <p> To create a "Reserved Room", that means a room manually configured by the room creator before anyone is allowed to enter, the room's owner should complete and send a form after creating the room. Once the completed configuration form is sent to the server, the server will unlock the room. You can use the returned  {@link MucCreateConfigFormHandle} to configure the room.</p>
+ * @param nickname the nickname to use.
+ * @return a handle to the MUC create configuration form API.
+ * @throws XMPPErrorException if the room couldn't be created for some reason (e.g. 405 error ifthe user is not allowed to create the room)
+ * @throws NoResponseException if there was no response from the server.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws MucAlreadyJoinedException if already joined the Multi-User Chat.7y
+ * @throws MissingMucCreationAcknowledgeException if there MUC creation was not acknowledged by the service.
+ * @throws NotAMucServiceException if the entity is not a MUC serivce.
+ */
+public synchronized MucCreateConfigFormHandle create(Resourcepart nickname) throws NoResponseException, XMPPErrorException, InterruptedException, MucAlreadyJoinedException, NotConnectedException, MissingMucCreationAcknowledgeException, NotAMucServiceException {
+  if (isJoined()) {
+    throw new MucAlreadyJoinedException();
+  }
+  MucCreateConfigFormHandle mucCreateConfigFormHandle=createOrJoin(nickname);
+  if (mucCreateConfigFormHandle != null) {
+    return mucCreateConfigFormHandle;
+  }
+  try {
+    leave();
+  }
+ catch (  MucNotJoinedException e) {
+    LOGGER.log(Level.INFO,"Unexpected MucNotJoinedException",e);
+  }
+  throw new MissingMucCreationAcknowledgeException();
+}

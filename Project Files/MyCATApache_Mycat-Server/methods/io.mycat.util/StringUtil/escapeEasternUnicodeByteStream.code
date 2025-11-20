@@ -1,0 +1,51 @@
+public static byte[] escapeEasternUnicodeByteStream(byte[] src,String srcString,int offset,int length){
+  if ((src == null) || (src.length == 0)) {
+    return src;
+  }
+  int bytesLen=src.length;
+  int bufIndex=0;
+  int strIndex=0;
+  ByteArrayOutputStream out=new ByteArrayOutputStream(bytesLen);
+  while (true) {
+    if (srcString.charAt(strIndex) == '\\') {
+      out.write(src[bufIndex++]);
+    }
+ else {
+      int loByte=src[bufIndex];
+      if (loByte < 0) {
+        loByte+=256;
+      }
+      out.write(loByte);
+      if (loByte >= 0x80) {
+        if (bufIndex < (bytesLen - 1)) {
+          int hiByte=src[bufIndex + 1];
+          if (hiByte < 0) {
+            hiByte+=256;
+          }
+          out.write(hiByte);
+          bufIndex++;
+          if (hiByte == 0x5C) {
+            out.write(hiByte);
+          }
+        }
+      }
+ else       if (loByte == 0x5c && bufIndex < (bytesLen - 1)) {
+        int hiByte=src[bufIndex + 1];
+        if (hiByte < 0) {
+          hiByte+=256;
+        }
+        if (hiByte == 0x62) {
+          out.write(0x5c);
+          out.write(0x62);
+          bufIndex++;
+        }
+      }
+      bufIndex++;
+    }
+    if (bufIndex >= bytesLen) {
+      break;
+    }
+    strIndex++;
+  }
+  return out.toByteArray();
+}

@@ -1,0 +1,22 @@
+/** 
+ * Enable or disable mobile data. <p>Must hold  {@code android:sharedUserId="android.uid.system"}, {@code <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" />}</p>
+ * @param enabled True to enabled, false otherwise.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+@RequiresPermission(MODIFY_PHONE_STATE) public static boolean setMobileDataEnabled(final boolean enabled){
+  try {
+    TelephonyManager tm=(TelephonyManager)Utils.getApp().getSystemService(Context.TELEPHONY_SERVICE);
+    if (tm == null)     return false;
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      tm.setDataEnabled(enabled);
+      return true;
+    }
+    Method setDataEnabledMethod=tm.getClass().getDeclaredMethod("setDataEnabled",boolean.class);
+    setDataEnabledMethod.invoke(tm,enabled);
+    return true;
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+  }
+  return false;
+}

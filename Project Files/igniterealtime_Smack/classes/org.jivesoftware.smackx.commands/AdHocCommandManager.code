@@ -1,0 +1,374 @@
+/** 
+ * An AdHocCommandManager is responsible for keeping the list of available commands offered by a service and for processing commands requests. Pass in an XMPPConnection instance to {@link #getAddHocCommandsManager(XMPPConnection)} in order toget an instance of this class.
+ * @author Gabriel Guardincerri
+ */
+public final class AdHocCommandManager extends Manager {
+  public static final String NAMESPACE="http://jabber.org/protocol/commands";
+  private static final Logger LOGGER=Logger.getLogger(AdHocCommandManager.class.getName());
+  /** 
+ * The session time out in seconds.
+ */
+  private static final int SESSION_TIMEOUT=2 * 60;
+  /** 
+ * Map an XMPPConnection with it AdHocCommandManager. This map have a key-value pair for every active connection.
+ */
+  private static final Map<XMPPConnection,AdHocCommandManager> instances=new WeakHashMap<>();
+  /** 
+ * Register the listener for all the connection creations. When a new connection is created a new AdHocCommandManager is also created and related to that connection.
+ */
+static {
+    XMPPConnectionRegistry.addConnectionCreationListener(new ConnectionCreationListener(){
+      @Override public void connectionCreated(      XMPPConnection connection){
+        getAddHocCommandsManager(connection);
+      }
+    }
+);
+  }
+  /** 
+ * Returns the <code>AdHocCommandManager</code> related to the <code>connection</code>.
+ * @param connection the XMPP connection.
+ * @return the AdHocCommandManager associated with the connection.
+ */
+  public static synchronized AdHocCommandManager getAddHocCommandsManager(  XMPPConnection connection){
+    AdHocCommandManager ahcm=instances.get(connection);
+    if (ahcm == null) {
+      ahcm=new AdHocCommandManager(connection);
+      instances.put(connection,ahcm);
+    }
+    return ahcm;
+  }
+  /** 
+ * Map a command node with its AdHocCommandInfo. Note: Key=command node, Value=command. Command node matches the node attribute sent by command requesters.
+ */
+  private final Map<String,AdHocCommandInfo> commands=new ConcurrentHashMap<>();
+  /** 
+ * Map a command session ID with the instance LocalCommand. The LocalCommand is the an objects that has all the information of the current state of the command execution. Note: Key=session ID, Value=LocalCommand. Session ID matches the sessionid attribute sent by command responders.
+ */
+  private final Map<String,LocalCommand> executingCommands=new ConcurrentHashMap<>();
+  private final ServiceDiscoveryManager serviceDiscoveryManager;
+  private AdHocCommandManager(  XMPPConnection connection){
+    super(connection);
+    this.serviceDiscoveryManager=ServiceDiscoveryManager.getInstanceFor(connection);
+    ServiceDiscoveryManager.getInstanceFor(connection).addFeature(NAMESPACE);
+    ServiceDiscoveryManager.getInstanceFor(connection).setNodeInformationProvider(NAMESPACE,new AbstractNodeInformationProvider(){
+      @Override public List<DiscoverItems.Item> getNodeItems(){
+        List<DiscoverItems.Item> answer=new ArrayList<>();
+        Collection<AdHocCommandInfo> commandsList=getRegisteredCommands();
+        for (        AdHocCommandInfo info : commandsList) {
+          DiscoverItems.Item item=new DiscoverItems.Item(info.getOwnerJID());
+          item.setName(info.getName());
+          item.setNode(info.getNode());
+          answer.add(item);
+        }
+        return answer;
+      }
+    }
+);
+    connection.registerIQRequestHandler(new AbstractIqRequestHandler(AdHocCommandData.ELEMENT,AdHocCommandData.NAMESPACE,IQ.Type.set,Mode.async){
+      @Override public IQ handleIQRequest(      IQ iqRequest){
+        AdHocCommandData requestData=(AdHocCommandData)iqRequest;
+        try {
+          return processAdHocCommand(requestData);
+        }
+ catch (        InterruptedException|NoResponseException|NotConnectedException e) {
+          LOGGER.log(Level.INFO,"processAdHocCommand threw exception",e);
+          return null;
+        }
+      }
+    }
+);
+  }
+  /** 
+ * Registers a new command with this command manager, which is related to a connection. The <code>node</code> is an unique identifier of that command for the connection related to this command manager. The <code>name</code> is the human readable name of the command. The <code>class</code> is the class of the command, which must extend  {@link LocalCommand} and have a defaultconstructor.
+ * @param node the unique identifier of the command.
+ * @param name the human readable name of the command.
+ * @param clazz the class of the command, which must extend {@link LocalCommand}.
+ */
+  public void registerCommand(  String node,  String name,  final Class<? extends LocalCommand> clazz){
+    registerCommand(node,name,new LocalCommandFactory(){
+      @Override public LocalCommand getInstance() throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+        return clazz.getConstructor().newInstance();
+      }
+    }
+);
+  }
+  /** 
+ * Registers a new command with this command manager, which is related to a connection. The <code>node</code> is an unique identifier of that command for the connection related to this command manager. The <code>name</code> is the human readable name of the command. The <code>factory</code> generates new instances of the command.
+ * @param node the unique identifier of the command.
+ * @param name the human readable name of the command.
+ * @param factory a factory to create new instances of the command.
+ */
+  public void registerCommand(  String node,  final String name,  LocalCommandFactory factory){
+    AdHocCommandInfo commandInfo=new AdHocCommandInfo(node,name,connection().getUser(),factory);
+    commands.put(node,commandInfo);
+    serviceDiscoveryManager.setNodeInformationProvider(node,new AbstractNodeInformationProvider(){
+      @Override public List<String> getNodeFeatures(){
+        List<String> answer=new ArrayList<>();
+        answer.add(NAMESPACE);
+        answer.add("jabber:x:data");
+        return answer;
+      }
+      @Override public List<DiscoverInfo.Identity> getNodeIdentities(){
+        List<DiscoverInfo.Identity> answer=new ArrayList<>();
+        DiscoverInfo.Identity identity=new DiscoverInfo.Identity("automation",name,"command-node");
+        answer.add(identity);
+        return answer;
+      }
+    }
+);
+  }
+  /** 
+ * Discover the commands of an specific JID. The <code>jid</code> is a full JID.
+ * @param jid the full JID to retrieve the commands for.
+ * @return the discovered items.
+ * @throws XMPPException if the operation failed for some reason.
+ * @throws SmackException if there was no response from the server.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  public DiscoverItems discoverCommands(  Jid jid) throws XMPPException, SmackException, InterruptedException {
+    return serviceDiscoveryManager.discoverItems(jid,NAMESPACE);
+  }
+  /** 
+ * Returns a command that represents an instance of a command in a remote host. It is used to execute remote commands. The concept is similar to RMI. Every invocation on this command is equivalent to an invocation in the remote command.
+ * @param jid the full JID of the host of the remote command
+ * @param node the identifier of the command
+ * @return a local instance equivalent to the remote command.
+ */
+  public RemoteCommand getRemoteCommand(  Jid jid,  String node){
+    return new RemoteCommand(connection(),node,jid);
+  }
+  /** 
+ * Process the AdHoc-Command stanza that request the execution of some action of a command. If this is the first request, this method checks, before executing the command, if: <ul> <li>The requested command exists</li> <li>The requester has permissions to execute it</li> <li>The command has more than one stage, if so, it saves the command and session ID for further use</li> </ul> <br> <br> If this is not the first request, this method checks, before executing the command, if: <ul> <li>The session ID of the request was stored</li> <li>The session life do not exceed the time out</li> <li>The action to execute is one of the available actions</li> </ul>
+ * @param requestData TODO javadoc me pleasethe stanza to process.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  private IQ processAdHocCommand(  AdHocCommandData requestData) throws NoResponseException, NotConnectedException, InterruptedException {
+    AdHocCommandData response=new AdHocCommandData();
+    response.setTo(requestData.getFrom());
+    response.setStanzaId(requestData.getStanzaId());
+    response.setNode(requestData.getNode());
+    response.setId(requestData.getTo());
+    String sessionId=requestData.getSessionID();
+    String commandNode=requestData.getNode();
+    if (sessionId == null) {
+      if (!commands.containsKey(commandNode)) {
+        return respondError(response,StanzaError.Condition.item_not_found);
+      }
+      sessionId=StringUtils.randomString(15);
+      try {
+        LocalCommand command;
+        try {
+          command=newInstanceOfCmd(commandNode,sessionId);
+        }
+ catch (        InstantiationException|IllegalAccessException|IllegalArgumentException|InvocationTargetException|NoSuchMethodException|SecurityException e) {
+          StanzaError xmppError=StanzaError.getBuilder().setCondition(StanzaError.Condition.internal_server_error).setDescriptiveEnText(e.getMessage()).build();
+          return respondError(response,xmppError);
+        }
+        response.setType(IQ.Type.result);
+        command.setData(response);
+        if (!command.hasPermission(requestData.getFrom())) {
+          return respondError(response,StanzaError.Condition.forbidden);
+        }
+        Action action=requestData.getAction();
+        if (action != null && action.equals(Action.unknown)) {
+          return respondError(response,StanzaError.Condition.bad_request,AdHocCommand.SpecificErrorCondition.malformedAction);
+        }
+        if (action != null && !action.equals(Action.execute)) {
+          return respondError(response,StanzaError.Condition.bad_request,AdHocCommand.SpecificErrorCondition.badAction);
+        }
+        command.incrementStage();
+        command.execute();
+        if (command.isLastStage()) {
+          response.setStatus(Status.completed);
+        }
+ else {
+          response.setStatus(Status.executing);
+          executingCommands.put(sessionId,command);
+          maybeWindUpSessionSweeper();
+        }
+        return response;
+      }
+ catch (      XMPPErrorException e) {
+        StanzaError error=e.getStanzaError();
+        if (StanzaError.Type.CANCEL.equals(error.getType())) {
+          response.setStatus(Status.canceled);
+          executingCommands.remove(sessionId);
+        }
+        return respondError(response,error);
+      }
+    }
+ else {
+      LocalCommand command=executingCommands.get(sessionId);
+      if (command == null) {
+        return respondError(response,StanzaError.Condition.bad_request,AdHocCommand.SpecificErrorCondition.badSessionid);
+      }
+      long creationStamp=command.getCreationDate();
+      if (System.currentTimeMillis() - creationStamp > SESSION_TIMEOUT * 1000) {
+        executingCommands.remove(sessionId);
+        return respondError(response,StanzaError.Condition.not_allowed,AdHocCommand.SpecificErrorCondition.sessionExpired);
+      }
+synchronized (command) {
+        Action action=requestData.getAction();
+        if (action != null && action.equals(Action.unknown)) {
+          return respondError(response,StanzaError.Condition.bad_request,AdHocCommand.SpecificErrorCondition.malformedAction);
+        }
+        if (action == null || Action.execute.equals(action)) {
+          action=command.getExecuteAction();
+        }
+        if (!command.isValidAction(action)) {
+          return respondError(response,StanzaError.Condition.bad_request,AdHocCommand.SpecificErrorCondition.badAction);
+        }
+        try {
+          response.setType(IQ.Type.result);
+          command.setData(response);
+          if (Action.next.equals(action)) {
+            command.incrementStage();
+            DataForm dataForm=requestData.getForm();
+            command.next(new FillableForm(dataForm));
+            if (command.isLastStage()) {
+              response.setStatus(Status.completed);
+            }
+ else {
+              response.setStatus(Status.executing);
+            }
+          }
+ else           if (Action.complete.equals(action)) {
+            command.incrementStage();
+            DataForm dataForm=requestData.getForm();
+            command.complete(new FillableForm(dataForm));
+            response.setStatus(Status.completed);
+            executingCommands.remove(sessionId);
+          }
+ else           if (Action.prev.equals(action)) {
+            command.decrementStage();
+            command.prev();
+          }
+ else           if (Action.cancel.equals(action)) {
+            command.cancel();
+            response.setStatus(Status.canceled);
+            executingCommands.remove(sessionId);
+          }
+          return response;
+        }
+ catch (        XMPPErrorException e) {
+          StanzaError error=e.getStanzaError();
+          if (StanzaError.Type.CANCEL.equals(error.getType())) {
+            response.setStatus(Status.canceled);
+            executingCommands.remove(sessionId);
+          }
+          return respondError(response,error);
+        }
+      }
+    }
+  }
+  private boolean sessionSweeperScheduled;
+  private void sessionSweeper(){
+    final long currentTime=System.currentTimeMillis();
+synchronized (this) {
+      for (Iterator<Map.Entry<String,LocalCommand>> it=executingCommands.entrySet().iterator(); it.hasNext(); ) {
+        Map.Entry<String,LocalCommand> entry=it.next();
+        LocalCommand command=entry.getValue();
+        long creationStamp=command.getCreationDate();
+        if (currentTime - creationStamp > SESSION_TIMEOUT * 1000 * 2) {
+          it.remove();
+        }
+      }
+      sessionSweeperScheduled=false;
+    }
+    if (!executingCommands.isEmpty()) {
+      maybeWindUpSessionSweeper();
+    }
+  }
+  private synchronized void maybeWindUpSessionSweeper(){
+    if (sessionSweeperScheduled) {
+      return;
+    }
+    sessionSweeperScheduled=true;
+    schedule(this::sessionSweeper,10,TimeUnit.SECONDS);
+  }
+  /** 
+ * Responds an error with an specific condition.
+ * @param response the response to send.
+ * @param condition the condition of the error.
+ */
+  private static IQ respondError(  AdHocCommandData response,  StanzaError.Condition condition){
+    return respondError(response,StanzaError.getBuilder(condition).build());
+  }
+  /** 
+ * Responds an error with an specific condition.
+ * @param response the response to send.
+ * @param condition the condition of the error.
+ * @param specificCondition the adhoc command error condition.
+ */
+  private static IQ respondError(  AdHocCommandData response,  StanzaError.Condition condition,  AdHocCommand.SpecificErrorCondition specificCondition){
+    StanzaError error=StanzaError.getBuilder(condition).addExtension(new AdHocCommandData.SpecificError(specificCondition)).build();
+    return respondError(response,error);
+  }
+  /** 
+ * Responds an error with an specific error.
+ * @param response the response to send.
+ * @param error the error to send.
+ */
+  private static IQ respondError(  AdHocCommandData response,  StanzaError error){
+    response.setType(IQ.Type.error);
+    response.setError(error);
+    return response;
+  }
+  /** 
+ * Creates a new instance of a command to be used by a new execution request
+ * @param commandNode the command node that identifies it.
+ * @param sessionID the session id of this execution.
+ * @return the command instance to execute.
+ * @throws XMPPErrorException if there is problem creating the new instance.
+ * @throws SecurityException if there was a security violation.
+ * @throws NoSuchMethodException if no such method is declared
+ * @throws InvocationTargetException if a reflection-based method or constructor invocation threw.
+ * @throws IllegalArgumentException if an illegal argument was given.
+ * @throws IllegalAccessException in case of an illegal access.
+ * @throws InstantiationException in case of an instantiation error.
+ */
+  private LocalCommand newInstanceOfCmd(  String commandNode,  String sessionID) throws XMPPErrorException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+    AdHocCommandInfo commandInfo=commands.get(commandNode);
+    LocalCommand command=commandInfo.getCommandInstance();
+    command.setSessionID(sessionID);
+    command.setName(commandInfo.getName());
+    command.setNode(commandInfo.getNode());
+    return command;
+  }
+  /** 
+ * Returns the registered commands of this command manager, which is related to a connection.
+ * @return the registered commands.
+ */
+  private Collection<AdHocCommandInfo> getRegisteredCommands(){
+    return commands.values();
+  }
+  /** 
+ * Stores ad-hoc command information.
+ */
+private static final class AdHocCommandInfo {
+    private String node;
+    private String name;
+    private final Jid ownerJID;
+    private LocalCommandFactory factory;
+    private AdHocCommandInfo(    String node,    String name,    Jid ownerJID,    LocalCommandFactory factory){
+      this.node=node;
+      this.name=name;
+      this.ownerJID=ownerJID;
+      this.factory=factory;
+    }
+    public LocalCommand getCommandInstance() throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+      return factory.getInstance();
+    }
+    public String getName(){
+      return name;
+    }
+    public String getNode(){
+      return node;
+    }
+    public Jid getOwnerJID(){
+      return ownerJID;
+    }
+  }
+}

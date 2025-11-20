@@ -1,0 +1,27 @@
+private void addGameManifestToSaveTransaction(SaveTransactionBuilder saveTransactionBuilder){
+  BlockManager blockManager=CoreRegistry.get(BlockManager.class);
+  UniverseConfig universeConfig=config.getUniverseConfig();
+  Time time=CoreRegistry.get(Time.class);
+  Game game=CoreRegistry.get(Game.class);
+  GameManifest gameManifest=new GameManifest(game.getName(),game.getSeed(),time.getGameTimeInMs());
+  for (  Module module : CoreRegistry.get(ModuleManager.class).getEnvironment()) {
+    gameManifest.addModule(module.getId(),module.getVersion());
+  }
+  List<String> registeredBlockFamilies=Lists.newArrayList();
+  for (  BlockFamily family : blockManager.listRegisteredBlockFamilies()) {
+    registeredBlockFamilies.add(family.getURI().toString());
+  }
+  gameManifest.setRegisteredBlockFamilies(registeredBlockFamilies);
+  gameManifest.setBlockIdMap(blockManager.getBlockIdMap());
+  List<WorldInfo> worlds=universeConfig.getWorlds();
+  for (  WorldInfo worldInfo : worlds) {
+    gameManifest.addWorld(worldInfo);
+  }
+  WorldGenerator worldGenerator=CoreRegistry.get(WorldGenerator.class);
+  if (worldGenerator != null) {
+    WorldConfigurator worldConfigurator=worldGenerator.getConfigurator();
+    var params=worldConfigurator.getProperties();
+    gameManifest.setModuleConfigs(worldGenerator.getUri(),params);
+  }
+  saveTransactionBuilder.setGameManifest(gameManifest);
+}

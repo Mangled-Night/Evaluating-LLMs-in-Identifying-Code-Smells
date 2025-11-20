@@ -1,0 +1,22 @@
+@SuppressWarnings("unchecked") @Override public void write(JsonWriter out,R value) throws IOException {
+  Class<?> valueClass=value.getClass();
+  String valueTypeName=valueClass.getName();
+  TypeToken<?> valueType=TypeToken.get(valueClass);
+  TypeAdapter<R> delegate=(TypeAdapter<R>)gson.getDelegateAdapter(PolymorphicTypeAdapterFactory.this,valueType);
+  if (delegate == null) {
+    throw new JsonParseException("Could not serialize " + valueClass.getName());
+  }
+  JsonElement jsonElement=delegate.toJsonTree(value);
+  if (valueClass != baseClass) {
+    JsonObject jsonObject=jsonElement.getAsJsonObject();
+    JsonObject clone=new JsonObject();
+    clone.add(TYPE_FIELD_NAME,new JsonPrimitive(valueTypeName));
+    for (    Map.Entry<String,JsonElement> e : jsonObject.entrySet()) {
+      clone.add(e.getKey(),e.getValue());
+    }
+    Streams.write(clone,out);
+  }
+ else {
+    Streams.write(jsonElement,out);
+  }
+}

@@ -1,0 +1,30 @@
+/** 
+ * Determines an optimal solution to the assignment problem.
+ * @param weight the <em>n</em>-by-<em>n</em> matrix of weights
+ * @throws IllegalArgumentException unless all weights are nonnegative
+ * @throws IllegalArgumentException if {@code weight} is {@code null}
+ */
+public AssignmentProblem(double[][] weight){
+  if (weight == null)   throw new IllegalArgumentException("constructor argument is null");
+  n=weight.length;
+  this.weight=new double[n][n];
+  for (int i=0; i < n; i++) {
+    for (int j=0; j < n; j++) {
+      if (Double.isNaN(weight[i][j]))       throw new IllegalArgumentException("weight " + i + "-"+ j+ " is NaN");
+      if (weight[i][j] < minWeight)       minWeight=weight[i][j];
+      this.weight[i][j]=weight[i][j];
+    }
+  }
+  px=new double[n];
+  py=new double[n];
+  xy=new int[n];
+  yx=new int[n];
+  for (int i=0; i < n; i++)   xy[i]=UNMATCHED;
+  for (int j=0; j < n; j++)   yx[j]=UNMATCHED;
+  for (int k=0; k < n; k++) {
+    assert isDualFeasible();
+    assert isComplementarySlack();
+    augment();
+  }
+  assert certifySolution();
+}

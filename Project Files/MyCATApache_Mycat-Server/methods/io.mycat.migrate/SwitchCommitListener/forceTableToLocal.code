@@ -1,0 +1,31 @@
+private static void forceTableToLocal(Path localPath,XmlProcessBase xmlProcess) throws Exception {
+  String schemaPath=ZKUtils.getZKBasePath();
+  schemaPath=schemaPath + ZookeeperPath.FOW_ZK_PATH_SCHEMA.getKey() + ZookeeperPath.ZK_SEPARATOR.getKey();
+  SchemasParseXmlImpl schemasParseXml=new SchemasParseXmlImpl(xmlProcess);
+  Schemas schema=new Schemas();
+  String str="";
+  str=new String(ZKUtils.getConnection().getData().forPath(schemaPath + ZookeeperPath.FLOW_ZK_PATH_SCHEMA_SCHEMA.getKey()));
+  LOGGER.info("-----------------------------------从zookeeper中拉取的新的schema的信息--------------------------------------------------");
+  LOGGER.info(str);
+  SchemaJsonParse schemaJsonParse=new SchemaJsonParse();
+  List<Schema> schemaList=schemaJsonParse.parseJsonToBean(str);
+  schema.setSchema(schemaList);
+  str=new String(ZKUtils.getConnection().getData().forPath(schemaPath + ZookeeperPath.FLOW_ZK_PATH_SCHEMA_DATANODE.getKey()));
+  LOGGER.info("-----------------------------------从zookeeper中拉取的新的dataNode的信息--------------------------------------------------");
+  LOGGER.info(str);
+  DataNodeJsonParse dataNodeJsonParse=new DataNodeJsonParse();
+  List<DataNode> dataNodeList=dataNodeJsonParse.parseJsonToBean(str);
+  schema.setDataNode(dataNodeList);
+  str=new String(ZKUtils.getConnection().getData().forPath(schemaPath + ZookeeperPath.FLOW_ZK_PATH_SCHEMA_DATAHOST.getKey()));
+  LOGGER.info("-----------------------------------从zookeeper中拉取的新的dataHost的信息--------------------------------------------------");
+  LOGGER.info(str);
+  DataHostJsonParse dataHostJsonParse=new DataHostJsonParse();
+  List<DataHost> dataHostList=dataHostJsonParse.parseJsonToBean(str);
+  schema.setDataHost(dataHostList);
+  xmlProcess.addParseClass(DataNode.class);
+  xmlProcess.addParseClass(DataHost.class);
+  xmlProcess.addParseClass(Schema.class);
+  xmlProcess.addParseClass(Schemas.class);
+  xmlProcess.initJaxbClass();
+  schemasParseXml.parseToXmlWrite(schema,localPath.resolve("schema.xml").toString(),"schema");
+}

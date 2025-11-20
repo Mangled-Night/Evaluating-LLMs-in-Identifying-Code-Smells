@@ -1,0 +1,28 @@
+/** 
+ * A single  {@link ScoredValue}.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @author Mark Paluch
+ * @since 5.1
+ */
+public class ScoredValueOutput<K,V> extends CommandOutput<K,V,ScoredValue<V>> {
+  private V value;
+  public ScoredValueOutput(  RedisCodec<K,V> codec){
+    super(codec,ScoredValue.empty());
+  }
+  @Override public void set(  ByteBuffer bytes){
+    if (bytes == null) {
+      return;
+    }
+    if (value == null) {
+      value=codec.decodeValue(bytes);
+      return;
+    }
+    double score=LettuceStrings.toDouble(decodeAscii(bytes));
+    set(score);
+  }
+  @Override public void set(  double number){
+    output=ScoredValue.just(number,value);
+    value=null;
+  }
+}

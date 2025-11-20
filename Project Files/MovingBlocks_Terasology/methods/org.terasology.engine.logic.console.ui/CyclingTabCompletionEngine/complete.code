@@ -1,0 +1,50 @@
+@Override public String complete(String rawCommand){
+  if (rawCommand.length() <= 0) {
+    reset();
+    previousMessage=new Message("Type 'help' to list all commands.");
+    console.addMessage(previousMessage);
+    return null;
+  }
+ else   if (query == null) {
+    query=rawCommand;
+  }
+  String commandNameRaw=console.processCommandName(query);
+  Name commandName=new Name(commandNameRaw);
+  List<String> commandParameters=console.processParameters(query);
+  ConsoleCommand command=console.getCommand(commandName);
+  int suggestedIndex=commandParameters.size() + (query.charAt(query.length() - 1) == ' ' ? 1 : 0);
+  Set<String> matches=findMatches(commandName,commandParameters,command,suggestedIndex);
+  if (matches == null || matches.size() <= 0) {
+    return query;
+  }
+  if (previousMatches == null || !matches.equals(Sets.newHashSet(previousMatches))) {
+    reset(false);
+    if (matches.size() == 1) {
+      return generateResult(matches.iterator().next(),commandName,commandParameters,suggestedIndex);
+    }
+    previousMatches=Lists.newArrayList(matches);
+    Collections.sort(previousMatches);
+  }
+  StringBuilder matchMessageString=new StringBuilder();
+  for (int i=0; i < previousMatches.size(); i++) {
+    if (i > 0) {
+      matchMessageString.append(' ');
+    }
+    String match=previousMatches.get(i);
+    if (selectionIndex == i) {
+      match=FontColor.getColored(match,ConsoleColors.COMMAND);
+    }
+    matchMessageString.append(match);
+  }
+  Message matchMessage=new Message(matchMessageString.toString());
+  String suggestion=previousMatches.get(selectionIndex);
+  if (previousMessage != null) {
+    console.replaceMessage(previousMessage,matchMessage);
+  }
+ else {
+    console.addMessage(matchMessage);
+  }
+  previousMessage=matchMessage;
+  selectionIndex=(selectionIndex + 1) % previousMatches.size();
+  return generateResult(suggestion,commandName,commandParameters,suggestedIndex);
+}

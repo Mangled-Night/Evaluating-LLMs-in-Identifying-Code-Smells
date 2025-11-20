@@ -1,0 +1,47 @@
+@Override public void process(CommandProcess process){
+  RowAffect effect=new RowAffect();
+  try {
+    if (directory != null) {
+      File dir=new File(directory);
+      if (dir.isFile()) {
+        process.end(-1,directory + " :is not a directory, please check it");
+        return;
+      }
+    }
+    ExitStatus status=null;
+    Instrumentation inst=process.session().getInstrumentation();
+    if (code == null && classLoaderClass != null) {
+      List<ClassLoader> matchedClassLoaders=ClassLoaderUtils.getClassLoaderByClassName(inst,classLoaderClass);
+      if (matchedClassLoaders.size() == 1) {
+        code=Integer.toHexString(matchedClassLoaders.get(0).hashCode());
+      }
+ else       if (matchedClassLoaders.size() > 1) {
+        Collection<ClassLoaderVO> classLoaderVOList=ClassUtils.createClassLoaderVOList(matchedClassLoaders);
+        DumpClassModel dumpClassModel=new DumpClassModel().setClassLoaderClass(classLoaderClass).setMatchedClassLoaders(classLoaderVOList);
+        process.appendResult(dumpClassModel);
+        process.end(-1,"Found more than one classloader by class name, please specify classloader with '-c <classloader hash>'");
+        return;
+      }
+ else {
+        process.end(-1,"Can not find classloader by class name: " + classLoaderClass + ".");
+        return;
+      }
+    }
+    Set<Class<?>> matchedClasses=SearchUtils.searchClass(inst,classPattern,isRegEx,code);
+    if (matchedClasses == null || matchedClasses.isEmpty()) {
+      status=processNoMatch(process);
+    }
+ else     if (matchedClasses.size() > limit) {
+      status=processMatches(process,matchedClasses);
+    }
+ else {
+      status=processMatch(process,effect,inst,matchedClasses);
+    }
+    process.appendResult(new RowAffectModel(effect));
+    CommandUtils.end(process,status);
+  }
+ catch (  Throwable e) {
+    logger.error("processing error",e);
+    process.end(-1,"processing error");
+  }
+}

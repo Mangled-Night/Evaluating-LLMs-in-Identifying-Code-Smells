@@ -1,0 +1,21 @@
+/** 
+ * Send a ratchet update message. This can be used to advance the ratchet of a session in order to maintain forward secrecy.
+ * @param recipient recipient
+ * @throws CorruptedOmemoKeyException           When the used identityKeys are corrupted
+ * @throws CryptoFailedException                When something fails with the crypto
+ * @throws CannotEstablishOmemoSessionException When we can't establish a session with the recipient
+ * @throws SmackException.NotLoggedInException if the XMPP connection is not authenticated.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws SmackException.NoResponseException if there was no response from the remote entity.
+ * @throws NoSuchAlgorithmException if no such algorithm is available.
+ * @throws SmackException.NotConnectedException if the XMPP connection is not connected.
+ * @throws IOException if an I/O error occurred.
+ */
+public synchronized void sendRatchetUpdateMessage(OmemoDevice recipient) throws SmackException.NotLoggedInException, CorruptedOmemoKeyException, InterruptedException, SmackException.NoResponseException, NoSuchAlgorithmException, SmackException.NotConnectedException, CryptoFailedException, CannotEstablishOmemoSessionException, IOException {
+  XMPPConnection connection=connection();
+  MessageBuilder message=connection.getStanzaFactory().buildMessageStanza().to(recipient.getJid());
+  OmemoElement element=getOmemoService().createRatchetUpdateElement(new LoggedInOmemoManager(this),recipient);
+  message.addExtension(element);
+  StoreHint.set(message);
+  connection.sendStanza(message.build());
+}

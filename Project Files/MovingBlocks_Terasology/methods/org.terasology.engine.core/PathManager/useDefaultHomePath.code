@@ -1,0 +1,32 @@
+/** 
+ * Uses a platform-specific default home path for this execution.
+ * @throws IOException Thrown when required directories cannot be accessed.
+ */
+public void useDefaultHomePath() throws IOException {
+switch (OS.get()) {
+case LINUX:
+    homePath=Paths.get(System.getProperty("user.home")).resolve(LINUX_HOME_SUBPATH);
+  break;
+case MACOSX:
+homePath=Paths.get(System.getProperty("user.home"),"Library","Application Support",TERASOLOGY_FOLDER_NAME);
+break;
+case WINDOWS:
+String savedGamesPath=Shell32Util.getKnownFolderPath(KnownFolders.FOLDERID_SavedGames);
+if (savedGamesPath == null) {
+savedGamesPath=Shell32Util.getKnownFolderPath(KnownFolders.FOLDERID_Documents);
+}
+Path rawPath;
+if (savedGamesPath != null) {
+rawPath=Paths.get(savedGamesPath);
+}
+ else {
+rawPath=new JFileChooser().getFileSystemView().getDefaultDirectory().toPath();
+}
+homePath=rawPath.resolve(TERASOLOGY_FOLDER_NAME);
+break;
+default :
+homePath=Paths.get(System.getProperty("user.home")).resolve(LINUX_HOME_SUBPATH);
+break;
+}
+updateDirs();
+}

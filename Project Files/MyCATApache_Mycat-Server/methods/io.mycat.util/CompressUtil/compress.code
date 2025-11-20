@@ -1,0 +1,32 @@
+public static byte[] compress(ByteBuffer byteBuf){
+  return compress(getByteArrayFromBuffer(byteBuf));
+}
+/** 
+ * 适用于mysql与客户端交互时zlib 压缩
+ * @param data
+ * @return
+ */
+public static byte[] compress(byte[] data){
+  byte[] output=null;
+  Deflater compresser=new Deflater();
+  compresser.setInput(data);
+  compresser.finish();
+  ByteArrayOutputStream out=new ByteArrayOutputStream(data.length);
+  byte[] result=new byte[1024];
+  try {
+    while (!compresser.finished()) {
+      int length=compresser.deflate(result);
+      out.write(result,0,length);
+    }
+    output=out.toByteArray();
+  }
+  finally {
+    try {
+      out.close();
+    }
+ catch (    Exception e) {
+    }
+    compresser.end();
+  }
+  return output;
+}

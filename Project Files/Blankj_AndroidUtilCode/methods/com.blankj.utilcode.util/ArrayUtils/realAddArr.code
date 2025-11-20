@@ -1,0 +1,47 @@
+private static Object realAddArr(@Nullable Object array1,@Nullable Object array2){
+  if (array1 == null && array2 == null)   return null;
+  if (array1 == null) {
+    return realCopy(array2);
+  }
+  if (array2 == null) {
+    return realCopy(array1);
+  }
+  int len1=getLength(array1);
+  int len2=getLength(array2);
+  Object joinedArray=Array.newInstance(array1.getClass().getComponentType(),len1 + len2);
+  System.arraycopy(array1,0,joinedArray,0,len1);
+  System.arraycopy(array2,0,joinedArray,len1,len2);
+  return joinedArray;
+}
+@Nullable private static Object realAddArr(@Nullable Object array1,int index,@Nullable Object array2,Class clss){
+  if (array1 == null && array2 == null)   return null;
+  int len1=getLength(array1);
+  int len2=getLength(array2);
+  if (len1 == 0) {
+    if (index != 0) {
+      throw new IndexOutOfBoundsException("Index: " + index + ", array1 Length: 0");
+    }
+    return realCopy(array2);
+  }
+  if (len2 == 0) {
+    return realCopy(array1);
+  }
+  if (index > len1 || index < 0) {
+    throw new IndexOutOfBoundsException("Index: " + index + ", array1 Length: "+ len1);
+  }
+  Object joinedArray=Array.newInstance(array1.getClass().getComponentType(),len1 + len2);
+  if (index == len1) {
+    System.arraycopy(array1,0,joinedArray,0,len1);
+    System.arraycopy(array2,0,joinedArray,len1,len2);
+  }
+ else   if (index == 0) {
+    System.arraycopy(array2,0,joinedArray,0,len2);
+    System.arraycopy(array1,0,joinedArray,len2,len1);
+  }
+ else {
+    System.arraycopy(array1,0,joinedArray,0,index);
+    System.arraycopy(array2,0,joinedArray,index,len2);
+    System.arraycopy(array1,index,joinedArray,index + len2,len1 - index);
+  }
+  return joinedArray;
+}

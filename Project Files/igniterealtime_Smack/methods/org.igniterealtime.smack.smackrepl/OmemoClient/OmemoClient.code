@@ -1,0 +1,30 @@
+public OmemoClient(EntityBareJid jid,String password){
+  connection=new XMPPTCPConnection(XMPPTCPConnectionConfiguration.builder().setXmppAddressAndPassword(jid,password).build());
+  connection.setReplyTimeout(10 * 1000);
+  omemoManager=OmemoManager.getInstanceFor(connection);
+  omemoManager.setTrustCallback(new OmemoTrustCallback(){
+    private final Map<OmemoFingerprint,TrustState> trustStateMap=new HashMap<>();
+    @Override public TrustState getTrust(    OmemoDevice device,    OmemoFingerprint fingerprint){
+      return trustStateMap.get(fingerprint) != null ? trustStateMap.get(fingerprint) : TrustState.undecided;
+    }
+    @Override public void setTrust(    OmemoDevice device,    OmemoFingerprint fingerprint,    TrustState state){
+      trustStateMap.put(fingerprint,state);
+    }
+  }
+);
+  omemoManager.addOmemoMessageListener(new OmemoMessageListener(){
+    @Override public void onOmemoMessageReceived(    Stanza s,    OmemoMessage.Received m){
+      print(m.getSenderDevice() + ": " + (m.getBody() != null ? m.getBody() : "<keyTransportMessage>"));
+    }
+    @Override public void onOmemoCarbonCopyReceived(    CarbonExtension.Direction d,    Message cc,    Message wm,    OmemoMessage.Received m){
+      onOmemoMessageReceived(cc,m);
+    }
+  }
+);
+  omemoManager.addOmemoMucMessageListener(new OmemoMucMessageListener(){
+    @Override public void onOmemoMucMessageReceived(    MultiUserChat muc,    Stanza s,    OmemoMessage.Received m){
+      print(s.getFrom() + ":" + m.getSenderDevice().getDeviceId()+ ": "+ (m.getBody() != null ? m.getBody() : "<keyTransportMessage>"));
+    }
+  }
+);
+}

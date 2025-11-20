@@ -1,0 +1,48 @@
+/** 
+ * Locates the position at which to insert the specified key into the specified sorted range; if the range contains an element equal to key, returns the index of the leftmost equal element.
+ * @param key the key whose insertion point to search for
+ * @param a the array in which to search
+ * @param base the index of the first element in the range
+ * @param len the length of the range; must be > 0
+ * @param hint the index at which to begin the search, 0 <= hint < n.The closer hint is to the result, the faster this method will run.
+ * @param c the comparator used to order the range, and to search
+ * @return the int k,  0 <= k <= n such that a[b + k - 1] < key <= a[b + k],pretending that a[b - 1] is minus infinity and a[b + n] is infinity. In other words, key belongs at index b + k; or in other words, the first k elements of a should precede key, and the last n - k should follow it.
+ */
+private int gallopLeft(K key,Buffer a,int base,int len,int hint,Comparator<? super K> c){
+  assert len > 0 && hint >= 0 && hint < len;
+  int lastOfs=0;
+  int ofs=1;
+  K key0=s.newKey();
+  if (c.compare(key,s.getKey(a,base + hint,key0)) > 0) {
+    int maxOfs=len - hint;
+    while (ofs < maxOfs && c.compare(key,s.getKey(a,base + hint + ofs,key0)) > 0) {
+      lastOfs=ofs;
+      ofs=(ofs << 1) + 1;
+      if (ofs <= 0)       ofs=maxOfs;
+    }
+    if (ofs > maxOfs)     ofs=maxOfs;
+    lastOfs+=hint;
+    ofs+=hint;
+  }
+ else {
+    final int maxOfs=hint + 1;
+    while (ofs < maxOfs && c.compare(key,s.getKey(a,base + hint - ofs,key0)) <= 0) {
+      lastOfs=ofs;
+      ofs=(ofs << 1) + 1;
+      if (ofs <= 0)       ofs=maxOfs;
+    }
+    if (ofs > maxOfs)     ofs=maxOfs;
+    int tmp=lastOfs;
+    lastOfs=hint - ofs;
+    ofs=hint - tmp;
+  }
+  assert -1 <= lastOfs && lastOfs < ofs && ofs <= len;
+  lastOfs++;
+  while (lastOfs < ofs) {
+    int m=lastOfs + ((ofs - lastOfs) >>> 1);
+    if (c.compare(key,s.getKey(a,base + m,key0)) > 0)     lastOfs=m + 1;
+ else     ofs=m;
+  }
+  assert lastOfs == ofs;
+  return ofs;
+}

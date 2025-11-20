@@ -1,0 +1,11 @@
+@Test void testRegularClientPubSubPublish() throws Exception {
+  String nodeId=pubSubConnection.sync().clusterMyId();
+  RedisClusterNode otherNode=getOtherThan(nodeId);
+  pubSubConnection.sync().subscribe(key);
+  pubSubConnection.addListener(connectionListener);
+  List<String> channelsOnSubscribedNode=connection.getConnection(nodeId).sync().pubsubChannels();
+  assertThat(channelsOnSubscribedNode).hasSize(1);
+  RedisCommands<String,String> otherNodeConnection=connection.getConnection(otherNode.getNodeId()).sync();
+  otherNodeConnection.publish(key,value);
+  assertThat(connectionListener.getChannels().take()).isEqualTo(key);
+}

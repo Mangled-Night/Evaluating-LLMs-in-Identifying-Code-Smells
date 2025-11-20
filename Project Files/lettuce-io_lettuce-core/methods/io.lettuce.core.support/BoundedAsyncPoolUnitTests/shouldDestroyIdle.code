@@ -1,0 +1,15 @@
+@Test void shouldDestroyIdle(){
+  BoundedAsyncPool<String> pool=new BoundedAsyncPool<>(STRING_OBJECT_FACTORY,BoundedPoolConfig.builder().maxIdle(2).maxTotal(5).build());
+  List<String> objects=new ArrayList<>();
+  for (int i=0; i < 3; i++) {
+    objects.add(TestFutures.getOrTimeout(pool.acquire()));
+  }
+  for (int i=0; i < 2; i++) {
+    pool.release(objects.get(i));
+  }
+  assertThat(pool.getIdle()).isEqualTo(2);
+  pool.release(objects.get(2));
+  assertThat(pool.getIdle()).isEqualTo(2);
+  assertThat(pool.getObjectCount()).isEqualTo(2);
+  assertThat(destroyed).containsOnly("3");
+}

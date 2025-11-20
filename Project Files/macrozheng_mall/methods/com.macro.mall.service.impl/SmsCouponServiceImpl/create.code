@@ -1,0 +1,19 @@
+@Override public int create(SmsCouponParam couponParam){
+  couponParam.setCount(couponParam.getPublishCount());
+  couponParam.setUseCount(0);
+  couponParam.setReceiveCount(0);
+  int count=couponMapper.insert(couponParam);
+  if (couponParam.getUseType().equals(2)) {
+    for (    SmsCouponProductRelation productRelation : couponParam.getProductRelationList()) {
+      productRelation.setCouponId(couponParam.getId());
+    }
+    productRelationDao.insertList(couponParam.getProductRelationList());
+  }
+  if (couponParam.getUseType().equals(1)) {
+    for (    SmsCouponProductCategoryRelation couponProductCategoryRelation : couponParam.getProductCategoryRelationList()) {
+      couponProductCategoryRelation.setCouponId(couponParam.getId());
+    }
+    productCategoryRelationDao.insertList(couponParam.getProductCategoryRelationList());
+  }
+  return count;
+}

@@ -1,0 +1,26 @@
+public boolean tryExistsCon(final BackendConnection conn,RouteResultsetNode node){
+  if (conn == null) {
+    return false;
+  }
+  boolean canReUse=false;
+  if (conn.isFromSlaveDB() && (node.canRunnINReadDB(getSource().isAutocommit()) && (node.getRunOnSlave() == null || node.getRunOnSlave()))) {
+    canReUse=true;
+  }
+  if (!conn.isFromSlaveDB() && (node.getRunOnSlave() == null || !node.getRunOnSlave())) {
+    canReUse=true;
+  }
+  if (canReUse) {
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("found connections in session to use " + conn + " for "+ node);
+    }
+    conn.setAttachment(node);
+    return true;
+  }
+ else {
+    if (LOGGER.isWarnEnabled()) {
+      LOGGER.warn("Release previous connection,can't be used in trasaction  " + conn + " for "+ node);
+    }
+    releaseConnection(node,LOGGER.isDebugEnabled(),false);
+  }
+  return false;
+}

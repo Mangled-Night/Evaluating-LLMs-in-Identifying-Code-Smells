@@ -1,0 +1,58 @@
+/** 
+ * 压缩数据包
+ * @param input
+ * @param con
+ * @param compressUnfinishedDataQueue
+ * @return
+ */
+public static ByteBuffer compressMysqlPacket(ByteBuffer input,AbstractConnection con,ConcurrentLinkedQueue<byte[]> compressUnfinishedDataQueue){
+  byte[] byteArrayFromBuffer=getByteArrayFromBuffer(input);
+  con.recycle(input);
+  byteArrayFromBuffer=mergeBytes(byteArrayFromBuffer,compressUnfinishedDataQueue);
+  return compressMysqlPacket(byteArrayFromBuffer,con,compressUnfinishedDataQueue);
+}
+/** 
+ * 压缩数据包
+ * @param data
+ * @param con
+ * @param compressUnfinishedDataQueue
+ * @return
+ */
+private static ByteBuffer compressMysqlPacket(byte[] data,AbstractConnection con,ConcurrentLinkedQueue<byte[]> compressUnfinishedDataQueue){
+  ByteBuffer byteBuf=con.allocate();
+  byteBuf=con.checkWriteBuffer(byteBuf,data.length,false);
+  MySQLMessage msg=new MySQLMessage(data);
+  while (msg.hasRemaining()) {
+    int packetLength=0;
+    int readLength=msg.length() - msg.position();
+    if (readLength > 3) {
+      packetLength=msg.readUB3();
+      msg.move(-3);
+    }
+    if (readLength < packetLength + 4) {
+      byte[] packet=msg.readBytes(readLength);
+      if (packet.length != 0) {
+        compressUnfinishedDataQueue.add(packet);
+      }
+    }
+ else {
+      byte[] packet=msg.readBytes(packetLength + 4);
+      if (packet.length != 0) {
+        if (packet.length <= NO_COMPRESS_PACKET_LENGTH) {
+          BufferUtil.writeUB3(byteBuf,packet.length);
+          byteBuf.put(packet[3]);
+          BufferUtil.writeUB3(byteBuf,0);
+          byteBuf.put(packet);
+        }
+ else {
+          byte[] compress=compress(packet);
+          BufferUtil.writeUB3(byteBuf,compress.length);
+          byteBuf.put(packet[3]);
+          BufferUtil.writeUB3(byteBuf,packet.length);
+          byteBuf.put(compress);
+        }
+      }
+    }
+  }
+  return byteBuf;
+}

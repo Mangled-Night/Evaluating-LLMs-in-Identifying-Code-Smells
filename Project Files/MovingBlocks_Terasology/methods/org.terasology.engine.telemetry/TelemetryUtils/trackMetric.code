@@ -1,0 +1,73 @@
+/** 
+ * Fetch metric in  {@link org.terasology.engine.telemetry.Metrics} and send to the server.
+ * @param emitter Emitter sending telemetry to the server.
+ * @param nameSpace The name the class tracking this metric.
+ * @param event The new event.
+ * @param metric the Metric class instance that this event belongs to.
+ * @param telemetryConfiguration the telemetryConfiguration adapter which could be used in modules.
+ */
+public static void trackMetric(Emitter emitter,String nameSpace,Unstructured event,Metric metric,TelemetryConfiguration telemetryConfiguration){
+  AccessController.doPrivileged((PrivilegedAction<Object>)() -> {
+    Context context=CoreRegistry.get(Context.class);
+    DisplayDevice display=context.get(DisplayDevice.class);
+    if (telemetryConfiguration.fetchBindingSize() == 0 && display.isHeadless()) {
+      trackMetric(emitter,nameSpace,event);
+    }
+ else     if (telemetryConfiguration.fetchBindingSize() != 0) {
+      TelemetryCategory telemetryCategory=metric.getClass().getAnnotation(TelemetryCategory.class);
+      if (telemetryCategory != null) {
+        if (telemetryConfiguration.containsField(telemetryCategory.id())) {
+          if ((telemetryConfiguration.get(telemetryCategory.id()))) {
+            trackMetric(emitter,nameSpace,event);
+          }
+        }
+      }
+    }
+    return null;
+  }
+);
+}
+/** 
+ * track a metric.
+ * @param emitter Emitter sending telemetry to the server.
+ * @param nameSpace The name the class tracking this metric.
+ * @param event The new event.
+ * @param metric the Metric class instance that this event belongs to.
+ * @param bindingMap the binding map contains fields who has user's permission.
+ */
+public static void trackMetric(Emitter emitter,String nameSpace,Unstructured event,Metric metric,Map<String,Boolean> bindingMap){
+  AccessController.doPrivileged((PrivilegedAction<Object>)() -> {
+    Context context=CoreRegistry.get(Context.class);
+    DisplayDevice display=context.get(DisplayDevice.class);
+    if (bindingMap.size() == 0 && display.isHeadless()) {
+      trackMetric(emitter,nameSpace,event);
+    }
+ else     if (bindingMap.size() != 0) {
+      TelemetryCategory telemetryCategory=metric.getClass().getAnnotation(TelemetryCategory.class);
+      if (telemetryCategory != null) {
+        if (bindingMap.containsKey(telemetryCategory.id())) {
+          if ((bindingMap.get(telemetryCategory.id()))) {
+            trackMetric(emitter,nameSpace,event);
+          }
+        }
+      }
+    }
+    return null;
+  }
+);
+}
+/** 
+ * track a metric without in spite of user's telemetry configuration. It's rather a method for test.
+ * @param emitter Emitter sending telemetry to the server.
+ * @param nameSpace The name the class tracking this metric.
+ * @param event The new event.
+ */
+public static void trackMetric(Emitter emitter,String nameSpace,Unstructured event){
+  AccessController.doPrivileged((PrivilegedAction<Object>)() -> {
+    Subject subject=new Subject.SubjectBuilder().userId(TelemetryParams.userId).ipAddress("anonymous").build();
+    Tracker tracker=new Tracker.TrackerBuilder(emitter,nameSpace,TelemetryParams.APP_ID_TERASOLOGY).subject(subject).platform(TelemetryParams.PLATFORM_DESKTOP).build();
+    tracker.track(event);
+    return null;
+  }
+);
+}

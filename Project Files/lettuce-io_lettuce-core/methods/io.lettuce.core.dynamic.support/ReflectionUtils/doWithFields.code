@@ -1,0 +1,33 @@
+/** 
+ * Invoke the given callback on all fields in the target class, going up the class hierarchy to get all declared fields.
+ * @param clazz the target class to analyze
+ * @param fc the callback to invoke for each field
+ */
+public static void doWithFields(Class<?> clazz,FieldCallback fc){
+  doWithFields(clazz,fc,null);
+}
+/** 
+ * Invoke the given callback on all fields in the target class, going up the class hierarchy to get all declared fields.
+ * @param clazz the target class to analyze
+ * @param fc the callback to invoke for each field
+ * @param ff the filter that determines the fields to apply the callback to
+ */
+public static void doWithFields(Class<?> clazz,FieldCallback fc,FieldFilter ff){
+  Class<?> targetClass=clazz;
+  do {
+    Field[] fields=targetClass.getDeclaredFields();
+    for (    Field field : fields) {
+      if (ff != null && !ff.matches(field)) {
+        continue;
+      }
+      try {
+        fc.doWith(field);
+      }
+ catch (      IllegalAccessException ex) {
+        throw new IllegalStateException("Not allowed to access field '" + field.getName() + "': "+ ex);
+      }
+    }
+    targetClass=targetClass.getSuperclass();
+  }
+ while (targetClass != null && targetClass != Object.class);
+}

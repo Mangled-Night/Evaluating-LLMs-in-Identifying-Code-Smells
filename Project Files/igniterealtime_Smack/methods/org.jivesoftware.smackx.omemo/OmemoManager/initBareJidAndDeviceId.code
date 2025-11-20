@@ -1,0 +1,21 @@
+/** 
+ * Get the bareJid of the user from the authenticated XMPP connection. If our deviceId is unknown, use the bareJid to look up deviceIds available in the omemoStore. If there are ids available, choose the smallest one. Otherwise generate a random deviceId.
+ * @param manager OmemoManager
+ */
+private static void initBareJidAndDeviceId(OmemoManager manager){
+  if (!manager.getConnection().isAuthenticated()) {
+    throw new IllegalStateException("Connection MUST be authenticated.");
+  }
+  if (manager.ownJid == null) {
+    manager.ownJid=manager.getConnection().getUser().asBareJid();
+  }
+  if (UNKNOWN_DEVICE_ID.equals(manager.deviceId)) {
+    SortedSet<Integer> storedDeviceIds=manager.getOmemoService().getOmemoStoreBackend().localDeviceIdsOf(manager.ownJid);
+    if (storedDeviceIds.size() > 0) {
+      manager.setDeviceId(storedDeviceIds.first());
+    }
+ else {
+      manager.setDeviceId(randomDeviceId());
+    }
+  }
+}

@@ -1,0 +1,48 @@
+public static void recreate(FBO fbo,FboConfig fboConfig){
+  Type type=fboConfig.getType();
+  Dimensions dimensions=fboConfig.getDimensions();
+  boolean useNormalBuffer=fboConfig.hasNormalBuffer();
+  boolean useLightBuffer=fboConfig.hasLightBuffer();
+  boolean useDepthBuffer=fboConfig.hasDepthBuffer();
+  boolean useStencilBuffer=fboConfig.hasStencilBuffer();
+  fbo.dimensions=fboConfig.getDimensions();
+  GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,fbo.fboId);
+  if (type != Type.NO_COLOR) {
+    glDeleteTextures(fbo.colorBufferTextureId);
+    createColorBuffer(fbo,dimensions,type);
+  }
+  if (useNormalBuffer) {
+    glDeleteTextures(fbo.normalsBufferTextureId);
+    createNormalsBuffer(fbo,dimensions);
+  }
+  if (useLightBuffer) {
+    glDeleteTextures(fbo.lightBufferTextureId);
+    createLightBuffer(fbo,dimensions,type);
+  }
+  if (useDepthBuffer) {
+    glDeleteTextures(fbo.depthStencilTextureId);
+    GL30.glDeleteRenderbuffers(fbo.depthStencilRboId);
+    createDepthBuffer(fbo,dimensions,useStencilBuffer);
+  }
+  GL11.glBindTexture(GL11.GL_TEXTURE_2D,0);
+  IntBuffer bufferIds=BufferUtils.createIntBuffer(3);
+  if (type != Type.NO_COLOR) {
+    bufferIds.put(GL30.GL_COLOR_ATTACHMENT0);
+  }
+  if (useNormalBuffer) {
+    bufferIds.put(GL30.GL_COLOR_ATTACHMENT1);
+  }
+  if (useLightBuffer) {
+    bufferIds.put(GL30.GL_COLOR_ATTACHMENT2);
+  }
+  bufferIds.flip();
+  if (bufferIds.limit() == 0) {
+    GL11.glReadBuffer(GL11.GL_NONE);
+    GL20.glDrawBuffers(GL11.GL_NONE);
+  }
+ else {
+    GL20.glDrawBuffers(bufferIds);
+  }
+  verifyCompleteness(fboConfig.getName(),type,fbo);
+  GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,0);
+}

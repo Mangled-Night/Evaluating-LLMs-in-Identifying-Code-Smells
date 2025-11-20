@@ -1,0 +1,21 @@
+@Override public void preInitialise(Context rootContext){
+  config=new Config(rootContext);
+  config.load();
+  String serverPortProperty=System.getProperty(SERVER_PORT_PROPERTY);
+  if (serverPortProperty != null) {
+    try {
+      config.getNetwork().setServerPort(Integer.parseInt(serverPortProperty));
+    }
+ catch (    NumberFormatException e) {
+      logger.error("Failed to set server port to invalid value: {}",serverPortProperty);
+    }
+  }
+  if (Iterables.isEmpty(config.getDefaultModSelection().listModules())) {
+    config.getDefaultModSelection().addModule(TerasologyConstants.CORE_GAMEPLAY_MODULE);
+  }
+  checkServerIdentity();
+  logger.info("Video Settings: {}",config.renderConfigAsJson(config.getRendering()));
+  rootContext.put(Config.class,config);
+  rootContext.put(InputDeviceConfiguration.class,new InputDeviceConfigurationImpl(config));
+  rootContext.put(BindsConfiguration.class,new BindsConfigurationImpl(config));
+}

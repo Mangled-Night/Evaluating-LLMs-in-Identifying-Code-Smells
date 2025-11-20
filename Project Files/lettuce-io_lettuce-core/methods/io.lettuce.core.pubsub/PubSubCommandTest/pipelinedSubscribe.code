@@ -1,0 +1,11 @@
+@Test void pipelinedSubscribe() throws Exception {
+  pubsub.setAutoFlushCommands(false);
+  pubsub.subscribe(channel);
+  Delay.delay(Duration.ofMillis(100));
+  assertThat(channels).isEmpty();
+  pubsub.flushCommands();
+  assertThat(channels.take()).isEqualTo(channel);
+  redis.publish(channel,message);
+  assertThat(channels.take()).isEqualTo(channel);
+  assertThat(messages.take()).isEqualTo(message);
+}

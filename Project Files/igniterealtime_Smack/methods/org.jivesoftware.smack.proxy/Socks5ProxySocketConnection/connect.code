@@ -1,0 +1,81 @@
+@Override public void connect(Socket socket,String host,int port,int timeout) throws IOException {
+  String proxy_host=proxy.getProxyAddress();
+  int proxy_port=proxy.getProxyPort();
+  String user=proxy.getProxyUsername();
+  String passwd=proxy.getProxyPassword();
+  socket.connect(new InetSocketAddress(proxy_host,proxy_port),timeout);
+  InputStream in=socket.getInputStream();
+  DataInputStream dis=new DataInputStream(in);
+  OutputStream out=socket.getOutputStream();
+  ByteArrayOutputStream outBuf=new ByteArrayOutputStream();
+  byte[] inBuf;
+  outBuf.write(5);
+  outBuf.write(2);
+  outBuf.write(0);
+  outBuf.write(2);
+  OutputStreamUtil.writeResetAndFlush(outBuf,out);
+  inBuf=new byte[2];
+  dis.readFully(inBuf);
+  boolean check=false;
+switch (inBuf[1] & 0xff) {
+case 0:
+    check=true;
+  break;
+case 2:
+if (user == null || passwd == null) {
+  break;
+}
+outBuf.write(1);
+byte[] userBytes=user.getBytes(StandardCharsets.UTF_8);
+OutputStreamUtil.writeByteSafe(outBuf,userBytes.length,"Username to long");
+outBuf.write(userBytes);
+byte[] passwordBytes=passwd.getBytes(StandardCharsets.UTF_8);
+OutputStreamUtil.writeByteSafe(outBuf,passwordBytes.length,"Password to long");
+outBuf.write(passwordBytes);
+OutputStreamUtil.writeResetAndFlush(outBuf,out);
+inBuf=new byte[2];
+dis.readFully(inBuf);
+if (inBuf[1] == 0) {
+check=true;
+}
+break;
+default :
+}
+if (!check) {
+throw new ProxyException(ProxyInfo.ProxyType.SOCKS5,"fail in SOCKS5 proxy");
+}
+outBuf.write(5);
+outBuf.write(1);
+outBuf.write(0);
+byte[] hostb=host.getBytes(StandardCharsets.UTF_8);
+int len=hostb.length;
+outBuf.write(3);
+OutputStreamUtil.writeByteSafe(outBuf,len,"Hostname too long");
+outBuf.write(hostb);
+outBuf.write(port >>> 8);
+outBuf.write(port & 0xff);
+OutputStreamUtil.writeResetAndFlush(outBuf,out);
+inBuf=new byte[4];
+dis.readFully(inBuf);
+if (inBuf[1] != 0) {
+throw new ProxyException(ProxyInfo.ProxyType.SOCKS5,"server returns " + inBuf[1]);
+}
+final int addressBytes;
+final int atyp=inBuf[3] & 0xff;
+switch (atyp) {
+case 1:
+addressBytes=4;
+break;
+case 3:
+byte domainnameLengthByte=dis.readByte();
+addressBytes=domainnameLengthByte & 0xff;
+break;
+case 4:
+addressBytes=16;
+break;
+default :
+throw new IOException("Unknown ATYP value: " + atyp);
+}
+inBuf=new byte[addressBytes + 2];
+dis.readFully(inBuf);
+}

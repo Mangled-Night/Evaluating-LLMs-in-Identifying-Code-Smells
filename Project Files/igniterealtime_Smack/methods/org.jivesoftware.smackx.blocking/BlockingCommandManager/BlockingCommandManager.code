@@ -1,0 +1,50 @@
+private BlockingCommandManager(XMPPConnection connection){
+  super(connection);
+  connection.registerIQRequestHandler(new AbstractIqRequestHandler(BlockContactsIQ.ELEMENT,BlockContactsIQ.NAMESPACE,IQ.Type.set,Mode.sync){
+    @Override public IQ handleIQRequest(    IQ iqRequest){
+      BlockContactsIQ blockContactIQ=(BlockContactsIQ)iqRequest;
+      if (blockListCached == null) {
+        blockListCached=new ArrayList<>();
+      }
+      List<Jid> blockedJids=blockContactIQ.getJids();
+      blockListCached.addAll(blockedJids);
+      for (      JidsBlockedListener listener : jidsBlockedListeners) {
+        listener.onJidsBlocked(blockedJids);
+      }
+      return IQ.createResultIQ(blockContactIQ);
+    }
+  }
+);
+  connection.registerIQRequestHandler(new AbstractIqRequestHandler(UnblockContactsIQ.ELEMENT,UnblockContactsIQ.NAMESPACE,IQ.Type.set,Mode.sync){
+    @Override public IQ handleIQRequest(    IQ iqRequest){
+      UnblockContactsIQ unblockContactIQ=(UnblockContactsIQ)iqRequest;
+      if (blockListCached == null) {
+        blockListCached=new ArrayList<>();
+      }
+      List<Jid> unblockedJids=unblockContactIQ.getJids();
+      if (unblockedJids == null) {
+        blockListCached.clear();
+        for (        AllJidsUnblockedListener listener : allJidsUnblockedListeners) {
+          listener.onAllJidsUnblocked();
+        }
+      }
+ else {
+        blockListCached.removeAll(unblockedJids);
+        for (        JidsUnblockedListener listener : jidsUnblockedListeners) {
+          listener.onJidsUnblocked(unblockedJids);
+        }
+      }
+      return IQ.createResultIQ(unblockContactIQ);
+    }
+  }
+);
+  connection.addConnectionListener(new ConnectionListener(){
+    @Override public void authenticated(    XMPPConnection connection,    boolean resumed){
+      if (resumed) {
+        return;
+      }
+      blockListCached=null;
+    }
+  }
+);
+}

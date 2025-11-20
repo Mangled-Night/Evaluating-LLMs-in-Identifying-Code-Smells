@@ -1,0 +1,54 @@
+private void bindCustomButtons(){
+  UIList<?> customServerList=find("customServerList",UIList.class);
+  ReadOnlyBinding<Boolean> localSelectedServerOnly=new ReadOnlyBinding<Boolean>(){
+    @Override public Boolean get(){
+      return customServerList.getSelection() != null;
+    }
+  }
+;
+  UIButton add=find("add",UIButton.class);
+  if (add != null) {
+    add.subscribe(button -> {
+      AddServerPopup popup=getManager().pushScreen(AddServerPopup.ASSET_URI,AddServerPopup.class);
+      popup.onSuccess(item -> {
+        config.getNetwork().addServerInfo(item);
+        visibleList.setSelection(item);
+      }
+);
+    }
+);
+  }
+  UIButton edit=find("edit",UIButton.class);
+  if (edit != null) {
+    edit.bindEnabled(localSelectedServerOnly);
+    edit.subscribe(button -> {
+      AddServerPopup popup=getManager().pushScreen(AddServerPopup.ASSET_URI,AddServerPopup.class);
+      ServerInfo info=visibleList.getSelection();
+      popup.setServerInfo(info);
+      popup.onSuccess(item -> extInfo.put(item,infoService.requestInfo(item.getAddress(),item.getPort())));
+    }
+);
+  }
+  UIButton removeButton=find("remove",UIButton.class);
+  if (removeButton != null) {
+    removeButton.bindEnabled(localSelectedServerOnly);
+    removeButton.subscribe(button -> {
+      ServerInfo info=visibleList.getSelection();
+      if (info != null) {
+        config.getNetwork().removeServerInfo(info);
+        extInfo.remove(info);
+        visibleList.setSelection(null);
+      }
+    }
+);
+  }
+  UILabel downloadLabel=find("download",UILabel.class);
+  if (downloadLabel != null) {
+    downloadLabel.bindText(new ReadOnlyBinding<String>(){
+      @Override public String get(){
+        return translationSystem.translate(downloader.getStatus());
+      }
+    }
+);
+  }
+}

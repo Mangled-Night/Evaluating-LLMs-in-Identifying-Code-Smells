@@ -1,0 +1,30 @@
+public class IoTRegisterProvider extends IqProvider<IoTRegister> {
+  @Override public IoTRegister parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    boolean selfOwned=ParserUtils.getBooleanAttribute(parser,"selfOwned",false);
+    NodeInfo nodeInfo=NodeInfoParser.parse(parser);
+    List<Tag> tags=new ArrayList<>();
+    while (parser.getDepth() != initialDepth) {
+      XmlPullParser.Event event=parser.next();
+      if (event != XmlPullParser.Event.START_ELEMENT) {
+        continue;
+      }
+      final String element=parser.getName();
+      Tag.Type type=null;
+switch (element) {
+case "str":
+        type=Tag.Type.str;
+      break;
+case "num":
+    type=Tag.Type.num;
+  break;
+}
+if (type == null) {
+continue;
+}
+String name=parser.getAttributeValue(null,"name");
+String value=parser.getAttributeValue(null,"value");
+tags.add(new Tag(name,type,value));
+}
+return new IoTRegister(tags,nodeInfo,selfOwned);
+}
+}

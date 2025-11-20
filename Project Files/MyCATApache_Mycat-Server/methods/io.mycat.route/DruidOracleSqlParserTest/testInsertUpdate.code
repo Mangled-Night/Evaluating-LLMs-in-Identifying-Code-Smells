@@ -1,0 +1,19 @@
+@Test public void testInsertUpdate() throws Exception {
+  SchemaConfig schema=schemaMap.get("oracledb");
+  String sql="insert into offer1(group_id,offer_id,member_id)values(234,123,'abc')";
+  RouteResultset rrs=routeStrategy.route(new SystemConfig(),schema,-1,sql,null,null,cachePool);
+  Assert.assertEquals(1,rrs.getNodes().length);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  Assert.assertEquals(-1,rrs.getLimitSize());
+  Assert.assertEquals(0,rrs.getNodes()[0].getLimitStart());
+  Assert.assertEquals(-1,rrs.getNodes()[0].getLimitSize());
+  Assert.assertEquals("d_oracle1",rrs.getNodes()[0].getName());
+  Assert.assertEquals("insert into offer1(group_id,offer_id,member_id)values(234,123,'abc')",rrs.getNodes()[0].getStatement());
+  sql="update offer set name='x'";
+  rrs=routeStrategy.route(new SystemConfig(),schema,-1,sql,null,null,cachePool);
+  Assert.assertEquals(2,rrs.getNodes().length);
+  Assert.assertEquals(-1,rrs.getLimitSize());
+  Assert.assertEquals(false,rrs.isCacheAble());
+  Assert.assertEquals(0,rrs.getNodes()[0].getLimitStart());
+  Assert.assertEquals(-1,rrs.getNodes()[0].getLimitSize());
+}

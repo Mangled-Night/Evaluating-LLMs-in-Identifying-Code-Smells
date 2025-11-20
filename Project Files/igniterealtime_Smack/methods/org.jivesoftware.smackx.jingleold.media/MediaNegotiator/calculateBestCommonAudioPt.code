@@ -1,0 +1,32 @@
+private PayloadType calculateBestCommonAudioPt(List<PayloadType> remoteAudioPts){
+  final ArrayList<PayloadType> commonAudioPtsHere=new ArrayList<>();
+  final ArrayList<PayloadType> commonAudioPtsThere=new ArrayList<>();
+  PayloadType result=null;
+  if (!remoteAudioPts.isEmpty()) {
+    commonAudioPtsHere.addAll(localAudioPts);
+    commonAudioPtsHere.retainAll(remoteAudioPts);
+    commonAudioPtsThere.addAll(remoteAudioPts);
+    commonAudioPtsThere.retainAll(localAudioPts);
+    if (!commonAudioPtsHere.isEmpty() && !commonAudioPtsThere.isEmpty()) {
+      if (session.getInitiator().equals(session.getConnection().getUser())) {
+        PayloadType.Audio bestPtHere=null;
+        PayloadType payload=mediaManager.getPreferredPayloadType();
+        if (payload != null && payload instanceof PayloadType.Audio)         if (commonAudioPtsHere.contains(payload))         bestPtHere=(PayloadType.Audio)payload;
+        if (bestPtHere == null)         for (        PayloadType payloadType : commonAudioPtsHere)         if (payloadType instanceof PayloadType.Audio) {
+          bestPtHere=(PayloadType.Audio)payloadType;
+          break;
+        }
+        result=bestPtHere;
+      }
+ else {
+        PayloadType.Audio bestPtThere=null;
+        for (        PayloadType payloadType : commonAudioPtsThere)         if (payloadType instanceof PayloadType.Audio) {
+          bestPtThere=(PayloadType.Audio)payloadType;
+          break;
+        }
+        result=bestPtThere;
+      }
+    }
+  }
+  return result;
+}

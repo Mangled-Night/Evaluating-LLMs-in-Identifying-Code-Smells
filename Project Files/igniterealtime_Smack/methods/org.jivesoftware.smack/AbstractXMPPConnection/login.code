@@ -1,0 +1,48 @@
+/** 
+ * Logs in to the server using the strongest SASL mechanism supported by the server. If more than the connection's default stanza timeout elapses in each step of the authentication process without a response from the server, a {@link SmackException.NoResponseException} will be thrown.<p> Before logging in (i.e. authenticate) to the server the connection must be connected by calling  {@link #connect}. </p> <p> It is possible to log in without sending an initial available presence by using {@link ConnectionConfiguration.Builder#setSendPresence(boolean)}. Finally, if you want to not pass a password and instead use a more advanced mechanism while using SASL then you may be interested in using {@link ConnectionConfiguration.Builder#setCallbackHandler(javax.security.auth.callback.CallbackHandler)}. For more advanced login settings see  {@link ConnectionConfiguration}. </p>
+ * @throws XMPPException if an error occurs on the XMPP protocol level.
+ * @throws SmackException if an error occurs somewhere else besides XMPP protocol level.
+ * @throws IOException if an I/O error occurs during login.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public synchronized void login() throws XMPPException, SmackException, IOException, InterruptedException {
+  CharSequence username=usedUsername != null ? usedUsername : config.getUsername();
+  String password=usedPassword != null ? usedPassword : config.getPassword();
+  Resourcepart resource=usedResource != null ? usedResource : config.getResource();
+  login(username,password,resource);
+}
+/** 
+ * Same as  {@link #login(CharSequence,String,Resourcepart)}, but takes the resource from the connection configuration.
+ * @param username TODO javadoc me please
+ * @param password TODO javadoc me please
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws IOException if an I/O error occurred.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @see #login
+ */
+public synchronized void login(CharSequence username,String password) throws XMPPException, SmackException, IOException, InterruptedException {
+  login(username,password,config.getResource());
+}
+/** 
+ * Login with the given username (authorization identity). You may omit the password if a callback handler is used. If resource is null, then the server will generate one.
+ * @param username TODO javadoc me please
+ * @param password TODO javadoc me please
+ * @param resource TODO javadoc me please
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws IOException if an I/O error occurred.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @see #login
+ */
+public synchronized void login(CharSequence username,String password,Resourcepart resource) throws XMPPException, SmackException, IOException, InterruptedException {
+  if (!config.allowNullOrEmptyUsername) {
+    StringUtils.requireNotNullNorEmpty(username,"Username must not be null nor empty");
+  }
+  throwNotConnectedExceptionIfAppropriate("Did you call connect() before login()?");
+  throwAlreadyLoggedInExceptionIfAppropriate();
+  usedUsername=username != null ? username.toString() : null;
+  usedPassword=password;
+  usedResource=resource;
+  loginInternal(usedUsername,usedPassword,usedResource);
+}

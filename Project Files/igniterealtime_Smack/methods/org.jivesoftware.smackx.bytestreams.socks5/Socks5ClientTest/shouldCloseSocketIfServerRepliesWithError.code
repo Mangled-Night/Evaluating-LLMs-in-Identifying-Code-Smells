@@ -1,0 +1,41 @@
+/** 
+ * The SOCKS5 client should close connection if server replies with an error.
+ * @throws Exception should not happen
+ */
+@Test public void shouldCloseSocketIfServerRepliesWithError() throws Exception {
+  Thread serverThread=new Thread(){
+    @Override public void run(){
+      StreamHost streamHost=new StreamHost(proxyJID,serverAddress,serverPort);
+      Socks5Client socks5Client=new Socks5Client(streamHost,digest);
+      try {
+        socks5Client.getSocket(10000);
+        fail("exception should be thrown");
+      }
+ catch (      SmackException e) {
+        assertTrue(e.getMessage().contains("SOCKS5 negotiation failed"));
+      }
+catch (      Exception e) {
+        fail(e.getMessage());
+      }
+    }
+  }
+;
+  serverThread.start();
+  Socket socket=serverSocket.accept();
+  DataInputStream in=new DataInputStream(socket.getInputStream());
+  DataOutputStream out=new DataOutputStream(socket.getOutputStream());
+  assertEquals((byte)0x05,(byte)in.read());
+  assertEquals((byte)0x01,(byte)in.read());
+  assertEquals((byte)0x00,(byte)in.read());
+  out.write(new byte[]{(byte)0x05,(byte)0x00});
+  out.flush();
+  Socks5Utils.receiveSocks5Message(in);
+  out.write(new byte[]{(byte)0x05,(byte)0x01,(byte)0x00,(byte)0x03});
+  byte[] address=digest.getBytes(StandardCharsets.UTF_8);
+  out.write(address.length);
+  out.write(address);
+  out.write(new byte[]{(byte)0x00,(byte)0x00});
+  out.flush();
+  serverThread.join();
+  assertEquals(-1,in.read());
+}

@@ -1,0 +1,15 @@
+@Test public void disconnectedConnectionRejectTest() throws Exception {
+  clusterClient.setOptions(ClusterClientOptions.builder().topologyRefreshOptions(PERIODIC_REFRESH_ENABLED).disconnectedBehavior(ClientOptions.DisconnectedBehavior.REJECT_COMMANDS).build());
+  RedisAdvancedClusterAsyncCommands<String,String> clusterConnection=clusterClient.connect().async();
+  clusterClient.setOptions(ClusterClientOptions.builder().disconnectedBehavior(ClientOptions.DisconnectedBehavior.REJECT_COMMANDS).build());
+  ClusterSetup.setup2Masters(clusterHelper);
+  assertRoutedExecution(clusterConnection);
+  RedisClusterNode partition1=getOwnPartition(redis1);
+  RedisClusterAsyncCommands<String,String> node1Connection=clusterConnection.getConnection(partition1.getUri().getHost(),partition1.getUri().getPort());
+  shiftAllSlotsToNode1();
+  suspendConnection(node1Connection);
+  RedisFuture<String> set=clusterConnection.set("t","value");
+  set.await(5,TimeUnit.SECONDS);
+  assertThatThrownBy(() -> TestFutures.awaitOrTimeout(set)).hasRootCauseInstanceOf(RedisException.class);
+  clusterConnection.getStatefulConnection().close();
+}

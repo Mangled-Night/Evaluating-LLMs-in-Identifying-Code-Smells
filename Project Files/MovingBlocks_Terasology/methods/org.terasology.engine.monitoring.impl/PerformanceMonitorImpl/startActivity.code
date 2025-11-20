@@ -1,0 +1,13 @@
+@Override public Activity startActivity(String activityName){
+  if (Thread.currentThread() != mainThread) {
+    return OFF_THREAD_ACTIVITY;
+  }
+  ActivityInfo newActivity=new ActivityInfo(activityName).initialize();
+  if (!activityStack.isEmpty()) {
+    ActivityInfo currentActivity=activityStack.peek();
+    currentActivity.ownTime+=newActivity.startTime - ((currentActivity.resumeTime > 0) ? currentActivity.resumeTime : currentActivity.startTime);
+    currentActivity.ownMem+=(currentActivity.startMem - newActivity.startMem > 0) ? currentActivity.startMem - newActivity.startMem : 0;
+  }
+  activityStack.push(newActivity);
+  return activityInstance;
+}

@@ -1,0 +1,43 @@
+public class ListSingleFormField extends AbstractSingleStringValueFormField implements FormFieldWithOptions {
+  private final List<Option> options;
+  protected ListSingleFormField(  Builder builder){
+    super(builder);
+    options=CollectionUtil.cloneAndSeal(builder.options);
+  }
+  @Override public List<Option> getOptions(){
+    return options;
+  }
+  public Builder asBuilder(){
+    return new Builder(this);
+  }
+  @Override protected void populateExtraXmlChildElements(){
+    extraXmlChildElements=new ArrayList<>(1 + options.size());
+    CharSequence value=getValue();
+    if (value != null) {
+      extraXmlChildElements.add(new FormField.Value(value));
+    }
+    extraXmlChildElements.addAll(options);
+  }
+public static final class Builder extends AbstractSingleStringValueFormField.Builder<ListSingleFormField,ListSingleFormField.Builder> implements FormFieldWithOptions.Builder<Builder> {
+    private List<Option> options;
+    private Builder(    ListSingleFormField textSingleFormField){
+      super(textSingleFormField);
+    }
+    Builder(    String fieldName){
+      super(fieldName,FormField.Type.list_single);
+    }
+    @Override public Builder addOption(    Option option){
+      if (options == null) {
+        options=new ArrayList<>();
+      }
+      options.add(option);
+      return this;
+    }
+    @Override public ListSingleFormField build(){
+      return new ListSingleFormField(this);
+    }
+    @Override public Builder getThis(){
+      return this;
+    }
+  }
+}

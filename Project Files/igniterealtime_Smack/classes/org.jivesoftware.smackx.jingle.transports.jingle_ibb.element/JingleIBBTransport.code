@@ -1,0 +1,57 @@
+/** 
+ * Transport Element for JingleInBandBytestream transports.
+ */
+public class JingleIBBTransport extends JingleContentTransport implements ExtensionElement {
+  public static final String NAMESPACE_V1="urn:xmpp:jingle:transports:ibb:1";
+  public static final QName QNAME=new QName(NAMESPACE_V1,ELEMENT);
+  public static final String ATTR_BLOCK_SIZE="block-size";
+  public static final String ATTR_SID="sid";
+  public static final short DEFAULT_BLOCK_SIZE=4096;
+  private final short blockSize;
+  private final String sid;
+  public JingleIBBTransport(){
+    this(DEFAULT_BLOCK_SIZE);
+  }
+  public JingleIBBTransport(  String sid){
+    this(DEFAULT_BLOCK_SIZE,sid);
+  }
+  public JingleIBBTransport(  short blockSize){
+    this(blockSize,StringUtils.randomString(24));
+  }
+  public JingleIBBTransport(  short blockSize,  String sid){
+    super(null);
+    if (blockSize > 0) {
+      this.blockSize=blockSize;
+    }
+ else {
+      this.blockSize=DEFAULT_BLOCK_SIZE;
+    }
+    this.sid=sid;
+  }
+  public String getSessionId(){
+    return sid;
+  }
+  public short getBlockSize(){
+    return blockSize;
+  }
+  @Override protected void addExtraAttributes(  XmlStringBuilder xml){
+    xml.attribute(ATTR_BLOCK_SIZE,blockSize);
+    xml.attribute(ATTR_SID,sid);
+  }
+  @Override public String getNamespace(){
+    return QNAME.getNamespaceURI();
+  }
+  @Override public boolean equals(  Object other){
+    if (other == null || !(other instanceof JingleIBBTransport)) {
+      return false;
+    }
+    if (this == other) {
+      return true;
+    }
+    JingleIBBTransport otherTransport=(JingleIBBTransport)other;
+    return this.getSessionId().equals(otherTransport.getSessionId()) && this.getBlockSize() == otherTransport.getBlockSize();
+  }
+  @Override public int hashCode(){
+    return this.toXML().toString().hashCode();
+  }
+}

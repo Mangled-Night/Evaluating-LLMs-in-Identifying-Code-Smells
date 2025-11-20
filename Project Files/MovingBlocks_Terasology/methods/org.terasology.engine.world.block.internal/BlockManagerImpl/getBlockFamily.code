@@ -1,0 +1,52 @@
+@Override public BlockFamily getBlockFamily(String uri){
+  if (!uri.contains(":")) {
+    Set<ResourceUrn> resourceUrns=assetManager.resolve(uri,BlockFamilyDefinition.class);
+    if (resourceUrns.size() == 1) {
+      return getBlockFamily(new BlockUri(resourceUrns.iterator().next()));
+    }
+ else {
+      if (resourceUrns.size() > 0) {
+        logger.error("Failed to resolve block family '{}', too many options - {}",uri,resourceUrns);
+      }
+ else {
+        logger.error("Failed to resolve block family '{}'",uri);
+      }
+    }
+  }
+ else {
+    try {
+      BlockUri blockUri=new BlockUri(uri);
+      return getBlockFamily(blockUri);
+    }
+ catch (    BlockUriParseException e) {
+      logger.error("Failed to resolve block family '{}', invalid uri",uri);
+    }
+  }
+  return getBlockFamily(AIR_ID);
+}
+@Override public BlockFamily getBlockFamily(BlockUri uri){
+  if (uri.getShapeUrn().isPresent() && uri.getShapeUrn().get().equals(CUBE_SHAPE_URN)) {
+    return getBlockFamily(uri.getShapelessUri());
+  }
+  BlockFamily family=registeredBlockInfo.get().registeredFamilyByUri.get(uri);
+  if (family == null && generateNewIds) {
+    Optional<BlockFamily> newFamily=loadFamily(uri);
+    if (newFamily.isPresent()) {
+      lock.lock();
+      try {
+        for (        Block block : newFamily.get().getBlocks()) {
+          block.setId(getNextId());
+        }
+        registerFamily(newFamily.get());
+      }
+ catch (      Exception ex) {
+        logger.error("Failed to register block family '{}'",newFamily,ex);
+      }
+ finally {
+        lock.unlock();
+      }
+      return newFamily.get();
+    }
+  }
+  return family;
+}

@@ -1,0 +1,7 @@
+@Test void xreadgroup(){
+  redis.xadd(key,Collections.singletonMap("key","value"));
+  redis.xgroupCreate(StreamOffset.latest(key),"group");
+  redis.xadd(key,Collections.singletonMap("key","value"));
+  List<StreamMessage<String,String>> read1=redis.xreadgroup(Consumer.from("group","consumer1"),StreamOffset.lastConsumed(key));
+  assertThat(read1).hasSize(1);
+}

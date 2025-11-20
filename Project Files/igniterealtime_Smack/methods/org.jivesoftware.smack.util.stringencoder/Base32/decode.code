@@ -1,0 +1,45 @@
+@Override public String decode(String string){
+  return Base32.decode(string);
+}
+public static String decode(String str){
+  ByteArrayOutputStream bs=new ByteArrayOutputStream();
+  byte[] raw=str.getBytes(StandardCharsets.UTF_8);
+  for (int i=0; i < raw.length; i++) {
+    char c=(char)raw[i];
+    if (!Character.isWhitespace(c)) {
+      c=Character.toUpperCase(c);
+      bs.write((byte)c);
+    }
+  }
+  while (bs.size() % 8 != 0)   bs.write('8');
+  byte[] in=bs.toByteArray();
+  bs.reset();
+  DataOutputStream ds=new DataOutputStream(bs);
+  for (int i=0; i < in.length / 8; i++) {
+    short[] s=new short[8];
+    int[] t=new int[5];
+    int padlen=8;
+    for (int j=0; j < 8; j++) {
+      char c=(char)in[i * 8 + j];
+      if (c == '8')       break;
+      s[j]=(short)ALPHABET.indexOf(in[i * 8 + j]);
+      if (s[j] < 0)       return null;
+      padlen--;
+    }
+    int blocklen=paddingToLen(padlen);
+    if (blocklen < 0)     return null;
+    t[0]=(s[0] << 3) | s[1] >> 2;
+    t[1]=((s[1] & 0x03) << 6) | (s[2] << 1) | (s[3] >> 4);
+    t[2]=((s[3] & 0x0F) << 4) | ((s[4] >> 1) & 0x0F);
+    t[3]=(s[4] << 7) | (s[5] << 2) | (s[6] >> 3);
+    t[4]=((s[6] & 0x07) << 5) | s[7];
+    try {
+      for (int j=0; j < blocklen; j++)       ds.writeByte((byte)(t[j] & 0xFF));
+    }
+ catch (    IOException e) {
+      throw new AssertionError(e);
+    }
+  }
+  String res=new String(bs.toByteArray(),StandardCharsets.UTF_8);
+  return res;
+}

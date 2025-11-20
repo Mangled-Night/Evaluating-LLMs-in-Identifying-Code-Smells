@@ -1,0 +1,13 @@
+protected final boolean waitFor(Supplier<Boolean> condition) throws InterruptedException {
+  final long deadline=System.currentTimeMillis() + getReplyTimeout();
+synchronized (internalMonitor) {
+    while (!condition.get().booleanValue()) {
+      final long now=System.currentTimeMillis();
+      if (now >= deadline) {
+        return false;
+      }
+      internalMonitor.wait(deadline - now);
+    }
+  }
+  return true;
+}

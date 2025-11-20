@@ -1,0 +1,8 @@
+@Override public void channelActive(ChannelHandlerContext ctx) throws Exception {
+  Channel channel=ctx.channel();
+  connectionEvents.fireEventRedisConnected(connection,channel.remoteAddress());
+  CommandHandler commandHandler=getCommandHandler(ctx);
+  String epid=commandHandler.getEndpoint().getId();
+  eventBus.publish(new ConnectionActivatedEvent(getRedisUri(channel),epid,commandHandler.getChannelId(),local(ctx),remote(ctx)));
+  super.channelActive(ctx);
+}

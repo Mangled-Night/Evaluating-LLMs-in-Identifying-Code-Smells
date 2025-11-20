@@ -1,0 +1,18 @@
+@Test public void expireStaleDefaultConnection(){
+  ClusterSetup.setup2Masters(clusterHelper);
+  RedisClusterClient redisClusterClient=RedisClusterClient.create(TestClientResources.get(),RedisURI.Builder.redis(host,port5).build());
+  redisClusterClient.setOptions(ClusterClientOptions.builder().topologyRefreshOptions(ClusterTopologyRefreshOptions.builder().dynamicRefreshSources(false).build()).build());
+  StatefulRedisClusterConnectionImpl<String,String> connection=(StatefulRedisClusterConnectionImpl<String,String>)redisClusterClient.connect();
+  String firstMaster=connection.sync().clusterMyId();
+  RedisClusterNode firstMasterNode=connection.getPartitions().getPartitionByNodeId(firstMaster);
+  assertThat(firstMasterNode.getUri().getPort()).isEqualTo(port5);
+  redis2.clusterForget(redis1.clusterMyId());
+  redis1.clusterForget(redis2.clusterMyId());
+  Partitions partitions=ClusterPartitionParser.parse(redis2.clusterNodes());
+  connection.setPartitions(partitions);
+  Wait.untilTrue(connection::isOpen).waitOrTimeout();
+  String secondMaster=connection.sync().clusterMyId();
+  assertThat(secondMaster).isEqualTo(redis2.clusterMyId());
+  connection.close();
+  FastShutdown.shutdown(redisClusterClient);
+}

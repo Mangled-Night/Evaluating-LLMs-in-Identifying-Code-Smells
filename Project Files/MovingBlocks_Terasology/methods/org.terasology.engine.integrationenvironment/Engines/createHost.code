@@ -1,0 +1,30 @@
+TerasologyEngine createHost(NetworkMode hostNetworkMode) throws IOException {
+  TerasologyEngine host=createHeadlessEngine();
+  host.subscribeToStateChange(new HeadlessStateChangeListener(host));
+  host.changeState(new TestingStateHeadlessSetup(dependencies,worldGeneratorUri,hostNetworkMode));
+  doneLoading=false;
+  host.subscribeToStateChange(() -> {
+    GameState newState=host.getState();
+    logger.debug("New engine state is {}",host.getState());
+    if (newState instanceof StateIngame) {
+      hostContext=newState.getContext();
+      if (hostContext == null) {
+        logger.warn("hostContext is NULL in engine state {}",newState);
+      }
+      doneLoading=true;
+    }
+ else     if (newState instanceof StateLoading) {
+      CoreRegistry.put(GameEngine.class,host);
+    }
+  }
+);
+  boolean keepTicking;
+  while (!doneLoading) {
+    keepTicking=host.tick();
+    if (!keepTicking) {
+      throw new RuntimeException(String.format("Engine stopped ticking before we got in game. Current state: %s",host.getState()));
+    }
+  }
+  logger.info("Created host: {}",host);
+  return host;
+}

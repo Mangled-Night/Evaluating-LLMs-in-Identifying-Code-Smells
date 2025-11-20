@@ -1,0 +1,8 @@
+@Test void shouldZscanIteratively(){
+  for (int i=0; i < 1000; i++) {
+    redis.zadd(key,(double)i,"value-" + i);
+  }
+  RedisReactiveCommands<String,String> reactive=redis.getStatefulConnection().reactive();
+  StepVerifier.create(ScanStream.zscan(reactive,key,ScanArgs.Builder.limit(200)).take(250)).expectNextCount(250).verifyComplete();
+  StepVerifier.create(ScanStream.zscan(reactive,key)).expectNextCount(1000).verifyComplete();
+}

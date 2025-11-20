@@ -1,0 +1,45 @@
+/** 
+ * Initialize the VR system. Note that calling this method will cause OpenVR to launch. If there is no headset connected, or if the OpenVR library fails to initialize for some reason, this will return false, and a log entry about why initialization failed will be written.
+ * @return true if successful.
+ */
+public boolean init(){
+  for (int handIndex=0; handIndex < 2; handIndex++) {
+    controllerDeviceIndex[handIndex]=-1;
+    controllerStateReference[handIndex]=new VRControllerState_t();
+    inputStateRefernceArray[handIndex]=new VRControllerState_t.ByReference();
+    inputStateRefernceArray[handIndex].setAutoRead(false);
+    inputStateRefernceArray[handIndex].setAutoWrite(false);
+    inputStateRefernceArray[handIndex].setAutoSynch(false);
+    texType[handIndex]=new Texture_t();
+  }
+  if (!initializeOpenVRLibrary()) {
+    logger.warn("JOpenVR library loading failed.");
+    return false;
+  }
+  if (!initializeJOpenVR()) {
+    logger.warn("JOpenVR initialization failed.");
+    return false;
+  }
+  int initAttempts=0;
+  boolean initSuccess=false;
+  while (!initSuccess && initAttempts < 10) {
+    try {
+      Thread.sleep(300);
+    }
+ catch (    InterruptedException ex) {
+      Thread.currentThread().interrupt();
+    }
+    initSuccess=initOpenVRCompositor(true);
+    initAttempts++;
+  }
+  if (!initOpenVROverlay()) {
+    logger.warn("VROverlay initialization failed.");
+    return false;
+  }
+  if (!initOpenVROSettings()) {
+    logger.warn("OpenVR settings initialization failed.");
+    return false;
+  }
+  initialized=true;
+  return true;
+}

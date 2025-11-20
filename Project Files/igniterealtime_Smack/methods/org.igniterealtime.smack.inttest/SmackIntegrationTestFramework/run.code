@@ -1,0 +1,76 @@
+public synchronized TestRunResult run() throws KeyManagementException, NoSuchAlgorithmException, SmackException, IOException, XMPPException, InterruptedException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+switch (config.dnsResolver) {
+case minidns:
+    MiniDnsResolver.setup();
+  break;
+case javax:
+JavaxResolver.setup();
+break;
+case dnsjava:
+DNSJavaResolver.setup();
+break;
+}
+testRunResult=new TestRunResult();
+this.connectionManager=new XmppConnectionManager(this);
+LOGGER.info("SmackIntegrationTestFramework [" + testRunResult.testRunId + ']'+ ": Starting\nSmack version: "+ Smack.getVersion());
+if (config.debugger != Configuration.Debugger.none) {
+SmackConfiguration.addDisabledSmackClass("org.jivesoftware.smack.debugger.JulDebugger");
+SmackConfiguration.DEBUG=true;
+}
+if (config.replyTimeout > 0) {
+SmackConfiguration.setDefaultReplyTimeout(config.replyTimeout);
+}
+if (config.securityMode != SecurityMode.required && config.accountRegistration == AccountRegistration.inBandRegistration) {
+AccountManager.sensitiveOperationOverInsecureConnectionDefault(true);
+}
+String[] testPackages;
+if (config.testPackages == null || config.testPackages.isEmpty()) {
+testPackages=new String[]{"org.jivesoftware.smackx","org.jivesoftware.smack"};
+}
+ else {
+testPackages=config.testPackages.toArray(new String[config.testPackages.size()]);
+}
+Reflections reflections=new Reflections(testPackages,new SubTypesScanner(),new TypeAnnotationsScanner(),new MethodAnnotationsScanner(),new MethodParameterScanner());
+Set<Class<? extends AbstractSmackIntegrationTest>> inttestClasses=reflections.getSubTypesOf(AbstractSmackIntegrationTest.class);
+Set<Class<? extends AbstractSmackLowLevelIntegrationTest>> lowLevelInttestClasses=reflections.getSubTypesOf(AbstractSmackLowLevelIntegrationTest.class);
+final int builtInTestCount=inttestClasses.size() + lowLevelInttestClasses.size();
+Set<Class<? extends AbstractSmackIntTest>> classes=new HashSet<>(builtInTestCount);
+classes.addAll(inttestClasses);
+classes.addAll(lowLevelInttestClasses);
+{
+Iterator<Class<? extends AbstractSmackIntTest>> it=classes.iterator();
+while (it.hasNext()) {
+Class<? extends AbstractSmackIntTest> clazz=it.next();
+if (Modifier.isAbstract(clazz.getModifiers())) {
+it.remove();
+}
+}
+}
+if (classes.isEmpty()) {
+throw new IllegalStateException("No test classes in " + Arrays.toString(testPackages) + " found");
+}
+LOGGER.info("SmackIntegrationTestFramework [" + testRunResult.testRunId + "]: Finished scanning for tests, preparing environment");
+environment=prepareEnvironment();
+try {
+runTests(classes);
+}
+ catch (Throwable t) {
+LOGGER.log(Level.SEVERE,"Unexpected abort because runTests() threw throwable",t);
+throw t;
+}
+ finally {
+connectionManager.disconnectAndCleanup();
+}
+return testRunResult;
+}
+public void run() throws InterruptedException, XMPPException, IOException, SmackException {
+  try {
+    executeSinttestSpecialMethod(beforeClassMethod);
+    for (    ConcreteTest concreteTest : concreteTests) {
+      runConcreteTest(concreteTest);
+    }
+  }
+  finally {
+    executeSinttestSpecialMethod(afterClassMethod);
+  }
+}

@@ -1,0 +1,28 @@
+public static Result lookup(DomainBareJid domainBareJid){
+  List<RemoteConnectionEndpointLookupFailure> lookupFailures=new ArrayList<>(1);
+  List<URI> rcUriList=null;
+  try {
+    rcUriList=HttpLookupMethod.lookup(domainBareJid,LinkRelation.WEBSOCKET);
+  }
+ catch (  IOException|XmlPullParserException|URISyntaxException e) {
+    lookupFailures.add(new RemoteConnectionEndpointLookupFailure.HttpLookupFailure(domainBareJid,e));
+    return new Result(lookupFailures);
+  }
+  List<SecureWebSocketRemoteConnectionEndpoint> discoveredSecureEndpoints=new ArrayList<>(rcUriList.size());
+  List<InsecureWebSocketRemoteConnectionEndpoint> discoveredInsecureEndpoints=new ArrayList<>(rcUriList.size());
+  for (  URI webSocketUri : rcUriList) {
+    WebSocketRemoteConnectionEndpoint wsRce=WebSocketRemoteConnectionEndpoint.from(webSocketUri);
+    if (wsRce instanceof SecureWebSocketRemoteConnectionEndpoint) {
+      SecureWebSocketRemoteConnectionEndpoint secureWsRce=(SecureWebSocketRemoteConnectionEndpoint)wsRce;
+      discoveredSecureEndpoints.add(secureWsRce);
+    }
+ else     if (wsRce instanceof InsecureWebSocketRemoteConnectionEndpoint) {
+      InsecureWebSocketRemoteConnectionEndpoint insecureWsRce=(InsecureWebSocketRemoteConnectionEndpoint)wsRce;
+      discoveredInsecureEndpoints.add(insecureWsRce);
+    }
+ else {
+      throw new AssertionError();
+    }
+  }
+  return new Result(discoveredSecureEndpoints,discoveredInsecureEndpoints,lookupFailures);
+}

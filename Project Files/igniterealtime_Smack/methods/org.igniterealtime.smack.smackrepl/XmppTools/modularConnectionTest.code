@@ -1,0 +1,14 @@
+public static void modularConnectionTest(ModularXmppClientToServerConnection connection,String messageTo) throws XMPPException, SmackException, IOException, InterruptedException {
+  connection.addConnectionStateMachineListener((event,c) -> {
+    Logger.getAnonymousLogger().info("Connection event: " + event);
+  }
+);
+  connection.connect();
+  connection.login();
+  XmppTools.sendItsAlive(messageTo,connection);
+  Thread.sleep(1000);
+  connection.disconnect();
+  ModularXmppClientToServerConnection.Stats connectionStats=connection.getStats();
+  ServiceDiscoveryManager.Stats serviceDiscoveryManagerStats=ServiceDiscoveryManager.getInstanceFor(connection).getStats();
+  System.out.println("NIO successfully finished, yeah!\n" + connectionStats + '\n'+ serviceDiscoveryManagerStats);
+}

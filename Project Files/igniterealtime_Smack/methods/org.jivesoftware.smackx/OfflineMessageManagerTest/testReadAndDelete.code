@@ -1,0 +1,47 @@
+/** 
+ * While user2 is connected but unavailable, user1 sends 2 messages to user1. User2 then performs some "Flexible Offline Message Retrieval" checking the number of offline messages, retriving the headers, then the real messages of the headers and finally removing the loaded messages.
+ */
+public void testReadAndDelete(){
+  getConnection(1).sendStanza(new Presence(Presence.Type.unavailable));
+  try {
+    Thread.sleep(500);
+    Chat chat=getConnection(0).getChatManager().createChat(getBareJID(1),null);
+    chat.sendMessage("Test 1");
+    chat.sendMessage("Test 2");
+    Thread.sleep(500);
+    OfflineMessageManager offlineManager=new OfflineMessageManager(getConnection(1));
+    assertEquals("Wrong number of offline messages",2,offlineManager.getMessageCount());
+    Iterator<OfflineMessageHeader> headers=offlineManager.getHeaders();
+    assertTrue("No message header was found",headers.hasNext());
+    List<String> stamps=new ArrayList<String>();
+    while (headers.hasNext()) {
+      OfflineMessageHeader header=headers.next();
+      assertEquals("Incorrect sender",getFullJID(0),header.getJid());
+      assertNotNull("No stamp was found in the message header",header.getStamp());
+      stamps.add(header.getStamp());
+    }
+    assertEquals("Wrong number of headers",2,stamps.size());
+    Iterator<Message> messages=offlineManager.getMessages(stamps);
+    assertTrue("No message was found",messages.hasNext());
+    stamps=new ArrayList<String>();
+    while (messages.hasNext()) {
+      Message message=messages.next();
+      OfflineMessageInfo info=(OfflineMessageInfo)message.getExtension("offline","http://jabber.org/protocol/offline");
+      assertNotNull("No offline information was included in the offline message",info);
+      assertNotNull("No stamp was found in the message header",info.getNode());
+      stamps.add(info.getNode());
+    }
+    assertEquals("Wrong number of messages",2,stamps.size());
+    assertEquals("Wrong number of offline messages",2,offlineManager.getMessageCount());
+    StanzaCollector collector=getConnection(1).createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+    getConnection(1).sendStanza(new Presence(Presence.Type.available));
+    Message message=(Message)collector.nextResult(2500);
+    assertNull("An offline message was sent from the server",message);
+    offlineManager.deleteMessages(stamps);
+    assertEquals("Wrong number of offline messages",0,offlineManager.getMessageCount());
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

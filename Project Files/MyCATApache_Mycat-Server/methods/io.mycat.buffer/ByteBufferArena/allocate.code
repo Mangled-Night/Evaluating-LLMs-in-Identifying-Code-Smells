@@ -1,0 +1,41 @@
+@Override public ByteBuffer allocate(int reqCapacity){
+  try {
+    ByteBuffer byteBuffer=null;
+    int i=0, count=0;
+    while (byteBuffer == null) {
+      if (i > 5) {
+        i=0;
+        count=failCount.incrementAndGet();
+        if (count > FAIL_THRESHOLD) {
+          try {
+            expand();
+          }
+  finally {
+          }
+        }
+      }
+      byteBuffer=q[i].allocate(reqCapacity);
+      i++;
+    }
+    capacity.addAndGet(-reqCapacity);
+    final Thread thread=Thread.currentThread();
+    final long threadId=thread.getId();
+    if (memoryUsage.containsKey(threadId)) {
+      memoryUsage.put(threadId,memoryUsage.get(thread.getId()) + reqCapacity);
+    }
+ else {
+      memoryUsage.put(threadId,(long)reqCapacity);
+    }
+    if (sharedOptsCount.containsKey(thread)) {
+      int currentCount=sharedOptsCount.get(thread);
+      currentCount++;
+      sharedOptsCount.put(thread,currentCount);
+    }
+ else {
+      sharedOptsCount.put(thread,0);
+    }
+    return byteBuffer;
+  }
+  finally {
+  }
+}

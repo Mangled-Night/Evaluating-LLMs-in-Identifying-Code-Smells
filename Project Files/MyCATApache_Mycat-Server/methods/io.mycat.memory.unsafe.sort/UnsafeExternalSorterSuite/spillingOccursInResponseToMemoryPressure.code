@@ -1,0 +1,22 @@
+@Test public void spillingOccursInResponseToMemoryPressure() throws Exception {
+  final UnsafeExternalSorter sorter=newSorter();
+  final int numRecords=(int)(pageSizeBytes / (4 + 4));
+  for (int i=0; i < numRecords; i++) {
+    insertNumber(sorter,numRecords - i);
+  }
+  assertEquals(1,sorter.getNumberOfAllocatedPages());
+  memoryManager.markExecutionAsOutOfMemoryOnce();
+  insertNumber(sorter,0);
+  UnsafeSorterIterator iter=sorter.getSortedIterator();
+  int i=0;
+  while (iter.hasNext()) {
+    iter.loadNext();
+    assertEquals(i,iter.getKeyPrefix());
+    assertEquals(4,iter.getRecordLength());
+    assertEquals(i,Platform.getInt(iter.getBaseObject(),iter.getBaseOffset()));
+    i++;
+  }
+  assertEquals(numRecords + 1,i);
+  sorter.cleanupResources();
+  assertSpillFilesWereCleanedUp();
+}

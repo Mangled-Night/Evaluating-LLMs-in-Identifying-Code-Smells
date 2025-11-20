@@ -1,0 +1,50 @@
+@Override public void registerEventHandler(ComponentSystem handler){
+  Class handlerClass=handler.getClass();
+  if (!Modifier.isPublic(handlerClass.getModifiers())) {
+    logger.error("Cannot register handler {}, must be public",handler.getClass().getName());
+    return;
+  }
+  logger.debug("Registering event handler " + handlerClass.getName());
+  for (  Method method : handlerClass.getMethods()) {
+    ReceiveEvent receiveEventAnnotation=method.getAnnotation(ReceiveEvent.class);
+    if (receiveEventAnnotation != null) {
+      NetFilterEvent netFilterAnnotation=method.getAnnotation(NetFilterEvent.class);
+      if (netFilterAnnotation != null && !netFilterAnnotation.netFilter().isValidFor(networkSystem.getMode().isAuthority(),false)) {
+        continue;
+      }
+      int priority;
+      Priority priorityAnnotation=method.getAnnotation(Priority.class);
+      if (priorityAnnotation != null) {
+        priority=priorityAnnotation.value();
+      }
+ else {
+        priority=EventPriority.PRIORITY_NORMAL;
+      }
+      String activity=null;
+      Activity activityAnnotation=method.getAnnotation(Activity.class);
+      if (activityAnnotation != null) {
+        activity=activityAnnotation.value();
+      }
+      Set<Class<? extends Component>> requiredComponents=Sets.newLinkedHashSet();
+      method.setAccessible(true);
+      Class<?>[] types=method.getParameterTypes();
+      logger.debug("Found method: " + method.toString());
+      if (!Event.class.isAssignableFrom(types[0]) || !EntityRef.class.isAssignableFrom(types[1])) {
+        logger.error("Invalid event handler method: {}",method.getName());
+        return;
+      }
+      requiredComponents.addAll(Arrays.asList(receiveEventAnnotation.components()));
+      List<Class<? extends Component>> componentParams=Lists.newArrayList();
+      for (int i=2; i < types.length; ++i) {
+        if (!Component.class.isAssignableFrom(types[i])) {
+          logger.error("Invalid event handler method: {} - {} is not a component class",method.getName(),types[i]);
+          return;
+        }
+        requiredComponents.add((Class<? extends Component>)types[i]);
+        componentParams.add((Class<? extends Component>)types[i]);
+      }
+      EventSystemReplayImpl.ByteCodeEventHandlerInfo handlerInfo=new EventSystemReplayImpl.ByteCodeEventHandlerInfo(handler,method,priority,activity,requiredComponents,componentParams);
+      addEventHandler((Class<? extends Event>)types[0],handlerInfo,requiredComponents);
+    }
+  }
+}

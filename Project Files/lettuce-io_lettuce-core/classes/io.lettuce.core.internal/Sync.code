@@ -1,0 +1,60 @@
+static class Sync<K,T extends AsyncCloseable,F extends CompletionStage<T>> {
+  private static final int PHASE_IN_PROGRESS=0;
+  private static final int PHASE_COMPLETE=1;
+  private static final int PHASE_FAILED=2;
+  private static final int PHASE_CANCELED=3;
+  @SuppressWarnings({"rawtypes","unchecked"}) private static final AtomicIntegerFieldUpdater<Sync> PHASE=AtomicIntegerFieldUpdater.newUpdater(Sync.class,"phase");
+  @SuppressWarnings("unused") private volatile int phase=PHASE_IN_PROGRESS;
+  private volatile T connection;
+  private final K key;
+  private final F future;
+  @SuppressWarnings("unchecked") public Sync(  K key,  F future){
+    this.key=key;
+    this.future=(F)future.whenComplete((connection,throwable) -> {
+      if (throwable != null) {
+        if (throwable instanceof CancellationException) {
+          PHASE.compareAndSet(this,PHASE_IN_PROGRESS,PHASE_CANCELED);
+        }
+        PHASE.compareAndSet(this,PHASE_IN_PROGRESS,PHASE_FAILED);
+      }
+      if (PHASE.compareAndSet(this,PHASE_IN_PROGRESS,PHASE_COMPLETE)) {
+        if (connection != null) {
+          Sync.this.connection=connection;
+        }
+      }
+    }
+);
+  }
+  @SuppressWarnings("unchecked") public Sync(  K key,  T value){
+    this.key=key;
+    this.connection=value;
+    this.future=(F)CompletableFuture.completedFuture(value);
+    PHASE.set(this,PHASE_COMPLETE);
+  }
+  public void cancel(){
+    future.toCompletableFuture().cancel(false);
+    doWithConnection(AsyncCloseable::closeAsync);
+  }
+  public F getConnection(){
+    return future;
+  }
+  void doWithConnection(  Consumer<? super T> action){
+    if (isComplete()) {
+      action.accept(connection);
+    }
+ else {
+      future.thenAccept(action);
+    }
+  }
+  void doWithConnection(  BiConsumer<? super K,? super T> action){
+    if (isComplete()) {
+      action.accept(key,connection);
+    }
+ else {
+      future.thenAccept(c -> action.accept(key,c));
+    }
+  }
+  private boolean isComplete(){
+    return PHASE.get(this) == PHASE_COMPLETE;
+  }
+}

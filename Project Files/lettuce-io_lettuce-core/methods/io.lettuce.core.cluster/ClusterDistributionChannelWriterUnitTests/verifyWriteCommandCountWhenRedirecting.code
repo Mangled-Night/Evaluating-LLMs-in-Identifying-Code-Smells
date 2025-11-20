@@ -1,0 +1,24 @@
+private void verifyWriteCommandCountWhenRedirecting(boolean isMoved){
+  String outputError=isMoved ? "MOVED 1234 127.0.0.1:6379" : "ASK 1234 127.0.0.1:6379";
+  CommandArgs<String,String> commandArgs=new CommandArgs<>(StringCodec.UTF8).addKey("KEY");
+  ValueOutput<String,String> valueOutput=new ValueOutput<>(StringCodec.UTF8);
+  Command<String,String,String> command=new Command<>(CommandType.GET,valueOutput,commandArgs);
+  AsyncCommand<String,String,String> asyncCommand=new AsyncCommand<>(command);
+  ClusterCommand<String,String,String> clusterCommand=new ClusterCommand<>(asyncCommand,defaultWriter,2);
+  clusterCommand.getOutput().setError(outputError);
+  clusterDistributionChannelWriter.setClusterConnectionProvider(pooledClusterConnectionProvider);
+  when(connectFuture.isDone()).thenReturn(true);
+  when(connectFuture.isCompletedExceptionally()).thenReturn(false);
+  when(connectFuture.join()).thenReturn(connection);
+  when(pooledClusterConnectionProvider.getConnectionAsync(any(ConnectionIntent.class),anyString(),anyInt())).thenReturn(connectFuture);
+  when(connection.getChannelWriter()).thenReturn(clusterNodeEndpoint);
+  clusterDistributionChannelWriter.write(clusterCommand);
+  if (isMoved) {
+    verify(clusterNodeEndpoint,never()).write(anyList());
+    verify(clusterNodeEndpoint,times(1)).write(ArgumentMatchers.<RedisCommand<String,String,String>>any());
+  }
+ else {
+    verify(clusterNodeEndpoint,times(1)).write(anyList());
+    verify(clusterNodeEndpoint,never()).write(ArgumentMatchers.<RedisCommand<String,String,String>>any());
+  }
+}

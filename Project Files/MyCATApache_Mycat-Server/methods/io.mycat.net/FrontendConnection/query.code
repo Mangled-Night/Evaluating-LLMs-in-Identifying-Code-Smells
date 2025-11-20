@@ -1,0 +1,63 @@
+public void query(String sql){
+  if (sql == null || sql.length() == 0) {
+    writeErrMessage(ErrorCode.ER_NOT_ALLOWED_COMMAND,"Empty SQL");
+    return;
+  }
+  if (LOGGER.isDebugEnabled()) {
+    LOGGER.debug(new StringBuilder().append(this).append(" ").append(sql).toString());
+  }
+  if (sql.endsWith(";")) {
+    sql=sql.substring(0,sql.length() - 1);
+  }
+  if (sql.indexOf("/* ApplicationName") >= 0) {
+    sql=sql.replaceFirst("\\/\\*.*\\*\\/\\s*","");
+  }
+  this.setExecuteSql(sql);
+  if (!privileges.checkFirewallSQLPolicy(user,sql)) {
+    writeErrMessage(ErrorCode.ERR_WRONG_USED,"The statement is unsafe SQL, reject for user '" + user + "'");
+    return;
+  }
+  try {
+    boolean isPassed=privileges.checkDmlPrivilege(user,schema,sql);
+    if (!isPassed) {
+      writeErrMessage(ErrorCode.ERR_WRONG_USED,"The statement DML privilege check is not passed, reject for user '" + user + "'");
+      return;
+    }
+  }
+ catch (  com.alibaba.druid.sql.parser.ParserException e1) {
+    writeErrMessage(ErrorCode.ERR_WRONG_USED,e1.getMessage());
+    LOGGER.error("parse exception",e1);
+    return;
+  }
+  if (queryHandler != null) {
+    queryHandler.setReadOnly(privileges.isReadOnly(user));
+    queryHandler.query(sql);
+  }
+ else {
+    writeErrMessage(ErrorCode.ER_UNKNOWN_COM_ERROR,"Query unsupported!");
+  }
+}
+public void query(byte[] data){
+  final String sql;
+  try {
+    MySQLMessage mm=new MySQLMessage(data);
+    mm.position(5);
+    sql=mm.readString(charset);
+  }
+ catch (  UnsupportedEncodingException e) {
+    writeErrMessage(ErrorCode.ER_UNKNOWN_CHARACTER_SET,"Unknown charset '" + charset + "'");
+    return;
+  }
+  MycatServer.getInstance().getBusinessExecutor().execute(new Runnable(){
+    @Override public void run(){
+      try {
+        FrontendConnection.this.query(sql);
+      }
+ catch (      Throwable t) {
+        FrontendConnection.this.writeErrMessage(ErrorCode.ERR_HANDLE_DATA,t.getMessage());
+        FrontendConnection.LOGGER.error("uncaught exception executing sql:" + FrontendConnection.this + ",[ "+ sql+ "]",t);
+      }
+    }
+  }
+);
+}

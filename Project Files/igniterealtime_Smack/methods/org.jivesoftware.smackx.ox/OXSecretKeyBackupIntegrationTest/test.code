@@ -1,0 +1,31 @@
+@SmackIntegrationTest public void test() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, IOException, InterruptedException, PubSubException.NotALeafNodeException, SmackException.NoResponseException, SmackException.NotConnectedException, XMPPException.XMPPErrorException, SmackException.NotLoggedInException, SmackException.FeatureNotSupportedException, MissingUserIdOnKeyException, NoBackupFoundException, InvalidBackupCodeException, PGPException, MissingOpenPgpKeyException {
+  OpenPgpStore beforeStore=new FileBasedOpenPgpStore(beforePath);
+  beforeStore.setKeyRingProtector(new UnprotectedKeysProtector());
+  PainlessOpenPgpProvider beforeProvider=new PainlessOpenPgpProvider(beforeStore);
+  OpenPgpManager openPgpManager=OpenPgpManager.getInstanceFor(aliceConnection);
+  openPgpManager.setOpenPgpProvider(beforeProvider);
+  OpenPgpSelf self=openPgpManager.getOpenPgpSelf();
+  assertNull(self.getSigningKeyFingerprint());
+  OpenPgpV4Fingerprint keyFingerprint=openPgpManager.generateAndImportKeyPair(alice);
+  assertEquals(keyFingerprint,self.getSigningKeyFingerprint());
+  assertTrue(self.getSecretKeys().contains(keyFingerprint.getKeyId()));
+  PGPSecretKeyRing beforeSec=beforeStore.getSecretKeyRing(alice,keyFingerprint);
+  assertNotNull(beforeSec);
+  PGPPublicKeyRing beforePub=beforeStore.getPublicKeyRing(alice,keyFingerprint);
+  assertNotNull(beforePub);
+  OpenPgpSecretKeyBackupPassphrase backupPassphrase=openPgpManager.backupSecretKeyToServer(availableSecretKeys -> availableSecretKeys);
+  FileBasedOpenPgpStore afterStore=new FileBasedOpenPgpStore(afterPath);
+  afterStore.setKeyRingProtector(new UnprotectedKeysProtector());
+  PainlessOpenPgpProvider afterProvider=new PainlessOpenPgpProvider(afterStore);
+  openPgpManager.setOpenPgpProvider(afterProvider);
+  OpenPgpV4Fingerprint fingerprint=openPgpManager.restoreSecretKeyServerBackup(() -> backupPassphrase);
+  assertEquals(keyFingerprint,fingerprint);
+  assertTrue(self.getSecretKeys().contains(keyFingerprint.getKeyId()));
+  assertEquals(keyFingerprint,self.getSigningKeyFingerprint());
+  PGPSecretKeyRing afterSec=afterStore.getSecretKeyRing(alice,keyFingerprint);
+  assertNotNull(afterSec);
+  assertArrayEquals(beforeSec.getEncoded(),afterSec.getEncoded());
+  PGPPublicKeyRing afterPub=afterStore.getPublicKeyRing(alice,keyFingerprint);
+  assertNotNull(afterPub);
+  assertArrayEquals(beforePub.getEncoded(),afterPub.getEncoded());
+}

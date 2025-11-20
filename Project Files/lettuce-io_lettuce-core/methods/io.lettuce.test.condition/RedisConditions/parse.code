@@ -1,0 +1,22 @@
+/** 
+ * Parses the given string representation of a version into a  {@link Version} object.
+ * @param version must not be {@code null} or empty.
+ * @return
+ */
+public static Version parse(String version){
+  LettuceAssert.notEmpty(version,"Version must not be null o empty!");
+  String[] parts=version.trim().split("\\.");
+  int[] intParts=new int[parts.length];
+  for (int i=0; i < parts.length; i++) {
+    String input=i == parts.length - 1 ? parts[i].replaceAll("\\D.*","") : parts[i];
+    if (LettuceStrings.isNotEmpty(input)) {
+      try {
+        intParts[i]=Integer.parseInt(input);
+      }
+ catch (      IllegalArgumentException o_O) {
+        throw new IllegalArgumentException(String.format(VERSION_PARSE_ERROR,input,version),o_O);
+      }
+    }
+  }
+  return new Version(intParts);
+}

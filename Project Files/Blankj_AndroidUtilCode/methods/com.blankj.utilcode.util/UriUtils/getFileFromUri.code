@@ -1,0 +1,51 @@
+private static File getFileFromUri(final Uri uri,final String code){
+  return getFileFromUri(uri,null,null,code);
+}
+private static File getFileFromUri(final Uri uri,final String selection,final String[] selectionArgs,final String code){
+  if ("com.google.android.apps.photos.content".equals(uri.getAuthority())) {
+    if (!TextUtils.isEmpty(uri.getLastPathSegment())) {
+      return new File(uri.getLastPathSegment());
+    }
+  }
+ else   if ("com.tencent.mtt.fileprovider".equals(uri.getAuthority())) {
+    String path=uri.getPath();
+    if (!TextUtils.isEmpty(path)) {
+      File fileDir=Environment.getExternalStorageDirectory();
+      return new File(fileDir,path.substring("/QQBrowser".length(),path.length()));
+    }
+  }
+ else   if ("com.huawei.hidisk.fileprovider".equals(uri.getAuthority())) {
+    String path=uri.getPath();
+    if (!TextUtils.isEmpty(path)) {
+      return new File(path.replace("/root",""));
+    }
+  }
+  final Cursor cursor=Utils.getApp().getContentResolver().query(uri,new String[]{"_data"},selection,selectionArgs,null);
+  if (cursor == null) {
+    Log.d("UriUtils",uri.toString() + " parse failed(cursor is null). -> " + code);
+    return null;
+  }
+  try {
+    if (cursor.moveToFirst()) {
+      final int columnIndex=cursor.getColumnIndex("_data");
+      if (columnIndex > -1) {
+        return new File(cursor.getString(columnIndex));
+      }
+ else {
+        Log.d("UriUtils",uri.toString() + " parse failed(columnIndex: " + columnIndex+ " is wrong). -> "+ code);
+        return null;
+      }
+    }
+ else {
+      Log.d("UriUtils",uri.toString() + " parse failed(moveToFirst return false). -> " + code);
+      return null;
+    }
+  }
+ catch (  Exception e) {
+    Log.d("UriUtils",uri.toString() + " parse failed. -> " + code);
+    return null;
+  }
+ finally {
+    cursor.close();
+  }
+}

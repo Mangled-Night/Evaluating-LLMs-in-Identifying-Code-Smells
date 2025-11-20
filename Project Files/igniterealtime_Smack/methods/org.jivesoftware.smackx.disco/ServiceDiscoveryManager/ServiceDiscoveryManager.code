@@ -1,0 +1,63 @@
+/** 
+ * Creates a new ServiceDiscoveryManager for a given XMPPConnection. This means that the service manager will respond to any service discovery request that the connection may receive.
+ * @param connection the connection to which a ServiceDiscoveryManager is going to be created.
+ */
+private ServiceDiscoveryManager(XMPPConnection connection){
+  super(connection);
+  addFeature(DiscoverInfo.NAMESPACE);
+  addFeature(DiscoverItems.NAMESPACE);
+  connection.registerIQRequestHandler(new AbstractIqRequestHandler(DiscoverItems.ELEMENT,DiscoverItems.NAMESPACE,IQ.Type.get,Mode.async){
+    @Override public IQ handleIQRequest(    IQ iqRequest){
+      DiscoverItems discoverItems=(DiscoverItems)iqRequest;
+      DiscoverItems response=new DiscoverItems();
+      response.setType(IQ.Type.result);
+      response.setTo(discoverItems.getFrom());
+      response.setStanzaId(discoverItems.getStanzaId());
+      response.setNode(discoverItems.getNode());
+      NodeInformationProvider nodeInformationProvider=getNodeInformationProvider(discoverItems.getNode());
+      if (nodeInformationProvider != null) {
+        response.addItems(nodeInformationProvider.getNodeItems());
+        response.addExtensions(nodeInformationProvider.getNodePacketExtensions());
+      }
+ else       if (discoverItems.getNode() != null) {
+        response.setType(IQ.Type.error);
+        response.setError(StanzaError.getBuilder(StanzaError.Condition.item_not_found).build());
+      }
+      return response;
+    }
+  }
+);
+  connection.registerIQRequestHandler(new AbstractIqRequestHandler(DiscoverInfo.ELEMENT,DiscoverInfo.NAMESPACE,IQ.Type.get,Mode.async){
+    @Override public IQ handleIQRequest(    IQ iqRequest){
+      DiscoverInfo discoverInfo=(DiscoverInfo)iqRequest;
+      DiscoverInfoBuilder responseBuilder=DiscoverInfoBuilder.buildResponseFor(discoverInfo,IQ.ResponseType.result);
+      if (discoverInfo.getNode() == null) {
+        addDiscoverInfoTo(responseBuilder);
+      }
+ else {
+        NodeInformationProvider nodeInformationProvider=getNodeInformationProvider(discoverInfo.getNode());
+        if (nodeInformationProvider != null) {
+          responseBuilder.addFeatures(nodeInformationProvider.getNodeFeatures());
+          responseBuilder.addIdentities(nodeInformationProvider.getNodeIdentities());
+          responseBuilder.addOptExtensions(nodeInformationProvider.getNodePacketExtensions());
+        }
+ else {
+          responseBuilder.ofType(IQ.Type.error);
+          responseBuilder.setError(StanzaError.getBuilder(StanzaError.Condition.item_not_found).build());
+        }
+      }
+      DiscoverInfo response=responseBuilder.build();
+      return response;
+    }
+  }
+);
+  connection.addConnectionListener(new ConnectionListener(){
+    @Override public void authenticated(    XMPPConnection connection,    boolean resumed){
+      if (!resumed) {
+        presenceSend=null;
+      }
+    }
+  }
+);
+  connection.addStanzaSendingListener(p -> presenceSend=(Presence)p,PresenceTypeFilter.OUTGOING_PRESENCE_BROADCAST);
+}

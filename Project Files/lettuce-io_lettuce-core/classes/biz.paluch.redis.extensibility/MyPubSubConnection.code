@@ -1,0 +1,23 @@
+/** 
+ * Demo code for extending a RedisPubSubConnectionImpl.
+ * @author Mark Paluch
+ */
+@SuppressWarnings("unchecked") class MyPubSubConnection<K,V> extends StatefulRedisPubSubConnectionImpl<K,V> {
+  private AtomicInteger subscriptions=new AtomicInteger();
+  /** 
+ * Initialize a new connection.
+ * @param endpoint
+ * @param writer the channel writer
+ * @param codec Codec used to encode/decode keys and values.
+ * @param timeout Maximum time to wait for a response.
+ */
+  public MyPubSubConnection(  PubSubEndpoint<K,V> endpoint,  RedisChannelWriter writer,  RedisCodec<K,V> codec,  Duration timeout){
+    super(endpoint,writer,codec,timeout);
+  }
+  @Override public <T>RedisCommand<K,V,T> dispatch(  RedisCommand<K,V,T> command){
+    if (command.getType() == CommandType.SUBSCRIBE) {
+      subscriptions.incrementAndGet();
+    }
+    return super.dispatch(command);
+  }
+}

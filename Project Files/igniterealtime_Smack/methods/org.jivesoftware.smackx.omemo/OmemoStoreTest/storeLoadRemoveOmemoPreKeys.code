@@ -1,0 +1,22 @@
+@Test public void storeLoadRemoveOmemoPreKeys() throws IOException, InterruptedException {
+  TreeMap<Integer,T_PreKey> before=store.generateOmemoPreKeys(1,10);
+  assertEquals("The store must have no prekeys before this test.",0,store.loadOmemoPreKeys(alice).size());
+  store.storeOmemoPreKeys(alice,before);
+  TreeMap<Integer,T_PreKey> after=store.loadOmemoPreKeys(alice);
+  assertNotNull("Loaded preKeys must not be null.",after);
+  assertEquals("Loaded preKey count must equal stored count.",before.size(),after.size());
+  assertNull("Non-existing preKey must be returned as null.",store.loadOmemoPreKey(alice,10000));
+  int last=after.size();
+  for (int i=1; i <= last; i++) {
+    T_PreKey bKey=before.get(i);
+    T_PreKey aKey=after.get(i);
+    assertTrue("Loaded keys must equal stored ones.",Arrays.equals(store.keyUtil().preKeyToBytes(bKey),store.keyUtil().preKeyToBytes(aKey)));
+    T_PreKey rKey=store.loadOmemoPreKey(alice,i);
+    assertNotNull("Randomly accessed preKeys must not be null.",rKey);
+    assertTrue("Randomly accessed preKeys must equal the stored ones.",Arrays.equals(store.keyUtil().preKeyToBytes(aKey),store.keyUtil().preKeyToBytes(rKey)));
+    store.removeOmemoPreKey(alice,i);
+    assertNull("PreKey must be null after deletion.",store.loadOmemoPreKey(alice,i));
+  }
+  TreeMap<Integer,T_PreKey> postDeletion=store.loadOmemoPreKeys(alice);
+  assertSame("PreKey count must equal 0 after deletion of all keys.",0,postDeletion.size());
+}

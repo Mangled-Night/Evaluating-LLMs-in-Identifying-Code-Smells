@@ -1,0 +1,36 @@
+/** 
+ * @param inputConnectionId Input BufferPairConnection id is a number of the input connection on this node.Chosen arbitrarily, integers starting by 1 typically.
+ * @param fromConnection BufferPairConnection obtained form another node's output.
+ */
+private void connectBufferPair(Node toNode,int inputConnectionId,DependencyConnection fromConnection){
+  if (!fromConnection.getConnectedConnections().isEmpty()) {
+    logger.info("Warning, " + fromConnection + "connection is already read somewhere else.");
+  }
+  if (toNode.addInputConnection(inputConnectionId,fromConnection)) {
+    DependencyConnection localConnection=toNode.getInputBufferPairConnection(inputConnectionId);
+    localConnection.connectInputToOutput(fromConnection);
+  }
+ else {
+    logger.info(toNode.getUri() + ".connectFbo(" + inputConnectionId+ ", "+ fromConnection.getName()+ "):"+ " Connection already existed. Testing for its connections..");
+    DependencyConnection localConnection=toNode.getInputBufferPairConnection(inputConnectionId);
+    if (!localConnection.getConnectedConnections().isEmpty()) {
+      if (!localConnection.getConnectedConnections().containsKey(fromConnection)) {
+        localConnection.connectInputToOutput(fromConnection);
+      }
+ else {
+        throw new RuntimeException(" Could not connect node " + toNode + ", inputConnection with id "+ inputConnectionId+ " already connected to "+ localConnection.getConnectedConnections());
+      }
+    }
+  }
+}
+/** 
+ * Connect BufferPair output of fromNode to toNode's BufferPair input.
+ * @param toNode Input node
+ * @param inputId Number/id of input
+ * @param fromNode Output node
+ * @param outputId Number/id of output
+ */
+public void connectBufferPair(Node fromNode,int outputId,Node toNode,int inputId){
+  connectBufferPair(toNode,inputId,fromNode.getOutputBufferPairConnection(outputId));
+  logger.debug("Connected " + fromNode.getOutputBufferPairConnection(outputId) + " to "+ toNode+ ".");
+}

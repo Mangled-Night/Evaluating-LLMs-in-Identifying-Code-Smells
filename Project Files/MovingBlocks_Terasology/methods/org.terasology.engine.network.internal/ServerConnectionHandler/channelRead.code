@@ -1,0 +1,17 @@
+@Override public void channelRead(ChannelHandlerContext ctx,Object msg) throws Exception {
+  NetData.NetMessage message=(NetData.NetMessage)msg;
+  if (message.hasServerInfoRequest()) {
+    NetData.ServerInfoMessage serverInfo=networkSystem.getServerInfoMessage();
+    ctx.channel().writeAndFlush(NetData.NetMessage.newBuilder().setServerInfo(serverInfo).setTime(serverInfo.getTime()).build());
+  }
+ else   if (message.hasJoin()) {
+    receivedConnect(message.getJoin());
+  }
+ else   if (message.getModuleRequestCount() > 0) {
+    sendModules(message.getModuleRequestList());
+  }
+ else {
+    super.channelRead(ctx,msg);
+    logger.error("Received unexpected message");
+  }
+}

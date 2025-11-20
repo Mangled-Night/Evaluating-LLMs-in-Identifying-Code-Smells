@@ -1,0 +1,29 @@
+/** 
+ * Register the listenerJingles, waiting for a Jingle stanza that tries to establish a new session.
+ */
+private void initJingleSessionRequestListeners(){
+  StanzaFilter initRequestFilter=new StanzaFilter(){
+    @Override public boolean accept(    Stanza pin){
+      if (pin instanceof IQ) {
+        IQ iq=(IQ)pin;
+        if (iq.getType().equals(IQ.Type.set)) {
+          if (iq instanceof Jingle) {
+            Jingle jin=(Jingle)pin;
+            if (jin.getAction().equals(JingleActionEnum.SESSION_INITIATE)) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
+  }
+;
+  jingleSessionRequestListeners=new ArrayList<>();
+  connection.addAsyncStanzaListener(new StanzaListener(){
+    @Override public void processStanza(    Stanza packet){
+      triggerSessionRequested((Jingle)packet);
+    }
+  }
+,initRequestFilter);
+}

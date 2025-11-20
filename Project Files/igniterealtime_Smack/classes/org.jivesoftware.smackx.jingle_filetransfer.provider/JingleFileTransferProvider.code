@@ -1,0 +1,83 @@
+/** 
+ * Provider for JingleContentDescriptionFileTransfer elements.
+ */
+public class JingleFileTransferProvider extends JingleContentDescriptionProvider<JingleFileTransfer> {
+  @Override public JingleFileTransfer parse(  XmlPullParser parser,  int initialDepth,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException, ParseException {
+    ArrayList<JingleContentDescriptionChildElement> payloads=new ArrayList<>();
+    JingleFileTransferChild.Builder builder=JingleFileTransferChild.getBuilder();
+    String elementName;
+    while (true) {
+      XmlPullParser.TagEvent tag=parser.nextTag();
+switch (tag) {
+case START_ELEMENT:
+        elementName=parser.getName();
+switch (elementName) {
+case JingleFileTransferChild.ELEM_DATE:
+        builder.setDate(XmppDateTime.parseXEP0082Date(parser.nextText()));
+      break;
+case JingleFileTransferChild.ELEM_DESC:
+    builder.setDescription(parser.nextText());
+  break;
+case JingleFileTransferChild.ELEM_MEDIA_TYPE:
+builder.setMediaType(parser.nextText());
+break;
+case JingleFileTransferChild.ELEM_NAME:
+builder.setName(parser.nextText());
+break;
+case JingleFileTransferChild.ELEM_SIZE:
+builder.setSize(Integer.parseInt(parser.nextText()));
+break;
+case Range.ELEMENT:
+Range range=parseRangeElement(parser);
+builder.setRange(range);
+break;
+case HashElement.ELEMENT:
+HashElement hashElement=HashElementProvider.INSTANCE.parse(parser);
+builder.setHash(hashElement);
+break;
+}
+break;
+case END_ELEMENT:
+elementName=parser.getName();
+switch (elementName) {
+case JingleFileTransferChild.ELEMENT:
+payloads.add(builder.build());
+builder=JingleFileTransferChild.getBuilder();
+break;
+case JingleContentDescription.ELEMENT:
+return new JingleFileTransfer(payloads);
+}
+break;
+}
+}
+}
+public static Range parseRangeElement(XmlPullParser parser) throws IOException, XmlPullParserException, SmackParsingException {
+final int initialDepth=parser.getDepth();
+final Integer offset=ParserUtils.getIntegerAttribute(parser,Range.ATTR_OFFSET);
+final Integer length=ParserUtils.getIntegerAttribute(parser,Range.ATTR_LENGTH);
+HashElement hashElement=null;
+outerloop: while (true) {
+String element;
+XmlPullParser.Event event=parser.next();
+switch (event) {
+case START_ELEMENT:
+element=parser.getName();
+switch (element) {
+case HashElement.ELEMENT:
+hashElement=HashElementProvider.INSTANCE.parse(parser);
+break;
+}
+break;
+case END_ELEMENT:
+element=parser.getName();
+if (element.equals(Range.ELEMENT) && parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return new Range(offset,length,hashElement);
+}
+}

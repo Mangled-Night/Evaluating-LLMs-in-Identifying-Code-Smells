@@ -1,0 +1,45 @@
+/** 
+ * Setup the listeners that act on events coming from the lower level negotiators.
+ */
+public void setupListeners(){
+  JingleMediaListener jingleMediaListener=new JingleMediaListener(){
+    @Override public void mediaClosed(    PayloadType cand){
+    }
+    @Override public void mediaEstablished(    PayloadType pt) throws NotConnectedException, InterruptedException {
+      if (isFullyEstablished()) {
+        Jingle jout=new Jingle(JingleActionEnum.SESSION_ACCEPT);
+        for (        ContentNegotiator contentNegotiator : contentNegotiators) {
+          if (contentNegotiator.getNegotiatorState() == JingleNegotiatorState.SUCCEEDED)           jout.addContent(contentNegotiator.getJingleContent());
+        }
+        addExpectedId(jout.getStanzaId());
+        sendStanza(jout);
+      }
+    }
+  }
+;
+  JingleTransportListener jingleTransportListener=new JingleTransportListener(){
+    @Override public void transportEstablished(    TransportCandidate local,    TransportCandidate remote) throws NotConnectedException, InterruptedException, NoResponseException, XMPPErrorException {
+      if (isFullyEstablished()) {
+        setSessionState(JingleSessionStateActive.getInstance());
+        for (        ContentNegotiator contentNegotiator : contentNegotiators) {
+          if (contentNegotiator.getNegotiatorState() == JingleNegotiatorState.SUCCEEDED)           contentNegotiator.triggerContentEstablished();
+        }
+        if (getSessionState().equals(JingleSessionStatePending.getInstance())) {
+          Jingle jout=new Jingle(JingleActionEnum.SESSION_ACCEPT);
+          for (          ContentNegotiator contentNegotiator : contentNegotiators) {
+            if (contentNegotiator.getNegotiatorState() == JingleNegotiatorState.SUCCEEDED)             jout.addContent(contentNegotiator.getJingleContent());
+          }
+          addExpectedId(jout.getStanzaId());
+          sendStanza(jout);
+        }
+      }
+    }
+    @Override public void transportClosed(    TransportCandidate cand){
+    }
+    @Override public void transportClosedOnError(    XMPPException e){
+    }
+  }
+;
+  addMediaListener(jingleMediaListener);
+  addTransportListener(jingleTransportListener);
+}

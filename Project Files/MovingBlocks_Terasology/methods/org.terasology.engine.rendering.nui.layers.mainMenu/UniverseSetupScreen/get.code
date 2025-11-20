@@ -1,0 +1,26 @@
+@Override public List<WorldGeneratorInfo> get(){
+  final Set<Name> enabledModuleNames=new HashSet<>(getAllEnabledModuleNames());
+  final List<WorldGeneratorInfo> result=Lists.newArrayList();
+  for (  WorldGeneratorInfo option : worldGeneratorManager.getWorldGenerators()) {
+    if (enabledModuleNames.contains(option.getUri().getModuleName())) {
+      result.add(option);
+    }
+  }
+  return result;
+}
+@Override public WorldGeneratorInfo get(){
+  WorldGeneratorInfo info=worldGeneratorManager.getWorldGeneratorInfo(config.getWorldGeneration().getDefaultGenerator());
+  if (info != null && getAllEnabledModuleNames().contains(info.getUri().getModuleName())) {
+    return info;
+  }
+  for (  WorldGeneratorInfo worldGenInfo : worldGeneratorManager.getWorldGenerators()) {
+    if (getAllEnabledModuleNames().contains(worldGenInfo.getUri().getModuleName())) {
+      set(worldGenInfo);
+      return worldGenInfo;
+    }
+  }
+  return null;
+}
+@Override public String get(){
+  return selectedWorld;
+}

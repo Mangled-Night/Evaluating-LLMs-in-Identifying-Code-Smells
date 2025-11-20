@@ -1,0 +1,37 @@
+/** 
+ * 首页
+ * @param page
+ * @param sort
+ * @param order
+ * @param request
+ * @param model
+ * @return
+ */
+@RequestMapping(value="",method=RequestMethod.GET) public String index(@RequestParam(required=false,defaultValue="1",value="page") int page,@RequestParam(required=false,defaultValue="orders",value="sort") String sort,@RequestParam(required=false,defaultValue="desc",value="order") String order,HttpServletRequest request,Model model){
+  CmsSystemExample cmsSystemExample=new CmsSystemExample();
+  cmsSystemExample.createCriteria().andCodeEqualTo(CODE);
+  CmsSystem system=cmsSystemService.selectFirstByExample(cmsSystemExample);
+  model.addAttribute("system",system);
+  CmsCategoryExample cmsCategoryExample=new CmsCategoryExample();
+  cmsCategoryExample.createCriteria().andSystemIdEqualTo(system.getSystemId());
+  cmsCategoryExample.setOrderByClause("orders asc");
+  List<CmsCategory> categories=cmsCategoryService.selectByExample(cmsCategoryExample);
+  model.addAttribute("categories",categories);
+  CmsTagExample cmsTagExample=new CmsTagExample();
+  cmsTagExample.createCriteria().andSystemIdEqualTo(system.getSystemId());
+  cmsTagExample.setOrderByClause("orders asc");
+  List<CmsTag> tags=cmsTagService.selectByExample(cmsTagExample);
+  model.addAttribute("tags",tags);
+  int rows=10;
+  CmsArticleExample cmsArticleExample=new CmsArticleExample();
+  cmsArticleExample.createCriteria().andStatusEqualTo((byte)1).andSystemIdEqualTo(system.getSystemId());
+  if (!StringUtils.isBlank(sort) && !StringUtils.isBlank(order)) {
+    cmsArticleExample.setOrderByClause(sort + " " + order);
+  }
+  List<CmsArticle> articles=cmsArticleService.selectByExampleForOffsetPage(cmsArticleExample,(page - 1) * rows,rows);
+  model.addAttribute("articles",articles);
+  long total=cmsArticleService.countByExample(cmsArticleExample);
+  Paginator paginator=new Paginator(total,page,rows,request);
+  model.addAttribute("paginator",paginator);
+  return thymeleaf("/blog/index");
+}

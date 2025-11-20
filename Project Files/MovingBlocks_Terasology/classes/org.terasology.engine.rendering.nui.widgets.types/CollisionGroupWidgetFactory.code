@@ -1,0 +1,28 @@
+@RegisterTypeWidgetFactory public class CollisionGroupWidgetFactory implements TypeWidgetFactory {
+  @In private CollisionGroupManager collisionGroupManager;
+  @Override public <T>Optional<TypeWidgetBuilder<T>> create(  TypeInfo<T> type,  TypeWidgetLibrary library){
+    if (!CollisionGroup.class.equals(type.getRawType())) {
+      return Optional.empty();
+    }
+    TypeWidgetBuilder<CollisionGroup> builder=new CollisionGroupWidgetBuilder(collisionGroupManager);
+    return Optional.of((TypeWidgetBuilder<T>)builder);
+  }
+private static class CollisionGroupWidgetBuilder implements TypeWidgetBuilder<CollisionGroup> {
+    private ArrayList<CollisionGroup> collisionGroups;
+    CollisionGroupWidgetBuilder(    CollisionGroupManager collisionGroupManager){
+      collisionGroups=Lists.newArrayList(collisionGroupManager.getAllGroups());
+    }
+    @Override public UIWidget build(    Binding<CollisionGroup> binding){
+      UIDropdownScrollable<CollisionGroup> dropdown=new UIDropdownScrollable<>();
+      dropdown.setOptions(collisionGroups);
+      dropdown.bindSelection(binding);
+      dropdown.setOptionRenderer(new StringTextRenderer<CollisionGroup>(){
+        @Override public String getString(        CollisionGroup value){
+          return value.getName();
+        }
+      }
+);
+      return dropdown;
+    }
+  }
+}

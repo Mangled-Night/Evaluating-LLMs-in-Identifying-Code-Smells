@@ -1,0 +1,38 @@
+/** 
+ * Creates a new error with the specified type, condition and message. This constructor is used when the condition is not recognized automatically by XMPPError i.e. there is not a defined instance of ErrorCondition or it does not apply the default specification.
+ * @param type the error type.
+ * @param condition the error condition.
+ * @param conditionText TODO javadoc me please
+ * @param errorGenerator TODO javadoc me please
+ * @param descriptiveTexts TODO javadoc me please
+ * @param extensions list of stanza extensions
+ */
+public StanzaError(Condition condition,String conditionText,String errorGenerator,Type type,Map<String,String> descriptiveTexts,List<XmlElement> extensions){
+  super(descriptiveTexts,ERROR_CONDITION_AND_TEXT_NAMESPACE,extensions);
+  this.condition=Objects.requireNonNull(condition,"condition must not be null");
+  if (StringUtils.isNullOrEmpty(conditionText)) {
+    conditionText=null;
+  }
+  if (conditionText != null) {
+switch (condition) {
+case gone:
+case redirect:
+      break;
+default :
+    throw new IllegalArgumentException("Condition text can only be set with condtion types 'gone' and 'redirect', not " + condition);
+}
+}
+this.conditionText=conditionText;
+this.errorGenerator=errorGenerator;
+if (type == null) {
+Type determinedType=CONDITION_TO_TYPE.get(condition);
+if (determinedType == null) {
+  LOGGER.warning("Could not determine type for condition: " + condition);
+  determinedType=Type.CANCEL;
+}
+this.type=determinedType;
+}
+ else {
+this.type=type;
+}
+}

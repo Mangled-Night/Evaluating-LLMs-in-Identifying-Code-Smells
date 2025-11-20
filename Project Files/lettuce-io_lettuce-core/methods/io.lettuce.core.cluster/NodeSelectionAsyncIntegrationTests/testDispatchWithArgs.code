@@ -1,0 +1,8 @@
+@Test void testDispatchWithArgs(){
+  AsyncNodeSelection<String,String> all=commands.all();
+  AsyncExecutions<List<String>> dispatched=all.commands().dispatch(CommandType.ECHO,() -> new StringListOutput<>(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).add("HELLO"));
+  List<List<String>> joined=dispatched.thenCollect(Collectors.toList()).toCompletableFuture().join();
+  for (  List<String> strings : joined) {
+    assertThat(strings).hasSize(1).contains("HELLO");
+  }
+}

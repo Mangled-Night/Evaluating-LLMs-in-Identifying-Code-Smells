@@ -1,0 +1,17 @@
+/** 
+ * Signal an event and the event result. <p> This method will return <code>false</code> if the event was not created with {@link #performActionAndWaitForEvent(Object,long,Callback)}. </p>
+ * @param eventKey the event key, must not be null.
+ * @param eventResult the event result, may be null.
+ * @return true if the event was found and signaled, false otherwise.
+ */
+public boolean signalEvent(K eventKey,R eventResult){
+  final Reference<R> reference=events.get(eventKey);
+  if (reference == null) {
+    return false;
+  }
+  reference.eventResult=eventResult;
+synchronized (reference) {
+    reference.notifyAll();
+  }
+  return true;
+}

@@ -1,0 +1,36 @@
+/** 
+ * Record the command latency per  {@code connectionPoint} and {@code commandType}.
+ * @param local the local address
+ * @param remote the remote address
+ * @param commandType the command type
+ * @param firstResponseLatency latency value in {@link TimeUnit#NANOSECONDS} from send to the first response
+ * @param completionLatency latency value in {@link TimeUnit#NANOSECONDS} from send to the command completion
+ */
+@Override public void recordCommandLatency(SocketAddress local,SocketAddress remote,ProtocolKeyword commandType,long firstResponseLatency,long completionLatency){
+  if (!isEnabled()) {
+    return;
+  }
+  PauseDetector pauseDetector;
+  do {
+    if (PAUSE_DETECTOR_UPDATER.get(this) == null) {
+      if (PAUSE_DETECTOR_UPDATER.compareAndSet(this,null,options.usePauseDetector() ? GLOBAL_PAUSE_DETECTOR : GLOBAL_NO_PAUSE_DETECTOR)) {
+        PAUSE_DETECTOR_UPDATER.get(this).retain();
+      }
+    }
+    PauseDetectorWrapper pauseDetectorWrapper=PAUSE_DETECTOR_UPDATER.get(this);
+    pauseDetector=(PauseDetector)pauseDetectorWrapper.getPauseDetector();
+  }
+ while (pauseDetector == null);
+  PauseDetector pauseDetectorToUse=pauseDetector;
+  Latencies latencies=latencyMetricsRef.get().computeIfAbsent(createId(local,remote,commandType),id -> {
+    if (options.resetLatenciesAfterEvent()) {
+      return new Latencies(pauseDetectorToUse);
+    }
+    return new CummulativeLatencies(pauseDetectorToUse);
+  }
+);
+  latencies.firstResponse.recordLatency(rangify(firstResponseLatency));
+  latencies.completion.recordLatency(rangify(completionLatency));
+}
+@Override public void recordCommandLatency(SocketAddress local,SocketAddress remote,ProtocolKeyword commandType,long firstResponseLatency,long completionLatency){
+}

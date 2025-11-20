@@ -1,0 +1,21 @@
+/** 
+ * Asserts that a moderator cannot revoke voice from an owner <p>From XEP-0045 § 5.1.1:</p> <blockquote> A moderator MUST NOT be able to revoke voice privileges from an admin or owner </blockquote> <p>From XEP-0045 § 8.4:</p> <blockquote> A moderator MUST NOT be able to revoke voice from a user whose affiliation is at or above the moderator's level. In addition, a service MUST NOT allow the voice privileges of an admin or owner to be removed by anyone. If a moderator attempts to revoke voice privileges from such a user, the service MUST deny the request and return a &lt;not-allowed/&gt; error to the sender along with the offending item(s) </blockquote>
+ * @throws Exception when errors occur
+ */
+@SmackIntegrationTest public void mucTestModeratorCannotRevokeVoiceFromOwner() throws Exception {
+  EntityBareJid mucAddress=getRandomRoom("smack-inttest");
+  MultiUserChat mucAsSeenByOne=mucManagerOne.getMultiUserChat(mucAddress);
+  MultiUserChat mucAsSeenByTwo=mucManagerTwo.getMultiUserChat(mucAddress);
+  final Resourcepart nicknameOne=Resourcepart.from("one-" + randomString);
+  final Resourcepart nicknameTwo=Resourcepart.from("two-" + randomString);
+  createModeratedMuc(mucAsSeenByOne,nicknameOne);
+  try {
+    mucAsSeenByTwo.join(nicknameTwo);
+    mucAsSeenByOne.grantModerator(nicknameTwo);
+    XMPPException.XMPPErrorException xe=assertThrows(XMPPException.XMPPErrorException.class,() -> mucAsSeenByTwo.revokeVoice(nicknameOne));
+    assertEquals(xe.getStanzaError().getCondition().toString(),"not-allowed");
+  }
+  finally {
+    tryDestroy(mucAsSeenByOne);
+  }
+}

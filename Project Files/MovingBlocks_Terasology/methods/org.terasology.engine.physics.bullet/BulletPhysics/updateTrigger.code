@@ -1,0 +1,29 @@
+@Override public boolean updateTrigger(EntityRef entity){
+  LocationComponent location=entity.getComponent(LocationComponent.class);
+  if (location == null) {
+    logger.warn("Trying to update or create trigger of entity that has no LocationComponent?! Entity: {}",entity);
+    return false;
+  }
+  btPairCachingGhostObject triggerObj=entityTriggers.get(entity);
+  if (triggerObj != null) {
+    float scale=location.getWorldScale();
+    if (Math.abs(triggerObj.getCollisionShape().getLocalScaling().x - scale) > SIMD_EPSILON) {
+      discreteDynamicsWorld.removeCollisionObject(triggerObj);
+      newTrigger(entity);
+    }
+ else {
+      Quaternionf worldRotation=location.getWorldRotation(new Quaternionf());
+      Vector3f position=location.getWorldPosition(new Vector3f());
+      if (!position.isFinite() || !worldRotation.isFinite()) {
+        logger.warn("Can't update Trigger entity with a non-finite position/rotation?! Entity: {}",entity);
+        return false;
+      }
+      triggerObj.setWorldTransform(new Matrix4f().translationRotateScale(position,worldRotation,1.0f));
+    }
+    return true;
+  }
+ else {
+    newTrigger(entity);
+    return false;
+  }
+}

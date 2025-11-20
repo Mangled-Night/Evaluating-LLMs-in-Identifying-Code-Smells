@@ -1,0 +1,49 @@
+private static RowDataPacket getRow(BackendConnection c,String charset){
+  RowDataPacket row=new RowDataPacket(FIELD_COUNT);
+  if (c instanceof BackendAIOConnection) {
+    row.add(((BackendAIOConnection)c).getProcessor().getName().getBytes());
+  }
+ else   if (c instanceof JDBCConnection) {
+    row.add(((JDBCConnection)c).getProcessor().getName().getBytes());
+  }
+ else {
+    row.add("N/A".getBytes());
+  }
+  row.add(LongUtil.toBytes(c.getId()));
+  long threadId=0;
+  if (c instanceof MySQLConnection) {
+    threadId=((MySQLConnection)c).getThreadId();
+  }
+  row.add(LongUtil.toBytes(threadId));
+  row.add(StringUtil.encode(c.getHost(),charset));
+  row.add(IntegerUtil.toBytes(c.getPort()));
+  row.add(IntegerUtil.toBytes(c.getLocalPort()));
+  row.add(LongUtil.toBytes(c.getNetInBytes()));
+  row.add(LongUtil.toBytes(c.getNetOutBytes()));
+  row.add(LongUtil.toBytes((TimeUtil.currentTimeMillis() - c.getStartupTime()) / 1000L));
+  row.add(c.isClosed() ? "true".getBytes() : "false".getBytes());
+  boolean isBorrowed=c.isBorrowed();
+  row.add(isBorrowed ? "true".getBytes() : "false".getBytes());
+  int writeQueueSize=0;
+  String schema="";
+  String charsetInf="";
+  String txLevel="";
+  String txAutommit="";
+  String txReadonly="";
+  if (c instanceof MySQLConnection) {
+    MySQLConnection mysqlC=(MySQLConnection)c;
+    writeQueueSize=mysqlC.getWriteQueue().size();
+    schema=mysqlC.getSchema();
+    charsetInf=mysqlC.getCharset() + ":" + mysqlC.getCharsetIndex();
+    txLevel=mysqlC.getTxIsolation() + "";
+    txAutommit=mysqlC.isAutocommit() + "";
+    txReadonly=mysqlC.isTxReadonly() + "";
+  }
+  row.add(IntegerUtil.toBytes(writeQueueSize));
+  row.add(schema.getBytes());
+  row.add(charsetInf.getBytes());
+  row.add(txLevel.getBytes());
+  row.add(txAutommit.getBytes());
+  row.add(txReadonly.getBytes());
+  return row;
+}

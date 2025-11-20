@@ -1,0 +1,31 @@
+/** 
+ * @return dataNodeIndex -&gt; [partitionKeysValueTuple+]
+ */
+public static Set<String> ruleByJoinValueCalculate(RouteResultset rrs,TableConfig tc,Set<ColumnRoutePair> colRoutePairSet) throws SQLNonTransientException {
+  String joinValue="";
+  if (colRoutePairSet.size() > 1) {
+    LOGGER.warn("joinKey can't have multi Value");
+  }
+ else {
+    Iterator<ColumnRoutePair> it=colRoutePairSet.iterator();
+    ColumnRoutePair joinCol=it.next();
+    joinValue=joinCol.colValue;
+  }
+  Set<String> retNodeSet=new LinkedHashSet<String>();
+  Set<String> nodeSet;
+  if (tc.isSecondLevel() && tc.getParentTC().getPartitionColumn().equals(tc.getParentKey())) {
+    nodeSet=ruleCalculate(tc.getParentTC(),colRoutePairSet,rrs.getDataNodeSlotMap());
+    if (nodeSet.isEmpty()) {
+      throw new SQLNonTransientException("parent key can't find  valid datanode ,expect 1 but found: " + nodeSet.size());
+    }
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("found partion node (using parent partion rule directly) for child table to insert  " + nodeSet + " sql :"+ rrs.getStatement());
+    }
+    retNodeSet.addAll(nodeSet);
+    return retNodeSet;
+  }
+ else {
+    retNodeSet.addAll(tc.getParentTC().getDataNodes());
+  }
+  return retNodeSet;
+}

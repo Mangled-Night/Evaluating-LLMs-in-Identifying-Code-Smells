@@ -1,0 +1,55 @@
+private void processHandledCount(long handledCount) throws StreamManagementCounterError {
+  long ackedStanzasCount=SMUtils.calculateDelta(handledCount,serverHandledStanzasCount);
+  final List<Stanza> ackedStanzas=new ArrayList<>(ackedStanzasCount <= Integer.MAX_VALUE ? (int)ackedStanzasCount : Integer.MAX_VALUE);
+  for (long i=0; i < ackedStanzasCount; i++) {
+    Stanza ackedStanza=unacknowledgedStanzas.poll();
+    if (ackedStanza == null) {
+      throw new StreamManagementCounterError(handledCount,serverHandledStanzasCount,ackedStanzasCount,ackedStanzas);
+    }
+    ackedStanzas.add(ackedStanza);
+  }
+  boolean atLeastOneStanzaAcknowledgedListener=false;
+  if (!stanzaAcknowledgedListeners.isEmpty()) {
+    atLeastOneStanzaAcknowledgedListener=true;
+  }
+ else {
+    for (    Stanza ackedStanza : ackedStanzas) {
+      String id=ackedStanza.getStanzaId();
+      if (id != null && stanzaIdAcknowledgedListeners.containsKey(id)) {
+        atLeastOneStanzaAcknowledgedListener=true;
+        break;
+      }
+    }
+  }
+  if (atLeastOneStanzaAcknowledgedListener) {
+    asyncGo(new Runnable(){
+      @Override public void run(){
+        for (        Stanza ackedStanza : ackedStanzas) {
+          for (          StanzaListener listener : stanzaAcknowledgedListeners) {
+            try {
+              listener.processStanza(ackedStanza);
+            }
+ catch (            InterruptedException|NotConnectedException|NotLoggedInException e) {
+              LOGGER.log(Level.FINER,"Received exception",e);
+            }
+          }
+          String id=ackedStanza.getStanzaId();
+          if (StringUtils.isNullOrEmpty(id)) {
+            continue;
+          }
+          StanzaListener listener=stanzaIdAcknowledgedListeners.remove(id);
+          if (listener != null) {
+            try {
+              listener.processStanza(ackedStanza);
+            }
+ catch (            InterruptedException|NotConnectedException|NotLoggedInException e) {
+              LOGGER.log(Level.FINER,"Received exception",e);
+            }
+          }
+        }
+      }
+    }
+);
+  }
+  serverHandledStanzasCount=handledCount;
+}

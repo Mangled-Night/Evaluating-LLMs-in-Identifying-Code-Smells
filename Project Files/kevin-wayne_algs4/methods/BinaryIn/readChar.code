@@ -1,0 +1,39 @@
+/** 
+ * Reads the next 8 bits from this binary input stream and return as an 8-bit char.
+ * @return the next 8 bits of data from this binary input stream as a {@code char}
+ * @throws NoSuchElementException if there are fewer than 8 bits available
+ */
+public char readChar(){
+  if (isEmpty())   throw new NoSuchElementException("Reading from empty input stream");
+  if (n == 8) {
+    int x=buffer;
+    fillBuffer();
+    return (char)(x & 0xff);
+  }
+  int x=buffer;
+  x<<=(8 - n);
+  int oldN=n;
+  fillBuffer();
+  if (isEmpty())   throw new NoSuchElementException("Reading from empty input stream");
+  n=oldN;
+  x|=(buffer >>> n);
+  return (char)(x & 0xff);
+}
+/** 
+ * Reads the next <em>r</em> bits from this binary input stream and return as an <em>r</em>-bit character.
+ * @param r number of bits to read
+ * @return the next {@code r} bits of data from this binary input stream as a {@code char}
+ * @throws NoSuchElementException if there are fewer than {@code r} bits available
+ * @throws IllegalArgumentException unless {@code 1 <= r <= 16}
+ */
+public char readChar(int r){
+  if (r < 1 || r > 16)   throw new IllegalArgumentException("Illegal value of r = " + r);
+  if (r == 8)   return readChar();
+  char x=0;
+  for (int i=0; i < r; i++) {
+    x<<=1;
+    boolean bit=readBoolean();
+    if (bit)     x|=1;
+  }
+  return x;
+}

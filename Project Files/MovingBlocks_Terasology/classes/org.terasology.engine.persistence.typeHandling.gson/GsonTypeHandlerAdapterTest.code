@@ -1,0 +1,43 @@
+public class GsonTypeHandlerAdapterTest {
+  private static final String OBJECT_JSON_ARRAY="{\"color\":[222,173,190,239],\"i\":-123}";
+  private static final String OBJECT_JSON_HEX="{\"color\":DEADBEEF,\"i\":-123}";
+  private static final TestClass OBJECT=new TestClass(new Color(0xDEADBEEF),-123);
+  private final Gson gson=GsonBuilderFactory.createGsonBuilderWithTypeHandlers(TypeHandlerEntry.of(Color.class,new ColorTypeHandler())).create();
+  /** 
+ * {@link GsonTypeHandlerAdapter#read(JsonReader)} is tested by deserializing an object from JSONvia Gson with a registered  {@link GsonTypeHandlerAdapterFactory} which creates instances of{@link GsonTypeHandlerAdapter}.
+ */
+  @Test public void testRead(){
+    TestClass deserializedObject=gson.fromJson(OBJECT_JSON_ARRAY,TestClass.class);
+    assertEquals(OBJECT,deserializedObject);
+    deserializedObject=gson.fromJson(OBJECT_JSON_HEX,TestClass.class);
+    assertEquals(OBJECT,deserializedObject);
+  }
+  /** 
+ * {@link GsonTypeHandlerAdapter#write(JsonWriter,Object)} is tested by serializing an object to JSONvia Gson with a registered  {@link GsonTypeHandlerAdapterFactory} which creates instances of{@link GsonTypeHandlerAdapter}.
+ */
+  @Test public void testWrite(){
+    String serializedObject=gson.toJson(OBJECT);
+    assertEquals(OBJECT_JSON_ARRAY,serializedObject);
+  }
+private static final class TestClass {
+    private final Color color;
+    private final int i;
+    private TestClass(    Color color,    int i){
+      this.color=color;
+      this.i=i;
+    }
+    @Override public boolean equals(    Object o){
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      TestClass testClass=(TestClass)o;
+      return i == testClass.i && Objects.equal(color,testClass.color);
+    }
+    @Override public int hashCode(){
+      return Objects.hashCode(color,i);
+    }
+  }
+}

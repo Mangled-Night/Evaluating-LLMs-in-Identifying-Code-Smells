@@ -1,0 +1,18 @@
+private void checkCollision(final ParticlePool pool,final int offset){
+  final Vector3f vel=new Vector3f();
+  final Vector3f halfVelDir=new Vector3f();
+  final Vector3f curr=new Vector3f();
+  for (int i=offset; i < pool.livingParticles(); i+=PHYSICS_SKIP_NR) {
+    int i3=i * 3;
+    curr.set(pool.position[i3 + 0],pool.position[i3 + 1],pool.position[i3 + 2]);
+    vel.set(pool.velocity[i3 + 0],pool.velocity[i3 + 1],pool.velocity[i3 + 2]);
+    halfVelDir.set(0).add(vel).normalize().mul(0.5f);
+    curr.sub(halfVelDir);
+    float dist=(vel.length() + 0.5f) * movingAvgDelta * PHYSICS_SKIP_NR* 1.5f;
+    vel.normalize();
+    HitResult hitResult=physics.rayTrace(curr,vel,dist,StandardCollisionGroup.WORLD);
+    if (hitResult.isHit()) {
+      pool.energy[i]=0;
+    }
+  }
+}

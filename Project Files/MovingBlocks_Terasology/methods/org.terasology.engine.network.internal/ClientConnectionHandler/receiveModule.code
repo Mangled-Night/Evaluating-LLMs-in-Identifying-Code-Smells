@@ -1,0 +1,46 @@
+/** 
+ * Converts the modules data to a byte array and writes it to a file, which then is copied from the temp directory to the correct directory.
+ * @param channelHandlerContext
+ * @param moduleData The data of the module.
+ */
+private void receiveModule(ChannelHandlerContext channelHandlerContext,NetData.ModuleData moduleData){
+  if (receivingModule == null) {
+    joinStatus.setErrorMessage("Module download error");
+    channelHandlerContext.channel().close();
+    return;
+  }
+  try {
+    downloadingModule.write(moduleData.getModule().toByteArray());
+    lengthReceived+=moduleData.getModule().size();
+    joinStatus.setCurrentProgress((float)lengthReceived / receivingModule.getSize());
+    if (lengthReceived == receivingModule.getSize()) {
+      downloadingModule.close();
+      String moduleName=String.format("%s-%s.jar",receivingModule.getId(),receivingModule.getVersion());
+      Path finalPath=PathManager.getInstance().getHomeModPath().normalize().resolve(moduleName);
+      if (finalPath.normalize().startsWith(PathManager.getInstance().getHomeModPath())) {
+        if (Files.exists(finalPath)) {
+          logger.error("File already exists at {}",finalPath);
+          joinStatus.setErrorMessage("Module download error");
+          channelHandlerContext.channel().close();
+          return;
+        }
+        Files.copy(tempModuleLocation,finalPath);
+        moduleManager.registerArchiveModule(finalPath);
+        receivingModule=null;
+        if (missingModules.isEmpty()) {
+          sendJoin(channelHandlerContext);
+        }
+      }
+ else {
+        logger.error("Module rejected");
+        joinStatus.setErrorMessage("Module download error");
+        channelHandlerContext.channel().close();
+      }
+    }
+  }
+ catch (  IOException e) {
+    logger.error("Error saving module",e);
+    joinStatus.setErrorMessage("Module download error");
+    channelHandlerContext.channel().close();
+  }
+}

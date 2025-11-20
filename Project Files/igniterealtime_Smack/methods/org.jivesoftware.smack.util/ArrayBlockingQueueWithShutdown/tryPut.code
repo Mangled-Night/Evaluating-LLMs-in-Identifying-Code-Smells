@@ -1,0 +1,20 @@
+public TryPutResult tryPut(E e){
+  checkNotNull(e);
+  boolean locked=lock.tryLock();
+  if (!locked) {
+    return TryPutResult.couldNotLock;
+  }
+  try {
+    if (isShutdown) {
+      return TryPutResult.queueWasShutDown;
+    }
+    if (isFull()) {
+      return TryPutResult.queueWasFull;
+    }
+    insert(e);
+    return TryPutResult.putSuccessful;
+  }
+  finally {
+    lock.unlock();
+  }
+}

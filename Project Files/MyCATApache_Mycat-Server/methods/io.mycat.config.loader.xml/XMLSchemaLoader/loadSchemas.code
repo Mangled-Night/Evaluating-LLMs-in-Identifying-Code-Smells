@@ -1,0 +1,58 @@
+private void loadSchemas(Element root){
+  NodeList list=root.getElementsByTagName("schema");
+  for (int i=0, n=list.getLength(); i < n; i++) {
+    Element schemaElement=(Element)list.item(i);
+    String name=schemaElement.getAttribute("name");
+    String dataNode=schemaElement.getAttribute("dataNode");
+    String randomDataNode=schemaElement.getAttribute("randomDataNode");
+    String checkSQLSchemaStr=schemaElement.getAttribute("checkSQLschema");
+    String sqlMaxLimitStr=schemaElement.getAttribute("sqlMaxLimit");
+    int sqlMaxLimit=-1;
+    if (sqlMaxLimitStr != null && !sqlMaxLimitStr.isEmpty()) {
+      sqlMaxLimit=Integer.parseInt(sqlMaxLimitStr);
+    }
+    String defaultDbType=null;
+    if (dataNode != null && !dataNode.isEmpty()) {
+      List<String> dataNodeLst=new ArrayList<String>(1);
+      dataNodeLst.add(dataNode);
+      checkDataNodeExists(dataNodeLst);
+      String dataHost=dataNodes.get(dataNode).getDataHost();
+      defaultDbType=dataHosts.get(dataHost).getDbType();
+    }
+ else {
+      dataNode=null;
+    }
+    Map<String,TableConfig> tables=loadTables(schemaElement);
+    if (schemas.containsKey(name)) {
+      throw new ConfigException("schema " + name + " duplicated!");
+    }
+    if (dataNode == null && tables.size() == 0) {
+      throw new ConfigException("schema " + name + " didn't config tables,so you must set dataNode property!");
+    }
+    SchemaConfig schemaConfig=new SchemaConfig(name,dataNode,tables,sqlMaxLimit,"true".equalsIgnoreCase(checkSQLSchemaStr),randomDataNode);
+    if (defaultDbType != null) {
+      schemaConfig.setDefaultDataNodeDbType(defaultDbType);
+      if (!"mysql".equalsIgnoreCase(defaultDbType)) {
+        schemaConfig.setNeedSupportMultiDBType(true);
+      }
+    }
+    for (    TableConfig tableConfig : tables.values()) {
+      if (isHasMultiDbType(tableConfig)) {
+        schemaConfig.setNeedSupportMultiDBType(true);
+        break;
+      }
+    }
+    Map<String,String> dataNodeDbTypeMap=new HashMap<>();
+    for (    String dataNodeName : dataNodes.keySet()) {
+      DataNodeConfig dataNodeConfig=dataNodes.get(dataNodeName);
+      String dataHost=dataNodeConfig.getDataHost();
+      DataHostConfig dataHostConfig=dataHosts.get(dataHost);
+      if (dataHostConfig != null) {
+        String dbType=dataHostConfig.getDbType();
+        dataNodeDbTypeMap.put(dataNodeName,dbType);
+      }
+    }
+    schemaConfig.setDataNodeDbTypeMap(dataNodeDbTypeMap);
+    schemas.put(name,schemaConfig);
+  }
+}

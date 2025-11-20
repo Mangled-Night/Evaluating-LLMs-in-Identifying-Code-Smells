@@ -1,0 +1,30 @@
+/** 
+ * <p> <ul> <li> {@code proxy.hashCode()} delegates to {@link AbstractInvocationHandler#hashCode}<li> {@code proxy.toString()} delegates to {@link AbstractInvocationHandler#toString}<li> {@code proxy.equals(argument)} returns true if:<ul> <li> {@code proxy} and {@code argument} are of the same type<li>and  {@link AbstractInvocationHandler#equals} returns true for the {@link InvocationHandler} of {@code argument}</ul> <li>other method calls are dispatched to  {@link #handleInvocation}. </ul>
+ * @param proxy the proxy instance that the method was invoked on
+ * @param method the {@code Method} instance corresponding to the interface method invoked on the proxy instance. Thedeclaring class of the  {@code Method} object will be the interface that the method was declared in, which may be asuperinterface of the proxy interface that the proxy class inherits the method through.
+ * @param args an array of objects containing the values of the arguments passed in the method invocation on the proxyinstance, or  {@code null} if interface method takes no arguments. Arguments of primitive types are wrapped ininstances of the appropriate primitive wrapper class, such as  {@code java.lang.Integer} or{@code java.lang.Boolean}.
+ * @return the invocation result value
+ * @throws Throwable the exception to throw from the method invocation on the proxy instance.
+ */
+@Override public final Object invoke(Object proxy,Method method,Object[] args) throws Throwable {
+  if (args == null) {
+    args=NO_ARGS;
+  }
+  if (args.length == 0 && method.getName().equals("hashCode")) {
+    return hashCode();
+  }
+  if (args.length == 1 && method.getName().equals("equals") && method.getParameterTypes()[0] == Object.class) {
+    Object arg=args[0];
+    if (arg == null) {
+      return false;
+    }
+    if (proxy == arg) {
+      return true;
+    }
+    return isProxyOfSameInterfaces(arg,proxy.getClass()) && equals(Proxy.getInvocationHandler(arg));
+  }
+  if (args.length == 0 && method.getName().equals("toString")) {
+    return toString();
+  }
+  return handleInvocation(proxy,method,args);
+}

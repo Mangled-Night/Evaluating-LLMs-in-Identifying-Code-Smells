@@ -1,0 +1,15 @@
+public static <T>T getInternalState(Object object,String fieldName,Class<T> fieldType){
+  Class<?> objectClass=object.getClass();
+  Field field=FieldUtils.getField(objectClass,fieldName,true);
+  Object res;
+  try {
+    res=field.get(object);
+  }
+ catch (  IllegalArgumentException|IllegalAccessException e) {
+    throw new AssertionError(e);
+  }
+  if (!fieldType.isInstance(res)) {
+    throw new AssertionError(res + " is not a (sub)type of " + fieldType);
+  }
+  return fieldType.cast(res);
+}

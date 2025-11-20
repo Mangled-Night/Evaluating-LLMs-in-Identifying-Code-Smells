@@ -1,0 +1,19 @@
+/** 
+ * Composite  {@link io.lettuce.core.output.StreamingOutput.Subscriber} that can notify multiple nested subscribers.
+ * @param < T > element type
+ */
+private static class CompositeSubscriber<T> extends StreamingOutput.Subscriber<T> {
+  private final StreamingOutput.Subscriber<T> first;
+  private final StreamingOutput.Subscriber<T> second;
+  public CompositeSubscriber(  StreamingOutput.Subscriber<T> first,  StreamingOutput.Subscriber<T> second){
+    this.first=first;
+    this.second=second;
+  }
+  @Override public void onNext(  T t){
+    throw new UnsupportedOperationException();
+  }
+  @Override public void onNext(  Collection<T> outputTarget,  T t){
+    first.onNext(outputTarget,t);
+    second.onNext(outputTarget,t);
+  }
+}

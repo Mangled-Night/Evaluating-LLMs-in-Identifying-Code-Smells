@@ -1,0 +1,24 @@
+/** 
+ * Return the consistent RGB color value of the input. This method uses the default  {@link ConsistentColorSettings}.
+ * @param input input string (for example username)
+ * @return consistent color of that username as RGB values in range [0,1].
+ * @see #RGBFrom(CharSequence,ConsistentColorSettings)
+ */
+public static float[] RGBFrom(CharSequence input){
+  return RGBFrom(input,DEFAULT_SETTINGS);
+}
+/** 
+ * Return the consistent RGB color value for the input. This method respects the color vision deficiency mode set by the user.
+ * @param input input string (for example username)
+ * @param settings the settings for consistent color creation.
+ * @return consistent color of that username as RGB values in range [0,1].
+ */
+public static float[] RGBFrom(CharSequence input,ConsistentColorSettings settings){
+  double angle=createAngle(input);
+  double correctedAngle=applyColorDeficiencyCorrection(angle,settings.getDeficiency());
+  double[] rgb=hsluvToRgb(correctedAngle);
+  if (settings.backgroundRGB != null) {
+    rgb=mixWithBackground(rgb,settings.backgroundRGB);
+  }
+  return new float[]{(float)rgb[0],(float)rgb[1],(float)rgb[2]};
+}

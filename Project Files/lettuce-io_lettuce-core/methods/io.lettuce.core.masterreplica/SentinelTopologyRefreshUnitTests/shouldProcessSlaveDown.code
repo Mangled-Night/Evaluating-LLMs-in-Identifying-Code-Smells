@@ -1,0 +1,8 @@
+@Test void shouldProcessSlaveDown(){
+  PubSubMessageHandler adapter=getMessageHandler();
+  sut.bind(refreshRunnable);
+  adapter.handle("*","+sdown","replica 127.0.0.1:6483 127.0.0.1 6483-2020 @ mymaster 127.0.0.1 6482");
+  verify(eventExecutors,times(1)).schedule(captor.capture(),anyLong(),any());
+  captor.getValue().run();
+  verify(refreshRunnable,times(1)).run();
+}

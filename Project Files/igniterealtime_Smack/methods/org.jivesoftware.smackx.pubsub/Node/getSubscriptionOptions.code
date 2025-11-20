@@ -1,0 +1,27 @@
+/** 
+ * Returns a SubscribeForm for subscriptions, from which you can create an answer form to be submitted via the  {@link #sendConfigurationForm(FillableConfigureForm)}.
+ * @param jid TODO javadoc me please
+ * @return A subscription options form
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public SubscribeForm getSubscriptionOptions(String jid) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  return getSubscriptionOptions(jid,null);
+}
+/** 
+ * Get the options for configuring the specified subscription.
+ * @param jid JID the subscription is registered under
+ * @param subscriptionId The subscription id
+ * @return The subscription option form
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public SubscribeForm getSubscriptionOptions(String jid,String subscriptionId) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  PubSub packet=sendPubsubPacket(createPubsubPacket(IQ.Type.get,new OptionsExtension(jid,getId(),subscriptionId)));
+  FormNode ext=packet.getExtension(PubSubElementType.OPTIONS);
+  return new SubscribeForm(ext.getForm());
+}

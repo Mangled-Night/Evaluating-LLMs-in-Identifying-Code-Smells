@@ -1,0 +1,35 @@
+private <T>void readBlockPartMap(JsonObject jsonObject,String singleName,String partsName,Supplier<EnumMap<BlockPart,T>> supplier,Class<T> type,JsonDeserializationContext context){
+  if (jsonObject.has(singleName)) {
+    T value=context.deserialize(jsonObject.get(singleName),type);
+    for (    BlockPart blockPart : BlockPart.values()) {
+      supplier.get().put(blockPart,value);
+    }
+  }
+  if (jsonObject.has(partsName) && jsonObject.get(partsName).isJsonObject()) {
+    JsonObject partsObject=jsonObject.getAsJsonObject(partsName);
+    if (partsObject.has("all")) {
+      T value=context.deserialize(partsObject.get("all"),type);
+      for (      BlockPart blockPart : BlockPart.values()) {
+        supplier.get().put(blockPart,value);
+      }
+    }
+    if (partsObject.has("sides")) {
+      T value=context.deserialize(partsObject.get("sides"),type);
+      for (      BlockPart blockPart : BlockPart.allHorizontalParts()) {
+        supplier.get().put(blockPart,value);
+      }
+    }
+    if (partsObject.has("topBottom")) {
+      T value=context.deserialize(partsObject.get("topBottom"),type);
+      supplier.get().put(BlockPart.TOP,value);
+      supplier.get().put(BlockPart.BOTTOM,value);
+    }
+    for (    BlockPart part : BlockPart.values()) {
+      String partName=part.toString().toLowerCase(Locale.ENGLISH);
+      if (partsObject.has(partName)) {
+        T value=context.deserialize(partsObject.get(partName),type);
+        supplier.get().put(part,value);
+      }
+    }
+  }
+}

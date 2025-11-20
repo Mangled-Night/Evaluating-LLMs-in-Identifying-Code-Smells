@@ -1,0 +1,37 @@
+/** 
+ * This method is invoked if one of the streams has been closed locally, if an error occurred locally or if the whole session should be closed.
+ * @param in do we want to close the Input- or OutputStream?
+ * @throws IOException if an error occurs while sending the close request
+ */
+protected synchronized void closeByLocal(boolean in) throws IOException {
+  if (this.isClosed) {
+    return;
+  }
+  if (this.closeBothStreamsEnabled) {
+    this.inputStream.closeInternal();
+    this.outputStream.closeInternal(true);
+  }
+ else {
+    if (in) {
+      this.inputStream.closeInternal();
+    }
+ else {
+      this.outputStream.closeInternal(true);
+    }
+  }
+  if (this.inputStream.isClosed && this.outputStream.isClosed) {
+    this.isClosed=true;
+    Close close=new Close(this.byteStreamRequest.getSessionID());
+    close.setTo(this.remoteJID);
+    try {
+      connection.sendIqRequestAndWaitForResponse(close);
+    }
+ catch (    Exception e) {
+      IOException ioException=new IOException();
+      ioException.initCause(e);
+      throw ioException;
+    }
+    this.inputStream.cleanup();
+    InBandBytestreamManager.getByteStreamManager(this.connection).getSessions().remove(byteStreamRequest.getSessionID());
+  }
+}

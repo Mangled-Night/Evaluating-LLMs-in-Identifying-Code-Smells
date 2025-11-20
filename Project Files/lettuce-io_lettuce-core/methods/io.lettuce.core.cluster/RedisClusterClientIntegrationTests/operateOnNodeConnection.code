@@ -1,0 +1,14 @@
+@Test void operateOnNodeConnection(){
+  sync.set(ClusterTestSettings.KEY_A,value);
+  sync.set(ClusterTestSettings.KEY_B,"d");
+  StatefulRedisConnection<String,String> statefulRedisConnection=connection.getConnection(TestSettings.hostAddr(),ClusterTestSettings.port2);
+  RedisClusterCommands<String,String> connection=statefulRedisConnection.sync();
+  assertThat(connection.get(ClusterTestSettings.KEY_A)).isEqualTo(value);
+  try {
+    connection.get(ClusterTestSettings.KEY_B);
+    fail("missing RedisCommandExecutionException: MOVED");
+  }
+ catch (  RedisException e) {
+    assertThat(e).hasMessageContaining("MOVED");
+  }
+}

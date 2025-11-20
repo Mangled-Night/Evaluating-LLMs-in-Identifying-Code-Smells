@@ -1,0 +1,124 @@
+public class InjectionHelperTest {
+  private ServiceA serviceA;
+  private ServiceB serviceB;
+  @BeforeEach public void setUp(){
+    serviceA=new ServiceAImpl();
+    serviceB=new ServiceBImpl();
+    CoreRegistry.setContext(new ContextImpl());
+  }
+  @Test public void testSharePopulatesCoreRegistry(){
+    assertNull(CoreRegistry.get(ServiceA.class));
+    InjectionHelper.share(serviceA);
+    assertEquals(CoreRegistry.get(ServiceA.class),serviceA);
+  }
+  @Test public void testShareRequiresShareAnnotation(){
+    InjectionHelper.share(new ServiceAImplNoAnnotation());
+    assertNull(CoreRegistry.get(ServiceA.class));
+  }
+  @Test @SuppressWarnings("removal") public void testDefaultFieldInjection(){
+    InjectionHelper.share(serviceA);
+    InjectionHelper.share(serviceB);
+    FieldInjectionAB fieldInjectionAB=new FieldInjectionAB();
+    InjectionHelper.inject(fieldInjectionAB);
+    assertEquals(fieldInjectionAB.getServiceA(),serviceA);
+    assertEquals(fieldInjectionAB.getServiceB(),serviceB);
+  }
+  @Test @SuppressWarnings("removal") public void testInjectUnavailableObject(){
+    InjectionHelper.share(serviceA);
+    FieldInjectionAB fieldInjectionAB=new FieldInjectionAB();
+    InjectionHelper.inject(fieldInjectionAB);
+    assertEquals(fieldInjectionAB.getServiceA(),serviceA);
+    assertNull(fieldInjectionAB.getServiceB());
+  }
+  @Test public void testDefaultConstructorInjection(){
+    Context context=new ContextImpl();
+    context.put(ServiceA.class,serviceA);
+    context.put(ServiceB.class,serviceB);
+    ConstructorAB constructorAB=InjectionHelper.createWithConstructorInjection(ConstructorAB.class,context);
+    assertEquals(constructorAB.getServiceA(),serviceA);
+    assertEquals(constructorAB.getServiceB(),serviceB);
+  }
+  @Test public void testConstructorInjectionNotAllParametersPopulated(){
+    Context context=new ContextImpl();
+    context.put(ServiceA.class,serviceA);
+    ConstructorAB constructorAB=InjectionHelper.createWithConstructorInjection(ConstructorAB.class,context);
+    assertNull(constructorAB.getServiceA());
+    assertNull(constructorAB.getServiceB());
+  }
+  @SuppressWarnings("checkstyle:LocalVariableName") @Test public void testConstructorInjectionNotAllParametersPopulatedFallback(){
+    Context context=new ContextImpl();
+    context.put(ServiceA.class,serviceA);
+    ConstructorA_AB constructorA_AB=InjectionHelper.createWithConstructorInjection(ConstructorA_AB.class,context);
+    assertEquals(constructorA_AB.getServiceA(),serviceA);
+    assertNull(constructorA_AB.getServiceB());
+  }
+  @Test public void testConstructorInjectionNoDefaultConstructorForFallback(){
+    Context context=new ContextImpl();
+    context.put(ServiceA.class,serviceA);
+    Assertions.assertThrows(NoSuchElementException.class,() -> InjectionHelper.createWithConstructorInjection(ConstructorB.class,context));
+  }
+private interface ServiceA {
+  }
+private interface ServiceB {
+  }
+@Share(ServiceA.class) private static class ServiceAImpl implements ServiceA {
+  }
+private static class ServiceAImplNoAnnotation implements ServiceA {
+  }
+@Share(ServiceB.class) private static class ServiceBImpl implements ServiceB {
+  }
+private static class FieldInjectionAB {
+    @In private ServiceA serviceA;
+    @In private ServiceB serviceB;
+    public ServiceA getServiceA(){
+      return serviceA;
+    }
+    public ServiceB getServiceB(){
+      return serviceB;
+    }
+  }
+public static class ConstructorAB {
+    private ServiceA serviceA;
+    private ServiceB serviceB;
+    public ConstructorAB(){
+    }
+    public ConstructorAB(    ServiceA serviceA,    ServiceB serviceB){
+      this.serviceA=serviceA;
+      this.serviceB=serviceB;
+    }
+    public ServiceA getServiceA(){
+      return serviceA;
+    }
+    public ServiceB getServiceB(){
+      return serviceB;
+    }
+  }
+@SuppressWarnings("checkstyle:TypeName") public static class ConstructorA_AB {
+    private ServiceA serviceA;
+    private ServiceB serviceB;
+    public ConstructorA_AB(){
+    }
+    public ConstructorA_AB(    ServiceA serviceA){
+      this.serviceA=serviceA;
+    }
+    public ConstructorA_AB(    ServiceA serviceA,    ServiceB serviceB){
+      this.serviceA=serviceA;
+      this.serviceB=serviceB;
+    }
+    public ServiceA getServiceA(){
+      return serviceA;
+    }
+    public ServiceB getServiceB(){
+      return serviceB;
+    }
+  }
+public static class ConstructorB {
+    private ServiceB serviceB;
+    public ConstructorB(    ServiceB serviceB){
+      this.serviceB=serviceB;
+    }
+    public ServiceB getServiceB(){
+      return serviceB;
+    }
+  }
+}

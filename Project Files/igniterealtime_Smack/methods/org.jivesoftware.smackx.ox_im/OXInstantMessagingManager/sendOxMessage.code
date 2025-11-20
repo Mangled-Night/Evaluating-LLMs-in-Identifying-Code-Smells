@@ -1,0 +1,19 @@
+/** 
+ * Send an OX message to a  {@link OpenPgpContact}. The message will be encrypted to all active keys of the contact, as well as all of our active keys. The message is also signed with our key.
+ * @param contact contact capable of OpenPGP for XMPP: Instant Messaging.
+ * @param body message body.
+ * @return {@link EncryptionResult} containing metadata about the messages encryption + signatures.
+ * @throws InterruptedException if the thread is interrupted
+ * @throws IOException IO is dangerous
+ * @throws SmackException.NotConnectedException if we are not connected
+ * @throws SmackException.NotLoggedInException if we are not logged in
+ * @throws PGPException PGP is brittle
+ */
+public EncryptionResult sendOxMessage(OpenPgpContact contact,CharSequence body) throws InterruptedException, IOException, SmackException.NotConnectedException, SmackException.NotLoggedInException, PGPException {
+  MessageBuilder messageBuilder=connection().getStanzaFactory().buildMessageStanza().to(contact.getJid());
+  Message.Body mBody=new Message.Body(null,body.toString());
+  EncryptionResult metadata=addOxMessage(messageBuilder,contact,Collections.<ExtensionElement>singletonList(mBody));
+  Message message=messageBuilder.build();
+  ChatManager.getInstanceFor(connection()).chatWith(contact.getJid().asEntityBareJidIfPossible()).send(message);
+  return metadata;
+}

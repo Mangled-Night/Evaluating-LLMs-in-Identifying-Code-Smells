@@ -1,0 +1,18 @@
+/** 
+ * Test successive calls to the output stream flush() method.
+ * @throws Exception should not happen
+ */
+@Test public void shouldSendNothingOnSuccessiveCallsToFlush() throws Exception {
+  byte[] controlData=new byte[blockSize * 3];
+  InBandBytestreamSession session=new InBandBytestreamSession(connection,initBytestream,initiatorJID);
+  IQ resultIQ=IBBPacketUtils.createResultIQ(initiatorJID,targetJID);
+  protocol.addResponse(resultIQ,incrementingSequence);
+  protocol.addResponse(resultIQ,incrementingSequence);
+  protocol.addResponse(resultIQ,incrementingSequence);
+  OutputStream outputStream=session.getOutputStream();
+  outputStream.write(controlData);
+  outputStream.flush();
+  outputStream.flush();
+  outputStream.flush();
+  protocol.verifyAll();
+}

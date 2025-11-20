@@ -1,0 +1,38 @@
+@Override public void initialise(){
+  availableWidgets=find("availableWidgets",UIDropdownScrollable.class);
+  ClassLibrary<UIWidget> metadataLibrary=getManager().getWidgetMetadataLibrary();
+  for (  ClassMetadata metadata : metadataLibrary) {
+    if (!CoreScreenLayer.class.isAssignableFrom(metadata.getType())) {
+      widgets.put(metadata.toString(),metadata);
+    }
+  }
+  List<String> options=Lists.newArrayList(widgets.keySet());
+  Collections.sort(options);
+  availableWidgets.setOptions(options);
+  WidgetUtil.trySubscribe(this,"ok",button -> {
+    String selection=availableWidgets.getSelection();
+    JsonTree childNode;
+    if (node.getValue().getType() == JsonTreeValue.Type.ARRAY) {
+      ClassMetadata metadata=widgets.get(selection);
+      childNode=NUIEditorNodeUtils.createNewWidget(selection,"newWidget",false);
+      if (UILayout.class.isAssignableFrom(metadata.getType())) {
+        childNode.addChild(new JsonTreeValue("contents",null,JsonTreeValue.Type.ARRAY));
+      }
+    }
+ else {
+      childNode=new JsonTree(new JsonTreeValue(selection,null,JsonTreeValue.Type.OBJECT));
+      childNode.setExpanded(true);
+    }
+    node.addChild(childNode);
+    closeListeners.forEach(UpdateListener::onAction);
+    getManager().closeScreen(ASSET_URI);
+  }
+);
+  find("ok",UIButton.class).bindEnabled(new ReadOnlyBinding<Boolean>(){
+    @Override public Boolean get(){
+      return availableWidgets.getSelection() != null;
+    }
+  }
+);
+  WidgetUtil.trySubscribe(this,"cancel",button -> getManager().closeScreen(ASSET_URI));
+}

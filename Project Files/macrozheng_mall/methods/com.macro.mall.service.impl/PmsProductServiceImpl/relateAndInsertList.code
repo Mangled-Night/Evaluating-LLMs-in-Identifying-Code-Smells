@@ -1,0 +1,23 @@
+/** 
+ * 建立和插入关系表操作
+ * @param dao       可以操作的dao
+ * @param dataList  要插入的数据
+ * @param productId 建立关系的id
+ */
+private void relateAndInsertList(Object dao,List dataList,Long productId){
+  try {
+    if (CollectionUtils.isEmpty(dataList))     return;
+    for (    Object item : dataList) {
+      Method setId=item.getClass().getMethod("setId",Long.class);
+      setId.invoke(item,(Long)null);
+      Method setProductId=item.getClass().getMethod("setProductId",Long.class);
+      setProductId.invoke(item,productId);
+    }
+    Method insertList=dao.getClass().getMethod("insertList",List.class);
+    insertList.invoke(dao,dataList);
+  }
+ catch (  Exception e) {
+    LOGGER.warn("创建产品出错:{}",e.getMessage());
+    throw new RuntimeException(e.getMessage());
+  }
+}

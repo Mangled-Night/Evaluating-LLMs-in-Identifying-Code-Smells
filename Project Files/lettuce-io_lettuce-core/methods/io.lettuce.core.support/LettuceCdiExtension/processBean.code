@@ -1,0 +1,27 @@
+/** 
+ * Implementation of a an observer which checks for RedisURI beans and stores them in  {@link #redisUris} for laterassociation with corresponding repository beans.
+ * @param < T > The type.
+ * @param processBean The annotated type as defined by CDI.
+ */
+@SuppressWarnings("unchecked") <T>void processBean(@Observes ProcessBean<T> processBean){
+  Bean<T> bean=processBean.getBean();
+  for (  Type type : bean.getTypes()) {
+    if (!(type instanceof Class<?>)) {
+      continue;
+    }
+    if (RedisURI.class.isAssignableFrom((Class<?>)type)) {
+      Set<Annotation> qualifiers=LettuceSets.newHashSet(bean.getQualifiers());
+      if (bean.isAlternative() || !redisUris.containsKey(qualifiers)) {
+        LOGGER.debug(String.format("Discovered '%s' with qualifiers %s.",RedisURI.class.getName(),qualifiers));
+        redisUris.put(qualifiers,(Bean<RedisURI>)bean);
+      }
+    }
+    if (ClientResources.class.isAssignableFrom((Class<?>)type)) {
+      Set<Annotation> qualifiers=LettuceSets.newHashSet(bean.getQualifiers());
+      if (bean.isAlternative() || !clientResources.containsKey(qualifiers)) {
+        LOGGER.debug(String.format("Discovered '%s' with qualifiers %s.",ClientResources.class.getName(),qualifiers));
+        clientResources.put(qualifiers,(Bean<ClientResources>)bean);
+      }
+    }
+  }
+}

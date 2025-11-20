@@ -1,0 +1,18 @@
+private void refreshPrefabs(){
+  Collection<Prefab> prefabs=prefabManager.listPrefabs(BehaviorNodeComponent.class);
+  if (prefabs.size() == 0) {
+    List<String> nodes=Arrays.asList("counter","timer","loop","lookup","dynselector","fail","parallel","playMusic","playSound","running","selector","setAnimation","sequence","succeed");
+    prefabs=Lists.newArrayList();
+    for (    String node : nodes) {
+      prefabs.add(Assets.get(new ResourceUrn("engine:" + node),Prefab.class).orElse(null));
+    }
+  }
+  for (  Prefab prefab : prefabs) {
+    EntityBuilder entityBuilder=entityManager.newBuilder(prefab);
+    entityBuilder.setPersistent(false);
+    EntityRef entityRef=entityBuilder.build();
+    BehaviorNodeComponent component=entityRef.getComponent(BehaviorNodeComponent.class);
+    addToCategory(component);
+    nodeComponents.add(component);
+  }
+}

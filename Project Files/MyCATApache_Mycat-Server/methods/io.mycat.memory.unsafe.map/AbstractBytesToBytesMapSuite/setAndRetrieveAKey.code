@@ -1,0 +1,30 @@
+@Test public void setAndRetrieveAKey(){
+  BytesToBytesMap map=new BytesToBytesMap(dataNodeMemoryManager,64,PAGE_SIZE_BYTES);
+  final int recordLengthWords=10;
+  final int recordLengthBytes=recordLengthWords * 8;
+  final byte[] keyData=getRandomByteArray(recordLengthWords);
+  final byte[] valueData=getRandomByteArray(recordLengthWords);
+  try {
+    final BytesToBytesMap.Location loc=map.lookup(keyData,Platform.BYTE_ARRAY_OFFSET,recordLengthBytes);
+    Assert.assertFalse(loc.isDefined());
+    Assert.assertTrue(loc.append(keyData,Platform.BYTE_ARRAY_OFFSET,recordLengthBytes,valueData,Platform.BYTE_ARRAY_OFFSET,recordLengthBytes));
+    Assert.assertEquals(recordLengthBytes,loc.getKeyLength());
+    Assert.assertEquals(recordLengthBytes,loc.getValueLength());
+    Assert.assertArrayEquals(keyData,getByteArray(loc.getKeyBase(),loc.getKeyOffset(),recordLengthBytes));
+    Assert.assertArrayEquals(valueData,getByteArray(loc.getValueBase(),loc.getValueOffset(),recordLengthBytes));
+    Assert.assertTrue(map.lookup(keyData,Platform.BYTE_ARRAY_OFFSET,recordLengthBytes).isDefined());
+    Assert.assertEquals(recordLengthBytes,loc.getKeyLength());
+    Assert.assertEquals(recordLengthBytes,loc.getValueLength());
+    Assert.assertArrayEquals(keyData,getByteArray(loc.getKeyBase(),loc.getKeyOffset(),recordLengthBytes));
+    Assert.assertArrayEquals(valueData,getByteArray(loc.getValueBase(),loc.getValueOffset(),recordLengthBytes));
+    try {
+      Assert.assertTrue(loc.append(keyData,Platform.BYTE_ARRAY_OFFSET,recordLengthBytes,valueData,Platform.BYTE_ARRAY_OFFSET,recordLengthBytes));
+      Assert.fail("Should not be able to set a new value for a key");
+    }
+ catch (    AssertionError e) {
+    }
+  }
+  finally {
+    map.free();
+  }
+}

@@ -1,0 +1,26 @@
+@Test public void testVector4fBinding(){
+  VertexResourceBuilder builder=new VertexResourceBuilder();
+  VertexAttributeBinding<Vector4fc,Vector4f> a1=builder.add(0,GLAttributes.VECTOR_4_F_VERTEX_ATTRIBUTE);
+  VertexResource resource=builder.build();
+  a1.put(new Vector4f(10,150,-10,12));
+  a1.put(new Vector4f(15.1f,15.04f,10,12));
+  a1.put(new Vector4f(16f,150,-10,12));
+  assertEquals(3,a1.getPosition());
+  int stride=Float.BYTES * 4;
+  resource.writeBuffer(buffer -> {
+    assertEquals(3 * 4 * Float.BYTES,buffer.limit());
+    assertEquals(10,buffer.getFloat(Float.BYTES * 0),0.001f);
+    assertEquals(150,buffer.getFloat(Float.BYTES * 1),0.001f);
+    assertEquals(-10,buffer.getFloat(Float.BYTES * 2),0.001f);
+    assertEquals(12,buffer.getFloat(Float.BYTES * 3),0.001f);
+    assertEquals(15.1f,buffer.getFloat((stride) + Float.BYTES * 0),0.001f);
+    assertEquals(15.04f,buffer.getFloat((stride) + Float.BYTES * 1),0.001f);
+    assertEquals(10,buffer.getFloat((stride) + Float.BYTES * 2),0.001f);
+    assertEquals(12,buffer.getFloat((stride) + Float.BYTES * 3),0.001f);
+    assertEquals(16f,buffer.getFloat((stride * 2) + Float.BYTES * 0),0.001f);
+    assertEquals(150f,buffer.getFloat((stride * 2) + Float.BYTES * 1),0.001f);
+    assertEquals(-10,buffer.getFloat((stride * 2) + Float.BYTES * 2),0.001f);
+    assertEquals(12,buffer.getFloat((stride * 2) + Float.BYTES * 3),0.001f);
+  }
+);
+}

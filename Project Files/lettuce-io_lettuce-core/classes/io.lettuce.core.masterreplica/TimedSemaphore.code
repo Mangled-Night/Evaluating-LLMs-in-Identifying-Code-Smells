@@ -1,0 +1,25 @@
+/** 
+ * Lock-free semaphore that limits calls by using a  {@link Timeout}. This class is thread-safe and {@link #onEvent(Consumer)} may be called by multiple threads concurrently. It's guaranteed the first caller for anexpired  {@link Timeout} will be called.
+ */
+static class TimedSemaphore {
+  private final AtomicReference<Timeout> timeoutRef=new AtomicReference<>();
+  private final int timeout=5;
+  private final TimeUnit timeUnit=TimeUnit.SECONDS;
+  /** 
+ * Rate-limited method that notifies the given  {@link Consumer} once the current {@link Timeout} is expired.
+ * @param timeoutConsumer callback.
+ */
+  protected void onEvent(  Consumer<Timeout> timeoutConsumer){
+    Timeout existingTimeout=timeoutRef.get();
+    if (existingTimeout != null) {
+      if (!existingTimeout.isExpired()) {
+        return;
+      }
+    }
+    Timeout timeout=new Timeout(this.timeout,this.timeUnit);
+    boolean state=timeoutRef.compareAndSet(existingTimeout,timeout);
+    if (state) {
+      timeoutConsumer.accept(timeout);
+    }
+  }
+}

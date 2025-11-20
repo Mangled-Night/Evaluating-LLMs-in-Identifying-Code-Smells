@@ -1,0 +1,31 @@
+@Test public void testColorPackedBinding(){
+  VertexResourceBuilder builder=new VertexResourceBuilder();
+  VertexAttributeBinding<Colorc,Color> a1=builder.add(0,GLAttributes.COLOR_4_PACKED_VERTEX_ATTRIBUTE);
+  VertexResource resource=builder.build();
+  a1.put(Color.white);
+  a1.put(Color.red);
+  a1.put(Color.green);
+  a1.put(Color.blue);
+  assertEquals(4,a1.getPosition());
+  int stride=Byte.BYTES * 4;
+  resource.writeBuffer(buffer -> {
+    assertEquals(4 * 4 * Byte.BYTES,buffer.limit());
+    assertEquals(255,Byte.toUnsignedInt(buffer.get(Byte.BYTES * 0)));
+    assertEquals(255,Byte.toUnsignedInt(buffer.get(Byte.BYTES * 1)));
+    assertEquals(255,Byte.toUnsignedInt(buffer.get(Byte.BYTES * 2)));
+    assertEquals(255,Byte.toUnsignedInt(buffer.get(Byte.BYTES * 3)));
+    assertEquals(255,Byte.toUnsignedInt(buffer.get(stride + Byte.BYTES * 0)));
+    assertEquals(0,Byte.toUnsignedInt(buffer.get(stride + Byte.BYTES * 1)));
+    assertEquals(0,Byte.toUnsignedInt(buffer.get(stride + Byte.BYTES * 2)));
+    assertEquals(255,Byte.toUnsignedInt(buffer.get(stride + Byte.BYTES * 3)));
+    assertEquals(0,Byte.toUnsignedInt(buffer.get((2 * stride) + Byte.BYTES * 0)));
+    assertEquals(255,Byte.toUnsignedInt(buffer.get((2 * stride) + Byte.BYTES * 1)));
+    assertEquals(0,Byte.toUnsignedInt(buffer.get((2 * stride) + Byte.BYTES * 2)));
+    assertEquals(255,Byte.toUnsignedInt(buffer.get((2 * stride) + Byte.BYTES * 3)));
+    assertEquals(0,Byte.toUnsignedInt(buffer.get((3 * stride) + Byte.BYTES * 0)));
+    assertEquals(0,Byte.toUnsignedInt(buffer.get((3 * stride) + Byte.BYTES * 1)));
+    assertEquals(255,Byte.toUnsignedInt(buffer.get((3 * stride) + Byte.BYTES * 2)));
+    assertEquals(255,Byte.toUnsignedInt(buffer.get((3 * stride) + Byte.BYTES * 3)));
+  }
+);
+}

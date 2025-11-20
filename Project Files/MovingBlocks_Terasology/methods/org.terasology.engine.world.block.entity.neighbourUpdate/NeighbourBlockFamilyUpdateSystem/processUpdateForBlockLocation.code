@@ -1,0 +1,16 @@
+private void processUpdateForBlockLocation(Vector3ic blockLocation){
+  for (  Side side : Side.values()) {
+    Vector3i neighborLocation=blockLocation.add(side.direction(),new Vector3i());
+    if (worldProvider.isBlockRelevant(neighborLocation)) {
+      Block neighborBlock=worldProvider.getBlock(neighborLocation);
+      final BlockFamily blockFamily=neighborBlock.getBlockFamily();
+      if (blockFamily instanceof UpdatesWithNeighboursFamily) {
+        UpdatesWithNeighboursFamily neighboursFamily=(UpdatesWithNeighboursFamily)blockFamily;
+        Block neighborBlockAfterUpdate=neighboursFamily.getBlockForNeighborUpdate(neighborLocation,neighborBlock);
+        if (neighborBlock != neighborBlockAfterUpdate) {
+          worldProvider.setBlock(neighborLocation,neighborBlockAfterUpdate);
+        }
+      }
+    }
+  }
+}

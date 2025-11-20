@@ -1,0 +1,21 @@
+private static void setCharset(String charset,ServerConnection c){
+  if ("null".equalsIgnoreCase(charset)) {
+    c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+  }
+ else   if (c.setCharset(charset)) {
+    c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+  }
+ else {
+    try {
+      if (c.setCharsetIndex(Integer.parseInt(charset))) {
+        c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+      }
+ else {
+        c.writeErrMessage(ErrorCode.ER_UNKNOWN_CHARACTER_SET,"Unknown charset :" + charset);
+      }
+    }
+ catch (    RuntimeException e) {
+      c.writeErrMessage(ErrorCode.ER_UNKNOWN_CHARACTER_SET,"Unknown charset :" + charset);
+    }
+  }
+}

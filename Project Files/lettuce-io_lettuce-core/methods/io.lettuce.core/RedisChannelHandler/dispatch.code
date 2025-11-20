@@ -1,0 +1,32 @@
+protected <T>RedisCommand<K,V,T> dispatch(RedisCommand<K,V,T> cmd){
+  if (debugEnabled) {
+    logger.debug("dispatching command {}",cmd);
+  }
+  if (tracingEnabled) {
+    RedisCommand<K,V,T> commandToSend=cmd;
+    TraceContextProvider provider=CommandWrapper.unwrap(cmd,TraceContextProvider.class);
+    if (provider == null) {
+      commandToSend=new TracedCommand<>(cmd,clientResources.tracing().initialTraceContextProvider().getTraceContext());
+    }
+    return channelWriter.write(commandToSend);
+  }
+  return channelWriter.write(cmd);
+}
+protected Collection<RedisCommand<K,V,?>> dispatch(Collection<? extends RedisCommand<K,V,?>> commands){
+  if (debugEnabled) {
+    logger.debug("dispatching commands {}",commands);
+  }
+  if (tracingEnabled) {
+    Collection<RedisCommand<K,V,?>> withTracer=new ArrayList<>(commands.size());
+    for (    RedisCommand<K,V,?> command : commands) {
+      RedisCommand<K,V,?> commandToUse=command;
+      TraceContextProvider provider=CommandWrapper.unwrap(command,TraceContextProvider.class);
+      if (provider == null) {
+        commandToUse=new TracedCommand<>(command,clientResources.tracing().initialTraceContextProvider().getTraceContext());
+      }
+      withTracer.add(commandToUse);
+    }
+    return channelWriter.write(withTracer);
+  }
+  return channelWriter.write(commands);
+}

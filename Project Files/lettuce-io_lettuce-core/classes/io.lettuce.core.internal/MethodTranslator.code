@@ -1,0 +1,62 @@
+protected static class MethodTranslator {
+  private static final WeakHashMap<Class<?>,MethodTranslator> TRANSLATOR_MAP=new WeakHashMap<>(32);
+  private final Map<Method,Method> map;
+  private MethodTranslator(  Class<?> delegate,  Class<?>... methodSources){
+    map=createMethodMap(delegate,methodSources);
+  }
+  public static MethodTranslator of(  Class<?> delegate,  Class<?>... methodSources){
+synchronized (TRANSLATOR_MAP) {
+      return TRANSLATOR_MAP.computeIfAbsent(delegate,key -> new MethodTranslator(key,methodSources));
+    }
+  }
+  private Map<Method,Method> createMethodMap(  Class<?> delegate,  Class<?>[] methodSources){
+    Map<Method,Method> map;
+    List<Method> methods=new ArrayList<>();
+    for (    Class<?> sourceClass : methodSources) {
+      methods.addAll(getMethods(sourceClass));
+    }
+    map=new HashMap<>(methods.size(),1.0f);
+    for (    Method method : methods) {
+      try {
+        map.put(method,delegate.getMethod(method.getName(),method.getParameterTypes()));
+      }
+ catch (      NoSuchMethodException ignore) {
+      }
+    }
+    return map;
+  }
+  private Collection<? extends Method> getMethods(  Class<?> sourceClass){
+    Set<Method> result=new HashSet<>();
+    Class<?> searchType=sourceClass;
+    while (searchType != null && searchType != Object.class) {
+      result.addAll(filterPublicMethods(Arrays.asList(sourceClass.getDeclaredMethods())));
+      if (sourceClass.isInterface()) {
+        Class<?>[] interfaces=sourceClass.getInterfaces();
+        for (        Class<?> interfaceClass : interfaces) {
+          result.addAll(getMethods(interfaceClass));
+        }
+        searchType=null;
+      }
+ else {
+        searchType=searchType.getSuperclass();
+      }
+    }
+    return result;
+  }
+  private Collection<? extends Method> filterPublicMethods(  List<Method> methods){
+    List<Method> result=new ArrayList<>(methods.size());
+    for (    Method method : methods) {
+      if (Modifier.isPublic(method.getModifiers())) {
+        result.add(method);
+      }
+    }
+    return result;
+  }
+  public Method get(  Method key){
+    Method result=map.get(key);
+    if (result != null) {
+      return result;
+    }
+    throw new IllegalStateException("Cannot find source method " + key);
+  }
+}

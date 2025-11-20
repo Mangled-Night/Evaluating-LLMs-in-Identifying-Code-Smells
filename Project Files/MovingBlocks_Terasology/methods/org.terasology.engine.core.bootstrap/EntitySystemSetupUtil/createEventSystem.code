@@ -1,0 +1,14 @@
+private static EventSystem createEventSystem(NetworkSystem networkSystem,PojoEntityManager entityManager,EntitySystemLibrary library,RecordedEventStore recordedEventStore,RecordAndReplaySerializer recordAndReplaySerializer,RecordAndReplayUtils recordAndReplayUtils,RecordAndReplayCurrentStatus recordAndReplayCurrentStatus){
+  EventSystem eventSystem;
+  List<Class<?>> selectedClassesToRecord=createSelectedClassesToRecordList();
+  if (recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.PREPARING_REPLAY) {
+    eventSystem=new EventSystemReplayImpl(library.getEventLibrary(),networkSystem,entityManager,recordedEventStore,recordAndReplaySerializer,recordAndReplayUtils,selectedClassesToRecord,recordAndReplayCurrentStatus);
+  }
+ else {
+    EventCatcher eventCatcher=new EventCatcher(selectedClassesToRecord,recordedEventStore);
+    eventSystem=new EventSystemImpl(networkSystem.getMode().isAuthority());
+    eventSystem=new NetworkEventSystemDecorator(eventSystem,networkSystem,library.getEventLibrary());
+    eventSystem=new RecordingEventSystemDecorator(eventSystem,eventCatcher,recordAndReplayCurrentStatus);
+  }
+  return eventSystem;
+}

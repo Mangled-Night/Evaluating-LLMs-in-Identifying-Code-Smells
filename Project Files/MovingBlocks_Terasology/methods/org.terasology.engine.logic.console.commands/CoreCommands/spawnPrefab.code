@@ -1,0 +1,33 @@
+/** 
+ * Spawns an instance of a prefab in the world
+ * @param sender     Sender of command
+ * @param prefabName String containing prefab name
+ * @return String containing final message
+ */
+@Command(shortDescription="Spawns an instance of a prefab in the world",runOnServer=true,requiredPermission=PermissionManager.CHEAT_PERMISSION) public String spawnPrefab(@Sender EntityRef sender,@CommandParam("prefabId") String prefabName){
+  ClientComponent clientComponent=sender.getComponent(ClientComponent.class);
+  LocationComponent characterLocation=clientComponent.character.getComponent(LocationComponent.class);
+  Vector3f spawnPos=characterLocation.getWorldPosition(new Vector3f());
+  Vector3f offset=characterLocation.getWorldDirection(new Vector3f());
+  offset.mul(2);
+  spawnPos.add(offset);
+  Vector3f dir=characterLocation.getWorldDirection(new Vector3f());
+  dir.y=0;
+  if (dir.lengthSquared() > 0.001f) {
+    dir.normalize();
+  }
+ else {
+    dir.set(Direction.FORWARD.asVector3f());
+  }
+  return Assets.getPrefab(prefabName).map(prefab -> {
+    LocationComponent loc=prefab.getComponent(LocationComponent.class);
+    if (loc != null) {
+      entityManager.create(prefab,spawnPos);
+      return "Done";
+    }
+ else {
+      return "Prefab cannot be spawned (no location component)";
+    }
+  }
+).orElse("Unknown prefab");
+}

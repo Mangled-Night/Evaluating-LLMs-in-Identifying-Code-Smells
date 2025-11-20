@@ -1,0 +1,89 @@
+protected DefaultClientResources(Builder builder){
+  addressResolverGroup=builder.addressResolverGroup;
+  threadFactoryProvider=builder.threadFactoryProvider;
+  if (builder.eventLoopGroupProvider == null) {
+    int ioThreadPoolSize=builder.ioThreadPoolSize;
+    if (ioThreadPoolSize < MIN_IO_THREADS) {
+      logger.info("ioThreadPoolSize is less than {} ({}), setting to: {}",MIN_IO_THREADS,ioThreadPoolSize,MIN_IO_THREADS);
+      ioThreadPoolSize=MIN_IO_THREADS;
+    }
+    this.sharedEventLoopGroupProvider=false;
+    this.eventLoopGroupProvider=new DefaultEventLoopGroupProvider(ioThreadPoolSize,threadFactoryProvider);
+  }
+ else {
+    this.sharedEventLoopGroupProvider=builder.sharedEventLoopGroupProvider;
+    this.eventLoopGroupProvider=builder.eventLoopGroupProvider;
+  }
+  if (builder.eventExecutorGroup == null) {
+    int computationThreadPoolSize=builder.computationThreadPoolSize;
+    if (computationThreadPoolSize < MIN_COMPUTATION_THREADS) {
+      logger.info("computationThreadPoolSize is less than {} ({}), setting to: {}",MIN_COMPUTATION_THREADS,computationThreadPoolSize,MIN_COMPUTATION_THREADS);
+      computationThreadPoolSize=MIN_COMPUTATION_THREADS;
+    }
+    eventExecutorGroup=DefaultEventLoopGroupProvider.createEventLoopGroup(DefaultEventExecutorGroup.class,computationThreadPoolSize,threadFactoryProvider);
+    sharedEventExecutor=false;
+  }
+ else {
+    sharedEventExecutor=builder.sharedEventExecutor;
+    eventExecutorGroup=builder.eventExecutorGroup;
+  }
+  if (builder.timer == null) {
+    timer=new HashedWheelTimer(threadFactoryProvider.getThreadFactory("lettuce-timer"));
+    sharedTimer=false;
+  }
+ else {
+    timer=builder.timer;
+    sharedTimer=builder.sharedTimer;
+  }
+  if (builder.eventBus == null) {
+    eventBus=new DefaultEventBus(Schedulers.fromExecutorService(eventExecutorGroup,"lettuce-event-bus"));
+  }
+ else {
+    eventBus=builder.eventBus;
+  }
+  if (builder.commandLatencyRecorder == null) {
+    if (DefaultCommandLatencyCollector.isAvailable()) {
+      if (builder.commandLatencyCollectorOptions != null) {
+        commandLatencyRecorder=CommandLatencyCollector.create(builder.commandLatencyCollectorOptions);
+      }
+ else {
+        commandLatencyRecorder=CommandLatencyCollector.create(CommandLatencyCollectorOptions.create());
+      }
+    }
+ else {
+      logger.debug("LatencyUtils/HdrUtils are not available, metrics are disabled");
+      builder.commandLatencyCollectorOptions=CommandLatencyCollectorOptions.disabled();
+      commandLatencyRecorder=CommandLatencyRecorder.disabled();
+    }
+    sharedCommandLatencyRecorder=false;
+  }
+ else {
+    sharedCommandLatencyRecorder=builder.sharedCommandLatencyCollector;
+    commandLatencyRecorder=builder.commandLatencyRecorder;
+  }
+  commandLatencyPublisherOptions=builder.commandLatencyPublisherOptions;
+  if (commandLatencyRecorder.isEnabled() && commandLatencyPublisherOptions != null && commandLatencyRecorder instanceof CommandLatencyCollector) {
+    metricEventPublisher=new DefaultCommandLatencyEventPublisher(eventExecutorGroup,commandLatencyPublisherOptions,eventBus,(CommandLatencyCollector)commandLatencyRecorder);
+  }
+ else {
+    metricEventPublisher=null;
+  }
+  if (builder.dnsResolver == null) {
+    dnsResolver=DnsResolvers.UNRESOLVED;
+  }
+ else {
+    dnsResolver=builder.dnsResolver;
+  }
+  if (builder.socketAddressResolver == null) {
+    socketAddressResolver=SocketAddressResolver.create(dnsResolver);
+  }
+ else {
+    socketAddressResolver=builder.socketAddressResolver;
+  }
+  reconnectDelay=builder.reconnectDelay;
+  nettyCustomizer=builder.nettyCustomizer;
+  tracing=builder.tracing;
+  if (!sharedTimer && timer instanceof HashedWheelTimer) {
+    ((HashedWheelTimer)timer).start();
+  }
+}

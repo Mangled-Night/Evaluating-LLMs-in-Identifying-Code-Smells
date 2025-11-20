@@ -1,0 +1,21 @@
+private RedisException validateWrite(int commands){
+  if (isClosed()) {
+    return new RedisException("Connection is closed");
+  }
+  if (usesBoundedQueues()) {
+    boolean connected=isConnected();
+    if (QUEUE_SIZE.get(this) + commands > clientOptions.getRequestQueueSize()) {
+      return new RedisException("Request queue size exceeded: " + clientOptions.getRequestQueueSize() + ". Commands are not accepted until the queue size drops.");
+    }
+    if (!connected && disconnectedBuffer.size() + commands > clientOptions.getRequestQueueSize()) {
+      return new RedisException("Request queue size exceeded: " + clientOptions.getRequestQueueSize() + ". Commands are not accepted until the queue size drops.");
+    }
+    if (connected && commandBuffer.size() + commands > clientOptions.getRequestQueueSize()) {
+      return new RedisException("Command buffer size exceeded: " + clientOptions.getRequestQueueSize() + ". Commands are not accepted until the queue size drops.");
+    }
+  }
+  if (!isConnected() && rejectCommandsWhileDisconnected) {
+    return new RedisException("Currently not connected. Commands are rejected.");
+  }
+  return null;
+}

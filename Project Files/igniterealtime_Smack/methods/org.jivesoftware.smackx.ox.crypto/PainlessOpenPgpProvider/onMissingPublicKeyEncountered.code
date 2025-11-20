@@ -1,0 +1,16 @@
+@Override public PGPPublicKeyRing onMissingPublicKeyEncountered(Long keyId){
+  try {
+    sender.updateKeys(connection);
+    PGPPublicKeyRingCollection anyKeys=sender.getAnyPublicKeys();
+    for (    PGPPublicKeyRing ring : anyKeys) {
+      if (ring.getPublicKey(keyId) != null) {
+        return ring;
+      }
+    }
+    return null;
+  }
+ catch (  InterruptedException|NotALeafNodeException|NotAPubSubNodeException|NotConnectedException|NoResponseException|XMPPErrorException|IOException|PGPException e) {
+    LOGGER.log(Level.WARNING,"Cannot fetch missing key " + keyId,e);
+    return null;
+  }
+}

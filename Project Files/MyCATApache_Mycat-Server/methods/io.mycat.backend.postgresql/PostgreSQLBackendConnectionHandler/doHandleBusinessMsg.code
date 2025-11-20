@@ -1,0 +1,64 @@
+/** 
+ * 进行业务处理
+ * @param con
+ * @param buf
+ * @param start
+ * @param readedLength
+ */
+private void doHandleBusinessMsg(PostgreSQLBackendConnection con,ByteBuffer buf,int start,int readedLength){
+  try {
+    List<PostgreSQLPacket> packets=PacketUtils.parsePacket(buf,0,readedLength);
+    if (packets == null || packets.isEmpty()) {
+      return;
+    }
+    for (    PostgreSQLPacket packet : packets) {
+      if (packet instanceof ErrorResponse) {
+        doProcessErrorResponse(con,(ErrorResponse)packet);
+      }
+ else       if (packet instanceof RowDescription) {
+        response=new SelectResponse((RowDescription)packet);
+      }
+ else       if (packet instanceof DataRow) {
+        response.addDataRow((DataRow)packet);
+      }
+ else       if (packet instanceof ParameterStatus) {
+        doProcessParameterStatus(con,(ParameterStatus)packet);
+      }
+ else       if (packet instanceof CommandComplete) {
+        doProcessCommandComplete(con,(CommandComplete)packet,response);
+      }
+ else       if (packet instanceof NoticeResponse) {
+        doProcessNoticeResponse(con,(NoticeResponse)packet);
+      }
+ else       if (packet instanceof ReadyForQuery) {
+        doProcessReadyForQuery(con,(ReadyForQuery)packet);
+      }
+ else       if (packet instanceof NotificationResponse) {
+        doProcessNotificationResponse(con,(NotificationResponse)packet);
+      }
+ else       if (packet instanceof CopyInResponse) {
+        doProcessCopyInResponse(con,(CopyInResponse)packet);
+      }
+ else       if (packet instanceof CopyOutResponse) {
+        doProcessCopyOutResponse(con,(CopyOutResponse)packet);
+      }
+ else       if (packet instanceof EmptyQueryResponse) {
+        doProcessEmptyQueryResponse(con,(EmptyQueryResponse)packet);
+      }
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.error("处理出异常了",e);
+    ErrorPacket err=new ErrorPacket();
+    err.packetId=++packetId;
+    err.message=("内部服务器处理出错!" + e.getMessage()).getBytes();
+    err.errno=ErrorCode.ERR_NOT_SUPPORTED;
+    ResponseHandler respHand=con.getResponseHandler();
+    if (respHand != null) {
+      respHand.errorResponse(err.writeToBytes(),con);
+    }
+ else {
+      LOGGER.error("{},respHand 为空",this);
+    }
+  }
+}

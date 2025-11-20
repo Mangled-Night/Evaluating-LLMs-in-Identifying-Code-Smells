@@ -1,0 +1,16 @@
+private void doProcessCommandComplete(PostgreSQLBackendConnection con,CommandComplete commandComplete,SelectResponse response){
+  if (commandComplete.isSelectComplete()) {
+    if (response == null) {
+      throw new RuntimeException("the select proess err ,the SelectResponse is empty");
+    }
+    doProcessBusinessQuery(con,response,commandComplete);
+  }
+ else {
+    OkPacket okPck=new OkPacket();
+    okPck.affectedRows=commandComplete.getAffectedRows();
+    okPck.insertId=commandComplete.getInsertId();
+    okPck.packetId=++packetId;
+    okPck.message=commandComplete.getCommandResponse().getBytes();
+    con.getResponseHandler().okResponse(okPck.writeToBytes(),con);
+  }
+}

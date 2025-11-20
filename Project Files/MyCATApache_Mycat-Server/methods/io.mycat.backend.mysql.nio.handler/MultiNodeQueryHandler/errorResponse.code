@@ -1,0 +1,19 @@
+@Override public void errorResponse(byte[] data,BackendConnection conn){
+  ErrorPacket errPacket=new ErrorPacket();
+  errPacket.read(data);
+  lock.lock();
+  try {
+    if (!isFail()) {
+      setFail(new String(errPacket.message));
+    }
+    errConnections.add(conn);
+    conn.syncAndExcute();
+    if (--nodeCount == 0) {
+      errPacket.packetId=++packetId;
+      processFinishWork(errPacket.writeToBytes(),false,conn);
+    }
+  }
+  finally {
+    lock.unlock();
+  }
+}

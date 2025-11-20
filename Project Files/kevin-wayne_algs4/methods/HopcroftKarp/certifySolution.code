@@ -1,0 +1,37 @@
+/** 
+ * The code below is solely for testing correctness of the data type.
+ */
+private boolean certifySolution(Graph G){
+  for (int v=0; v < V; v++) {
+    if (mate(v) == -1)     continue;
+    if (mate(mate(v)) != v)     return false;
+  }
+  int matchedVertices=0;
+  for (int v=0; v < V; v++) {
+    if (mate(v) != -1)     matchedVertices++;
+  }
+  if (2 * size() != matchedVertices)   return false;
+  int sizeOfMinVertexCover=0;
+  for (int v=0; v < V; v++)   if (inMinVertexCover(v))   sizeOfMinVertexCover++;
+  if (size() != sizeOfMinVertexCover)   return false;
+  boolean[] isMatched=new boolean[V];
+  for (int v=0; v < V; v++) {
+    int w=mate[v];
+    if (w == -1)     continue;
+    if (v == w)     return false;
+    if (v >= w)     continue;
+    if (isMatched[v] || isMatched[w])     return false;
+    isMatched[v]=true;
+    isMatched[w]=true;
+  }
+  for (int v=0; v < V; v++) {
+    if (mate(v) == -1)     continue;
+    boolean isEdge=false;
+    for (    int w : G.adj(v)) {
+      if (mate(v) == w)       isEdge=true;
+    }
+    if (!isEdge)     return false;
+  }
+  for (int v=0; v < V; v++)   for (  int w : G.adj(v))   if (!inMinVertexCover(v) && !inMinVertexCover(w))   return false;
+  return true;
+}

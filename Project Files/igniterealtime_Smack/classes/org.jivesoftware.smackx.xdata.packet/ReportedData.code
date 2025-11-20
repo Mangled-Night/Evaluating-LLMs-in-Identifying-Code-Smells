@@ -1,0 +1,43 @@
+/** 
+ * Represents the fields that will be returned from a search. This information is useful when you try to use the jabber:iq:search namespace to return dynamic form information.
+ * @author Gaston Dombiak
+ */
+public static class ReportedData implements ExtensionElement {
+  public static final String ELEMENT="reported";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  private final List<? extends FormField> fields;
+  private Map<String,FormField> fieldMap;
+  public ReportedData(  List<? extends FormField> fields){
+    this.fields=Collections.unmodifiableList(fields);
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  /** 
+ * Returns the fields returned from a search.
+ * @return the fields returned from a search.
+ */
+  public List<? extends FormField> getFields(){
+    return fields;
+  }
+  public FormField getField(  String name){
+    if (fieldMap == null) {
+      fieldMap=new HashMap<>(fields.size());
+      for (      FormField field : fields) {
+        String fieldName=field.getFieldName();
+        fieldMap.put(fieldName,field);
+      }
+    }
+    return fieldMap.get(name);
+  }
+  @Override public XmlStringBuilder toXML(  XmlEnvironment xmlEnvironment){
+    XmlStringBuilder xml=new XmlStringBuilder(this,xmlEnvironment);
+    xml.rightAngleBracket();
+    xml.append(getFields());
+    xml.closeElement(this);
+    return xml;
+  }
+}

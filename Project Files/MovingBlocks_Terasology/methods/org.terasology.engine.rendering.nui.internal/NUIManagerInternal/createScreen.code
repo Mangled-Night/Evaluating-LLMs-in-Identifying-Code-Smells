@@ -1,0 +1,42 @@
+@Override public UIScreenLayer createScreen(String screenUri){
+  return createScreen(screenUri,CoreScreenLayer.class);
+}
+@Override public UIScreenLayer createScreen(ResourceUrn screenUri){
+  return createScreen(screenUri,CoreScreenLayer.class);
+}
+@Override public <T extends CoreScreenLayer>T createScreen(String screenUri,Class<T> expectedType){
+  Set<ResourceUrn> urns=assetManager.resolve(screenUri,UIElement.class);
+switch (urns.size()) {
+case 0:
+    logger.warn("No asset found for screen '{}'",screenUri);
+  return null;
+case 1:
+ResourceUrn urn=urns.iterator().next();
+return createScreen(urn,expectedType);
+default :
+logger.warn("Multiple matches for screen '{}': {}",screenUri,urns);
+return null;
+}
+}
+@Override public <T extends CoreScreenLayer>T createScreen(ResourceUrn screenUri,Class<T> expectedType){
+  boolean existsAlready=!screenUri.isInstance() && assetManager.isLoaded(screenUri,UIElement.class);
+  Optional<UIElement> opt=Assets.get(screenUri,UIElement.class);
+  if (!opt.isPresent()) {
+    logger.error("Can't find screen '{}'",screenUri);
+  }
+ else {
+    UIElement element=opt.get();
+    UIWidget root=element.getRootWidget();
+    if (expectedType.isInstance(root)) {
+      T screen=expectedType.cast(root);
+      if (!existsAlready) {
+        initialiseScreen(screen,screenUri);
+      }
+      return screen;
+    }
+ else {
+      logger.error("Screen '{}' is a '{}' and not a '{}'",screenUri,root.getClass(),expectedType);
+    }
+  }
+  return null;
+}

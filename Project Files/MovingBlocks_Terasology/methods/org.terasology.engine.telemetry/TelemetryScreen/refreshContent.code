@@ -1,0 +1,21 @@
+private void refreshContent(){
+  ColumnLayout mainLayout=new ColumnLayout();
+  mainLayout.setHorizontalSpacing(8);
+  mainLayout.setVerticalSpacing(8);
+  fetchTelemetryCategoriesFromEngineOnlyEnvironment();
+  for (  Map.Entry<TelemetryCategory,Class> telemetryCategory : telemetryCategories.entrySet()) {
+    Class metricClass=telemetryCategory.getValue();
+    Optional<Metric> optional=metrics.getMetric(metricClass);
+    if (optional.isPresent()) {
+      Metric metric=optional.get();
+      Map<String,?> map=metric.createTelemetryFieldToValue();
+      if (map != null) {
+        addTelemetrySection(telemetryCategory.getKey(),mainLayout,map);
+      }
+    }
+  }
+  ScrollableArea area=find("area",ScrollableArea.class);
+  if (area != null) {
+    area.setContent(mainLayout);
+  }
+}

@@ -1,0 +1,54 @@
+/** 
+ * Additional functionality around the  {@link FacetLayer} interface that isindependent from any actual implementation.
+ */
+public final class FacetLayers {
+  private static final Logger logger=LoggerFactory.getLogger(FacetLayers.class);
+  private FacetLayers(){
+  }
+  /** 
+ * @param facets the facets that should be rendered
+ * @param environment the module environment that contains the facet layers
+ * @return an ordered list of facet layers
+ */
+  public static List<FacetLayer> createLayersFor(  Set<Class<? extends WorldFacet>> facets,  ModuleEnvironment environment){
+    Iterable<Class<? extends FacetLayer>> layers=environment.getSubtypesOf(FacetLayer.class);
+    List<FacetLayer> loadedLayers=new ArrayList<>();
+    for (    Class<? extends WorldFacet> facet : facets) {
+      loadedLayers.addAll(createLayersFor(facet,layers));
+    }
+    loadedLayers.sort((l1,l2) -> {
+      int o1=l1.getClass().getAnnotation(Renders.class).order();
+      int o2=l2.getClass().getAnnotation(Renders.class).order();
+      return Integer.compare(o1,o2);
+    }
+);
+    return loadedLayers;
+  }
+  private static Collection<FacetLayer> createLayersFor(  Class<? extends WorldFacet> facetClass,  Iterable<Class<? extends FacetLayer>> layers){
+    Collection<FacetLayer> result=new ArrayList<>();
+    for (    Class<? extends FacetLayer> layer : layers) {
+      Renders anno=layer.getAnnotation(Renders.class);
+      if (anno == null) {
+        if (!Modifier.isAbstract(layer.getModifiers())) {
+          logger.warn("FacetLayer class {} is not annotated with @Renders",layer);
+        }
+      }
+ else {
+        Class<? extends WorldFacet> annotated=anno.value();
+        if (facetClass.equals(annotated)) {
+          try {
+            FacetLayer instance=layer.newInstance();
+            result.add(instance);
+          }
+ catch (          InstantiationException|IllegalAccessException e) {
+            logger.warn("Could not call default constructor for {}",layer);
+          }
+        }
+      }
+    }
+    if (result.isEmpty()) {
+      logger.warn("No layers found for facet {}",facetClass.getName());
+    }
+    return result;
+  }
+}

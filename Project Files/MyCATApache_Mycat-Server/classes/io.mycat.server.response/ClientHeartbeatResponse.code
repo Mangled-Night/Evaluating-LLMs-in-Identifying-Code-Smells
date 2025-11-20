@@ -1,0 +1,46 @@
+/** 
+ * 构建select 1语句返回包： 客户端连接池给mycat发送select 1或select 1 from dual心跳语句,mycat拦截，用该类直接返回包
+ */
+public class ClientHeartbeatResponse {
+  private static byte[] RESPONSE_DATA=null;
+  public static void response(  ServerConnection c){
+    if (RESPONSE_DATA == null) {
+synchronized (ClientHeartbeatResponse.class) {
+        if (RESPONSE_DATA == null) {
+          RESPONSE_DATA=buildPacket(c);
+        }
+      }
+    }
+    ByteBuffer buffer=c.allocate();
+    buffer.put(RESPONSE_DATA);
+    c.write(buffer);
+  }
+  private static byte[] buildPacket(  ServerConnection c){
+    byte packetId=0;
+    final int FIELD_COUNT=1;
+    final String FIELD_NAME="1";
+    final String FIELD_VALUE="1";
+    ByteBuffer buffer=c.allocate();
+    ResultSetHeaderPacket header=PacketUtil.getHeader(FIELD_COUNT);
+    header.packetId=++packetId;
+    buffer=header.write(buffer,c,false);
+    FieldPacket field=PacketUtil.getField(FIELD_NAME,Fields.FIELD_TYPE_VAR_STRING);
+    field.packetId=++packetId;
+    buffer=field.write(buffer,c,false);
+    EOFPacket eof=new EOFPacket();
+    eof.packetId=++packetId;
+    buffer=eof.write(buffer,c,false);
+    RowDataPacket row=new RowDataPacket(FIELD_COUNT);
+    row.add(StringUtil.encode(FIELD_VALUE,c.getCharset()));
+    row.packetId=++packetId;
+    buffer=row.write(buffer,c,false);
+    EOFPacket rowEof=new EOFPacket();
+    rowEof.packetId=++packetId;
+    buffer=rowEof.write(buffer,c,false);
+    buffer.flip();
+    byte[] data=new byte[buffer.limit()];
+    buffer.get(data);
+    c.recycle(buffer);
+    return data;
+  }
+}

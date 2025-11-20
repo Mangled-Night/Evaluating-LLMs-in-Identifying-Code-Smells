@@ -1,0 +1,19 @@
+@Test @SuppressWarnings({"rawtypes"}) void testClusterRedirectionLimit() throws Exception {
+  clusterClient.setOptions(ClusterClientOptions.builder().maxRedirects(0).build());
+  RedisAdvancedClusterAsyncCommands<String,String> connection=clusterClient.connect().async();
+  Partitions partitions=clusterClient.getPartitions();
+  for (  RedisClusterNode partition : partitions) {
+    if (partition.getSlots().contains(15495)) {
+      partition.setSlots(Collections.emptyList());
+    }
+ else {
+      partition.setSlots(IntStream.range(0,SlotHash.SLOT_COUNT).boxed().collect(Collectors.toList()));
+    }
+  }
+  partitions.updateCache();
+  RedisFuture<String> setA=connection.set(ClusterTestSettings.KEY_A,value);
+  assertThat(setA instanceof AsyncCommand).isTrue();
+  setA.await(10,TimeUnit.SECONDS);
+  assertThat(setA.getError()).isEqualTo("MOVED 15495 127.0.0.1:7380");
+  connection.getStatefulConnection().close();
+}

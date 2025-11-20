@@ -1,0 +1,31 @@
+/** 
+ * Asserts that a non-occupant receives a Bad Request error when attempting to query an occupant by their occupant JID. <p>From XEP-0045 § 6.6:</p> <blockquote> If a non-occupant attempts to send a disco request to an address of the form &lt;room@service/nick&gt;, a MUC service MUST return a &lt;bad-request/&gt; error </blockquote>
+ * @throws Exception when errors occur
+ */
+@SmackIntegrationTest public void mucTestForRejectingDiscoOnRoomOccupantByNonOccupant() throws Exception {
+  EntityBareJid mucAddress=getRandomRoom("smack-inttest-discoitems");
+  MultiUserChat mucAsSeenByOne=mucManagerOne.getMultiUserChat(mucAddress);
+  final Resourcepart nicknameOne=Resourcepart.from("one-" + randomString);
+  createMuc(mucAsSeenByOne,nicknameOne);
+  final EntityFullJid mucAsSeenByOneUserJid=mucAsSeenByOne.getMyRoomJid();
+  if (mucAsSeenByOneUserJid == null) {
+    throw new AssertionError();
+  }
+  XMPPException.XMPPErrorException xe;
+  try {
+    xe=assertThrows(XMPPException.XMPPErrorException.class,() -> ServiceDiscoveryManager.getInstanceFor(conTwo).discoverItems(mucAsSeenByOneUserJid));
+  }
+  finally {
+    tryDestroy(mucAsSeenByOne);
+  }
+  final StanzaError.Condition expectedCondition;
+switch (sinttestConfiguration.compatibilityMode) {
+default :
+    expectedCondition=StanzaError.Condition.bad_request;
+  break;
+case ejabberd:
+expectedCondition=StanzaError.Condition.not_acceptable;
+break;
+}
+assertEquals(xe.getStanzaError().getCondition(),expectedCondition);
+}

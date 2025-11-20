@@ -1,0 +1,41 @@
+@Override public void process(CommandProcess process){
+  int status=0;
+  String message="";
+  try {
+    Session session=process.session();
+    if (username == null) {
+      status=1;
+      message="username can not be empty!";
+      return;
+    }
+    if (password == null) {
+      boolean authenticated=session.get(ArthasConstants.SUBJECT_KEY) != null;
+      boolean needLogin=this.authenticator.needLogin();
+      message="Authentication result: " + authenticated + ", Need authentication: "+ needLogin;
+      if (needLogin && !authenticated) {
+        status=1;
+      }
+      return;
+    }
+ else {
+      BasicPrincipal principal=new BasicPrincipal(username,password);
+      try {
+        Subject subject=authenticator.login(principal);
+        if (subject != null) {
+          session.put(ArthasConstants.SUBJECT_KEY,subject);
+          message="Authentication result: " + true + ", username: "+ username;
+        }
+ else {
+          status=1;
+          message="Authentication result: " + false + ", username: "+ username;
+        }
+      }
+ catch (      LoginException e) {
+        logger.error("Authentication error, username: {}",username,e);
+      }
+    }
+  }
+  finally {
+    process.end(status,message);
+  }
+}

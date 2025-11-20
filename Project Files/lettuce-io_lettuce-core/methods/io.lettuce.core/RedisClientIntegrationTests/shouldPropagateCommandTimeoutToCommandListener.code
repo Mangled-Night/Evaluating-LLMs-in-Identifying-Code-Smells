@@ -1,0 +1,14 @@
+@Test void shouldPropagateCommandTimeoutToCommandListener() throws InterruptedException {
+  TestCommandListener commandListener=new TestCommandListener();
+  RedisClient client=RedisClient.create(clientResources,RedisURI.Builder.redis(host,port).build());
+  client.addListener(commandListener);
+  ClientOptions options=ClientOptions.builder().timeoutOptions(TimeoutOptions.enabled()).build();
+  client.setOptions(options);
+  StatefulRedisConnection<String,String> connection=client.connect();
+  connection.setTimeout(Duration.ofMillis(1));
+  assertThat(connection.async().blpop(100,key).await(100,TimeUnit.SECONDS)).isTrue();
+  assertThat(commandListener.started).hasSize(1);
+  assertThat(commandListener.succeeded).isEmpty();
+  assertThat(commandListener.failed).hasSize(1).extracting(it -> it.getCommand().getType()).contains(CommandType.BLPOP);
+  FastShutdown.shutdown(client);
+}

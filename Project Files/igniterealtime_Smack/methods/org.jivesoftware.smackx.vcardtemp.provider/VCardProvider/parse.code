@@ -1,0 +1,54 @@
+@Override public VCard parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  VCard vCard=new VCard();
+  String name=null;
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      name=parser.getName();
+switch (name) {
+case "N":
+      parseName(parser,vCard);
+    break;
+case "ORG":
+  parseOrg(parser,vCard);
+break;
+case "TEL":
+parseTel(parser,vCard);
+break;
+case "ADR":
+parseAddress(parser,vCard);
+break;
+case "EMAIL":
+parseEmail(parser,vCard);
+break;
+case "NICKNAME":
+vCard.setNickName(parser.nextText());
+break;
+case "JABBERID":
+vCard.setJabberId(parser.nextText());
+break;
+case "PHOTO":
+parsePhoto(parser,vCard);
+break;
+default :
+break;
+}
+break;
+case TEXT_CHARACTERS:
+if (initialDepth + 1 == parser.getDepth()) {
+String text=parser.getText();
+vCard.setField(name,text);
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return vCard;
+}

@@ -1,0 +1,60 @@
+@Override protected void channelRead0(ChannelHandlerContext ctx,FullHttpRequest request) throws Exception {
+  String path=new URI(request.uri()).getPath();
+  if (wsUri.equalsIgnoreCase(path)) {
+    ctx.fireChannelRead(request.retain());
+  }
+ else {
+    if (HttpUtil.is100ContinueExpected(request)) {
+      send100Continue(ctx);
+    }
+    HttpResponse response=null;
+    if ("/".equals(path)) {
+      path="/index.html";
+    }
+    boolean isHttpApiResponse=false;
+    boolean isFileResponseFinished=false;
+    try {
+      if ("/api".equals(path)) {
+        response=httpApiHandler.handle(ctx,request);
+        isHttpApiResponse=true;
+      }
+      if (path.equals("/ui")) {
+        response=createRedirectResponse(request,"/ui/");
+      }
+      if (path.equals("/ui/")) {
+        path+="index.html";
+      }
+      if (response == null) {
+        response=readFileFromResource(request,path);
+      }
+      if (response == null) {
+        response=DirectoryBrowser.directView(dir,path,request,ctx);
+        isFileResponseFinished=response != null;
+      }
+      if (response == null) {
+        response=createResponse(request,HttpResponseStatus.NOT_FOUND,"Not found");
+      }
+    }
+ catch (    Throwable e) {
+      logger.error("arthas process http request error: " + request.uri(),e);
+    }
+ finally {
+      if (response == null) {
+        response=createResponse(request,HttpResponseStatus.INTERNAL_SERVER_ERROR,"Server error");
+      }
+      if (!isFileResponseFinished) {
+        ChannelFuture future=writeResponse(ctx,response);
+        future.addListener(ChannelFutureListener.CLOSE);
+        if (isHttpApiResponse && response instanceof DefaultFullHttpResponse) {
+          final HttpResponse finalResponse=response;
+          future.addListener(new ChannelFutureListener(){
+            @Override public void operationComplete(            ChannelFuture future) throws Exception {
+              httpApiHandler.onCompleted((DefaultFullHttpResponse)finalResponse);
+            }
+          }
+);
+        }
+      }
+    }
+  }
+}

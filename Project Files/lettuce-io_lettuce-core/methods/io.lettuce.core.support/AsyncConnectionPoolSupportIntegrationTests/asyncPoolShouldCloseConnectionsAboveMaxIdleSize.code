@@ -1,0 +1,15 @@
+@Test void asyncPoolShouldCloseConnectionsAboveMaxIdleSize(){
+  GenericObjectPoolConfig poolConfig=new GenericObjectPoolConfig();
+  poolConfig.setMaxIdle(2);
+  BoundedAsyncPool<StatefulRedisConnection<String,String>> pool=AsyncConnectionPoolSupport.createBoundedObjectPool(() -> client.connectAsync(StringCodec.ASCII,uri),CommonsPool2ConfigConverter.bounded(poolConfig));
+  borrowAndReturn(pool);
+  borrowAndClose(pool);
+  StatefulRedisConnection<String,String> c1=TestFutures.getOrTimeout(pool.acquire());
+  StatefulRedisConnection<String,String> c2=TestFutures.getOrTimeout(pool.acquire());
+  StatefulRedisConnection<String,String> c3=TestFutures.getOrTimeout(pool.acquire());
+  assertThat(channels).hasSize(3);
+  CompletableFuture.allOf(pool.release(c1),pool.release(c2),pool.release(c3)).join();
+  assertThat(channels).hasSize(2);
+  pool.close();
+  assertThat(channels).isEmpty();
+}

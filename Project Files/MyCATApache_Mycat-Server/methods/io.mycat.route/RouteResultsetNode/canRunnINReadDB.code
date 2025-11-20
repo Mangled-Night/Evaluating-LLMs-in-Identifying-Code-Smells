@@ -1,0 +1,8 @@
+/** 
+ * 这里的逻辑是为了优化，实现：非业务sql可以在负载均衡走slave的效果。因为业务sql一般是非自动提交， 而非业务sql一般默认是自动提交，比如mysql client，还有SQLJob, heartbeat都可以使用 了Leader-us优化的query函数，该函数实现为自动提交； 在非自动提交的情况下(有事物)，除非使用了  balance 注解的情况下，才可以走slave. 当然还有一个大前提，必须是 select 或者 show 语句(canRunInReadDB=true)
+ * @param autocommit
+ * @return
+ */
+public boolean canRunnINReadDB(boolean autocommit){
+  return canRunInReadDB && (autocommit || (!autocommit && hasBlanceFlag));
+}

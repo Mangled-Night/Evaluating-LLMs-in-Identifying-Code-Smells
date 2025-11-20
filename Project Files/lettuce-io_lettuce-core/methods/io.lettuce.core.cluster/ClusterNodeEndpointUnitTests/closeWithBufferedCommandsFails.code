@@ -1,0 +1,8 @@
+@Test void closeWithBufferedCommandsFails(){
+  when(clientOptions.getDisconnectedBehavior()).thenReturn(ClientOptions.DisconnectedBehavior.ACCEPT_COMMANDS);
+  prepareNewEndpoint();
+  sut.write(command);
+  when(clusterChannelWriter.write(any(RedisCommand.class))).thenThrow(new RedisException(""));
+  sut.closeAsync();
+  assertThatThrownBy(() -> TestFutures.awaitOrTimeout(command)).isInstanceOf(RedisException.class);
+}

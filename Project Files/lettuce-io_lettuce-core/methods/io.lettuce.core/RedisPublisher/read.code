@@ -1,0 +1,32 @@
+/** 
+ * Reads data from the input, if possible.
+ * @return the data that was read or {@code null}
+ */
+protected T read(){
+  return data.poll();
+}
+/** 
+ * @param subscription
+ * @return {@code true} if the {@code read()} call was able to perform a read and whether this method should becalled again to emit remaining data.
+ */
+private boolean read(RedisSubscription<?> subscription){
+  State state=subscription.state();
+  if (state == NO_DEMAND || state == DEMAND) {
+    if (!subscription.changeState(state,READING)) {
+      return false;
+    }
+  }
+ else {
+    return false;
+  }
+  subscription.readAndPublish();
+  if (subscription.allDataRead && subscription.data.isEmpty()) {
+    state.onAllDataRead(subscription);
+    return false;
+  }
+  subscription.afterRead();
+  if (subscription.allDataRead || !subscription.data.isEmpty()) {
+    return true;
+  }
+  return false;
+}

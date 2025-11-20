@@ -1,0 +1,52 @@
+@Test public void testSortingOnlyByIntegerPrefix() throws Exception {
+  final String[] dataToSort=new String[]{"Boba","Pearls","Tapioca","Taho","Condensed Milk","Jasmine","Milk Tea","Lychee","Mango"};
+  final DataNodeMemoryManager memoryManager=new DataNodeMemoryManager(new TestMemoryManager(new MycatPropertyConf().set("mycat.memory.offHeap.enabled","false")),0);
+  final TestMemoryConsumer consumer=new TestMemoryConsumer(memoryManager);
+  final MemoryBlock dataPage=memoryManager.allocatePage(2048,null);
+  final Object baseObject=dataPage.getBaseObject();
+  long position=dataPage.getBaseOffset();
+  for (  String str : dataToSort) {
+    final byte[] strBytes=str.getBytes(StandardCharsets.UTF_8);
+    Platform.putInt(baseObject,position,strBytes.length);
+    position+=4;
+    Platform.copyMemory(strBytes,Platform.BYTE_ARRAY_OFFSET,baseObject,position,strBytes.length);
+    position+=strBytes.length;
+  }
+  final RecordComparator recordComparator=new RecordComparator(){
+    @Override public int compare(    Object leftBaseObject,    long leftBaseOffset,    Object rightBaseObject,    long rightBaseOffset){
+      return 0;
+    }
+  }
+;
+  final HashPartitioner hashPartitioner=new HashPartitioner(4);
+  final PrefixComparator prefixComparator=PrefixComparators.LONG;
+  UnsafeInMemorySorter sorter=new UnsafeInMemorySorter(consumer,memoryManager,recordComparator,prefixComparator,dataToSort.length,shouldUseRadixSort(),true);
+  position=dataPage.getBaseOffset();
+  System.out.println("(0)address = " + position);
+  for (int i=0; i < dataToSort.length; i++) {
+    if (!sorter.hasSpaceForAnotherRecord()) {
+      sorter.expandPointerArray(consumer.allocateLongArray(sorter.getMemoryUsage() / 8 * 2));
+    }
+    final int recordLength=Platform.getInt(baseObject,position);
+    final long address=memoryManager.encodePageNumberAndOffset(dataPage,position);
+    final String str=getStringFromDataPage(baseObject,position + 4,recordLength);
+    final int partitionId=hashPartitioner.getPartition(str);
+    System.out.println("(" + partitionId + ","+ str+ ")");
+    sorter.insertRecord(address,partitionId);
+    position+=4 + recordLength;
+  }
+  final UnsafeSorterIterator iter=sorter.getSortedIterator();
+  int iterLength=0;
+  long prevPrefix=-1;
+  Arrays.sort(dataToSort);
+  while (iter.hasNext()) {
+    iter.loadNext();
+    final String str=getStringFromDataPage(iter.getBaseObject(),iter.getBaseOffset(),iter.getRecordLength());
+    final long keyPrefix=iter.getKeyPrefix();
+    assertThat(str,isIn(Arrays.asList(dataToSort)));
+    assertThat(keyPrefix,greaterThanOrEqualTo(prevPrefix));
+    prevPrefix=keyPrefix;
+    iterLength++;
+  }
+  assertEquals(dataToSort.length,iterLength);
+}

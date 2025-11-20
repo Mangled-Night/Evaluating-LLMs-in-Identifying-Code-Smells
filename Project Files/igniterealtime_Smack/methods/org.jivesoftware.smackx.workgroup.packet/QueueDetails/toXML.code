@@ -1,0 +1,27 @@
+@Override public String toXML(org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+  StringBuilder buf=new StringBuilder();
+  buf.append('<').append(ELEMENT_NAME).append(" xmlns=\"").append(NAMESPACE).append("\">");
+synchronized (users) {
+    for (Iterator<QueueUser> i=users.iterator(); i.hasNext(); ) {
+      QueueUser user=i.next();
+      int position=user.getQueuePosition();
+      int timeRemaining=user.getEstimatedRemainingTime();
+      Date timestamp=user.getQueueJoinTimestamp();
+      buf.append("<user jid=\"").append(user.getUserID()).append("\">");
+      if (position != -1) {
+        buf.append("<position>").append(position).append("</position>");
+      }
+      if (timeRemaining != -1) {
+        buf.append("<time>").append(timeRemaining).append("</time>");
+      }
+      if (timestamp != null) {
+        buf.append("<join-time>");
+        buf.append(dateFormat.format(timestamp));
+        buf.append("</join-time>");
+      }
+      buf.append("</user>");
+    }
+  }
+  buf.append("</").append(ELEMENT_NAME).append('>');
+  return buf.toString();
+}

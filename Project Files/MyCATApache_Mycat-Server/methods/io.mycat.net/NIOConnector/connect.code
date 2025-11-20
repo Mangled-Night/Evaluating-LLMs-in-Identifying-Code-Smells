@@ -1,0 +1,14 @@
+private void connect(Selector selector){
+  AbstractConnection c=null;
+  while ((c=connectQueue.poll()) != null) {
+    try {
+      SocketChannel channel=(SocketChannel)c.getChannel();
+      channel.register(selector,SelectionKey.OP_CONNECT,c);
+      channel.connect(new InetSocketAddress(c.host,c.port));
+    }
+ catch (    Exception e) {
+      LOGGER.error("error:",e);
+      c.close(e.toString());
+    }
+  }
+}

@@ -1,0 +1,24 @@
+/** 
+ * Initiate reconnect and return a  {@link ChannelFuture} for synchronization. The resulting future either succeeds or fails.It can be  {@link ChannelFuture#cancel(boolean) canceled} to interrupt reconnection and channel initialization. A failed{@link ChannelFuture} will close the channel.
+ * @return reconnect {@link ChannelFuture}.
+ */
+protected Tuple2<CompletableFuture<Channel>,CompletableFuture<SocketAddress>> reconnect(){
+  CompletableFuture<Channel> future=new CompletableFuture<>();
+  CompletableFuture<SocketAddress> address=new CompletableFuture<>();
+  socketAddressSupplier.subscribe(remoteAddress -> {
+    address.complete(remoteAddress);
+    if (future.isCancelled()) {
+      return;
+    }
+    reconnect0(future,remoteAddress);
+  }
+,ex -> {
+    if (!address.isDone()) {
+      address.completeExceptionally(ex);
+    }
+    future.completeExceptionally(ex);
+  }
+);
+  this.currentFuture=future;
+  return Tuples.of(future,address);
+}

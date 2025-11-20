@@ -1,0 +1,72 @@
+/** 
+ * Represents the available options of a  {@link ListSingleFormField} and {@link ListMultiFormField}.
+ * @author Gaston Dombiak
+ */
+public static final class Option implements XmlElement {
+  public static final String ELEMENT="option";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  private final String label;
+  private final Value value;
+  public Option(  String value){
+    this(null,value);
+  }
+  public Option(  String label,  String value){
+    this.label=label;
+    this.value=new Value(value);
+  }
+  public Option(  String label,  Value value){
+    this.label=label;
+    this.value=value;
+  }
+  /** 
+ * Returns the label that represents the option.
+ * @return the label that represents the option.
+ */
+  public String getLabel(){
+    return label;
+  }
+  /** 
+ * Returns the value of the option.
+ * @return the value of the option.
+ */
+  public Value getValue(){
+    return value;
+  }
+  /** 
+ * Returns the string representation of the value of the option.
+ * @return the value of the option.
+ */
+  public String getValueString(){
+    return value.value.toString();
+  }
+  @Override public String toString(){
+    return getLabel();
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  @Override public QName getQName(){
+    return QNAME;
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this);
+    xml.optAttribute("label",getLabel());
+    xml.rightAngleBracket();
+    xml.element("value",getValueString());
+    xml.closeElement(this);
+    return xml;
+  }
+  @Override public boolean equals(  Object obj){
+    return EqualsUtil.equals(this,obj,(e,o) -> {
+      e.append(value,o.value).append(label,o.label);
+    }
+);
+  }
+  private final HashCode.Cache hashCodeCache=new HashCode.Cache();
+  @Override public int hashCode(){
+    return hashCodeCache.getHashCode(c -> c.append(value).append(label));
+  }
+}

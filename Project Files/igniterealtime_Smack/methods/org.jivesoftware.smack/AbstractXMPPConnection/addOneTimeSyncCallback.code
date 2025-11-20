@@ -1,0 +1,20 @@
+@SuppressWarnings("FutureReturnValueIgnored") @Override public void addOneTimeSyncCallback(final StanzaListener callback,final StanzaFilter packetFilter){
+  final StanzaListener packetListener=new StanzaListener(){
+    @Override public void processStanza(    Stanza packet) throws NotConnectedException, InterruptedException, NotLoggedInException {
+      try {
+        callback.processStanza(packet);
+      }
+  finally {
+        removeSyncStanzaListener(this);
+      }
+    }
+  }
+;
+  addSyncStanzaListener(packetListener,packetFilter);
+  schedule(new Runnable(){
+    @Override public void run(){
+      removeSyncStanzaListener(packetListener);
+    }
+  }
+,getReplyTimeout(),TimeUnit.MILLISECONDS);
+}

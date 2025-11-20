@@ -1,0 +1,16 @@
+/** 
+ * Check that sending an IQ to a full JID that is offline returns an IQ ERROR instead of being route to some other resource of the same user.
+ */
+public void testFullJIDToOfflineUser(){
+  Version versionRequest=new Version();
+  versionRequest.setType(IQ.Type.get);
+  versionRequest.setFrom(getFullJID(0));
+  versionRequest.setTo(getBareJID(0) + "/Something");
+  StanzaCollector collector=getConnection(0).createStanzaCollector(new PacketIDFilter(versionRequest.getStanzaId()));
+  getConnection(0).sendStanza(versionRequest);
+  IQ result=(IQ)collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
+  collector.cancel();
+  assertNotNull("No response from server",result);
+  assertEquals("The server didn't reply with an error packet",IQ.Type.error,result.getType());
+  assertEquals("Server answered an incorrect error code",503,result.getError().getCode());
+}

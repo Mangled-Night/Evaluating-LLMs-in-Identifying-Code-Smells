@@ -1,0 +1,35 @@
+/** 
+ * Jingle.
+ * @author Jeff Williams
+ * @see JingleSessionState
+ */
+public class JingleSessionStateEnded extends JingleSessionState {
+  private static final Logger LOGGER=Logger.getLogger(JingleSessionStateEnded.class.getName());
+  private static JingleSessionStateEnded INSTANCE=null;
+  protected JingleSessionStateEnded(){
+  }
+  /** 
+ * A thread-safe means of getting the one instance of this class.
+ * @return The singleton instance of this class.
+ */
+  public static synchronized JingleSessionState getInstance(){
+    if (INSTANCE == null) {
+      INSTANCE=new JingleSessionStateEnded();
+    }
+    return INSTANCE;
+  }
+  @Override public void enter(){
+    LOGGER.fine("Session Ended");
+    LOGGER.fine("-------------------------------------------------------------------");
+  }
+  @Override public void exit(){
+  }
+  /** 
+ * Pretty much nothing is valid for receiving once we've ended the session.
+ */
+  @Override public IQ processJingle(  JingleSession session,  Jingle jingle,  JingleActionEnum action){
+    IQ response;
+    response=session.createJingleError(jingle,JingleError.MALFORMED_STANZA);
+    return response;
+  }
+}

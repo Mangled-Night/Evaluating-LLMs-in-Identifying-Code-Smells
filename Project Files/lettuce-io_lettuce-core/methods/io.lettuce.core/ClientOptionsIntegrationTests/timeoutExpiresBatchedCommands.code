@@ -1,0 +1,10 @@
+@Test void timeoutExpiresBatchedCommands(){
+  client.setOptions(ClientOptions.builder().timeoutOptions(TimeoutOptions.builder().fixedTimeout(Duration.ofMillis(1)).build()).build());
+  try (StatefulRedisConnection<String,String> connection=client.connect()){
+    connection.setAutoFlushCommands(false);
+    RedisFuture<String> future=connection.async().ping();
+    Wait.untilTrue(future::isDone).waitOrTimeout();
+    assertThatThrownBy(future::get).isInstanceOf(ExecutionException.class).hasCauseInstanceOf(RedisCommandTimeoutException.class).hasMessageContaining("1 milli");
+    connection.flushCommands();
+  }
+ }

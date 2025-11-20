@@ -1,0 +1,11 @@
+protected void notifyPushListeners(PushMessage notification){
+  if (PubSubOutput.Type.isPubSubType(notification.getType())) {
+    PubSubOutput.Type type=PubSubOutput.Type.valueOf(notification.getType());
+    RedisCommand<?,?,?> command=getStack().peek();
+    if (command != null && shouldCompleteCommand(type,command)) {
+      completeCommand(notification,command);
+    }
+    doNotifyMessage(toPubSubMessage(notification));
+  }
+  super.notifyPushListeners(notification);
+}

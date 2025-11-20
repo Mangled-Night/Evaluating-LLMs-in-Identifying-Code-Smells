@@ -1,0 +1,13 @@
+private void syncIsolation(int nativeIsolation){
+  int jdbcIsolation=convertNativeIsolationToJDBC(nativeIsolation);
+  int srcJdbcIsolation=getTxIsolation();
+  if (jdbcIsolation == srcJdbcIsolation || "oracle".equalsIgnoreCase(getDbType()) && jdbcIsolation != Connection.TRANSACTION_READ_COMMITTED && jdbcIsolation != Connection.TRANSACTION_SERIALIZABLE) {
+    return;
+  }
+  try {
+    con.setTransactionIsolation(jdbcIsolation);
+  }
+ catch (  SQLException e) {
+    LOGGER.warn("set txisolation error:",e);
+  }
+}

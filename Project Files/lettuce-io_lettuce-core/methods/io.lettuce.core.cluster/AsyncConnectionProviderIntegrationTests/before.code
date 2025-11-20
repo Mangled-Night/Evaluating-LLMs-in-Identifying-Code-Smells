@@ -1,0 +1,15 @@
+@BeforeEach void before() throws Exception {
+  serverSocket=new ServerSocket(9393,1);
+  client=RedisClusterClient.create(resources,"redis://localhost");
+  client.setOptions(ClusterClientOptions.builder().protocolVersion(ProtocolVersion.RESP2).build());
+  sut=new AsyncConnectionProvider<>(new AbstractClusterNodeConnectionFactory<String,String>(resources){
+    @Override public ConnectionFuture<StatefulRedisConnection<String,String>> apply(    ConnectionKey connectionKey){
+      RedisURI redisURI=RedisURI.create(TestSettings.host(),serverSocket.getLocalPort());
+      redisURI.setTimeout(Duration.ofSeconds(5));
+      ConnectionFuture<StatefulRedisConnection<String,String>> future=client.connectToNodeAsync(StringCodec.UTF8,"",null,Mono.just(new InetSocketAddress(connectionKey.host,serverSocket.getLocalPort())));
+      connectInitiated.countDown();
+      return future;
+    }
+  }
+);
+}

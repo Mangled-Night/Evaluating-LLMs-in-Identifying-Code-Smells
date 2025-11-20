@@ -1,0 +1,10 @@
+@Test void shouldDetermineSimpleConsistency(){
+  RedisClusterNode node1=new RedisClusterNode(RedisURI.create("127.0.0.1",1),"1",true,"",0,0,0,new ArrayList<>(),new HashSet<>());
+  RedisClusterNode node2=new RedisClusterNode(RedisURI.create("127.0.0.0",1),"2",true,"",0,0,0,new ArrayList<>(),new HashSet<>());
+  RedisClusterNode newNode1=new RedisClusterNode(RedisURI.create("127.0.0.0",1),"1",true,"",0,0,0,new ArrayList<>(),new HashSet<>());
+  RoundRobin<RedisClusterNode> roundRobin=new RoundRobin<>();
+  roundRobin.rebuild(Arrays.asList(node1,node2));
+  assertThat(roundRobin.isConsistent(Arrays.asList(node1,node2))).isTrue();
+  assertThat(roundRobin.isConsistent(Arrays.asList(newNode1,node2))).isTrue();
+  assertThat(roundRobin.isConsistent(Arrays.asList(RedisClusterNode.of("1"),node2))).isTrue();
+}

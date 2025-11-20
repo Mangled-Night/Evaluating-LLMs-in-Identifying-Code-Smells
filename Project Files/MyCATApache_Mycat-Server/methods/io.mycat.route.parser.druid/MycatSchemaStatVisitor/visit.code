@@ -1,0 +1,526 @@
+@Override public boolean visit(SQLSelectStatement x){
+  aliasMap.clear();
+  selectTableList.clear();
+  clearTableVisitFlag();
+  return true;
+}
+@Override public boolean visit(SQLBetweenExpr x){
+  String begin=null;
+  if (x.beginExpr instanceof SQLCharExpr) {
+    begin=(String)((SQLCharExpr)x.beginExpr).getValue();
+  }
+ else {
+    begin=x.beginExpr.toString();
+  }
+  String end=null;
+  if (x.endExpr instanceof SQLCharExpr) {
+    end=(String)((SQLCharExpr)x.endExpr).getValue();
+  }
+ else {
+    end=x.endExpr.toString();
+  }
+  Column column=getColumn(x);
+  if (column == null) {
+    return true;
+  }
+  Condition condition=null;
+  for (  Condition item : this.getConditions()) {
+    if (item.getColumn().equals(column) && item.getOperator().equals("between")) {
+      condition=item;
+      break;
+    }
+  }
+  if (condition == null) {
+    condition=new Condition(column,"between");
+    this.conditions.add(condition);
+  }
+  condition.getValues().add(begin);
+  condition.getValues().add(end);
+  return true;
+}
+@Override public boolean visit(SQLQueryExpr x){
+  setSubQueryRelationOrFlag(x);
+  addSubQuerys(x.getSubQuery());
+  return super.visit(x);
+}
+@Override public boolean visit(SQLSubqueryTableSource x){
+  addSubQuerys(x.getSelect());
+  return super.visit(x);
+}
+@Override public boolean visit(SQLExistsExpr x){
+  setSubQueryRelationOrFlag(x);
+  addSubQuerys(x.getSubQuery());
+  return super.visit(x);
+}
+@Override public boolean visit(SQLInListExpr x){
+  return super.visit(x);
+}
+@Override public boolean visit(SQLInSubQueryExpr x){
+  setSubQueryRelationOrFlag(x);
+  addSubQuerys(x.getSubQuery());
+  return super.visit(x);
+}
+@Override public boolean visit(SQLAllExpr x){
+  setSubQueryRelationOrFlag(x);
+  List<SQLSelectItem> itemlist=((SQLSelectQueryBlock)(x.getSubQuery().getQuery())).getSelectList();
+  SQLExpr sexpr=itemlist.get(0).getExpr();
+  if (x.getParent() instanceof SQLBinaryOpExpr) {
+    SQLBinaryOpExpr parentExpr=(SQLBinaryOpExpr)x.getParent();
+    SQLAggregateExpr saexpr=null;
+switch (parentExpr.getOperator()) {
+case GreaterThan:
+case GreaterThanOrEqual:
+case NotLessThan:
+      this.hasChange=true;
+    if (sexpr instanceof SQLIdentifierExpr || (sexpr instanceof SQLPropertyExpr && ((SQLPropertyExpr)sexpr).getOwner() instanceof SQLIdentifierExpr)) {
+      saexpr=new SQLAggregateExpr("MAX");
+      saexpr.getArguments().add(sexpr);
+      saexpr.setParent(itemlist.get(0));
+      itemlist.get(0).setExpr(saexpr);
+    }
+  SQLQueryExpr maxSubQuery=new SQLQueryExpr(x.getSubQuery());
+x.getSubQuery().setParent(x.getParent());
+if (x.getParent() instanceof SQLBinaryOpExpr) {
+if (((SQLBinaryOpExpr)x.getParent()).getLeft().equals(x)) {
+  ((SQLBinaryOpExpr)x.getParent()).setLeft(maxSubQuery);
+}
+ else if (((SQLBinaryOpExpr)x.getParent()).getRight().equals(x)) {
+  ((SQLBinaryOpExpr)x.getParent()).setRight(maxSubQuery);
+}
+}
+addSubQuerys(x.getSubQuery());
+return super.visit(x.getSubQuery());
+case LessThan:
+case LessThanOrEqual:
+case NotGreaterThan:
+this.hasChange=true;
+if (sexpr instanceof SQLIdentifierExpr || (sexpr instanceof SQLPropertyExpr && ((SQLPropertyExpr)sexpr).getOwner() instanceof SQLIdentifierExpr)) {
+saexpr=new SQLAggregateExpr("MIN");
+saexpr.getArguments().add(sexpr);
+saexpr.setParent(itemlist.get(0));
+itemlist.get(0).setExpr(saexpr);
+x.subQuery.setParent(x.getParent());
+}
+SQLQueryExpr minSubQuery=new SQLQueryExpr(x.getSubQuery());
+if (x.getParent() instanceof SQLBinaryOpExpr) {
+if (((SQLBinaryOpExpr)x.getParent()).getLeft().equals(x)) {
+((SQLBinaryOpExpr)x.getParent()).setLeft(minSubQuery);
+}
+ else if (((SQLBinaryOpExpr)x.getParent()).getRight().equals(x)) {
+((SQLBinaryOpExpr)x.getParent()).setRight(minSubQuery);
+}
+}
+addSubQuerys(x.getSubQuery());
+return super.visit(x.getSubQuery());
+case LessThanOrGreater:
+case NotEqual:
+this.hasChange=true;
+SQLInSubQueryExpr notInSubQueryExpr=new SQLInSubQueryExpr(x.getSubQuery());
+x.getSubQuery().setParent(notInSubQueryExpr);
+notInSubQueryExpr.setNot(true);
+if (x.getParent() instanceof SQLBinaryOpExpr) {
+SQLBinaryOpExpr xp=(SQLBinaryOpExpr)x.getParent();
+if (xp.getLeft().equals(x)) {
+notInSubQueryExpr.setExpr(xp.getRight());
+}
+ else if (xp.getRight().equals(x)) {
+notInSubQueryExpr.setExpr(xp.getLeft());
+}
+if (xp.getParent() instanceof MySqlSelectQueryBlock) {
+((MySqlSelectQueryBlock)xp.getParent()).setWhere(notInSubQueryExpr);
+}
+ else if (xp.getParent() instanceof SQLBinaryOpExpr) {
+SQLBinaryOpExpr pp=((SQLBinaryOpExpr)xp.getParent());
+if (pp.getLeft().equals(xp)) {
+pp.setLeft(notInSubQueryExpr);
+}
+ else if (pp.getRight().equals(xp)) {
+pp.setRight(notInSubQueryExpr);
+}
+}
+}
+addSubQuerys(x.getSubQuery());
+return super.visit(notInSubQueryExpr);
+default :
+break;
+}
+}
+addSubQuerys(x.getSubQuery());
+return super.visit(x);
+}
+@Override public boolean visit(SQLSomeExpr x){
+  setSubQueryRelationOrFlag(x);
+  List<SQLSelectItem> itemlist=((SQLSelectQueryBlock)(x.getSubQuery().getQuery())).getSelectList();
+  SQLExpr sexpr=itemlist.get(0).getExpr();
+  if (x.getParent() instanceof SQLBinaryOpExpr) {
+    SQLBinaryOpExpr parentExpr=(SQLBinaryOpExpr)x.getParent();
+    SQLAggregateExpr saexpr=null;
+switch (parentExpr.getOperator()) {
+case GreaterThan:
+case GreaterThanOrEqual:
+case NotLessThan:
+      this.hasChange=true;
+    if (sexpr instanceof SQLIdentifierExpr || (sexpr instanceof SQLPropertyExpr && ((SQLPropertyExpr)sexpr).getOwner() instanceof SQLIdentifierExpr)) {
+      saexpr=new SQLAggregateExpr("MIN");
+      saexpr.getArguments().add(sexpr);
+      saexpr.setParent(itemlist.get(0));
+      itemlist.get(0).setExpr(saexpr);
+    }
+  SQLQueryExpr maxSubQuery=new SQLQueryExpr(x.getSubQuery());
+x.getSubQuery().setParent(maxSubQuery);
+if (x.getParent() instanceof SQLBinaryOpExpr) {
+if (((SQLBinaryOpExpr)x.getParent()).getLeft().equals(x)) {
+  ((SQLBinaryOpExpr)x.getParent()).setLeft(maxSubQuery);
+}
+ else if (((SQLBinaryOpExpr)x.getParent()).getRight().equals(x)) {
+  ((SQLBinaryOpExpr)x.getParent()).setRight(maxSubQuery);
+}
+}
+addSubQuerys(x.getSubQuery());
+return super.visit(x.getSubQuery());
+case LessThan:
+case LessThanOrEqual:
+case NotGreaterThan:
+this.hasChange=true;
+if (sexpr instanceof SQLIdentifierExpr || (sexpr instanceof SQLPropertyExpr && ((SQLPropertyExpr)sexpr).getOwner() instanceof SQLIdentifierExpr)) {
+saexpr=new SQLAggregateExpr("MAX");
+saexpr.getArguments().add(sexpr);
+saexpr.setParent(itemlist.get(0));
+itemlist.get(0).setExpr(saexpr);
+}
+SQLQueryExpr minSubQuery=new SQLQueryExpr(x.getSubQuery());
+x.getSubQuery().setParent(minSubQuery);
+if (x.getParent() instanceof SQLBinaryOpExpr) {
+if (((SQLBinaryOpExpr)x.getParent()).getLeft().equals(x)) {
+((SQLBinaryOpExpr)x.getParent()).setLeft(minSubQuery);
+}
+ else if (((SQLBinaryOpExpr)x.getParent()).getRight().equals(x)) {
+((SQLBinaryOpExpr)x.getParent()).setRight(minSubQuery);
+}
+}
+addSubQuerys(x.getSubQuery());
+return super.visit(x.getSubQuery());
+case LessThanOrGreater:
+case NotEqual:
+this.hasChange=true;
+SQLInSubQueryExpr notInSubQueryExpr=new SQLInSubQueryExpr(x.getSubQuery());
+x.getSubQuery().setParent(notInSubQueryExpr);
+notInSubQueryExpr.setNot(true);
+if (x.getParent() instanceof SQLBinaryOpExpr) {
+SQLBinaryOpExpr xp=(SQLBinaryOpExpr)x.getParent();
+if (xp.getLeft().equals(x)) {
+notInSubQueryExpr.setExpr(xp.getRight());
+}
+ else if (xp.getRight().equals(x)) {
+notInSubQueryExpr.setExpr(xp.getLeft());
+}
+if (xp.getParent() instanceof MySqlSelectQueryBlock) {
+((MySqlSelectQueryBlock)xp.getParent()).setWhere(notInSubQueryExpr);
+}
+ else if (xp.getParent() instanceof SQLBinaryOpExpr) {
+SQLBinaryOpExpr pp=((SQLBinaryOpExpr)xp.getParent());
+if (pp.getLeft().equals(xp)) {
+pp.setLeft(notInSubQueryExpr);
+}
+ else if (pp.getRight().equals(xp)) {
+pp.setRight(notInSubQueryExpr);
+}
+}
+}
+addSubQuerys(x.getSubQuery());
+return super.visit(notInSubQueryExpr);
+case Equality:
+this.hasChange=true;
+SQLInSubQueryExpr inSubQueryExpr=new SQLInSubQueryExpr(x.getSubQuery());
+x.getSubQuery().setParent(inSubQueryExpr);
+inSubQueryExpr.setNot(false);
+if (x.getParent() instanceof SQLBinaryOpExpr) {
+SQLBinaryOpExpr xp=(SQLBinaryOpExpr)x.getParent();
+if (xp.getLeft().equals(x)) {
+inSubQueryExpr.setExpr(xp.getRight());
+}
+ else if (xp.getRight().equals(x)) {
+inSubQueryExpr.setExpr(xp.getLeft());
+}
+if (xp.getParent() instanceof MySqlSelectQueryBlock) {
+((MySqlSelectQueryBlock)xp.getParent()).setWhere(inSubQueryExpr);
+}
+ else if (xp.getParent() instanceof SQLBinaryOpExpr) {
+SQLBinaryOpExpr pp=((SQLBinaryOpExpr)xp.getParent());
+if (pp.getLeft().equals(xp)) {
+pp.setLeft(inSubQueryExpr);
+}
+ else if (pp.getRight().equals(xp)) {
+pp.setRight(inSubQueryExpr);
+}
+}
+}
+addSubQuerys(x.getSubQuery());
+return super.visit(inSubQueryExpr);
+default :
+break;
+}
+}
+addSubQuerys(x.getSubQuery());
+return super.visit(x);
+}
+@Override public boolean visit(SQLAnyExpr x){
+  setSubQueryRelationOrFlag(x);
+  List<SQLSelectItem> itemlist=((SQLSelectQueryBlock)(x.getSubQuery().getQuery())).getSelectList();
+  SQLExpr sexpr=itemlist.get(0).getExpr();
+  if (x.getParent() instanceof SQLBinaryOpExpr) {
+    SQLBinaryOpExpr parentExpr=(SQLBinaryOpExpr)x.getParent();
+    SQLAggregateExpr saexpr=null;
+switch (parentExpr.getOperator()) {
+case GreaterThan:
+case GreaterThanOrEqual:
+case NotLessThan:
+      this.hasChange=true;
+    if (sexpr instanceof SQLIdentifierExpr || (sexpr instanceof SQLPropertyExpr && ((SQLPropertyExpr)sexpr).getOwner() instanceof SQLIdentifierExpr)) {
+      saexpr=new SQLAggregateExpr("MIN");
+      saexpr.getArguments().add(sexpr);
+      saexpr.setParent(itemlist.get(0));
+      itemlist.get(0).setExpr(saexpr);
+    }
+  SQLQueryExpr maxSubQuery=new SQLQueryExpr(x.getSubQuery());
+x.getSubQuery().setParent(maxSubQuery);
+if (x.getParent() instanceof SQLBinaryOpExpr) {
+if (((SQLBinaryOpExpr)x.getParent()).getLeft().equals(x)) {
+  ((SQLBinaryOpExpr)x.getParent()).setLeft(maxSubQuery);
+}
+ else if (((SQLBinaryOpExpr)x.getParent()).getRight().equals(x)) {
+  ((SQLBinaryOpExpr)x.getParent()).setRight(maxSubQuery);
+}
+}
+addSubQuerys(x.getSubQuery());
+return super.visit(x.getSubQuery());
+case LessThan:
+case LessThanOrEqual:
+case NotGreaterThan:
+this.hasChange=true;
+if (sexpr instanceof SQLIdentifierExpr || (sexpr instanceof SQLPropertyExpr && ((SQLPropertyExpr)sexpr).getOwner() instanceof SQLIdentifierExpr)) {
+saexpr=new SQLAggregateExpr("MAX");
+saexpr.getArguments().add(sexpr);
+saexpr.setParent(itemlist.get(0));
+itemlist.get(0).setExpr(saexpr);
+}
+SQLQueryExpr minSubQuery=new SQLQueryExpr(x.getSubQuery());
+x.subQuery.setParent(minSubQuery);
+if (x.getParent() instanceof SQLBinaryOpExpr) {
+if (((SQLBinaryOpExpr)x.getParent()).getLeft().equals(x)) {
+((SQLBinaryOpExpr)x.getParent()).setLeft(minSubQuery);
+}
+ else if (((SQLBinaryOpExpr)x.getParent()).getRight().equals(x)) {
+((SQLBinaryOpExpr)x.getParent()).setRight(minSubQuery);
+}
+}
+addSubQuerys(x.getSubQuery());
+return super.visit(x.getSubQuery());
+case LessThanOrGreater:
+case NotEqual:
+this.hasChange=true;
+SQLInSubQueryExpr notInSubQueryExpr=new SQLInSubQueryExpr(x.getSubQuery());
+x.getSubQuery().setParent(notInSubQueryExpr);
+notInSubQueryExpr.setNot(true);
+if (x.getParent() instanceof SQLBinaryOpExpr) {
+SQLBinaryOpExpr xp=(SQLBinaryOpExpr)x.getParent();
+if (xp.getLeft().equals(x)) {
+notInSubQueryExpr.setExpr(xp.getRight());
+}
+ else if (xp.getRight().equals(x)) {
+notInSubQueryExpr.setExpr(xp.getLeft());
+}
+if (xp.getParent() instanceof MySqlSelectQueryBlock) {
+((MySqlSelectQueryBlock)xp.getParent()).setWhere(notInSubQueryExpr);
+}
+ else if (xp.getParent() instanceof SQLBinaryOpExpr) {
+SQLBinaryOpExpr pp=((SQLBinaryOpExpr)xp.getParent());
+if (pp.getLeft().equals(xp)) {
+pp.setLeft(notInSubQueryExpr);
+}
+ else if (pp.getRight().equals(xp)) {
+pp.setRight(notInSubQueryExpr);
+}
+}
+}
+addSubQuerys(x.getSubQuery());
+return super.visit(notInSubQueryExpr);
+case Equality:
+this.hasChange=true;
+SQLInSubQueryExpr inSubQueryExpr=new SQLInSubQueryExpr(x.getSubQuery());
+x.getSubQuery().setParent(inSubQueryExpr);
+inSubQueryExpr.setNot(false);
+if (x.getParent() instanceof SQLBinaryOpExpr) {
+SQLBinaryOpExpr xp=(SQLBinaryOpExpr)x.getParent();
+if (xp.getLeft().equals(x)) {
+inSubQueryExpr.setExpr(xp.getRight());
+}
+ else if (xp.getRight().equals(x)) {
+inSubQueryExpr.setExpr(xp.getLeft());
+}
+if (xp.getParent() instanceof MySqlSelectQueryBlock) {
+((MySqlSelectQueryBlock)xp.getParent()).setWhere(inSubQueryExpr);
+}
+ else if (xp.getParent() instanceof SQLBinaryOpExpr) {
+SQLBinaryOpExpr pp=((SQLBinaryOpExpr)xp.getParent());
+if (pp.getLeft().equals(xp)) {
+pp.setLeft(inSubQueryExpr);
+}
+ else if (pp.getRight().equals(xp)) {
+pp.setRight(inSubQueryExpr);
+}
+}
+}
+addSubQuerys(x.getSubQuery());
+return super.visit(inSubQueryExpr);
+default :
+break;
+}
+}
+addSubQuerys(x.getSubQuery());
+return super.visit(x);
+}
+@Override public boolean visit(SQLBinaryOpExpr x){
+  x.getLeft().setParent(x);
+  x.getRight().setParent(x);
+switch (x.getOperator()) {
+case Equality:
+case LessThanOrEqualOrGreaterThan:
+case Is:
+case IsNot:
+case GreaterThan:
+case GreaterThanOrEqual:
+case LessThan:
+case LessThanOrEqual:
+case NotLessThan:
+case LessThanOrGreater:
+case NotEqual:
+case NotGreaterThan:
+    handleCondition(x.getLeft(),x.getOperator().name,x.getRight());
+  handleCondition(x.getRight(),x.getOperator().name,x.getLeft());
+handleRelationship(x.getLeft(),x.getOperator().name,x.getRight());
+break;
+case BooleanOr:
+if (!RouterUtil.isConditionAlwaysTrue(x)) {
+hasOrCondition=true;
+orBinaryExprs.add(x);
+}
+return false;
+case Like:
+case NotLike:
+default :
+break;
+}
+super.statExpr(x.getLeft());
+super.statExpr(x.getRight());
+return false;
+}
+@Override public boolean visit(SQLAlterTableStatement x){
+  String tableName=x.getName().toString();
+  TableStat stat=getTableStat(tableName);
+  stat.incrementAlterCount();
+  setCurrentTable(tableName);
+  for (  SQLAlterTableItem item : x.getItems()) {
+    item.setParent(x);
+    item.accept(this);
+  }
+  return false;
+}
+public boolean visit(MySqlCreateTableStatement x){
+  SQLName sqlName=x.getName();
+  if (sqlName != null) {
+    String table=sqlName.toString();
+    if (table.startsWith("`")) {
+      table=table.substring(1,table.length() - 1);
+    }
+    setCurrentTable(table);
+  }
+  return false;
+}
+public boolean visit(MySqlInsertStatement x){
+  SQLName sqlName=x.getTableName();
+  if (sqlName != null) {
+    String table=sqlName.toString();
+    if (table.startsWith("`")) {
+      table=table.substring(1,table.length() - 1);
+    }
+    setCurrentTable(sqlName.toString());
+  }
+  return false;
+}
+public boolean visit(MySqlDeleteStatement x){
+  aliasMap.clear();
+  this.clearTableVisitFlag();
+  setMode(x,Mode.Delete);
+  accept(x.getFrom());
+  accept(x.getUsing());
+  x.getTableSource().accept(this);
+  if (x.getTableSource() instanceof SQLExprTableSource) {
+    SQLName tableName=(SQLName)((SQLExprTableSource)x.getTableSource()).getExpr();
+    String ident=tableName.toString();
+    setCurrentTable(ident);
+    TableStat stat=this.getTableStat(ident);
+    stat.incrementDeleteCount();
+  }
+  accept(x.getWhere());
+  accept(x.getOrderBy());
+  accept(x.getLimit());
+  return false;
+}
+public boolean visit(SQLUpdateStatement x){
+  aliasMap.clear();
+  this.clearTableVisitFlag();
+  setMode(x,Mode.Update);
+  SQLName identName=x.getTableName();
+  if (identName != null) {
+    String ident=identName.toString();
+    String alias=x.getTableSource().getAlias();
+    setCurrentTable(ident);
+    TableStat stat=getTableStat(ident);
+    stat.incrementUpdateCount();
+    putAliasToMap(ident,ident);
+    if (alias != null) {
+      putAliasToMap(alias,ident);
+    }
+  }
+ else {
+    x.getTableSource().accept(this);
+  }
+  accept(x.getItems());
+  accept(x.getWhere());
+  return false;
+}
+@Override public boolean visit(MySqlHintStatement x){
+  List<SQLCommentHint> hits=x.getHints();
+  if (hits != null && !hits.isEmpty()) {
+    String schema=parseSchema(hits);
+    if (schema != null) {
+      setCurrentTable(schema + ".");
+      return true;
+    }
+  }
+  return true;
+}
+@Override public boolean visit(SQLExprTableSource x){
+  super.visit(x);
+  if (this.isSimpleExprTableSource(x)) {
+    String ident=x.getExpr().toString();
+    setCurrentTable(ident);
+    selectTableList.add(ident);
+    String alias=x.getAlias();
+    if (x.getAttribute(TABLE_HAS_VISIT_FLAG) == null || !((Boolean)x.getAttribute(TABLE_HAS_VISIT_FLAG))) {
+      x.putAttribute(TABLE_HAS_VISIT_FLAG,true);
+      this.visitedTableSourceExpr.add(x);
+      if (alias != null) {
+        putAliasToMap(alias,ident);
+      }
+ else {
+        putAliasToMap(ident,ident);
+      }
+    }
+  }
+ else {
+    this.accept(x.getExpr());
+  }
+  return false;
+}

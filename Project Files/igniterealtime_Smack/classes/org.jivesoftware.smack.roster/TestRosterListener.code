@@ -1,0 +1,83 @@
+/** 
+ * This class can be used to check if the RosterListener was invoked.
+ */
+public static class TestRosterListener extends WaitForPacketListener implements RosterListener {
+  private final List<Jid> addressesAdded=new CopyOnWriteArrayList<>();
+  private final List<Jid> addressesDeleted=new CopyOnWriteArrayList<>();
+  private final List<Jid> addressesUpdated=new CopyOnWriteArrayList<>();
+  @Override public synchronized void entriesAdded(  Collection<Jid> addresses){
+    addressesAdded.addAll(addresses);
+    reportInvoked();
+  }
+  @Override public synchronized void entriesDeleted(  Collection<Jid> addresses){
+    addressesDeleted.addAll(addresses);
+    reportInvoked();
+  }
+  @Override public synchronized void entriesUpdated(  Collection<Jid> addresses){
+    addressesUpdated.addAll(addresses);
+    reportInvoked();
+  }
+  @Override public void presenceChanged(  Presence presence){
+    reportInvoked();
+  }
+  /** 
+ * Get a collection of JIDs of the added roster items.
+ * @return the collection of addresses which were added.
+ */
+  public Collection<Jid> getAddedAddresses(){
+    return Collections.unmodifiableCollection(addressesAdded);
+  }
+  /** 
+ * Get a collection of JIDs of the deleted roster items.
+ * @return the collection of addresses which were deleted.
+ */
+  public Collection<Jid> getDeletedAddresses(){
+    return Collections.unmodifiableCollection(addressesDeleted);
+  }
+  /** 
+ * Get a collection of JIDs of the updated roster items.
+ * @return the collection of addresses which were updated.
+ */
+  public Collection<Jid> getUpdatedAddresses(){
+    return Collections.unmodifiableCollection(addressesUpdated);
+  }
+  public boolean addedAddressesContains(  String jidString){
+    Jid jid;
+    try {
+      jid=JidCreate.from(jidString);
+    }
+ catch (    XmppStringprepException e) {
+      throw new IllegalArgumentException(e);
+    }
+    return addressesAdded.contains(jid);
+  }
+  public boolean deletedAddressesContains(  String jidString){
+    Jid jid;
+    try {
+      jid=JidCreate.from(jidString);
+    }
+ catch (    XmppStringprepException e) {
+      throw new IllegalArgumentException(e);
+    }
+    return addressesDeleted.contains(jid);
+  }
+  public boolean updatedAddressesContains(  String jidString){
+    Jid jid;
+    try {
+      jid=JidCreate.from(jidString);
+    }
+ catch (    XmppStringprepException e) {
+      throw new IllegalArgumentException(e);
+    }
+    return addressesUpdated.contains(jid);
+  }
+  /** 
+ * Reset the lists of added, deleted or updated items.
+ */
+  @Override public synchronized void reset(){
+    super.reset();
+    addressesAdded.clear();
+    addressesDeleted.clear();
+    addressesUpdated.clear();
+  }
+}

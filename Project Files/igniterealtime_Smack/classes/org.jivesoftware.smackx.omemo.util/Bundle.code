@@ -1,0 +1,71 @@
+/** 
+ * Bundle related methods.
+ */
+public class Bundle {
+  /** 
+ * Extract an IdentityKey from a OmemoBundleElement.
+ * @param bundle OmemoBundleElement
+ * @return identityKey of the bundle
+ * @throws CorruptedOmemoKeyException if the key is damaged/malformed
+ */
+  public T_IdKey identityKey(  OmemoBundleElement bundle) throws CorruptedOmemoKeyException {
+    return identityKeyFromBytes(bundle.getIdentityKey());
+  }
+  /** 
+ * Extract a signedPreKey from an OmemoBundleElement.
+ * @param bundle OmemoBundleElement
+ * @return signed preKey
+ * @throws CorruptedOmemoKeyException if the key is damaged/malformed
+ */
+  public T_ECPub signedPreKeyPublic(  OmemoBundleElement bundle) throws CorruptedOmemoKeyException {
+    return signedPreKeyPublicFromBytes(bundle.getSignedPreKey());
+  }
+  /** 
+ * Extract the id of the transported signedPreKey from the bundle.
+ * @param bundle OmemoBundleElement
+ * @return id of the signed preKey
+ */
+  public int signedPreKeyId(  OmemoBundleElement bundle){
+    return bundle.getSignedPreKeyId();
+  }
+  /** 
+ * Extract the signature of the signedPreKey in the bundle as a byte array.
+ * @param bundle OmemoBundleElement
+ * @return signature on the signed preKey
+ */
+  public byte[] signedPreKeySignature(  OmemoBundleElement bundle){
+    return bundle.getSignedPreKeySignature();
+  }
+  /** 
+ * Extract the preKey with id 'keyId' from the bundle.
+ * @param bundle OmemoBundleElement
+ * @param keyId  id of the preKey
+ * @return the preKey
+ * @throws CorruptedOmemoKeyException when the key cannot be parsed from bytes
+ */
+  public T_ECPub preKeyPublic(  OmemoBundleElement bundle,  int keyId) throws CorruptedOmemoKeyException {
+    return preKeyPublicFromBytes(bundle.getPreKey(keyId));
+  }
+  /** 
+ * Break up the OmemoBundleElement into a list of crypto-lib specific bundles (T_PreKey). In case of the signal library, we break the OmemoBundleElement in ~100 PreKeyBundles (one for every transported preKey).
+ * @param bundle  OmemoBundleElement containing multiple PreKeys
+ * @param contact Contact that the bundle belongs to
+ * @return a HashMap with one T_Bundle per preKey and the preKeyId as key
+ * @throws CorruptedOmemoKeyException when one of the keys cannot be parsed
+ */
+  public HashMap<Integer,T_Bundle> bundles(  OmemoBundleElement bundle,  OmemoDevice contact) throws CorruptedOmemoKeyException {
+    HashMap<Integer,T_Bundle> bundles=new HashMap<>();
+    for (    int deviceId : bundle.getPreKeys().keySet()) {
+      try {
+        bundles.put(deviceId,bundleFromOmemoBundle(bundle,contact,deviceId));
+      }
+ catch (      CorruptedOmemoKeyException e) {
+        LOGGER.log(Level.INFO,"Cannot parse PreKeyBundle: " + e.getMessage());
+      }
+    }
+    if (bundles.size() == 0) {
+      throw new CorruptedOmemoKeyException("Bundle contained no valid preKeys.");
+    }
+    return bundles;
+  }
+}

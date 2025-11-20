@@ -1,0 +1,58 @@
+/** 
+ * InitiationListener handles all incoming SOCKS5 Bytestream initiation requests. If there are no listeners for a SOCKS5 bytestream request InitiationListener will always refuse the request and reply with a &lt;not-acceptable/&gt; error (<a href="http://xmpp.org/extensions/xep-0065.html#usecase-alternate">XEP-0065</a> Section 5.2.A2).
+ * @author Henning Staib
+ */
+final class InitiationListener extends AbstractIqRequestHandler {
+  private static final Logger LOGGER=Logger.getLogger(InitiationListener.class.getName());
+  private final Socks5BytestreamManager manager;
+  private final ExecutorService initiationListenerExecutor;
+  /** 
+ * Constructor
+ * @param manager the SOCKS5 Bytestream manager
+ */
+  InitiationListener(  Socks5BytestreamManager manager){
+    super(Bytestream.ELEMENT,Bytestream.NAMESPACE,IQ.Type.set,Mode.async);
+    this.manager=manager;
+    initiationListenerExecutor=Executors.newCachedThreadPool();
+  }
+  @Override public IQ handleIQRequest(  final IQ packet){
+    initiationListenerExecutor.execute(new Runnable(){
+      @Override public void run(){
+        try {
+          processRequest(packet);
+        }
+ catch (        InterruptedException|NotConnectedException e) {
+          LOGGER.log(Level.WARNING,"process request",e);
+        }
+      }
+    }
+);
+    return null;
+  }
+  private void processRequest(  Stanza packet) throws NotConnectedException, InterruptedException {
+    Bytestream byteStreamRequest=(Bytestream)packet;
+    StreamNegotiator.signal(byteStreamRequest.getFrom().toString() + '\t' + byteStreamRequest.getSessionID(),byteStreamRequest);
+    if (this.manager.getIgnoredBytestreamRequests().remove(byteStreamRequest.getSessionID())) {
+      return;
+    }
+    Socks5BytestreamRequest request=new Socks5BytestreamRequest(this.manager,byteStreamRequest);
+    BytestreamListener userListener=this.manager.getUserListener(byteStreamRequest.getFrom());
+    if (userListener != null) {
+      userListener.incomingBytestreamRequest(request);
+    }
+ else     if (!this.manager.getAllRequestListeners().isEmpty()) {
+      for (      BytestreamListener listener : this.manager.getAllRequestListeners()) {
+        listener.incomingBytestreamRequest(request);
+      }
+    }
+ else {
+      this.manager.replyRejectPacket(byteStreamRequest);
+    }
+  }
+  /** 
+ * Shuts down the listeners executor service.
+ */
+  void shutdown(){
+    this.initiationListenerExecutor.shutdownNow();
+  }
+}

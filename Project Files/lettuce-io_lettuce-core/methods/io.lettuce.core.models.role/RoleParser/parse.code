@@ -1,0 +1,21 @@
+/** 
+ * Parse the output of the Redis ROLE command and convert to a RedisInstance.
+ * @param roleOutput output of the Redis ROLE command.
+ * @return RedisInstance
+ */
+public static RedisInstance parse(List<?> roleOutput){
+  LettuceAssert.isTrue(roleOutput != null && !roleOutput.isEmpty(),"Empty role output");
+  LettuceAssert.isTrue(roleOutput.get(0) instanceof String && ROLE_MAPPING.containsKey(roleOutput.get(0)),() -> "First role element must be a string (any of " + ROLE_MAPPING.keySet() + ")");
+  RedisInstance.Role role=ROLE_MAPPING.get(roleOutput.get(0));
+switch (role) {
+case MASTER:
+case UPSTREAM:
+    return parseUpstream(roleOutput);
+case SLAVE:
+case REPLICA:
+  return parseReplica(roleOutput);
+case SENTINEL:
+return parseSentinel(roleOutput);
+}
+return null;
+}

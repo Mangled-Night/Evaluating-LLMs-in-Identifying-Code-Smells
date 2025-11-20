@@ -1,0 +1,34 @@
+@Override public SubscribeAnswer processSubscribe(Jid from,Presence subscribeRequest){
+  try {
+    if (IoTDiscoveryManager.getInstanceFor(connection()).isRegistry(from.asBareJid())) {
+      return SubscribeAnswer.Approve;
+    }
+  }
+ catch (  NoResponseException|XMPPErrorException|NotConnectedException|InterruptedException e) {
+    LOGGER.log(Level.WARNING,"Could not determine if " + from + " is a registry",e);
+  }
+  Jid provisioningServer=null;
+  try {
+    provisioningServer=getConfiguredProvisioningServer();
+  }
+ catch (  NoResponseException|XMPPErrorException|NotConnectedException|InterruptedException e) {
+    LOGGER.log(Level.WARNING,"Could not determine provisioning server. Ignoring friend request from " + from,e);
+  }
+  if (provisioningServer == null) {
+    return null;
+  }
+  boolean isFriend;
+  try {
+    isFriend=isFriend(provisioningServer,from.asBareJid());
+  }
+ catch (  NoResponseException|XMPPErrorException|NotConnectedException|InterruptedException e) {
+    LOGGER.log(Level.WARNING,"Could not determine if " + from + " is a friend.",e);
+    return null;
+  }
+  if (isFriend) {
+    return SubscribeAnswer.Approve;
+  }
+ else {
+    return SubscribeAnswer.Deny;
+  }
+}

@@ -1,0 +1,22 @@
+public void initDB(byte[] data){
+  MySQLMessage mm=new MySQLMessage(data);
+  mm.position(5);
+  String db=mm.readString();
+  if (db == null || !privileges.schemaExists(db)) {
+    writeErrMessage(ErrorCode.ER_BAD_DB_ERROR,"Unknown database '" + db + "'");
+    return;
+  }
+  if (!privileges.userExists(user,host)) {
+    writeErrMessage(ErrorCode.ER_ACCESS_DENIED_ERROR,"Access denied for user '" + user + "'");
+    return;
+  }
+  Set<String> schemas=privileges.getUserSchemas(user);
+  if (schemas == null || schemas.size() == 0 || schemas.contains(db)) {
+    this.schema=db;
+    write(writeToBuffer(OkPacket.OK,allocate()));
+  }
+ else {
+    String s="Access denied for user '" + user + "' to database '"+ db+ "'";
+    writeErrMessage(ErrorCode.ER_DBACCESS_DENIED_ERROR,s);
+  }
+}

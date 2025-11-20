@@ -1,0 +1,15 @@
+@SuppressWarnings("UnusedVariable") private static void triggerGarbageCollection(){
+  Object object=new Object();
+  WeakReference<Object> weakReference=new WeakReference<>(object);
+  object=null;
+  int gcCalls=0;
+  do {
+    if (gcCalls > 1000) {
+      throw new AssertionError("No observed gargabe collection after " + gcCalls + " calls of System.gc()");
+    }
+    System.gc();
+    gcCalls++;
+  }
+ while (weakReference.get() != null);
+  LOGGER.finer("Observed garbage collection after " + gcCalls + " calls of System.gc()");
+}

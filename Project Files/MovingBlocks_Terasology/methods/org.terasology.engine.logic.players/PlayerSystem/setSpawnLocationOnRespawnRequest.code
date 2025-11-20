@@ -1,0 +1,16 @@
+@Priority(EventPriority.PRIORITY_CRITICAL) @ReceiveEvent(components=ClientComponent.class) public void setSpawnLocationOnRespawnRequest(RespawnRequestEvent event,EntityRef entity){
+  ClientComponent clientComponent=entity.getComponent(ClientComponent.class);
+  EntityRef character=clientComponent.character;
+  EntityRef clientInfo=clientComponent.clientInfo;
+  Vector3fc spawnPosition;
+  if (clientInfo.hasComponent(StaticSpawnLocationComponent.class)) {
+    spawnPosition=clientInfo.getComponent(StaticSpawnLocationComponent.class).position;
+  }
+ else {
+    spawnPosition=worldGenerator.getSpawnPosition(entity);
+  }
+  LocationComponent loc=character.getComponent(LocationComponent.class);
+  loc.setWorldPosition(spawnPosition);
+  loc.setLocalRotation(new Quaternionf());
+  character.saveComponent(loc);
+}

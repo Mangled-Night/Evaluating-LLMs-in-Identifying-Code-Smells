@@ -1,0 +1,20 @@
+@Test void clientUnblock() throws InterruptedException {
+  try {
+    redis.clientUnblock(0,UnblockType.ERROR);
+  }
+ catch (  Exception e) {
+    assumeFalse(true,e.getMessage());
+  }
+  StatefulRedisConnection<String,String> connection2=client.connect();
+  connection2.sync().clientSetname("blocked");
+  RedisFuture<KeyValue<String,String>> blocked=connection2.async().brpop(100000,"foo");
+  Pattern p=Pattern.compile("^.*id=([^ ]+).*name=blocked.*$",Pattern.MULTILINE | Pattern.DOTALL);
+  String clients=redis.clientList();
+  Matcher m=p.matcher(clients);
+  assertThat(m.matches()).isTrue();
+  String id=m.group(1);
+  Long unblocked=redis.clientUnblock(Long.parseLong(id),UnblockType.ERROR);
+  assertThat(unblocked).isEqualTo(1);
+  blocked.await(1,TimeUnit.SECONDS);
+  assertThat(blocked.getError()).contains("UNBLOCKED client unblocked");
+}

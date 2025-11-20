@@ -1,0 +1,42 @@
+private DBHostConfig createDBHostConf(String dataHost,Element node,String dbType,String dbDriver,int maxCon,int minCon,String filters,long logTime){
+  String nodeHost=node.getAttribute("host");
+  String nodeUrl=node.getAttribute("url");
+  String user=node.getAttribute("user");
+  String password=node.getAttribute("password");
+  String usingDecrypt=node.getAttribute("usingDecrypt");
+  String checkAliveText=node.getAttribute("checkAlive");
+  if (checkAliveText == null)   checkAliveText=Boolean.TRUE.toString();
+  boolean checkAlive=Boolean.parseBoolean(checkAliveText);
+  String passwordEncryty=DecryptUtil.DBHostDecrypt(usingDecrypt,nodeHost,user,password);
+  String weightStr=node.getAttribute("weight");
+  int weight="".equals(weightStr) ? PhysicalDBPool.WEIGHT : Integer.parseInt(weightStr);
+  String ip=null;
+  int port=0;
+  if (empty(nodeHost) || empty(nodeUrl) || empty(user)) {
+    throw new ConfigException("dataHost " + dataHost + " define error,some attributes of this element is empty: "+ nodeHost);
+  }
+  if ("native".equalsIgnoreCase(dbDriver)) {
+    int colonIndex=nodeUrl.indexOf(':');
+    ip=nodeUrl.substring(0,colonIndex).trim();
+    port=Integer.parseInt(nodeUrl.substring(colonIndex + 1).trim());
+  }
+ else {
+    URI url;
+    try {
+      url=new URI(nodeUrl.substring(5));
+    }
+ catch (    Exception e) {
+      throw new ConfigException("invalid jdbc url " + nodeUrl + " of "+ dataHost);
+    }
+    ip=url.getHost();
+    port=url.getPort();
+  }
+  DBHostConfig conf=new DBHostConfig(nodeHost,ip,port,nodeUrl,user,passwordEncryty,password,checkAlive);
+  conf.setDbType(dbType);
+  conf.setMaxCon(maxCon);
+  conf.setMinCon(minCon);
+  conf.setFilters(filters);
+  conf.setLogTime(logTime);
+  conf.setWeight(weight);
+  return conf;
+}

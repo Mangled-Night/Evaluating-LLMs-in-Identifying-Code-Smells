@@ -1,0 +1,12 @@
+@Test void tags(){
+  Tags tags=Tags.of("app","foo");
+  MicrometerOptions options=MicrometerOptions.builder().tags(tags).build();
+  MicrometerCommandLatencyRecorder commandLatencyRecorder=new MicrometerCommandLatencyRecorder(meterRegistry,options);
+  commandLatencyRecorder.recordCommandLatency(LOCAL_ADDRESS,REMOTE_ADDRESS,CommandType.AUTH,1,10);
+  assertThat(meterRegistry.find(METRIC_COMPLETION).tags(tags).timers()).hasSize(1);
+  assertThat(meterRegistry.find(METRIC_COMPLETION).tag(LABEL_COMMAND,CommandType.AUTH.name()).timers()).hasSize(1);
+  assertThat(meterRegistry.find(METRIC_COMPLETION).tag(LABEL_REMOTE,REMOTE_ADDRESS.toString()).timers()).hasSize(1);
+  assertThat(meterRegistry.find(METRIC_FIRST_RESPONSE).tags(tags).timers()).hasSize(1);
+  assertThat(meterRegistry.find(METRIC_FIRST_RESPONSE).tag(LABEL_COMMAND,CommandType.AUTH.name()).timers()).hasSize(1);
+  assertThat(meterRegistry.find(METRIC_FIRST_RESPONSE).tag(LABEL_REMOTE,REMOTE_ADDRESS.toString()).timers()).hasSize(1);
+}

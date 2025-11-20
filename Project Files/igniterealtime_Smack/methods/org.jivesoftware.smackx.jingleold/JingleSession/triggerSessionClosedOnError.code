@@ -1,0 +1,18 @@
+/** 
+ * Trigger a session closed event due to an error.
+ * @param exc the exception.
+ */
+void triggerSessionClosedOnError(XMPPException exc){
+  for (  ContentNegotiator contentNegotiator : contentNegotiators) {
+    contentNegotiator.stopJingleMediaSession();
+    for (    TransportCandidate candidate : contentNegotiator.getTransportNegotiator().getOfferedCandidates())     candidate.removeCandidateEcho();
+  }
+  List<JingleListener> listeners=getListenersList();
+  for (  JingleListener li : listeners) {
+    if (li instanceof JingleSessionListener) {
+      JingleSessionListener sli=(JingleSessionListener)li;
+      sli.sessionClosedOnError(exc,this);
+    }
+  }
+  close();
+}

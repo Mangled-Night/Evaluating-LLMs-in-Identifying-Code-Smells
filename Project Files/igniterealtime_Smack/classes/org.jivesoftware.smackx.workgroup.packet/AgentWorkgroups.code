@@ -1,0 +1,73 @@
+/** 
+ * Represents a request for getting the jid of the workgroups where an agent can work or could represent the result of such request which will contain the list of workgroups JIDs where the agent can work.
+ * @author Gaston Dombiak
+ */
+public class AgentWorkgroups extends IQ {
+  private Jid agentJID;
+  private List<String> workgroups;
+  private AgentWorkgroups(){
+    super("workgroups","http://jabber.org/protocol/workgroup");
+  }
+  /** 
+ * Creates an AgentWorkgroups request for the given agent. This IQ will be sent and an answer will be received with the jid of the workgroups where the agent can work.
+ * @param agentJID the id of the agent to get his workgroups.
+ */
+  public AgentWorkgroups(  Jid agentJID){
+    this();
+    this.agentJID=agentJID;
+    this.workgroups=new ArrayList<>();
+  }
+  /** 
+ * Creates an AgentWorkgroups which will contain the JIDs of the workgroups where an agent can work.
+ * @param agentJID the id of the agent that can work in the list of workgroups.
+ * @param workgroups the list of workgroup JIDs where the agent can work.
+ */
+  public AgentWorkgroups(  Jid agentJID,  List<String> workgroups){
+    this();
+    this.agentJID=agentJID;
+    this.workgroups=workgroups;
+  }
+  public Jid getAgentJID(){
+    return agentJID;
+  }
+  /** 
+ * Returns a list of workgroup JIDs where the agent can work.
+ * @return a list of workgroup JIDs where the agent can work.
+ */
+  public List<String> getWorkgroups(){
+    return Collections.unmodifiableList(workgroups);
+  }
+  @Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(  IQChildElementXmlStringBuilder buf){
+    buf.attribute("jid",agentJID).rightAngleBracket();
+    for (Iterator<String> it=workgroups.iterator(); it.hasNext(); ) {
+      String workgroupJID=it.next();
+      buf.append("<workgroup jid=\"" + workgroupJID + "\"/>");
+    }
+    return buf;
+  }
+  /** 
+ * An IQProvider for AgentWorkgroups packets.
+ * @author Gaston Dombiak
+ */
+public static class Provider extends IqProvider<AgentWorkgroups> {
+    @Override public AgentWorkgroups parse(    XmlPullParser parser,    int initialDepth,    IqData iqData,    XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+      final Jid agentJID=ParserUtils.getJidAttribute(parser);
+      List<String> workgroups=new ArrayList<>();
+      boolean done=false;
+      while (!done) {
+        XmlPullParser.Event eventType=parser.next();
+        if (eventType == XmlPullParser.Event.START_ELEMENT) {
+          if (parser.getName().equals("workgroup")) {
+            workgroups.add(parser.getAttributeValue("","jid"));
+          }
+        }
+ else         if (eventType == XmlPullParser.Event.END_ELEMENT) {
+          if (parser.getName().equals("workgroups")) {
+            done=true;
+          }
+        }
+      }
+      return new AgentWorkgroups(agentJID,workgroups);
+    }
+  }
+}

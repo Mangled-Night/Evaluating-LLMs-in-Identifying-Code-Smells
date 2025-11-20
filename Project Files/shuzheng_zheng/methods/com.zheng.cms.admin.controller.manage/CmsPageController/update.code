@@ -1,0 +1,14 @@
+@ApiOperation(value="修改单页") @RequiresPermissions("cms:page:update") @RequestMapping(value="/update/{id}",method=RequestMethod.GET) public String update(@PathVariable("id") int id,ModelMap modelMap){
+  CmsPage page=cmsPageService.selectByPrimaryKey(id);
+  modelMap.put("page",page);
+  return "/manage/page/update.jsp";
+}
+@ApiOperation(value="修改单页") @RequiresPermissions("cms:page:update") @RequestMapping(value="/update/{id}",method=RequestMethod.POST) @ResponseBody public Object update(@PathVariable("id") int id,CmsPage cmsPage){
+  ComplexResult result=FluentValidator.checkAll().on(cmsPage.getTitle(),new LengthValidator(1,20,"标题")).doValidate().result(ResultCollectors.toComplex());
+  if (!result.isSuccess()) {
+    return new CmsResult(CmsResultConstant.INVALID_LENGTH,result.getErrors());
+  }
+  cmsPage.setPageId(id);
+  int count=cmsPageService.updateByPrimaryKeySelective(cmsPage);
+  return new CmsResult(CmsResultConstant.SUCCESS,count);
+}

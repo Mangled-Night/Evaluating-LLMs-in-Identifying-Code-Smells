@@ -1,0 +1,16 @@
+/** 
+ * @author Mark Paluch
+ */
+@ExtendWith(MockitoExtension.class) @MockitoSettings(strictness=Strictness.LENIENT) class ConnectionsUnitTests {
+  @Mock private StatefulRedisConnection<String,String> connection1;
+  @BeforeEach void before(){
+    when(connection1.closeAsync()).thenReturn(CompletableFuture.completedFuture(null));
+  }
+  @Test void shouldCloseConnectionCompletingAfterCloseSignal(){
+    Connections connections=new Connections(5,Collections.emptyList());
+    connections.closeAsync();
+    verifyNoInteractions(connection1);
+    connections.onAccept(Tuples.of(RedisURI.create("localhost",6379),connection1));
+    verify(connection1).closeAsync();
+  }
+}

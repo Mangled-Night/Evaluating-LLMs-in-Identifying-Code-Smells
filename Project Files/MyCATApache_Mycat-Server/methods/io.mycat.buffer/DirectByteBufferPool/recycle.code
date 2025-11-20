@@ -1,0 +1,23 @@
+public void recycle(ByteBuffer theBuf){
+  if (theBuf != null && (!(theBuf instanceof DirectBuffer))) {
+    theBuf.clear();
+    return;
+  }
+  final long size=theBuf.capacity();
+  boolean recycled=false;
+  StringBuilder relatedThreadId=new StringBuilder();
+  DirectBuffer thisNavBuf=(DirectBuffer)theBuf;
+  int chunkCount=theBuf.capacity() / chunkSize;
+  DirectBuffer parentBuf=(DirectBuffer)thisNavBuf.attachment();
+  int startChunk=(int)((thisNavBuf.address() - parentBuf.address()) / chunkSize);
+  for (int i=0; i < allPages.length; i++) {
+    if ((recycled=allPages[i].recycleBuffer((ByteBuffer)parentBuf,theBuf,startChunk,chunkCount,relatedThreadId) == true)) {
+      break;
+    }
+  }
+  final Long threadId=relatedThreadId.length() > 0 ? Long.parseLong(relatedThreadId.toString()) : Thread.currentThread().getId();
+  memoryUsage.computeIfAbsent(threadId,aLong -> (long)(memoryUsage.get(threadId) - size));
+  if (recycled == false) {
+    LOGGER.warn("warning ,not recycled buffer " + theBuf);
+  }
+}

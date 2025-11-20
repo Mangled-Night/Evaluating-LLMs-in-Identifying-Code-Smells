@@ -1,0 +1,5 @@
+ChunkMeshWorker(Function<? super Chunk,Mono<Tuple2<Chunk,ChunkMesh>>> workFunction,Comparator<RenderableChunk> frontToBackComparator,Scheduler parallelScheduler,Scheduler graphicsScheduler){
+  this.frontToBackComparator=frontToBackComparator;
+  chunksAndNewMeshes=chunkMeshPublisher.asFlux().distinct(Chunk::getPosition,() -> chunkMeshProcessing).parallel().runOn(parallelScheduler).flatMap(workFunction).sequential();
+  completedChunks=chunksAndNewMeshes.publishOn(graphicsScheduler).map(TupleUtils.function(ChunkMeshWorker::uploadNewMesh)).doOnNext(chunk -> chunkMeshProcessing.remove(chunk.getPosition()));
+}

@@ -1,0 +1,28 @@
+@Override public void release(){
+}
+/** 
+ * Release reference to  {@link PauseDetectorWrapper} and decrement reference counter.
+ */
+void release();
+/** 
+ * Decrements the usage counter. When reaching  {@code 0}, the  {@link PauseDetector} instance is released.
+ */
+@Override public void release(){
+  if (counter.decrementAndGet() == 0) {
+    lock.lock();
+    try {
+      instanceCounter.decrementAndGet();
+      pauseDetector.shutdown();
+      pauseDetector=null;
+      try {
+        Runtime.getRuntime().removeShutdownHook(shutdownHook);
+      }
+ catch (      IllegalStateException ignored) {
+      }
+      shutdownHook=null;
+    }
+  finally {
+      lock.unlock();
+    }
+  }
+}

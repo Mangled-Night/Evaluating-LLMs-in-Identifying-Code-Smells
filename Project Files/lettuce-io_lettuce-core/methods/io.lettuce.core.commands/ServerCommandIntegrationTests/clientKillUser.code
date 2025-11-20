@@ -1,0 +1,7 @@
+@Test @EnabledOnCommand("XAUTOCLAIM") void clientKillUser(){
+  RedisCommands<String,String> connection2=client.connect().sync();
+  redis.aclSetuser("test_kill",AclSetuserArgs.Builder.addPassword("password1").on().addCommand(CommandType.ACL));
+  connection2.auth("test_kill","password1");
+  assertThat(redis.clientKill(KillArgs.Builder.user("test_kill"))).isGreaterThan(0);
+  redis.aclDeluser("test_kill");
+}

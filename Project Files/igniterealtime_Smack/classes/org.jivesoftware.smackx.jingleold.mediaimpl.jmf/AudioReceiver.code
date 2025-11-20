@@ -1,0 +1,88 @@
+/** 
+ * This class implements receive methods and listeners to be used in AudioChannel.
+ * @author Thiago Camargo
+ */
+public class AudioReceiver implements ReceiveStreamListener, SessionListener, ControllerListener {
+  private static final Logger LOGGER=Logger.getLogger(AudioReceiver.class.getName());
+  boolean dataReceived=false;
+  final Object dataSync;
+  JingleMediaSession jingleMediaSession;
+  public AudioReceiver(  final Object dataSync,  final JingleMediaSession jingleMediaSession){
+    this.dataSync=dataSync;
+    this.jingleMediaSession=jingleMediaSession;
+  }
+  /** 
+ * JingleSessionListener.
+ */
+  @Override public synchronized void update(  SessionEvent evt){
+    if (evt instanceof NewParticipantEvent) {
+      Participant p=((NewParticipantEvent)evt).getParticipant();
+      LOGGER.fine("  - A new participant had just joined: " + p.getCNAME());
+    }
+  }
+  /** 
+ * ReceiveStreamListener.
+ */
+  @Override public synchronized void update(  ReceiveStreamEvent evt){
+    Participant participant=evt.getParticipant();
+    ReceiveStream stream=evt.getReceiveStream();
+    if (evt instanceof RemotePayloadChangeEvent) {
+      LOGGER.severe("  - Received an RTP PayloadChangeEvent.");
+      LOGGER.severe("Sorry, cannot handle payload change.");
+    }
+ else     if (evt instanceof NewReceiveStreamEvent) {
+      try {
+        stream=evt.getReceiveStream();
+        DataSource ds=stream.getDataSource();
+        RTPControl ctl=(RTPControl)ds.getControl("javax.jmf.rtp.RTPControl");
+        if (ctl != null) {
+          LOGGER.severe("  - Received new RTP stream: " + ctl.getFormat());
+        }
+ else         LOGGER.severe("  - Received new RTP stream");
+        if (participant == null)         LOGGER.severe("      The sender of this stream had yet to be identified.");
+ else {
+          LOGGER.severe("      The stream comes from: " + participant.getCNAME());
+        }
+        Player p=javax.media.Manager.createPlayer(ds);
+        if (p == null)         return;
+        p.addControllerListener(this);
+        p.realize();
+        jingleMediaSession.mediaReceived(participant != null ? participant.getCNAME() : "");
+synchronized (dataSync) {
+          dataReceived=true;
+          dataSync.notifyAll();
+        }
+      }
+ catch (      Exception e) {
+        LOGGER.severe("NewReceiveStreamEvent exception " + e.getMessage());
+        return;
+      }
+    }
+ else     if (evt instanceof StreamMappedEvent) {
+      if (stream != null && stream.getDataSource() != null) {
+        DataSource ds=stream.getDataSource();
+        RTPControl ctl=(RTPControl)ds.getControl("javax.jmf.rtp.RTPControl");
+        LOGGER.severe("  - The previously unidentified stream ");
+        if (ctl != null)         LOGGER.severe("      " + ctl.getFormat());
+        LOGGER.severe("      had now been identified as sent by: " + participant.getCNAME());
+      }
+    }
+ else     if (evt instanceof ByeEvent) {
+      LOGGER.severe("  - Got \"bye\" from: " + participant.getCNAME());
+    }
+  }
+  /** 
+ * ControllerListener for the Players.
+ */
+  @Override public synchronized void controllerUpdate(  ControllerEvent ce){
+    Player p=(Player)ce.getSourceController();
+    if (p == null)     return;
+    if (ce instanceof RealizeCompleteEvent) {
+      p.start();
+    }
+    if (ce instanceof ControllerErrorEvent) {
+      p.removeControllerListener(this);
+      LOGGER.severe("Receiver internal error: " + ce);
+    }
+  }
+}

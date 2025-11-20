@@ -1,0 +1,10 @@
+@Test void shouldCreateObjectWithTestOnBorrowSuccess(){
+  mockCreation();
+  when(factory.validate(any())).thenReturn(CompletableFuture.completedFuture(true));
+  BoundedAsyncPool<String> pool=new BoundedAsyncPool<>(factory,BoundedPoolConfig.builder().testOnCreate().build());
+  CompletableFuture<String> acquire=pool.acquire();
+  assertThat(pool.getIdle()).isZero();
+  assertThat(pool.getObjectCount()).isEqualTo(1);
+  assertThat(pool.getCreationInProgress()).isZero();
+  assertThat(acquire).isCompletedWithValue("1");
+}

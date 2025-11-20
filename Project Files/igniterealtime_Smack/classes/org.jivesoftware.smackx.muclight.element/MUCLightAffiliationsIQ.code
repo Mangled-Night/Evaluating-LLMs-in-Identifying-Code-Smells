@@ -1,0 +1,44 @@
+/** 
+ * MUC Light affiliations response IQ class.
+ * @author Fernando Ramirez
+ */
+public class MUCLightAffiliationsIQ extends IQ {
+  public static final String ELEMENT=QUERY_ELEMENT;
+  public static final String NAMESPACE=MultiUserChatLight.NAMESPACE + MultiUserChatLight.AFFILIATIONS;
+  private final String version;
+  private HashMap<Jid,MUCLightAffiliation> affiliations;
+  /** 
+ * MUC Light affiliations response IQ constructor.
+ * @param version TODO javadoc me please
+ * @param affiliations TODO javadoc me please
+ */
+  public MUCLightAffiliationsIQ(  String version,  HashMap<Jid,MUCLightAffiliation> affiliations){
+    super(ELEMENT,NAMESPACE);
+    this.version=version;
+    this.affiliations=affiliations;
+  }
+  @Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(  IQChildElementXmlStringBuilder xml){
+    xml.rightAngleBracket();
+    xml.optElement("version",version);
+    Iterator<Map.Entry<Jid,MUCLightAffiliation>> it=affiliations.entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<Jid,MUCLightAffiliation> pair=it.next();
+      xml.append(new UserWithAffiliationElement(pair.getKey(),pair.getValue()));
+    }
+    return xml;
+  }
+  /** 
+ * Returns the version.
+ * @return the version
+ */
+  public String getVersion(){
+    return version;
+  }
+  /** 
+ * Returns the room affiliations.
+ * @return the affiliations of the room
+ */
+  public HashMap<Jid,MUCLightAffiliation> getAffiliations(){
+    return affiliations;
+  }
+}

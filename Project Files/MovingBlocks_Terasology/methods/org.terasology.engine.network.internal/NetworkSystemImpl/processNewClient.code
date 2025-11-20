@@ -1,0 +1,32 @@
+private void processNewClient(NetClient client){
+  ServerConnectListManager serverConnectListManager=context.get(ServerConnectListManager.class);
+  if (!serverConnectListManager.isClientAllowedToConnect(client.getId())) {
+    String errorMessage=serverConnectListManager.getErrorMessage(client.getId());
+    client.send(NetData.NetMessage.newBuilder().setServerInfo(getServerInfoMessage(errorMessage)).build());
+    forceDisconnect(client);
+    kicked=false;
+    return;
+  }
+  client.connected(entityManager,entitySerializer,eventSerializer,eventLibrary);
+  client.send(NetData.NetMessage.newBuilder().setJoinComplete(NetData.JoinCompleteMessage.newBuilder().setClientId(client.getEntity().getComponent(NetworkComponent.class).getNetworkId())).build());
+  clientList.add(client);
+  netClientList.add(client);
+  clientPlayerLookup.put(client.getEntity(),client);
+  connectClient(client);
+  logger.info("New client entity: {}",client.getEntity());
+  for (  EntityRef netEntity : entityManager.getEntitiesWith(NetworkComponent.class)) {
+    NetworkComponent netComp=netEntity.getComponent(NetworkComponent.class);
+    if (netComp.getNetworkId() != NULL_NET_ID) {
+switch (netComp.replicateMode) {
+case OWNER:
+        if (client.equals(getOwner(netEntity))) {
+          client.setNetInitial(netComp.getNetworkId());
+        }
+      break;
+default :
+    client.setNetInitial(netComp.getNetworkId());
+  break;
+}
+}
+}
+}

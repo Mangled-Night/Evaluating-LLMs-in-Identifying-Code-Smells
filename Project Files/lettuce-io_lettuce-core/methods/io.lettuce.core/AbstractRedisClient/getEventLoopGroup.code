@@ -1,0 +1,13 @@
+private EventLoopGroup getEventLoopGroup(Class<? extends EventLoopGroup> eventLoopGroupClass){
+  for (; ; ) {
+    if (!eventLoopGroupCas.compareAndSet(EVENTLOOP_ACQ_INACTIVE,EVENTLOOP_ACQ_ACTIVE)) {
+      continue;
+    }
+    try {
+      return eventLoopGroups.computeIfAbsent(eventLoopGroupClass,it -> clientResources.eventLoopGroupProvider().allocate(it));
+    }
+  finally {
+      eventLoopGroupCas.set(EVENTLOOP_ACQ_INACTIVE);
+    }
+  }
+}

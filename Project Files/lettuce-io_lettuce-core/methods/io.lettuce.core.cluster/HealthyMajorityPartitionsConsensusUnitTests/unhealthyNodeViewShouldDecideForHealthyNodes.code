@@ -1,0 +1,12 @@
+@Test void unhealthyNodeViewShouldDecideForHealthyNodes(){
+  Partitions partitions1=createPartitions(node1,node2);
+  Partitions partitions2=createPartitions(node2,node3,node4,node5);
+  Partitions partitions3=createPartitions(node2,node3,node4,node5);
+  Map<RedisURI,Partitions> map=createMap(partitions1,partitions2,partitions3);
+  node2.setFlags(Collections.singleton(RedisClusterNode.NodeFlag.FAIL));
+  node3.setFlags(Collections.singleton(RedisClusterNode.NodeFlag.FAIL));
+  node4.setFlags(Collections.singleton(RedisClusterNode.NodeFlag.FAIL));
+  node5.setFlags(Collections.singleton(RedisClusterNode.NodeFlag.FAIL));
+  Partitions result=PartitionsConsensus.HEALTHY_MAJORITY.getPartitions(null,map);
+  assertThat(result).isSameAs(partitions1);
+}

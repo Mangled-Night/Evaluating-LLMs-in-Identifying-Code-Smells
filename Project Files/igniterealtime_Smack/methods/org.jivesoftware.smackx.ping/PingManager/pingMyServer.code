@@ -1,0 +1,40 @@
+/** 
+ * Pings the server. This method will return true if the server is reachable.  It is the equivalent of calling <code>ping</code> with the XMPP domain. <p> Unlike the  {@link #ping(Jid)} case, this method will return true even if{@link #isPingSupported(Jid)} is false.
+ * @return true if a reply was received from the server, false otherwise.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public boolean pingMyServer() throws NotConnectedException, InterruptedException {
+  return pingMyServer(true);
+}
+/** 
+ * Pings the server. This method will return true if the server is reachable.  It is the equivalent of calling <code>ping</code> with the XMPP domain. <p> Unlike the  {@link #ping(Jid)} case, this method will return true even if{@link #isPingSupported(Jid)} is false.
+ * @param notifyListeners Notify the PingFailedListener in case of error if true
+ * @return true if the user's server could be pinged.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public boolean pingMyServer(boolean notifyListeners) throws NotConnectedException, InterruptedException {
+  return pingMyServer(notifyListeners,connection().getReplyTimeout());
+}
+/** 
+ * Pings the server. This method will return true if the server is reachable.  It is the equivalent of calling <code>ping</code> with the XMPP domain. <p> Unlike the  {@link #ping(Jid)} case, this method will return true even if{@link #isPingSupported(Jid)} is false.
+ * @param notifyListeners Notify the PingFailedListener in case of error if true
+ * @param pingTimeout The time to wait for a reply in milliseconds
+ * @return true if the user's server could be pinged.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public boolean pingMyServer(boolean notifyListeners,long pingTimeout) throws NotConnectedException, InterruptedException {
+  boolean res;
+  try {
+    res=ping(connection().getXMPPServiceDomain(),pingTimeout);
+  }
+ catch (  NoResponseException e) {
+    res=false;
+  }
+  if (!res && notifyListeners) {
+    for (    PingFailedListener l : pingFailedListeners)     l.pingFailed();
+  }
+  return res;
+}

@@ -1,0 +1,33 @@
+/** 
+ * Open asynchronously a new pub/sub connection to the Redis server using the supplied  {@link RedisURI} and use the supplied{@link RedisCodec codec} to encode/decode keys and values.
+ * @param codec Use this codec to encode/decode keys and values, must not be {@code null}
+ * @param redisURI the redis server to connect to, must not be {@code null}
+ * @param < K > Key type
+ * @param < V > Value type
+ * @return {@link ConnectionFuture} to indicate success or failure to connect.
+ * @since 5.0
+ */
+public <K,V>ConnectionFuture<StatefulRedisPubSubConnection<K,V>> connectPubSubAsync(RedisCodec<K,V> codec,RedisURI redisURI){
+  assertNotNull(redisURI);
+  return transformAsyncConnectionException(connectPubSubAsync(codec,redisURI,redisURI.getTimeout()));
+}
+private <K,V>ConnectionFuture<StatefulRedisPubSubConnection<K,V>> connectPubSubAsync(RedisCodec<K,V> codec,RedisURI redisURI,Duration timeout){
+  assertNotNull(codec);
+  checkValidRedisURI(redisURI);
+  PubSubEndpoint<K,V> endpoint=new PubSubEndpoint<>(getOptions(),getResources());
+  RedisChannelWriter writer=endpoint;
+  if (CommandExpiryWriter.isSupported(getOptions())) {
+    writer=new CommandExpiryWriter(writer,getOptions(),getResources());
+  }
+  if (CommandListenerWriter.isSupported(getCommandListeners())) {
+    writer=new CommandListenerWriter(writer,getCommandListeners());
+  }
+  StatefulRedisPubSubConnectionImpl<K,V> connection=newStatefulRedisPubSubConnection(endpoint,writer,codec,timeout);
+  ConnectionFuture<StatefulRedisPubSubConnection<K,V>> future=connectStatefulAsync(connection,endpoint,redisURI,() -> new PubSubCommandHandler<>(getOptions(),getResources(),codec,endpoint));
+  return future.whenComplete((conn,throwable) -> {
+    if (throwable != null) {
+      conn.close();
+    }
+  }
+);
+}

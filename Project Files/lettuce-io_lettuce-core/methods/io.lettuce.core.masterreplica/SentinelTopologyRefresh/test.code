@@ -1,0 +1,30 @@
+@Override boolean test(String message,String channel);
+@Override public boolean test(String channel,String message){
+  if (channel.equals("+elected-leader") || channel.equals("+reset-master")) {
+    if (message.startsWith(String.format("master %s ",masterId))) {
+      return true;
+    }
+  }
+  if (TOPOLOGY_CHANGE_CHANNELS.contains(channel)) {
+    if (message.contains(String.format("@ %s ",masterId))) {
+      return true;
+    }
+  }
+  if (channel.equals("+switch-master")) {
+    if (message.startsWith(String.format("%s ",masterId))) {
+      return true;
+    }
+  }
+  return PROCESSING_CHANNELS.contains(channel);
+}
+@Override public boolean test(String channel,String message){
+  if (channel.equals("+sentinel")) {
+    return true;
+  }
+  if (channel.equals("-odown") || channel.equals("-sdown")) {
+    if (message.startsWith("sentinel ")) {
+      return true;
+    }
+  }
+  return false;
+}

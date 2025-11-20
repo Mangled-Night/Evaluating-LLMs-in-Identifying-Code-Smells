@@ -1,0 +1,21 @@
+@Test public void modifySubscriptionsAsOwnerTest() throws InterruptedException, SmackException, IOException, XMPPException, Exception {
+  ThreadedDummyConnection con=ThreadedDummyConnection.newInstance();
+  PubSubManager mgr=new PubSubManager(con,JidTestUtil.PUBSUB_EXAMPLE_ORG);
+  Node testNode=new LeafNode(mgr,"princely_musings");
+  List<Subscription> ChangeSubs=Arrays.asList(new Subscription(JidCreate.from("romeo@montague.org"),Subscription.State.subscribed),new Subscription(JidCreate.from("juliet@capulet.org"),Subscription.State.none));
+  testNode.modifySubscriptionsAsOwner(ChangeSubs);
+  PubSub request=con.getSentPacket();
+  assertEquals("http://jabber.org/protocol/pubsub#owner",request.getChildElementNamespace());
+  assertEquals("pubsub",request.getChildElementName());
+  XmlPullParser parser=TestUtils.getIQParser(request.toXML().toString());
+  PubSub pubsubResult=(PubSub)PacketParserUtils.parseIQ(parser);
+  SubscriptionsExtension subElem=pubsubResult.getExtension(PubSubElementType.SUBSCRIPTIONS_OWNER);
+  List<Subscription> subscriptions=subElem.getSubscriptions();
+  assertEquals(2,subscriptions.size());
+  Subscription sub1=subscriptions.get(0);
+  assertEquals("romeo@montague.org",sub1.getJid().toString());
+  assertEquals(Subscription.State.subscribed,sub1.getState());
+  Subscription sub2=subscriptions.get(1);
+  assertEquals("juliet@capulet.org",sub2.getJid().toString());
+  assertEquals(Subscription.State.none,sub2.getState());
+}

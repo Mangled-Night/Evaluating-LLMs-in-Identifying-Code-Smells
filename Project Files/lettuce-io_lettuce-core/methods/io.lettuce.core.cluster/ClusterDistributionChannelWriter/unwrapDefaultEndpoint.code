@@ -1,0 +1,15 @@
+private DefaultEndpoint unwrapDefaultEndpoint(){
+  RedisChannelWriter writer=this.defaultWriter;
+  while (!(writer instanceof DefaultEndpoint)) {
+    if (writer instanceof CommandListenerWriter) {
+      writer=((CommandListenerWriter)writer).getDelegate();
+      continue;
+    }
+    if (writer instanceof CommandExpiryWriter) {
+      writer=((CommandExpiryWriter)writer).getDelegate();
+      continue;
+    }
+    throw new IllegalStateException(String.format("Cannot unwrap defaultWriter %s into DefaultEndpoint",writer));
+  }
+  return (DefaultEndpoint)writer;
+}

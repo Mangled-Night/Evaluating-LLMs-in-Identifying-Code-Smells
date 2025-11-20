@@ -1,0 +1,63 @@
+Command<K,V,List<ScoredValue<V>>> zrevrangebyscoreWithScores(K key,double max,double min){
+  return zrevrangebyscoreWithScores(key,string(max),string(min));
+}
+Command<K,V,List<ScoredValue<V>>> zrevrangebyscoreWithScores(K key,String max,String min){
+  notNullKey(key);
+  notNullMinMax(min,max);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  args.addKey(key).add(max).add(min).add(WITHSCORES);
+  return createCommand(ZREVRANGEBYSCORE,new ScoredValueListOutput<>(codec),args);
+}
+Command<K,V,List<ScoredValue<V>>> zrevrangebyscoreWithScores(K key,double max,double min,long offset,long count){
+  return zrevrangebyscoreWithScores(key,string(max),string(min),offset,count);
+}
+Command<K,V,List<ScoredValue<V>>> zrevrangebyscoreWithScores(K key,String max,String min,long offset,long count){
+  notNullKey(key);
+  notNullMinMax(min,max);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  addLimit(args.addKey(key).add(max).add(min).add(WITHSCORES),Limit.create(offset,count));
+  return createCommand(ZREVRANGEBYSCORE,new ScoredValueListOutput<>(codec),args);
+}
+Command<K,V,List<ScoredValue<V>>> zrevrangebyscoreWithScores(K key,Range<? extends Number> range,Limit limit){
+  notNullKey(key);
+  notNullRange(range);
+  notNullLimit(limit);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  addLimit(args.addKey(key).add(max(range)).add(min(range)).add(WITHSCORES),limit);
+  return createCommand(ZREVRANGEBYSCORE,new ScoredValueListOutput<>(codec),args);
+}
+Command<K,V,Long> zrevrangebyscoreWithScores(ScoredValueStreamingChannel<V> channel,K key,double max,double min){
+  return zrevrangebyscoreWithScores(channel,key,string(max),string(min));
+}
+Command<K,V,Long> zrevrangebyscoreWithScores(ScoredValueStreamingChannel<V> channel,K key,String max,String min){
+  notNullKey(key);
+  notNullMinMax(min,max);
+  notNull(channel);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  args.addKey(key).add(max).add(min).add(WITHSCORES);
+  return createCommand(ZREVRANGEBYSCORE,new ScoredValueStreamingOutput<>(codec,channel),args);
+}
+Command<K,V,Long> zrevrangebyscoreWithScores(ScoredValueStreamingChannel<V> channel,K key,double max,double min,long offset,long count){
+  notNullKey(key);
+  LettuceAssert.notNull(min,"Min " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(max,"Max " + MUST_NOT_BE_NULL);
+  notNull(channel);
+  return zrevrangebyscoreWithScores(channel,key,string(max),string(min),offset,count);
+}
+Command<K,V,Long> zrevrangebyscoreWithScores(ScoredValueStreamingChannel<V> channel,K key,String max,String min,long offset,long count){
+  notNullKey(key);
+  notNullMinMax(min,max);
+  notNull(channel);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  addLimit(args.addKey(key).add(max).add(min).add(WITHSCORES),Limit.create(offset,count));
+  return createCommand(ZREVRANGEBYSCORE,new ScoredValueStreamingOutput<>(codec,channel),args);
+}
+Command<K,V,Long> zrevrangebyscoreWithScores(ScoredValueStreamingChannel<V> channel,K key,Range<? extends Number> range,Limit limit){
+  notNullKey(key);
+  notNullRange(range);
+  notNullLimit(limit);
+  notNull(channel);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  addLimit(args.addKey(key).add(max(range)).add(min(range)).add(WITHSCORES),limit);
+  return createCommand(ZREVRANGEBYSCORE,new ScoredValueStreamingOutput<>(codec,channel),args);
+}

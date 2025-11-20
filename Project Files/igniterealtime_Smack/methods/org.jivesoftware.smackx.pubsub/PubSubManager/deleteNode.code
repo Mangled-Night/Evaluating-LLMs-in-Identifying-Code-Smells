@@ -1,0 +1,25 @@
+/** 
+ * Delete the specified node.
+ * @param nodeId TODO javadoc me please
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @return <code>true</code> if this node existed and was deleted and <code>false</code> if this node did not exist.
+ */
+public boolean deleteNode(String nodeId) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  boolean res=true;
+  try {
+    sendPubsubPacket(IQ.Type.set,new NodeExtension(PubSubElementType.DELETE,nodeId),PubSubElementType.DELETE.getNamespace());
+  }
+ catch (  XMPPErrorException e) {
+    if (e.getStanzaError().getCondition() == StanzaError.Condition.item_not_found) {
+      res=false;
+    }
+ else {
+      throw e;
+    }
+  }
+  nodeMap.remove(nodeId);
+  return res;
+}

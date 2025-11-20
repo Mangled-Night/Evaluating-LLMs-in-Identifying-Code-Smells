@@ -1,0 +1,11 @@
+public void setMigrateTaskList(List<MigrateTask> migrateTaskList){
+  this.migrateTaskList=migrateTaskList;
+  for (  MigrateTask migrateTask : migrateTaskList) {
+    databaseSet.add(MigrateUtils.getDatabaseFromDataNode(migrateTask.getFrom()));
+    String dataHostTo=MigrateUtils.getDataHostFromDataNode(migrateTask.getTo());
+    if (!semaphoreMap.containsKey(dataHostTo)) {
+      int count=Double.valueOf(MycatServer.getInstance().getConfig().getDataHosts().get(dataHostTo).getSource().getSize() * 0.8).intValue();
+      semaphoreMap.put(dataHostTo,new Semaphore(1));
+    }
+  }
+}

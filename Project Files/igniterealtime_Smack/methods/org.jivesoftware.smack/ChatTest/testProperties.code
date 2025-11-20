@@ -1,0 +1,25 @@
+@SuppressWarnings("deprecation") @SmackIntegrationTest public void testProperties() throws Exception {
+  org.jivesoftware.smack.chat.Chat newChat=chatManagerOne.createChat(conTwo.getUser());
+  StanzaCollector collector=conTwo.createStanzaCollector(new ThreadFilter(newChat.getThreadID()));
+  MessageBuilder messageBuilder=StanzaBuilder.buildMessage();
+  messageBuilder.setSubject("Subject of the chat");
+  messageBuilder.setBody("Body of the chat");
+  addProperty(messageBuilder,"favoriteColor","red");
+  addProperty(messageBuilder,"age",30);
+  addProperty(messageBuilder,"distance",30f);
+  addProperty(messageBuilder,"weight",30d);
+  addProperty(messageBuilder,"male",true);
+  addProperty(messageBuilder,"birthdate",new Date());
+  Message msg=messageBuilder.build();
+  newChat.sendMessage(msg);
+  Message msg2=collector.nextResult(2000);
+  assertNotNull(msg2,"No message was received");
+  assertEquals(msg.getSubject(),msg2.getSubject(),"Subjects are different");
+  assertEquals(msg.getBody(),msg2.getBody(),"Bodies are different");
+  assertEquals(getProperty(msg,"favoriteColor"),getProperty(msg2,"favoriteColor"),"favoriteColors are different");
+  assertEquals(getProperty(msg,"age"),getProperty(msg2,"age"),"ages are different");
+  assertEquals(getProperty(msg,"distance"),getProperty(msg2,"distance"),"distances are different");
+  assertEquals(getProperty(msg,"weight"),getProperty(msg2,"weight"),"weights are different");
+  assertEquals(getProperty(msg,"male"),getProperty(msg2,"male"),"males are different");
+  assertEquals(getProperty(msg,"birthdate"),getProperty(msg2,"birthdate"),"birthdates are different");
+}

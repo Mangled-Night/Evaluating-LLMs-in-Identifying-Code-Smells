@@ -1,0 +1,21 @@
+@Override public void visitorParse(SchemaConfig schema,RouteResultset rrs,SQLStatement stmt,MycatSchemaStatVisitor visitor) throws SQLNonTransientException {
+  String sql=rrs.getStatement();
+  sql=sql.replaceAll("\n"," ").replaceAll("\t"," ");
+  String[] stmts=SplitUtil.split(sql,',',true);
+  if (stmts.length > 1) {
+    String tmpStmt=null;
+    String tmpWords[]=null;
+    for (int i=1; i < stmts.length; i++) {
+      tmpStmt=stmts[i];
+      tmpWords=SplitUtil.split(tmpStmt,' ',true);
+      if (tmpWords.length == 2 && ("READ".equalsIgnoreCase(tmpWords[1]) || "WRITE".equalsIgnoreCase(tmpWords[1]))) {
+        continue;
+      }
+ else {
+        throw new SQLNonTransientException("You have an error in your SQL syntax, don't support lock multi tables!");
+      }
+    }
+    LOGGER.error("can't lock multi-table");
+    throw new SQLNonTransientException("can't lock multi-table");
+  }
+}

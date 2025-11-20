@@ -1,0 +1,24 @@
+public MacroGroup parseMacroGroup(XmlPullParser parser) throws XmlPullParserException, IOException {
+  MacroGroup group=new MacroGroup();
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      if (parser.getName().equals("macrogroup")) {
+        group.addMacroGroup(parseMacroGroup(parser));
+      }
+      if (parser.getName().equals("title")) {
+        group.setTitle(parser.nextText());
+      }
+      if (parser.getName().equals("macro")) {
+        group.addMacro(parseMacro(parser));
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getName().equals("macrogroup")) {
+        done=true;
+      }
+    }
+  }
+  return group;
+}

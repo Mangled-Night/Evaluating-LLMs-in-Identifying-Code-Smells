@@ -1,0 +1,17 @@
+/** 
+ * Immediately remove the given key and any associated value.
+ * @param key the key to evict the entry for
+ * @return {@code true} if the key was present before, {@code false} if there was no matching key
+ */
+public boolean remove(K key){
+  this.lock.writeLock().lock();
+  try {
+    boolean wasPresent=(this.cache.remove(key) != null);
+    this.queue.remove(key);
+    this.size=this.cache.size();
+    return wasPresent;
+  }
+  finally {
+    this.lock.writeLock().unlock();
+  }
+}

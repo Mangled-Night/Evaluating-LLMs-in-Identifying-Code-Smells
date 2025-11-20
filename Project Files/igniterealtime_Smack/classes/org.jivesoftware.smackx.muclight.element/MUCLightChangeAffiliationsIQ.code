@@ -1,0 +1,38 @@
+/** 
+ * MUCLight change affiliations IQ class.
+ * @author Fernando Ramirez
+ */
+public class MUCLightChangeAffiliationsIQ extends IQ {
+  public static final String ELEMENT=QUERY_ELEMENT;
+  public static final String NAMESPACE=MultiUserChatLight.NAMESPACE + MultiUserChatLight.AFFILIATIONS;
+  private HashMap<Jid,MUCLightAffiliation> affiliations;
+  /** 
+ * MUCLight change affiliations IQ constructor.
+ * @param room TODO javadoc me please
+ * @param affiliations TODO javadoc me please
+ */
+  public MUCLightChangeAffiliationsIQ(  Jid room,  HashMap<Jid,MUCLightAffiliation> affiliations){
+    super(ELEMENT,NAMESPACE);
+    this.setType(Type.set);
+    this.setTo(room);
+    this.affiliations=affiliations;
+  }
+  /** 
+ * Get the affiliations.
+ * @return the affiliations
+ */
+  public HashMap<Jid,MUCLightAffiliation> getAffiliations(){
+    return affiliations;
+  }
+  @Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(  IQChildElementXmlStringBuilder xml){
+    xml.rightAngleBracket();
+    if (affiliations != null) {
+      Iterator<Map.Entry<Jid,MUCLightAffiliation>> it=affiliations.entrySet().iterator();
+      while (it.hasNext()) {
+        Map.Entry<Jid,MUCLightAffiliation> pair=it.next();
+        xml.append(new UserWithAffiliationElement(pair.getKey(),pair.getValue()));
+      }
+    }
+    return xml;
+  }
+}

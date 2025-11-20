@@ -1,0 +1,30 @@
+private RedisCodec<?,?> resolveCodec(Set<Class<?>> keyTypes,Set<Class<?>> valueTypes){
+  Class<?> keyType=keyTypes.isEmpty() ? null : keyTypes.iterator().next();
+  Class<?> valueType=valueTypes.isEmpty() ? null : valueTypes.iterator().next();
+  for (  RedisCodec<?,?> codec : codecs) {
+    ClassTypeInformation<?> typeInformation=ClassTypeInformation.from(codec.getClass());
+    TypeInformation<?> keyTypeArgument=typeInformation.getTypeArgument(RedisCodec.class,0);
+    TypeInformation<?> valueTypeArgument=typeInformation.getTypeArgument(RedisCodec.class,1);
+    if (keyTypeArgument == null || valueTypeArgument == null) {
+      continue;
+    }
+    boolean keyMatch=false;
+    boolean valueMatch=false;
+    if (keyType != null) {
+      keyMatch=keyTypeArgument.isAssignableFrom(ClassTypeInformation.from(keyType));
+    }
+    if (valueType != null) {
+      valueMatch=valueTypeArgument.isAssignableFrom(ClassTypeInformation.from(valueType));
+    }
+    if (keyType != null && valueType != null && keyMatch && valueMatch) {
+      return codec;
+    }
+    if (keyType != null && valueType == null && keyMatch) {
+      return codec;
+    }
+    if (keyType == null && valueType != null && valueMatch) {
+      return codec;
+    }
+  }
+  return null;
+}

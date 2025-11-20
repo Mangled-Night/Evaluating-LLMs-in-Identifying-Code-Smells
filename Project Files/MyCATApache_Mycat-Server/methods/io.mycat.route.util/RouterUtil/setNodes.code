@@ -1,0 +1,39 @@
+private static void setNodes(RouteResultset rrs,TableConfig tableConfig,String partionCol,Set<String> tablesRouteSet,Map.Entry<String,Map<String,Set<ColumnRoutePair>>> entry1) throws SQLNonTransientException {
+  Map<String,Set<ColumnRoutePair>> columnsMap=entry1.getValue();
+  Set<ColumnRoutePair> partitionValue=columnsMap.get(partionCol);
+  if (partitionValue == null || partitionValue.size() == 0) {
+    tablesRouteSet.addAll(tableConfig.getDistTables());
+  }
+ else {
+    for (    ColumnRoutePair pair : partitionValue) {
+      AbstractPartitionAlgorithm algorithm=tableConfig.getRule().getRuleAlgorithm();
+      if (pair.colValue != null) {
+        Integer tableIndex=algorithm.calculate(pair.colValue);
+        if (tableIndex == null) {
+          String msg="can't find any valid datanode :" + tableConfig.getName() + " -> "+ tableConfig.getPartitionColumn()+ " -> "+ pair.colValue;
+          LOGGER.warn(msg);
+          throw new SQLNonTransientException(msg);
+        }
+        String subTable=tableConfig.getDistTables().get(tableIndex);
+        if (subTable != null) {
+          tablesRouteSet.add(subTable);
+          if (algorithm instanceof SlotFunction) {
+            rrs.getDataNodeSlotMap().put(subTable,((SlotFunction)algorithm).slotValue());
+          }
+        }
+      }
+      if (pair.rangeValue != null) {
+        Integer[] tableIndexs=algorithm.calculateRange(pair.rangeValue.beginValue.toString(),pair.rangeValue.endValue.toString());
+        for (        Integer idx : tableIndexs) {
+          String subTable=tableConfig.getDistTables().get(idx);
+          if (subTable != null) {
+            tablesRouteSet.add(subTable);
+            if (algorithm instanceof SlotFunction) {
+              rrs.getDataNodeSlotMap().put(subTable,((SlotFunction)algorithm).slotValue());
+            }
+          }
+        }
+      }
+    }
+  }
+}

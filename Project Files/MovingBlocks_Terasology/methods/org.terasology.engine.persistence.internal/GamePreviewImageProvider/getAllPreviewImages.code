@@ -1,0 +1,20 @@
+/** 
+ * Gets all images for saved game.
+ * @param savePath a path to saves directory
+ * @return all preview images
+ */
+public static List<BufferedImage> getAllPreviewImages(final Path savePath){
+  final List<BufferedImage> result=new ArrayList<>();
+  final StoragePathProvider storagePathProvider=new StoragePathProvider(savePath);
+  final Path previewsDirPath=storagePathProvider.getPreviewsPath();
+  for (  Path previewPath : getAllPathsToFilesInFolder(previewsDirPath)) {
+    try (InputStream in=new BufferedInputStream(Files.newInputStream(previewPath))){
+      result.add(ImageIO.read(in));
+    }
+ catch (    IOException ex) {
+      logger.warn("Can't load an image",ex);
+    }
+  }
+  result.removeIf(Objects::isNull);
+  return result;
+}

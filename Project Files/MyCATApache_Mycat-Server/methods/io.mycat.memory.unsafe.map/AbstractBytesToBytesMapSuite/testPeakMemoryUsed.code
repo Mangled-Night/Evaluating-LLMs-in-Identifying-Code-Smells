@@ -1,0 +1,28 @@
+@Test public void testPeakMemoryUsed(){
+  final long recordLengthBytes=32;
+  final long pageSizeBytes=256 + 8;
+  final long numRecordsPerPage=(pageSizeBytes - 8) / recordLengthBytes;
+  final BytesToBytesMap map=new BytesToBytesMap(dataNodeMemoryManager,1024,pageSizeBytes);
+  long previousPeakMemory=map.getPeakMemoryUsedBytes();
+  long newPeakMemory;
+  try {
+    for (long i=0; i < numRecordsPerPage * 10; i++) {
+      final long[] value=new long[]{i};
+      map.lookup(value,Platform.LONG_ARRAY_OFFSET,8).append(value,Platform.LONG_ARRAY_OFFSET,8,value,Platform.LONG_ARRAY_OFFSET,8);
+      newPeakMemory=map.getPeakMemoryUsedBytes();
+      if (i % numRecordsPerPage == 0) {
+        assertEquals(previousPeakMemory + pageSizeBytes,newPeakMemory);
+      }
+ else {
+        assertEquals(previousPeakMemory,newPeakMemory);
+      }
+      previousPeakMemory=newPeakMemory;
+    }
+    map.free();
+    newPeakMemory=map.getPeakMemoryUsedBytes();
+    assertEquals(previousPeakMemory,newPeakMemory);
+  }
+  finally {
+    map.free();
+  }
+}

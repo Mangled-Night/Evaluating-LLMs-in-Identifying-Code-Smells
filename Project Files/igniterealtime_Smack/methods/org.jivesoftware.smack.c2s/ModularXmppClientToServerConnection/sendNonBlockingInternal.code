@@ -1,0 +1,11 @@
+@Override protected void sendNonBlockingInternal(TopLevelStreamElement element) throws NotConnectedException, OutgoingQueueFullException {
+  final XmppClientToServerTransport transport=activeTransport;
+  if (transport == null) {
+    throw new NotConnectedException();
+  }
+  boolean enqueued=outgoingElementsQueue.offer(element);
+  if (!enqueued) {
+    throw new OutgoingQueueFullException();
+  }
+  transport.notifyAboutNewOutgoingElements();
+}

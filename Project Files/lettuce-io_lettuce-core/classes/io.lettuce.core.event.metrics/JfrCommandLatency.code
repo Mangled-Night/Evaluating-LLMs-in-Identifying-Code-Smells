@@ -1,0 +1,31 @@
+/** 
+ * A JFR event for Each Command Latency triggered by JfrCommandLatencyEvent
+ * @author Hash.Jang
+ * @since 6.2
+ * @see JfrCommandLatency
+ */
+@Category({"Lettuce","Command Events"}) @Label("Command Latency") @StackTrace(false) class JfrCommandLatency extends Event {
+  private final String remoteAddress;
+  private final String commandType;
+  private final long count;
+  @Timespan(Timespan.MICROSECONDS) @Description("First response latency minimum in µs") private final long firstResponseMin;
+  @Timespan(Timespan.MICROSECONDS) @Description("First response latency maximum in µs") private final long firstResponseMax;
+  private final String firstResponsePercentiles;
+  @Timespan(Timespan.MICROSECONDS) @Description("Command response latency minimum in µs") private final long completionResponseMin;
+  @Timespan(Timespan.MICROSECONDS) @Description("Command response latency maximum in µs") private final long completionResponseMax;
+  private final String completionResponsePercentiles;
+  public JfrCommandLatency(  CommandLatencyId commandLatencyId,  CommandMetrics commandMetrics){
+    this.remoteAddress=commandLatencyId.remoteAddress().toString();
+    this.commandType=commandLatencyId.commandType().toString();
+    this.count=commandMetrics.getCount();
+    CommandMetrics.CommandLatency firstResponse=commandMetrics.getFirstResponse();
+    TimeUnit timeUnit=commandMetrics.getTimeUnit();
+    this.firstResponseMin=timeUnit.toMicros(firstResponse.getMin());
+    this.firstResponseMax=timeUnit.toMicros(firstResponse.getMax());
+    this.firstResponsePercentiles=firstResponse.getPercentiles().toString();
+    CommandMetrics.CommandLatency completion=commandMetrics.getCompletion();
+    this.completionResponseMin=timeUnit.toMicros(completion.getMin());
+    this.completionResponseMax=timeUnit.toMicros(completion.getMax());
+    this.completionResponsePercentiles=completion.getPercentiles().toString();
+  }
+}

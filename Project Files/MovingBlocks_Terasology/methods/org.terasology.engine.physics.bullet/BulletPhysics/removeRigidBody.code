@@ -1,0 +1,19 @@
+@Override public boolean removeRigidBody(EntityRef entity){
+  BulletRigidBody rigidBody=entityRigidBodies.remove(entity);
+  if (rigidBody != null) {
+    removeRigidBody(rigidBody);
+    Matrix4f m=new Matrix4f();
+    Vector3f aabbMin=new Vector3f();
+    Vector3f aabbMax=new Vector3f();
+    rigidBody.rb.getCollisionShape().getAabb(m,aabbMin,aabbMax);
+    awakenArea(rigidBody.getLocation(new Vector3f()),(aabbMax.sub(aabbMin)).length() * .5f);
+    return true;
+  }
+ else {
+    logger.warn("Deleting non existing rigidBody from physics engine?! Entity: {}",entity);
+    return false;
+  }
+}
+private void removeRigidBody(BulletRigidBody body){
+  removalQueue.add(body);
+}

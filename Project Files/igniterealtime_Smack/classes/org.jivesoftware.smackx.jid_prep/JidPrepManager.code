@@ -1,0 +1,40 @@
+public class JidPrepManager extends Manager {
+  public static final String NAMESPACE=JidPrepIq.NAMESPACE;
+  private static final Map<XMPPConnection,JidPrepManager> INSTANCES=new WeakHashMap<>();
+  private final ServiceDiscoveryManager serviceDiscoveryManager;
+  public static synchronized JidPrepManager getInstanceFor(  XMPPConnection connection){
+    JidPrepManager manager=INSTANCES.get(connection);
+    if (manager == null) {
+      manager=new JidPrepManager(connection);
+      INSTANCES.put(connection,manager);
+    }
+    return manager;
+  }
+  public JidPrepManager(  XMPPConnection connection){
+    super(connection);
+    serviceDiscoveryManager=ServiceDiscoveryManager.getInstanceFor(connection);
+  }
+  public String requestJidPrep(  String jidToBePrepped) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    DomainBareJid serviceAddress=serviceDiscoveryManager.findService(NAMESPACE,true);
+    return requestJidPrep(serviceAddress,jidToBePrepped);
+  }
+  public String requestJidPrep(  Jid jidPrepService,  String jidToBePrepped) throws NoResponseException, NotConnectedException, InterruptedException, XMPPErrorException {
+    JidPrepIq jidPrepRequest=new JidPrepIq(jidToBePrepped);
+    jidPrepRequest.setTo(jidPrepService);
+    JidPrepIq jidPrepResponse;
+    try {
+      jidPrepResponse=connection().sendIqRequestAndWaitForResponse(jidPrepRequest);
+    }
+ catch (    XMPPErrorException e) {
+      StanzaError stanzaError=e.getStanzaError();
+      if (stanzaError.getCondition() == StanzaError.Condition.jid_malformed) {
+        return null;
+      }
+      throw e;
+    }
+    return jidPrepResponse.getJid();
+  }
+  public boolean isSupported(  Jid jid) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    return serviceDiscoveryManager.supportsFeature(jid,NAMESPACE);
+  }
+}

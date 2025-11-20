@@ -1,0 +1,25 @@
+/** 
+ * Inspect whether additional Sentinel connections are required based on the which Sentinels are currently connected.
+ * @return list of futures that are notified with the connection progress.
+ */
+private List<ConnectionFuture<StatefulRedisPubSubConnection<String,String>>> potentiallyConnectSentinels(){
+  List<ConnectionFuture<StatefulRedisPubSubConnection<String,String>>> connectionFutures=new ArrayList<>();
+  for (  RedisURI sentinel : sentinels) {
+    if (pubSubConnections.containsKey(sentinel)) {
+      continue;
+    }
+    ConnectionFuture<StatefulRedisPubSubConnection<String,String>> future=redisClient.connectPubSubAsync(CODEC,sentinel);
+    pubSubConnections.put(sentinel,future);
+    future.whenComplete((connection,throwable) -> {
+      if (throwable != null || closed) {
+        pubSubConnections.remove(sentinel);
+      }
+      if (closed) {
+        connection.closeAsync();
+      }
+    }
+);
+    connectionFutures.add(future);
+  }
+  return connectionFutures;
+}

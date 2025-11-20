@@ -1,0 +1,21 @@
+/** 
+ * Updates the particle emitters lifetime and disables or removes it potentially. In case the life time runs out, the emitter is disabled. In case no more particles in the pool are alive, the emitter is destroyed.
+ * @param emitter emitter to update
+ * @param delta delta time
+ */
+private void updateEmitterLifeTime(ParticleEmitterComponent emitter,float delta){
+  if (emitter.lifeTime != ParticleEmitterComponent.INDEFINITE_EMITTER_LIFETIME) {
+    emitter.lifeTime=Math.max(0,emitter.lifeTime - delta);
+    if (emitter.lifeTime == 0) {
+      emitter.enabled=false;
+      if (emitter.particlePool.deadParticles() == emitter.maxParticles) {
+        if (emitter.destroyEntityWhenDead) {
+          emitter.ownerEntity.destroy();
+        }
+ else {
+          emitter.ownerEntity.removeComponent(ParticleEmitterComponent.class);
+        }
+      }
+    }
+  }
+}

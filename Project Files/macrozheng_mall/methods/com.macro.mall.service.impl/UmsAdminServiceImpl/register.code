@@ -1,0 +1,16 @@
+@Override public UmsAdmin register(UmsAdminParam umsAdminParam){
+  UmsAdmin umsAdmin=new UmsAdmin();
+  BeanUtils.copyProperties(umsAdminParam,umsAdmin);
+  umsAdmin.setCreateTime(new Date());
+  umsAdmin.setStatus(1);
+  UmsAdminExample example=new UmsAdminExample();
+  example.createCriteria().andUsernameEqualTo(umsAdmin.getUsername());
+  List<UmsAdmin> umsAdminList=adminMapper.selectByExample(example);
+  if (umsAdminList.size() > 0) {
+    return null;
+  }
+  String encodePassword=passwordEncoder.encode(umsAdmin.getPassword());
+  umsAdmin.setPassword(encodePassword);
+  adminMapper.insert(umsAdmin);
+  return umsAdmin;
+}

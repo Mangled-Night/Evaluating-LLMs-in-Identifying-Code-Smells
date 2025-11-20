@@ -1,0 +1,36 @@
+/** 
+ * Returns a random simple digraph containing  {@code V} vertices and {@code E} edges.
+ * @param V the number of vertices
+ * @param E the number of vertices
+ * @return a random simple digraph on {@code V} vertices, containing a totalof  {@code E} edges
+ * @throws IllegalArgumentException if no such simple digraph exists
+ */
+public static Digraph simple(int V,int E){
+  if (E > (long)V * (V - 1))   throw new IllegalArgumentException("Too many edges");
+  if (E < 0)   throw new IllegalArgumentException("Too few edges");
+  Digraph G=new Digraph(V);
+  SET<Edge> set=new SET<Edge>();
+  while (G.E() < E) {
+    int v=StdRandom.uniformInt(V);
+    int w=StdRandom.uniformInt(V);
+    Edge e=new Edge(v,w);
+    if ((v != w) && !set.contains(e)) {
+      set.add(e);
+      G.addEdge(v,w);
+    }
+  }
+  return G;
+}
+/** 
+ * Returns a random simple digraph on  {@code V} vertices, with anedge between any two vertices with probability  {@code p}. This is sometimes referred to as the Erdos-Renyi random digraph model. This implementations takes time proportional to V^2 (even if  {@code p} is small).
+ * @param V the number of vertices
+ * @param p the probability of choosing an edge
+ * @return a random simple digraph on {@code V} vertices, with an edge betweenany two vertices with probability  {@code p}
+ * @throws IllegalArgumentException if probability is not between 0 and 1
+ */
+public static Digraph simple(int V,double p){
+  if (p < 0.0 || p > 1.0)   throw new IllegalArgumentException("Probability must be between 0 and 1");
+  Digraph G=new Digraph(V);
+  for (int v=0; v < V; v++)   for (int w=0; w < V; w++)   if (v != w)   if (StdRandom.bernoulli(p))   G.addEdge(v,w);
+  return G;
+}

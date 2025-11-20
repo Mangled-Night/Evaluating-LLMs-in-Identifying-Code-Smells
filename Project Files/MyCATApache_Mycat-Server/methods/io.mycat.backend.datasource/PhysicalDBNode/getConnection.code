@@ -1,0 +1,50 @@
+public void getConnection(String schema,boolean autoCommit,RouteResultsetNode rrs,ResponseHandler handler,Object attachment) throws Exception {
+  checkRequest(schema);
+  boolean needMaster=!autoCommit && MycatServer.getInstance().getConfig().getSystem().isStrictTxIsolation();
+  if (needMaster && rrs.getRunOnSlave() == null) {
+    rrs.setRunOnSlave(false);
+  }
+  if (dbPool.isInitSuccess()) {
+    LOGGER.debug("rrs.getRunOnSlave() " + rrs.getRunOnSlaveDebugInfo());
+    if (rrs.getRunOnSlave() != null) {
+      if (rrs.getRunOnSlave()) {
+        LOGGER.debug("rrs.isHasBlanceFlag() " + rrs.isHasBlanceFlag());
+        if (rrs.isHasBlanceFlag()) {
+          dbPool.getReadBanlanceCon(schema,autoCommit,handler,attachment,this.database);
+        }
+ else {
+          LOGGER.debug("rrs.isHasBlanceFlag()" + rrs.isHasBlanceFlag());
+          if (!dbPool.getReadCon(schema,autoCommit,handler,attachment,this.database)) {
+            LOGGER.warn("Do not have slave connection to use, use master connection instead.");
+            PhysicalDatasource writeSource=dbPool.getSource();
+            writeSource.setWriteCount();
+            writeSource.getConnection(schema,autoCommit,handler,attachment);
+            rrs.setRunOnSlave(false);
+            rrs.setCanRunInReadDB(false);
+          }
+        }
+      }
+ else {
+        LOGGER.debug("rrs.getRunOnSlave() " + rrs.getRunOnSlaveDebugInfo());
+        PhysicalDatasource writeSource=dbPool.getSource();
+        writeSource.setWriteCount();
+        writeSource.getConnection(schema,autoCommit,handler,attachment);
+        rrs.setCanRunInReadDB(false);
+      }
+    }
+ else {
+      LOGGER.debug("rrs.getRunOnSlave() " + rrs.getRunOnSlaveDebugInfo());
+      if (rrs.canRunnINReadDB(autoCommit)) {
+        dbPool.getRWBanlanceCon(schema,autoCommit,handler,attachment,this.database);
+      }
+ else {
+        PhysicalDatasource writeSource=dbPool.getSource();
+        writeSource.setWriteCount();
+        writeSource.getConnection(schema,autoCommit,handler,attachment);
+      }
+    }
+  }
+ else {
+    throw new IllegalArgumentException("Invalid DataSource:" + dbPool.getActivedIndex());
+  }
+}

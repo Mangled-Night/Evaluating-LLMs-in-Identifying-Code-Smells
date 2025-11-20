@@ -1,0 +1,40 @@
+static final class SystemToast extends AbsToast {
+  SystemToast(  ToastUtils toastUtils){
+    super(toastUtils);
+    if (Build.VERSION.SDK_INT == Build.VERSION_CODES.N_MR1) {
+      try {
+        Field mTNField=Toast.class.getDeclaredField("mTN");
+        mTNField.setAccessible(true);
+        Object mTN=mTNField.get(mToast);
+        Field mTNmHandlerField=mTNField.getType().getDeclaredField("mHandler");
+        mTNmHandlerField.setAccessible(true);
+        Handler tnHandler=(Handler)mTNmHandlerField.get(mTN);
+        mTNmHandlerField.set(mTN,new SafeHandler(tnHandler));
+      }
+ catch (      Exception ignored) {
+      }
+    }
+  }
+  @Override public void show(  int duration){
+    if (mToast == null)     return;
+    mToast.setDuration(duration);
+    mToast.show();
+  }
+static class SafeHandler extends Handler {
+    private Handler impl;
+    SafeHandler(    Handler impl){
+      this.impl=impl;
+    }
+    @Override public void handleMessage(    @NonNull Message msg){
+      impl.handleMessage(msg);
+    }
+    @Override public void dispatchMessage(    @NonNull Message msg){
+      try {
+        impl.dispatchMessage(msg);
+      }
+ catch (      Exception e) {
+        e.printStackTrace();
+      }
+    }
+  }
+}

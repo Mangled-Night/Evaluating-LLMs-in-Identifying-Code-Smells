@@ -1,0 +1,15 @@
+@Test public void testReduceLight(){
+  StubPropagatorWorldView worldView=new StubPropagatorWorldView(testingRegion,air);
+  worldView.setBlockAt(new Vector3i(0,0,0),fullLight);
+  BatchPropagator propagator=new StandardBatchPropagator(lightRules,worldView);
+  propagator.process(new BlockChange(ZERO_VECTOR,air,fullLight));
+  worldView.setBlockAt(new Vector3i(0,0,0),weakLight);
+  propagator.process(new BlockChange(ZERO_VECTOR,fullLight,weakLight));
+  assertEquals(weakLight.getLuminance(),worldView.getValueAt(new Vector3i(0,0,0)));
+  for (int i=1; i < 15; ++i) {
+    byte expectedLuminance=(byte)Math.max(0,weakLight.getLuminance() - i);
+    for (    Vector3ic pos : Diamond3iIterable.shell(new Vector3i(0,0,0),i).build()) {
+      assertEquals(expectedLuminance,worldView.getValueAt(pos));
+    }
+  }
+}

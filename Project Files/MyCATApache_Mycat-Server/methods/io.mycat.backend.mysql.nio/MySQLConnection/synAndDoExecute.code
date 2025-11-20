@@ -1,0 +1,79 @@
+private void synAndDoExecute(String xaTxID,RouteResultsetNode rrn,int clientCharSetIndex,int clientTxIsoLation,boolean clientAutoCommit,boolean clientTxReadonly,int clientSqlSelectLimit){
+  String xaCmd=null;
+  boolean conAutoComit=this.autocommit;
+  boolean conTxReadonly=this.txReadonly;
+  int conSqlSelectLimit=this.sqlSelectLimit;
+  String conSchema=this.schema;
+  boolean strictTxIsolation=MycatServer.getInstance().getConfig().getSystem().isStrictTxIsolation();
+  boolean expectAutocommit=false;
+  if (strictTxIsolation) {
+    expectAutocommit=isFromSlaveDB() || clientAutoCommit;
+  }
+ else {
+    expectAutocommit=(!modifiedSQLExecuted || isFromSlaveDB() || clientAutoCommit);
+  }
+  if (expectAutocommit == false && xaTxID != null && xaStatus == TxState.TX_INITIALIZE_STATE) {
+    xaCmd="XA START " + xaTxID + ';';
+    this.xaStatus=TxState.TX_STARTED_STATE;
+  }
+  int schemaSyn=conSchema.equals(oldSchema) ? 0 : 1;
+  int charsetSyn=0;
+  if (this.charsetIndex != clientCharSetIndex) {
+    setCharset(CharsetUtil.getCharset(clientCharSetIndex));
+    charsetSyn=1;
+  }
+  int txIsoLationSyn=(txIsolation == clientTxIsoLation) ? 0 : 1;
+  int autoCommitSyn=(conAutoComit == expectAutocommit) ? 0 : 1;
+  int txReadonlySyn=(conTxReadonly == clientTxReadonly) ? 0 : 1;
+  int sqlSelectLimitSyn=(conSqlSelectLimit == clientSqlSelectLimit) ? 0 : 1;
+  int synCount=schemaSyn + charsetSyn + txIsoLationSyn+ autoCommitSyn+ (xaCmd != null ? 1 : 0)+ txReadonlySyn+ sqlSelectLimitSyn;
+  if (synCount == 0) {
+    if (rrn.getSqlType() == ServerParse.COMMAND) {
+      this.sendComFieldListCmd(rrn.getStatement() + ";");
+      return;
+    }
+    sendQueryCmd(rrn.getStatement());
+    return;
+  }
+  CommandPacket schemaCmd=null;
+  StringBuilder sb=new StringBuilder();
+  if (schemaSyn == 1) {
+    schemaCmd=getChangeSchemaCommand(conSchema);
+  }
+  if (charsetSyn == 1) {
+    getCharsetCommand(sb,clientCharSetIndex);
+  }
+  if (txIsoLationSyn == 1) {
+    getTxIsolationCommand(sb,clientTxIsoLation);
+  }
+  if (autoCommitSyn == 1) {
+    getAutocommitCommand(sb,expectAutocommit);
+  }
+  if (txReadonlySyn == 1) {
+    getTxReadonly(sb,false);
+  }
+  if (sqlSelectLimitSyn == 1) {
+    getSqlSelectLimit(sb,clientSqlSelectLimit);
+  }
+  if (xaCmd != null) {
+    sb.append(xaCmd);
+  }
+  metaDataSyned=false;
+  statusSync=new StatusSync(xaCmd != null,conSchema,clientCharSetIndex,clientTxIsoLation,expectAutocommit,synCount,clientTxReadonly,clientSqlSelectLimit);
+  if (LOGGER.isDebugEnabled()) {
+    LOGGER.debug("con need syn ,total syn cmd " + synCount + " commands "+ sb.toString()+ "schema change:"+ (schemaCmd != null)+ " con:"+ this);
+  }
+  if (schemaCmd != null) {
+    schemaCmd.write(this);
+  }
+  if (rrn.getSqlType() == ServerParse.COMMAND) {
+    if (sb.length() > 0) {
+      statusSync.synCmdCount.incrementAndGet();
+      this.sendQueryCmd(sb.toString());
+    }
+    this.sendComFieldListCmd(rrn.getStatement() + ";");
+    return;
+  }
+  sb.append(rrn.getStatement() + ";");
+  this.sendQueryCmd(sb.toString());
+}

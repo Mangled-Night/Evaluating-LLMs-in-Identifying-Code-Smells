@@ -1,0 +1,14 @@
+@Override public void cancelPeriodicAction(EntityRef entity,String actionId){
+  PeriodicActionComponent periodicActionComponent=entity.getComponent(PeriodicActionComponent.class);
+  long oldWakeUp=periodicActionComponent.getLowestWakeUp();
+  periodicActionComponent.removeScheduledActionId(actionId);
+  long newWakeUp=periodicActionComponent.getLowestWakeUp();
+  if (!periodicActionComponent.isEmpty() && oldWakeUp < newWakeUp) {
+    periodicOperationsSortedByTime.remove(oldWakeUp,entity);
+    periodicOperationsSortedByTime.put(newWakeUp,entity);
+  }
+ else   if (periodicActionComponent.isEmpty()) {
+    periodicOperationsSortedByTime.remove(oldWakeUp,entity);
+  }
+  saveOrRemoveComponent(entity,periodicActionComponent);
+}

@@ -1,0 +1,79 @@
+/** 
+ * This is a full test in the Jingle API.
+ */
+public void testFullTest(){
+  resetCounter();
+  XMPPTCPConnection x0=getConnection(0);
+  XMPPTCPConnection x1=getConnection(1);
+  XMPPSmackConfiguration.DEBUG=true;
+  FixedResolver tr0=new FixedResolver("127.0.0.1",20080);
+  FixedTransportManager ftm0=new FixedTransportManager(tr0);
+  JmfMediaManager jmf0=new JmfMediaManager(ftm0);
+  List<JingleMediaManager> trl0=new ArrayList<JingleMediaManager>();
+  trl0.add(jmf0);
+  FixedResolver tr1=new FixedResolver("127.0.0.1",20040);
+  FixedTransportManager ftm1=new FixedTransportManager(tr1);
+  JmfMediaManager jmf1=new JmfMediaManager(ftm1);
+  List<JingleMediaManager> trl1=new ArrayList<JingleMediaManager>();
+  trl1.add(jmf1);
+  JingleManager man0=new JingleManager(x0,trl0);
+  JingleManager man1=new JingleManager(x1,trl1);
+  man1.addJingleSessionRequestListener(new JingleSessionRequestListener(){
+    public void sessionRequested(    final JingleSessionRequest request){
+      try {
+        JingleSession session=request.accept();
+        session.addListener(new JingleSessionListener(){
+          public void sessionEstablished(          PayloadType pt,          TransportCandidate rc,          TransportCandidate lc,          JingleSession jingleSession){
+            incCounter();
+            System.out.println("Establish In");
+          }
+          public void sessionDeclined(          String reason,          JingleSession jingleSession){
+          }
+          public void sessionRedirected(          String redirection,          JingleSession jingleSession){
+          }
+          public void sessionClosed(          String reason,          JingleSession jingleSession){
+          }
+          public void sessionMediaReceived(          JingleSession jingleSession,          String participant){
+          }
+          public void sessionClosedOnError(          XMPPException e,          JingleSession jingleSession){
+          }
+        }
+);
+        session.startIncoming();
+      }
+ catch (      XMPPException e) {
+        LOGGER.log(Level.WARNING,"exception",e);
+      }
+    }
+  }
+);
+  for (int i=0; i < 3; i++)   try {
+    JingleSession js0=man0.createOutgoingJingleSession(x1.getUser());
+    js0.addListener(new JingleSessionListener(){
+      public void sessionEstablished(      PayloadType pt,      TransportCandidate rc,      TransportCandidate lc,      JingleSession jingleSession){
+        incCounter();
+        System.out.println("Establish Out");
+      }
+      public void sessionDeclined(      String reason,      JingleSession jingleSession){
+      }
+      public void sessionRedirected(      String redirection,      JingleSession jingleSession){
+      }
+      public void sessionClosed(      String reason,      JingleSession jingleSession){
+      }
+      public void sessionMediaReceived(      JingleSession jingleSession,      String participant){
+      }
+      public void sessionClosedOnError(      XMPPException e,      JingleSession jingleSession){
+      }
+    }
+);
+    js0.startOutgoing();
+    Thread.sleep(8000);
+    js0.terminate();
+    Thread.sleep(3000);
+  }
+ catch (  Exception e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+  System.out.println(valCounter());
+  assertTrue(valCounter() == 6);
+}

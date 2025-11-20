@@ -1,0 +1,14 @@
+@Test void sslAndAuthentication(){
+  WithPassword.run(client,() -> {
+    RedisURI redisURI=RedisURI.Builder.redis(host,6443).withPassword(passwd).withVerifyPeer(false).withSsl(true).build();
+    RedisCommands<String,String> connection=client.connect(redisURI).sync();
+    try {
+      String result=connection.info();
+      assertThat(result).contains("memory");
+    }
+  finally {
+      connection.getStatefulConnection().close();
+    }
+  }
+);
+}

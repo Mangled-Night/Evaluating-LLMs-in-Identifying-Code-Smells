@@ -1,0 +1,43 @@
+/** 
+ * Concrete implementation of the OmemoService using the Signal library.
+ * @author Paul Schaub
+ */
+@SuppressWarnings("unused") public final class SignalOmemoService extends OmemoService<IdentityKeyPair,IdentityKey,PreKeyRecord,SignedPreKeyRecord,SessionRecord,SignalProtocolAddress,ECPublicKey,PreKeyBundle,SessionCipher> {
+  private static SignalOmemoService INSTANCE;
+  private static boolean LICENSE_ACKNOWLEDGED=false;
+  @Override protected SignalOmemoRatchet instantiateOmemoRatchet(  OmemoManager manager,  OmemoStore<IdentityKeyPair,IdentityKey,PreKeyRecord,SignedPreKeyRecord,SessionRecord,SignalProtocolAddress,ECPublicKey,PreKeyBundle,SessionCipher> store){
+    return new SignalOmemoRatchet(manager,getOmemoStoreBackend());
+  }
+  public static void setup(){
+    if (!LICENSE_ACKNOWLEDGED) {
+      throw new IllegalStateException("smack-omemo-signal is licensed under the terms of the GPLv3. " + "Please be aware that you can only use this library within the terms of the GPLv3. " + "See for example https://www.gnu.org/licenses/quick-guide-gplv3 for more details. Please call "+ "SignalOmemoService.acknowledgeLicense() prior to the setup() method in order to prevent "+ "this exception.");
+    }
+    if (INSTANCE == null) {
+      INSTANCE=new SignalOmemoService();
+    }
+    setInstance(INSTANCE);
+  }
+  @Override public OmemoStore<IdentityKeyPair,IdentityKey,PreKeyRecord,SignedPreKeyRecord,SessionRecord,SignalProtocolAddress,ECPublicKey,PreKeyBundle,SessionCipher> createDefaultOmemoStoreBackend(){
+    return new SignalCachingOmemoStore();
+  }
+  private SignalOmemoService(){
+    super();
+  }
+  public static void acknowledgeLicense(){
+    LICENSE_ACKNOWLEDGED=true;
+  }
+  @Override protected void processBundle(  OmemoManager omemoManager,  PreKeyBundle contactsBundle,  OmemoDevice contactsDevice) throws CorruptedOmemoKeyException {
+    SignalOmemoStoreConnector connector=new SignalOmemoStoreConnector(omemoManager,getOmemoStoreBackend());
+    SessionBuilder builder=new SessionBuilder(connector,connector,connector,connector,SignalOmemoStoreConnector.asAddress(contactsDevice));
+    try {
+      builder.process(contactsBundle);
+      LOGGER.log(Level.FINE,"Session built with " + contactsDevice);
+    }
+ catch (    org.whispersystems.libsignal.InvalidKeyException e) {
+      throw new CorruptedOmemoKeyException(e);
+    }
+catch (    UntrustedIdentityException e) {
+      throw new AssertionError(e);
+    }
+  }
+}

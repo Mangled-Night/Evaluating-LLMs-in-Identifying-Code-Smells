@@ -1,0 +1,14 @@
+@Test public void receiptTest() throws Exception {
+  XmlPullParser parser;
+  String control;
+  control=XMLBuilder.create("message").a("from","romeo@montague.com").e("request").a("xmlns","urn:xmpp:receipts").asString(outputProperties);
+  parser=PacketParserUtils.getParserFor(control);
+  Message p=PacketParserUtils.parseMessage(parser);
+  DeliveryReceiptRequest drr=p.getExtension(DeliveryReceiptRequest.class);
+  assertNotNull(drr);
+  assertTrue(DeliveryReceiptManager.hasDeliveryReceiptRequest(p));
+  MessageBuilder messageBuilder=StanzaBuilder.buildMessage("request-id").to("romeo@montague.com").ofType(Message.Type.normal);
+  assertFalse(DeliveryReceiptManager.hasDeliveryReceiptRequest(messageBuilder.build()));
+  DeliveryReceiptRequest.addTo(messageBuilder);
+  assertTrue(DeliveryReceiptManager.hasDeliveryReceiptRequest(messageBuilder.build()));
+}

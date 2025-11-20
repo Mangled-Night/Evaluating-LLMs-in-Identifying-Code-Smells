@@ -1,0 +1,36 @@
+/** 
+ * Uninstall the app silently. <p>Without root permission must hold {@code android:sharedUserId="android.uid.shell"} and{@code <uses-permission android:name="android.permission.DELETE_PACKAGES" />}</p>
+ * @param packageName The name of the package.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean uninstallAppSilent(final String packageName){
+  return uninstallAppSilent(packageName,false);
+}
+/** 
+ * Uninstall the app silently. <p>Without root permission must hold {@code android:sharedUserId="android.uid.shell"} and{@code <uses-permission android:name="android.permission.DELETE_PACKAGES" />}</p>
+ * @param packageName The name of the package.
+ * @param isKeepData  Is keep the data.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean uninstallAppSilent(final String packageName,final boolean isKeepData){
+  return uninstallAppSilent(packageName,isKeepData,isDeviceRooted());
+}
+/** 
+ * Uninstall the app silently. <p>Without root permission must hold {@code android:sharedUserId="android.uid.shell"} and{@code <uses-permission android:name="android.permission.DELETE_PACKAGES" />}</p>
+ * @param packageName The name of the package.
+ * @param isKeepData  Is keep the data.
+ * @param isRooted    True to use root, false otherwise.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean uninstallAppSilent(final String packageName,final boolean isKeepData,final boolean isRooted){
+  if (isSpace(packageName))   return false;
+  String command="LD_LIBRARY_PATH=/vendor/lib*:/system/lib* pm uninstall " + (isKeepData ? "-k " : "") + packageName;
+  ShellUtils.CommandResult commandResult=ShellUtils.execCmd(command,isRooted);
+  if (commandResult.successMsg != null && commandResult.successMsg.toLowerCase().contains("success")) {
+    return true;
+  }
+ else {
+    Log.e("AppUtils","uninstallAppSilent successMsg: " + commandResult.successMsg + ", errorMsg: "+ commandResult.errorMsg);
+    return false;
+  }
+}

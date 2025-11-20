@@ -1,0 +1,24 @@
+@Test public void expireStaleNodeIdConnections(){
+  clusterClient.setOptions(ClusterClientOptions.builder().topologyRefreshOptions(PERIODIC_REFRESH_ENABLED).build());
+  RedisAdvancedClusterAsyncCommands<String,String> clusterConnection=clusterClient.connect().async();
+  ClusterSetup.setup2Masters(clusterHelper);
+  PooledClusterConnectionProvider<String,String> clusterConnectionProvider=getPooledClusterConnectionProvider(clusterConnection);
+  assertThat(clusterConnectionProvider.getConnectionCount()).isEqualTo(0);
+  assertRoutedExecution(clusterConnection);
+  assertThat(clusterConnectionProvider.getConnectionCount()).isEqualTo(2);
+  Partitions partitions=ClusterPartitionParser.parse(redis1.clusterNodes());
+  for (  RedisClusterNode redisClusterNode : partitions.getPartitions()) {
+    if (!redisClusterNode.getFlags().contains(RedisClusterNode.NodeFlag.MYSELF)) {
+      redis1.clusterForget(redisClusterNode.getNodeId());
+    }
+  }
+  partitions=ClusterPartitionParser.parse(redis2.clusterNodes());
+  for (  RedisClusterNode redisClusterNode : partitions.getPartitions()) {
+    if (!redisClusterNode.getFlags().contains(RedisClusterNode.NodeFlag.MYSELF)) {
+      redis2.clusterForget(redisClusterNode.getNodeId());
+    }
+  }
+  Wait.untilEquals(1,() -> clusterClient.getPartitions().size()).waitOrTimeout();
+  Wait.untilEquals(1,() -> clusterConnectionProvider.getConnectionCount()).waitOrTimeout();
+  clusterConnection.getStatefulConnection().close();
+}

@@ -1,0 +1,28 @@
+/** 
+ * Accepting the SOCKS5 Bytestream request should be successfully.
+ * @throws Exception should not happen
+ */
+@Test public void shouldAcceptSocks5BytestreamRequestAndReceiveData() throws Exception {
+  final Protocol protocol=new Protocol();
+  final XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,targetJID);
+  try (Socks5TestProxy socks5Proxy=new Socks5TestProxy()){
+    Bytestream bytestreamInitialization=Socks5PacketUtils.createBytestreamInitiation(initiatorJID,targetJID,sessionID);
+    bytestreamInitialization.addStreamHost(proxyJID,proxyAddress,socks5Proxy.getPort());
+    byte[] data=new byte[]{1,2,3};
+    Socks5BytestreamManager byteStreamManager=Socks5BytestreamManager.getBytestreamManager(connection);
+    Socks5BytestreamRequest byteStreamRequest=new Socks5BytestreamRequest(byteStreamManager,bytestreamInitialization);
+    InputStream inputStream=byteStreamRequest.accept().getInputStream();
+    String digest=Socks5Utils.createDigest(sessionID,initiatorJID,targetJID);
+    OutputStream outputStream=socks5Proxy.getSocket(digest).getOutputStream();
+    outputStream.write(data);
+    byte[] result=new byte[3];
+    inputStream.read(result);
+    assertArrayEquals(data,result);
+    assertEquals(1,protocol.getRequests().size());
+    Stanza targetResponse=protocol.getRequests().remove(0);
+    assertEquals(Bytestream.class,targetResponse.getClass());
+    assertEquals(initiatorJID,targetResponse.getTo());
+    assertEquals(IQ.Type.result,((Bytestream)targetResponse).getType());
+    assertEquals(proxyJID,((Bytestream)targetResponse).getUsedHost().getJID());
+  }
+ }

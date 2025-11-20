@@ -1,0 +1,17 @@
+/** 
+ * @param client the client engine to connect to the local host
+ * @param mainLoop return true if the connection to the host was successful and the client is in state <i>in-game</i>.
+ */
+boolean connectToHost(TerasologyEngine client,MainLoop mainLoop){
+  CoreRegistry.put(Config.class,client.getFromEngineContext(Config.class));
+  JoinStatus joinStatus=null;
+  try {
+    joinStatus=client.getFromEngineContext(NetworkSystem.class).join("localhost",25777);
+  }
+ catch (  InterruptedException e) {
+    logger.warn("Interrupted while joining: ",e);
+  }
+  client.changeState(new StateLoading(joinStatus));
+  CoreRegistry.put(GameEngine.class,client);
+  return !mainLoop.runUntil(() -> client.getState() instanceof StateIngame);
+}

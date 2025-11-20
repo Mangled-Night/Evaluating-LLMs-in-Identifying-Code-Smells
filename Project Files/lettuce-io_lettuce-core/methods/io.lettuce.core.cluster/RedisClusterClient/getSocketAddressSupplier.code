@@ -1,0 +1,21 @@
+/** 
+ * Returns a  {@link Supplier} for {@link SocketAddress connection points}.
+ * @param sortFunction Sort function to enforce a specific order. The sort function must not change the order or the inputparameter but create a new collection with the desired order, must not be  {@code null}.
+ * @return {@link Supplier} for {@link SocketAddress connection points}.
+ */
+protected Mono<SocketAddress> getSocketAddressSupplier(Supplier<Partitions> partitionsSupplier,Function<Partitions,Collection<RedisClusterNode>> sortFunction){
+  LettuceAssert.notNull(sortFunction,"Sort function must not be null");
+  RoundRobinSocketAddressSupplier socketAddressSupplier=new RoundRobinSocketAddressSupplier(partitionsSupplier,sortFunction,getResources());
+  return Mono.defer(() -> {
+    if (partitions.isEmpty()) {
+      return Mono.fromCallable(() -> {
+        SocketAddress socketAddress=getResources().socketAddressResolver().resolve(getFirstUri());
+        logger.debug("Resolved SocketAddress {} using {}",socketAddress,getFirstUri());
+        return socketAddress;
+      }
+);
+    }
+    return Mono.fromCallable(socketAddressSupplier::get);
+  }
+);
+}

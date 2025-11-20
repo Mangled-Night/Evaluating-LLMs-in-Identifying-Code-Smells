@@ -1,0 +1,19 @@
+private static MUCUser.Decline parseDecline(XmlPullParser parser) throws XmlPullParserException, IOException {
+  String reason=null;
+  EntityBareJid to=ParserUtils.getBareJidAttribute(parser,"to");
+  EntityBareJid from=ParserUtils.getBareJidAttribute(parser,"from");
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      if (parser.getName().equals("reason")) {
+        reason=parser.nextText();
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getName().equals("decline")) {
+        break outerloop;
+      }
+    }
+  }
+  return new MUCUser.Decline(reason,from,to);
+}

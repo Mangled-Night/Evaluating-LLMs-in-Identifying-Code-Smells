@@ -1,0 +1,24 @@
+public void commit(){
+  final int initCount=target.size();
+  if (initCount <= 0) {
+    ByteBuffer buffer=source.allocate();
+    buffer=source.writeToBuffer(OkPacket.OK,buffer);
+    source.write(buffer);
+    if (getXaTXID() != null) {
+      setXATXEnabled(false);
+    }
+    if (source.isPreAcStates() && !source.isAutocommit()) {
+      source.setAutocommit(true);
+    }
+    return;
+  }
+ else   if (initCount == 1) {
+    commitHandler.commit();
+  }
+ else {
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("multi node commit to send ,total " + initCount);
+    }
+    checkDistriTransaxAndExecute();
+  }
+}

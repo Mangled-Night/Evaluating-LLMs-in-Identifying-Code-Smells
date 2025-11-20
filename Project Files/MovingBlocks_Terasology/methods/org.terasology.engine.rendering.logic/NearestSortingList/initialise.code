@@ -1,0 +1,23 @@
+/** 
+ * Calling this method starts the background sorting. If never called, the elements in this container are never sorted!
+ * @param origin The entity to sort around. When using the getNearestmethods, this container has tried to put entities nearer to the entity given here at a lower index.
+ */
+public synchronized void initialise(Camera origin){
+  initialise(origin,50,0);
+}
+/** 
+ * Same as initialise(), but allows the user to specify an amount of milliseconds to wait before the first sorting run.
+ * @param origin
+ * @param period       The minimum time between sorts.
+ * @param initialDelay delay before the first sorting run. The frequency ofsorting runs can be set with the setSortDelayMS(long) method.
+ */
+public synchronized void initialise(Camera origin,long period,long initialDelay){
+  if (sortingTask != null || timer != null) {
+    logger.error("Mis-usages of initialise detected! Initialising again" + " before stopping the sorting process. Sorting is " + "stopped now, but it should be done by the user of "+ "this class.");
+    stop();
+  }
+  sortPeriod=period;
+  timer=new Timer();
+  sortingTask=new SortTask(origin);
+  timer.scheduleAtFixedRate(sortingTask,initialDelay,sortPeriod);
+}

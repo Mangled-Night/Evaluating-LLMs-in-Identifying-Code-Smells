@@ -1,0 +1,22 @@
+@Override public void createNewConnection(ResponseHandler handler,String schema) throws IOException {
+  DBHostConfig cfg=getConfig();
+  JDBCConnection c=new JDBCConnection();
+  c.setHost(cfg.getIp());
+  c.setPort(cfg.getPort());
+  c.setPool(this);
+  c.setSchema(schema);
+  c.setDbType(cfg.getDbType());
+  c.setFromSlaveDB(isReadNode());
+  NIOProcessor processor=(NIOProcessor)MycatServer.getInstance().nextProcessor();
+  c.setProcessor(processor);
+  c.setId(NIOConnector.ID_GENERATOR.getId());
+  processor.addBackend(c);
+  try {
+    Connection con=getConnection();
+    c.setCon(con);
+    handler.connectionAcquired(c);
+  }
+ catch (  Exception e) {
+    handler.connectionError(e,c);
+  }
+}

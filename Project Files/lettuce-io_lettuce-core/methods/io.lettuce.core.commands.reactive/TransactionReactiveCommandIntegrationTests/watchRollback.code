@@ -1,0 +1,14 @@
+@Test void watchRollback(){
+  StatefulRedisConnection<String,String> otherConnection=client.connect();
+  otherConnection.sync().set(key,value);
+  StepVerifier.create(commands.watch(key)).expectNext("OK").verifyComplete();
+  StepVerifier.create(commands.multi()).expectNext("OK").verifyComplete();
+  commands.set(key,value).toProcessor();
+  otherConnection.sync().del(key);
+  StepVerifier.create(commands.exec()).consumeNextWith(actual -> {
+    assertThat(actual).isNotNull();
+    assertThat(actual.wasDiscarded()).isTrue();
+  }
+).verifyComplete();
+  otherConnection.close();
+}

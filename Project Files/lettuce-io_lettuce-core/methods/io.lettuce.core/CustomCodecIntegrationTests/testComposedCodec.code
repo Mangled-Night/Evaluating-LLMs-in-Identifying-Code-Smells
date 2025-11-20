@@ -1,0 +1,9 @@
+@Test void testComposedCodec(){
+  RedisCodec<String,Object> composed=RedisCodec.of(StringCodec.ASCII,new SerializedObjectCodec());
+  RedisCommands<String,Object> connection=client.connect(composed).sync();
+  connection.set(key,new Person());
+  List<String> keys=connection.keys(key);
+  assertThat(keys).hasSize(1);
+  assertThat(connection.get(key)).isInstanceOf(Person.class);
+  connection.getStatefulConnection().close();
+}

@@ -1,0 +1,35 @@
+private void createQryJob(int batchSize){
+  int count=0;
+  Map<String,byte[]> batchRows=new ConcurrentHashMap<String,byte[]>();
+  String theId=null;
+  StringBuilder sb=new StringBuilder().append('(');
+  String svalue="";
+  for (  Map.Entry<String,String> e : ids.entrySet()) {
+    theId=e.getKey();
+    byte[] rowbyte=rows.remove(theId);
+    if (rowbyte != null) {
+      batchRows.put(theId,rowbyte);
+    }
+    if (!svalue.equals(e.getValue())) {
+      if (joinKeyType == Fields.FIELD_TYPE_VAR_STRING || joinKeyType == Fields.FIELD_TYPE_STRING) {
+        sb.append("'").append(e.getValue()).append("'").append(',');
+      }
+ else {
+        sb.append(e.getValue()).append(',');
+      }
+    }
+    svalue=e.getValue();
+    if (count++ > batchSize) {
+      break;
+    }
+  }
+  if (count == 0) {
+    return;
+  }
+  jointTableIsData=true;
+  sb.deleteCharAt(sb.length() - 1).append(')');
+  String sql=String.format(joinParser.getChildSQL(),sb);
+  getRoute(sql);
+  ctx.executeNativeSQLParallJob(getDataNodes(),sql,new ShareRowOutPutDataHandler(this,fields,joinindex,joinParser.getJoinRkey(),batchRows,ctx.getSession()));
+  EngineCtx.LOGGER.info("SQLParallJob:" + getDataNode(getDataNodes()) + " sql:"+ sql);
+}

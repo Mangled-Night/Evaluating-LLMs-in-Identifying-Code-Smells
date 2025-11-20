@@ -1,0 +1,22 @@
+/** 
+ * A  {@link LayerThickness} that picks the thickness at each point by selecting a value between the minimum and maximum.This value is picked base on a noise function, so it translates smoothly between close points.
+ */
+@API public class MinMaxLayerThickness extends SeededNoiseLayerThickness {
+  private final int min;
+  private final int max;
+  /** 
+ * @param min the minimum thickness for the layer
+ * @param max the maximum thickness for the layer
+ */
+  public MinMaxLayerThickness(  int min,  int max){
+    super(seed -> new BrownianNoise(new SimplexNoise(seed),2));
+    this.min=min;
+    this.max=max;
+  }
+  @Override public int get(  int x,  int z){
+    float noiseScale=100f;
+    float noiseValue=noise.noise(x / noiseScale,z / noiseScale);
+    noiseValue=(noiseValue + 1) / 2;
+    return Math.round(min + (noiseValue * (max - min)));
+  }
+}

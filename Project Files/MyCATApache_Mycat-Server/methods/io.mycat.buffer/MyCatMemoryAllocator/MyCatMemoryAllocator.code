@@ -1,0 +1,17 @@
+/** 
+ * numberOfArenas 设置为处理器cores*2
+ * @param numberOfArenas
+ */
+public MyCatMemoryAllocator(int numberOfArenas){
+  this.numberOfArenas=numberOfArenas;
+  if (!PlatformDependent.hasUnsafe()) {
+    LOGGER.warn("Using direct memory, but sun.misc.Unsafe not available.");
+  }
+  boolean preferDirect=true;
+  this.pageSize=8192 * 2;
+  int maxOrder=11;
+  this.chunkSize=pageSize << maxOrder;
+  int numDirectArenas=numberOfArenas;
+  int numHeapArenas=0;
+  this.alloc=new PooledByteBufAllocator(preferDirect,numHeapArenas,numDirectArenas,pageSize,maxOrder,512,256,64,true);
+}

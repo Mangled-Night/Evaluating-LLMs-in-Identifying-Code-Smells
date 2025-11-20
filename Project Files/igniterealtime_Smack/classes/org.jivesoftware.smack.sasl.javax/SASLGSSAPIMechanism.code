@@ -1,0 +1,33 @@
+/** 
+ * Implementation of the SASL GSSAPI mechanism.
+ * @author Jay Kline
+ */
+public class SASLGSSAPIMechanism extends SASLJavaXMechanism {
+  public static final String NAME=GSSAPI;
+  @Override public boolean authzidSupported(){
+    return true;
+  }
+  @Override public String getName(){
+    return NAME;
+  }
+  @Override protected Map<String,String> getSaslProps(){
+    Map<String,String> props=super.getSaslProps();
+    props.put(Sasl.SERVER_AUTH,"TRUE");
+    return props;
+  }
+  /** 
+ * GSSAPI differs from all other SASL mechanism such that it required the FQDN host name as server name and not the serviceName (At least that is what old code comments of Smack tell us).
+ */
+  @Override protected String getServerName(){
+    return host;
+  }
+  @Override public int getPriority(){
+    return 100;
+  }
+  @Override public SASLGSSAPIMechanism newInstance(){
+    return new SASLGSSAPIMechanism();
+  }
+  @Override public boolean requiresPassword(){
+    return false;
+  }
+}

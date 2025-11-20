@@ -1,0 +1,109 @@
+/** 
+ * Jingle.
+ * @author Jeff Williams
+ * @see JingleSessionState
+ */
+@SuppressWarnings("UnusedVariable") public class JingleSessionStateUnknown extends JingleSessionState {
+  private static final Logger LOGGER=Logger.getLogger(JingleSessionStateUnknown.class.getName());
+  private static JingleSessionStateUnknown INSTANCE=null;
+  protected JingleSessionStateUnknown(){
+  }
+  /** 
+ * A thread-safe means of getting the one instance of this class.
+ * @return The singleton instance of this class.
+ */
+  public static synchronized JingleSessionState getInstance(){
+    if (INSTANCE == null) {
+      INSTANCE=new JingleSessionStateUnknown();
+    }
+    return INSTANCE;
+  }
+  @Override public void enter(){
+  }
+  @Override public void exit(){
+  }
+  @Override public IQ processJingle(  JingleSession session,  Jingle jingle,  JingleActionEnum action) throws SmackException, InterruptedException {
+    IQ response;
+switch (action) {
+case SESSION_INITIATE:
+      response=receiveSessionInitiateAction(session,jingle);
+    break;
+case SESSION_TERMINATE:
+  response=receiveSessionTerminateAction(session,jingle);
+break;
+default :
+response=session.createJingleError(jingle,JingleError.MALFORMED_STANZA);
+break;
+}
+return response;
+}
+/** 
+ * In the UNKNOWN state we received a <session-initiate> action. This method processes that action.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+private static IQ receiveSessionInitiateAction(JingleSession session,Jingle inJingle) throws SmackException, InterruptedException {
+IQ response;
+boolean shouldAck=true;
+if (!shouldAck) {
+response=session.createJingleError(inJingle,JingleError.NEGOTIATION_ERROR);
+}
+ else {
+response=session.createAck(inJingle);
+session.setSessionState(JingleSessionStatePending.getInstance());
+for (JingleContent jingleContent : inJingle.getContentsList()) {
+ContentNegotiator contentNeg=new ContentNegotiator(session,jingleContent.getCreator(),jingleContent.getName());
+JingleDescription jingleDescription=jingleContent.getDescription();
+JingleMediaManager chosenMediaManager=session.getMediaManagers().get(0);
+for (JingleMediaManager mediaManager : session.getMediaManagers()) {
+boolean matches=true;
+for (PayloadType mediaPayloadType : mediaManager.getPayloads()) {
+for (PayloadType descPayloadType2 : jingleDescription.getPayloadTypesList()) {
+  if (mediaPayloadType.getId() != descPayloadType2.getId()) {
+    matches=false;
+  }
+}
+if (matches) {
+  chosenMediaManager=mediaManager;
+}
+}
+}
+contentNeg.setMediaNegotiator(new MediaNegotiator(session,chosenMediaManager,jingleDescription.getPayloadTypesList(),contentNeg));
+for (JingleTransport jingleTransport : jingleContent.getJingleTransportsList()) {
+for (JingleMediaManager mediaManager : session.getMediaManagers()) {
+JingleTransportManager transportManager=mediaManager.getTransportManager();
+TransportResolver resolver=null;
+try {
+  resolver=transportManager.getResolver(session);
+}
+ catch (XMPPException e) {
+  LOGGER.log(Level.WARNING,"exception",e);
+}
+if (resolver.getType().equals(TransportResolver.Type.rawupd)) {
+  contentNeg.setTransportNegotiator(new TransportNegotiator.RawUdp(session,resolver,contentNeg));
+}
+if (resolver.getType().equals(TransportResolver.Type.ice)) {
+  contentNeg.setTransportNegotiator(new TransportNegotiator.Ice(session,resolver,contentNeg));
+}
+}
+}
+session.addContentNegotiator(contentNeg);
+}
+session.setupListeners();
+}
+return response;
+}
+/** 
+ * Receive and process the <session-terminate> action.
+ */
+private static IQ receiveSessionTerminateAction(JingleSession session,Jingle jingle){
+IQ response=session.createAck(jingle);
+try {
+session.terminate("Closed remotely");
+}
+ catch (Exception e) {
+LOGGER.log(Level.WARNING,"exception",e);
+}
+return response;
+}
+}

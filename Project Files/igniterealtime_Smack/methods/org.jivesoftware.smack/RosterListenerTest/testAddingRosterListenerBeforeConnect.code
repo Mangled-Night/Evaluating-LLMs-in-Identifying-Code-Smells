@@ -1,0 +1,29 @@
+public void testAddingRosterListenerBeforeConnect() throws Exception {
+  int inviterIndex=0;
+  int inviteeIndex=1;
+  XMPPTCPConnection inviterConnection=getConnection(inviterIndex);
+  connectAndLogin(inviterIndex);
+  assertTrue("Inviter is not online",inviterConnection.isConnected());
+  Roster inviterRoster=inviterConnection.getRoster();
+  inviterRoster.createEntry(getBareJID(inviteeIndex),getUsername(inviteeIndex),null);
+  XMPPTCPConnection inviteeConnection=getConnection(inviteeIndex);
+  assertFalse("Invitee is already online",inviteeConnection.isConnected());
+  final List<String> addedEntries=new ArrayList<String>();
+  Roster inviteeRoster=inviteeConnection.getRoster();
+  inviteeRoster.addRosterListener(new RosterListener(){
+    public void presenceChanged(    Presence presence){
+    }
+    public void entriesUpdated(    Collection<String> addresses){
+    }
+    public void entriesDeleted(    Collection<String> addresses){
+    }
+    public void entriesAdded(    Collection<String> addresses){
+      addedEntries.addAll(addresses);
+    }
+  }
+);
+  connectAndLogin(inviteeIndex);
+  Thread.sleep(5000);
+  assertNotNull("inviter is not in roster",inviteeRoster.getEntry(getBareJID(inviterIndex)));
+  assertTrue("got no event for adding inviter",addedEntries.contains(getBareJID(inviterIndex)));
+}

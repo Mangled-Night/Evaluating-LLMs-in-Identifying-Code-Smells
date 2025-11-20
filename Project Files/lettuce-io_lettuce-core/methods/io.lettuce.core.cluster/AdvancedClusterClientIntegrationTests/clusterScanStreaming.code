@@ -1,0 +1,16 @@
+@Test void clusterScanStreaming(){
+  RedisAdvancedClusterCommands<String,String> sync=async.getStatefulConnection().sync();
+  sync.mset(KeysAndValues.MAP);
+  ListStreamingAdapter<String> adapter=new ListStreamingAdapter<>();
+  StreamScanCursor scanCursor=null;
+  do {
+    if (scanCursor == null) {
+      scanCursor=sync.scan(adapter);
+    }
+ else {
+      scanCursor=sync.scan(adapter,scanCursor);
+    }
+  }
+ while (!scanCursor.isFinished());
+  assertThat(adapter.getList()).containsAll(KeysAndValues.KEYS);
+}

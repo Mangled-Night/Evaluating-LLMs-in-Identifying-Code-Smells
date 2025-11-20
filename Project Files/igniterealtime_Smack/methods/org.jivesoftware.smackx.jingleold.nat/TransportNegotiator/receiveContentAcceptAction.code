@@ -1,0 +1,21 @@
+/** 
+ * One of our transport candidates has been accepted.
+ * @return a Jingle packet
+ * @throws XMPPException an exception
+ * @see org.jivesoftware.smackx.jingleold.JingleNegotiator.State#eventAccept(org.jivesoftware.smackx.jingleold.packet.Jingle)
+ */
+private IQ receiveContentAcceptAction(Jingle jingle) throws XMPPException {
+  IQ response=null;
+  List<TransportCandidate> accepted=obtainCandidatesList(jingle);
+  if (!accepted.isEmpty()) {
+    for (    TransportCandidate cand : accepted) {
+      LOGGER.fine("Remote accepted candidate addr: " + cand.getIp());
+    }
+    TransportCandidate cand=accepted.get(0);
+    setAcceptedLocalCandidate(cand);
+    if (isEstablished()) {
+      LOGGER.fine(cand.getIp() + " is set active");
+    }
+  }
+  return response;
+}

@@ -1,0 +1,25 @@
+public class RSMManager {
+  Collection<XmlElement> page(  int max){
+    List<XmlElement> packetExtensions=new LinkedList<>();
+    packetExtensions.add(new RSMSet(max));
+    return packetExtensions;
+  }
+  Collection<XmlElement> continuePage(  int max,  Collection<XmlElement> returnedExtensions){
+    return continuePage(max,returnedExtensions,null);
+  }
+  Collection<XmlElement> continuePage(  int max,  Collection<XmlElement> returnedExtensions,  Collection<XmlElement> additionalExtensions){
+    if (returnedExtensions == null) {
+      throw new IllegalArgumentException("returnedExtensions must no be null");
+    }
+    if (additionalExtensions == null) {
+      additionalExtensions=new LinkedList<>();
+    }
+    RSMSet resultRsmSet=PacketUtil.extensionElementFrom(returnedExtensions,RSMSet.ELEMENT,RSMSet.NAMESPACE);
+    if (resultRsmSet == null) {
+      throw new IllegalArgumentException("returnedExtensions did not contain a RSMset");
+    }
+    RSMSet continuePageRsmSet=new RSMSet(max,resultRsmSet.getLast(),PageDirection.after);
+    additionalExtensions.add(continuePageRsmSet);
+    return additionalExtensions;
+  }
+}

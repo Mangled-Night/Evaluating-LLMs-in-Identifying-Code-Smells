@@ -1,0 +1,39 @@
+/** 
+ * Asserts that a members-only room assigns the correct default roles for a given affiliation <p>From XEP-0045 § 5.1.2:</p> <blockquote> ...the initial default roles that a service SHOULD set based on the user's affiliation... </blockquote>
+ * @throws Exception when errors occur
+ */
+@SmackIntegrationTest public void mucTestDefaultRoleForAffiliationInMembersOnlyRoom() throws Exception {
+  EntityBareJid mucAddress=getRandomRoom("smack-inttest-membersonlyroles");
+  MultiUserChat mucAsSeenByOne=mucManagerOne.getMultiUserChat(mucAddress);
+  MultiUserChat mucAsSeenByTwo=mucManagerTwo.getMultiUserChat(mucAddress);
+  MultiUserChat mucAsSeenByThree=mucManagerThree.getMultiUserChat(mucAddress);
+  final Resourcepart nicknameOne=Resourcepart.from("one-" + randomString);
+  final Resourcepart nicknameTwo=Resourcepart.from("two-" + randomString);
+  final Resourcepart nicknameThree=Resourcepart.from("three-" + randomString);
+  final EntityFullJid jidOne=JidCreate.entityFullFrom(mucAddress,nicknameOne);
+  final EntityFullJid jidTwo=JidCreate.entityFullFrom(mucAddress,nicknameTwo);
+  final EntityFullJid jidThree=JidCreate.entityFullFrom(mucAddress,nicknameThree);
+  createMembersOnlyMuc(mucAsSeenByOne,nicknameOne);
+  final ResultSyncPoint<String,Exception> adminResultSyncPoint=new ResultSyncPoint<>();
+  mucAsSeenByOne.addParticipantStatusListener(new ParticipantStatusListener(){
+    @Override public void adminGranted(    EntityFullJid participant){
+      adminResultSyncPoint.signal("done");
+    }
+  }
+);
+  try {
+    mucAsSeenByOne.grantMembership(conTwo.getUser().asBareJid());
+    mucAsSeenByOne.grantMembership(conThree.getUser().asBareJid());
+    mucAsSeenByTwo.join(nicknameTwo);
+    mucAsSeenByThree.join(nicknameThree);
+    mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
+    adminResultSyncPoint.waitForResult(timeout);
+    assertEquals(mucAsSeenByOne.getOccupantsCount(),3);
+    assertEquals(MUCRole.moderator,mucAsSeenByOne.getOccupant(jidOne).getRole());
+    assertEquals(MUCRole.moderator,mucAsSeenByOne.getOccupant(jidTwo).getRole());
+    assertEquals(MUCRole.participant,mucAsSeenByOne.getOccupant(jidThree).getRole());
+  }
+  finally {
+    tryDestroy(mucAsSeenByOne);
+  }
+}

@@ -1,0 +1,20 @@
+public static CharSequence parseContentDepth(XmlPullParser parser,int depth) throws XmlPullParserException, IOException {
+  return parseContentDepth(parser,depth,false);
+}
+/** 
+ * Returns the content from the current position of the parser up to the closing tag of the given depth. Note that only the outermost namespace attributes ("xmlns") will be returned, not nested ones, if <code>fullNamespaces</code> is false. If it is true, then namespaces of parent elements will be added to child elements that don't define a different namespace. <p> This method is able to parse the content with MX- and KXmlParser. KXmlParser does not support xml-roundtrip. i.e. return a String on getText() on START_ELEMENT and END_ELEMENT. We check for the XML_ROUNDTRIP feature. If it's not found we are required to work around this limitation, which results in only partial support for XML namespaces ("xmlns"): Only the outermost namespace of elements will be included in the resulting String, if <code>fullNamespaces</code> is set to false. </p> <p> In particular Android's XmlPullParser does not support XML_ROUNDTRIP. </p>
+ * @param parser TODO javadoc me please
+ * @param depth TODO javadoc me please
+ * @param fullNamespaces TODO javadoc me please
+ * @return the content of the current depth
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ * @throws IOException if an I/O error occurred.
+ */
+public static CharSequence parseContentDepth(XmlPullParser parser,int depth,boolean fullNamespaces) throws XmlPullParserException, IOException {
+  if (parser.supportsRoundtrip()) {
+    return parseContentDepthWithRoundtrip(parser,depth);
+  }
+ else {
+    return parseContentDepthWithoutRoundtrip(parser,depth,fullNamespaces);
+  }
+}

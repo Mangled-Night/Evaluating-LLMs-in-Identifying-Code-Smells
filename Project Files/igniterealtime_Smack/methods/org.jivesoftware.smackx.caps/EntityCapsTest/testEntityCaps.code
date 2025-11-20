@@ -1,0 +1,23 @@
+@SmackIntegrationTest public void testEntityCaps() throws XMPPException, InterruptedException, NoResponseException, NotConnectedException, TimeoutException {
+  final String dummyFeature=getNewDummyFeature();
+  dropWholeEntityCapsCache();
+  performActionAndWaitUntilStanzaReceived(new Runnable(){
+    @Override public void run(){
+      sdmTwo.addFeature(dummyFeature);
+    }
+  }
+,connection,new AndFilter(PresenceTypeFilter.AVAILABLE,FromMatchesFilter.create(conTwo.getUser())));
+  waitUntilTrue(new Condition(){
+    @Override public boolean evaluate() throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+      DiscoverInfo info=sdmOne.discoverInfo(conTwo.getUser());
+      return info.containsFeature(dummyFeature);
+    }
+  }
+);
+  DiscoverInfo info=sdmOne.discoverInfo(conTwo.getUser());
+  String u1ver=EntityCapsManager.getNodeVersionByJid(conTwo.getUser());
+  assertNotNull(u1ver);
+  DiscoverInfo entityInfo=EntityCapsManager.CAPS_CACHE.lookup(u1ver);
+  assertNotNull(entityInfo);
+  assertEquals(info.toXML().toString(),entityInfo.toXML().toString());
+}

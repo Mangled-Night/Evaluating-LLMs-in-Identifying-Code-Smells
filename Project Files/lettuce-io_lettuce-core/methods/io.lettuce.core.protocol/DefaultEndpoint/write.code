@@ -1,0 +1,64 @@
+@Override public <K,V,T>RedisCommand<K,V,T> write(RedisCommand<K,V,T> command){
+  LettuceAssert.notNull(command,"Command must not be null");
+  RedisException validation=validateWrite(1);
+  if (validation != null) {
+    command.completeExceptionally(validation);
+    return command;
+  }
+  try {
+    sharedLock.incrementWriters();
+    if (inActivation) {
+      command=processActivationCommand(command);
+    }
+    if (autoFlushCommands) {
+      if (isConnected()) {
+        writeToChannelAndFlush(command);
+      }
+ else {
+        writeToDisconnectedBuffer(command);
+      }
+    }
+ else {
+      writeToBuffer(command);
+    }
+  }
+  finally {
+    sharedLock.decrementWriters();
+    if (debugEnabled) {
+      logger.debug("{} write() done",logPrefix());
+    }
+  }
+  return command;
+}
+@SuppressWarnings("unchecked") @Override public <K,V>Collection<RedisCommand<K,V,?>> write(Collection<? extends RedisCommand<K,V,?>> commands){
+  LettuceAssert.notNull(commands,"Commands must not be null");
+  RedisException validation=validateWrite(commands.size());
+  if (validation != null) {
+    commands.forEach(it -> it.completeExceptionally(validation));
+    return (Collection<RedisCommand<K,V,?>>)commands;
+  }
+  try {
+    sharedLock.incrementWriters();
+    if (inActivation) {
+      commands=processActivationCommands(commands);
+    }
+    if (autoFlushCommands) {
+      if (isConnected()) {
+        writeToChannelAndFlush(commands);
+      }
+ else {
+        writeToDisconnectedBuffer(commands);
+      }
+    }
+ else {
+      writeToBuffer(commands);
+    }
+  }
+  finally {
+    sharedLock.decrementWriters();
+    if (debugEnabled) {
+      logger.debug("{} write() done",logPrefix());
+    }
+  }
+  return (Collection<RedisCommand<K,V,?>>)commands;
+}

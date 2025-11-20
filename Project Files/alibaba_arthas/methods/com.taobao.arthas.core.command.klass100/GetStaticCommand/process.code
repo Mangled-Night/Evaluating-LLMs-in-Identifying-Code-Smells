@@ -1,0 +1,42 @@
+@Override public void process(CommandProcess process){
+  RowAffect affect=new RowAffect();
+  Instrumentation inst=process.session().getInstrumentation();
+  if (hashCode == null && classLoaderClass != null) {
+    List<ClassLoader> matchedClassLoaders=ClassLoaderUtils.getClassLoaderByClassName(inst,classLoaderClass);
+    if (matchedClassLoaders.size() == 1) {
+      hashCode=Integer.toHexString(matchedClassLoaders.get(0).hashCode());
+    }
+ else     if (matchedClassLoaders.size() > 1) {
+      Collection<ClassLoaderVO> classLoaderVOList=ClassUtils.createClassLoaderVOList(matchedClassLoaders);
+      GetStaticModel getStaticModel=new GetStaticModel().setClassLoaderClass(classLoaderClass).setMatchedClassLoaders(classLoaderVOList);
+      process.appendResult(getStaticModel);
+      process.end(-1,"Found more than one classloader by class name, please specify classloader with '-c <classloader hash>'");
+      return;
+    }
+ else {
+      process.end(-1,"Can not find classloader by class name: " + classLoaderClass + ".");
+      return;
+    }
+  }
+  Set<Class<?>> matchedClasses=SearchUtils.searchClassOnly(inst,classPattern,isRegEx,hashCode);
+  try {
+    if (matchedClasses == null || matchedClasses.isEmpty()) {
+      process.end(-1,"No class found for: " + classPattern);
+      return;
+    }
+    ExitStatus status=null;
+    if (matchedClasses.size() > 1) {
+      status=processMatches(process,matchedClasses);
+    }
+ else {
+      status=processExactMatch(process,affect,inst,matchedClasses);
+    }
+    process.appendResult(new RowAffectModel(affect));
+    CommandUtils.end(process,status);
+  }
+ catch (  Throwable e) {
+    logger.error("processing error",e);
+    process.appendResult(new RowAffectModel(affect));
+    process.end(-1,"processing error");
+  }
+}

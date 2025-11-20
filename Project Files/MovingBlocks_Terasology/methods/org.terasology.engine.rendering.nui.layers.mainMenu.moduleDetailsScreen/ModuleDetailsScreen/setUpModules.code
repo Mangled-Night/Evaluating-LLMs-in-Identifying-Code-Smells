@@ -1,0 +1,33 @@
+private void setUpModules(){
+  modules.subscribeSelection(((widget,item) -> {
+    if (item != null) {
+      dependencies.setList(getSortedDependencies(item));
+      dependencies.setSelection(null);
+      dependencies.select(0);
+      this.updateOpenInBrowserButton();
+    }
+  }
+));
+  modules.setItemRenderer(new StringTextRenderer<Module>(){
+    @Override public String getString(    Module value){
+      if (value != null) {
+        return value.getMetadata().getDisplayName().toString();
+      }
+      return "";
+    }
+    @Override public void draw(    Module value,    Canvas canvas){
+      if (!validateModuleDependencies(value.getId())) {
+        canvas.setMode(("invalid"));
+      }
+ else {
+        canvas.setMode("available");
+      }
+      canvas.drawText(getString(value),canvas.getRegion());
+    }
+    @Override public Vector2i getPreferredSize(    Module value,    Canvas canvas){
+      String text=getString(value);
+      return new Vector2i(canvas.getCurrentStyle().getFont().getWidth(text),canvas.getCurrentStyle().getFont().getLineHeight());
+    }
+  }
+);
+}

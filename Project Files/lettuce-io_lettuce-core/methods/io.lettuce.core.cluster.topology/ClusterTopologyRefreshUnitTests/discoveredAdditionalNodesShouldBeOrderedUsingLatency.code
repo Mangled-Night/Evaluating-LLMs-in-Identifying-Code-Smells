@@ -1,0 +1,9 @@
+@Test void discoveredAdditionalNodesShouldBeOrderedUsingLatency(){
+  List<RedisURI> seed=Collections.singletonList(RedisURI.create("127.0.0.1",7380));
+  when(nodeConnectionFactory.connectToNodeAsync(any(RedisCodec.class),eq(InetSocketAddress.createUnresolved("127.0.0.1",7380)))).thenReturn(completedFuture((StatefulRedisConnection)connection1));
+  when(nodeConnectionFactory.connectToNodeAsync(any(RedisCodec.class),eq(InetSocketAddress.createUnresolved("127.0.0.1",7381)))).thenReturn(completedFuture((StatefulRedisConnection)connection2));
+  Map<RedisURI,Partitions> partitionsMap=sut.loadViews(seed,Duration.ofSeconds(1),true).toCompletableFuture().join();
+  Partitions partitions=partitionsMap.values().iterator().next();
+  List<RedisClusterNode> nodes=TopologyComparators.sortByLatency(partitions);
+  assertThat(nodes).hasSize(2).extracting(RedisClusterNode::getUri).contains(RedisURI.create("127.0.0.1",7381),seed.get(0));
+}

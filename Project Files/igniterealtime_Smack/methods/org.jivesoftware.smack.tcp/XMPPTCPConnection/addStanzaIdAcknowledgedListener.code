@@ -1,0 +1,20 @@
+/** 
+ * Add a new Stanza ID acknowledged listener for the given ID. <p> The listener will be invoked if the stanza with the given ID was acknowledged by the server. It will automatically be removed after the listener was run. </p>
+ * @param id the stanza ID.
+ * @param listener the listener to invoke.
+ * @return the previous listener for this stanza ID or null.
+ * @throws StreamManagementNotEnabledException if Stream Management is not enabled.
+ */
+@SuppressWarnings("FutureReturnValueIgnored") public StanzaListener addStanzaIdAcknowledgedListener(final String id,StanzaListener listener) throws StreamManagementNotEnabledException {
+  if (!smWasEnabledAtLeastOnce) {
+    throw new StreamManagementException.StreamManagementNotEnabledException();
+  }
+  final int removeAfterSeconds=Math.min(getMaxSmResumptionTime(),3 * 60 * 60);
+  schedule(new Runnable(){
+    @Override public void run(){
+      stanzaIdAcknowledgedListeners.remove(id);
+    }
+  }
+,removeAfterSeconds,TimeUnit.SECONDS);
+  return stanzaIdAcknowledgedListeners.put(id,listener);
+}

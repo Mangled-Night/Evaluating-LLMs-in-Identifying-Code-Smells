@@ -1,0 +1,43 @@
+/** 
+ * 1. Create entries in roster groups 2. Iterate on the groups and remove the entry from each group 3. Check that the entries are kept as unfiled entries
+ */
+public void testDeleteAllRosterGroupEntries(){
+  try {
+    Roster roster=getConnection(0).getRoster();
+    CountDownLatch latch=new CountDownLatch(2);
+    setupCountdown(latch,roster);
+    roster.createEntry(getBareJID(1),"gato11",new String[]{"Friends","Family"});
+    roster.createEntry(getBareJID(2),"gato12",new String[]{"Family"});
+    waitForCountdown(latch,roster,2);
+    final CountDownLatch removeLatch=new CountDownLatch(3);
+    RosterListener latchCounter=new RosterListener(){
+      @Override public void presenceChanged(      Presence presence){
+      }
+      @Override public void entriesUpdated(      Collection<String> addresses){
+        removeLatch.countDown();
+      }
+      @Override public void entriesDeleted(      Collection<String> addresses){
+      }
+      @Override public void entriesAdded(      Collection<String> addresses){
+      }
+    }
+;
+    roster.addRosterListener(latchCounter);
+    for (    RosterEntry entry : roster.getEntries()) {
+      for (      RosterGroup rosterGroup : entry.getGroups()) {
+        rosterGroup.removeEntry(entry);
+      }
+    }
+    removeLatch.await(5,TimeUnit.SECONDS);
+    roster.removeRosterListener(latchCounter);
+    assertEquals("The number of entries in connection 1 should be 1",1,getConnection(1).getRoster().getEntryCount());
+    assertEquals("The number of groups in connection 1 should be 0",0,getConnection(1).getRoster().getGroupCount());
+    assertEquals("The number of entries in connection 2 should be 1",1,getConnection(2).getRoster().getEntryCount());
+    assertEquals("The number of groups in connection 2 should be 0",0,getConnection(2).getRoster().getGroupCount());
+    assertEquals("The number of entries in connection 0 should be 2",2,roster.getEntryCount());
+    assertEquals("The number of groups in connection 0 should be 0",0,roster.getGroupCount());
+  }
+ catch (  Exception e) {
+    fail(e.getMessage());
+  }
+}

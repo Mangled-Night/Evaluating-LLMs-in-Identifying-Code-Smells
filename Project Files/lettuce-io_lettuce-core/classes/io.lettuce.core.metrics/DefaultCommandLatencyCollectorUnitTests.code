@@ -1,0 +1,65 @@
+/** 
+ * @author Mark Paluch
+ */
+@ExtendWith(MockitoExtension.class) class DefaultCommandLatencyCollectorUnitTests {
+  private DefaultCommandLatencyCollector sut;
+  @Test void shutdown(){
+    sut=new DefaultCommandLatencyCollector(DefaultCommandLatencyCollectorOptions.create());
+    sut.shutdown();
+    assertThat(sut.isEnabled()).isFalse();
+  }
+  @Test void simpleCreateShouldNotInitializePauseDetector(){
+    sut=new DefaultCommandLatencyCollector(DefaultCommandLatencyCollectorOptions.create());
+    PauseDetectorWrapper wrapper=(PauseDetectorWrapper)ReflectionTestUtils.getField(sut,"pauseDetectorWrapper");
+    assertThat(wrapper).isNull();
+  }
+  @Test void latencyRecordShouldInitializePauseDetectorWrapper(){
+    sut=new DefaultCommandLatencyCollector(DefaultCommandLatencyCollectorOptions.create());
+    setupData();
+    PauseDetectorWrapper wrapper=(PauseDetectorWrapper)ReflectionTestUtils.getField(sut,"pauseDetectorWrapper");
+    assertThat(wrapper).isNotNull();
+    sut.shutdown();
+    wrapper=(PauseDetectorWrapper)ReflectionTestUtils.getField(sut,"pauseDetectorWrapper");
+    assertThat(wrapper).isNull();
+  }
+  @Test void shutdownShouldReleasePauseDetector(){
+    sut=new DefaultCommandLatencyCollector(DefaultCommandLatencyCollectorOptions.create());
+    PauseDetectorWrapper wrapper=(PauseDetectorWrapper)ReflectionTestUtils.getField(sut,"pauseDetectorWrapper");
+    assertThat(wrapper).isNull();
+    setupData();
+    wrapper=(PauseDetectorWrapper)ReflectionTestUtils.getField(sut,"pauseDetectorWrapper");
+    assertThat(wrapper).isNotNull();
+    sut.shutdown();
+  }
+  @Test void verifyMetrics(){
+    sut=new DefaultCommandLatencyCollector(DefaultCommandLatencyCollectorOptions.builder().usePauseDetector().build());
+    setupData();
+    Map<CommandLatencyId,CommandMetrics> latencies=sut.retrieveMetrics();
+    assertThat(latencies).hasSize(1);
+    Map.Entry<CommandLatencyId,CommandMetrics> entry=latencies.entrySet().iterator().next();
+    assertThat(entry.getKey().commandType()).isSameAs(CommandType.BGSAVE);
+    CommandMetrics metrics=entry.getValue();
+    assertThat(metrics.getCount()).isEqualTo(3);
+    assertThat(metrics.getCompletion().getMin()).isBetween(990000L,1100000L);
+    assertThat(metrics.getCompletion().getPercentiles()).hasSize(5);
+    assertThat(metrics.getFirstResponse().getMin()).isBetween(90000L,110000L);
+    assertThat(metrics.getFirstResponse().getMax()).isBetween(290000L,310000L);
+    assertThat(metrics.getCompletion().getPercentiles()).containsKey(50.0d);
+    assertThat(metrics.getFirstResponse().getPercentiles().get(50d)).isLessThanOrEqualTo(metrics.getCompletion().getPercentiles().get(50d));
+    assertThat(metrics.getTimeUnit()).isEqualTo(MICROSECONDS);
+    assertThat(sut.retrieveMetrics()).isEmpty();
+    sut.shutdown();
+  }
+  @Test void verifyCummulativeMetrics(){
+    sut=new DefaultCommandLatencyCollector(DefaultCommandLatencyCollectorOptions.builder().usePauseDetector().resetLatenciesAfterEvent(false).build());
+    setupData();
+    assertThat(sut.retrieveMetrics()).hasSize(1);
+    assertThat(sut.retrieveMetrics()).hasSize(1);
+    sut.shutdown();
+  }
+  private void setupData(){
+    sut.recordCommandLatency(LocalAddress.ANY,LocalAddress.ANY,CommandType.BGSAVE,MILLISECONDS.toNanos(100),MILLISECONDS.toNanos(1000));
+    sut.recordCommandLatency(LocalAddress.ANY,LocalAddress.ANY,CommandType.BGSAVE,MILLISECONDS.toNanos(200),MILLISECONDS.toNanos(1000));
+    sut.recordCommandLatency(LocalAddress.ANY,LocalAddress.ANY,CommandType.BGSAVE,MILLISECONDS.toNanos(300),MILLISECONDS.toNanos(1000));
+  }
+}

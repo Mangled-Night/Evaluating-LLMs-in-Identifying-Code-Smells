@@ -1,0 +1,105 @@
+/** 
+ * Return whether the charset of file is utf8.
+ * @param filePath The path of file.
+ * @return {@code true}: yes<br> {@code false}: no
+ */
+public static boolean isUtf8(final String filePath){
+  return isUtf8(getFileByPath(filePath));
+}
+/** 
+ * Return whether the charset of file is utf8.
+ * @param file The file.
+ * @return {@code true}: yes<br> {@code false}: no
+ */
+public static boolean isUtf8(final File file){
+  if (file == null)   return false;
+  InputStream is=null;
+  try {
+    byte[] bytes=new byte[24];
+    is=new BufferedInputStream(new FileInputStream(file));
+    int read=is.read(bytes);
+    if (read != -1) {
+      byte[] readArr=new byte[read];
+      System.arraycopy(bytes,0,readArr,0,read);
+      return isUtf8(readArr) == 100;
+    }
+ else {
+      return false;
+    }
+  }
+ catch (  IOException e) {
+    e.printStackTrace();
+  }
+ finally {
+    try {
+      if (is != null) {
+        is.close();
+      }
+    }
+ catch (    IOException e) {
+      e.printStackTrace();
+    }
+  }
+  return false;
+}
+/** 
+ * UTF-8编码方式 ---------------------------------------------- 0xxxxxxx 110xxxxx 10xxxxxx 1110xxxx 10xxxxxx 10xxxxxx 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+ */
+private static int isUtf8(byte[] raw){
+  int i, len;
+  int utf8=0, ascii=0;
+  if (raw.length > 3) {
+    if ((raw[0] == (byte)0xEF) && (raw[1] == (byte)0xBB) && (raw[2] == (byte)0xBF)) {
+      return 100;
+    }
+  }
+  len=raw.length;
+  int child=0;
+  for (i=0; i < len; ) {
+    if ((raw[i] & (byte)0xFF) == (byte)0xFF || (raw[i] & (byte)0xFE) == (byte)0xFE) {
+      return 0;
+    }
+    if (child == 0) {
+      if ((raw[i] & (byte)0x7F) == raw[i] && raw[i] != 0) {
+        ascii++;
+      }
+ else       if ((raw[i] & (byte)0xC0) == (byte)0xC0) {
+        for (int bit=0; bit < 8; bit++) {
+          if ((((byte)(0x80 >> bit)) & raw[i]) == ((byte)(0x80 >> bit))) {
+            child=bit;
+          }
+ else {
+            break;
+          }
+        }
+        utf8++;
+      }
+      i++;
+    }
+ else {
+      child=(raw.length - i > child) ? child : (raw.length - i);
+      boolean currentNotUtf8=false;
+      for (int children=0; children < child; children++) {
+        if ((raw[i + children] & ((byte)0x80)) != ((byte)0x80)) {
+          if ((raw[i + children] & (byte)0x7F) == raw[i + children] && raw[i] != 0) {
+            ascii++;
+          }
+          currentNotUtf8=true;
+        }
+      }
+      if (currentNotUtf8) {
+        utf8--;
+        i++;
+      }
+ else {
+        utf8+=child;
+        i+=child;
+      }
+      child=0;
+    }
+  }
+  if (ascii == len) {
+    return 100;
+  }
+  return (int)(100 * ((float)(utf8 + ascii) / (float)len));
+}

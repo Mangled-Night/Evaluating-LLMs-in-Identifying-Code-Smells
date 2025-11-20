@@ -1,0 +1,22 @@
+@Override public UIData load(ResourceUrn resourceUrn,List<AssetDataFile> inputs) throws IOException {
+  try (JsonReader reader=new JsonReader(new InputStreamReader(inputs.get(0).openStream(),Charsets.UTF_8))){
+    reader.setLenient(true);
+    UIData data=load(new JsonParser().parse(reader));
+    data.setSource(inputs.get(0));
+    return data;
+  }
+ }
+public UIData load(JsonElement element) throws IOException {
+  return load(element,null);
+}
+public UIData load(JsonElement element,Locale otherLocale) throws IOException {
+  NUIManager nuiManager=CoreRegistry.get(NUIManager.class);
+  TranslationSystem translationSystem=CoreRegistry.get(TranslationSystem.class);
+  TypeHandlerLibrary library=CoreRegistry.get(TypeHandlerLibrary.class).copy();
+  library.addTypeHandler(UISkinAsset.class,new AssetTypeHandler<>(UISkinAsset.class));
+  library.addTypeHandler(UISkin.class,new UISkinTypeHandler());
+  GsonBuilder gsonBuilder=new GsonBuilder().registerTypeAdapterFactory(new GsonTypeSerializationLibraryAdapterFactory(library)).registerTypeAdapterFactory(new CaseInsensitiveEnumTypeAdapterFactory()).registerTypeAdapter(UIData.class,new UIDataTypeAdapter()).registerTypeHierarchyAdapter(UIWidget.class,new UIWidgetTypeAdapter(nuiManager));
+  gsonBuilder.registerTypeAdapter(String.class,new I18nStringTypeAdapter(translationSystem,otherLocale));
+  Gson gson=gsonBuilder.create();
+  return gson.fromJson(element,UIData.class);
+}

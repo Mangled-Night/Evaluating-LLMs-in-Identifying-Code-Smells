@@ -1,0 +1,54 @@
+/** 
+ * Ice transport negotiator.
+ * @author Alvaro Saurin
+ */
+public static final class Ice extends TransportNegotiator {
+  /** 
+ * Default constructor, with a JingleSession and transport manager.
+ * @param js  The Jingle session this negotiation belongs to.
+ * @param res The transport manager to use.
+ * @param parentNegotiator the parent content negotiator.
+ */
+  public Ice(  JingleSession js,  final TransportResolver res,  ContentNegotiator parentNegotiator){
+    super(js,res,parentNegotiator);
+  }
+  /** 
+ * Get a TransportNegotiator instance.
+ * @param candidate TODO javadoc me please
+ */
+  @Override public org.jivesoftware.smackx.jingleold.packet.JingleTransport getJingleTransport(  TransportCandidate candidate){
+    org.jivesoftware.smackx.jingleold.packet.JingleTransport.Ice jt=new org.jivesoftware.smackx.jingleold.packet.JingleTransport.Ice();
+    jt.addCandidate(new org.jivesoftware.smackx.jingleold.packet.JingleTransport.Ice.Candidate(candidate));
+    return jt;
+  }
+  /** 
+ * Obtain the best remote candidate obtained in the negotiation so far.
+ * @return the bestRemoteCandidate
+ */
+  @Override public TransportCandidate getBestRemoteCandidate(){
+    ICECandidate result=null;
+    ArrayList<TransportCandidate> cands=getValidRemoteCandidatesList();
+    if (!cands.isEmpty()) {
+      int highest=-1;
+      ICECandidate chose=null;
+      for (      TransportCandidate transportCandidate : cands) {
+        if (transportCandidate instanceof ICECandidate) {
+          ICECandidate icecandidate=(ICECandidate)transportCandidate;
+          if (icecandidate.getPreference() > highest) {
+            chose=icecandidate;
+            highest=icecandidate.getPreference();
+          }
+        }
+      }
+      result=chose;
+    }
+    if (result != null && result.getType().equals(ICECandidate.Type.relay))     LOGGER.fine("Relay Type");
+    return result;
+  }
+  /** 
+ * Return true for ICE candidates.
+ */
+  @Override public boolean acceptableTransportCandidate(  TransportCandidate tc,  List<TransportCandidate> localCandidates){
+    return tc instanceof ICECandidate;
+  }
+}

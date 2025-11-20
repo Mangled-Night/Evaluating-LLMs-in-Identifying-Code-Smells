@@ -1,0 +1,21 @@
+@Override public void close(String reason){
+  if (!isClosed.get()) {
+    closeSocket();
+    isClosed.set(true);
+    if (processor != null) {
+      processor.removeConnection(this);
+    }
+    this.cleanup();
+    isSupportCompress=false;
+    if (Strings.isNullOrEmpty(reason)) {
+      return;
+    }
+    LOGGER.info("close connection,reason:" + reason + " ,"+ this);
+    if (reason.contains("connection,reason:java.net.ConnectException")) {
+      throw new RuntimeException(" errr");
+    }
+  }
+ else {
+    this.cleanup();
+  }
+}

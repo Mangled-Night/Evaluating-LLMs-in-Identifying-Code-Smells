@@ -1,0 +1,45 @@
+@Override public void shutdown(){
+  allChannels.close().awaitUninterruptibly();
+  List<Future<?>> shutdowns=new ArrayList<>(3);
+  if (serverChannelFuture != null) {
+    shutdowns.add(bossGroup.shutdownGracefully(shutdownQuietMs,shutdownTimeoutMs,TimeUnit.MILLISECONDS));
+    shutdowns.add(workerGroup.shutdownGracefully(shutdownQuietMs,shutdownTimeoutMs,TimeUnit.MILLISECONDS));
+  }
+  if (clientGroup != null) {
+    shutdowns.add(clientGroup.shutdownGracefully(shutdownQuietMs,shutdownTimeoutMs,TimeUnit.MILLISECONDS));
+  }
+  Mono.whenDelayError(Flux.fromIterable(shutdowns).map(x -> {
+    @SuppressWarnings("unchecked") Future<Void> f=(Future<Void>)x;
+    return FutureMono.from(f);
+  }
+).collectList()).block(Duration.ofMillis(shutdownTimeoutMs));
+  processPendingDisconnects();
+  clientList.forEach(this::processRemovedClient);
+  server=null;
+  nextNetId=1;
+  netIdToEntityId.clear();
+  if (mode != NetworkMode.CLIENT) {
+    if (this.entityManager != null) {
+      for (      EntityRef entity : entityManager.getEntitiesWith(NetworkComponent.class)) {
+        NetworkComponent netComp=entity.getComponent(NetworkComponent.class);
+        netComp.setNetworkId(0);
+        entity.saveComponent(netComp);
+      }
+      this.entityManager.unsubscribe(this);
+    }
+  }
+  mode=NetworkMode.NONE;
+  entityManager=null;
+  eventLibrary=null;
+  componentLibrary=null;
+  eventSerializer=null;
+  entitySerializer=null;
+  clientList.clear();
+  netClientList.clear();
+  blockManager=null;
+  ownerLookup.clear();
+  ownedLookup.clear();
+  ownershipHelper=null;
+  storageManager=null;
+  logger.info("Network shutdown");
+}

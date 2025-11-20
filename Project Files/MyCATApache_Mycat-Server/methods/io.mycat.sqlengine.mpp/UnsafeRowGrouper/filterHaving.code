@@ -1,0 +1,48 @@
+private void filterHaving(@Nonnull UnsafeExternalRowSorter sorter){
+  if (havingCols.getColMeta() == null || aggregationMap == null) {
+    return;
+  }
+  KVIterator<UnsafeRow,UnsafeRow> it=aggregationMap.iterator();
+  byte[] right=havingCols.getRight().getBytes(StandardCharsets.UTF_8);
+  int index=havingCols.getColMeta().getColIndex();
+  try {
+    while (it.next()) {
+      UnsafeRow row=getAllBinaryRow(it.getValue());
+switch (havingCols.getOperator()) {
+case "=":
+        if (eq(row.getBinary(index),right)) {
+          sorter.insertRow(row);
+        }
+      break;
+case ">":
+    if (gt(row.getBinary(index),right)) {
+      sorter.insertRow(row);
+    }
+  break;
+case "<":
+if (lt(row.getBinary(index),right)) {
+  sorter.insertRow(row);
+}
+break;
+case ">=":
+if (gt(row.getBinary(index),right) || eq(row.getBinary(index),right)) {
+sorter.insertRow(row);
+}
+break;
+case "<=":
+if (lt(row.getBinary(index),right) || eq(row.getBinary(index),right)) {
+sorter.insertRow(row);
+}
+break;
+case "!=":
+if (neq(row.getBinary(index),right)) {
+sorter.insertRow(row);
+}
+break;
+}
+}
+}
+ catch (IOException e) {
+logger.error(e.getMessage());
+}
+}

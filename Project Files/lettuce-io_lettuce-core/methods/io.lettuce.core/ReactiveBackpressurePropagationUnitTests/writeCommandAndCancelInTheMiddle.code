@@ -1,0 +1,30 @@
+@Test void writeCommandAndCancelInTheMiddle() throws Exception {
+  Command<String,String,List<String>> lrange=new Command<>(CommandType.LRANGE,new ValueListOutput<>(StringCodec.UTF8));
+  RedisPublisher<String,String,String> publisher=new RedisPublisher<>(lrange,statefulConnection,true,ImmediateEventExecutor.INSTANCE);
+  CountDownLatch pressureArrived=new CountDownLatch(1);
+  CountDownLatch buildPressure=new CountDownLatch(1);
+  CountDownLatch waitForPressureReduced=new CountDownLatch(2);
+  Disposable cancellation=Flux.from(publisher).limitRate(2).publishOn(Schedulers.single()).doOnNext(s -> {
+    try {
+      pressureArrived.countDown();
+      buildPressure.await();
+    }
+ catch (    InterruptedException e) {
+    }
+    waitForPressureReduced.countDown();
+  }
+).subscribe();
+  assertThat(embeddedChannel.config().isAutoRead()).isTrue();
+  embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.arrayHeader(4)));
+  embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.bulkString("one")));
+  pressureArrived.await();
+  assertThat(embeddedChannel.config().isAutoRead()).isTrue();
+  embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.bulkString("two")));
+  embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.bulkString("three")));
+  assertThat(embeddedChannel.config().isAutoRead()).isFalse();
+  cancellation.dispose();
+  assertThat(embeddedChannel.config().isAutoRead()).isTrue();
+  buildPressure.countDown();
+  embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.bulkString("four")));
+  assertThat(embeddedChannel.config().isAutoRead()).isTrue();
+}

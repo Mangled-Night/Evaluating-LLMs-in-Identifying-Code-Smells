@@ -1,0 +1,25 @@
+/** 
+ * Free all allocated memory associated with this map, including the storage for keys and values as well as the hash map array itself. This method is idempotent and can be called multiple times.
+ */
+public void free(){
+  updatePeakMemoryUsed();
+  if (longArray != null) {
+    freeLongArray(longArray);
+    longArray=null;
+  }
+  Iterator<MemoryBlock> dataPagesIterator=dataPages.iterator();
+  while (dataPagesIterator.hasNext()) {
+    MemoryBlock dataPage=dataPagesIterator.next();
+    dataPagesIterator.remove();
+    freePage(dataPage);
+  }
+  assert (dataPages.isEmpty());
+  while (!spillWriters.isEmpty()) {
+    File file=spillWriters.removeFirst().getFile();
+    if (file != null && file.exists()) {
+      if (!file.delete()) {
+        logger.error("Was unable to delete spill file {}",file.getAbsolutePath());
+      }
+    }
+  }
+}

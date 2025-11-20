@@ -1,0 +1,63 @@
+@Override public EntityRef create(){
+  return create((Prefab)null,(Vector3fc)null,null);
+}
+@Override public EntityRef create(Component... components){
+  return create(Arrays.asList(components));
+}
+@Override public EntityRef create(Iterable<Component> components){
+  return create(components,true);
+}
+@Override public EntityRef create(Iterable<Component> components,boolean sendLifecycleEvents){
+  EntityBuilder builder=newBuilder();
+  builder.addComponents(components);
+  builder.setSendLifecycleEvents(sendLifecycleEvents);
+  return builder.build();
+}
+@Override public EntityRef create(String prefabName){
+  return create(prefabName,null,null);
+}
+@Override public EntityRef create(String prefabName,Vector3fc position){
+  return create(prefabName,position,null);
+}
+@Override public EntityRef create(Prefab prefab,Vector3fc position){
+  return create(prefab,position,null);
+}
+@Override public EntityRef create(Prefab prefab){
+  return create(prefab,(Vector3fc)null,null);
+}
+@Override public EntityRef create(Prefab prefab,Vector3fc position,Quaternionfc rotation){
+  return create(prefab,position,rotation,true);
+}
+private EntityRef create(Prefab prefab,Vector3fc position,Quaternionfc rotation,boolean sendLifecycleEvents){
+  EntityBuilder builder=newBuilder(prefab);
+  builder.setSendLifecycleEvents(sendLifecycleEvents);
+  LocationComponent loc=builder.getComponent(LocationComponent.class);
+  if (loc == null && (position != null || rotation != null)) {
+    loc=new LocationComponent();
+    builder.addComponent(loc);
+  }
+  if (position != null) {
+    loc.setWorldPosition(position);
+  }
+  if (rotation != null) {
+    loc.setWorldRotation(rotation);
+  }
+  return builder.build();
+}
+private EntityRef create(String prefabName,Vector3fc position,Quaternionfc rotation){
+  return create(prefabName,position,rotation,true);
+}
+private EntityRef create(String prefabName,Vector3fc position,Quaternionfc rotation,boolean sendLifecycleEvents){
+  Prefab prefab;
+  if (prefabName == null || prefabName.isEmpty()) {
+    prefab=null;
+  }
+ else {
+    prefab=entityManager.getPrefabManager().getPrefab(prefabName);
+    if (prefab == null) {
+      logger.warn("Unable to instantiate unknown prefab: \"{}\"",prefabName);
+      return EntityRef.NULL;
+    }
+  }
+  return create(prefab,position,rotation,sendLifecycleEvents);
+}

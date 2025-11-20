@@ -1,0 +1,19 @@
+/** 
+ * Output capturing a hostname and port (both string elements) into a  {@link SocketAddress}.
+ * @author Mark Paluch
+ * @since 5.0.1
+ */
+public class SocketAddressOutput<K,V> extends CommandOutput<K,V,SocketAddress> {
+  private String hostname;
+  public SocketAddressOutput(  RedisCodec<K,V> codec){
+    super(codec,null);
+  }
+  @Override public void set(  ByteBuffer bytes){
+    if (hostname == null) {
+      hostname=decodeAscii(bytes);
+      return;
+    }
+    int port=Integer.parseInt(decodeAscii(bytes));
+    output=InetSocketAddress.createUnresolved(hostname,port);
+  }
+}

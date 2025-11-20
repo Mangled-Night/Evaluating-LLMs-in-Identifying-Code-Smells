@@ -1,0 +1,128 @@
+/** 
+ * Transport class for  {@link ModularXmppClientToServerConnectionModule}'s websocket implementation.
+ */
+public final class XmppWebSocketTransport extends XmppClientToServerTransport {
+  AsyncButOrdered<Queue<TopLevelStreamElement>> asyncButOrderedOutgoingElementsQueue;
+  XmppWebSocketTransport(  ModularXmppClientToServerConnectionInternal connectionInternal){
+    super(connectionInternal);
+    asyncButOrderedOutgoingElementsQueue=new AsyncButOrdered<Queue<TopLevelStreamElement>>();
+  }
+  @Override protected void resetDiscoveredConnectionEndpoints(){
+    discoveredWebSocketEndpoints=null;
+  }
+  @Override public boolean hasUseableConnectionEndpoints(){
+    return discoveredWebSocketEndpoints != null;
+  }
+  @SuppressWarnings("incomplete-switch") @Override protected List<SmackFuture<LookupConnectionEndpointsResult,Exception>> lookupConnectionEndpoints(){
+    assert discoveredWebSocketEndpoints == null;
+    InternalSmackFuture<LookupConnectionEndpointsResult,Exception> websocketEndpointsLookupFuture=new InternalSmackFuture<>();
+    connectionInternal.asyncGo(() -> {
+      Result result=null;
+      ModularXmppClientToServerConnectionConfiguration configuration=connectionInternal.connection.getConfiguration();
+      DomainBareJid host=configuration.getXMPPServiceDomain();
+      if (moduleDescriptor.isWebSocketEndpointDiscoveryEnabled()) {
+        result=WebSocketRemoteConnectionEndpointLookup.lookup(host);
+      }
+      WebSocketRemoteConnectionEndpoint providedEndpoint=moduleDescriptor.getExplicitlyProvidedEndpoint();
+      if (providedEndpoint != null) {
+        if (result == null) {
+          result=new Result();
+        }
+        final int INSERT_INDEX=0;
+        if (providedEndpoint instanceof SecureWebSocketRemoteConnectionEndpoint) {
+          SecureWebSocketRemoteConnectionEndpoint secureEndpoint=(SecureWebSocketRemoteConnectionEndpoint)providedEndpoint;
+          result.discoveredSecureEndpoints.add(INSERT_INDEX,secureEndpoint);
+        }
+ else         if (providedEndpoint instanceof InsecureWebSocketRemoteConnectionEndpoint) {
+          InsecureWebSocketRemoteConnectionEndpoint insecureEndpoint=(InsecureWebSocketRemoteConnectionEndpoint)providedEndpoint;
+          result.discoveredInsecureEndpoints.add(INSERT_INDEX,insecureEndpoint);
+        }
+ else {
+          throw new AssertionError();
+        }
+      }
+      if (moduleDescriptor.isImplicitWebSocketEndpointEnabled()) {
+        String urlWithoutScheme="://" + host + ":5443/ws";
+        SecureWebSocketRemoteConnectionEndpoint implicitSecureEndpoint=SecureWebSocketRemoteConnectionEndpoint.from(WebSocketRemoteConnectionEndpoint.SECURE_WEB_SOCKET_SCHEME + urlWithoutScheme);
+        result.discoveredSecureEndpoints.add(implicitSecureEndpoint);
+        InsecureWebSocketRemoteConnectionEndpoint implicitInsecureEndpoint=InsecureWebSocketRemoteConnectionEndpoint.from(WebSocketRemoteConnectionEndpoint.INSECURE_WEB_SOCKET_SCHEME + urlWithoutScheme);
+        result.discoveredInsecureEndpoints.add(implicitInsecureEndpoint);
+      }
+      final LookupConnectionEndpointsResult endpointsResult;
+      if (result.isEmpty()) {
+        endpointsResult=new WebSocketEndpointsDiscoveryFailed(result.lookupFailures);
+      }
+ else {
+        endpointsResult=new DiscoveredWebSocketEndpoints(result);
+      }
+      websocketEndpointsLookupFuture.setResult(endpointsResult);
+    }
+);
+    return Collections.singletonList(websocketEndpointsLookupFuture);
+  }
+  @Override protected void loadConnectionEndpoints(  LookupConnectionEndpointsSuccess lookupConnectionEndpointsSuccess){
+    discoveredWebSocketEndpoints=(DiscoveredWebSocketEndpoints)lookupConnectionEndpointsSuccess;
+  }
+  @Override protected void afterFiltersClosed(){
+  }
+  @Override protected void disconnect(){
+    websocket.disconnect(WEBSOCKET_NORMAL_CLOSURE,"WebSocket closed normally");
+  }
+  @Override protected void notifyAboutNewOutgoingElements(){
+    final Queue<TopLevelStreamElement> outgoingElementsQueue=connectionInternal.outgoingElementsQueue;
+    asyncButOrderedOutgoingElementsQueue.performAsyncButOrdered(outgoingElementsQueue,() -> {
+      for (TopLevelStreamElement topLevelStreamElement; (topLevelStreamElement=outgoingElementsQueue.poll()) != null; ) {
+        websocket.send(topLevelStreamElement);
+      }
+    }
+);
+  }
+  @Override public SSLSession getSslSession(){
+    return websocket.getSSLSession();
+  }
+  @Override public boolean isTransportSecured(){
+    return websocket.isConnectionSecure();
+  }
+  @Override public Stats getStats(){
+    return null;
+  }
+  @Override public StreamOpenAndCloseFactory getStreamOpenAndCloseFactory(){
+    return new StreamOpenAndCloseFactory(){
+      @Override public AbstractStreamOpen createStreamOpen(      DomainBareJid to,      CharSequence from,      String id,      String lang){
+        return new WebSocketOpenElement(to);
+      }
+      @Override public AbstractStreamClose createStreamClose(){
+        return new WebSocketCloseElement();
+      }
+    }
+;
+  }
+  /** 
+ * Contains  {@link Result} for successfully discovered endpoints.
+ */
+public final class DiscoveredWebSocketEndpoints implements LookupConnectionEndpointsSuccess {
+    final WebSocketRemoteConnectionEndpointLookup.Result result;
+    DiscoveredWebSocketEndpoints(    Result result){
+      assert result != null;
+      this.result=result;
+    }
+  }
+  /** 
+ * Contains list of  {@link RemoteConnectionEndpointLookupFailure} when no endpointcould be found during http lookup.
+ */
+final class WebSocketEndpointsDiscoveryFailed implements LookupConnectionEndpointsFailed {
+    final List<RemoteConnectionEndpointLookupFailure> lookupFailures;
+    WebSocketEndpointsDiscoveryFailed(    RemoteConnectionEndpointLookupFailure lookupFailure){
+      this(Collections.singletonList(lookupFailure));
+    }
+    WebSocketEndpointsDiscoveryFailed(    List<RemoteConnectionEndpointLookupFailure> lookupFailures){
+      assert lookupFailures != null;
+      this.lookupFailures=Collections.unmodifiableList(lookupFailures);
+    }
+    @Override public String toString(){
+      StringBuilder str=new StringBuilder();
+      StringUtils.appendTo(lookupFailures,str);
+      return str.toString();
+    }
+  }
+}

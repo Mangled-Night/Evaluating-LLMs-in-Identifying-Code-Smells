@@ -1,0 +1,12 @@
+@Test public void concretisationTest() throws Exception {
+  ProviderManager.addExtensionProvider(EcstaticMoodConcretisation.ELEMENT,EcstaticMoodConcretisation.NAMESPACE,EcstaticMoodConcretisationProvider.INSTANCE);
+  String xml="<mood xmlns='http://jabber.org/protocol/mood'>" + "<happy>" + "<ecstatic xmlns='https://example.org/'/>"+ "</happy>"+ "<text>Yay, the mood spec has been approved!</text>"+ "</mood>";
+  MoodElement element=new MoodElement(new MoodElement.MoodSubjectElement(Mood.happy,new EcstaticMoodConcretisation()),"Yay, the mood spec has been approved!");
+  assertXmlSimilar(xml,element.toXML().toString());
+  XmlPullParser parser=TestUtils.getParser(xml);
+  MoodElement parsed=MoodProvider.INSTANCE.parse(parser);
+  assertXmlSimilar(xml,parsed.toXML().toString());
+  assertTrue(parsed.hasConcretisation());
+  assertTrue(parsed.hasText());
+  assertEquals(EcstaticMoodConcretisation.ELEMENT,parsed.getMoodConcretisation().getMood());
+}

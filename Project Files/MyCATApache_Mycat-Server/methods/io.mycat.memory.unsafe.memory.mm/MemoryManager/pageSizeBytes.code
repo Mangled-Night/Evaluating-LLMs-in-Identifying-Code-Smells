@@ -1,0 +1,28 @@
+/** 
+ * The default page size, in bytes. If user didn't explicitly set "mycat.buffer.pageSize", we figure out the default value by looking at the number of cores available to the process, and the total amount of memory, and then divide it by a factor of safety.
+ */
+public long pageSizeBytes(){
+  long minPageSize=1L * 1024 * 1024;
+  long maxPageSize=64L * minPageSize;
+  int cores=0;
+  if (numCores > 0) {
+    cores=numCores;
+  }
+ else {
+    cores=Runtime.getRuntime().availableProcessors();
+  }
+  int safetyFactor=16;
+  long maxTungstenMemory=0L;
+switch (tungstenMemoryMode()) {
+case ON_HEAP:
+    maxTungstenMemory=onHeapExecutionMemoryPool.poolSize();
+  break;
+case OFF_HEAP:
+maxTungstenMemory=offHeapExecutionMemoryPool.poolSize();
+break;
+}
+long size=ByteArrayMethods.nextPowerOf2(maxTungstenMemory / cores / safetyFactor);
+long defaultSize=Math.min(maxPageSize,Math.max(minPageSize,size));
+defaultSize=conf.getSizeAsBytes("mycat.buffer.pageSize",defaultSize);
+return defaultSize;
+}

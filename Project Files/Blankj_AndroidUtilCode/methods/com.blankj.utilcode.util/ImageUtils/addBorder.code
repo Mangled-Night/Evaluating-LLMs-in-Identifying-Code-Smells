@@ -1,0 +1,48 @@
+/** 
+ * Return the bitmap with border.
+ * @param src          The source of bitmap.
+ * @param borderSize   The size of border.
+ * @param color        The color of border.
+ * @param isCircle     True to draw circle, false to draw corner.
+ * @param cornerRadius The radius of corner.
+ * @param recycle      True to recycle the source of bitmap, false otherwise.
+ * @return the bitmap with border
+ */
+private static Bitmap addBorder(final Bitmap src,@FloatRange(from=1) final float borderSize,@ColorInt final int color,final boolean isCircle,final float cornerRadius,final boolean recycle){
+  float[] radii={cornerRadius,cornerRadius,cornerRadius,cornerRadius,cornerRadius,cornerRadius,cornerRadius,cornerRadius};
+  return addBorder(src,borderSize,color,isCircle,radii,recycle);
+}
+/** 
+ * Return the bitmap with border.
+ * @param src        The source of bitmap.
+ * @param borderSize The size of border.
+ * @param color      The color of border.
+ * @param isCircle   True to draw circle, false to draw corner.
+ * @param radii      Array of 8 values, 4 pairs of [X,Y] radii
+ * @param recycle    True to recycle the source of bitmap, false otherwise.
+ * @return the bitmap with border
+ */
+private static Bitmap addBorder(final Bitmap src,@FloatRange(from=1) final float borderSize,@ColorInt final int color,final boolean isCircle,final float[] radii,final boolean recycle){
+  if (isEmptyBitmap(src))   return null;
+  Bitmap ret=recycle ? src : src.copy(src.getConfig(),true);
+  int width=ret.getWidth();
+  int height=ret.getHeight();
+  Canvas canvas=new Canvas(ret);
+  Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+  paint.setColor(color);
+  paint.setStyle(Paint.Style.STROKE);
+  paint.setStrokeWidth(borderSize);
+  if (isCircle) {
+    float radius=Math.min(width,height) / 2f - borderSize / 2f;
+    canvas.drawCircle(width / 2f,height / 2f,radius,paint);
+  }
+ else {
+    RectF rectF=new RectF(0,0,width,height);
+    float halfBorderSize=borderSize / 2f;
+    rectF.inset(halfBorderSize,halfBorderSize);
+    Path path=new Path();
+    path.addRoundRect(rectF,radii,Path.Direction.CW);
+    canvas.drawPath(path,paint);
+  }
+  return ret;
+}

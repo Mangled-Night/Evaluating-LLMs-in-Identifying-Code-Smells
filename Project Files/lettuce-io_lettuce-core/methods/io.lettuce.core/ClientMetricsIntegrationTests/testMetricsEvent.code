@@ -1,0 +1,12 @@
+@Test @Inject void testMetricsEvent(RedisClient client,StatefulRedisConnection<String,String> connection){
+  Collection<CommandLatencyEvent> events=new LinkedBlockingQueue<>();
+  EventBus eventBus=client.getResources().eventBus();
+  MetricEventPublisher publisher=(MetricEventPublisher)ReflectionTestUtils.getField(client.getResources(),"metricEventPublisher");
+  publisher.emitMetricsEvent();
+  Disposable disposable=eventBus.get().filter(redisEvent -> redisEvent instanceof CommandLatencyEvent).cast(CommandLatencyEvent.class).doOnNext(events::add).subscribe();
+  generateTestData(connection.sync());
+  publisher.emitMetricsEvent();
+  Wait.untilTrue(() -> !events.isEmpty()).waitOrTimeout();
+  assertThat(events).isNotEmpty();
+  disposable.dispose();
+}

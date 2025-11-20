@@ -1,0 +1,34 @@
+/** 
+ * modifies the held item mount point to move the held item in first person view
+ */
+@Override public void update(float delta){
+  if (!currentHeldItem.exists() && currentHeldItem != getHandEntity()) {
+    linkHeldItemLocationForLocalPlayer(getHandEntity());
+  }
+  for (  EntityRef entityRef : entityManager.getEntitiesWith(ItemIsHeldComponent.class)) {
+    if (!entityRef.equals(currentHeldItem) && !entityRef.equals(handEntity)) {
+      entityRef.destroy();
+    }
+  }
+  CharacterHeldItemComponent characterHeldItemComponent=localPlayer.getCharacterEntity().getComponent(CharacterHeldItemComponent.class);
+  FirstPersonHeldItemMountPointComponent mountPointComponent=localPlayer.getCameraEntity().getComponent(FirstPersonHeldItemMountPointComponent.class);
+  if (characterHeldItemComponent == null || mountPointComponent == null) {
+    return;
+  }
+  LocationComponent locationComponent=mountPointComponent.mountPointEntity.getComponent(LocationComponent.class);
+  if (locationComponent == null) {
+    return;
+  }
+  long timeElapsedSinceLastUsed=time.getGameTimeInMs() - characterHeldItemComponent.lastItemUsedTime;
+  float animateAmount=0f;
+  if (timeElapsedSinceLastUsed < USEANIMATIONLENGTH) {
+    animateAmount=1f - Math.abs(((float)timeElapsedSinceLastUsed / (float)USEANIMATIONLENGTH) - 0.5f);
+  }
+  float addPitch=15f * animateAmount;
+  float addYaw=10f * animateAmount;
+  locationComponent.setLocalRotation(new Quaternionf().rotationYXZ(TeraMath.DEG_TO_RAD * (mountPointComponent.rotateDegrees.y + addYaw),TeraMath.DEG_TO_RAD * (mountPointComponent.rotateDegrees.x + addPitch),TeraMath.DEG_TO_RAD * mountPointComponent.rotateDegrees.z));
+  Vector3f offset=new Vector3f(0.25f * animateAmount,-0.12f * animateAmount,0f);
+  offset.add(mountPointComponent.translate);
+  locationComponent.setLocalPosition(offset);
+  mountPointComponent.mountPointEntity.saveComponent(locationComponent);
+}

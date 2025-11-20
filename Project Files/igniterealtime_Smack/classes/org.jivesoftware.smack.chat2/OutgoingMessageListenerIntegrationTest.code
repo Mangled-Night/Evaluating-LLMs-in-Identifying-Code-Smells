@@ -1,0 +1,28 @@
+public class OutgoingMessageListenerIntegrationTest extends AbstractChatIntegrationTest {
+  public OutgoingMessageListenerIntegrationTest(  SmackIntegrationTestEnvironment environment){
+    super(environment);
+  }
+  @SmackIntegrationTest public void outgoingMessageListenerTest() throws Exception {
+    final String body=StringUtils.randomString(16);
+    final SimpleResultSyncPoint syncPoint=new SimpleResultSyncPoint();
+    final OutgoingChatMessageListener listener=new OutgoingChatMessageListener(){
+      @Override public void newOutgoingMessage(      EntityBareJid to,      MessageBuilder messageBuilder,      Chat chat){
+        Message message=messageBuilder.build();
+        if (message.getBody().equals(body)) {
+          syncPoint.signal();
+        }
+      }
+    }
+;
+    EntityBareJid peer=conTwo.getUser().asEntityBareJid();
+    try {
+      chatManagerOne.addOutgoingListener(listener);
+      Chat chat=chatManagerOne.chatWith(peer);
+      chat.send(body);
+      syncPoint.waitForResult(timeout);
+    }
+  finally {
+      chatManagerOne.removeOutgoingListener(listener);
+    }
+  }
+}

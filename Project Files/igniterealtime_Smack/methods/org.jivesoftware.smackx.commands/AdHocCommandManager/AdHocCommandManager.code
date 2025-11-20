@@ -1,0 +1,32 @@
+private AdHocCommandManager(XMPPConnection connection){
+  super(connection);
+  this.serviceDiscoveryManager=ServiceDiscoveryManager.getInstanceFor(connection);
+  ServiceDiscoveryManager.getInstanceFor(connection).addFeature(NAMESPACE);
+  ServiceDiscoveryManager.getInstanceFor(connection).setNodeInformationProvider(NAMESPACE,new AbstractNodeInformationProvider(){
+    @Override public List<DiscoverItems.Item> getNodeItems(){
+      List<DiscoverItems.Item> answer=new ArrayList<>();
+      Collection<AdHocCommandInfo> commandsList=getRegisteredCommands();
+      for (      AdHocCommandInfo info : commandsList) {
+        DiscoverItems.Item item=new DiscoverItems.Item(info.getOwnerJID());
+        item.setName(info.getName());
+        item.setNode(info.getNode());
+        answer.add(item);
+      }
+      return answer;
+    }
+  }
+);
+  connection.registerIQRequestHandler(new AbstractIqRequestHandler(AdHocCommandData.ELEMENT,AdHocCommandData.NAMESPACE,IQ.Type.set,Mode.async){
+    @Override public IQ handleIQRequest(    IQ iqRequest){
+      AdHocCommandData requestData=(AdHocCommandData)iqRequest;
+      try {
+        return processAdHocCommand(requestData);
+      }
+ catch (      InterruptedException|NoResponseException|NotConnectedException e) {
+        LOGGER.log(Level.INFO,"processAdHocCommand threw exception",e);
+        return null;
+      }
+    }
+  }
+);
+}

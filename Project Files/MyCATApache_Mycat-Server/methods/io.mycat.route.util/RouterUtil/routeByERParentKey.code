@@ -1,0 +1,27 @@
+/** 
+ * 根据 ER分片规则获取路由集合
+ * @param stmt            执行的语句
+ * @param rrs      		     数据路由集合
+ * @param tc	      	     表实体
+ * @param joinKeyVal      连接属性
+ * @return RouteResultset(数据路由集合)	 
+ * @throws SQLNonTransientException ，IllegalShardingColumnValueException
+ * @author mycat
+ */
+public static RouteResultset routeByERParentKey(ServerConnection sc,SchemaConfig schema,int sqlType,String stmt,RouteResultset rrs,TableConfig tc,String joinKeyVal) throws SQLNonTransientException {
+  if (tc.isSecondLevel() && tc.getParentTC().getPartitionColumn().equals(tc.getParentKey())) {
+    Set<ColumnRoutePair> parentColVal=new HashSet<ColumnRoutePair>(1);
+    ColumnRoutePair pair=new ColumnRoutePair(joinKeyVal);
+    parentColVal.add(pair);
+    Set<String> dataNodeSet=ruleCalculate(tc.getParentTC(),parentColVal,rrs.getDataNodeSlotMap());
+    if (dataNodeSet.isEmpty() || dataNodeSet.size() > 1) {
+      throw new SQLNonTransientException("parent key can't find  valid datanode ,expect 1 but found: " + dataNodeSet.size());
+    }
+    String dn=dataNodeSet.iterator().next();
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("found partion node (using parent partion rule directly) for child table to insert  " + dn + " sql :"+ stmt);
+    }
+    return RouterUtil.routeToSingleNode(rrs,dn,stmt);
+  }
+  return null;
+}

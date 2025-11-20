@@ -1,0 +1,14 @@
+@Test void serverAssistedCachingShouldFetchValueFromRedis(){
+  Map<String,String> clientCache=new ConcurrentHashMap<>();
+  StatefulRedisConnection<String,String> otherParty=redisClient.connect();
+  RedisCommands<String,String> commands=otherParty.sync();
+  commands.set(key,value);
+  StatefulRedisConnection<String,String> connection=redisClient.connect();
+  CacheFrontend<String,String> frontend=ClientSideCaching.enable(CacheAccessor.forMap(clientCache),connection,TrackingArgs.Builder.enabled().noloop());
+  assertThat(clientCache).isEmpty();
+  String shouldExist=frontend.get(key);
+  assertThat(shouldExist).isNotNull();
+  assertThat(clientCache).hasSize(1);
+  otherParty.close();
+  frontend.close();
+}

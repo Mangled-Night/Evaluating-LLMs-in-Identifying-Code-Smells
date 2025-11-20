@@ -1,0 +1,31 @@
+/** 
+ * Verifies that a notification for a previously sent publication is received as soon as notification filtering has been adjusted to allow for the notification to be delivered.
+ * @throws Exception if the test fails
+ */
+@SmackIntegrationTest public void testNotificationAfterFilterChange() throws Exception {
+  URI uri=new URI("http://www.yesworld.com/lyrics/Fragile.html#8");
+  UserTuneElement.Builder builder=UserTuneElement.getBuilder();
+  UserTuneElement data=builder.setArtist("No").setLength(306).setRating(3).setSource("NoSongs").setTitle("Sunrise of the Heart").setTrack("2").setUri(uri).build();
+  IntegrationTestRosterUtil.ensureBothAccountsAreSubscribedToEachOther(conOne,conTwo,timeout);
+  final SimpleResultSyncPoint userTuneReceived=new SimpleResultSyncPoint();
+  final PepEventListener<UserTuneElement> userTuneListener=(jid,userTune,id,message) -> {
+    if (userTune.equals(data)) {
+      userTuneReceived.signal();
+    }
+  }
+;
+  try {
+    publishAndWait(utm1,ServiceDiscoveryManager.getInstanceFor(conOne),data);
+    registerListenerAndWait(utm2,ServiceDiscoveryManager.getInstanceFor(conTwo),userTuneListener);
+    try {
+      Object result=userTuneReceived.waitForResult(timeout);
+      Assertions.assertNotNull(result,"Expected to receive a PEP notification, but did not.");
+    }
+ catch (    TimeoutException e) {
+      Assertions.fail("Expected to receive a PEP notification, but did not.");
+    }
+  }
+  finally {
+    unregisterListener(utm2,userTuneListener);
+  }
+}

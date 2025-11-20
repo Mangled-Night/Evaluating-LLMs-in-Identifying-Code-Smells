@@ -1,0 +1,39 @@
+@Override public void run(){
+  byte[] buf=new byte[1024];
+  DatagramPacket p=new DatagramPacket(buf,1024);
+  try {
+    while (on) {
+      socket.receive(p);
+      int length=p.getLength();
+      BufferedImage bufferedImage=decoder.decode(new ByteArrayInputStream(p.getData(),0,length - 2));
+      if (bufferedImage != null) {
+        int x=p.getData()[length - 2];
+        int y=p.getData()[length - 1];
+        drawTile(x,y,bufferedImage);
+      }
+    }
+  }
+ catch (  IOException e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+}
+@Override public void run(){
+  byte[] buf=new byte[1024];
+  DatagramPacket p=new DatagramPacket(buf,1024);
+  try {
+    while (on) {
+      p.setAddress(remoteHost);
+      p.setPort(remotePort);
+      socket.send(p);
+      try {
+        Thread.sleep(1000);
+      }
+ catch (      InterruptedException e) {
+        LOGGER.log(Level.WARNING,"exception",e);
+      }
+    }
+  }
+ catch (  IOException e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+}

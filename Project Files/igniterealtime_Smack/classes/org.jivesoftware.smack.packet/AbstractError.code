@@ -1,0 +1,127 @@
+public class AbstractError {
+  protected final String textNamespace;
+  protected final Map<String,String> descriptiveTexts;
+  protected final List<XmlElement> extensions;
+  protected AbstractError(  Map<String,String> descriptiveTexts){
+    this(descriptiveTexts,null);
+  }
+  protected AbstractError(  Map<String,String> descriptiveTexts,  List<XmlElement> extensions){
+    this(descriptiveTexts,null,extensions);
+  }
+  protected AbstractError(  Map<String,String> descriptiveTexts,  String textNamespace,  List<XmlElement> extensions){
+    if (descriptiveTexts != null) {
+      this.descriptiveTexts=descriptiveTexts;
+    }
+ else {
+      this.descriptiveTexts=Collections.emptyMap();
+    }
+    this.textNamespace=textNamespace;
+    if (extensions != null) {
+      this.extensions=extensions;
+    }
+ else {
+      this.extensions=Collections.emptyList();
+    }
+  }
+  /** 
+ * Get the descriptive text of this SASLFailure. <p> Returns the descriptive text of this SASLFailure in the system default language if possible. May return null. </p>
+ * @return the descriptive text or null.
+ */
+  public String getDescriptiveText(){
+    if (descriptiveTexts.isEmpty())     return null;
+    Locale l=Locale.getDefault();
+    String[] tags=new String[]{l.getLanguage() + "-" + l.getCountry()+ "-"+ l.getVariant(),l.getLanguage() + "-" + l.getCountry(),l.getLanguage(),"en",""};
+    for (    String tag : tags) {
+      String descriptiveText=getDescriptiveText(tag);
+      if (descriptiveText != null)       return descriptiveText;
+    }
+    return descriptiveTexts.values().iterator().next();
+  }
+  /** 
+ * Get the descriptive test of this SASLFailure. <p> Returns the descriptive text of this SASLFailure in the given language. May return null if not available. </p>
+ * @param xmllang the language.
+ * @return the descriptive text or null.
+ */
+  public String getDescriptiveText(  String xmllang){
+    Objects.requireNonNull(xmllang,"xmllang must not be null");
+    return descriptiveTexts.get(xmllang);
+  }
+  /** 
+ * Returns the first stanza extension that matches the specified element name and namespace, or <code>null</code> if it doesn't exist.
+ * @param elementName the XML element name of the stanza extension.
+ * @param namespace the XML element namespace of the stanza extension.
+ * @param < PE > type of the ExtensionElement.
+ * @return the extension, or <code>null</code> if it doesn't exist.
+ */
+  public <PE extends XmlElement>PE getExtension(  String elementName,  String namespace){
+    return PacketUtil.extensionElementFrom(extensions,elementName,namespace);
+  }
+  protected void addDescriptiveTextsAndExtensions(  XmlStringBuilder xml){
+    for (    Map.Entry<String,String> entry : descriptiveTexts.entrySet()) {
+      String xmllang=entry.getKey();
+      String text=entry.getValue();
+      xml.halfOpenElement("text").xmlnsAttribute(textNamespace).optXmlLangAttribute(xmllang).rightAngleBracket();
+      xml.escape(text);
+      xml.closeElement("text");
+    }
+    xml.append(extensions);
+  }
+public abstract static class Builder<B extends Builder<B>> {
+    protected String textNamespace;
+    protected Map<String,String> descriptiveTexts;
+    protected List<XmlElement> extensions;
+    public B setDescriptiveTexts(    Map<String,String> descriptiveTexts){
+      if (descriptiveTexts == null) {
+        this.descriptiveTexts=null;
+        return getThis();
+      }
+      for (      String key : descriptiveTexts.keySet()) {
+        if (key == null) {
+          throw new IllegalArgumentException("descriptiveTexts cannot contain null key");
+        }
+      }
+      if (this.descriptiveTexts == null) {
+        this.descriptiveTexts=descriptiveTexts;
+      }
+ else {
+        this.descriptiveTexts.putAll(descriptiveTexts);
+      }
+      return getThis();
+    }
+    public B setDescriptiveEnText(    String descriptiveEnText){
+      if (descriptiveTexts == null) {
+        descriptiveTexts=new HashMap<>();
+      }
+      descriptiveTexts.put("en",descriptiveEnText);
+      return getThis();
+    }
+    public B setDescriptiveEnText(    String descriptiveEnText,    Exception exception){
+      StringBuilder sb=new StringBuilder(512);
+      sb.append(descriptiveEnText).append('\n');
+      String stacktrace=ExceptionUtil.getStackTrace(exception);
+      sb.append(stacktrace);
+      return setDescriptiveEnText(sb.toString());
+    }
+    public B setTextNamespace(    String textNamespace){
+      this.textNamespace=textNamespace;
+      return getThis();
+    }
+    public B setExtensions(    List<XmlElement> extensions){
+      if (this.extensions == null) {
+        this.extensions=extensions;
+      }
+ else {
+        this.extensions.addAll(extensions);
+      }
+      return getThis();
+    }
+    public B addExtension(    XmlElement extension){
+      if (extensions == null) {
+        extensions=new ArrayList<>();
+      }
+      extensions.add(extension);
+      return getThis();
+    }
+    protected abstract B getThis();
+  }
+}

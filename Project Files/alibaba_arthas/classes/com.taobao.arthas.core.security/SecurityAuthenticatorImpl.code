@@ -1,0 +1,52 @@
+/** 
+ * TODO 支持不同角色不同权限，command按角色分类？
+ * @author hengyunabc 2021-03-03
+ */
+public class SecurityAuthenticatorImpl implements SecurityAuthenticator {
+  private static final Logger logger=LoggerFactory.getLogger(SecurityAuthenticatorImpl.class);
+  private String username;
+  private String password;
+  private Subject subject;
+  public SecurityAuthenticatorImpl(  String username,  String password){
+    if (username != null && password == null) {
+      password=StringUtils.randomString(32);
+      logger.info("\nUsing generated security password: {}\n",password);
+    }
+    if (username == null && password != null) {
+      username=ArthasConstants.DEFAULT_USERNAME;
+    }
+    this.username=username;
+    this.password=password;
+    subject=new Subject();
+  }
+  @Override public void setName(  String name){
+  }
+  @Override public String getName(){
+    return null;
+  }
+  @Override public void setRoleClassNames(  String names){
+  }
+  @Override public Subject login(  Principal principal) throws LoginException {
+    if (principal == null) {
+      return null;
+    }
+    if (principal instanceof BasicPrincipal) {
+      BasicPrincipal basicPrincipal=(BasicPrincipal)principal;
+      if (basicPrincipal.getName().equals(username) && basicPrincipal.getPassword().equals(this.password)) {
+        return subject;
+      }
+    }
+    if (principal instanceof LocalConnectionPrincipal) {
+      return subject;
+    }
+    return null;
+  }
+  @Override public void logout(  Subject subject) throws LoginException {
+  }
+  @Override public String getUserRoles(  Subject subject){
+    return null;
+  }
+  @Override public boolean needLogin(){
+    return username != null && password != null;
+  }
+}

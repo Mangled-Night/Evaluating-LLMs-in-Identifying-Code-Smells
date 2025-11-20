@@ -1,0 +1,11 @@
+@Override public void connectionAcquired(final BackendConnection conn){
+  final RouteResultsetNode node=(RouteResultsetNode)conn.getAttachment();
+  session.bindConnection(node,conn);
+  if (errorRepsponsed.get()) {
+    ServerConnection source=session.getSource();
+    LOGGER.warn(new StringBuilder(this.toString()).append(source).append(rrs).toString(),"connectionAcquired",conn);
+    this.connectionClose(conn,"find error, so close this connection");
+    return;
+  }
+  _execute(conn,node);
+}

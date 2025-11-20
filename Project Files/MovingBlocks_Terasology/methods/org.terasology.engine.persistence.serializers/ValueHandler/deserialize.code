@@ -1,0 +1,36 @@
+@Override public EntityData.Value deserialize(JsonElement json,Type typeOfT,JsonDeserializationContext context) throws JsonParseException {
+  EntityData.Value.Builder value=EntityData.Value.newBuilder();
+  if (json.isJsonPrimitive()) {
+    extractPrimitive(value,json);
+  }
+ else   if (json.isJsonObject()) {
+    extractMap(json,context,value);
+  }
+ else   if (json.isJsonArray()) {
+    JsonArray jsonArray=json.getAsJsonArray();
+    TByteList byteList=new TByteArrayList();
+    for (    JsonElement element : jsonArray) {
+      if (element.isJsonArray()) {
+        value.addValue((EntityData.Value)context.deserialize(element,EntityData.Value.class));
+      }
+ else       if (element.isJsonObject()) {
+        value.addValue((EntityData.Value)context.deserialize(element,EntityData.Value.class));
+      }
+ else       if (element.isJsonPrimitive()) {
+        extractPrimitive(value,element);
+        if (element.getAsJsonPrimitive().isNumber()) {
+          try {
+            byteList.add(element.getAsByte());
+          }
+ catch (          NumberFormatException nfe) {
+            byteList.add((byte)0);
+          }
+        }
+      }
+    }
+    if (byteList.size() > 0) {
+      value.setBytes(ByteString.copyFrom(byteList.toArray()));
+    }
+  }
+  return value.build();
+}

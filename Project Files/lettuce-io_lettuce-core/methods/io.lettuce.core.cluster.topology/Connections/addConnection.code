@@ -1,0 +1,22 @@
+/** 
+ * Add a connection for a  {@link RedisURI}
+ * @param redisURI
+ * @param connection
+ */
+public void addConnection(RedisURI redisURI,StatefulRedisConnection<String,String> connection){
+  if (this.closed) {
+    connection.closeAsync();
+    return;
+  }
+  try {
+    lock.lock();
+    if (this.closed) {
+      connection.closeAsync();
+      return;
+    }
+    this.connections.put(redisURI,connection);
+  }
+  finally {
+    lock.unlock();
+  }
+}

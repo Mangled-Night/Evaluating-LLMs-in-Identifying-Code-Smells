@@ -1,0 +1,27 @@
+/** 
+ * 创建商品分享图
+ * @param goodId
+ * @param goodPicUrl
+ * @param goodName
+ */
+public String createGoodShareImage(String goodId,String goodPicUrl,String goodName){
+  if (!SystemConfig.isAutoCreateShareImage())   return "";
+  try {
+    File file=wxMaService.getQrcodeService().createWxaCodeUnlimit("goods," + goodId,"pages/index/index");
+    FileInputStream inputStream=new FileInputStream(file);
+    byte[] imageData=drawPicture(inputStream,goodPicUrl,goodName);
+    ByteArrayInputStream inputStream2=new ByteArrayInputStream(imageData);
+    LitemallStorage litemallStorage=storageService.store(inputStream2,imageData.length,"image/jpeg",getKeyName(goodId));
+    return litemallStorage.getUrl();
+  }
+ catch (  WxErrorException e) {
+    logger.error(e.getMessage(),e);
+  }
+catch (  FileNotFoundException e) {
+    logger.error(e.getMessage(),e);
+  }
+catch (  IOException e) {
+    logger.error(e.getMessage(),e);
+  }
+  return "";
+}

@@ -1,0 +1,68 @@
+public class OXInstantMessagingManagerTest extends SmackTestSuite {
+  private static final File basePath;
+static {
+    basePath=new File(org.apache.commons.io.FileUtils.getTempDirectory(),"ox_im_test_" + StringUtils.randomString(10));
+  }
+  @Test public void test() throws IOException, PGPException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, SmackException, MissingUserIdOnKeyException, InterruptedException, XMPPException, XmlPullParserException {
+    DummyConnection aliceCon=new DummyConnection();
+    aliceCon.connect().login();
+    DummyConnection bobCon=new DummyConnection();
+    bobCon.connect().login();
+    FileBasedOpenPgpStore aliceStore=new FileBasedOpenPgpStore(new File(basePath,"alice"));
+    FileBasedOpenPgpStore bobStore=new FileBasedOpenPgpStore(new File(basePath,"bob"));
+    PainlessOpenPgpProvider aliceProvider=new PainlessOpenPgpProvider(aliceStore);
+    PainlessOpenPgpProvider bobProvider=new PainlessOpenPgpProvider(bobStore);
+    OpenPgpManager aliceOpenPgp=OpenPgpManager.getInstanceFor(aliceCon);
+    OpenPgpManager bobOpenPgp=OpenPgpManager.getInstanceFor(bobCon);
+    aliceOpenPgp.setOpenPgpProvider(aliceProvider);
+    bobOpenPgp.setOpenPgpProvider(bobProvider);
+    OXInstantMessagingManager aliceOxim=OXInstantMessagingManager.getInstanceFor(aliceCon);
+    OpenPgpSelf aliceSelf=aliceOpenPgp.getOpenPgpSelf();
+    OpenPgpSelf bobSelf=bobOpenPgp.getOpenPgpSelf();
+    assertFalse(aliceSelf.hasSecretKeyAvailable());
+    assertFalse(bobSelf.hasSecretKeyAvailable());
+    aliceOpenPgp.generateAndImportKeyPair(aliceSelf.getJid());
+    bobOpenPgp.generateAndImportKeyPair(bobSelf.getJid());
+    assertTrue(aliceSelf.hasSecretKeyAvailable());
+    assertTrue(bobSelf.hasSecretKeyAvailable());
+    assertTrue(aliceSelf.isTrusted(aliceSelf.getSigningKeyFingerprint()));
+    assertTrue(bobSelf.isTrusted(bobSelf.getSigningKeyFingerprint()));
+    assertTrue(aliceSelf.getTrustedFingerprints().contains(aliceSelf.getSigningKeyFingerprint()));
+    aliceStore.importPublicKey(bobSelf.getJid(),bobSelf.getAnnouncedPublicKeys().iterator().next());
+    bobStore.importPublicKey(aliceSelf.getJid(),aliceSelf.getAnnouncedPublicKeys().iterator().next());
+    bobStore.setAnnouncedFingerprintsOf(bobSelf.getJid(),Collections.singletonMap(bobSelf.getSigningKeyFingerprint(),new Date()));
+    bobStore.setAnnouncedFingerprintsOf(aliceSelf.getJid(),Collections.singletonMap(aliceSelf.getSigningKeyFingerprint(),new Date()));
+    aliceStore.setAnnouncedFingerprintsOf(aliceSelf.getJid(),Collections.singletonMap(aliceSelf.getSigningKeyFingerprint(),new Date()));
+    aliceStore.setAnnouncedFingerprintsOf(bobSelf.getJid(),Collections.singletonMap(bobSelf.getSigningKeyFingerprint(),new Date()));
+    OpenPgpContact aliceForBob=bobOpenPgp.getOpenPgpContact((EntityBareJid)aliceSelf.getJid());
+    OpenPgpContact bobForAlice=aliceOpenPgp.getOpenPgpContact((EntityBareJid)bobSelf.getJid());
+    assertTrue(aliceForBob.hasUndecidedKeys());
+    assertTrue(bobForAlice.hasUndecidedKeys());
+    assertTrue(aliceForBob.getUndecidedFingerprints().contains(aliceSelf.getSigningKeyFingerprint()));
+    assertTrue(bobForAlice.getUndecidedFingerprints().contains(bobSelf.getSigningKeyFingerprint()));
+    bobForAlice.trust(bobSelf.getSigningKeyFingerprint());
+    aliceForBob.trust(aliceSelf.getSigningKeyFingerprint());
+    assertFalse(aliceForBob.hasUndecidedKeys());
+    assertFalse(bobForAlice.hasUndecidedKeys());
+    MessageBuilder messageBuilder=StanzaBuilder.buildMessage();
+    assertFalse(ExplicitMessageEncryptionElement.hasProtocol(messageBuilder.build(),ExplicitMessageEncryptionElement.ExplicitMessageEncryptionProtocol.openpgpV0));
+    aliceOxim.addOxMessage(messageBuilder,bobForAlice,Collections.singletonList(new Message.Body(null,"Hello World!")));
+    Message message=messageBuilder.build();
+    assertTrue(ExplicitMessageEncryptionElement.hasProtocol(message,ExplicitMessageEncryptionElement.ExplicitMessageEncryptionProtocol.openpgpV0));
+    assertNotNull(OpenPgpElement.fromStanza(message));
+    OpenPgpMessage decrypted=bobOpenPgp.decryptOpenPgpElement(OpenPgpElement.fromStanza(message),aliceForBob);
+    assertEquals(OpenPgpMessage.State.signcrypt,decrypted.getState());
+    SigncryptElement signcryptElement=(SigncryptElement)decrypted.getOpenPgpContentElement();
+    Message.Body body=signcryptElement.getExtension(Message.Body.ELEMENT,Message.Body.NAMESPACE);
+    assertNotNull(body);
+    assertEquals("Hello World!",body.getMessage());
+    OpenPgpMetadata metadata=decrypted.getMetadata();
+    assertTrue(metadata.isSigned() && metadata.isEncrypted());
+    assertNotNull(bobSelf.getSigningKeyRing().getPublicKey(metadata.getDecryptionKey().getKeyId()));
+    PGPPublicKeyRingCollection pubKeys=aliceForBob.getTrustedAnnouncedKeys();
+    assertTrue(metadata.containsVerifiedSignatureFrom(pubKeys.iterator().next()),metadata + " did not contain one of alice' keys " + pubKeys);
+  }
+  @AfterClass @BeforeClass public static void deleteDirs() throws IOException {
+    org.apache.commons.io.FileUtils.deleteDirectory(basePath);
+  }
+}

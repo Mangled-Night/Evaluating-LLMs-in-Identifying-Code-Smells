@@ -1,0 +1,57 @@
+@Override public void takeLeadership(final CuratorFramework curatorFramework){
+  this.isLeader=true;
+  this.instanceId=1;
+  this.ready=true;
+  this.mark=new int[(int)maxinstanceId];
+  List<String> children=null;
+  try {
+    if (this.slavePath != null) {
+      client.delete().forPath(slavePath);
+    }
+    if (client.checkExists().forPath(PATH.concat(INSTANCE_PATH)) != null) {
+      children=client.getChildren().forPath(PATH.concat(INSTANCE_PATH));
+    }
+    if (children != null) {
+      for (      String child : children) {
+        String data=new String(client.getData().forPath(PATH.concat(INSTANCE_PATH.concat("/").concat(child))));
+        if (!"ready".equals(data)) {
+          mark[Integer.parseInt(data)]=1;
+        }
+      }
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.warn("Caught exception while handling zk!",e);
+  }
+  leaderExecutor=Executors.newSingleThreadScheduledExecutor();
+  leaderExecutor.scheduleAtFixedRate(new Runnable(){
+    @Override public void run(){
+      try {
+        while (!client.isStarted()) {
+          Thread.currentThread().yield();
+        }
+        List<String> children=client.getChildren().forPath(PATH.concat(INSTANCE_PATH));
+        int mark2[]=new int[(int)maxinstanceId];
+        for (        String child : children) {
+          String data=new String(client.getData().forPath(PATH.concat("/instance/" + child)));
+          if ("ready".equals(data)) {
+            int i=nextFree();
+            client.setData().forPath(PATH.concat(INSTANCE_PATH.concat("/").concat(child)),("" + i).getBytes());
+            mark2[i]=1;
+          }
+ else {
+            mark2[Integer.parseInt(data)]=1;
+          }
+        }
+        mark=mark2;
+      }
+ catch (      Exception e) {
+        LOGGER.warn("Caught exception while handling zk!",e);
+      }
+    }
+  }
+,0L,3L,TimeUnit.SECONDS);
+  while (true) {
+    Thread.currentThread().yield();
+  }
+}

@@ -1,0 +1,22 @@
+/** 
+ * Return cluster node URI's using the topology query sources and partitions.
+ * @return
+ */
+public Set<RedisURI> getClusterNodes(){
+  Set<RedisURI> result=new HashSet<>();
+  Map<String,RedisURI> knownUris=new HashMap<>();
+  for (  NodeTopologyView view : views) {
+    knownUris.put(view.getNodeId(),view.getRedisURI());
+  }
+  for (  NodeTopologyView view : views) {
+    for (    RedisClusterNode redisClusterNode : view.getPartitions()) {
+      if (knownUris.containsKey(redisClusterNode.getNodeId())) {
+        result.add(knownUris.get(redisClusterNode.getNodeId()));
+      }
+ else {
+        result.add(redisClusterNode.getUri());
+      }
+    }
+  }
+  return result;
+}

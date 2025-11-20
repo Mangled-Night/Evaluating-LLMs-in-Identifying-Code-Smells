@@ -1,0 +1,9 @@
+@Test void xclaim(){
+  redis.xgroupCreate(StreamOffset.latest(key),"group",XGroupCreateArgs.Builder.mkstream());
+  redis.xadd(key,Collections.singletonMap("key","value"));
+  List<StreamMessage<String,String>> messages=redis.xreadgroup(Consumer.from("group","consumer1"),StreamOffset.lastConsumed(key));
+  List<StreamMessage<String,String>> claimedMessages=redis.xclaim(key,Consumer.from("group","consumer2"),0,messages.get(0).getId());
+  assertThat(claimedMessages).hasSize(1).contains(messages.get(0));
+  assertThat(redis.xpending(key,Consumer.from("group","consumer1"),Range.unbounded(),Limit.from(10))).isEmpty();
+  assertThat(redis.xpending(key,Consumer.from("group","consumer2"),Range.unbounded(),Limit.from(10))).hasSize(1);
+}

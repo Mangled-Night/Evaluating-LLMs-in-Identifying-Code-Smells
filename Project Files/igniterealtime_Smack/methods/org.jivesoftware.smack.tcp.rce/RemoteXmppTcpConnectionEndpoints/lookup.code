@@ -1,0 +1,41 @@
+/** 
+ * Lookups remote connection endpoints on the server for XMPP connections over TCP taking A, AAAA and SRV resource records into account. If no host address was configured and all lookups failed, for example with NX_DOMAIN, then result will be populated with the empty list.
+ * @param config the connection configuration to lookup the endpoints for.
+ * @return a lookup result.
+ */
+public static Result<Rfc6120TcpRemoteConnectionEndpoint> lookup(ConnectionConfiguration config){
+  List<Rfc6120TcpRemoteConnectionEndpoint> discoveredRemoteConnectionEndpoints;
+  List<RemoteConnectionEndpointLookupFailure> lookupFailures;
+  final InetAddress hostAddress=config.getHostAddress();
+  final DnsName host=config.getHost();
+  if (hostAddress != null) {
+    lookupFailures=Collections.emptyList();
+    IpTcpRemoteConnectionEndpoint<InternetAddressRR<?>> connectionEndpoint=IpTcpRemoteConnectionEndpoint.from(hostAddress.toString(),config.getPort(),hostAddress);
+    discoveredRemoteConnectionEndpoints=Collections.singletonList(connectionEndpoint);
+  }
+ else   if (host != null) {
+    lookupFailures=new ArrayList<>(1);
+    List<InetAddress> hostAddresses=DNSUtil.getDNSResolver().lookupHostAddress(host,lookupFailures,config.getDnssecMode());
+    if (hostAddresses != null) {
+      discoveredRemoteConnectionEndpoints=new ArrayList<>(hostAddresses.size());
+      UInt16 port=config.getPort();
+      for (      InetAddress inetAddress : hostAddresses) {
+        IpTcpRemoteConnectionEndpoint<InternetAddressRR<?>> connectionEndpoint=IpTcpRemoteConnectionEndpoint.from(host,port,inetAddress);
+        discoveredRemoteConnectionEndpoints.add(connectionEndpoint);
+      }
+    }
+ else {
+      discoveredRemoteConnectionEndpoints=Collections.emptyList();
+    }
+  }
+ else {
+    lookupFailures=new ArrayList<>();
+    DnsName dnsName=config.getXmppServiceDomainAsDnsNameIfPossible();
+    if (dnsName == null) {
+      throw new IllegalStateException();
+    }
+    discoveredRemoteConnectionEndpoints=resolveXmppServiceDomain(dnsName,lookupFailures,config.getDnssecMode());
+  }
+  assert !discoveredRemoteConnectionEndpoints.isEmpty() || !lookupFailures.isEmpty();
+  return new Result<>(discoveredRemoteConnectionEndpoints,lookupFailures);
+}

@@ -1,0 +1,27 @@
+private void processLines(){
+  for (  String line : lines) {
+    int w=font.getWidth(line);
+    x=alignment.getOffset(w,width);
+    for (    char c : line.toCharArray()) {
+      FontCharacter character=font.getCharacterData(c);
+      if (character != null && character.getPage() != null) {
+        MeshBuilder builder=getBuilderFor(character.getPageMat());
+        if (shadowColor.a() != 0) {
+          addCharacter(builder,character,shadowColor,SHADOW_HORIZONTAL_OFFSET,SHADOW_VERTICAL_OFFSET,SHADOW_DEPTH);
+        }
+        addCharacter(builder,character,currentColor,0,0,0);
+        updateUnderline(c,character);
+        x+=character.getxAdvance();
+      }
+ else       if (FontColor.isValid(c)) {
+        applyUnderline();
+        processColorCode(c);
+      }
+ else       if (FontUnderline.isValid(c)) {
+        processUnderlineCode(c);
+      }
+    }
+    applyUnderline();
+    y+=font.getLineHeight();
+  }
+}

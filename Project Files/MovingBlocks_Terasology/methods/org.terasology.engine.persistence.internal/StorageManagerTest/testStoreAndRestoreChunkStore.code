@@ -1,0 +1,15 @@
+@Test public void testStoreAndRestoreChunkStore(StorageManager esm,BlockManager blockManager,ExtraBlockDataManager extraDataManager){
+  Chunk chunk=new ChunkImpl(CHUNK_POS,blockManager,extraDataManager);
+  chunk.setBlock(0,0,0,testBlock);
+  chunk.markReady();
+  ChunkProvider chunkProvider=mock(ChunkProvider.class);
+  when(chunkProvider.getAllChunks()).thenReturn(List.of(chunk));
+  CoreRegistry.put(ChunkProvider.class,chunkProvider);
+  esm.waitForCompletionOfPreviousSaveAndStartSaving();
+  esm.finishSavingAndShutdown();
+  ChunkStore restored=esm.loadChunkStore(CHUNK_POS);
+  assertNotNull(restored);
+  assertEquals(CHUNK_POS,restored.getChunkPosition());
+  assertNotNull(restored.getChunk());
+  assertEquals(testBlock,restored.getChunk().getBlock(0,0,0));
+}

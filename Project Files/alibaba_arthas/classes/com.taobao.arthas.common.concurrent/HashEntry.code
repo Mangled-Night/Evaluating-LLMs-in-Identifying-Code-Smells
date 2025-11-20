@@ -1,0 +1,33 @@
+/** 
+ * ConcurrentReferenceHashMap list entry. Note that this is never exported out as a user-visible Map.Entry. Because the value field is volatile, not final, it is legal wrt the Java Memory Model for an unsynchronized reader to see null instead of initial value when read via a data race.  Although a reordering leading to this is not likely to ever actually occur, the Segment.readValueUnderLock method is used as a backup in case a null (pre-initialized) value is ever seen in an unsynchronized access method.
+ */
+static final class HashEntry<K,V> {
+  final Object keyRef;
+  final int hash;
+  volatile Object valueRef;
+  final HashEntry<K,V> next;
+  HashEntry(  K key,  int hash,  HashEntry<K,V> next,  V value,  ReferenceQueue<Object> refQueue){
+    this.hash=hash;
+    this.next=next;
+    keyRef=new WeakKeyReference<K>(key,hash,refQueue);
+    valueRef=value;
+  }
+  @SuppressWarnings("unchecked") K key(){
+    return ((Reference<K>)keyRef).get();
+  }
+  V value(){
+    return dereferenceValue(valueRef);
+  }
+  @SuppressWarnings("unchecked") V dereferenceValue(  Object value){
+    if (value instanceof WeakKeyReference) {
+      return ((Reference<V>)value).get();
+    }
+    return (V)value;
+  }
+  void setValue(  V value){
+    valueRef=value;
+  }
+  @SuppressWarnings("unchecked") static <K,V>HashEntry<K,V>[] newArray(  int i){
+    return new HashEntry[i];
+  }
+}

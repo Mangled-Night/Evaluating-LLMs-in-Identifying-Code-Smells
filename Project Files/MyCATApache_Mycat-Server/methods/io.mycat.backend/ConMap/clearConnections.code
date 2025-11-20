@@ -1,0 +1,21 @@
+public void clearConnections(String reason,PhysicalDatasource dataSouce){
+  for (  NIOProcessor processor : MycatServer.getInstance().getProcessors()) {
+    ConcurrentMap<Long,BackendConnection> map=processor.getBackends();
+    Iterator<Entry<Long,BackendConnection>> itor=map.entrySet().iterator();
+    while (itor.hasNext()) {
+      Entry<Long,BackendConnection> entry=itor.next();
+      BackendConnection con=entry.getValue();
+      if (con instanceof MySQLConnection) {
+        if (((MySQLConnection)con).getPool() == dataSouce) {
+          con.close(reason);
+          itor.remove();
+        }
+      }
+ else       if ((con instanceof JDBCConnection) && (((JDBCConnection)con).getPool() == dataSouce)) {
+        con.close(reason);
+        itor.remove();
+      }
+    }
+  }
+  items.clear();
+}

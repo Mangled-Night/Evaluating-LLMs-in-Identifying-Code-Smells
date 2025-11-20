@@ -1,0 +1,94 @@
+/** 
+ * 改写sql：需要加limit的加上
+ */
+@Override public void changeSql(SchemaConfig schema,RouteResultset rrs,SQLStatement stmt,LayerCachePool cachePool) throws SQLNonTransientException {
+  tryRoute(schema,rrs,cachePool);
+  rrs.copyLimitToNodes();
+  SQLSelectStatement selectStmt=(SQLSelectStatement)stmt;
+  SQLSelectQuery sqlSelectQuery=selectStmt.getSelect().getQuery();
+  if (sqlSelectQuery instanceof MySqlSelectQueryBlock) {
+    MySqlSelectQueryBlock mysqlSelectQuery=(MySqlSelectQueryBlock)selectStmt.getSelect().getQuery();
+    int limitStart=0;
+    int limitSize=schema.getDefaultMaxLimit();
+    SQLSelectGroupByClause groupByClause=mysqlSelectQuery.getGroupBy();
+    if (groupByClause != null && groupByClause.getHaving() != null && isRoutMultiNode(schema,rrs)) {
+      groupByClause.setHaving(null);
+    }
+    Map<String,Map<String,Set<ColumnRoutePair>>> allConditions=getAllConditions();
+    boolean isNeedAddLimit=isNeedAddLimit(schema,rrs,mysqlSelectQuery,allConditions);
+    if (isNeedAddLimit) {
+      SQLLimit limit=new SQLLimit();
+      limit.setRowCount(new SQLIntegerExpr(limitSize));
+      mysqlSelectQuery.setLimit(limit);
+      rrs.setLimitSize(limitSize);
+      String sql=getSql(rrs,stmt,isNeedAddLimit);
+      rrs.changeNodeSqlAfterAddLimit(schema,getCurentDbType(),sql,0,limitSize,true);
+    }
+    SQLLimit limit=mysqlSelectQuery.getLimit();
+    if (limit != null && !isNeedAddLimit) {
+      SQLIntegerExpr offset=(SQLIntegerExpr)limit.getOffset();
+      SQLIntegerExpr count=(SQLIntegerExpr)limit.getRowCount();
+      if (offset != null) {
+        limitStart=offset.getNumber().intValue();
+        rrs.setLimitStart(limitStart);
+      }
+      if (count != null) {
+        limitSize=count.getNumber().intValue();
+        rrs.setLimitSize(limitSize);
+      }
+      if (isNeedChangeLimit(rrs)) {
+        SQLLimit changedLimit=new SQLLimit();
+        changedLimit.setRowCount(new SQLIntegerExpr(limitStart + limitSize));
+        if (offset != null) {
+          if (limitStart < 0) {
+            String msg="You have an error in your SQL syntax; check the manual that " + "corresponds to your MySQL server version for the right syntax to use near '" + limitStart + "'";
+            throw new SQLNonTransientException(ErrorCode.ER_PARSE_ERROR + " - " + msg);
+          }
+ else {
+            changedLimit.setOffset(new SQLIntegerExpr(0));
+          }
+        }
+        mysqlSelectQuery.setLimit(changedLimit);
+        String sql=getSql(rrs,stmt,isNeedAddLimit);
+        rrs.changeNodeSqlAfterAddLimit(schema,getCurentDbType(),sql,0,limitStart + limitSize,true);
+        ctx.setSql(sql);
+      }
+ else {
+        rrs.changeNodeSqlAfterAddLimit(schema,getCurentDbType(),getCtx().getSql(),rrs.getLimitStart(),rrs.getLimitSize(),true);
+      }
+    }
+    if (rrs.isDistTable()) {
+      for (      RouteResultsetNode node : rrs.getNodes()) {
+        String sql=selectStmt.toString();
+        SQLStatementParser parser=null;
+        if (schema.isNeedSupportMultiDBType()) {
+          parser=new MycatStatementParser(sql);
+        }
+ else {
+          parser=new MySqlStatementParser(sql);
+        }
+        SQLSelectStatement newStmt=null;
+        try {
+          newStmt=(SQLSelectStatement)parser.parseStatement();
+        }
+ catch (        Exception t) {
+          LOGGER.error("DruidMycatRouteStrategyError",t);
+          throw new SQLSyntaxErrorException(t);
+        }
+        MySqlSelectQueryBlock query=(MySqlSelectQueryBlock)newStmt.getSelect().getQuery();
+        SQLTableSource from2=query.getFrom();
+        if (from2 instanceof SQLSubqueryTableSource) {
+          SQLSubqueryTableSource from=(SQLSubqueryTableSource)from2;
+          MySqlSelectQueryBlock query2=(MySqlSelectQueryBlock)from.getSelect().getQuery();
+          repairExpr(query2.getFrom(),node);
+          node.setStatement(newStmt.toString());
+        }
+ else {
+          repairExpr(from2,node);
+          node.setStatement(newStmt.toString());
+        }
+      }
+    }
+    rrs.setCacheAble(isNeedCache(schema,rrs,mysqlSelectQuery,allConditions));
+  }
+}

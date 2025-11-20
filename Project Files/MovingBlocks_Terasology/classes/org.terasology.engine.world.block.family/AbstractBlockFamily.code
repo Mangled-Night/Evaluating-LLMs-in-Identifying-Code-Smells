@@ -1,0 +1,40 @@
+public abstract class AbstractBlockFamily implements BlockFamily {
+  private BlockUri uri;
+  private Set<String> categories=Sets.newHashSet();
+  protected AbstractBlockFamily(  BlockFamilyDefinition definition,  BlockShape shape,  BlockBuilderHelper blockBuilder){
+    setBlockUri(new BlockUri(definition.getUrn()));
+    setCategory(definition.getCategories());
+  }
+  protected AbstractBlockFamily(  BlockFamilyDefinition definition,  BlockBuilderHelper blockBuilder){
+    setBlockUri(new BlockUri(definition.getUrn()));
+    setCategory(definition.getCategories());
+  }
+  protected void setCategory(  Iterable<String> newCategories){
+    for (    String category : newCategories) {
+      this.categories.add(category.toLowerCase(Locale.ENGLISH));
+    }
+  }
+  protected void setBlockUri(  BlockUri newUri){
+    uri=newUri;
+  }
+  @Override public BlockUri getURI(){
+    return uri;
+  }
+  @Override public String getDisplayName(){
+    return getArchetypeBlock().getDisplayName();
+  }
+  @Override public Iterable<String> getCategories(){
+    return categories;
+  }
+  @Override public boolean hasCategory(  String category){
+    return categories.contains(category.toLowerCase(Locale.ENGLISH));
+  }
+  @Override public String toString(){
+    String familyType="";
+    RegisterBlockFamily registerInfo=this.getClass().getAnnotation(RegisterBlockFamily.class);
+    if (registerInfo != null) {
+      familyType=registerInfo.value();
+    }
+    return "BlockFamily[" + familyType + ","+ uri.toString()+ "]";
+  }
+}

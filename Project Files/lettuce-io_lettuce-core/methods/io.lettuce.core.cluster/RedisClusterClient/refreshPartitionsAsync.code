@@ -1,0 +1,27 @@
+/** 
+ * Asynchronously reload partitions and re-initialize the distribution table.
+ * @return a {@link CompletionStage} that signals completion.
+ * @since 6.0
+ */
+public CompletionStage<Void> refreshPartitionsAsync(){
+  List<RedisURI> sources=new ArrayList<>();
+  Iterable<RedisURI> topologyRefreshSource=getTopologyRefreshSource();
+  for (  RedisURI redisURI : topologyRefreshSource) {
+    sources.add(redisURI);
+  }
+  EventRecorder.RecordableEvent event=EventRecorder.getInstance().start(new TopologyRefreshEvent(sources));
+  if (partitions == null) {
+    return initializePartitions().thenAccept(Partitions::updateCache).whenComplete((unused,throwable) -> event.record());
+  }
+  return loadPartitionsAsync().thenAccept(loadedPartitions -> {
+    if (TopologyComparators.isChanged(getPartitions(),loadedPartitions)) {
+      logger.debug("Using a new cluster topology");
+      List<RedisClusterNode> before=new ArrayList<>(getPartitions());
+      List<RedisClusterNode> after=new ArrayList<>(loadedPartitions);
+      getResources().eventBus().publish(new ClusterTopologyChangedEvent(before,after));
+    }
+    this.partitions.reload(loadedPartitions.getPartitions());
+    updatePartitionsInConnections();
+  }
+).whenComplete((unused,throwable) -> event.record());
+}

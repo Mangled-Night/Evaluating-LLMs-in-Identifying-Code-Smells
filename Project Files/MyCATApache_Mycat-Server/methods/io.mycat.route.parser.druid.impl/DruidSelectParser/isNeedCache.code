@@ -1,0 +1,22 @@
+private boolean isNeedCache(SchemaConfig schema,RouteResultset rrs,MySqlSelectQueryBlock mysqlSelectQuery,Map<String,Map<String,Set<ColumnRoutePair>>> allConditions){
+  if (ctx.getTables() == null || ctx.getTables().size() == 0) {
+    return false;
+  }
+  TableConfig tc=schema.getTables().get(ctx.getTables().get(0));
+  if (tc == null || (ctx.getTables().size() == 1 && tc.isGlobalTable())) {
+    return false;
+  }
+ else {
+    if (ctx.getTables().size() == 1) {
+      String tableName=ctx.getTables().get(0);
+      String primaryKey=schema.getTables().get(tableName).getPrimaryKey();
+      if (ctx.getRouteCalculateUnit().getTablesAndConditions().get(tableName) != null && ctx.getRouteCalculateUnit().getTablesAndConditions().get(tableName).get(primaryKey) != null && tc.getDataNodes().size() > 1) {
+        return false;
+      }
+    }
+ else     if (RouterUtil.isAllGlobalTable(ctx,schema)) {
+      return false;
+    }
+    return true;
+  }
+}

@@ -1,0 +1,27 @@
+private void updateEntity(NetData.UpdateEntityMessage updateEntity){
+  EntityRef currentEntity=networkSystem.getEntity(updateEntity.getNetId());
+  if (currentEntity.exists()) {
+    NetworkComponent netComp=currentEntity.getComponent(NetworkComponent.class);
+    if (netComp == null) {
+      logger.error("Updating entity with no network component: {}, expected netId {}",currentEntity,updateEntity.getNetId());
+      return;
+    }
+    if (netComp.getNetworkId() != updateEntity.getNetId()) {
+      logger.error("Network ID wrong before update");
+    }
+    boolean blockEntityBefore=currentEntity.hasComponent(BlockComponent.class);
+    entitySerializer.deserializeOnto(currentEntity,updateEntity.getEntity());
+    BlockComponent blockComponent=currentEntity.getComponent(BlockComponent.class);
+    if (blockComponent != null && !blockEntityBefore) {
+      if (!blockEntityRegistry.getExistingBlockEntityAt(blockComponent.getPosition()).equals(currentEntity)) {
+        logger.error("Failed to associated new block entity");
+      }
+    }
+    if (netComp.getNetworkId() != updateEntity.getNetId()) {
+      logger.error("Network ID lost in update: {}, {} -> {}",currentEntity,updateEntity.getNetId(),netComp.getNetworkId());
+    }
+  }
+ else {
+    logger.warn("Received update for non-existent entity {}",updateEntity.getNetId());
+  }
+}

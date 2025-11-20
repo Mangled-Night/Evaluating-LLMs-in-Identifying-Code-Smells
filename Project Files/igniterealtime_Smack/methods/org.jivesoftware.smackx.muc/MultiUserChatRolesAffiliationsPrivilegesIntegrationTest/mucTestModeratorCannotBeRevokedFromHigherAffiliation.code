@@ -1,0 +1,29 @@
+/** 
+ * Asserts that a moderator cannot revoke moderator privileges from a moderator with a higher affiliation than themselves. <p>From XEP-0045 § 5.1.3 and §5.2.1:</p> <blockquote> A moderator SHOULD NOT be allowed to revoke moderation privileges from someone with a higher affiliation than themselves (i.e., an unaffiliated moderator SHOULD NOT be allowed to revoke moderation privileges from an admin or an owner, and an admin SHOULD NOT be allowed to revoke moderation privileges from an owner) </blockquote>
+ * @throws Exception when errors occur
+ */
+@SmackIntegrationTest public void mucTestModeratorCannotBeRevokedFromHigherAffiliation() throws Exception {
+  EntityBareJid mucAddress=getRandomRoom("smack-inttest");
+  MultiUserChat mucAsSeenByOne=mucManagerOne.getMultiUserChat(mucAddress);
+  MultiUserChat mucAsSeenByTwo=mucManagerTwo.getMultiUserChat(mucAddress);
+  MultiUserChat mucAsSeenByThree=mucManagerThree.getMultiUserChat(mucAddress);
+  final Resourcepart nicknameOne=Resourcepart.from("one-" + randomString);
+  final Resourcepart nicknameTwo=Resourcepart.from("two-" + randomString);
+  final Resourcepart nicknameThree=Resourcepart.from("three-" + randomString);
+  createModeratedMuc(mucAsSeenByOne,nicknameOne);
+  try {
+    mucAsSeenByTwo.join(nicknameTwo);
+    mucAsSeenByThree.join(nicknameThree);
+    mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
+    mucAsSeenByOne.grantModerator(nicknameThree);
+    XMPPException.XMPPErrorException xe1=assertThrows(XMPPException.XMPPErrorException.class,() -> mucAsSeenByTwo.revokeModerator(nicknameOne));
+    XMPPException.XMPPErrorException xe2=assertThrows(XMPPException.XMPPErrorException.class,() -> mucAsSeenByThree.revokeModerator(nicknameOne));
+    XMPPException.XMPPErrorException xe3=assertThrows(XMPPException.XMPPErrorException.class,() -> mucAsSeenByThree.revokeModerator(nicknameTwo));
+    assertEquals(xe1.getStanzaError().getCondition().toString(),"not-allowed");
+    assertEquals(xe2.getStanzaError().getCondition().toString(),"not-allowed");
+    assertEquals(xe3.getStanzaError().getCondition().toString(),"not-allowed");
+  }
+  finally {
+    tryDestroy(mucAsSeenByOne);
+  }
+}

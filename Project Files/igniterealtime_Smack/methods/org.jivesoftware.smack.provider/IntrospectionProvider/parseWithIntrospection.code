@@ -1,0 +1,25 @@
+public static Object parseWithIntrospection(Class<?> objectClass,XmlPullParser parser,final int initialDepth) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, XmlPullParserException, IOException, IllegalArgumentException, InvocationTargetException, ClassNotFoundException {
+  ParserUtils.assertAtStartTag(parser);
+  Object object=objectClass.getConstructor().newInstance();
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String name=parser.getName();
+    String stringValue=parser.nextText();
+  Class<?> propertyType=object.getClass().getMethod("get" + Character.toUpperCase(name.charAt(0)) + name.substring(1)).getReturnType();
+Object value=decode(propertyType,stringValue);
+object.getClass().getMethod("set" + Character.toUpperCase(name.charAt(0)) + name.substring(1),propertyType).invoke(object,value);
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+ParserUtils.assertAtEndTag(parser);
+return object;
+}

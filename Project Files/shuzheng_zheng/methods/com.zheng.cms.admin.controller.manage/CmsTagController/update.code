@@ -1,0 +1,14 @@
+@ApiOperation(value="修改标签") @RequiresPermissions("cms:tag:update") @RequestMapping(value="/update/{id}",method=RequestMethod.GET) public String update(@PathVariable("id") int id,ModelMap modelMap){
+  CmsTag tag=cmsTagService.selectByPrimaryKey(id);
+  modelMap.put("tag",tag);
+  return "/manage/tag/update.jsp";
+}
+@ApiOperation(value="修改标签") @RequiresPermissions("cms:tag:update") @RequestMapping(value="/update/{id}",method=RequestMethod.POST) @ResponseBody public Object update(@PathVariable("id") int id,CmsTag cmsTag){
+  ComplexResult result=FluentValidator.checkAll().on(cmsTag.getName(),new LengthValidator(1,20,"名称")).doValidate().result(ResultCollectors.toComplex());
+  if (!result.isSuccess()) {
+    return new CmsResult(CmsResultConstant.INVALID_LENGTH,result.getErrors());
+  }
+  cmsTag.setTagId(id);
+  int count=cmsTagService.updateByPrimaryKeySelective(cmsTag);
+  return new CmsResult(CmsResultConstant.SUCCESS,count);
+}

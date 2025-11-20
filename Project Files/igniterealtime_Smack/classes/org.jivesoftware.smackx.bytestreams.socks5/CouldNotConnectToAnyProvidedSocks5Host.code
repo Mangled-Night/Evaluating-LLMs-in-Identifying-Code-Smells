@@ -1,0 +1,29 @@
+public static final class CouldNotConnectToAnyProvidedSocks5Host extends Socks5Exception {
+  /** 
+ */
+  private static final long serialVersionUID=1L;
+  private final Map<StreamHost,Exception> streamHostsExceptions;
+  private CouldNotConnectToAnyProvidedSocks5Host(  String message,  Map<StreamHost,Exception> streamHostsExceptions){
+    super(message);
+    this.streamHostsExceptions=Collections.unmodifiableMap(streamHostsExceptions);
+  }
+  public Map<StreamHost,Exception> getStreamHostsExceptions(){
+    return streamHostsExceptions;
+  }
+  static CouldNotConnectToAnyProvidedSocks5Host construct(  Map<StreamHost,Exception> streamHostsExceptions){
+    assert !streamHostsExceptions.isEmpty();
+    StringBuilder sb=new StringBuilder(256);
+    sb.append("Could not establish socket with any provided SOCKS5 stream host.");
+    Iterator<StreamHost> it=streamHostsExceptions.keySet().iterator();
+    while (it.hasNext()) {
+      StreamHost streamHost=it.next();
+      Exception exception=streamHostsExceptions.get(streamHost);
+      sb.append(' ').append(streamHost).append(" Exception: '").append(exception).append('\'');
+      if (it.hasNext()) {
+        sb.append(',');
+      }
+    }
+    String message=sb.toString();
+    return new CouldNotConnectToAnyProvidedSocks5Host(message,streamHostsExceptions);
+  }
+}

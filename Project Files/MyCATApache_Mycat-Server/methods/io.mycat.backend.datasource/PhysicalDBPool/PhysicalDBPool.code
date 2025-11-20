@@ -1,0 +1,29 @@
+public PhysicalDBPool(String name,DataHostConfig conf,PhysicalDatasource[] writeSources,Map<Integer,PhysicalDatasource[]> readSources,int balance,int writeType){
+  this.hostName=name;
+  this.dataHostConfig=conf;
+  this.writeSources=writeSources;
+  this.banlance=balance;
+  this.writeType=writeType;
+switch (dataHostConfig.getBalanceType()) {
+case WEIGHTED_ROUND_ROBIN:
+    loadBalance=new WeightedRoundRobinLoadBalance();
+  break;
+case LEAST_ACTIVE:
+loadBalance=new LeastActiveLoadBalance();
+break;
+default :
+loadBalance=new RandomLoadBalance();
+break;
+}
+Iterator<Map.Entry<Integer,PhysicalDatasource[]>> entryItor=readSources.entrySet().iterator();
+while (entryItor.hasNext()) {
+PhysicalDatasource[] values=entryItor.next().getValue();
+if (values.length == 0) {
+entryItor.remove();
+}
+}
+this.readSources=readSources;
+this.allDs=this.genAllDataSources();
+LOGGER.info("total resources of dataHost " + this.hostName + " is :"+ allDs.size());
+setDataSourceProps();
+}

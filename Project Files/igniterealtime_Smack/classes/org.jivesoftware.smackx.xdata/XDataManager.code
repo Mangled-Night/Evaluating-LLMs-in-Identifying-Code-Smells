@@ -1,0 +1,48 @@
+public final class XDataManager extends Manager {
+  /** 
+ * The value of  {@link DataForm#NAMESPACE}.
+ */
+  public static final String NAMESPACE=DataForm.NAMESPACE;
+static {
+    FormFieldChildElementProviderManager.addFormFieldChildElementProvider(new DescriptionProvider());
+    XMPPConnectionRegistry.addConnectionCreationListener(new ConnectionCreationListener(){
+      @Override public void connectionCreated(      XMPPConnection connection){
+        getInstanceFor(connection);
+      }
+    }
+);
+  }
+  private static final Map<XMPPConnection,XDataManager> INSTANCES=new WeakHashMap<>();
+  /** 
+ * Get the XDataManager for the given XMPP connection.
+ * @param connection the XMPPConnection.
+ * @return the XDataManager
+ */
+  public static synchronized XDataManager getInstanceFor(  XMPPConnection connection){
+    XDataManager xDataManager=INSTANCES.get(connection);
+    if (xDataManager == null) {
+      xDataManager=new XDataManager(connection);
+      INSTANCES.put(connection,xDataManager);
+    }
+    return xDataManager;
+  }
+  private XDataManager(  XMPPConnection connection){
+    super(connection);
+    ServiceDiscoveryManager serviceDiscoveryManager=ServiceDiscoveryManager.getInstanceFor(connection);
+    serviceDiscoveryManager.addFeature(NAMESPACE);
+  }
+  /** 
+ * Check if the given entity supports data forms.
+ * @param jid the JID of the entity to check.
+ * @return true if the entity supports data forms.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @see <a href="http://xmpp.org/extensions/xep-0004.html#disco">XEP-0004: Data Forms § 6. Service Discovery</a>
+ * @since 4.1
+ */
+  public boolean isSupported(  Jid jid) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    return ServiceDiscoveryManager.getInstanceFor(connection()).supportsFeature(jid,NAMESPACE);
+  }
+}

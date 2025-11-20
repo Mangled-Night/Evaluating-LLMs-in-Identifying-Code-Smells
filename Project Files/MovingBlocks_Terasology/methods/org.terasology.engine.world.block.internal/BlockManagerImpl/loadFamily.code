@@ -1,0 +1,25 @@
+private Optional<BlockFamily> loadFamily(BlockUri uri){
+  Optional<BlockFamilyDefinition> familyDef=assetManager.getAsset(uri.getBlockFamilyDefinitionUrn(),BlockFamilyDefinition.class);
+  if (familyDef.isPresent() && familyDef.get().isLoadable()) {
+    if (familyDef.get().isFreeform()) {
+      ResourceUrn shapeUrn;
+      if (uri.getShapeUrn().isPresent()) {
+        shapeUrn=uri.getShapeUrn().get();
+      }
+ else {
+        shapeUrn=CUBE_SHAPE_URN;
+      }
+      Optional<BlockShape> shape=assetManager.getAsset(shapeUrn,BlockShape.class);
+      if (shape.isPresent()) {
+        return Optional.of(familyDef.get().createFamily(shape.get(),blockBuilder));
+      }
+    }
+ else     if (!familyDef.get().isFreeform()) {
+      return Optional.of(familyDef.get().createFamily(blockBuilder));
+    }
+  }
+ else {
+    logger.error("Family not available: {}",uri);
+  }
+  return Optional.empty();
+}

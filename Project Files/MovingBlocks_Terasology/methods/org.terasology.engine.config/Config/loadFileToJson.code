@@ -1,0 +1,14 @@
+public Optional<JsonObject> loadFileToJson(Path configPath){
+  if (Files.isRegularFile(configPath)) {
+    try (Reader reader=Files.newBufferedReader(configPath,TerasologyConstants.CHARSET)){
+      JsonElement userConfig=new JsonParser().parse(reader);
+      if (userConfig.isJsonObject()) {
+        return Optional.of(userConfig.getAsJsonObject());
+      }
+    }
+ catch (    IOException e) {
+      logger.error("Failed to load config file {}, falling back on default config",configPath);
+    }
+  }
+  return Optional.empty();
+}

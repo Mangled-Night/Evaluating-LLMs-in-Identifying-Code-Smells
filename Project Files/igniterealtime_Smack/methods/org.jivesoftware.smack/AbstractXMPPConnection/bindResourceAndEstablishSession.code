@@ -1,0 +1,19 @@
+protected Resourcepart bindResourceAndEstablishSession(Resourcepart resource) throws SmackException, InterruptedException, XMPPException {
+  LOGGER.finer("Waiting for last features to be received before continuing with resource binding");
+  waitForConditionOrThrowConnectionException(() -> lastFeaturesReceived,"last stream features received from server");
+  if (!hasFeature(Bind.ELEMENT,Bind.NAMESPACE)) {
+    throw new ResourceBindingNotOfferedException();
+  }
+  Bind bindResource=Bind.newSet(resource);
+  StanzaCollector packetCollector=createStanzaCollectorAndSend(new StanzaIdFilter(bindResource),bindResource);
+  Bind response=packetCollector.nextResultOrThrow();
+  user=response.getJid();
+  xmppServiceDomain=user.asDomainBareJid();
+  Session.Feature sessionFeature=getFeature(Session.Feature.class);
+  if (sessionFeature != null && !sessionFeature.isOptional()) {
+    Session session=new Session();
+    packetCollector=createStanzaCollectorAndSend(new StanzaIdFilter(session),session);
+    packetCollector.nextResultOrThrow();
+  }
+  return response.getJid().getResourcepart();
+}

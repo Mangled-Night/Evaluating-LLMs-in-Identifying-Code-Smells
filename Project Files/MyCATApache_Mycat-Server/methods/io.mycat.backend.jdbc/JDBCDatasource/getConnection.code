@@ -1,0 +1,18 @@
+Connection getConnection() throws SQLException {
+  DBHostConfig cfg=getConfig();
+  Connection connection=DriverManager.getConnection(cfg.getUrl(),cfg.getUser(),cfg.getPassword());
+  String initSql=getHostConfig().getConnectionInitSql();
+  if (initSql != null && !"".equals(initSql)) {
+    Statement statement=null;
+    try {
+      statement=connection.createStatement();
+      statement.execute(initSql);
+    }
+  finally {
+      if (statement != null) {
+        statement.close();
+      }
+    }
+  }
+  return connection;
+}

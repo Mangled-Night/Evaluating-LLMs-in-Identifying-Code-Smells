@@ -1,0 +1,57 @@
+public void testCompleteWithBridge(){
+  for (int i=0; i < 1; i+=2) {
+    final int n=i;
+    Thread t=new Thread(new Runnable(){
+      public void run(){
+        try {
+          XMPPTCPConnection x0=getConnection(n);
+          XMPPTCPConnection x1=getConnection(n + 1);
+          BridgedTransportManager btm0=new BridgedTransportManager(x0);
+          BridgedTransportManager btm1=new BridgedTransportManager(x1);
+          JingleMediaManager jingleMediaManager0=new JmfMediaManager(btm0);
+          JingleMediaManager jingleMediaManager1=new JmfMediaManager(btm1);
+          List<JingleMediaManager> jml0=new ArrayList<JingleMediaManager>();
+          List<JingleMediaManager> jml1=new ArrayList<JingleMediaManager>();
+          jml0.add(jingleMediaManager0);
+          jml1.add(jingleMediaManager1);
+          final JingleManager jm0=new JingleManager(x0,jml0);
+          final JingleManager jm1=new JingleManager(x1,jml1);
+          jm0.addCreationListener(btm0);
+          jm1.addCreationListener(btm1);
+          jm1.addJingleSessionRequestListener(new JingleSessionRequestListener(){
+            public void sessionRequested(            final JingleSessionRequest request){
+              try {
+                JingleSession session=request.accept();
+                session.startIncoming();
+              }
+ catch (              XMPPException e) {
+                LOGGER.log(Level.WARNING,"exception",e);
+              }
+            }
+          }
+);
+          JingleSession js0=jm0.createOutgoingJingleSession(x1.getUser());
+          js0.startOutgoing();
+          Thread.sleep(20000);
+          js0.sendStanza(js0.createJingleError(null,JingleError.UNSUPPORTED_TRANSPORTS));
+          Thread.sleep(20000);
+          js0.terminate();
+          Thread.sleep(3000);
+          x0.disconnect();
+          x1.disconnect();
+        }
+ catch (        Exception e) {
+          LOGGER.log(Level.WARNING,"exception",e);
+        }
+      }
+    }
+);
+    t.start();
+  }
+  try {
+    Thread.sleep(250000);
+  }
+ catch (  InterruptedException e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+}

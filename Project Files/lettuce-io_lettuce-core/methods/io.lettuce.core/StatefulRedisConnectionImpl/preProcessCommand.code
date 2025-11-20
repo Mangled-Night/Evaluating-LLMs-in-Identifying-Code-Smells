@@ -1,0 +1,64 @@
+protected <T>RedisCommand<K,V,T> preProcessCommand(RedisCommand<K,V,T> command){
+  RedisCommand<K,V,T> local=command;
+  if (local.getType().name().equals(AUTH.name())) {
+    local=attachOnComplete(local,status -> {
+      if ("OK".equals(status)) {
+        List<char[]> args=CommandArgsAccessor.getCharArrayArguments(command.getArgs());
+        if (!args.isEmpty()) {
+          state.setUserNamePassword(args);
+        }
+ else {
+          List<String> strings=CommandArgsAccessor.getStringArguments(command.getArgs());
+          state.setUserNamePassword(strings.stream().map(String::toCharArray).collect(Collectors.toList()));
+        }
+      }
+    }
+);
+  }
+  if (local.getType().name().equals(SELECT.name())) {
+    local=attachOnComplete(local,status -> {
+      if ("OK".equals(status)) {
+        Long db=CommandArgsAccessor.getFirstInteger(command.getArgs());
+        if (db != null) {
+          state.setDb(db.intValue());
+        }
+      }
+    }
+);
+  }
+  if (local.getType().name().equals(READONLY.name())) {
+    local=attachOnComplete(local,status -> {
+      if ("OK".equals(status)) {
+        state.setReadOnly(true);
+      }
+    }
+);
+  }
+  if (local.getType().name().equals(READWRITE.name())) {
+    local=attachOnComplete(local,status -> {
+      if ("OK".equals(status)) {
+        state.setReadOnly(false);
+      }
+    }
+);
+  }
+  if (local.getType().name().equals(DISCARD.name())) {
+    if (multi != null) {
+      multi.cancel();
+      multi=null;
+    }
+  }
+  if (local.getType().name().equals(EXEC.name())) {
+    MultiOutput<K,V> multiOutput=this.multi;
+    this.multi=null;
+    if (multiOutput == null) {
+      multiOutput=new MultiOutput<>(codec);
+    }
+    local.setOutput((MultiOutput)multiOutput);
+  }
+  if (multi != null && !local.getType().name().equals(MULTI.name())) {
+    local=new TransactionalCommand<>(local);
+    multi.add(local);
+  }
+  return local;
+}

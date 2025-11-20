@@ -1,0 +1,23 @@
+@Test void georadiusWithArgs(){
+  prepareGeo();
+  GeoArgs geoArgs=new GeoArgs().withHash().withCoordinates().withDistance().withCount(1).desc();
+  List<GeoWithin<String>> result=redis.georadius(key,8.665351,49.553302,5,GeoArgs.Unit.km,geoArgs);
+  assertThat(result).hasSize(1);
+  GeoWithin<String> weinheim=result.get(0);
+  assertThat(weinheim.getMember()).isEqualTo("Weinheim");
+  assertThat(weinheim.getGeohash()).isEqualTo(3666615932941099L);
+  GeoValue<String> value=weinheim.toValue();
+  assertThat(value.getValue()).isEqualTo("Weinheim");
+  assertThat(value.getLongitude()).isEqualTo(8.663875,offset(0.5));
+  assertThat(value.getLatitude()).isEqualTo(49.52825,offset(0.5));
+  assertThat(weinheim.getDistance()).isEqualTo(2.7882,offset(0.5));
+  assertThat(weinheim.getCoordinates().getX().doubleValue()).isEqualTo(8.663875,offset(0.5));
+  assertThat(weinheim.getCoordinates().getY().doubleValue()).isEqualTo(49.52825,offset(0.5));
+  result=redis.georadius(key,8.665351,49.553302,1,GeoArgs.Unit.km,new GeoArgs());
+  assertThat(result).hasSize(1);
+  GeoWithin<String> bahn=result.get(0);
+  assertThat(bahn.getMember()).isEqualTo("Bahn");
+  assertThat(bahn.getGeohash()).isNull();
+  assertThat(bahn.getDistance()).isNull();
+  assertThat(bahn.getCoordinates()).isNull();
+}

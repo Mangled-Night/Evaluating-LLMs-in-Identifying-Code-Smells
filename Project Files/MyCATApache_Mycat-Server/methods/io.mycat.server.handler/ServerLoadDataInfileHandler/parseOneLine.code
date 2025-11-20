@@ -1,0 +1,37 @@
+private void parseOneLine(List<SQLExpr> columns,String tableName,String[] line,boolean toFile,String lineEnd){
+  RouteResultset rrs=tryDirectRoute(sql,line);
+  if (rrs == null || rrs.getNodes() == null || rrs.getNodes().length == 0) {
+    String insertSql=makeSimpleInsert(columns,line,tableName,true);
+    rrs=serverConnection.routeSQL(insertSql,ServerParse.INSERT);
+  }
+  if (rrs == null || rrs.getNodes() == null || rrs.getNodes().length == 0) {
+  }
+ else {
+    for (    RouteResultsetNode routeResultsetNode : rrs.getNodes()) {
+      String name=routeResultsetNode.getName();
+      LoadData data=routeResultMap.get(name);
+      if (data == null) {
+        data=new LoadData();
+        data.setCharset(loadData.getCharset());
+        data.setEnclose(loadData.getEnclose());
+        data.setFieldTerminatedBy(loadData.getFieldTerminatedBy());
+        data.setLineTerminatedBy(loadData.getLineTerminatedBy());
+        data.setEscape(loadData.getEscape());
+        routeResultMap.put(name,data);
+      }
+      String jLine=joinField(line,data);
+      if (shoudAddSlot) {
+        jLine=jLine + loadData.getFieldTerminatedBy() + routeResultsetNode.getSlot();
+      }
+      if (data.getData() == null) {
+        data.setData(Lists.newArrayList(jLine));
+      }
+ else {
+        data.getData().add(jLine);
+      }
+      if (toFile && data.getData().size() > 10000) {
+        saveDataToFile(data,name);
+      }
+    }
+  }
+}

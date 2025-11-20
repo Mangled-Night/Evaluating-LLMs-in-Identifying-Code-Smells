@@ -1,0 +1,28 @@
+/** 
+ * 所有分类数据
+ * @return 所有分类数据
+ */
+@GetMapping("all") public Object queryAll(){
+  if (HomeCacheManager.hasData(HomeCacheManager.CATALOG)) {
+    return ResponseUtil.ok(HomeCacheManager.getCacheData(HomeCacheManager.CATALOG));
+  }
+  List<LitemallCategory> l1CatList=categoryService.queryL1();
+  Map<Integer,List<LitemallCategory>> allList=new HashMap<>();
+  List<LitemallCategory> sub;
+  for (  LitemallCategory category : l1CatList) {
+    sub=categoryService.queryByPid(category.getId());
+    allList.put(category.getId(),sub);
+  }
+  LitemallCategory currentCategory=l1CatList.get(0);
+  List<LitemallCategory> currentSubCategory=null;
+  if (null != currentCategory) {
+    currentSubCategory=categoryService.queryByPid(currentCategory.getId());
+  }
+  Map<String,Object> data=new HashMap<String,Object>();
+  data.put("categoryList",l1CatList);
+  data.put("allList",allList);
+  data.put("currentCategory",currentCategory);
+  data.put("currentSubCategory",currentSubCategory);
+  HomeCacheManager.loadData(HomeCacheManager.CATALOG,data);
+  return ResponseUtil.ok(data);
+}

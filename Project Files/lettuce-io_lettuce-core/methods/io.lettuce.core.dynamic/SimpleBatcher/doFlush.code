@@ -1,0 +1,19 @@
+private List<? extends RedisCommand<?,?,?>> doFlush(boolean forcedFlush,boolean defaultFlush,int consume){
+  List<RedisCommand<Object,Object,Object>> commands=null;
+  if (forcedFlush) {
+    commands=prepareForceFlush();
+  }
+ else   if (defaultFlush) {
+    commands=prepareDefaultFlush(consume);
+  }
+  if (commands != null && !commands.isEmpty()) {
+    if (commands.size() == 1) {
+      connection.dispatch(commands.get(0));
+    }
+ else {
+      connection.dispatch(commands);
+    }
+    return commands;
+  }
+  return Collections.emptyList();
+}

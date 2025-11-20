@@ -1,0 +1,34 @@
+public DruidSequenceHandler(int seqHandlerType,String sequnceHandlerPattern){
+  this.pattern=Pattern.compile(sequnceHandlerPattern,Pattern.CASE_INSENSITIVE);
+switch (seqHandlerType) {
+case SystemConfig.SEQUENCEHANDLER_MYSQLDB:
+    sequenceHandler=IncrSequenceMySQLHandler.getInstance();
+  break;
+case SystemConfig.SEQUENCEHANDLER_LOCALFILE:
+sequenceHandler=IncrSequencePropHandler.getInstance();
+break;
+case SystemConfig.SEQUENCEHANDLER_LOCAL_TIME:
+sequenceHandler=IncrSequenceTimeHandler.getInstance();
+break;
+case SystemConfig.SEQUENCEHANDLER_ZK_DISTRIBUTED:
+sequenceHandler=DistributedSequenceHandler.getInstance(MycatServer.getInstance().getConfig().getSystem());
+break;
+case SystemConfig.SEQUENCEHANDLER_ZK_GLOBAL_INCREMENT:
+sequenceHandler=IncrSequenceZKHandler.getInstance();
+break;
+case SystemConfig.SEQUENCEHANDLER_DEF_GLOBAL_INCREMENT:
+try {
+String sequenceHanlderClass=MycatServer.getInstance().getConfig().getSystem().getSequenceHanlderClass();
+Class<?> aClass=Class.forName(sequenceHanlderClass);
+Constructor constructor=aClass.getConstructor();
+sequenceHandler=(SequenceHandler)constructor.newInstance();
+}
+ catch (Exception e) {
+e.printStackTrace();
+throw new RuntimeException(e);
+}
+break;
+default :
+throw new java.lang.IllegalArgumentException("Invalid sequnce handler type " + seqHandlerType);
+}
+}

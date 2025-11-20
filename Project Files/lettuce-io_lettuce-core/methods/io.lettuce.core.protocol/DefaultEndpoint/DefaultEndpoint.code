@@ -1,0 +1,17 @@
+/** 
+ * Create a new  {@link DefaultEndpoint}.
+ * @param clientOptions client options for this connection, must not be {@code null}.
+ * @param clientResources client resources for this connection, must not be {@code null}.
+ */
+public DefaultEndpoint(ClientOptions clientOptions,ClientResources clientResources){
+  LettuceAssert.notNull(clientOptions,"ClientOptions must not be null");
+  LettuceAssert.notNull(clientOptions,"ClientResources must not be null");
+  this.clientOptions=clientOptions;
+  this.clientResources=clientResources;
+  this.reliability=clientOptions.isAutoReconnect() ? Reliability.AT_LEAST_ONCE : Reliability.AT_MOST_ONCE;
+  this.disconnectedBuffer=LettuceFactories.newConcurrentQueue(clientOptions.getRequestQueueSize());
+  this.commandBuffer=LettuceFactories.newConcurrentQueue(clientOptions.getRequestQueueSize());
+  this.boundedQueues=clientOptions.getRequestQueueSize() != Integer.MAX_VALUE;
+  this.rejectCommandsWhileDisconnected=isRejectCommand(clientOptions);
+  this.cachedEndpointId="0x" + Long.toHexString(endpointId);
+}

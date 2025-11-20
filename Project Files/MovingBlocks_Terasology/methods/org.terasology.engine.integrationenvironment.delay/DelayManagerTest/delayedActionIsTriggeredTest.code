@@ -1,0 +1,11 @@
+@Test public void delayedActionIsTriggeredTest(ModuleTestingHelper helper) throws IOException {
+  helper.createClient();
+  helper.runWhile(() -> Lists.newArrayList(entityManager.getEntitiesWith(ClientComponent.class)).isEmpty());
+  final TestEventReceiver<DelayedActionTriggeredEvent> eventReceiver=new TestEventReceiver<>(helper.getHostContext(),DelayedActionTriggeredEvent.class);
+  EntityRef player=Lists.newArrayList(entityManager.getEntitiesWith(ClientComponent.class)).get(0);
+  delayManager.addDelayedAction(player,"ModuleTestingEnvironment:delayManagerTest",1000);
+  Assertions.assertTrue(eventReceiver.getEvents().isEmpty());
+  long stop=time.getGameTimeInMs() + 1200;
+  helper.runWhile(() -> time.getGameTimeInMs() < stop);
+  Assertions.assertFalse(eventReceiver.getEvents().isEmpty());
+}

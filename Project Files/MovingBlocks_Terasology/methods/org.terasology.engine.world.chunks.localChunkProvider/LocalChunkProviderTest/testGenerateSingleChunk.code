@@ -1,0 +1,18 @@
+@Test void testGenerateSingleChunk() throws InterruptedException, ExecutionException, TimeoutException {
+  Vector3i chunkPosition=new Vector3i(0,0,0);
+  requestCreatingOrLoadingArea(chunkPosition).get(WAIT_CHUNK_IS_READY_IN_SECONDS,TimeUnit.SECONDS);
+  chunkProvider.update();
+  final ArgumentCaptor<Event> eventArgumentCaptor=ArgumentCaptor.forClass(Event.class);
+  verify(worldEntity,atLeast(2)).send(eventArgumentCaptor.capture());
+  Assertions.assertAll("WorldEvents not valid",() -> {
+    Event mustBeOnGeneratedEvent=eventArgumentCaptor.getAllValues().get(0);
+    Assertions.assertTrue(mustBeOnGeneratedEvent instanceof OnChunkGenerated,"First world event must be OnChunkGenerated");
+    Assertions.assertEquals(((OnChunkGenerated)mustBeOnGeneratedEvent).getChunkPos(),chunkPosition,"Chunk position at event not expected");
+  }
+,() -> {
+    Event mustBeOnLoadedEvent=eventArgumentCaptor.getAllValues().get(1);
+    Assertions.assertTrue(mustBeOnLoadedEvent instanceof OnChunkLoaded,"Second world event must be OnChunkLoaded");
+    Assertions.assertEquals(chunkPosition,((OnChunkLoaded)mustBeOnLoadedEvent).getChunkPos(),"Chunk position at event not expected");
+  }
+);
+}

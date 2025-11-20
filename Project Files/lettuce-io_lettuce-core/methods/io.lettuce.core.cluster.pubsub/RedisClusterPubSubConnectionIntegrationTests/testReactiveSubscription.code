@@ -1,0 +1,12 @@
+@Test void testReactiveSubscription() throws Exception {
+  pubSubConnection.setNodeMessagePropagation(true);
+  pubSubConnection.addListener(connectionListener);
+  PubSubReactiveNodeSelection<String,String> masters=pubSubConnection.reactive().masters();
+  NodeSelectionPubSubReactiveCommands<String,String> commands=masters.commands();
+  commands.psubscribe("chann*").flux().then().block();
+  pubSubConnection2.sync().publish("channel","message");
+  assertThat(masters.size()).isEqualTo(2);
+  assertThat(connectionListener.getMessages().take()).isEqualTo("message");
+  assertThat(connectionListener.getMessages().take()).isEqualTo("message");
+  assertThat(connectionListener.getMessages().poll()).isNull();
+}

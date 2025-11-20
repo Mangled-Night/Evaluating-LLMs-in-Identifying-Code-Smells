@@ -1,0 +1,33 @@
+private Set<String> findMatches(Name commandName,List<String> commandParameters,ConsoleCommand command,int suggestedIndex){
+  if (suggestedIndex <= 0) {
+    updateCommandNamesIfNecessary();
+    return StringUtility.wildcardMatch(commandName.toString(),commandNames,true);
+  }
+ else   if (command == null) {
+    return null;
+  }
+  List<String> finishedParameters=Lists.newArrayList();
+  for (int i=0; i < suggestedIndex - 1; i++) {
+    finishedParameters.add(commandParameters.get(i));
+  }
+  String currentValue=commandParameters.size() >= suggestedIndex ? commandParameters.get(suggestedIndex - 1) : null;
+  EntityRef sender=localPlayer.getClientEntity();
+  try {
+    return command.suggest(currentValue,finishedParameters,sender);
+  }
+ catch (  CommandSuggestionException e) {
+    String causeMessage=e.getLocalizedMessage();
+    if (causeMessage == null) {
+      Throwable cause=e.getCause();
+      causeMessage=cause.getLocalizedMessage();
+      if (causeMessage == null || causeMessage.isEmpty()) {
+        causeMessage=cause.toString();
+        if (causeMessage == null || causeMessage.isEmpty()) {
+          return null;
+        }
+      }
+    }
+    console.addMessage("Error when suggesting command: " + causeMessage,CoreMessageType.ERROR);
+    return null;
+  }
+}

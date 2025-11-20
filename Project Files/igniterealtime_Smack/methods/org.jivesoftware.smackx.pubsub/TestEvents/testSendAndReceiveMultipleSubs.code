@@ -1,0 +1,25 @@
+public void testSendAndReceiveMultipleSubs() throws Exception {
+  String nodeId="TestNode" + System.currentTimeMillis();
+  PubSubManager creatorMgr=new PubSubManager(getConnection(0),getService());
+  LeafNode creatorNode=getPubnode(creatorMgr,nodeId,true,false);
+  BlockingQueue<ItemEventCoordinator<Item>> queue=new ArrayBlockingQueue<ItemEventCoordinator<Item>>(3);
+  PubSubManager subMgr=new PubSubManager(getConnection(1),getService());
+  LeafNode subNode=(LeafNode)subMgr.getNode(nodeId);
+  ItemEventCoordinator<Item> sub1Handler=new ItemEventCoordinator<Item>(queue,"sub1");
+  subNode.addItemEventListener(sub1Handler);
+  Subscription sub1=subNode.subscribe(getConnection(1).getUser());
+  ItemEventCoordinator<Item> sub2Handler=new ItemEventCoordinator<Item>(queue,"sub2");
+  subNode.addItemEventListener(sub2Handler);
+  Subscription sub2=subNode.subscribe(getConnection(1).getUser());
+  String itemId=String.valueOf(System.currentTimeMillis());
+  creatorNode.send(new Item(itemId));
+  for (int i=0; i < 2; i++) {
+    ItemEventCoordinator<Item> coord=queue.poll(10,TimeUnit.SECONDS);
+    if (coord == null)     fail();
+    assertEquals(1,coord.events.getItems().size());
+    assertEquals(itemId,coord.events.getItems().iterator().next().getId());
+    if (coord.id.equals("sub1") || coord.id.equals("sub2")) {
+      assertEquals(2,coord.events.getSubscriptions().size());
+    }
+  }
+}

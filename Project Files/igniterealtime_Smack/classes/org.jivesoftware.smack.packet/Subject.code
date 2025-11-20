@@ -1,0 +1,47 @@
+/** 
+ * Represents a message subject, its language and the content of the subject.
+ */
+public static final class Subject implements ExtensionElement {
+  public static final String ELEMENT="subject";
+  public static final String NAMESPACE=StreamOpen.CLIENT_NAMESPACE;
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  private final String subject;
+  private final String language;
+  public Subject(  String language,  String subject){
+    if (subject == null) {
+      throw new NullPointerException("Subject cannot be null.");
+    }
+    this.language=language;
+    this.subject=subject;
+  }
+  @Override public String getLanguage(){
+    return language;
+  }
+  /** 
+ * Returns the subject content.
+ * @return the content of the subject.
+ */
+  public String getSubject(){
+    return subject;
+  }
+  private final HashCode.Cache hashCodeCache=new HashCode.Cache();
+  @Override public int hashCode(){
+    return hashCodeCache.getHashCode(c -> c.append(language).append(subject));
+  }
+  @Override public boolean equals(  Object obj){
+    return EqualsUtil.equals(this,obj,(e,o) -> e.append(language,o.language).append(subject,o.subject));
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this,enclosingNamespace);
+    xml.rightAngleBracket();
+    xml.escape(subject);
+    xml.closeElement(getElementName());
+    return xml;
+  }
+}

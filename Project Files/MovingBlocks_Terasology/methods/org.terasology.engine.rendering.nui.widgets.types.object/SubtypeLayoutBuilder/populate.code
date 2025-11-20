@@ -1,0 +1,39 @@
+@Override protected void populate(Binding<T> binding,ColumnLayout layout,ColumnLayout mainLayout){
+  ColumnLayout widgetContainer=new ColumnLayout();
+  Binding<TypeInfo<T>> editingType=new NotifyingBinding<TypeInfo<T>>(baseType){
+    @Override protected void onSet(){
+      widgetContainer.removeAllWidgets();
+      TypeWidgetBuilder<T> builder=SubtypeLayoutBuilder.this.library.getBuilder(get()).orElse(baseTypeWidgetBuilder);
+      if (builder == null) {
+        LOGGER.error("Could not find widget for type {}, editing as base type {}",get(),baseType);
+        return;
+      }
+      widgetContainer.addWidget(builder.build(binding));
+    }
+  }
+;
+  if (binding.get() != null && !editingType.get().getRawType().equals(binding.get().getClass())) {
+    Type actual=ReflectionUtil.parameterizeandResolveRawType(baseType.getType(),binding.get().getClass());
+    TypeInfo<T> actualType=(TypeInfo<T>)TypeInfo.of(actual);
+    if (!allowedSubtypes.contains(actualType)) {
+      Optional<TypeInfo<T>> closestMatch=allowedSubtypes.stream().filter(subtype -> subtype.getRawType().isAssignableFrom(actualType.getRawType())).findFirst();
+      assert closestMatch.isPresent();
+      editingType.set(closestMatch.get());
+    }
+ else {
+      editingType.set(actualType);
+    }
+  }
+  UIDropdownScrollable<TypeInfo<T>> typeSelection=new UIDropdownScrollable<>();
+  typeSelection.setOptions(allowedSubtypes);
+  typeSelection.bindSelection(editingType);
+  typeSelection.setOptionRenderer(new StringTextRenderer<TypeInfo<T>>(){
+    @Override public String getString(    TypeInfo<T> value){
+      return getTypeName(value);
+    }
+  }
+);
+  typeSelection.setTooltip("Select the type for the new object");
+  layout.addWidget(typeSelection);
+  layout.addWidget(widgetContainer);
+}

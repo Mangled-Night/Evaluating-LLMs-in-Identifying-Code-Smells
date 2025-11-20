@@ -1,0 +1,32 @@
+/** 
+ * Closes the connection by setting presence to unavailable then closing the connection to the XMPP server. The XMPPConnection can still be used for connecting to the server again.
+ */
+public void disconnect(){
+  Presence unavailablePresence=null;
+  if (isAuthenticated()) {
+    unavailablePresence=getStanzaFactory().buildPresenceStanza().ofType(Presence.Type.unavailable).build();
+  }
+  try {
+    disconnect(unavailablePresence);
+  }
+ catch (  NotConnectedException e) {
+    LOGGER.log(Level.FINEST,"Connection is already disconnected",e);
+  }
+}
+/** 
+ * Closes the connection. A custom unavailable presence is sent to the server, followed by closing the stream. The XMPPConnection can still be used for connecting to the server again. A custom unavailable presence is useful for communicating offline presence information such as "On vacation". Typically, just the status text of the presence stanza is set with online information, but most XMPP servers will deliver the full presence stanza with whatever data is set.
+ * @param unavailablePresence the optional presence stanza to send during shutdown.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ */
+public synchronized void disconnect(Presence unavailablePresence) throws NotConnectedException {
+  if (unavailablePresence != null) {
+    try {
+      sendStanza(unavailablePresence);
+    }
+ catch (    InterruptedException e) {
+      LOGGER.log(Level.FINE,"Was interrupted while sending unavailable presence. Continuing to disconnect the connection",e);
+    }
+  }
+  shutdown();
+  callConnectionClosedListener();
+}

@@ -1,0 +1,29 @@
+public void setReactorThreadCount(int reactorThreadCount){
+  if (reactorThreadCount < 2) {
+    throw new IllegalArgumentException("Must have at least two reactor threads, but you requested " + reactorThreadCount);
+  }
+synchronized (reactorThreads) {
+    int deltaThreads=reactorThreadCount - reactorThreads.size();
+    if (deltaThreads > 0) {
+      for (int i=0; i < deltaThreads; i++) {
+        Reactor reactor=new Reactor();
+        reactor.setDaemon(true);
+        reactor.setName("Smack " + reactorName + " Thread #"+ i);
+        reactorThreads.add(reactor);
+        reactor.start();
+      }
+      actionsSemaphore.release(deltaThreads);
+    }
+ else {
+      deltaThreads-=deltaThreads;
+      for (int i=deltaThreads - 1; i > 0; i--) {
+        actionsSemaphore.acquireUninterruptibly();
+      }
+      for (int i=deltaThreads - 1; i > 0; i--) {
+        Reactor reactor=reactorThreads.remove(i);
+        reactor.requestShutdown();
+      }
+      selector.wakeup();
+    }
+  }
+}

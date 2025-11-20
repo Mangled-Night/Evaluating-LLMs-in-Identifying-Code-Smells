@@ -1,0 +1,33 @@
+private static void checkMethodDeletion(Collection<ApiMethod> originalMethods,Collection<ApiMethod> newMethods){
+  List<String> checkedMethods=new ArrayList<>();
+  for (  ApiMethod method1 : originalMethods) {
+    boolean found=false;
+    List<ApiMethod> newMethodsWithSameName=new ArrayList<>();
+    List<ApiMethod> originalMethodsWithSameName=new ArrayList<>();
+    for (    ApiMethod method2 : newMethods) {
+      if (method1.getName().equals(method2.getName())) {
+        found=true;
+        newMethodsWithSameName.add(method2);
+      }
+    }
+    if (found && !checkedMethods.contains(method1.getName())) {
+      for (      ApiMethod oMethod : originalMethods) {
+        if (oMethod.getName().equals(method1.getName())) {
+          originalMethodsWithSameName.add(oMethod);
+        }
+      }
+      if ((originalMethodsWithSameName.size() - newMethodsWithSameName.size()) > 0) {
+        for (        ApiMethod method : originalMethodsWithSameName) {
+          ApiMethod result=getMethodWithSameNameAndParameters(method,newMethodsWithSameName);
+          if (result.getName().equals("")) {
+            checkedMethods.add(method.getName());
+            System.out.println("MAJOR INCREASE, OVERLOADED METHOD DELETION:  " + method.getName() + " ON "+ method.getClassName()+ "\nPARAMETERS: "+ method.getParametersType());
+          }
+        }
+      }
+    }
+    if (!found) {
+      System.out.println("MAJOR INCREASE, METHOD DELETION:  " + method1.getName() + " ON "+ method1.getClassName());
+    }
+  }
+}

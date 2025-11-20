@@ -1,0 +1,26 @@
+/** 
+ * 设置是否允许批量执行命令
+ * @param data
+ */
+public void setOption(byte[] data){
+  CommandPacket command=new CommandPacket();
+  command.read(data);
+  int option=0;
+  try {
+    option=command.arg[0];
+    if (option == 0) {
+      this.allowMultiStatements=true;
+    }
+ else     if (option == 1) {
+      this.allowMultiStatements=false;
+    }
+    EOFPacket eof=new EOFPacket();
+    eof.packetId=1;
+    eof.warningCount=option;
+    write(eof.write(allocate(),this,true));
+  }
+ catch (  Throwable e) {
+    writeErrMessage(ErrorCode.ER_UNKNOWN_COM_ERROR,"Com Set Option Error");
+    return;
+  }
+}

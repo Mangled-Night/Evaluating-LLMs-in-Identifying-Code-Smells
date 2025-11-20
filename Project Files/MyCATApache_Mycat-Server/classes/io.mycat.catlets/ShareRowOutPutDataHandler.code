@@ -1,0 +1,75 @@
+class ShareRowOutPutDataHandler implements SQLJobHandler {
+  private final List<byte[]> afields;
+  private List<byte[]> bfields;
+  private final ShareJoin ctx;
+  private final Map<String,byte[]> arows;
+  private int joinL;
+  private int joinR;
+  private String joinRkey;
+  public NonBlockingSession session;
+  public ShareRowOutPutDataHandler(  ShareJoin ctx,  List<byte[]> afields,  int joini,  String joinField,  Map<String,byte[]> arows,  NonBlockingSession session){
+    super();
+    this.afields=afields;
+    this.ctx=ctx;
+    this.arows=arows;
+    this.joinL=joini;
+    this.joinRkey=joinField;
+    this.session=session;
+  }
+  @Override public void onHeader(  String dataNode,  byte[] header,  List<byte[]> bfields){
+    this.bfields=bfields;
+    joinR=this.ctx.getFieldIndex(bfields,joinRkey);
+    MiddlerResultHandler middlerResultHandler=session.getMiddlerResultHandler();
+    if (middlerResultHandler == null) {
+      ctx.writeHeader(dataNode,afields,bfields);
+    }
+  }
+  private byte[] getRow(  Map<String,byte[]> batchRowsCopy,  String value,  int index){
+    for (    Map.Entry<String,byte[]> e : batchRowsCopy.entrySet()) {
+      String key=e.getKey();
+      RowDataPacket rowDataPkg=ResultSetUtil.parseRowData(e.getValue(),afields);
+      byte[] columnValue=rowDataPkg.fieldValues.get(index);
+      if (columnValue == null)       continue;
+      String id=ByteUtil.getString(columnValue);
+      if (id.equals(value)) {
+        return batchRowsCopy.remove(key);
+      }
+    }
+    return null;
+  }
+  @Override public boolean onRowData(  String dataNode,  byte[] rowData){
+    RowDataPacket rowDataPkgold=ResultSetUtil.parseRowData(rowData,bfields);
+    Map<String,byte[]> batchRowsCopy=new ConcurrentHashMap<String,byte[]>();
+    batchRowsCopy.putAll(arows);
+    String id=ByteUtil.getString(rowDataPkgold.fieldValues.get(joinR));
+    byte[] arow=getRow(batchRowsCopy,id,joinL);
+    while (arow != null) {
+      RowDataPacket rowDataPkg=ResultSetUtil.parseRowData(arow,afields);
+      for (int i=1; i < rowDataPkgold.fieldCount; i++) {
+        byte[] bname=rowDataPkgold.fieldValues.get(i);
+        rowDataPkg.add(bname);
+        rowDataPkg.addFieldCount(1);
+      }
+      MiddlerResultHandler middlerResultHandler=session.getMiddlerResultHandler();
+      if (null == middlerResultHandler) {
+        ctx.writeRow(rowDataPkg);
+      }
+ else {
+        if (middlerResultHandler instanceof MiddlerQueryResultHandler) {
+          byte[] columnData=rowDataPkg.fieldValues.get(0);
+          if (columnData != null && columnData.length > 0) {
+            String rowValue=new String(columnData);
+            middlerResultHandler.add(rowValue);
+          }
+        }
+      }
+      arow=getRow(batchRowsCopy,id,joinL);
+    }
+    return false;
+  }
+  @Override public void finished(  String dataNode,  boolean failed,  String errorMsg){
+    if (failed) {
+      session.getSource().writeErrMessage(ErrorCode.ER_UNKNOWN_ERROR,errorMsg);
+    }
+  }
+}

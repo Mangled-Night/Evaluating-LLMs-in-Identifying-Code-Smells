@@ -1,0 +1,12 @@
+@Test void shouldObtainConnectionReadFromReplica(){
+  when(clientMock.connectToNodeAsync(eq(StringCodec.UTF8),eq("localhost:2"),any(),any())).thenReturn(ConnectionFuture.from(socketAddressMock,CompletableFuture.completedFuture(nodeConnectionMock)));
+  AsyncCommand<String,String,String> async=new AsyncCommand<>(new Command<>(CommandType.READONLY,null,null));
+  async.complete();
+  when(asyncCommandsMock.readOnly()).thenReturn(async);
+  sut.setReadFrom(ReadFrom.REPLICA);
+  StatefulRedisConnection<String,String> connection=sut.getConnection(ConnectionIntent.READ,1);
+  assertThat(connection).isSameAs(nodeConnectionMock);
+  verify(connection).async();
+  verify(asyncCommandsMock).readOnly();
+  verify(connection).setAutoFlushCommands(true);
+}

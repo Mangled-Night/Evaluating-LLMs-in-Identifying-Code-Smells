@@ -1,0 +1,23 @@
+/** 
+ * Inspectable  {@link ReplayOutput} to investigate the first multi and string response elements.
+ * @param < K >
+ * @param < V >
+ */
+static class ResponseHeaderReplayOutput<K,V> extends ReplayOutput<K,V> {
+  Integer multiCount;
+  String firstElement;
+  @Override public void set(  ByteBuffer bytes){
+    if (firstElement == null && bytes != null && bytes.remaining() > 0) {
+      bytes.mark();
+      firstElement=StringCodec.ASCII.decodeKey(bytes);
+      bytes.reset();
+    }
+    super.set(bytes);
+  }
+  @Override public void multi(  int count){
+    if (multiCount == null) {
+      multiCount=count;
+    }
+    super.multi(count);
+  }
+}

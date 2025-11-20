@@ -1,0 +1,41 @@
+public static RosterPacket.Item parseItem(XmlPullParser parser) throws XmlPullParserException, IOException {
+  ParserUtils.assertAtStartTag(parser,RosterPacket.Item.ELEMENT);
+  final int initialDepth=parser.getDepth();
+  String jidString=parser.getAttributeValue("","jid");
+  String itemName=parser.getAttributeValue("","name");
+  BareJid jid=JidCreate.bareFrom(jidString);
+  RosterPacket.Item item=new RosterPacket.Item(jid,itemName);
+  String ask=parser.getAttributeValue("","ask");
+  item.setSubscriptionPending("subscribe".equals(ask));
+  String subscription=parser.getAttributeValue("","subscription");
+  RosterPacket.ItemType type=RosterPacket.ItemType.fromString(subscription);
+  item.setItemType(type);
+  boolean approved=ParserUtils.getBooleanAttribute(parser,"approved",false);
+  item.setApproved(approved);
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String name=parser.getName();
+switch (name) {
+case RosterPacket.Item.GROUP:
+      final String groupName=parser.nextText();
+    if (groupName != null && groupName.trim().length() > 0) {
+      item.addGroupName(groupName);
+    }
+  break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+ParserUtils.assertAtEndTag(parser);
+assert item != null;
+return item;
+}

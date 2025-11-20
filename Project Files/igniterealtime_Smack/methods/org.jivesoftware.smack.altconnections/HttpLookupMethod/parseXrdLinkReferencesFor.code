@@ -1,0 +1,48 @@
+/** 
+ * Get remote endpoints for the provided LinkRelation from provided XmlPullParser.
+ * @param parser XmlPullParser that contains LinkRelations
+ * @param relation type of endpoints specified by the given LinkRelation
+ * @return list of endpoints
+ * @throws IOException exception due to input/output operations
+ * @throws XmlPullParserException exception encountered during XML parsing
+ * @throws URISyntaxException exception to indicate that a string could not be parsed as a URI reference
+ */
+public static List<URI> parseXrdLinkReferencesFor(XmlPullParser parser,String relation) throws IOException, XmlPullParserException, URISyntaxException {
+  ParserUtils.forwardToStartElement(parser);
+  List<URI> uriList=new ArrayList<>();
+  int initialDepth=parser.getDepth();
+  loop:   while (true) {
+    XmlPullParser.TagEvent tag=parser.nextTag();
+switch (tag) {
+case START_ELEMENT:
+      String name=parser.getName();
+    String namespace=parser.getNamespace();
+  String rel=parser.getAttributeValue("rel");
+if (!namespace.equals(XRD_NAMESPACE) || !name.equals("Link") || !rel.equals(relation)) {
+  continue loop;
+}
+String endpointUri=parser.getAttributeValue("href");
+URI uri=new URI(endpointUri);
+uriList.add(uri);
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break loop;
+}
+break;
+}
+}
+return uriList;
+}
+/** 
+ * Get remote endpoints for the provided LinkRelation from provided XmlPullParser.
+ * @param parser XmlPullParser that contains LinkRelations
+ * @param relation type of endpoints specified by the given LinkRelation
+ * @return list of endpoints
+ * @throws IOException exception due to input/output operations
+ * @throws XmlPullParserException exception encountered during XML parsing
+ * @throws URISyntaxException exception to indicate that a string could not be parsed as a URI reference
+ */
+public static List<URI> parseXrdLinkReferencesFor(XmlPullParser parser,LinkRelation relation) throws IOException, XmlPullParserException, URISyntaxException {
+  return parseXrdLinkReferencesFor(parser,relation.attribute);
+}

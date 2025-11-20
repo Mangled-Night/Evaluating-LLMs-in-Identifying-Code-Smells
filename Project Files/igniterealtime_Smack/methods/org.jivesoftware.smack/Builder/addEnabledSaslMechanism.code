@@ -1,0 +1,33 @@
+/** 
+ * Add the given mechanism to the enabled ones. See  {@link #addEnabledSaslMechanism(Collection)} for a discussion about enabled SASL mechanisms.
+ * @param saslMechanism the name of the mechanism to enable.
+ * @return a reference to this builder.
+ */
+public B addEnabledSaslMechanism(String saslMechanism){
+  return addEnabledSaslMechanism(Arrays.asList(StringUtils.requireNotNullNorEmpty(saslMechanism,"saslMechanism must not be null nor empty")));
+}
+/** 
+ * Enable the given SASL mechanisms. If you never add a mechanism to the set of enabled ones, <b>all mechanisms known to Smack</b> will be enabled. Only explicitly enable particular SASL mechanisms if you want to limit the used mechanisms to the enabled ones.
+ * @param saslMechanisms a collection of names of mechanisms to enable.
+ * @return a reference to this builder.
+ */
+public B addEnabledSaslMechanism(Collection<String> saslMechanisms){
+  if (saslMechanismsSealed) {
+    throw new IllegalStateException("The enabled SASL mechanisms are sealed, you can not add new ones");
+  }
+  CollectionUtil.requireNotEmpty(saslMechanisms,"saslMechanisms");
+  Set<String> blacklistedMechanisms=SASLAuthentication.getBlacklistedSASLMechanisms();
+  for (  String mechanism : saslMechanisms) {
+    if (!SASLAuthentication.isSaslMechanismRegistered(mechanism)) {
+      throw new IllegalArgumentException("SASL " + mechanism + " is not available. Consider registering it with Smack");
+    }
+    if (blacklistedMechanisms.contains(mechanism)) {
+      throw new IllegalArgumentException("SALS " + mechanism + " is blacklisted.");
+    }
+  }
+  if (enabledSaslMechanisms == null) {
+    enabledSaslMechanisms=new HashSet<>(saslMechanisms.size());
+  }
+  enabledSaslMechanisms.addAll(saslMechanisms);
+  return getThis();
+}

@@ -1,0 +1,18 @@
+/** 
+ * Asserts that a MUC Service returns disco info for a room. <p>From XEP-0045 § 6.4:</p> <blockquote> Using the disco#info protocol, an entity may also query a specific chat room for more detailed information about the room....The room MUST return its identity and SHOULD return the features it supports </blockquote>
+ * @throws Exception when errors occur
+ */
+@SmackIntegrationTest public void mucTestForDiscoveringRoomInfo() throws Exception {
+  EntityBareJid mucAddress=getRandomRoom("smack-inttest-discoinfo");
+  MultiUserChat mucAsSeenByOne=mucManagerOne.getMultiUserChat(mucAddress);
+  createMuc(mucAsSeenByOne,Resourcepart.from("one-" + randomString));
+  DiscoverInfo discoInfo;
+  try {
+    discoInfo=ServiceDiscoveryManager.getInstanceFor(conOne).discoverInfo(mucAddress);
+  }
+  finally {
+    tryDestroy(mucAsSeenByOne);
+  }
+  assertTrue(discoInfo.getIdentities().size() > 0);
+  assertTrue(discoInfo.getFeatures().size() > 0);
+}

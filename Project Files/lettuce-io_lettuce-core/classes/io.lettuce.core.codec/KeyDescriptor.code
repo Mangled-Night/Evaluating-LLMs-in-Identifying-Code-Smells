@@ -1,0 +1,105 @@
+/** 
+ * Descriptor to determine which crypto key to use. Allows versioning and usage of named keys. Key names must not contain dollar  {@code $} or plus {@code +} characters as these characters are used within the message format to encode key nameand key version.
+ */
+public static class KeyDescriptor {
+  private static final KeyDescriptor UNNAMED=new KeyDescriptor("".getBytes(StandardCharsets.US_ASCII),0);
+  private final byte[] name;
+  private final int version;
+  private KeyDescriptor(  byte[] name,  int version){
+    for (    byte b : name) {
+      if (b == '+' || b == '$') {
+        throw new IllegalArgumentException(String.format("Key name %s must not contain plus (+) or dollar ($) characters",new String(name)));
+      }
+    }
+    this.name=name;
+    this.version=version;
+  }
+  /** 
+ * Returns the default  {@link KeyDescriptor} that has no specified name.
+ * @return the default {@link KeyDescriptor}.
+ */
+  public static KeyDescriptor unnamed(){
+    return UNNAMED;
+  }
+  /** 
+ * Create a named  {@link KeyDescriptor} without version. Version defaults to zero.
+ * @param name the key name. Must not contain plus or dollar character.
+ * @return the {@link KeyDescriptor} for {@code name}.
+ */
+  public static KeyDescriptor create(  String name){
+    return create(name,0);
+  }
+  /** 
+ * Create a named and versioned  {@link KeyDescriptor}.
+ * @param name the key name. Must not contain plus or dollar character.
+ * @param version the key version.
+ * @return the {@link KeyDescriptor} for {@code name}.
+ */
+  public static KeyDescriptor create(  String name,  int version){
+    return create(name,version,Charset.defaultCharset());
+  }
+  /** 
+ * Create a named and versioned  {@link KeyDescriptor} using {@link Charset} to encode {@code name} to its binaryrepresentation.
+ * @param name the key name. Must not contain plus or dollar character.
+ * @param version the key version.
+ * @param charset must not be {@code null}.
+ * @return the {@link KeyDescriptor} for {@code name}.
+ */
+  public static KeyDescriptor create(  String name,  int version,  Charset charset){
+    LettuceAssert.notNull(name,"Name must not be null");
+    LettuceAssert.notNull(charset,"Charset must not be null");
+    return new KeyDescriptor(name.getBytes(charset),version);
+  }
+  static KeyDescriptor from(  ByteBuffer bytes){
+    int end=-1;
+    int version=-1;
+    if (bytes.get() != '$') {
+      throw new IllegalArgumentException("Cannot extract KeyDescriptor. Malformed message header.");
+    }
+    int startPosition=bytes.position();
+    for (int i=0; i < bytes.remaining(); i++) {
+      if (bytes.get(bytes.position() + i) == '$') {
+        end=(bytes.position() - startPosition) + i;
+        break;
+      }
+      if (bytes.get(bytes.position() + i) == '+') {
+        version=(bytes.position() - startPosition) + i;
+      }
+    }
+    if (end == -1 || version == -1) {
+      throw new IllegalArgumentException("Cannot extract KeyDescriptor");
+    }
+    byte[] name=new byte[version];
+    bytes.get(name);
+    bytes.get();
+    byte[] versionBytes=new byte[end - version - 1];
+    bytes.get(versionBytes);
+    bytes.get();
+    return new KeyDescriptor(name,Integer.parseInt(new String(versionBytes)));
+  }
+  public int getVersion(){
+    return version;
+  }
+  /** 
+ * Returns the key  {@code name} by decoding name bytes using the {@link Charset#defaultCharset() default charset}.
+ * @return the key name.
+ */
+  public String getName(){
+    return getName(Charset.defaultCharset());
+  }
+  /** 
+ * Returns the key  {@code name} by decoding name bytes using the given {@link Charset}.
+ * @param charset the {@link Charset} to use to decode the key name, must not be {@code null}.
+ * @return the key name.
+ */
+  public String getName(  Charset charset){
+    LettuceAssert.notNull(charset,"Charset must not be null");
+    return new String(name,charset);
+  }
+  void writeTo(  ByteBuf target){
+    target.writeByte('$').writeBytes(this.name).writeByte('+').writeBytes(Integer.toString(this.version).getBytes()).writeByte('$');
+  }
+  void writeTo(  ByteBuffer target){
+    target.put((byte)'$').put(this.name).put((byte)'+').put(Integer.toString(this.version).getBytes()).put((byte)'$');
+  }
+}

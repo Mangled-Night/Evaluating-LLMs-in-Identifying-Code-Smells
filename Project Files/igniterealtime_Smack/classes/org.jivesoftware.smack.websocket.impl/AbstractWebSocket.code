@@ -1,0 +1,84 @@
+public abstract class AbstractWebSocket {
+  protected static final Logger LOGGER=Logger.getLogger(AbstractWebSocket.class.getName());
+  protected static final String SEC_WEBSOCKET_PROTOCOL_HEADER_FILED_NAME="Sec-WebSocket-Protocol";
+  protected static final String SEC_WEBSOCKET_PROTOCOL_HEADER_FILED_VALUE_XMPP="xmpp";
+  protected final SmackFuture.InternalSmackFuture<AbstractWebSocket,Exception> future=new SmackFuture.InternalSmackFuture<>();
+  protected final ModularXmppClientToServerConnectionInternal connectionInternal;
+  protected final WebSocketRemoteConnectionEndpoint endpoint;
+  private final SmackWebSocketDebugger debugger;
+  protected AbstractWebSocket(  WebSocketRemoteConnectionEndpoint endpoint,  ModularXmppClientToServerConnectionInternal connectionInternal){
+    this.endpoint=endpoint;
+    this.connectionInternal=connectionInternal;
+    final SmackDebugger smackDebugger=connectionInternal.smackDebugger;
+    if (smackDebugger != null) {
+      debugger=new SmackWebSocketDebugger(smackDebugger);
+    }
+ else {
+      debugger=null;
+    }
+  }
+  public final WebSocketRemoteConnectionEndpoint getEndpoint(){
+    return endpoint;
+  }
+  private String streamOpen;
+  private String streamClose;
+  protected final void onIncomingWebSocketElement(  String element){
+    if (debugger != null) {
+      debugger.incoming(element);
+    }
+    if (isOpenElement(element)) {
+      streamOpen=getStreamFromOpenElement(element);
+      streamClose=connectionInternal.onStreamOpen(streamOpen);
+      return;
+    }
+    if (isCloseElement(element)) {
+      connectionInternal.onStreamClosed();
+      return;
+    }
+    connectionInternal.withSmackDebugger(debugger -> debugger.onIncomingElementCompleted());
+    String wrappedCompleteElement=streamOpen + element + streamClose;
+    connectionInternal.parseAndProcessElement(wrappedCompleteElement);
+  }
+  static String getStreamFromOpenElement(  String openElement){
+    String streamElement=openElement.replaceFirst("\\A<open ","<stream:stream ").replace("urn:ietf:params:xml:ns:xmpp-framing","jabber:client").replaceFirst("/>\\s*\\z"," xmlns:stream='http://etherx.jabber.org/streams'>");
+    return streamElement;
+  }
+  static boolean isOpenElement(  String text){
+    if (text.startsWith("<open ")) {
+      return true;
+    }
+    return false;
+  }
+  static boolean isCloseElement(  String text){
+    if (text.startsWith("<close xmlns='urn:ietf:params:xml:ns:xmpp-framing'/>")) {
+      return true;
+    }
+    return false;
+  }
+  protected void onWebSocketFailure(  Throwable throwable){
+    WebSocketException websocketException=new WebSocketException(throwable);
+    if (future.wasSuccessful()) {
+      connectionInternal.notifyConnectionError(websocketException);
+    }
+ else {
+      future.setException(websocketException);
+    }
+  }
+  public final SmackFuture<AbstractWebSocket,Exception> getFuture(){
+    return future;
+  }
+  public final void send(  TopLevelStreamElement element){
+    XmlEnvironment outgoingStreamXmlEnvironment=connectionInternal.getOutgoingStreamXmlEnvironment();
+    String elementString=element.toXML(outgoingStreamXmlEnvironment).toString();
+    if (debugger != null) {
+      debugger.outgoing(elementString);
+    }
+    send(elementString);
+  }
+  protected abstract void send(  String element);
+  public abstract void disconnect(  int code,  String message);
+  public boolean isConnectionSecure(){
+    return endpoint.isSecureEndpoint();
+  }
+  public abstract SSLSession getSSLSession();
+}

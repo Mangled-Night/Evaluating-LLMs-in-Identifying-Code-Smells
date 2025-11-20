@@ -1,0 +1,50 @@
+/** 
+ * 加载某个类
+ * @param c
+ * @return
+ * @throws ClassNotFoundException
+ * @throws IOException
+ */
+public Class<?> loadClass(String name) throws ClassNotFoundException {
+  if (name.startsWith("java") || name.startsWith("sun") || name.startsWith("io.mycat")) {
+    return super.loadClass(name);
+  }
+  DynaClass dynaClass=loadedDynaClassMap.get(name);
+  if (dynaClass != null) {
+    if (dynaClass.realClass != null) {
+      return dynaClass.realClass;
+    }
+  }
+ else {
+    try {
+      dynaClass=searchFile(extClassHome,name);
+    }
+ catch (    Exception e) {
+      LOGGER.error("SearchFileError",e);
+    }
+  }
+  if (dynaClass == null) {
+    return super.loadClass(name);
+  }
+ else {
+    LOGGER.info("load class from file " + dynaClass.filePath);
+    Class<?> cNew=null;
+    if (dynaClass.isJar) {
+      cNew=dynaClass.realClass;
+    }
+ else {
+      byte[] content;
+      try {
+        content=loadFile(dynaClass.filePath);
+      }
+ catch (      IOException e) {
+        throw new ClassNotFoundException(e.toString());
+      }
+      cNew=super.defineClass(name,content,0,content.length);
+      dynaClass.realClass=cNew;
+    }
+    dynaClass.classObj=null;
+    loadedDynaClassMap.put(name,dynaClass);
+    return cNew;
+  }
+}

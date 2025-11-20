@@ -1,0 +1,20 @@
+private Runnable getTopologyRefreshRunnable(MasterReplicaTopologyRefresh refresh,MasterReplicaConnectionProvider<K,V> connectionProvider){
+  return () -> {
+    try {
+      LOG.debug("Refreshing topology");
+      refresh.getNodes(redisURI).subscribe(nodes -> {
+        EventRecorder.getInstance().record(new MasterReplicaTopologyChangedEvent(redisURI,nodes));
+        if (nodes.isEmpty()) {
+          LOG.warn("Topology refresh returned no nodes from {}",redisURI);
+        }
+        LOG.debug("New topology: {}",nodes);
+        connectionProvider.setKnownNodes(nodes);
+      }
+,t -> LOG.error("Error during background refresh",t));
+    }
+ catch (    Exception e) {
+      LOG.error("Error during background refresh",e);
+    }
+  }
+;
+}

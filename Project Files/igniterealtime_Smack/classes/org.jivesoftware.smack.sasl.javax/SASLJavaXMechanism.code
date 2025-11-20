@@ -1,0 +1,87 @@
+public abstract class SASLJavaXMechanism extends SASLMechanism {
+  protected SaslClient sc;
+  @Override public abstract String getName();
+  @Override public final void checkIfSuccessfulOrThrow() throws SmackSaslException {
+    if (!sc.isComplete()) {
+      throw new SmackSaslException(getName() + " was not completed");
+    }
+  }
+  @Override protected void authenticateInternal() throws SmackJavaxSaslException {
+    String[] mechanisms={getName()};
+    Map<String,String> props=getSaslProps();
+    String authzid=null;
+    if (authorizationId != null) {
+      authzid=authorizationId.toString();
+    }
+    try {
+      sc=Sasl.createSaslClient(mechanisms,authzid,"xmpp",getServerName().toString(),props,new CallbackHandler(){
+        @Override public void handle(        Callback[] callbacks) throws IOException, UnsupportedCallbackException {
+          for (int i=0; i < callbacks.length; i++) {
+            if (callbacks[i] instanceof NameCallback) {
+              NameCallback ncb=(NameCallback)callbacks[i];
+              ncb.setName(authenticationId);
+            }
+ else             if (callbacks[i] instanceof PasswordCallback) {
+              PasswordCallback pcb=(PasswordCallback)callbacks[i];
+              pcb.setPassword(password.toCharArray());
+            }
+ else             if (callbacks[i] instanceof RealmCallback) {
+              RealmCallback rcb=(RealmCallback)callbacks[i];
+              String text=rcb.getDefaultText();
+              rcb.setText(text);
+            }
+ else             if (callbacks[i] instanceof RealmChoiceCallback) {
+            }
+ else {
+              throw new UnsupportedCallbackException(callbacks[i]);
+            }
+          }
+        }
+      }
+);
+    }
+ catch (    SaslException e) {
+      throw new SmackJavaxSaslException(e);
+    }
+  }
+  @Override protected void authenticateInternal(  CallbackHandler cbh) throws SmackJavaxSaslException {
+    String[] mechanisms={getName()};
+    Map<String,String> props=getSaslProps();
+    try {
+      sc=Sasl.createSaslClient(mechanisms,null,"xmpp",host,props,cbh);
+    }
+ catch (    SaslException e) {
+      throw new SmackJavaxSaslException(e);
+    }
+  }
+  @Override protected byte[] getAuthenticationText() throws SmackJavaxSaslException {
+    if (sc.hasInitialResponse()) {
+      try {
+        return sc.evaluateChallenge(new byte[0]);
+      }
+ catch (      SaslException e) {
+        throw new SmackJavaxSaslException(e);
+      }
+    }
+    return null;
+  }
+  @Override protected byte[] evaluateChallenge(  byte[] challenge) throws SmackJavaxSaslException {
+    try {
+      if (challenge != null) {
+        return sc.evaluateChallenge(challenge);
+      }
+ else {
+        return sc.evaluateChallenge(new byte[0]);
+      }
+    }
+ catch (    SaslException e) {
+      throw new SmackJavaxSaslException(e);
+    }
+  }
+  protected Map<String,String> getSaslProps(){
+    return new HashMap<>();
+  }
+  protected String getServerName(){
+    return serviceName.toString();
+  }
+}

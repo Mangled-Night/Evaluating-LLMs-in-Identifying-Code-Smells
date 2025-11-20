@@ -1,0 +1,20 @@
+public String requestJidPrep(String jidToBePrepped) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  DomainBareJid serviceAddress=serviceDiscoveryManager.findService(NAMESPACE,true);
+  return requestJidPrep(serviceAddress,jidToBePrepped);
+}
+public String requestJidPrep(Jid jidPrepService,String jidToBePrepped) throws NoResponseException, NotConnectedException, InterruptedException, XMPPErrorException {
+  JidPrepIq jidPrepRequest=new JidPrepIq(jidToBePrepped);
+  jidPrepRequest.setTo(jidPrepService);
+  JidPrepIq jidPrepResponse;
+  try {
+    jidPrepResponse=connection().sendIqRequestAndWaitForResponse(jidPrepRequest);
+  }
+ catch (  XMPPErrorException e) {
+    StanzaError stanzaError=e.getStanzaError();
+    if (stanzaError.getCondition() == StanzaError.Condition.jid_malformed) {
+      return null;
+    }
+    throw e;
+  }
+  return jidPrepResponse.getJid();
+}

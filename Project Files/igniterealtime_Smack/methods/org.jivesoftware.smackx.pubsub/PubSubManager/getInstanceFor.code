@@ -1,0 +1,56 @@
+/** 
+ * Get a PubSub manager for the default PubSub service of the connection.
+ * @param connection TODO javadoc me please
+ * @return the default PubSub manager.
+ */
+public static PubSubManager getInstanceFor(XMPPConnection connection){
+  DomainBareJid pubSubService=null;
+  if (connection.isAuthenticated()) {
+    try {
+      pubSubService=getPubSubService(connection);
+    }
+ catch (    NoResponseException|XMPPErrorException|NotConnectedException e) {
+      LOGGER.log(Level.WARNING,"Could not determine PubSub service",e);
+    }
+catch (    InterruptedException e) {
+      LOGGER.log(Level.FINE,"Interrupted while trying to determine PubSub service",e);
+    }
+  }
+  if (pubSubService == null) {
+    try {
+      pubSubService=JidCreate.domainBareFrom("pubsub." + connection.getXMPPServiceDomain());
+    }
+ catch (    XmppStringprepException e) {
+      throw new RuntimeException(e);
+    }
+  }
+  return getInstanceFor(connection,pubSubService);
+}
+/** 
+ * Get the PubSub manager for the given connection and PubSub service. Use <code>null</code> as argument for pubSubService to retrieve a PubSubManager for the users PEP service.
+ * @param connection the XMPP connection.
+ * @param pubSubService the PubSub service, may be <code>null</code>.
+ * @return a PubSub manager for the connection and service.
+ */
+public static PubSubManager getInstanceFor(XMPPConnection connection,BareJid pubSubService){
+  if (pubSubService != null && connection.isAuthenticated() && connection.getUser().asBareJid().equals(pubSubService)) {
+    pubSubService=null;
+  }
+  PubSubManager pubSubManager;
+  Map<BareJid,PubSubManager> managers;
+synchronized (INSTANCES) {
+    managers=INSTANCES.get(connection);
+    if (managers == null) {
+      managers=new HashMap<>();
+      INSTANCES.put(connection,managers);
+    }
+  }
+synchronized (managers) {
+    pubSubManager=managers.get(pubSubService);
+    if (pubSubManager == null) {
+      pubSubManager=new PubSubManager(connection,pubSubService);
+      managers.put(pubSubService,pubSubManager);
+    }
+  }
+  return pubSubManager;
+}

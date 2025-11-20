@@ -1,0 +1,22 @@
+/** 
+ * 获取物流信息
+ * @param expCode
+ * @param expNo
+ * @return
+ */
+public ExpressInfo getExpressInfo(String expCode,String expNo){
+  if (!properties.isEnable()) {
+    return null;
+  }
+  try {
+    String result=getOrderTracesByJson(expCode,expNo);
+    ObjectMapper objMap=new ObjectMapper();
+    ExpressInfo ei=objMap.readValue(result,ExpressInfo.class);
+    ei.setShipperName(getVendorName(expCode));
+    return ei;
+  }
+ catch (  Exception e) {
+    logger.error(e.getMessage(),e);
+  }
+  return null;
+}

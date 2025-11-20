@@ -1,0 +1,7 @@
+@Test void pingNotAllowedInSubscriptionState(){
+  TestFutures.awaitOrTimeout(pubsub.subscribe(channel));
+  assertThatThrownBy(() -> TestFutures.getOrTimeout(pubsub.echo("ping"))).isInstanceOf(RedisException.class).hasMessageContaining("not allowed");
+  pubsub.unsubscribe(channel);
+  Wait.untilTrue(() -> channels.size() == 2).waitOrTimeout();
+  assertThat(TestFutures.getOrTimeout(pubsub.echo("ping"))).isEqualTo("ping");
+}

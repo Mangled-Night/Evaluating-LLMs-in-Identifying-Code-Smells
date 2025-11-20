@@ -1,0 +1,43 @@
+/** 
+ * InitiationListener handles all incoming In-Band Bytestream open requests. If there are no listeners for a In-Band Bytestream request InitiationListener will always refuse the request and reply with a &lt;not-acceptable/&gt; error (<a href="http://xmpp.org/extensions/xep-0047.html#example-5" >XEP-0047</a> Section 2.1). <p> All In-Band Bytestream request having a block size greater than the maximum allowed block size for this connection are rejected with an &lt;resource-constraint/&gt; error. The maximum block size can be set by invoking  {@link InBandBytestreamManager#setMaximumBlockSize(int)}.
+ * @author Henning Staib
+ */
+class InitiationListener extends AbstractIqRequestHandler {
+  private final InBandBytestreamManager manager;
+  /** 
+ * Constructor.
+ * @param manager the In-Band Bytestream manager
+ */
+  protected InitiationListener(  InBandBytestreamManager manager){
+    super(Open.ELEMENT,Open.NAMESPACE,IQ.Type.set,Mode.async);
+    this.manager=manager;
+  }
+  @Override public IQ handleIQRequest(  final IQ iqRequest){
+    Open ibbRequest=(Open)iqRequest;
+    int blockSize=ibbRequest.getBlockSize();
+    int maximumBlockSize=manager.getMaximumBlockSize();
+    if (blockSize > maximumBlockSize) {
+      StanzaError error=StanzaError.getBuilder().setCondition(StanzaError.Condition.resource_constraint).setDescriptiveEnText("Requests block size of " + blockSize + " exceeds maximum block size of "+ maximumBlockSize).build();
+      return IQ.createErrorResponse(iqRequest,error);
+    }
+    StreamNegotiator.signal(ibbRequest.getFrom().toString() + '\t' + ibbRequest.getSessionID(),ibbRequest);
+    if (this.manager.getIgnoredBytestreamRequests().remove(ibbRequest.getSessionID())) {
+      return null;
+    }
+    InBandBytestreamRequest request=new InBandBytestreamRequest(this.manager,ibbRequest);
+    BytestreamListener userListener=this.manager.getUserListener(ibbRequest.getFrom());
+    if (userListener != null) {
+      userListener.incomingBytestreamRequest(request);
+    }
+ else     if (!this.manager.getAllRequestListeners().isEmpty()) {
+      for (      BytestreamListener listener : this.manager.getAllRequestListeners()) {
+        listener.incomingBytestreamRequest(request);
+      }
+    }
+ else {
+      StanzaError error=StanzaError.getBuilder().setCondition(StanzaError.Condition.not_acceptable).setDescriptiveEnText("No file-transfer listeners registered").build();
+      return IQ.createErrorResponse(iqRequest,error);
+    }
+    return null;
+  }
+}

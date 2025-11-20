@@ -1,0 +1,13 @@
+private void generateBlockTypeEntity(Block block){
+  EntityBuilder builder=entityManager.newBuilder(blockTypePrefab);
+  builder.getComponent(BlockTypeComponent.class).block=block;
+  Optional<Prefab> prefab=block.getPrefab();
+  if (prefab.isPresent()) {
+    for (    Component comp : prefab.get().iterateComponents()) {
+      if (!(comp instanceof NetworkComponent)) {
+        builder.addComponent(entityManager.getComponentLibrary().copy(comp));
+      }
+    }
+  }
+  block.setEntity(builder.build());
+}

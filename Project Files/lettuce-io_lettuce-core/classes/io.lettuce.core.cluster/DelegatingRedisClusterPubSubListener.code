@@ -1,0 +1,36 @@
+class DelegatingRedisClusterPubSubListener extends RedisPubSubAdapter<K,V> {
+  private final String nodeId;
+  private final String host;
+  private final int port;
+  DelegatingRedisClusterPubSubListener(  String nodeId){
+    this.nodeId=nodeId;
+    this.host=null;
+    this.port=0;
+  }
+  DelegatingRedisClusterPubSubListener(  String host,  int port){
+    this.nodeId=null;
+    this.host=host;
+    this.port=port;
+  }
+  @Override public void message(  K channel,  V message){
+    notifications.message(getNode(),channel,message);
+  }
+  @Override public void message(  K pattern,  K channel,  V message){
+    notifications.message(getNode(),pattern,channel,message);
+  }
+  @Override public void subscribed(  K channel,  long count){
+    notifications.subscribed(getNode(),channel,count);
+  }
+  @Override public void psubscribed(  K pattern,  long count){
+    notifications.psubscribed(getNode(),pattern,count);
+  }
+  @Override public void unsubscribed(  K channel,  long count){
+    notifications.unsubscribed(getNode(),channel,count);
+  }
+  @Override public void punsubscribed(  K pattern,  long count){
+    notifications.punsubscribed(getNode(),pattern,count);
+  }
+  private RedisClusterNode getNode(){
+    return nodeId != null ? getPartitions().getPartitionByNodeId(nodeId) : getPartitions().getPartition(host,port);
+  }
+}

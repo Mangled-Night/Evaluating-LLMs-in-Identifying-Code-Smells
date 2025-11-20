@@ -1,0 +1,21 @@
+private void processChunkInfo(ChunkProcessingInfo info){
+  if (info.getChunkTask() == null) {
+    return;
+  }
+  if (info.getCurrentFuture() != null) {
+    return;
+  }
+  ChunkTask chunkTask=info.getChunkTask();
+  List<Vector3ic> requirements=chunkTask.getRequirements();
+  List<Chunk> requiredChunks=Lists.newArrayListWithCapacity(requirements.size());
+  for (  Vector3ic pos : requirements) {
+    Chunk chunk=getChunkBy(info.getChunkTaskProvider(),pos);
+    if (chunk != null) {
+      requiredChunks.add(chunk);
+    }
+ else {
+      return;
+    }
+  }
+  info.setCurrentFuture(runTask(chunkTask,requiredChunks));
+}

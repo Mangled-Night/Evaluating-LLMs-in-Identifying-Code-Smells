@@ -1,0 +1,15 @@
+@Test void genericPoolUsingWrappingShouldPropagateExceptionsCorrectly() throws Exception {
+  GenericObjectPool<StatefulRedisConnection<String,String>> pool=ConnectionPoolSupport.createGenericObjectPool(() -> client.connect(),new GenericObjectPoolConfig<>());
+  StatefulRedisConnection<String,String> connection=pool.borrowObject();
+  RedisCommands<String,String> sync=connection.sync();
+  sync.set(key,value);
+  try {
+    sync.hgetall(key);
+    fail("Missing RedisCommandExecutionException");
+  }
+ catch (  RedisCommandExecutionException e) {
+    assertThat(e).hasMessageContaining("WRONGTYPE");
+  }
+  connection.close();
+  pool.close();
+}

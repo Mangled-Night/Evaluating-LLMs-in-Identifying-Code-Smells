@@ -1,0 +1,9 @@
+@ParameterizedTest @MethodSource("cryptoTestValues") void shouldEncryptValue(CryptoTestArgs testArgs){
+  RedisCodec<String,String> crypto=CipherCodec.forValues(StringCodec.UTF8,encrypt,decrypt);
+  ByteBuffer encrypted=crypto.encodeValue(testArgs.content);
+  assertThat(encrypted).isNotEqualTo(ByteBuffer.wrap(testArgs.content.getBytes()));
+  assertThat(new String(encrypted.array())).startsWith("$foobar+142$");
+  String decrypted=crypto.decodeValue(encrypted);
+  assertThat(decrypted).isEqualTo(testArgs.content);
+  assertThat(StringCodec.UTF8.encodeValue(testArgs.content)).isEqualTo(ByteBuffer.wrap(testArgs.content.getBytes()));
+}

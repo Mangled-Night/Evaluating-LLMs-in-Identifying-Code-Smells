@@ -1,0 +1,70 @@
+/** 
+ * Status code assists in presenting notification messages. The following link provides the list of existing error codes <a href="http://xmpp.org/registrar/mucstatus.html">Multi-User Chat Status Codes</a>.
+ * @author Gaston Dombiak
+ */
+public static final class Status implements NamedElement {
+  public static final String ELEMENT="status";
+  private static final Map<Integer,Status> statusMap=new HashMap<>(8);
+  public static final Status PRESENCE_TO_SELF_110=Status.create(110);
+  public static final Status ROOM_CREATED_201=Status.create(201);
+  public static final Status BANNED_301=Status.create(301);
+  public static final Status NEW_NICKNAME_303=Status.create(303);
+  public static final Status KICKED_307=Status.create(307);
+  public static final Status REMOVED_AFFIL_CHANGE_321=Status.create(321);
+  public static final Status REMOVED_FOR_TECHNICAL_REASONS_333=Status.create(333);
+  private final Integer code;
+  public static Status create(  String string){
+    Integer integer=Integer.valueOf(string);
+    return create(integer);
+  }
+  public static Status create(  Integer i){
+    Status status;
+synchronized (statusMap) {
+      status=statusMap.get(i);
+      if (status == null) {
+        status=new Status(i);
+        statusMap.put(i,status);
+      }
+    }
+    return status;
+  }
+  /** 
+ * Creates a new instance of Status with the specified code.
+ * @param code the code that uniquely identifies the reason of the error.
+ */
+  private Status(  int code){
+    this.code=code;
+  }
+  /** 
+ * Returns the code that uniquely identifies the reason of the error. The code assists in presenting notification messages.
+ * @return the code that uniquely identifies the reason of the error.
+ */
+  public int getCode(){
+    return code;
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this);
+    xml.attribute("code",getCode());
+    xml.closeEmptyElement();
+    return xml;
+  }
+  @Override public String toString(){
+    return code.toString();
+  }
+  @Override public boolean equals(  Object other){
+    if (other == null) {
+      return false;
+    }
+    if (other instanceof Status) {
+      Status otherStatus=(Status)other;
+      return code.equals(otherStatus.getCode());
+    }
+    return false;
+  }
+  @Override public int hashCode(){
+    return code;
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+}

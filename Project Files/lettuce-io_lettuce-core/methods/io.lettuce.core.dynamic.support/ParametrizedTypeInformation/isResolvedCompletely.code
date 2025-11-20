@@ -1,0 +1,21 @@
+private boolean isResolvedCompletely(){
+  if (resolved != null) {
+    return resolved;
+  }
+  Type[] typeArguments=type.getActualTypeArguments();
+  if (typeArguments.length == 0) {
+    return cacheAndReturn(false);
+  }
+  for (  Type typeArgument : typeArguments) {
+    TypeInformation<?> info=createInfo(typeArgument);
+    if (info instanceof ParametrizedTypeInformation) {
+      if (!((ParametrizedTypeInformation<?>)info).isResolvedCompletely()) {
+        return cacheAndReturn(false);
+      }
+    }
+    if (!(info instanceof ClassTypeInformation)) {
+      return cacheAndReturn(false);
+    }
+  }
+  return cacheAndReturn(true);
+}

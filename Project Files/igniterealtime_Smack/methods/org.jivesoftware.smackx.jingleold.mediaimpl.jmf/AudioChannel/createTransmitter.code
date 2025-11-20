@@ -1,0 +1,48 @@
+/** 
+ * Use the RTPManager API to create sessions for each jmf track of the processor.
+ * @return description TODO javadoc me please
+ */
+private String createTransmitter(){
+  PushBufferDataSource pbds=(PushBufferDataSource)dataOutput;
+  PushBufferStream[] pbss=pbds.getStreams();
+  rtpMgrs=new RTPManager[pbss.length];
+  SessionAddress localAddr, destAddr;
+  InetAddress ipAddr;
+  SendStream sendStream;
+  audioReceiver=new AudioReceiver(this,jingleMediaSession);
+  int port;
+  for (int i=0; i < pbss.length; i++) {
+    try {
+      rtpMgrs[i]=RTPManager.newInstance();
+      port=portBase + 2 * i;
+      ipAddr=InetAddress.getByName(remoteIpAddress);
+      localAddr=new SessionAddress(InetAddress.getByName(this.localIpAddress),localPort);
+      destAddr=new SessionAddress(ipAddr,port);
+      rtpMgrs[i].addReceiveStreamListener(audioReceiver);
+      rtpMgrs[i].addSessionListener(audioReceiver);
+      BufferControl bc=(BufferControl)rtpMgrs[i].getControl("javax.media.control.BufferControl");
+      if (bc != null) {
+        int bl=160;
+        bc.setBufferLength(bl);
+      }
+      try {
+        rtpMgrs[i].initialize(localAddr);
+      }
+ catch (      InvalidSessionAddressException e) {
+        SessionAddress sessAddr=new SessionAddress();
+        localAddr=new SessionAddress(sessAddr.getDataAddress(),localPort);
+        rtpMgrs[i].initialize(localAddr);
+      }
+      rtpMgrs[i].addTarget(destAddr);
+      LOGGER.severe("Created RTP session at " + localPort + " to: "+ remoteIpAddress+ " "+ port);
+      sendStream=rtpMgrs[i].createSendStream(dataOutput,i);
+      sendStreams.add(sendStream);
+      sendStream.start();
+    }
+ catch (    Exception e) {
+      LOGGER.log(Level.WARNING,"exception",e);
+      return e.getMessage();
+    }
+  }
+  return null;
+}

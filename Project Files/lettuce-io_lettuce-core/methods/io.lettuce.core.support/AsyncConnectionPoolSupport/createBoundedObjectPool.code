@@ -1,0 +1,26 @@
+/** 
+ * Create and initialize asynchronously a new  {@link BoundedAsyncPool} using the {@link Supplier}. Allocated instances are wrapped and must not be returned with  {@link AsyncPool#release(Object)}. <p> Since Lettuce 6, this method is blocking as it awaits pool initialization (creation of idle connections).Use {@link #createBoundedObjectPoolAsync(Supplier,BoundedPoolConfig)} to obtain a {@link CompletionStage} for non-blockingsynchronization.
+ * @param connectionSupplier must not be {@code null}.
+ * @param config must not be {@code null}.
+ * @param < T > connection type.
+ * @return the connection pool.
+ */
+public static <T extends StatefulConnection<?,?>>BoundedAsyncPool<T> createBoundedObjectPool(Supplier<CompletionStage<T>> connectionSupplier,BoundedPoolConfig config){
+  return createBoundedObjectPool(connectionSupplier,config,true);
+}
+/** 
+ * Create and initialize asynchronously a new  {@link BoundedAsyncPool} using the {@link Supplier}. <p> Since Lettuce 6, this method is blocking as it awaits pool initialization (creation of idle connections).Use {@link #createBoundedObjectPoolAsync(Supplier,BoundedPoolConfig,boolean)} to obtain a {@link CompletionStage} fornon-blocking synchronization.
+ * @param connectionSupplier must not be {@code null}.
+ * @param config must not be {@code null}.
+ * @param wrapConnections {@code false} to return direct connections that need to be returned to the pool using{@link AsyncPool#release(Object)}.  {@code true} to return wrapped connection that are returned to the pool wheninvoking  {@link StatefulConnection#close()}/ {@link StatefulConnection#closeAsync()}.
+ * @param < T > connection type.
+ * @return the connection pool.
+ */
+public static <T extends StatefulConnection<?,?>>BoundedAsyncPool<T> createBoundedObjectPool(Supplier<CompletionStage<T>> connectionSupplier,BoundedPoolConfig config,boolean wrapConnections){
+  try {
+    return createBoundedObjectPoolAsync(connectionSupplier,config,wrapConnections).toCompletableFuture().join();
+  }
+ catch (  Exception e) {
+    throw Exceptions.bubble(Exceptions.unwrap(e));
+  }
+}

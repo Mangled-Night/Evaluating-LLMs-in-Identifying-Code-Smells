@@ -1,0 +1,149 @@
+/** 
+ * Tests the connection and reconnection mechanism
+ * @author Francisco Vives
+ */
+public class ReconnectionTest extends SmackTestCase {
+  private static final long MIN_RECONNECT_WAIT=17;
+  public ReconnectionTest(  String arg0){
+    super(arg0);
+  }
+  /** 
+ * Tests an automatic reconnection. Simulates a connection error and then waits until gets reconnected.
+ */
+  public void testAutomaticReconnection() throws Exception {
+    XMPPTCPConnection connection=getConnection(0);
+    CountDownLatch latch=new CountDownLatch(1);
+    XMPPTCPConnectionTestListener listener=new XMPPConnectionTestListener(latch);
+    connection.addConnectionListener(listener);
+    connection.notifyConnectionError(new Exception("Simulated Error"));
+    latch.await(MIN_RECONNECT_WAIT,TimeUnit.SECONDS);
+    assertEquals("The ConnectionListener.connectionStablished() notification was not fired",true,listener.reconnected);
+    assertTrue("The ReconnectionManager algorithm has reconnected without waiting at least 5 seconds",listener.attemptsNotifications > 0);
+    executeSomeServerInteraction(connection);
+  }
+  public void testAutomaticReconnectionWithCompression() throws Exception {
+    ConnectionConfiguration config=new ConnectionConfiguration(getHost(),getPort());
+    config.setCompressionEnabled(true);
+    config.setSASLAuthenticationEnabled(true);
+    XMPPTCPConnection connection=new XMPPConnection(config);
+    connection.connect();
+    connection.login(getUsername(0),getPassword(0),"MyOtherResource");
+    assertTrue("Failed to use compression",connection.isUsingCompression());
+    executeSomeServerInteraction(connection);
+    CountDownLatch latch=new CountDownLatch(1);
+    XMPPTCPConnectionTestListener listener=new XMPPConnectionTestListener(latch);
+    connection.addConnectionListener(listener);
+    connection.notifyConnectionError(new Exception("Simulated Error"));
+    latch.await(MIN_RECONNECT_WAIT,TimeUnit.SECONDS);
+    assertEquals("The ConnectionListener.connectionEstablished() notification was not fired",true,listener.reconnected);
+    assertTrue("The ReconnectionManager algorithm has reconnected without waiting at least 5 seconds",listener.attemptsNotifications > 0);
+    executeSomeServerInteraction(connection);
+  }
+  /** 
+ * Tests a manual reconnection. Simulates a connection error, disables the reconnection mechanism and then reconnects.
+ */
+  public void testManualReconnectionWithCancelation() throws Exception {
+    XMPPTCPConnection connection=getConnection(0);
+    CountDownLatch latch=new CountDownLatch(1);
+    XMPPTCPConnectionTestListener listener=new XMPPConnectionTestListener(latch);
+    connection.addConnectionListener(listener);
+    connection.notifyConnectionError(new Exception("Simulated Error"));
+    assertEquals("An error occurs but the ConnectionListener.connectionClosedOnError(e) was not notified",true,listener.connectionClosedOnError);
+    connection.getConfiguration().setReconnectionAllowed(false);
+    Thread.sleep(MIN_RECONNECT_WAIT * 1000);
+    assertEquals(false,listener.reconnected);
+    connection.connect();
+    executeSomeServerInteraction(connection);
+  }
+  /** 
+ * Tests a manual reconnection after a login. Closes the connection and then reconnects.
+ */
+  public void testCloseAndManualReconnection() throws Exception {
+    XMPPTCPConnection connection=getConnection(0);
+    String username=connection.getConfiguration().getUsername();
+    String password=connection.getConfiguration().getPassword();
+    XMPPTCPConnectionTestListener listener=new XMPPConnectionTestListener();
+    connection.addConnectionListener(listener);
+    connection.disconnect();
+    assertEquals("ConnectionListener.connectionClosed() was not notified",true,listener.connectionClosed);
+    Thread.sleep(MIN_RECONNECT_WAIT * 1000);
+    assertEquals("The connection was stablished but it was not allowed to",false,listener.reconnected);
+    connection.connect();
+    connection.login(username,password);
+    executeSomeServerInteraction(connection);
+  }
+  /** 
+ * Tests a reconnection in a anonymously logged connection. Closes the connection and then reconnects.
+ */
+  public void testAnonymousReconnection() throws Exception {
+    XMPPTCPConnection connection=createConnection();
+    connection.connect();
+    XMPPTCPConnectionTestListener listener=new XMPPConnectionTestListener();
+    connection.addConnectionListener(listener);
+    connection.loginAnonymously();
+    connection.disconnect();
+    assertEquals("ConnectionListener.connectionClosed() was not notified",true,listener.connectionClosed);
+    connection.connect();
+    connection.loginAnonymously();
+    assertEquals("Failed the manual connection",true,connection.isAnonymous());
+  }
+  private XMPPTCPConnection createXMPPConnection() throws Exception {
+    XMPPTCPConnection connection;
+    ConnectionConfiguration config=new ConnectionConfiguration(getHost(),getPort());
+    config.setCompressionEnabled(Boolean.getBoolean("test.compressionEnabled"));
+    config.setSASLAuthenticationEnabled(true);
+    connection=new XMPPTCPConnection(config);
+    return connection;
+  }
+  /** 
+ * Execute some server interaction in order to test that the regenerated connection works fine.
+ */
+  private void executeSomeServerInteraction(  TCPConnection connection) throws XMPPException {
+    PingManager pingManager=PingManager.getInstanceFor(connection);
+    pingManager.pingMyServer();
+  }
+  protected int getMaxConnections(){
+    return 1;
+  }
+private class XMPPTCPConnectionTestListener implements ConnectionListener {
+    private volatile boolean connectionClosed=false;
+    private volatile boolean connectionClosedOnError=false;
+    private volatile boolean reconnected=false;
+    private volatile boolean reconnectionFailed=false;
+    private volatile int remainingSeconds=0;
+    private volatile int attemptsNotifications=0;
+    private volatile boolean reconnectionCanceled=false;
+    private CountDownLatch countDownLatch;
+    private XMPPTCPConnectionTestListener(    CountDownLatch latch){
+      countDownLatch=latch;
+    }
+    private XMPPTCPConnectionTestListener(){
+    }
+    /** 
+ * Methods to test the listener.
+ */
+    public void connectionClosed(){
+      connectionClosed=true;
+      if (countDownLatch != null)       countDownLatch.countDown();
+    }
+    public void connectionClosedOnError(    Exception e){
+      connectionClosedOnError=true;
+    }
+    public void reconnectionCanceled(){
+      reconnectionCanceled=true;
+      if (countDownLatch != null)       countDownLatch.countDown();
+    }
+    public void reconnectingIn(    int seconds){
+      attemptsNotifications=attemptsNotifications + 1;
+      remainingSeconds=seconds;
+    }
+    public void reconnectionSuccessful(){
+      reconnected=true;
+      if (countDownLatch != null)       countDownLatch.countDown();
+    }
+    public void reconnectionFailed(    Exception error){
+      reconnectionFailed=true;
+      if (countDownLatch != null)       countDownLatch.countDown();
+    }
+  }
+}

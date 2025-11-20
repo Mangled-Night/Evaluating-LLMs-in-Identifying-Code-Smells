@@ -1,0 +1,20 @@
+/** 
+ * Constructor.
+ * @param connection the XMPP connection
+ */
+private InBandBytestreamManager(XMPPConnection connection){
+  super(connection);
+  connection.addConnectionListener(new AbstractConnectionClosedListener(){
+    @Override public void connectionTerminated(){
+      InBandBytestreamManager.this.sessions.clear();
+      InBandBytestreamManager.this.ignoredBytestreamRequests.clear();
+    }
+  }
+);
+  this.initiationListener=new InitiationListener(this);
+  connection.registerIQRequestHandler(initiationListener);
+  this.dataListener=new DataListener(this);
+  connection.registerIQRequestHandler(dataListener);
+  this.closeListener=new CloseListener(this);
+  connection.registerIQRequestHandler(closeListener);
+}

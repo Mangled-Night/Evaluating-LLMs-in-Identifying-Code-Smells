@@ -1,0 +1,52 @@
+private void genericfileTransferTest() throws Exception {
+  final ResultSyncPoint<String,Exception> resultSyncPoint=new ResultSyncPoint<>();
+  final FileTransferListener receiveListener=new FileTransferListener(){
+    @Override public void fileTransferRequest(    FileTransferRequest request){
+      byte[] dataReceived;
+      IncomingFileTransfer ift=request.accept();
+      try {
+        InputStream is=ift.receiveFile();
+        ByteArrayOutputStream os=new ByteArrayOutputStream();
+        int nRead;
+        byte[] buf=new byte[1024];
+        while ((nRead=is.read(buf,0,buf.length)) != -1) {
+          os.write(buf,0,nRead);
+        }
+        os.flush();
+        dataReceived=os.toByteArray();
+        if (Arrays.equals(dataToSend,dataReceived)) {
+          resultSyncPoint.signal("Received data matches send data. \\o/");
+        }
+ else {
+          resultSyncPoint.signal(new Exception("Received data does not match"));
+        }
+      }
+ catch (      SmackException|IOException|XMPPErrorException|InterruptedException e) {
+        resultSyncPoint.signal(e);
+      }
+    }
+  }
+;
+  ftManagerTwo.addFileTransferListener(receiveListener);
+  OutgoingFileTransfer oft=ftManagerOne.createOutgoingFileTransfer(conTwo.getUser());
+  oft.sendStream(new ByteArrayInputStream(dataToSend),"hello.txt",dataToSend.length,"A greeting");
+  int duration=0;
+  while (!oft.isDone()) {
+    Status status=oft.getStatus();
+switch (status) {
+case error:
+      FileTransfer.Error error=oft.getError();
+    Exception exception=oft.getException();
+  throw new Exception("FileTransfer error: " + error,exception);
+default :
+LOGGER.info("FileTransfer status: " + oft.getStatus() + ". Progress: "+ oft.getProgress());
+break;
+}
+Thread.sleep(1000);
+if (++duration > MAX_FT_DURATION) {
+throw new Exception("Max duration reached");
+}
+}
+resultSyncPoint.waitForResult(MAX_FT_DURATION * 1000);
+ftManagerTwo.removeFileTransferListener(receiveListener);
+}

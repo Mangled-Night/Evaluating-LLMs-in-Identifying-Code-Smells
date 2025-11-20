@@ -1,0 +1,22 @@
+@Override public void addDelayedAction(EntityRef entity,String actionId,long delay){
+  long scheduleTime=time.getGameTimeInMs() + delay;
+  DelayedActionComponent delayedActionComponent=entity.getComponent(DelayedActionComponent.class);
+  if (delayedActionComponent != null) {
+    final long oldWakeUp=delayedActionComponent.getLowestWakeUp();
+    delayedActionComponent.addActionId(actionId,scheduleTime);
+    entity.saveComponent(delayedActionComponent);
+    final long newWakeUp=delayedActionComponent.getLowestWakeUp();
+    if (oldWakeUp < newWakeUp) {
+      delayedOperationsSortedByTime.remove(oldWakeUp,entity);
+      delayedOperationsSortedByTime.put(newWakeUp,entity);
+    }
+ else {
+      delayedOperationsSortedByTime.put(scheduleTime,entity);
+    }
+  }
+ else {
+    delayedActionComponent=new DelayedActionComponent();
+    delayedActionComponent.addActionId(actionId,scheduleTime);
+    entity.addComponent(delayedActionComponent);
+  }
+}

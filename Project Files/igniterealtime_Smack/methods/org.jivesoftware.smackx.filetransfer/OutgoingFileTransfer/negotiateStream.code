@@ -1,0 +1,14 @@
+private OutputStream negotiateStream(String fileName,long fileSize,String description) throws SmackException, XMPPException, InterruptedException {
+  if (!updateStatus(Status.initial,Status.negotiating_transfer)) {
+    throw new IllegalStateChangeException();
+  }
+  StreamNegotiator streamNegotiator=negotiator.negotiateOutgoingTransfer(getPeer(),streamID,fileName,fileSize,description,RESPONSE_TIMEOUT);
+  if (!updateStatus(Status.negotiating_transfer,Status.negotiating_stream)) {
+    throw new IllegalStateChangeException();
+  }
+  outputStream=streamNegotiator.createOutgoingStream(streamID,initiator,getPeer());
+  if (!updateStatus(Status.negotiating_stream,Status.negotiated)) {
+    throw new IllegalStateChangeException();
+  }
+  return outputStream;
+}

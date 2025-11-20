@@ -1,0 +1,22 @@
+/** 
+ * @param uri uri of the world generator to create.
+ * @param context that will be used to inject teh world generator.
+ * @param environment to be searched for the world generator class.
+ * @return a new world generator with the specified uri.
+ */
+public static WorldGenerator createWorldGenerator(SimpleUri uri,Context context,ModuleEnvironment environment) throws UnresolvedWorldGeneratorException {
+  for (  Class<?> generatorClass : environment.getTypesAnnotatedWith(RegisterWorldGenerator.class)) {
+    RegisterWorldGenerator annotation=generatorClass.getAnnotation(RegisterWorldGenerator.class);
+    Name moduleName=environment.getModuleProviding(generatorClass);
+    if (moduleName == null) {
+      throw new UnresolvedWorldGeneratorException("Cannot find module for world generator " + generatorClass);
+    }
+    SimpleUri generatorUri=new SimpleUri(moduleName,annotation.id());
+    if (generatorUri.equals(uri)) {
+      WorldGenerator worldGenerator=loadGenerator(generatorClass,generatorUri);
+      InjectionHelper.inject(worldGenerator,context);
+      return worldGenerator;
+    }
+  }
+  throw new UnresolvedWorldGeneratorException("Unable to resolve world generator '" + uri + "' - not found");
+}

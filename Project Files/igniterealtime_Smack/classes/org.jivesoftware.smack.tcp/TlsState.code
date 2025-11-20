@@ -1,0 +1,228 @@
+private final class TlsState implements XmppInputOutputFilter {
+  private static final int MAX_PENDING_OUTPUT_BYTES=8096;
+  private final SmackTlsContext smackTlsContext;
+  private final SSLEngine engine;
+  private TlsHandshakeStatus handshakeStatus=TlsHandshakeStatus.initial;
+  private SSLException handshakeException;
+  private ByteBuffer myNetData;
+  private ByteBuffer peerAppData;
+  private final List<ByteBuffer> pendingOutputData=new ArrayList<>();
+  private int pendingOutputBytes;
+  private ByteBuffer pendingInputData;
+  private final AtomicInteger pendingDelegatedTasks=new AtomicInteger();
+  private long wrapInBytes;
+  private long wrapOutBytes;
+  private long unwrapInBytes;
+  private long unwrapOutBytes;
+  private TlsState(  SmackTlsContext smackTlsContext) throws IOException {
+    this.smackTlsContext=smackTlsContext;
+    String peerHost=connectionInternal.connection.getConfiguration().getXMPPServiceDomain().toString();
+    engine=smackTlsContext.sslContext.createSSLEngine(peerHost,remoteAddress.getPort());
+    engine.setUseClientMode(true);
+    SSLSession session=engine.getSession();
+    int applicationBufferSize=session.getApplicationBufferSize();
+    int packetBufferSize=session.getPacketBufferSize();
+    myNetData=ByteBuffer.allocateDirect(packetBufferSize);
+    peerAppData=ByteBuffer.allocate(applicationBufferSize);
+  }
+  @Override public OutputResult output(  ByteBuffer outputData,  boolean isFinalDataOfElement,  boolean destinationAddressChanged,  boolean moreDataAvailable) throws SSLException {
+    if (outputData != null) {
+      pendingOutputData.add(outputData);
+      pendingOutputBytes+=outputData.remaining();
+      if (moreDataAvailable && pendingOutputBytes < MAX_PENDING_OUTPUT_BYTES) {
+        return OutputResult.NO_OUTPUT;
+      }
+    }
+    ByteBuffer[] outputDataArray=pendingOutputData.toArray(new ByteBuffer[pendingOutputData.size()]);
+    myNetData.clear();
+    while (true) {
+      SSLEngineResult result;
+      try {
+        result=engine.wrap(outputDataArray,myNetData);
+      }
+ catch (      SSLException e) {
+        handleSslException(e);
+        throw e;
+      }
+      debugLogSslEngineResult("wrap",result);
+      SSLEngineResult.Status engineResultStatus=result.getStatus();
+      pendingOutputBytes-=result.bytesConsumed();
+      if (engineResultStatus == SSLEngineResult.Status.OK) {
+        wrapInBytes+=result.bytesConsumed();
+        wrapOutBytes+=result.bytesProduced();
+        SSLEngineResult.HandshakeStatus handshakeStatus=handleHandshakeStatus(result);
+switch (handshakeStatus) {
+case NEED_UNWRAP:
+          break;
+case NEED_WRAP:
+case NEED_TASK:
+        return new OutputResult(true,myNetData);
+default :
+      break;
+  }
+}
+switch (engineResultStatus) {
+case OK:
+  pruneBufferList(pendingOutputData);
+return new OutputResult(!pendingOutputData.isEmpty(),myNetData);
+case CLOSED:
+pendingOutputData.clear();
+return OutputResult.NO_OUTPUT;
+case BUFFER_OVERFLOW:
+LOGGER.warning("SSLEngine status BUFFER_OVERFLOW, this is hopefully uncommon");
+int outputDataRemaining=outputData != null ? outputData.remaining() : 0;
+int newCapacity=(int)(1.3 * outputDataRemaining);
+if (newCapacity <= myNetData.capacity()) {
+newCapacity=2 * myNetData.capacity();
+}
+ByteBuffer newMyNetData=ByteBuffer.allocateDirect(newCapacity);
+myNetData.flip();
+newMyNetData.put(myNetData);
+myNetData=newMyNetData;
+continue;
+case BUFFER_UNDERFLOW:
+throw new IllegalStateException("Buffer underflow as result of SSLEngine.wrap() should never happen");
+}
+}
+}
+@SuppressWarnings("ReferenceEquality") @Override public ByteBuffer input(ByteBuffer inputData) throws SSLException {
+ByteBuffer accumulatedData;
+if (pendingInputData == null) {
+accumulatedData=inputData;
+}
+ else {
+assert pendingInputData != inputData;
+int accumulatedDataBytes=pendingInputData.remaining() + inputData.remaining();
+accumulatedData=ByteBuffer.allocate(accumulatedDataBytes);
+accumulatedData.put(pendingInputData).put(inputData).flip();
+pendingInputData=null;
+}
+peerAppData.clear();
+while (true) {
+SSLEngineResult result;
+try {
+result=engine.unwrap(accumulatedData,peerAppData);
+}
+ catch (SSLException e) {
+handleSslException(e);
+throw e;
+}
+debugLogSslEngineResult("unwrap",result);
+SSLEngineResult.Status engineResultStatus=result.getStatus();
+if (engineResultStatus == SSLEngineResult.Status.OK) {
+unwrapInBytes+=result.bytesConsumed();
+unwrapOutBytes+=result.bytesProduced();
+SSLEngineResult.HandshakeStatus handshakeStatus=handleHandshakeStatus(result);
+switch (handshakeStatus) {
+case NEED_TASK:
+addAsPendingInputData(accumulatedData);
+return null;
+case NEED_UNWRAP:
+continue;
+case NEED_WRAP:
+addAsPendingInputData(accumulatedData);
+connectionInternal.asyncGo(() -> callChannelSelectedCallback(false,true));
+return null;
+default :
+break;
+}
+}
+switch (engineResultStatus) {
+case OK:
+if (accumulatedData.hasRemaining()) {
+continue;
+}
+return peerAppData;
+case CLOSED:
+return null;
+case BUFFER_UNDERFLOW:
+addAsPendingInputData(accumulatedData);
+return null;
+case BUFFER_OVERFLOW:
+int applicationBufferSize=engine.getSession().getApplicationBufferSize();
+assert peerAppData.remaining() < applicationBufferSize;
+peerAppData=ByteBuffer.allocate(applicationBufferSize);
+continue;
+}
+}
+}
+private void addAsPendingInputData(ByteBuffer byteBuffer){
+pendingInputData=ByteBuffer.allocate(byteBuffer.remaining());
+pendingInputData.put(byteBuffer).flip();
+pendingInputFilterData=pendingInputData.hasRemaining();
+}
+private SSLEngineResult.HandshakeStatus handleHandshakeStatus(SSLEngineResult sslEngineResult){
+SSLEngineResult.HandshakeStatus handshakeStatus=sslEngineResult.getHandshakeStatus();
+switch (handshakeStatus) {
+case NEED_TASK:
+while (true) {
+final Runnable delegatedTask=engine.getDelegatedTask();
+if (delegatedTask == null) {
+break;
+}
+sslEngineDelegatedTasks++;
+int currentPendingDelegatedTasks=pendingDelegatedTasks.incrementAndGet();
+if (currentPendingDelegatedTasks > maxPendingSslEngineDelegatedTasks) {
+maxPendingSslEngineDelegatedTasks=currentPendingDelegatedTasks;
+}
+Runnable wrappedDelegatedTask=() -> {
+delegatedTask.run();
+int wrappedCurrentPendingDelegatedTasks=pendingDelegatedTasks.decrementAndGet();
+if (wrappedCurrentPendingDelegatedTasks == 0) {
+callChannelSelectedCallback(true,true);
+}
+}
+;
+connectionInternal.asyncGo(wrappedDelegatedTask);
+}
+break;
+case FINISHED:
+onHandshakeFinished();
+break;
+default :
+break;
+}
+SSLEngineResult.HandshakeStatus afterHandshakeStatus=engine.getHandshakeStatus();
+return afterHandshakeStatus;
+}
+private void handleSslException(SSLException e){
+handshakeException=e;
+handshakeStatus=TlsHandshakeStatus.failed;
+connectionInternal.notifyWaitingThreads();
+}
+private void onHandshakeFinished(){
+handshakeStatus=TlsHandshakeStatus.successful;
+connectionInternal.notifyWaitingThreads();
+}
+private boolean isHandshakeFinished(){
+return handshakeStatus == TlsHandshakeStatus.successful || handshakeStatus == TlsHandshakeStatus.failed;
+}
+private void waitForHandshakeFinished() throws InterruptedException, CertificateException, SSLException, SmackException, XMPPException {
+connectionInternal.waitForConditionOrThrowConnectionException(() -> isHandshakeFinished(),"TLS handshake to finish");
+if (handshakeStatus == TlsHandshakeStatus.failed) {
+throw handshakeException;
+}
+assert handshakeStatus == TlsHandshakeStatus.successful;
+if (smackTlsContext.daneVerifier != null) {
+smackTlsContext.daneVerifier.finish(engine.getSession());
+}
+}
+@Override public Object getStats(){
+return new TlsStateStats(this);
+}
+@Override public void closeInputOutput(){
+engine.closeOutbound();
+try {
+engine.closeInbound();
+}
+ catch (SSLException e) {
+LOGGER.log(Level.FINEST,"SSLException when closing inbound TLS session. This can likely be ignored if a possible truncation attack is suggested." + " You may want to ask your XMPP server vendor to implement a clean TLS session shutdown sending close_notify after </stream>",e);
+}
+}
+@Override public void waitUntilInputOutputClosed() throws IOException, CertificateException, InterruptedException, SmackException, XMPPException {
+waitForHandshakeFinished();
+}
+@Override public String getFilterName(){
+return "TLS (" + engine + ')';
+}
+}

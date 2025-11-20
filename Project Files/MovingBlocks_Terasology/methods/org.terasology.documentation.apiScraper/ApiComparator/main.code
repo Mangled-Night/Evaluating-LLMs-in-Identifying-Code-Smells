@@ -1,0 +1,20 @@
+/** 
+ * Generates a NEW_API_FILE and compares it with the ORIGINAL_API_FILE to detect major and minor version increases. Major increases: Deletion of class, new public abstract method, new non-default interface method, public method deletion, existing public method's change of parameters types, exception types or return type. Minor increases: Creation of a new class, new non-abstract public methods.
+ */
+public static void main(String[] args) throws Exception {
+  try (BufferedReader br=new BufferedReader(new FileReader(ORIGINAL_API_FILE))){
+    Map<String,Collection<ApiMethod>> originalApi=getApi(br);
+    br.close();
+    BufferedWriter writer=new BufferedWriter(new FileWriter(new File(NEW_API_FILE)));
+    writer.write(CompleteApiScraper.getApi().toString());
+    writer.flush();
+    writer.close();
+    BufferedReader br2=new BufferedReader(new FileReader(NEW_API_FILE));
+    Map<String,Collection<ApiMethod>> newApi=getApi(br2);
+    br2.close();
+    System.out.println("=================================================================");
+    checkClassAdditionAndDeletion(originalApi,newApi);
+    checkMethodChanges(originalApi,newApi);
+    System.out.println("REPORT FINISHED");
+  }
+ }

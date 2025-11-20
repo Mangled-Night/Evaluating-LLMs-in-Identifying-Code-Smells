@@ -1,0 +1,10 @@
+@Test void xpendingGroup(){
+  redis.xgroupCreate(StreamOffset.latest(key),"group",XGroupCreateArgs.Builder.mkstream());
+  String id=redis.xadd(key,Collections.singletonMap("key","value"));
+  redis.xreadgroup(Consumer.from("group","consumer1"),StreamOffset.lastConsumed(key));
+  PendingMessages pendingMessages=redis.xpending(key,"group");
+  assertThat(pendingMessages.getCount()).isEqualTo(1);
+  assertThat(pendingMessages.getMessageIds()).isEqualTo(Range.create(id,id));
+  assertThat(pendingMessages.getConsumerMessageCount()).containsEntry("consumer1",1L);
+  assertThat(pendingMessages.getCount()).isEqualTo(1);
+}

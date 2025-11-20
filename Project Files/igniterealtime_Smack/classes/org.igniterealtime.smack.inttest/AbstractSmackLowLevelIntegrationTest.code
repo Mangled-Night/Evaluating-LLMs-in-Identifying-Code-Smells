@@ -1,0 +1,33 @@
+public abstract class AbstractSmackLowLevelIntegrationTest extends AbstractSmackIntTest {
+  private final SmackIntegrationTestEnvironment environment;
+  /** 
+ * The configuration
+ */
+  protected final Configuration configuration;
+  protected final DomainBareJid service;
+  protected AbstractSmackLowLevelIntegrationTest(  SmackIntegrationTestEnvironment environment){
+    super(environment);
+    this.environment=environment;
+    this.configuration=environment.configuration;
+    this.service=configuration.service;
+  }
+  protected AbstractXMPPConnection getConnectedConnection() throws InterruptedException, XMPPException, SmackException, IOException {
+    AbstractXMPPConnection connection=getUnconnectedConnection();
+    connection.connect().login();
+    return connection;
+  }
+  protected AbstractXMPPConnection getUnconnectedConnection() throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    return environment.connectionManager.constructConnection();
+  }
+  protected List<AbstractXMPPConnection> getUnconnectedConnections(  int count) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    List<AbstractXMPPConnection> connections=new ArrayList<>(count);
+    for (int i=0; i < count; i++) {
+      AbstractXMPPConnection connection=getUnconnectedConnection();
+      connections.add(connection);
+    }
+    return connections;
+  }
+  protected void recycle(  AbstractXMPPConnection connection){
+    environment.connectionManager.recycle(connection);
+  }
+}

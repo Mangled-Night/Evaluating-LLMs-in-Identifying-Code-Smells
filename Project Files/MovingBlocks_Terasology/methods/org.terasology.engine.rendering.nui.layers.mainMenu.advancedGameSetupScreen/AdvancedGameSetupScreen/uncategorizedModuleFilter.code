@@ -1,0 +1,24 @@
+private void uncategorizedModuleFilter(){
+  Iterator<ModuleSelectionInfo> iter=sortedModules.iterator();
+  while (iter.hasNext()) {
+    ModuleSelectionInfo m=iter.next();
+    Module module;
+    if (m.isPresent()) {
+      module=moduleManager.getRegistry().getLatestModuleVersion(m.getMetadata().getId());
+    }
+ else {
+      module=(m.getOnlineVersion() == null) ? m.getLatestVersion() : m.getOnlineVersion();
+    }
+    boolean isUncategorized=true;
+    Set<StandardModuleExtension> booleanStandardModuleExtensionEnumSet=StandardModuleExtension.booleanPropertySet();
+    for (    StandardModuleExtension standardModuleExtension : booleanStandardModuleExtensionEnumSet) {
+      if (standardModuleExtension.isProvidedBy(module)) {
+        isUncategorized=false;
+        break;
+      }
+    }
+    if (!isUncategorized) {
+      iter.remove();
+    }
+  }
+}

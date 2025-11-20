@@ -1,0 +1,25 @@
+private static class GrowableListCollectionWidgetBuilder<T extends Collection<E>,E> extends GrowableListWidgetBuilder<T,E> {
+  GrowableListCollectionWidgetBuilder(  TypeInfo<T> type,  TypeWidgetLibrary library,  ObjectConstructor<T> constructor){
+    super(type,ReflectionUtil.getElementType(type),library,constructor);
+  }
+  @Override protected void updateBindingWithElements(  Binding<T> binding,  List<E> elements){
+    try {
+      binding.get().clear();
+      binding.get().addAll(elements);
+    }
+ catch (    UnsupportedOperationException e) {
+      Class<T> rawType=type.getRawType();
+      Iterable<E> filtered=Iterables.filter(elements,Objects::nonNull);
+      if (SortedSet.class.isAssignableFrom(rawType)) {
+        binding.set((T)ImmutableSortedSet.copyOf(filtered));
+      }
+      if (Set.class.isAssignableFrom(rawType)) {
+        binding.set((T)ImmutableSet.copyOf(filtered));
+      }
+      binding.set((T)ImmutableList.copyOf(filtered));
+    }
+  }
+  @Override protected Stream<E> getBindingStream(  Binding<T> binding){
+    return binding.get().stream();
+  }
+}

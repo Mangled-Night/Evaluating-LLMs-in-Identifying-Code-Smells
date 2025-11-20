@@ -1,0 +1,30 @@
+/** 
+ * Return a copy of the given deviceList of user contact, but with stale devices marked as inactive. Never mark our own device as stale. If we haven't yet received a message from a device, store the current date as last date of message receipt to allow future decisions. A stale device is a device, from which we haven't received an OMEMO message from for more than "maxAgeMillis" milliseconds.
+ * @param userDevice our OmemoDevice.
+ * @param contact subjects BareJid.
+ * @param contactsDeviceList subjects deviceList.
+ * @return copy of subjects deviceList with stale devices marked as inactive.
+ * @throws IOException if an I/O error occurred.
+ */
+private OmemoCachedDeviceList removeStaleDevicesFromDeviceList(OmemoDevice userDevice,BareJid contact,OmemoCachedDeviceList contactsDeviceList,int maxAgeHours) throws IOException {
+  OmemoCachedDeviceList deviceList=new OmemoCachedDeviceList(contactsDeviceList);
+  for (  int deviceId : contactsDeviceList.getActiveDevices()) {
+    OmemoDevice device=new OmemoDevice(contact,deviceId);
+    Date lastDeviceIdPublication=getOmemoStoreBackend().getDateOfLastDeviceIdPublication(userDevice,device);
+    if (lastDeviceIdPublication == null) {
+      lastDeviceIdPublication=new Date();
+      getOmemoStoreBackend().setDateOfLastDeviceIdPublication(userDevice,device,lastDeviceIdPublication);
+    }
+    Date lastMessageReceived=getOmemoStoreBackend().getDateOfLastReceivedMessage(userDevice,device);
+    if (lastMessageReceived == null) {
+      lastMessageReceived=new Date();
+      getOmemoStoreBackend().setDateOfLastReceivedMessage(userDevice,device,lastMessageReceived);
+    }
+    boolean stale=isStale(userDevice,device,lastDeviceIdPublication,maxAgeHours);
+    stale&=isStale(userDevice,device,lastMessageReceived,maxAgeHours);
+    if (stale) {
+      deviceList.addInactiveDevice(deviceId);
+    }
+  }
+  return deviceList;
+}

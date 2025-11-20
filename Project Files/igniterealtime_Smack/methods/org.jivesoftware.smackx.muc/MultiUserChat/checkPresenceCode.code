@@ -1,0 +1,45 @@
+/** 
+ * Fires events according to the received presence code.
+ * @param statusCodes TODO javadoc me please
+ * @param isUserModification TODO javadoc me please
+ * @param mucUser TODO javadoc me please
+ * @param from TODO javadoc me please
+ */
+private void checkPresenceCode(Set<Status> statusCodes,boolean isUserModification,MUCUser mucUser,EntityFullJid from){
+  if (statusCodes.contains(Status.KICKED_307)) {
+    if (isUserModification) {
+      for (      UserStatusListener listener : userStatusListeners) {
+        listener.kicked(mucUser.getItem().getActor(),mucUser.getItem().getReason());
+      }
+    }
+ else {
+      for (      ParticipantStatusListener listener : participantStatusListeners) {
+        listener.kicked(from,mucUser.getItem().getActor(),mucUser.getItem().getReason());
+      }
+    }
+  }
+  if (statusCodes.contains(Status.BANNED_301)) {
+    if (isUserModification) {
+      for (      UserStatusListener listener : userStatusListeners) {
+        listener.banned(mucUser.getItem().getActor(),mucUser.getItem().getReason());
+      }
+    }
+ else {
+      for (      ParticipantStatusListener listener : participantStatusListeners) {
+        listener.banned(from,mucUser.getItem().getActor(),mucUser.getItem().getReason());
+      }
+    }
+  }
+  if (statusCodes.contains(Status.REMOVED_AFFIL_CHANGE_321)) {
+    if (isUserModification) {
+      for (      UserStatusListener listener : userStatusListeners) {
+        listener.membershipRevoked();
+      }
+    }
+  }
+  if (statusCodes.contains(Status.NEW_NICKNAME_303)) {
+    for (    ParticipantStatusListener listener : participantStatusListeners) {
+      listener.nicknameChanged(from,mucUser.getItem().getNick());
+    }
+  }
+}

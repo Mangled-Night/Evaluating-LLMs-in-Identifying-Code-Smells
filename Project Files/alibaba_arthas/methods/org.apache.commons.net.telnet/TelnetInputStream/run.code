@@ -1,0 +1,55 @@
+@Override public void run(){
+  int ch;
+  try {
+    _outerLoop:     while (!__isClosed) {
+      try {
+        if ((ch=__read(true)) < 0) {
+          break;
+        }
+      }
+ catch (      InterruptedIOException e) {
+synchronized (__queue) {
+          __ioException=e;
+          __queue.notifyAll();
+          try {
+            __queue.wait(100);
+          }
+ catch (          InterruptedException interrupted) {
+            if (__isClosed) {
+              break _outerLoop;
+            }
+          }
+          continue;
+        }
+      }
+catch (      RuntimeException re) {
+        super.close();
+        break _outerLoop;
+      }
+      boolean notify=false;
+      try {
+        notify=__processChar(ch);
+      }
+ catch (      InterruptedException e) {
+        if (__isClosed) {
+          break _outerLoop;
+        }
+      }
+      if (notify) {
+        __client.notifyInputListener();
+      }
+    }
+  }
+ catch (  IOException ioe) {
+synchronized (__queue) {
+      __ioException=ioe;
+    }
+    __client.notifyInputListener();
+  }
+synchronized (__queue) {
+    __isClosed=true;
+    __hasReachedEOF=true;
+    __queue.notify();
+  }
+  __threaded=false;
+}

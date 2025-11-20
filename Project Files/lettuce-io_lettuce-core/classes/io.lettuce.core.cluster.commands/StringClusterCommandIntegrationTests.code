@@ -1,0 +1,29 @@
+/** 
+ * Integration tests for  {@link io.lettuce.core.api.sync.RedisStringCommands} using Redis Cluster.
+ * @author Mark Paluch
+ */
+class StringClusterCommandIntegrationTests extends StringCommandIntegrationTests {
+  private final RedisClusterCommands<String,String> redis;
+  @Inject StringClusterCommandIntegrationTests(  StatefulRedisClusterConnection<String,String> connection){
+    super(ClusterTestUtil.redisCommandsOverCluster(connection));
+    this.redis=connection.sync();
+  }
+  @Test void msetnx(){
+    redis.set("one","1");
+    Map<String,String> map=new LinkedHashMap<>();
+    map.put("one","1");
+    map.put("two","2");
+    assertThat(redis.msetnx(map)).isFalse();
+    redis.del("one");
+    redis.del("two");
+    assertThat(redis.msetnx(map)).isTrue();
+    assertThat(redis.get("two")).isEqualTo("2");
+  }
+  @Test void mgetStreaming(){
+    setupMget();
+    KeyValueStreamingAdapter<String,String> streamingAdapter=new KeyValueStreamingAdapter<>();
+    Long count=redis.mget(streamingAdapter,"one","two");
+    assertThat(streamingAdapter.getMap()).containsEntry("one","1").containsEntry("two","2");
+    assertThat(count.intValue()).isEqualTo(2);
+  }
+}

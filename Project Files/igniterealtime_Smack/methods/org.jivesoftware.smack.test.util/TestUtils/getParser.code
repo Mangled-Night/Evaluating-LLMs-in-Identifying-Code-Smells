@@ -1,0 +1,30 @@
+public static XmlPullParser getParser(String string){
+  return getParser(string,null);
+}
+public static XmlPullParser getParser(String string,String startTag){
+  return getParser(new StringReader(string),startTag);
+}
+private static XmlPullParser getParser(Reader reader,String startTag){
+  XmlPullParser parser;
+  try {
+    parser=SmackXmlParser.newXmlParser(reader);
+    if (startTag == null) {
+      while (parser.getEventType() != XmlPullParser.Event.START_ELEMENT) {
+        parser.next();
+      }
+      return parser;
+    }
+    boolean found=false;
+    while (!found) {
+      if ((parser.next() == XmlPullParser.Event.START_ELEMENT) && parser.getName().equals(startTag))       found=true;
+    }
+    if (!found)     throw new IllegalArgumentException("Can not find start tag '" + startTag + "'");
+  }
+ catch (  XmlPullParserException e) {
+    throw new RuntimeException(e);
+  }
+catch (  IOException e) {
+    throw new RuntimeException(e);
+  }
+  return parser;
+}

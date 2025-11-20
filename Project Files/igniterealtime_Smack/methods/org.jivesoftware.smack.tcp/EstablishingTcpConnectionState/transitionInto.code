@@ -1,0 +1,14 @@
+@Override public StateTransitionResult.AttemptResult transitionInto(WalkStateGraphContext walkStateGraphContext) throws InterruptedException, IOException, SmackException, XMPPException {
+  ConnectionAttemptState connectionAttemptState=new ConnectionAttemptState(connectionInternal,discoveredTcpEndpoints,this);
+  StateTransitionResult.Failure failure=connectionAttemptState.establishTcpConnection();
+  if (failure != null) {
+    return failure;
+  }
+  socketChannel=connectionAttemptState.socketChannel;
+  remoteAddress=(InetSocketAddress)socketChannel.socket().getRemoteSocketAddress();
+  selectionKey=connectionInternal.registerWithSelector(socketChannel,SelectionKey.OP_READ,XmppTcpTransportModule.this::onChannelSelected);
+  selectionKeyAttachment=(SelectionKeyAttachment)selectionKey.attachment();
+  connectionInternal.setTransport(tcpNioTransport);
+  connectionInternal.newStreamOpenWaitForFeaturesSequence("stream features after initial connection");
+  return new TcpSocketConnectedResult(remoteAddress);
+}

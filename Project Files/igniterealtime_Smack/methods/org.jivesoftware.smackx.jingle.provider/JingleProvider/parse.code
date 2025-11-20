@@ -1,0 +1,43 @@
+@Override public Jingle parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+  Jingle.Builder builder=Jingle.builder(iqData);
+  String actionString=parser.getAttributeValue("",Jingle.ACTION_ATTRIBUTE_NAME);
+  if (actionString != null) {
+    JingleAction action=JingleAction.fromString(actionString);
+    builder.setAction(action);
+  }
+  FullJid initiator=ParserUtils.getFullJidAttribute(parser,Jingle.INITIATOR_ATTRIBUTE_NAME);
+  builder.setInitiator(initiator);
+  FullJid responder=ParserUtils.getFullJidAttribute(parser,Jingle.RESPONDER_ATTRIBUTE_NAME);
+  builder.setResponder(responder);
+  String sessionId=parser.getAttributeValue("",Jingle.SESSION_ID_ATTRIBUTE_NAME);
+  builder.setSessionId(sessionId);
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String tagName=parser.getName();
+switch (tagName) {
+case JingleContent.ELEMENT:
+      JingleContent content=parseJingleContent(parser,parser.getDepth());
+    builder.addJingleContent(content);
+  break;
+case JingleReason.ELEMENT:
+JingleReason reason=parseJingleReason(parser);
+builder.setReason(reason);
+break;
+default :
+LOGGER.severe("Unknown Jingle element: " + tagName);
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return builder.build();
+}

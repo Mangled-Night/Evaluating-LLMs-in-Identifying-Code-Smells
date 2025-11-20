@@ -1,0 +1,36 @@
+/** 
+ * Returns a List of Presence objects for all of a user's current presences or an unavailable presence if the user is unavailable (offline) or if no presence information is available, such as when you are not subscribed to the user's presence updates.
+ * @param jid an XMPP ID, e.g. jdoe@example.com.
+ * @return a List of Presence objects for all the user's current presences,or an unavailable presence if the user is offline or if no presence information is available.
+ */
+public List<Presence> getPresences(BareJid jid){
+  List<Presence> res;
+  Map<Resourcepart,Presence> userPresences=getPresencesInternal(jid);
+  if (userPresences == null) {
+    Presence presence=synthesizeUnvailablePresence(jid);
+    res=Arrays.asList(presence);
+  }
+ else {
+    List<Presence> answer=new ArrayList<>();
+    Presence unavailable=null;
+    for (    Presence presence : userPresences.values()) {
+      if (presence.isAvailable()) {
+        answer.add(presence);
+      }
+ else {
+        unavailable=presence;
+      }
+    }
+    if (!answer.isEmpty()) {
+      res=answer;
+    }
+ else     if (unavailable != null) {
+      res=Arrays.asList(unavailable);
+    }
+ else {
+      Presence presence=synthesizeUnvailablePresence(jid);
+      res=Arrays.asList(presence);
+    }
+  }
+  return res;
+}

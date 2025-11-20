@@ -1,0 +1,20 @@
+/** 
+ * Stops the background sorting without deleting clearing this container. This is required for proper clean-up. <br><br> Note that if a sorting process is running while this method is called, the sorting process finishes sorting this method will wait for it to finish. Afterwards the sorting is not scheduled again until the initialize method is called again. <br><br> Note that calling stop() and clear() can be done in any order and the specified behaviour will be exactly the same. If there is a difference it is an insignificant performance loss or win if.
+ */
+public synchronized void stop(){
+  if (timer != null) {
+    timer.cancel();
+    timer.purge();
+    timer=null;
+  }
+  if (sortingThread != null) {
+    try {
+      sortingThread.join();
+    }
+ catch (    InterruptedException ex) {
+      logger.error("Joining of sorting thread was interrupted!");
+    }
+  }
+  sortingThread=null;
+  sortingTask=null;
+}

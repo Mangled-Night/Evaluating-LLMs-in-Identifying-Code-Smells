@@ -1,0 +1,22 @@
+/** 
+ * Produces an entity with the components contained in this entity builder
+ * @return The built entity.
+ */
+public EntityRef build(){
+  if (id.isPresent() && !entityManager.registerId(id.get())) {
+    return EntityRef.NULL;
+  }
+  long finalId=id.orElse(entityManager.createEntity());
+  components.values().forEach(c -> entityManager.getComponentStore().put(finalId,c));
+  entityManager.assignToPool(finalId,pool);
+  EntityRef entity=entityManager.getEntity(finalId);
+  if (sendLifecycleEvents && entityManager.getEventSystem() != null) {
+    entity.send(OnAddedComponent.newInstance());
+    entity.send(OnActivatedComponent.newInstance());
+  }
+  for (  Component component : entityManager.iterateComponents(entity.getId())) {
+    entityManager.notifyComponentAdded(entity,component.getClass());
+  }
+  entity.setScope(scope.orElse(getEntityInfo().scope));
+  return entity;
+}

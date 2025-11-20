@@ -1,0 +1,22 @@
+@Override public boolean moveToPool(long id,EngineEntityPool pool){
+  if (getPool(id).isPresent() && getPool(id).get().equals(pool)) {
+    return true;
+  }
+  Optional<EngineEntityPool> maybePool=getPool(id);
+  EngineEntityPool oldPool;
+  if (!maybePool.isPresent()) {
+    return false;
+  }
+ else {
+    oldPool=maybePool.get();
+  }
+  Map<Class<? extends Component>,Component> savedComponents=copyComponents(oldPool.getEntity(id));
+  Optional<BaseEntityRef> maybeRef=oldPool.remove(id);
+  poolCounts.put(oldPool,poolCounts.get(oldPool) - 1);
+  if (!maybeRef.isPresent()) {
+    return false;
+  }
+  BaseEntityRef ref=maybeRef.get();
+  pool.insertRef(ref,savedComponents.values());
+  return true;
+}

@@ -1,0 +1,50 @@
+@Override public void onEvent(Event event){
+  logger.debug("----->migrate binlog event:" + event.toString());
+  EventType eventType=event.getHeader().getEventType();
+switch (eventType) {
+case TABLE_MAP:
+    TableMapEventData tableMapEventData=event.getData();
+  tablesById.put(tableMapEventData.getTableId(),tableMapEventData);
+if (!tablesColumnMap.containsKey(tableMapEventData.getDatabase() + "." + tableMapEventData.getTable())) {
+  tablesColumnMap.put(tableMapEventData.getDatabase() + "." + tableMapEventData.getTable(),loadColumn(tableMapEventData.getDatabase(),tableMapEventData.getTable()));
+}
+break;
+case ROTATE:
+RotateEventData data=event.getData();
+binlogFilename=data.getBinlogFilename();
+break;
+case PRE_GA_WRITE_ROWS:
+case WRITE_ROWS:
+case EXT_WRITE_ROWS:
+handleWriteRowsEvent(event);
+break;
+case PRE_GA_UPDATE_ROWS:
+case UPDATE_ROWS:
+case EXT_UPDATE_ROWS:
+handleUpdateRowsEvent(event);
+break;
+case PRE_GA_DELETE_ROWS:
+case DELETE_ROWS:
+case EXT_DELETE_ROWS:
+handleDeleteRowsEvent(event);
+break;
+case QUERY:
+if (groupEventsByTX) {
+QueryEventData queryEventData=event.getData();
+String query=queryEventData.getSql();
+if ("BEGIN".equals(query)) {
+transactionInProgress=true;
+}
+ else if (!query.startsWith("#")) {
+handleOtherSqlEvent(event);
+}
+}
+break;
+case XID:
+if (groupEventsByTX) {
+transactionInProgress=false;
+}
+break;
+default :
+}
+}

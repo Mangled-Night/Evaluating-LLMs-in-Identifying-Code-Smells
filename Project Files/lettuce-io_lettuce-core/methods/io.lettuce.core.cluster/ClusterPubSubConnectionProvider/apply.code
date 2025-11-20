@@ -1,0 +1,21 @@
+@Override public ConnectionFuture<StatefulRedisConnection<K,V>> apply(ConnectionKey key){
+  if (key.nodeId != null) {
+    return redisClusterClient.connectPubSubToNodeAsync((RedisCodec)redisCodec,key.nodeId,getSocketAddressSupplier(key));
+  }
+  return redisClusterClient.connectPubSubToNodeAsync((RedisCodec)redisCodec,key.host + ":" + key.port,getSocketAddressSupplier(key));
+}
+@Override public ConnectionFuture<StatefulRedisConnection<K,V>> apply(ConnectionKey key){
+  ConnectionFuture<StatefulRedisConnection<K,V>> future=delegate.apply(key);
+  if (key.nodeId != null) {
+    return future.thenApply(connection -> {
+      ((StatefulRedisPubSubConnection)connection).addListener(new DelegatingRedisClusterPubSubListener(key.nodeId));
+      return connection;
+    }
+);
+  }
+  return future.thenApply(connection -> {
+    ((StatefulRedisPubSubConnection)connection).addListener(new DelegatingRedisClusterPubSubListener(key.host,key.port));
+    return connection;
+  }
+);
+}

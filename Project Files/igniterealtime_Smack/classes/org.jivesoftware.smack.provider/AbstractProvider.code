@@ -1,0 +1,67 @@
+public class AbstractProvider<E extends Element> {
+  private final Class<E> elementClass;
+  @SuppressWarnings("unchecked") protected AbstractProvider(){
+    Type currentType=getClass().getGenericSuperclass();
+    while (!(currentType instanceof ParameterizedType)) {
+      Class<?> currentClass=(Class<?>)currentType;
+      currentType=currentClass.getGenericSuperclass();
+    }
+    ParameterizedType parameterizedGenericSuperclass=(ParameterizedType)currentType;
+    Type[] actualTypeArguments=parameterizedGenericSuperclass.getActualTypeArguments();
+    Type elementType=actualTypeArguments[0];
+    if (elementType instanceof Class) {
+      elementClass=(Class<E>)elementType;
+    }
+ else     if (elementType instanceof ParameterizedType) {
+      ParameterizedType parameteriezedElementType=(ParameterizedType)elementType;
+      elementClass=(Class<E>)parameteriezedElementType.getRawType();
+    }
+ else     if (elementType instanceof TypeVariable) {
+      TypeVariable<?> typeVariableElementType=(TypeVariable<?>)elementType;
+      elementClass=(Class<E>)typeVariableElementType.getClass();
+    }
+ else {
+      throw new AssertionError("Element type '" + elementType + "' ("+ elementType.getClass()+ ") is neither of type Class, ParameterizedType or TypeVariable");
+    }
+  }
+  public final Class<E> getElementClass(){
+    return elementClass;
+  }
+public static final class TextParseException extends SmackParsingException {
+    /** 
+ */
+    private static final long serialVersionUID=1L;
+    private final ParseException parseException;
+    private TextParseException(    ParseException parseException){
+      super(parseException);
+      this.parseException=parseException;
+    }
+    public ParseException getParseException(){
+      return parseException;
+    }
+  }
+public static final class NumberFormatParseException extends SmackParsingException {
+    /** 
+ */
+    private static final long serialVersionUID=1L;
+    private NumberFormatParseException(    NumberFormatException numberFormatException){
+      super(numberFormatException);
+    }
+  }
+protected interface WrappableParser<E> {
+    E parse() throws XmlPullParserException, IOException, SmackParsingException, ParseException ;
+  }
+  protected static <E>E wrapExceptions(  WrappableParser<E> parser) throws XmlPullParserException, IOException, SmackParsingException {
+    E e;
+    try {
+      e=parser.parse();
+    }
+ catch (    ParseException parseException) {
+      throw new TextParseException(parseException);
+    }
+catch (    NumberFormatException numberFormatException) {
+      throw new NumberFormatParseException(numberFormatException);
+    }
+    return e;
+  }
+}

@@ -1,0 +1,12 @@
+public VoxelBlockWorld(BulletPhysics physics){
+  btDiscreteDynamicsWorld discreteDynamicsWorld=physics.getDiscreteDynamicsWorld();
+  wrapper=new VoxelCollisionAlgorithmWrapper(Chunks.SIZE_X,Chunks.SIZE_Y,Chunks.SIZE_Z);
+  worldShape=new btVoxelShape(wrapper,new Vector3f(-AABB_SIZE,-AABB_SIZE,-AABB_SIZE),new Vector3f(AABB_SIZE,AABB_SIZE,AABB_SIZE));
+  Matrix4f matrix4f=new Matrix4f();
+  btDefaultMotionState blockMotionState=new btDefaultMotionState(matrix4f);
+  blockConsInf=new btRigidBody.btRigidBodyConstructionInfo(0,blockMotionState,worldShape,new Vector3f());
+  rigidBody=new btRigidBody(blockConsInf);
+  rigidBody.setCollisionFlags(btCollisionObject.CollisionFlags.CF_STATIC_OBJECT | rigidBody.getCollisionFlags());
+  short mask=(short)(~(StandardCollisionGroup.STATIC.getFlag() | StandardCollisionGroup.LIQUID.getFlag()));
+  discreteDynamicsWorld.addRigidBody(rigidBody,physics.combineGroups(StandardCollisionGroup.WORLD),mask);
+}

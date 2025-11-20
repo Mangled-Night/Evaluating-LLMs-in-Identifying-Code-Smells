@@ -1,0 +1,21 @@
+/** 
+ * Sets timeout threshold, if client exceeds this time during connection it will automatically close the channel.
+ * @param inputChannel Socket for connections to allow I/O.
+ */
+private void scheduleTimeout(Channel inputChannel){
+  channel=inputChannel;
+  timeoutPoint=System.currentTimeMillis() + timeoutThreshold;
+  timeoutTimer.schedule(new java.util.TimerTask(){
+    @Override public void run(){
+synchronized (joinStatus) {
+        if (System.currentTimeMillis() > timeoutPoint && joinStatus.getStatus() != JoinStatus.Status.COMPLETE && joinStatus.getStatus() != JoinStatus.Status.FAILED) {
+          joinStatus.setErrorMessage("Server stopped responding.");
+          channel.close();
+          logger.error("Server timeout threshold of {} ms exceeded.",timeoutThreshold);
+        }
+      }
+      Thread.currentThread().stop();
+    }
+  }
+,timeoutThreshold + 200);
+}

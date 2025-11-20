@@ -1,0 +1,14 @@
+@ApiOperation(value="用户组织") @RequiresPermissions("upms:user:organization") @RequestMapping(value="/organization/{id}",method=RequestMethod.GET) public String organization(@PathVariable("id") int id,ModelMap modelMap){
+  List<UpmsOrganization> upmsOrganizations=upmsOrganizationService.selectByExample(new UpmsOrganizationExample());
+  UpmsUserOrganizationExample upmsUserOrganizationExample=new UpmsUserOrganizationExample();
+  upmsUserOrganizationExample.createCriteria().andUserIdEqualTo(id);
+  List<UpmsUserOrganization> upmsUserOrganizations=upmsUserOrganizationService.selectByExample(upmsUserOrganizationExample);
+  modelMap.put("upmsOrganizations",upmsOrganizations);
+  modelMap.put("upmsUserOrganizations",upmsUserOrganizations);
+  return "/manage/user/organization.jsp";
+}
+@ApiOperation(value="用户组织") @RequiresPermissions("upms:user:organization") @RequestMapping(value="/organization/{id}",method=RequestMethod.POST) @ResponseBody public Object organization(@PathVariable("id") int id,HttpServletRequest request){
+  String[] organizationIds=request.getParameterValues("organizationId");
+  upmsUserOrganizationService.organization(organizationIds,id);
+  return new UpmsResult(UpmsResultConstant.SUCCESS,"");
+}

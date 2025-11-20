@@ -1,0 +1,21 @@
+/** 
+ * Asserts that when a user leaves a room, they are themselves included on the list of users notified (self-presence). <p>From XEP-0045 § 7.14:</p> <blockquote> The service MUST then send a presence stanzas of type "unavailable" from the departing user's occupant JID to the departing occupant's full JIDs, including a status code of "110" to indicate that this notification is "self-presence" </blockquote>
+ * @throws Exception when errors occur
+ */
+@SmackIntegrationTest public void mucLeaveTest() throws Exception {
+  EntityBareJid mucAddress=getRandomRoom("smack-inttest-leave");
+  MultiUserChat muc=mucManagerOne.getMultiUserChat(mucAddress);
+  try {
+    muc.join(Resourcepart.from("nick-one"));
+    Presence reflectedLeavePresence=muc.leave();
+    MUCUser mucUser=MUCUser.from(reflectedLeavePresence);
+    assertNotNull(mucUser);
+    assertTrue(mucUser.getStatus().contains(MUCUser.Status.PRESENCE_TO_SELF_110));
+    assertEquals(mucAddress + "/nick-one",reflectedLeavePresence.getFrom().toString());
+    assertEquals(conOne.getUser().asEntityFullJidIfPossible().toString(),reflectedLeavePresence.getTo().toString());
+  }
+  finally {
+    muc.join(Resourcepart.from("nick-one"));
+    tryDestroy(muc);
+  }
+}

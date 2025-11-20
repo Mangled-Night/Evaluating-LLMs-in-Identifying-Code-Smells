@@ -1,0 +1,55 @@
+/** 
+ * @see sun.misc.Perf
+ * @see sun.management.counter.perf.PerfInstrumentation
+ * @author hengyunabc 2020-02-16
+ */
+@Name("perfcounter") @Summary("Display the perf counter information.") @Description("\nExamples:\n" + "  perfcounter\n" + "  perfcounter -d\n" + Constants.WIKI + Constants.WIKI_HOME+ "perfcounter") public class PerfCounterCommand extends AnnotatedCommand {
+  private static final Logger logger=LoggerFactory.getLogger(PerfCounterCommand.class);
+  private static Object perfObject;
+  private static Method attachMethod;
+  private boolean details;
+  @Option(shortName="d",longName="details",flag=true) @Description("print all perf counter details") public void setDetails(  boolean details){
+    this.details=details;
+  }
+  @Override public void process(  CommandProcess process){
+    List<Counter> perfCounters=getPerfCounters();
+    if (perfCounters.isEmpty()) {
+      process.end(1,"please check arthas log. if java version >=9 , try to add jvm options when start your process: " + "--add-opens java.base/jdk.internal.perf=ALL-UNNAMED " + "--add-exports java.base/jdk.internal.perf=ALL-UNNAMED");
+      return;
+    }
+    List<PerfCounterVO> perfCounterVOs=new ArrayList<PerfCounterVO>();
+    for (    Counter counter : perfCounters) {
+      PerfCounterVO perfCounterVO=new PerfCounterVO(counter.getName(),counter.getValue());
+      if (details) {
+        perfCounterVO.setUnits(counter.getUnits().toString());
+        perfCounterVO.setVariability(counter.getVariability().toString());
+      }
+      perfCounterVOs.add(perfCounterVO);
+    }
+    process.appendResult(new PerfCounterModel(perfCounterVOs,details));
+    process.end();
+  }
+  private static List<Counter> getPerfCounters(){
+    try {
+      if (perfObject == null) {
+        String perfClassName="sun.misc.Perf";
+        if (!JavaVersionUtils.isLessThanJava9()) {
+          perfClassName="jdk.internal.perf.Perf";
+        }
+        Class<?> perfClass=ClassLoader.getSystemClassLoader().loadClass(perfClassName);
+        Method getPerfMethod=perfClass.getDeclaredMethod("getPerf");
+        perfObject=getPerfMethod.invoke(null);
+      }
+      if (attachMethod == null) {
+        attachMethod=perfObject.getClass().getDeclaredMethod("attach",new Class<?>[]{int.class,String.class});
+      }
+      ByteBuffer buffer=(ByteBuffer)attachMethod.invoke(perfObject,new Object[]{(int)PidUtils.currentLongPid(),"r"});
+      PerfInstrumentation perfInstrumentation=new PerfInstrumentation(buffer);
+      return perfInstrumentation.getAllCounters();
+    }
+ catch (    Throwable e) {
+      logger.error("get perf counter error",e);
+    }
+    return Collections.emptyList();
+  }
+}

@@ -1,0 +1,15 @@
+private CharacterCollider createCharacterCollider(EntityRef owner){
+  LocationComponent locComp=owner.getComponent(LocationComponent.class);
+  CharacterMovementComponent movementComp=owner.getComponent(CharacterMovementComponent.class);
+  if (locComp == null || movementComp == null) {
+    throw new IllegalArgumentException("Expected an entity with a Location component and " + "CharacterMovementComponent.");
+  }
+  Vector3f pos=locComp.getWorldPosition(new Vector3f());
+  final float worldScale=locComp.getWorldScale();
+  final float height=(movementComp.height - 2 * movementComp.radius) * worldScale;
+  final float width=movementComp.radius * worldScale;
+  btConvexShape shape=new btCapsuleShape(width,height);
+  shapes.add(shape);
+  shape.setMargin(0.1f);
+  return createCustomCollider(pos,shape,movementComp.collisionGroup.getFlag(),combineGroups(movementComp.collidesWith),btCollisionObject.CollisionFlags.CF_CHARACTER_OBJECT,owner);
+}

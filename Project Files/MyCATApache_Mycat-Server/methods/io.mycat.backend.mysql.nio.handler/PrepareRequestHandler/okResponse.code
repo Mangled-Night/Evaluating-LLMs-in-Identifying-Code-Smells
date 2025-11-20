@@ -1,0 +1,39 @@
+@Override public void okResponse(byte[] data,BackendConnection conn){
+  if (statementId == -1L) {
+    boolean executeResponse=conn.syncAndExcute();
+    if (executeResponse) {
+      PreparedOkPacket preparedOkPacket=new PreparedOkPacket();
+      preparedOkPacket.read(data);
+      this.paramSize=preparedOkPacket.parametersNumber;
+      this.fieldSize=preparedOkPacket.columnsNumber;
+      this.statementId=preparedOkPacket.statementId;
+    }
+  }
+ else {
+switch (data[4]) {
+case ErrorPacket.FIELD_COUNT:
+      errorResponse(data,conn);
+    break;
+case EOFPacket.FIELD_COUNT:
+  if (fields.size() == fieldSize) {
+    doFinished(false,null);
+    closePrepareStmt(conn);
+    conn.release();
+  }
+break;
+default :
+FieldPacket packet=new FieldPacket();
+packet.read(data);
+packet.db=this.sc.getSchema().getBytes();
+packet.length=packet.calcPacketSize();
+if (params.size() < paramSize) {
+params.add(packet);
+}
+ else {
+if (fields.size() < fieldSize) {
+fields.add(packet);
+}
+}
+}
+}
+}

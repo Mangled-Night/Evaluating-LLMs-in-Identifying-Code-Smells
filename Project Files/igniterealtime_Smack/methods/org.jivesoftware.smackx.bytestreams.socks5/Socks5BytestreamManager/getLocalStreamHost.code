@@ -1,0 +1,24 @@
+/** 
+ * Returns the stream host information of the local SOCKS5 proxy containing the IP address and the port. The returned list may be empty if the local SOCKS5 proxy is not running.
+ * @return the stream host information of the local SOCKS5 proxy
+ */
+public List<StreamHost> getLocalStreamHost(){
+  Socks5Proxy.getSocks5Proxy();
+  List<StreamHost> streamHosts=new ArrayList<>();
+  XMPPConnection connection=connection();
+  EntityFullJid myJid=connection.getUser();
+  for (  Socks5Proxy socks5Server : Socks5Proxy.getRunningProxies()) {
+    List<InetAddress> addresses=socks5Server.getLocalAddresses();
+    if (addresses.isEmpty()) {
+      continue;
+    }
+    final int port=socks5Server.getPort();
+    for (    InetAddress address : addresses) {
+      if (address.isLoopbackAddress()) {
+        continue;
+      }
+      streamHosts.add(new StreamHost(myJid,address,port));
+    }
+  }
+  return streamHosts;
+}

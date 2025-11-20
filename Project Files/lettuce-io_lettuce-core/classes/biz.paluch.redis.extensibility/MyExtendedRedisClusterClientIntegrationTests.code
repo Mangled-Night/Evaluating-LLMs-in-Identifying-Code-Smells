@@ -1,0 +1,25 @@
+/** 
+ * Test for override/extensibility of RedisClusterClient
+ */
+class MyExtendedRedisClusterClientIntegrationTests {
+  private static final String host=TestSettings.host();
+  private static final int port=TestSettings.port(900);
+  private static MyExtendedRedisClusterClient client;
+  protected RedisCommands<String,String> redis;
+  protected String key="key";
+  protected String value="value";
+  @BeforeAll static void setupClient(){
+    client=new MyExtendedRedisClusterClient(null,Collections.singletonList(RedisURI.create(host,port)));
+  }
+  @AfterAll static void shutdownClient(){
+    FastShutdown.shutdown(client);
+  }
+  @Test void testConnection() throws Exception {
+    StatefulRedisClusterConnection<String,String> connection=client.connect();
+    RedisAdvancedClusterAsyncCommands<String,String> commands=connection.async();
+    assertThat(commands).isInstanceOf(RedisAdvancedClusterAsyncCommandsImpl.class);
+    assertThat(commands.getStatefulConnection()).isInstanceOf(MyRedisClusterConnection.class);
+    commands.set("key","value").get();
+    connection.close();
+  }
+}

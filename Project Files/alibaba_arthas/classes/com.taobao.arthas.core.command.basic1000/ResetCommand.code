@@ -1,0 +1,26 @@
+/** 
+ * 恢复所有增强类<br/>
+ * @author vlinux on 15/5/29.
+ */
+@Name("reset") @Summary("Reset all the enhanced classes") @Description(Constants.EXAMPLE + "  reset\n" + "  reset *List\n"+ "  reset -E .*List\n") public class ResetCommand extends AnnotatedCommand {
+  private String classPattern;
+  private boolean isRegEx=false;
+  @Argument(index=0,argName="class-pattern",required=false) @Description("Path and classname of Pattern Matching") public void setClassPattern(  String classPattern){
+    this.classPattern=classPattern;
+  }
+  @Option(shortName="E",longName="regex",flag=true) @Description("Enable regular expression to match (wildcard matching by default)") public void setRegEx(  boolean regEx){
+    isRegEx=regEx;
+  }
+  @Override public void process(  CommandProcess process){
+    Instrumentation inst=process.session().getInstrumentation();
+    Matcher matcher=SearchUtils.classNameMatcher(classPattern,isRegEx);
+    try {
+      EnhancerAffect enhancerAffect=Enhancer.reset(inst,matcher);
+      process.appendResult(new ResetModel(enhancerAffect));
+      process.end();
+    }
+ catch (    UnmodifiableClassException e) {
+      process.end();
+    }
+  }
+}

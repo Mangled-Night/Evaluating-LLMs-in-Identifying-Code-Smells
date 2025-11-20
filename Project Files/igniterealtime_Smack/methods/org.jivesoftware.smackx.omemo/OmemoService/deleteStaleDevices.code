@@ -1,0 +1,11 @@
+/** 
+ * Return a copy of our deviceList, but with stale devices marked as inactive. Never mark our own device as stale. This method ignores  {@link OmemoConfiguration#getDeleteStaleDevices()}! In this case, a stale device is one of our devices, from which we haven't received an OMEMO message from for more than  {@link OmemoConfiguration#getDeleteStaleDevicesAfterHours()} hours.
+ * @param userDevice our OmemoDevice
+ * @return our altered deviceList with stale devices marked as inactive.
+ * @throws IOException if an I/O error occurred.
+ */
+private OmemoCachedDeviceList deleteStaleDevices(OmemoDevice userDevice) throws IOException {
+  OmemoCachedDeviceList deviceList=getOmemoStoreBackend().loadCachedDeviceList(userDevice);
+  int maxAgeHours=OmemoConfiguration.getDeleteStaleDevicesAfterHours();
+  return removeStaleDevicesFromDeviceList(userDevice,userDevice.getJid(),deviceList,maxAgeHours);
+}

@@ -1,0 +1,12 @@
+/** 
+ * Retrieve a  {@link CompletionStage} that is notified upon completion or timeout.
+ * @param timeout
+ * @param timeoutExecutor
+ * @return
+ */
+public final CompletionStage<V> getOrTimeout(Duration timeout,ScheduledExecutorService timeoutExecutor){
+  if (GATE_UPDATER.get(this) == GATE_OPEN && timeoutScheduleFuture == null) {
+    this.timeoutScheduleFuture=timeoutExecutor.schedule(this::emit,timeout.toNanos(),TimeUnit.NANOSECONDS);
+  }
+  return selfFuture;
+}

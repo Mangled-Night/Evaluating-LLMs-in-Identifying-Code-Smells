@@ -1,0 +1,16 @@
+/** 
+ * Write a record to the sorter.
+ */
+public void insertRecord(Object recordBase,long recordOffset,int length,long prefix) throws IOException {
+  growPointerArrayIfNecessary();
+  final int required=length + 4;
+  acquireNewPageIfNecessary(required);
+  final Object base=currentPage.getBaseObject();
+  final long recordAddress=dataNodeMemoryManager.encodePageNumberAndOffset(currentPage,pageCursor);
+  Platform.putInt(base,pageCursor,length);
+  pageCursor+=4;
+  Platform.copyMemory(recordBase,recordOffset,base,pageCursor,length);
+  pageCursor+=length;
+  assert (inMemSorter != null);
+  inMemSorter.insertRecord(recordAddress,prefix);
+}

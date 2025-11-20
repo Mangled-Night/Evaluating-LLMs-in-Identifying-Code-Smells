@@ -1,0 +1,18 @@
+@Override protected Object handleInvocation(Object proxy,Method method,Object[] args) throws Throwable {
+  try {
+    Method targetMethod=this.translator.get(method);
+    Object result=targetMethod.invoke(asyncApi,args);
+    if (result instanceof RedisFuture<?>) {
+      RedisFuture<?> command=(RedisFuture<?>)result;
+      if (!isTxControlMethod(method.getName(),args) && isTransactionActive(connection)) {
+        return null;
+      }
+      long timeout=getTimeoutNs(command);
+      return Futures.awaitOrCancel(command,timeout,TimeUnit.NANOSECONDS);
+    }
+    return result;
+  }
+ catch (  InvocationTargetException e) {
+    throw e.getTargetException();
+  }
+}

@@ -1,0 +1,51 @@
+/** 
+ * Show the soft input.
+ */
+public static void showSoftInput(){
+  InputMethodManager imm=(InputMethodManager)Utils.getApp().getSystemService(Context.INPUT_METHOD_SERVICE);
+  if (imm == null) {
+    return;
+  }
+  imm.toggleSoftInput(InputMethodManager.SHOW_FORCED,InputMethodManager.HIDE_IMPLICIT_ONLY);
+}
+/** 
+ * Show the soft input.
+ */
+public static void showSoftInput(@Nullable Activity activity){
+  if (activity == null) {
+    return;
+  }
+  if (!isSoftInputVisible(activity)) {
+    toggleSoftInput();
+  }
+}
+/** 
+ * Show the soft input.
+ * @param view The view.
+ */
+public static void showSoftInput(@NonNull final View view){
+  showSoftInput(view,0);
+}
+/** 
+ * Show the soft input.
+ * @param view The view.
+ * @param flags Provides additional operating flags.  Currently may be0 or have the  {@link InputMethodManager#SHOW_IMPLICIT} bit set.
+ */
+public static void showSoftInput(@NonNull final View view,final int flags){
+  InputMethodManager imm=(InputMethodManager)Utils.getApp().getSystemService(Context.INPUT_METHOD_SERVICE);
+  if (imm == null) {
+    return;
+  }
+  view.setFocusable(true);
+  view.setFocusableInTouchMode(true);
+  view.requestFocus();
+  imm.showSoftInput(view,flags,new ResultReceiver(new Handler()){
+    @Override protected void onReceiveResult(    int resultCode,    Bundle resultData){
+      if (resultCode == InputMethodManager.RESULT_UNCHANGED_HIDDEN || resultCode == InputMethodManager.RESULT_HIDDEN) {
+        toggleSoftInput();
+      }
+    }
+  }
+);
+  imm.toggleSoftInput(InputMethodManager.SHOW_FORCED,InputMethodManager.HIDE_IMPLICIT_ONLY);
+}

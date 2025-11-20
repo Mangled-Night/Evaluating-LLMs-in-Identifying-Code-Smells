@@ -1,0 +1,35 @@
+private class BioConnection implements Runnable {
+  private Socket socket;
+  private InputStream input;
+  private OutputStream output;
+  private byte[] readBuffer;
+  private byte[] writeBuffer;
+  private BioConnection(  Socket socket) throws IOException {
+    this.socket=socket;
+    this.input=socket.getInputStream();
+    this.output=socket.getOutputStream();
+    this.readBuffer=new byte[4096];
+    this.writeBuffer=new byte[4096];
+  }
+  @Override public void run(){
+    try {
+      output.write(FIRST_BYTES);
+      output.flush();
+      while (true) {
+        int got=input.read(readBuffer);
+        output.write(writeBuffer,0,got);
+      }
+    }
+ catch (    IOException e) {
+      e.printStackTrace();
+      if (socket != null) {
+        try {
+          socket.close();
+        }
+ catch (        IOException e1) {
+          e1.printStackTrace();
+        }
+      }
+    }
+  }
+}

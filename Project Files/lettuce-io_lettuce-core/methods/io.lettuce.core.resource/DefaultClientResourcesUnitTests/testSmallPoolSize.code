@@ -1,0 +1,9 @@
+@Test void testSmallPoolSize(){
+  DefaultClientResources sut=DefaultClientResources.builder().ioThreadPoolSize(1).computationThreadPoolSize(1).build();
+  EventExecutorGroup eventExecutors=sut.eventExecutorGroup();
+  NioEventLoopGroup eventLoopGroup=sut.eventLoopGroupProvider().allocate(NioEventLoopGroup.class);
+  assertThat(eventExecutors).hasSize(2);
+  assertThat(eventLoopGroup.executorCount()).isEqualTo(2);
+  assertThat(sut.ioThreadPoolSize()).isEqualTo(2);
+  assertThat(TestFutures.getOrTimeout(sut.shutdown(0,0,TimeUnit.MILLISECONDS))).isTrue();
+}

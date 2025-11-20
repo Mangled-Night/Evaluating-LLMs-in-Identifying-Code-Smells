@@ -1,0 +1,16 @@
+public Set<String> getTriggeredActionsAndReschedule(final long worldTime){
+  final Set<String> result=new HashSet<>();
+  final Iterator<Map.Entry<String,Long>> entryIterator=actionIdsWakeUp.entrySet().iterator();
+  while (entryIterator.hasNext()) {
+    final Map.Entry<String,Long> entry=entryIterator.next();
+    if (entry.getValue() <= worldTime) {
+      result.add(entry.getKey());
+      entryIterator.remove();
+    }
+  }
+  for (  String actionId : result) {
+    actionIdsWakeUp.put(actionId,worldTime + actionIdsPeriod.get(actionId));
+  }
+  lowestWakeUp=findSmallestWakeUp();
+  return result;
+}

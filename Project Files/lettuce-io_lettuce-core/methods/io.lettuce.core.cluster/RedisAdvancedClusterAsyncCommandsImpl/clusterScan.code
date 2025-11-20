@@ -1,0 +1,13 @@
+private <T extends ScanCursor>RedisFuture<T> clusterScan(ScanCursor cursor,BiFunction<RedisKeyAsyncCommands<K,V>,ScanCursor,RedisFuture<T>> scanFunction,ScanCursorMapper<RedisFuture<T>> resultMapper){
+  return clusterScan(getStatefulConnection(),cursor,scanFunction,resultMapper);
+}
+/** 
+ * Perform a SCAN in the cluster.
+ */
+static <T extends ScanCursor,K,V>RedisFuture<T> clusterScan(StatefulRedisClusterConnection<K,V> connection,ScanCursor cursor,BiFunction<RedisKeyAsyncCommands<K,V>,ScanCursor,RedisFuture<T>> scanFunction,ScanCursorMapper<RedisFuture<T>> mapper){
+  List<String> nodeIds=ClusterScanSupport.getNodeIds(connection,cursor);
+  String currentNodeId=ClusterScanSupport.getCurrentNodeId(cursor,nodeIds);
+  ScanCursor continuationCursor=ClusterScanSupport.getContinuationCursor(cursor);
+  RedisFuture<T> scanCursor=scanFunction.apply(connection.getConnection(currentNodeId).async(),continuationCursor);
+  return mapper.map(nodeIds,currentNodeId,scanCursor);
+}

@@ -1,0 +1,16 @@
+/** 
+ * Returns the room's configuration form that the room's owner can use. The configuration form allows to set the room's language, enable logging, specify room's type, etc..
+ * @return the Form that contains the fields to complete together with the instrucions or<code>null</code> if no configuration is possible.
+ * @throws XMPPErrorException if an error occurs asking the configuration form for the room.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public Form getConfigurationForm() throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  MUCOwner iq=new MUCOwner();
+  iq.setTo(room);
+  iq.setType(IQ.Type.get);
+  IQ answer=connection.sendIqRequestAndWaitForResponse(iq);
+  DataForm dataForm=DataForm.from(answer,MucConfigFormManager.FORM_TYPE);
+  return new Form(dataForm);
+}

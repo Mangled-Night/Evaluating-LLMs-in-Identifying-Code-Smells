@@ -1,0 +1,23 @@
+/** 
+ * Propagate the initial sunlight values out
+ * @param chunk The chunk to set in
+ */
+private static void populateSunlight(Chunk chunk,int scale){
+  PropagationRules sunlightRules=new SunlightPropagationRules(chunk);
+  BatchPropagator lightPropagator=new StandardBatchPropagator(sunlightRules,new SingleChunkView(sunlightRules,chunk),scale);
+  Vector3i pos=new Vector3i();
+  for (int x=0; x < Chunks.SIZE_X; x++) {
+    for (int z=0; z < Chunks.SIZE_Z; z++) {
+      for (int y=0; y < Chunks.SIZE_Y; y++) {
+        pos.set(x,y,z);
+        Block block=chunk.getBlock(x,y,z);
+        byte light=sunlightRules.getFixedValue(block,pos);
+        if (light > 0) {
+          chunk.setSunlight(x,y,z,light);
+          lightPropagator.propagateFrom(pos,light);
+        }
+      }
+    }
+  }
+  lightPropagator.process();
+}

@@ -1,0 +1,28 @@
+private void parseThreeLevelPageSql(SQLStatement stmt,RouteResultset rrs,SchemaConfig schema,SQLSubqueryTableSource from,SQLBinaryOpExpr one,SQLBinaryOperator operator){
+  SQLIntegerExpr right=(SQLIntegerExpr)one.getRight();
+  int firstrownum=right.getNumber().intValue();
+  if (operator == SQLBinaryOperator.GreaterThanOrEqual && firstrownum != 0) {
+    firstrownum=firstrownum - 1;
+  }
+  SQLSelectQuery subSelect=from.getSelect().getQuery();
+  if (subSelect instanceof OracleSelectQueryBlock) {
+    OracleSelectQueryBlock twoSubSelect=(OracleSelectQueryBlock)subSelect;
+    if (twoSubSelect.getWhere() instanceof SQLBinaryOpExpr && twoSubSelect.getFrom() instanceof SQLSubqueryTableSource) {
+      SQLBinaryOpExpr twoWhere=(SQLBinaryOpExpr)twoSubSelect.getWhere();
+      boolean isRowNum="rownum".equalsIgnoreCase(twoWhere.getLeft().toString());
+      boolean isLess=twoWhere.getOperator() == SQLBinaryOperator.LessThanOrEqual || twoWhere.getOperator() == SQLBinaryOperator.LessThan;
+      if (isRowNum && twoWhere.getRight() instanceof SQLIntegerExpr && isLess) {
+        int lastrownum=((SQLIntegerExpr)twoWhere.getRight()).getNumber().intValue();
+        if (operator == SQLBinaryOperator.LessThan && lastrownum != 0) {
+          lastrownum=lastrownum - 1;
+        }
+        SQLSelectQuery finalQuery=((SQLSubqueryTableSource)twoSubSelect.getFrom()).getSelect().getQuery();
+        if (finalQuery instanceof OracleSelectQueryBlock) {
+          setLimitIFChange(stmt,rrs,schema,one,firstrownum,lastrownum);
+          parseOrderAggGroupOracle(stmt,rrs,(OracleSelectQueryBlock)finalQuery,schema);
+          isNeedParseOrderAgg=false;
+        }
+      }
+    }
+  }
+}

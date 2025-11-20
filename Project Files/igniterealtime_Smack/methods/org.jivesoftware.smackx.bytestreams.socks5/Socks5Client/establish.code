@@ -1,0 +1,31 @@
+/** 
+ * Initializes the connection to the SOCKS5 proxy by negotiating authentication method and requesting a stream for the given digest. Currently only the no-authentication method is supported by the Socks5Client.
+ * @param socket connected to a SOCKS5 proxy
+ * @throws IOException if an I/O error occurred.
+ * @throws SmackMessageException if there was an error.
+ */
+protected void establish(Socket socket) throws IOException, SmackMessageException {
+  byte[] connectionRequest;
+  byte[] connectionResponse;
+  DataInputStream in=new DataInputStream(socket.getInputStream());
+  DataOutputStream out=new DataOutputStream(socket.getOutputStream());
+  byte[] cmd=new byte[3];
+  cmd[0]=(byte)0x05;
+  cmd[1]=(byte)0x01;
+  cmd[2]=(byte)0x00;
+  out.write(cmd);
+  out.flush();
+  byte[] response=new byte[2];
+  in.readFully(response);
+  if (response[0] != (byte)0x05 || response[1] != (byte)0x00) {
+    throw new SmackException.SmackMessageException("Remote SOCKS5 server responded with unexpected version: " + response[0] + ' '+ response[1]+ ". Should be 0x05 0x00.");
+  }
+  connectionRequest=createSocks5ConnectRequest();
+  out.write(connectionRequest);
+  out.flush();
+  connectionResponse=Socks5Utils.receiveSocks5Message(in);
+  connectionRequest[1]=(byte)0x00;
+  if (!Arrays.equals(connectionRequest,connectionResponse)) {
+    throw new SmackException.SmackMessageException("Connection request does not equal connection response. Response: " + Arrays.toString(connectionResponse) + ". Request: "+ Arrays.toString(connectionRequest));
+  }
+}

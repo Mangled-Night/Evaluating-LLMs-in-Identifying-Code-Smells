@@ -1,0 +1,18 @@
+@Around("cacheAspect()") public Object doAround(ProceedingJoinPoint joinPoint) throws Throwable {
+  Signature signature=joinPoint.getSignature();
+  MethodSignature methodSignature=(MethodSignature)signature;
+  Method method=methodSignature.getMethod();
+  Object result=null;
+  try {
+    result=joinPoint.proceed();
+  }
+ catch (  Throwable throwable) {
+    if (method.isAnnotationPresent(CacheException.class)) {
+      throw throwable;
+    }
+ else {
+      LOGGER.error(throwable.getMessage());
+    }
+  }
+  return result;
+}

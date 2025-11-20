@@ -1,0 +1,38 @@
+/** 
+ * Serializes the given object to a ByteArray
+ * @param object The object to serialize.
+ * @param type A {@link TypeInfo} specifying the type of the object to serialize.
+ * @param < T > The type of the object to serialize.
+ * @return A ByteArray, if the serialization was successful. Serialization usually fails only because an appropriatetype handler could not be found for the given type.
+ */
+public <T>Optional<byte[]> serialize(T object,TypeInfo<T> type){
+  Optional<D> persistedData=serializeToPersisted(object,type);
+  if (persistedData.isPresent()) {
+    return Optional.of(writer.writeBytes(persistedData.get()));
+  }
+ else {
+    logger.error("Cannot serialize [{}]",type);
+    return Optional.empty();
+  }
+}
+/** 
+ * Serializes and write the given object to   {@link OutputStream}
+ * @param object The object to serialize.
+ * @param type A {@link TypeInfo} specifying the type of the object to serialize.
+ * @param outputStream A {@link OutputStream} which will used for writing.
+ * @param < T > The type of the object to serialize.
+ */
+public <T>void serialize(T object,TypeInfo<T> type,OutputStream outputStream){
+  Optional<D> persistedData=serializeToPersisted(object,type);
+  if (persistedData.isPresent()) {
+    try {
+      writer.writeTo(persistedData.get(),outputStream);
+    }
+ catch (    IOException e) {
+      logger.error("Cannot serialize [" + type + "]",e);
+    }
+  }
+ else {
+    logger.error("Cannot serialize [{}]",type);
+  }
+}

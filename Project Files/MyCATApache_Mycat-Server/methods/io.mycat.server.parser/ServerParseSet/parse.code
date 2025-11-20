@@ -1,0 +1,40 @@
+public static int parse(String stmt,int offset){
+  if (stmt.contains("@@session.")) {
+    stmt=stmt.replaceAll("@@session.","");
+  }
+  int i=offset;
+  for (; i < stmt.length(); i++) {
+switch (stmt.charAt(i)) {
+case ' ':
+case '\r':
+case '\n':
+case '\t':
+      continue;
+case '/':
+case '#':
+    i=ParseUtil.comment(stmt,i);
+  continue;
+case 'A':
+case 'a':
+return autocommit(stmt,i);
+case 'C':
+case 'c':
+return characterSet(stmt,i,0);
+case 'N':
+case 'n':
+return names(stmt,i);
+case 'S':
+case 's':
+return parseS(stmt,i);
+case 'T':
+case 't':
+return transaction(stmt,i);
+case 'X':
+case 'x':
+return xaFlag(stmt,i);
+default :
+return OTHER;
+}
+}
+return OTHER;
+}

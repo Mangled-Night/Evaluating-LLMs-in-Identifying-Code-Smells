@@ -1,0 +1,23 @@
+@Override public boolean datagramReceived(DatagramPacket datagramPacket){
+  try {
+    LOGGER.fine("ECHO Received to: " + candidate.getIp() + ":"+ candidate.getPort()+ "  data: "+ new String(datagramPacket.getData(),"UTF-8"));
+    String[] str=new String(datagramPacket.getData(),"UTF-8").split(";");
+    String pass=str[0];
+    String[] addr=str[1].split(":");
+    String ip=addr[0];
+    String pt=addr[1];
+    if (pass.equals(password) && transportCandidate.getIp().indexOf(ip) != -1 && transportCandidate.getPort() == Integer.parseInt(pt)) {
+      LOGGER.fine("ECHO OK: " + candidate.getIp() + ":"+ candidate.getPort()+ " <-> "+ transportCandidate.getIp()+ ":"+ transportCandidate.getPort());
+      TestResult testResult=new TestResult();
+      testResult.setResult(true);
+      ended=true;
+      fireTestResult(testResult,transportCandidate);
+      return true;
+    }
+  }
+ catch (  UnsupportedEncodingException e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+  LOGGER.fine("ECHO Wrong Data: " + datagramPacket.getAddress().getHostAddress() + ":"+ datagramPacket.getPort());
+  return false;
+}

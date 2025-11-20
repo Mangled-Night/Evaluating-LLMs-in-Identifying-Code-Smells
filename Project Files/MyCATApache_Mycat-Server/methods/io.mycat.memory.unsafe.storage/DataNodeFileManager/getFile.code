@@ -1,0 +1,24 @@
+/** 
+ * Looks up a file by hashing it into one of our local subdirectories. 
+ */
+public File getFile(String filename) throws IOException {
+  int hash=JavaUtils.nonNegativeHash(filename);
+  int dirId=hash % localDirs.size();
+  int subDirId=(hash / localDirs.size()) % subDirsPerLocalDir;
+synchronized (this) {
+    File file=subDirs.get(dirId).get(subDirId);
+    if (file != null) {
+    }
+ else {
+      file=new File(localDirs.get(dirId),"%02x".format(String.valueOf(subDirId)));
+      if (!file.exists() && !file.mkdir()) {
+        throw new IOException("Failed to create local dir in $newDir.");
+      }
+      subDirs.get(dirId).add(subDirId,file);
+    }
+  }
+  return new File(subDirs.get(dirId).get(subDirId),filename);
+}
+public File getFile(ConnectionId connid) throws IOException {
+  return getFile(connid.name);
+}

@@ -1,0 +1,44 @@
+private static TagHead processTagAndHead(String tag){
+  if (!CONFIG.mTagIsSpace && !CONFIG.isLogHeadSwitch()) {
+    tag=CONFIG.getGlobalTag();
+  }
+ else {
+    final StackTraceElement[] stackTrace=new Throwable().getStackTrace();
+    final int stackIndex=3 + CONFIG.getStackOffset();
+    if (stackIndex >= stackTrace.length) {
+      StackTraceElement targetElement=stackTrace[3];
+      final String fileName=getFileName(targetElement);
+      if (CONFIG.mTagIsSpace && UtilsBridge.isSpace(tag)) {
+        int index=fileName.indexOf('.');
+        tag=index == -1 ? fileName : fileName.substring(0,index);
+      }
+      return new TagHead(tag,null,": ");
+    }
+    StackTraceElement targetElement=stackTrace[stackIndex];
+    final String fileName=getFileName(targetElement);
+    if (CONFIG.mTagIsSpace && UtilsBridge.isSpace(tag)) {
+      int index=fileName.indexOf('.');
+      tag=index == -1 ? fileName : fileName.substring(0,index);
+    }
+    if (CONFIG.isLogHeadSwitch()) {
+      String tName=Thread.currentThread().getName();
+      final String head=new Formatter().format("%s, %s.%s(%s:%d)",tName,targetElement.getClassName(),targetElement.getMethodName(),fileName,targetElement.getLineNumber()).toString();
+      final String fileHead=" [" + head + "]: ";
+      if (CONFIG.getStackDeep() <= 1) {
+        return new TagHead(tag,new String[]{head},fileHead);
+      }
+ else {
+        final String[] consoleHead=new String[Math.min(CONFIG.getStackDeep(),stackTrace.length - stackIndex)];
+        consoleHead[0]=head;
+        int spaceLen=tName.length() + 2;
+        String space=new Formatter().format("%" + spaceLen + "s","").toString();
+        for (int i=1, len=consoleHead.length; i < len; ++i) {
+          targetElement=stackTrace[i + stackIndex];
+          consoleHead[i]=new Formatter().format("%s%s.%s(%s:%d)",space,targetElement.getClassName(),targetElement.getMethodName(),getFileName(targetElement),targetElement.getLineNumber()).toString();
+        }
+        return new TagHead(tag,consoleHead,fileHead);
+      }
+    }
+  }
+  return new TagHead(tag,null,": ");
+}

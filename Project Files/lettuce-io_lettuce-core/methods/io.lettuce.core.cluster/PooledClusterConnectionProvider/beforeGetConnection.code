@@ -1,0 +1,13 @@
+private void beforeGetConnection(ConnectionIntent connectionIntent,String host,int port){
+  if (debugEnabled) {
+    logger.debug("getConnection(" + connectionIntent + ", "+ host+ ", "+ port+ ")");
+  }
+  RedisClusterNode redisClusterNode=partitions.getPartition(host,port);
+  if (redisClusterNode == null) {
+    clusterEventListener.onUnknownNode();
+    if (validateClusterNodeMembership()) {
+      HostAndPort hostAndPort=HostAndPort.of(host,port);
+      throw connectionAttemptRejected(hostAndPort.toString());
+    }
+  }
+}

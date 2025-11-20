@@ -1,0 +1,54 @@
+/** 
+ * Builds and sends the <code>auth</code> stanza to the server. Note that this method of authentication is not recommended, since it is very inflexible. Use {@link #authenticate(String,DomainBareJid,CallbackHandler,EntityBareJid,SSLSession)} whenever possible.Explanation of auth stanza: The client authentication stanza needs to include the digest-uri of the form: xmpp/serviceName From RFC-2831: digest-uri = "digest-uri" "=" digest-uri-value digest-uri-value = serv-type "/" host [ "/" serv-name ] digest-uri: Indicates the principal name of the service with which the client wishes to connect, formed from the serv-type, host, and serv-name. For example, the FTP service on "ftp.example.com" would have a "digest-uri" value of "ftp/ftp.example.com"; the SMTP server from the example above would have a "digest-uri" value of "smtp/mail3.example.com/example.com". host: The DNS host name or IP address for the service requested. The DNS host name must be the fully-qualified canonical name of the host. The DNS host name is the preferred form; see notes on server processing of the digest-uri. serv-name: Indicates the name of the service if it is replicated. The service is considered to be replicated if the client's service-location process involves resolution using standard DNS lookup operations, and if these operations involve DNS records (such as SRV, or MX) which resolve one DNS name into a set of other DNS names. In this case, the initial name used by the client is the "serv-name", and the final name is the "host" component. For example, the incoming mail service for "example.com" may be replicated through the use of MX records stored in the DNS, one of which points at an SMTP server called "mail3.example.com"; it's "serv-name" would be "example.com", it's "host" would be "mail3.example.com". If the service is not replicated, or the serv-name is identical to the host, then the serv-name component MUST be omitted digest-uri verification is needed for ejabberd 2.0.3 and higher
+ * @param username the username of the user being authenticated.
+ * @param host the hostname where the user account resides.
+ * @param serviceName the xmpp service location - used by the SASL client in digest-uri creationserviceName format is: host [ "/" serv-name ] as per RFC-2831
+ * @param password the password for this account.
+ * @param authzid the optional authorization identity.
+ * @param sslSession the optional SSL/TLS session (if one was established)
+ * @throws SmackSaslException if a SASL related error occurs.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public final void authenticate(String username,String host,DomainBareJid serviceName,String password,EntityBareJid authzid,SSLSession sslSession) throws SmackSaslException, NotConnectedException, InterruptedException {
+  this.authenticationId=username;
+  this.host=host;
+  this.serviceName=serviceName;
+  this.password=password;
+  this.authorizationId=authzid;
+  this.sslSession=sslSession;
+  assert authorizationId == null || authzidSupported();
+  authenticateInternal();
+  authenticate();
+}
+/** 
+ * Builds and sends the <code>auth</code> stanza to the server. The callback handler will handle any additional information, such as the authentication ID or realm, if it is needed.
+ * @param host     the hostname where the user account resides.
+ * @param serviceName the xmpp service location
+ * @param cbh      the CallbackHandler to obtain user information.
+ * @param authzid the optional authorization identity.
+ * @param sslSession the optional SSL/TLS session (if one was established)
+ * @throws SmackSaslException if a SASL related error occurs.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void authenticate(String host,DomainBareJid serviceName,CallbackHandler cbh,EntityBareJid authzid,SSLSession sslSession) throws SmackSaslException, NotConnectedException, InterruptedException {
+  this.host=host;
+  this.serviceName=serviceName;
+  this.authorizationId=authzid;
+  this.sslSession=sslSession;
+  assert authorizationId == null || authzidSupported();
+  authenticateInternal(cbh);
+  authenticate();
+}
+private void authenticate() throws SmackSaslException, NotConnectedException, InterruptedException {
+  byte[] authenticationBytes=getAuthenticationText();
+  String authenticationText;
+  if (authenticationBytes != null && authenticationBytes.length > 0) {
+    authenticationText=Base64.encodeToString(authenticationBytes);
+  }
+ else {
+    authenticationText="=";
+  }
+  connection.sendNonza(new AuthMechanism(getName(),authenticationText));
+}

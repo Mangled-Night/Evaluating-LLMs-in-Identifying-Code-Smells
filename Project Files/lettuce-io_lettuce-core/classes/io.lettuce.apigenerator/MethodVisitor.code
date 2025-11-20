@@ -1,0 +1,90 @@
+/** 
+ * Simple visitor implementation for visiting MethodDeclaration nodes.
+ */
+private class MethodVisitor extends VoidVisitorAdapter<Object> {
+  @Override public void visit(  MethodDeclaration parsedDeclaration,  Object arg){
+    if (!methodFilter.test(parsedDeclaration)) {
+      return;
+    }
+    Type returnType=getMethodReturnType(parsedDeclaration);
+    MethodDeclaration method=new MethodDeclaration(parsedDeclaration.getModifiers(),parsedDeclaration.getAnnotations(),parsedDeclaration.getTypeParameters(),returnType,parsedDeclaration.getName(),parsedDeclaration.getParameters(),parsedDeclaration.getThrownExceptions(),null);
+    if (methodCommentMutator != null) {
+      method.setComment(methodCommentMutator.apply(method,parsedDeclaration.getComment().orElse(null)));
+    }
+ else {
+      method.setComment(parsedDeclaration.getComment().orElse(null));
+    }
+    onMethod.accept(method);
+    resultType.addMember(method);
+  }
+  private Type getMethodReturnType(  MethodDeclaration parsedDeclaration){
+    List<Map.Entry<Predicate<MethodDeclaration>,Function<MethodDeclaration,Type>>> entries=new ArrayList<>(methodReturnTypeMutation.entrySet());
+    Collections.reverse(entries);
+    return entries.stream().filter(entry -> entry.getKey().test(parsedDeclaration)).findFirst().map(entry -> entry.getValue().apply(parsedDeclaration)).orElse(null);
+  }
+}
+private class MethodVisitor extends VoidVisitorAdapter<Object> {
+  @Override public void visit(  MethodDeclaration method,  Object arg){
+    if (!contains(KEEP_DEPRECATED_METHODS.keySet(),method) && (method.isAnnotationPresent(Deprecated.class) || contains(SKIP_METHODS,method) || method.getParameters().stream().anyMatch(p -> p.getType().asString().contains("StreamingChannel")))) {
+      return;
+    }
+    result.append(FORMATTING_INDENT).append(extractJavadoc(method.getJavadoc().get()).replace("\n","\n" + FORMATTING_INDENT)).append(extractAnnotations(method)).append(contains(NON_SUSPENDABLE_METHODS,method) || isFlowable(method) ? "" : "suspend ").append("fun ").append(method.getTypeParameters().isNonEmpty() ? extractTypeParams(method.getTypeParameters(),"Any").concat(" ") : "").append(method.getNameAsString()).append("(").append(extractParameters(method)).append(")").append(customResultType(method).orElse(toKotlinType(method.getType(),isFlowable(method),contains(NON_NULLABLE_RESULT_METHODS,method)))).append("\n\n");
+  }
+  private String extractAnnotations(  MethodDeclaration method){
+    return method.getAnnotations().stream().map(a -> {
+      String annotation=a.getNameAsString();
+      if (annotation.equals("Deprecated")) {
+        String identifier=method.getName().getIdentifier();
+        String replacement=KEEP_DEPRECATED_METHODS.get(identifier);
+        return "@" + annotation + "(\"Use ["+ replacement+ "] instead.\", ReplaceWith(\""+ replacement+ "\"))\n"+ FORMATTING_INDENT;
+      }
+ else {
+        return "@" + annotation + "\n"+ FORMATTING_INDENT;
+      }
+    }
+).collect(joining());
+  }
+  private String extractParameters(  MethodDeclaration method){
+    return method.getParameters().stream().map(p -> (p.isVarArgs() ? "vararg " : "") + p.getName() + toKotlinType(p.getType(),false,true)).collect(joining(", "));
+  }
+  private Optional<String> customResultType(  MethodDeclaration method){
+    ClassOrInterfaceDeclaration declaringClass=(ClassOrInterfaceDeclaration)method.getParentNode().get();
+    return RESULT_SPEC.entrySet().stream().filter(e -> e.getKey().equals(method.getNameAsString()) || e.getKey().contains(declaringClass.getNameAsString() + "." + method.getNameAsString())).findFirst().map(e -> ": " + e.getValue());
+  }
+  private boolean contains(  Collection<String> haystack,  MethodDeclaration method){
+    ClassOrInterfaceDeclaration declaringClass=(ClassOrInterfaceDeclaration)method.getParentNode().get();
+    return haystack.contains(method.getNameAsString()) || haystack.contains(declaringClass.getNameAsString() + "." + method.getNameAsString());
+  }
+  private boolean isCollection(  Type type){
+    return type.asString().startsWith("List<") || type.asString().startsWith("Set<");
+  }
+  private boolean isFlowable(  MethodDeclaration method){
+    return contains(FLOW_METHODS,method);
+  }
+  private String toKotlinType(  Type type,  boolean isFlowable,  boolean isForceNonNullable){
+    String fixedType;
+    if (type.isTypeParameter() || type.asString().equals("K") || type.asString().equals("V")) {
+      fixedType=type.asString();
+    }
+ else     if (type.isArrayType()) {
+      Type componentType=type.asArrayType().getComponentType();
+      if (componentType.asString().equals("byte")) {
+        fixedType="ByteArray";
+      }
+ else {
+        fixedType=String.format("Array<%s>",componentType.asString());
+      }
+    }
+ else     if (type.isPrimitiveType()) {
+      fixedType=type.asPrimitiveType().toBoxedType().getName().asString().replace("Integer","Int").replace("Object","Any");
+    }
+ else     if (isFlowable) {
+      fixedType=type.asString().replaceFirst("List|Map|Set","Flow").replace("T","Flow<T>").replace("Object","Any").replace(",",", ");
+    }
+ else {
+      fixedType=type.asString().replace("void","Unit").replace("Object","Any").replace("? extends","out").replace("? super","in").replace(",",", ");
+    }
+    boolean nullable=!isForceNonNullable && !isFlowable && !type.isPrimitiveType()&& !isCollection(type);
+    return fixedType.equals("Unit") ? "" : ": " + (nullable ? fixedType + "?" : fixedType);
+  }
+}

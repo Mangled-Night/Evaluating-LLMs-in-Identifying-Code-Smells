@@ -1,0 +1,72 @@
+/** 
+ * Returns true if the given URL was found and parsed without problems. The file provided by the URL must contain information useful for the test case configuration, such us, host and port of the server.
+ * @param url the url of the file to parse.
+ * @return true if the given URL was found and parsed without problems.
+ */
+private boolean parseURL(URL url){
+  boolean parsedOK=false;
+  InputStream systemStream=null;
+  try {
+    systemStream=url.openStream();
+    XmlPullParser parser=XmlPullParserFactory.newInstance().newPullParser();
+    parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES,true);
+    parser.setInput(systemStream,"UTF-8");
+    XmlPullParser.Event eventType=parser.getEventType();
+    do {
+      if (eventType == START_ELEMENT) {
+        if (parser.getName().equals("host")) {
+          host=parser.nextText();
+        }
+ else         if (parser.getName().equals("port")) {
+          port=parseIntProperty(parser,port);
+        }
+ else         if (parser.getName().equals("serviceName")) {
+          serviceName=parser.nextText();
+        }
+ else         if (parser.getName().equals("chat")) {
+          chatDomain=parser.nextText();
+        }
+ else         if (parser.getName().equals("muc")) {
+          mucDomain=parser.nextText();
+        }
+ else         if (parser.getName().equals("username")) {
+          usernamePrefix=parser.nextText();
+        }
+ else         if (parser.getName().equals("password")) {
+          samePassword="true".equals(parser.getAttributeValue(0));
+          passwordPrefix=parser.nextText();
+        }
+ else         if (parser.getName().equals("testAnonymousLogin")) {
+          testAnonymousLogin="true".equals(parser.nextText());
+        }
+ else         if (parser.getName().equals("accountCreationParameters")) {
+          int numAttributes=parser.getAttributeCount();
+          String key=null;
+          String value=null;
+          for (int i=0; i < numAttributes; i++) {
+            key=parser.getAttributeName(i);
+            value=parser.getAttributeValue(i);
+            accountCreationParameters.put(key,value);
+          }
+        }
+ else         if (parser.getName().equals("compressionEnabled")) {
+          compressionEnabled="true".equals(parser.nextText());
+        }
+      }
+      eventType=parser.next();
+    }
+ while (eventType != END_DOCUMENT);
+    parsedOK=true;
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+  }
+ finally {
+    try {
+      systemStream.close();
+    }
+ catch (    Exception e) {
+    }
+  }
+  return parsedOK;
+}

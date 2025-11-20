@@ -1,0 +1,22 @@
+/** 
+ * Emits particles from emitter
+ */
+private void updateEmitter(final ParticleEmitterComponent particleEmitter,final int particleReviveLimit,final float delta){
+  float deltaLeft=delta;
+  while (deltaLeft > 0 && particleEmitter.particlePool.deadParticles() > particleReviveLimit) {
+    if (particleEmitter.nextEmission < deltaLeft) {
+      deltaLeft-=particleEmitter.nextEmission;
+      float freq1=1.0f / particleEmitter.spawnRateMax;
+      float freq2=1.0f / particleEmitter.spawnRateMin;
+      particleEmitter.nextEmission=random.nextFloat(freq1,freq2);
+      if (particleEmitter.particleSpawnsLeft != ParticleEmitterComponent.INFINITE_PARTICLE_SPAWNS) {
+        particleEmitter.particleSpawnsLeft--;
+      }
+      emitParticle(particleEmitter);
+    }
+ else {
+      particleEmitter.nextEmission-=deltaLeft;
+      deltaLeft=0;
+    }
+  }
+}

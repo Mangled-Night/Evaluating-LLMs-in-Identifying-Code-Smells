@@ -1,0 +1,38 @@
+/** 
+ * @author Mark Paluch
+ */
+@ExtendWith(LettuceExtension.class) class RedisCommandsClusterIntegrationTests extends TestSupport {
+  private final StatefulRedisClusterConnection<String,String> connection;
+  @Inject RedisCommandsClusterIntegrationTests(  StatefulRedisClusterConnection<String,String> connection){
+    this.connection=connection;
+    this.connection.sync().flushall();
+  }
+  @Test void future() throws ExecutionException, InterruptedException {
+    RedisCommandFactory factory=new RedisCommandFactory(connection);
+    SynchronousCommands api=factory.getCommands(SynchronousCommands.class);
+    api.setSync(key,value,Timeout.create(Duration.ofSeconds(10)));
+    assertThat(api.get("key").get()).isEqualTo("value");
+    assertThat(api.getAsBytes("key")).isEqualTo("value".getBytes());
+  }
+  @Test void shouldRouteBinaryKey(){
+    connection.sync().set(key,value);
+    RedisCommandFactory factory=new RedisCommandFactory(connection);
+    SynchronousCommands api=factory.getCommands(SynchronousCommands.class);
+    assertThat(api.get(key.getBytes())).isEqualTo(value.getBytes());
+  }
+  @Test void mgetAsValues(){
+    connection.sync().set(key,value);
+    RedisCommandFactory factory=new RedisCommandFactory(connection);
+    SynchronousCommands api=factory.getCommands(SynchronousCommands.class);
+    List<Value<String>> values=api.mgetAsValues(key);
+    assertThat(values).hasSize(1);
+    assertThat(values.get(0)).isEqualTo(Value.just(value));
+  }
+interface SynchronousCommands extends Commands {
+    byte[] get(    byte[] key);
+    RedisFuture<String> get(    String key);
+    @Command("GET") byte[] getAsBytes(    String key);
+    @Command("SET") String setSync(    String key,    String value,    Timeout timeout);
+    @Command("MGET") List<Value<String>> mgetAsValues(    String... keys);
+  }
+}

@@ -1,0 +1,37 @@
+@Override public void run(){
+  long curmaxTTL=this.maxTTL;
+  long curminTTL=this.minTTL;
+  long curvalidTTLSum=this.validTTLSum;
+  long curvalidTTLCount=this.validTTLCount;
+  long start=System.currentTimeMillis();
+  for (int i=0; i < executeTimes; i++) {
+    long ttlTime=this.select();
+    if (ttlTime != -1) {
+      if (ttlTime > curmaxTTL) {
+        curmaxTTL=ttlTime;
+      }
+ else       if (ttlTime < curminTTL) {
+        curminTTL=ttlTime;
+      }
+      curvalidTTLSum+=ttlTime;
+      curvalidTTLCount+=1;
+    }
+    usedTime=System.currentTimeMillis() - start;
+    if (i % 100 == 0) {
+      maxTTL=curmaxTTL;
+      minTTL=curminTTL;
+      validTTLSum=curvalidTTLSum;
+      validTTLCount=curvalidTTLCount;
+    }
+  }
+  maxTTL=curmaxTTL;
+  minTTL=curminTTL;
+  validTTLSum=curvalidTTLSum;
+  validTTLCount=curvalidTTLCount;
+  try {
+    con.close();
+  }
+ catch (  SQLException e) {
+    e.printStackTrace();
+  }
+}

@@ -1,0 +1,27 @@
+/** 
+ * This class translates low level item deletion events into api level objects for user consumption.
+ * @author Robin Collier
+ */
+public static class ItemDeleteTranslator implements StanzaListener {
+  private final ItemDeleteListener listener;
+  public ItemDeleteTranslator(  ItemDeleteListener eventListener){
+    listener=eventListener;
+  }
+  @Override public void processStanza(  Stanza packet){
+    EventElement event=(EventElement)packet.getExtensionElement("event",PubSubNamespace.event.getXmlns());
+    List<XmlElement> extList=event.getExtensions();
+    if (extList.get(0).getElementName().equals(PubSubElementType.PURGE_EVENT.getElementName())) {
+      listener.handlePurge();
+    }
+ else {
+      ItemsExtension itemsElem=(ItemsExtension)event.getEvent();
+      @SuppressWarnings("unchecked") Collection<RetractItem> pubItems=(Collection<RetractItem>)itemsElem.getItems();
+      List<String> items=new ArrayList<>(pubItems.size());
+      for (      RetractItem item : pubItems) {
+        items.add(item.getId());
+      }
+      ItemDeleteEvent eventItems=new ItemDeleteEvent(itemsElem.getNode(),items,getSubscriptionIds(packet));
+      listener.handleDeletedItems(eventItems);
+    }
+  }
+}

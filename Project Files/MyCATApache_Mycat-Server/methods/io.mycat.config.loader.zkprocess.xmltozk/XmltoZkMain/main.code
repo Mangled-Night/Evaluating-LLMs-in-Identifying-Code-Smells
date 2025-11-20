@@ -1,0 +1,28 @@
+public static void main(String[] args) throws JAXBException, InterruptedException {
+  ZookeeperProcessListen zkListen=new ZookeeperProcessListen();
+  String custerName=ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_CLUSTERID);
+  String basePath=ZookeeperPath.ZK_SEPARATOR.getKey() + ZookeeperPath.FLOW_ZK_PATH_BASE.getKey();
+  basePath=basePath + ZookeeperPath.ZK_SEPARATOR.getKey() + custerName;
+  zkListen.setBasePath(basePath);
+  CuratorFramework zkConn=buildConnection(ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_URL));
+  XmlProcessBase xmlProcess=new XmlProcessBase();
+  new SchemasxmlTozkLoader(zkListen,zkConn,xmlProcess);
+  new ServerxmlTozkLoader(zkListen,zkConn,xmlProcess);
+  new RulesxmlTozkLoader(zkListen,zkConn,xmlProcess);
+  new SequenceTozkLoader(zkListen,zkConn,xmlProcess);
+  new EcachesxmlTozkLoader(zkListen,zkConn,xmlProcess);
+  new OthermsgTozkLoader(zkListen,zkConn,xmlProcess);
+  xmlProcess.initJaxbClass();
+  zkListen.notifly(ZkNofiflyCfg.ZK_NOTIFLY_LOAD_ALL.getKey());
+  String clusterNodes=ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_CLUSTER_NODES);
+  String clusterSize=ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_CLUSTER_SIZE);
+  ClusterInfo info=new ClusterInfo();
+  info.setClusterNodes(clusterNodes);
+  info.setClusterSize(Integer.parseInt(clusterSize));
+  try {
+    zkConn.setData().forPath(basePath,JSON.toJSONBytes(info));
+  }
+ catch (  Exception e) {
+    LOGGER.error("error",e);
+  }
+}

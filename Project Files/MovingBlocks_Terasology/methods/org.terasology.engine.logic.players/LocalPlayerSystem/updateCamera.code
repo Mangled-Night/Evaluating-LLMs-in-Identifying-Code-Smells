@@ -1,0 +1,26 @@
+private void updateCamera(CharacterMovementComponent charMovementComp,Vector3f position,Quaternionf rotation){
+  playerCamera.getPosition().set(position);
+  playerCamera.setOrientation(rotation);
+  float stepDelta=charMovementComp.footstepDelta - lastStepDelta;
+  if (stepDelta < 0) {
+    stepDelta+=1;
+  }
+  bobFactor+=stepDelta;
+  lastStepDelta=charMovementComp.footstepDelta;
+  if (playerCamera.isBobbingAllowed()) {
+    if (config.getRendering().isCameraBobbing()) {
+      ((PerspectiveCamera)playerCamera).setBobbingRotationOffsetFactor(calcBobbingOffset(0.0f,0.01f,2.5f));
+      ((PerspectiveCamera)playerCamera).setBobbingVerticalOffsetFactor(calcBobbingOffset((float)java.lang.Math.PI / 4f,0.025f,3f));
+    }
+ else {
+      ((PerspectiveCamera)playerCamera).setBobbingRotationOffsetFactor(0.0f);
+      ((PerspectiveCamera)playerCamera).setBobbingVerticalOffsetFactor(0.0f);
+    }
+  }
+  if (charMovementComp.mode == MovementMode.GHOSTING) {
+    playerCamera.extendFov(24);
+  }
+ else {
+    playerCamera.resetFov();
+  }
+}

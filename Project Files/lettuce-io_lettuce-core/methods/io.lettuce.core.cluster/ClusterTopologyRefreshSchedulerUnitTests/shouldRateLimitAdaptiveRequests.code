@@ -1,0 +1,11 @@
+@Test void shouldRateLimitAdaptiveRequests(){
+  ClusterTopologyRefreshOptions adaptiveTimeout=ClusterTopologyRefreshOptions.builder().enablePeriodicRefresh(false).enableAllAdaptiveRefreshTriggers().adaptiveRefreshTriggersTimeout(50,TimeUnit.MILLISECONDS).build();
+  ClusterClientOptions clusterClientOptions=ClusterClientOptions.builder().topologyRefreshOptions(adaptiveTimeout).build();
+  when(clusterClient.getClusterClientOptions()).thenReturn(clusterClientOptions);
+  for (int i=0; i < 10; i++) {
+    sut.onAskRedirection();
+  }
+  Delay.delay(Duration.ofMillis(100));
+  sut.onAskRedirection();
+  verify(eventExecutors,times(2)).submit(any(Runnable.class));
+}

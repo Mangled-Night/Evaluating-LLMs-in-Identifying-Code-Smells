@@ -1,0 +1,12 @@
+@Test void lrangeStreaming(){
+  assertThat(redis.lrange(key,0,10).isEmpty()).isTrue();
+  redis.rpush(key,"one","two","three");
+  ListStreamingAdapter<String> adapter=new ListStreamingAdapter<>();
+  Long count=redis.lrange(adapter,key,0,1);
+  assertThat(count.longValue()).isEqualTo(2);
+  List<String> range=adapter.getList();
+  assertThat(range).hasSize(2);
+  assertThat(range.get(0)).isEqualTo("one");
+  assertThat(range.get(1)).isEqualTo("two");
+  assertThat(redis.lrange(key,0,-1)).hasSize(3);
+}

@@ -1,0 +1,20 @@
+private boolean switchSourceVoted(int newIndex,boolean isAlarm,String reason){
+  if (notSwitchSource(newIndex)) {
+    return false;
+  }
+  final ReentrantLock lock=this.switchLock;
+  if (MycatServer.getInstance().isUseZkSwitch()) {
+    lock.lock();
+    try {
+      final String myId=ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_MYID);
+      String manageVotePath=ZKUtils.getZKBasePath() + "heartbeat/" + hostName+ "/"+ "voteInformation/"+ myId;
+      String data=String.format("%s=%d",myId,newIndex);
+      ZKUtils.createPath(manageVotePath,data);
+      LogUtil.writeDataSourceLog(String.format("[%s 發生投票: %s]",myId,this.getSources()[newIndex].getName()));
+    }
+  finally {
+      lock.unlock();
+    }
+  }
+  return true;
+}

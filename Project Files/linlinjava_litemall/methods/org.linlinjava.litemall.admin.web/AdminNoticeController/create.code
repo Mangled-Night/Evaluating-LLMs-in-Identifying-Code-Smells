@@ -1,0 +1,17 @@
+@RequiresPermissions("admin:notice:create") @RequiresPermissionsDesc(menu={"推广管理","通知管理"},button="添加") @PostMapping("/create") public Object create(@RequestBody LitemallNotice notice){
+  Object error=validate(notice);
+  if (error != null) {
+    return error;
+  }
+  notice.setAdminId(getAdminId());
+  noticeService.add(notice);
+  List<LitemallAdmin> adminList=adminService.all();
+  LitemallNoticeAdmin noticeAdmin=new LitemallNoticeAdmin();
+  noticeAdmin.setNoticeId(notice.getId());
+  noticeAdmin.setNoticeTitle(notice.getTitle());
+  for (  LitemallAdmin admin : adminList) {
+    noticeAdmin.setAdminId(admin.getId());
+    noticeAdminService.add(noticeAdmin);
+  }
+  return ResponseUtil.ok(notice);
+}

@@ -1,0 +1,27 @@
+private ByteBuffer decompress(ByteBuffer source) throws IOException {
+  if (source.remaining() == 0) {
+    return source;
+  }
+  InputStream decompressor=null;
+  ByteArrayOutputStream outputStream=new ByteArrayOutputStream(source.remaining() * 2);
+  try {
+    try (ByteBufferInputStream sourceStream=new ByteBufferInputStream(source)){
+      if (compressionType == CompressionType.GZIP) {
+        decompressor=new GZIPInputStream(sourceStream);
+      }
+      if (compressionType == CompressionType.DEFLATE) {
+        decompressor=new InflaterInputStream(sourceStream);
+      }
+      copy(decompressor,outputStream);
+    }
+  finally {
+      if (decompressor != null) {
+        decompressor.close();
+      }
+    }
+    return ByteBuffer.wrap(outputStream.toByteArray());
+  }
+  finally {
+    outputStream.close();
+  }
+}

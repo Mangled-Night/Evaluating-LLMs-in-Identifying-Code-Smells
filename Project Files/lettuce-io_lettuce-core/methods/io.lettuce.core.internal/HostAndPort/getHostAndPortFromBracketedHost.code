@@ -1,0 +1,23 @@
+/** 
+ * Parses a bracketed host-port string, throwing IllegalArgumentException if parsing fails.
+ * @param hostPortString the full bracketed host-port specification. Post might not be specified.
+ * @return an array with 2 strings: host and port, in that order.
+ * @throws IllegalArgumentException if parsing the bracketed host-port string fails.
+ */
+private static String[] getHostAndPortFromBracketedHost(String hostPortString){
+  LettuceAssert.isTrue(hostPortString.charAt(0) == '[',() -> String.format("Bracketed host-port string must start with a bracket: %s",hostPortString));
+  int colonIndex=hostPortString.indexOf(':');
+  int closeBracketIndex=hostPortString.lastIndexOf(']');
+  LettuceAssert.isTrue(colonIndex > -1 && closeBracketIndex > colonIndex,() -> String.format("Invalid bracketed host/port: %s",hostPortString));
+  String host=hostPortString.substring(1,closeBracketIndex);
+  if (closeBracketIndex + 1 == hostPortString.length()) {
+    return new String[]{host,""};
+  }
+ else {
+    LettuceAssert.isTrue(hostPortString.charAt(closeBracketIndex + 1) == ':',"Only a colon may follow a close bracket: " + hostPortString);
+    for (int i=closeBracketIndex + 2; i < hostPortString.length(); ++i) {
+      LettuceAssert.isTrue(Character.isDigit(hostPortString.charAt(i)),() -> String.format("Port must be numeric: %s",hostPortString));
+    }
+    return new String[]{host,hostPortString.substring(closeBracketIndex + 2)};
+  }
+}

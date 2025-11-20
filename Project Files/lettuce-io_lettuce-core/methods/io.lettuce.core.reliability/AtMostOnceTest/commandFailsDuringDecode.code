@@ -1,0 +1,15 @@
+@Test void commandFailsDuringDecode(){
+  StatefulRedisConnection<String,String> connection=client.connect();
+  RedisCommands<String,String> sync=connection.sync();
+  RedisChannelWriter channelWriter=ConnectionTestUtil.getChannelWriter(connection);
+  RedisCommands<String,String> verificationConnection=client.connect().sync();
+  sync.set(key,"1");
+  AsyncCommand<String,String,String> command=new AsyncCommand<>(new Command<>(CommandType.INCR,new StatusOutput<>(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).addKey(key)));
+  channelWriter.write(command);
+  assertThat(command.await(2,TimeUnit.SECONDS)).isTrue();
+  assertThat(command.isCancelled()).isFalse();
+  assertThat(getException(command)).isInstanceOf(UnsupportedOperationException.class);
+  assertThat(verificationConnection.get(key)).isEqualTo("2");
+  assertThat(sync.get(key)).isEqualTo("2");
+  connection.close();
+}

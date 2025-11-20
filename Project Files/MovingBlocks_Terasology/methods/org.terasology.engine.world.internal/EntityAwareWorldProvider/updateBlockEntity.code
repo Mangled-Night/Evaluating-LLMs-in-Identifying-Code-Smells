@@ -1,0 +1,17 @@
+private void updateBlockEntity(EntityRef blockEntity,Vector3ic pos,Block oldType,Block type,boolean forceEntityUpdate,Set<Class<? extends Component>> retainComponents){
+  if (type.isKeepActive()) {
+    temporaryBlockEntities.remove(blockEntity);
+  }
+ else   if (oldType.isKeepActive() && isTemporaryBlock(blockEntity,type)) {
+    temporaryBlockEntities.add(blockEntity);
+  }
+  if (forceEntityUpdate || !(Objects.equal(oldType.getBlockFamily(),type.getBlockFamily()) && Objects.equal(oldType.getPrefab(),type.getPrefab()))) {
+    updateBlockEntityComponents(blockEntity,oldType,type,retainComponents);
+  }
+  OnChangedBlock changedEvent=new OnChangedBlock(pos,type,oldType);
+  EntityRef regionEntity=blockRegionLookup.get(pos);
+  if (regionEntity != null) {
+    regionEntity.send(changedEvent);
+  }
+  blockEntity.send(changedEvent);
+}

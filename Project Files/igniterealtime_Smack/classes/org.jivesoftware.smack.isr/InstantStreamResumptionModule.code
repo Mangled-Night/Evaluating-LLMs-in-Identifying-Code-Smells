@@ -1,0 +1,38 @@
+public class InstantStreamResumptionModule extends ModularXmppClientToServerConnectionModule<InstantStreamResumptionModuleDescriptor> {
+  protected InstantStreamResumptionModule(  InstantStreamResumptionModuleDescriptor instantStreamResumptionModuleDescriptor,  ModularXmppClientToServerConnectionInternal connectionInternal){
+    super(instantStreamResumptionModuleDescriptor,connectionInternal);
+  }
+public static final class InstantStreamResumptionStateDescriptor extends StateDescriptor {
+    private InstantStreamResumptionStateDescriptor(){
+      super(InstantStreamResumptionState.class,397,StateDescriptor.Property.notImplemented);
+      addSuccessor(AuthenticatedAndResourceBoundStateDescriptor.class);
+      addPredeccessor(ConnectedButUnauthenticatedStateDescriptor.class);
+      declarePrecedenceOver(SaslAuthenticationStateDescriptor.class);
+    }
+    @Override protected InstantStreamResumptionModule.InstantStreamResumptionState constructState(    ModularXmppClientToServerConnectionInternal connectionInternal){
+      InstantStreamResumptionModule isrModule=connectionInternal.connection.getConnectionModuleFor(InstantStreamResumptionModuleDescriptor.class);
+      return isrModule.constructInstantStreamResumptionState(this,connectionInternal);
+    }
+  }
+  private boolean useIsr=true;
+private final class InstantStreamResumptionState extends State {
+    private InstantStreamResumptionState(    InstantStreamResumptionStateDescriptor instantStreamResumptionStateDescriptor,    ModularXmppClientToServerConnectionInternal connectionInternal){
+      super(instantStreamResumptionStateDescriptor,connectionInternal);
+    }
+    @Override public StateTransitionResult.TransitionImpossible isTransitionToPossible(    WalkStateGraphContext walkStateGraphContext){
+      if (!useIsr) {
+        return new StateTransitionResult.TransitionImpossibleReason("Instant stream resumption not enabled nor implemented");
+      }
+      return new StateTransitionResult.TransitionImpossibleBecauseNotImplemented(stateDescriptor);
+    }
+    @Override public StateTransitionResult.AttemptResult transitionInto(    WalkStateGraphContext walkStateGraphContext){
+      throw new IllegalStateException("Instant stream resumption not implemented");
+    }
+  }
+  public void setInstantStreamResumptionEnabled(  boolean useIsr){
+    this.useIsr=useIsr;
+  }
+  public InstantStreamResumptionState constructInstantStreamResumptionState(  InstantStreamResumptionStateDescriptor instantStreamResumptionStateDescriptor,  ModularXmppClientToServerConnectionInternal connectionInternal){
+    return new InstantStreamResumptionState(instantStreamResumptionStateDescriptor,connectionInternal);
+  }
+}

@@ -1,0 +1,63 @@
+/** 
+ * Perform hostname to address resolution.
+ * @param host the hostname, must not be empty or {@code null}.
+ * @return array of one or more {@link InetAddress addresses}
+ * @throws UnknownHostException
+ */
+@Override public InetAddress[] resolve(String host) throws UnknownHostException {
+  if (ipStringToBytes(host) != null) {
+    return new InetAddress[]{InetAddress.getByAddress(ipStringToBytes(host))};
+  }
+  List<InetAddress> inetAddresses=new ArrayList<>();
+  try {
+    resolve(host,inetAddresses);
+  }
+ catch (  NamingException e) {
+    throw new UnknownHostException(String.format("Cannot resolve %s to a hostname because of %s",host,e));
+  }
+  if (inetAddresses.isEmpty()) {
+    throw new UnknownHostException(String.format("Cannot resolve %s to a hostname",host));
+  }
+  return inetAddresses.toArray(new InetAddress[inetAddresses.size()]);
+}
+/** 
+ * Resolve a hostname
+ * @param hostname
+ * @param inetAddresses
+ * @throws NamingException
+ * @throws UnknownHostException
+ */
+private void resolve(String hostname,List<InetAddress> inetAddresses) throws NamingException, UnknownHostException {
+  if (preferIpv6 || (!preferIpv4 && !preferIpv6)) {
+    inetAddresses.addAll(resolve(hostname,"AAAA"));
+    inetAddresses.addAll(resolve(hostname,"A"));
+  }
+ else {
+    inetAddresses.addAll(resolve(hostname,"A"));
+    inetAddresses.addAll(resolve(hostname,"AAAA"));
+  }
+  if (inetAddresses.isEmpty()) {
+    inetAddresses.addAll(resolveCname(hostname));
+  }
+}
+/** 
+ * Resolve an attribute for a hostname.
+ * @param hostname
+ * @param attrName
+ * @return
+ * @throws NamingException
+ * @throws UnknownHostException
+ */
+@SuppressWarnings("rawtypes") private List<InetAddress> resolve(String hostname,String attrName) throws NamingException, UnknownHostException {
+  Attributes attrs=context.getAttributes(hostname,new String[]{attrName});
+  List<InetAddress> inetAddresses=new ArrayList<>();
+  Attribute attr=attrs.get(attrName);
+  if (attr != null && attr.size() > 0) {
+    NamingEnumeration e=attr.getAll();
+    while (e.hasMore()) {
+      InetAddress inetAddress=InetAddress.getByName("" + e.next());
+      inetAddresses.add(InetAddress.getByAddress(hostname,inetAddress.getAddress()));
+    }
+  }
+  return inetAddresses;
+}

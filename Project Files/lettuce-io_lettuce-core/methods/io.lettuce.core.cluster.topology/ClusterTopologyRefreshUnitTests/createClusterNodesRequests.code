@@ -1,0 +1,12 @@
+Requests createClusterNodesRequests(int duration,String nodes){
+  RedisURI redisURI=RedisURI.create("redis://localhost:" + duration);
+  Connections connections=new Connections(clientResources,new HashMap<>());
+  connections.addConnection(redisURI,connection);
+  Requests requests=connections.requestTopology(100,TimeUnit.SECONDS);
+  TimedAsyncCommand<String,String,String> command=requests.getRequest(redisURI);
+  command.getOutput().set(ByteBuffer.wrap(nodes.getBytes()));
+  command.complete();
+  command.encodedAtNs=0;
+  command.completedAtNs=duration;
+  return requests;
+}

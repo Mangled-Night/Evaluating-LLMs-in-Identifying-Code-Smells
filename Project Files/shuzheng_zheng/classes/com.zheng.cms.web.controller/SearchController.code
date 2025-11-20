@@ -1,0 +1,21 @@
+/** 
+ * 搜索控制器 Created by shuzheng on 2017/3/26.
+ */
+@Controller @RequestMapping(value="/search") public class SearchController extends BaseController {
+  private static final Logger LOGGER=LoggerFactory.getLogger(SearchController.class);
+  @Autowired private CmsArticleService cmsArticleService;
+  @RequestMapping(value="/{keyword}",method=RequestMethod.GET) public String index(  @PathVariable("keyword") String keyword,  @RequestParam(required=false,defaultValue="1",value="page") int page,  @RequestParam(required=false,defaultValue="orders",value="sort") String sort,  @RequestParam(required=false,defaultValue="desc",value="order") String order,  HttpServletRequest request,  Model model){
+    int rows=10;
+    CmsArticleExample cmsArticleExample=new CmsArticleExample();
+    cmsArticleExample.createCriteria().andStatusEqualTo((byte)1).andTitleLike(keyword);
+    if (!StringUtils.isBlank(sort) && !StringUtils.isBlank(order)) {
+      cmsArticleExample.setOrderByClause(sort + " " + order);
+    }
+    List<CmsArticle> articles=cmsArticleService.selectByExampleForOffsetPage(cmsArticleExample,(page - 1) * rows,rows);
+    model.addAttribute("articles",articles);
+    long total=cmsArticleService.countByExample(cmsArticleExample);
+    Paginator paginator=new Paginator(total,page,rows,request);
+    model.addAttribute("paginator",paginator);
+    return thymeleaf("/search/index");
+  }
+}

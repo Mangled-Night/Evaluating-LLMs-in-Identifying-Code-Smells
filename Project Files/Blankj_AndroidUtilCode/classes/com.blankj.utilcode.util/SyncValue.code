@@ -1,0 +1,34 @@
+public static class SyncValue<T> {
+  private CountDownLatch mLatch=new CountDownLatch(1);
+  private AtomicBoolean mFlag=new AtomicBoolean();
+  private T mValue;
+  public void setValue(  T value){
+    if (mFlag.compareAndSet(false,true)) {
+      mValue=value;
+      mLatch.countDown();
+    }
+  }
+  public T getValue(){
+    if (!mFlag.get()) {
+      try {
+        mLatch.await();
+      }
+ catch (      InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+    return mValue;
+  }
+  public T getValue(  long timeout,  TimeUnit unit,  T defaultValue){
+    if (!mFlag.get()) {
+      try {
+        mLatch.await(timeout,unit);
+      }
+ catch (      InterruptedException e) {
+        e.printStackTrace();
+        return defaultValue;
+      }
+    }
+    return mValue;
+  }
+}

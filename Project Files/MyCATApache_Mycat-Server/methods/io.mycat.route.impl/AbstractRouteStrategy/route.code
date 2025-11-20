@@ -1,0 +1,45 @@
+@Override public RouteResultset route(SystemConfig sysConfig,SchemaConfig schema,int sqlType,String origSQL,String charset,ServerConnection sc,LayerCachePool cachePool) throws SQLNonTransientException {
+  if (schema.isCheckSQLSchema()) {
+    origSQL=RouterUtil.removeSchema(origSQL,schema.getName());
+  }
+  if (beforeRouteProcess(schema,sqlType,origSQL,sc)) {
+    return null;
+  }
+  String stmt=MycatServer.getInstance().getSqlInterceptor().interceptSQL(origSQL,sqlType);
+  if (!origSQL.equals(stmt) && LOGGER.isDebugEnabled()) {
+    LOGGER.debug("sql intercepted to " + stmt + " from "+ origSQL);
+  }
+  RouteResultset rrs=new RouteResultset(stmt,sqlType);
+  if (LOGGER.isDebugEnabled() && origSQL.startsWith(LoadData.loadDataHint)) {
+    rrs.setCacheAble(false);
+  }
+  if (sc != null) {
+    rrs.setAutocommit(sc.isAutocommit());
+  }
+  if (ServerParse.DDL == sqlType) {
+    return RouterUtil.routeToDDLNode(rrs,sqlType,stmt,schema);
+  }
+  if (schema.isNoSharding() && ServerParse.SHOW != sqlType) {
+    rrs=RouterUtil.routeToSingleNode(rrs,schema.getDataNode(),stmt);
+  }
+ else {
+    RouteResultset returnedSet=routeSystemInfo(schema,sqlType,stmt,rrs);
+    if (returnedSet == null) {
+      rrs=routeNormalSqlWithAST(schema,stmt,rrs,charset,cachePool,sqlType,sc);
+    }
+  }
+  if (rrs.getSqlType() == ServerParse.INSERT && rrs.getTables() != null && rrs.getTables().size() != 0) {
+    List<String> tables=rrs.getTables();
+    boolean isAutoIncrement=false;
+    for (    String tableName : tables) {
+      if (schema.getTables() != null && schema.getTables().get(tableName) != null) {
+        TableConfig tableConfig=schema.getTables().get(tableName);
+        if (tableConfig.isAutoIncrement()) {
+          isAutoIncrement=true;
+        }
+      }
+    }
+    rrs.setAutoIncrement(isAutoIncrement);
+  }
+  return rrs;
+}

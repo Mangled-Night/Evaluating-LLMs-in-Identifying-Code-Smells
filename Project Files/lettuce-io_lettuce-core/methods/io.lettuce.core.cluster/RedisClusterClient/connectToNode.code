@@ -1,0 +1,19 @@
+StatefulRedisConnection<String,String> connectToNode(SocketAddress socketAddress){
+  return connectToNode(newStringStringCodec(),socketAddress.toString(),null,Mono.just(socketAddress));
+}
+/** 
+ * Create a connection to a redis socket address.
+ * @param codec Use this codec to encode/decode keys and values, must not be {@code null}
+ * @param nodeId the nodeId
+ * @param clusterWriter global cluster writer
+ * @param socketAddressSupplier supplier for the socket address
+ * @param < K > Key type
+ * @param < V > Value type
+ * @return A new connection
+ */
+<K,V>StatefulRedisConnection<K,V> connectToNode(RedisCodec<K,V> codec,String nodeId,RedisChannelWriter clusterWriter,Mono<SocketAddress> socketAddressSupplier){
+  return getConnection(connectToNodeAsync(codec,nodeId,clusterWriter,socketAddressSupplier));
+}
+@Override public <K,V>StatefulRedisConnection<K,V> connectToNode(RedisCodec<K,V> codec,SocketAddress socketAddress){
+  return RedisClusterClient.this.connectToNode(codec,socketAddress.toString(),null,Mono.just(socketAddress));
+}

@@ -1,0 +1,27 @@
+@Override public void setScope(EntityScope scope){
+  if (exists()) {
+    EntityInfoComponent info=getEntityInfo();
+    if (!info.scope.equals(scope)) {
+      EngineEntityPool newPool;
+switch (scope) {
+case GLOBAL:
+case CHUNK:
+        newPool=entityManager.getGlobalPool();
+      removeComponent(SectorSimulationComponent.class);
+    break;
+case SECTOR:
+  newPool=entityManager.getSectorManager();
+if (!hasComponent(SectorSimulationComponent.class)) {
+  addComponent(new SectorSimulationComponent());
+}
+break;
+default :
+logger.error("Unrecognised scope {}.",scope);
+return;
+}
+entityManager.moveToPool(getId(),newPool);
+info.scope=scope;
+saveComponent(info);
+}
+}
+}

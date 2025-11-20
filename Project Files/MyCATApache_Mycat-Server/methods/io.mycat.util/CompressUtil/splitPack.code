@@ -1,0 +1,32 @@
+/** 
+ * 分包处理
+ * @param in
+ * @param decompressUnfinishedDataQueue
+ * @return
+ */
+private static List<byte[]> splitPack(byte[] in,ConcurrentLinkedQueue<byte[]> decompressUnfinishedDataQueue){
+  in=mergeBytes(in,decompressUnfinishedDataQueue);
+  List<byte[]> smallPackList=new ArrayList<>();
+  MySQLMessage msg=new MySQLMessage(in);
+  while (msg.hasRemaining()) {
+    int readLength=msg.length() - msg.position();
+    int packetLength=0;
+    if (readLength > 3) {
+      packetLength=msg.readUB3();
+      msg.move(-3);
+    }
+    if (readLength < packetLength + 4) {
+      byte[] packet=msg.readBytes(readLength);
+      if (packet.length != 0) {
+        decompressUnfinishedDataQueue.add(packet);
+      }
+    }
+ else {
+      byte[] packet=msg.readBytes(packetLength + 4);
+      if (packet.length != 0) {
+        smallPackList.add(packet);
+      }
+    }
+  }
+  return smallPackList;
+}

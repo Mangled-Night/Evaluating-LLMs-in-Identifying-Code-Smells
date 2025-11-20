@@ -1,0 +1,19 @@
+/** 
+ * If the data stanza contains invalid Base64 encoding an 'bad-request' error should be returned. See XEP-0047 Section 2.2.
+ * @throws Exception should not happen
+ */
+@Test public void shouldReplyWithErrorIfDataIsInvalid() throws Exception {
+  protocol.addResponse(null,Verification.requestTypeERROR,new Verification<IQ,IQ>(){
+    @Override public void verify(    IQ request,    IQ response){
+      assertEquals(StanzaError.Condition.bad_request,request.getError().getCondition());
+    }
+  }
+);
+  InBandBytestreamSession session=new InBandBytestreamSession(connection,initBytestream,initiatorJID);
+  InputStream inputStream=session.getInputStream();
+  StanzaListener listener=Whitebox.getInternalState(inputStream,"dataPacketListener",StanzaListener.class);
+  DataPacketExtension dpe=new DataPacketExtension(sessionID,0,"AA=BB");
+  Data data=new Data(dpe);
+  listener.processStanza(data);
+  protocol.verifyAll();
+}

@@ -1,0 +1,19 @@
+@Override public boolean shouldBeRemovedDueToChange(Vector3i location,Side sideChanged){
+  final SideBlockSupportRequiredComponent component=getComponent(location,Collections.emptyMap());
+  if (component != null) {
+    final boolean sufficientlySupported=isSufficientlySupported(location,sideChanged,Collections.emptyMap(),component);
+    if (!sufficientlySupported) {
+      if (component.dropDelay <= 0) {
+        return true;
+      }
+ else {
+        DelayManager delayManager=CoreRegistry.get(DelayManager.class);
+        final EntityRef blockEntity=getBlockEntityRegistry().getEntityAt(location);
+        if (!delayManager.hasDelayedAction(blockEntity,SUPPORT_CHECK_ACTION_ID)) {
+          delayManager.addDelayedAction(blockEntity,SUPPORT_CHECK_ACTION_ID,component.dropDelay);
+        }
+      }
+    }
+  }
+  return false;
+}

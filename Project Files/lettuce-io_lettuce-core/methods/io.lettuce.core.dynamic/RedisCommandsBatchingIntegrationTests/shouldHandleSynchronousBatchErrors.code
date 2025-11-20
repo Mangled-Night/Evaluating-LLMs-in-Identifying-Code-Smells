@@ -1,0 +1,20 @@
+@Test void shouldHandleSynchronousBatchErrors(){
+  RedisCommandFactory factory=new RedisCommandFactory(redis.getStatefulConnection());
+  Batching api=factory.getCommands(Batching.class);
+  api.set("k1",value);
+  api.set("k2",value);
+  api.llen("k2");
+  api.set("k4",value);
+  assertThat(redis.get("k1")).isNull();
+  try {
+    api.llen("k4");
+    fail("Missing BatchException");
+  }
+ catch (  BatchException e) {
+    assertThat(redis.get("k1")).isEqualTo(value);
+    assertThat(redis.get("k4")).isEqualTo(value);
+    assertThat(e).isInstanceOf(BatchException.class);
+    assertThat(e.getSuppressed()).hasSize(2);
+    assertThat(e.getFailedCommands()).hasSize(2);
+  }
+}

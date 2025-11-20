@@ -1,0 +1,21 @@
+private static final class Pinger implements Runnable {
+  private final List<Jid> toPing;
+  private final Collection<Future<Boolean>> pongFutures;
+  private final PingManager pingManager;
+  private Pinger(  XMPPConnection connection,  Collection<Future<Boolean>> pongFutures,  Jid... toPing){
+    this(connection,pongFutures,Arrays.asList(toPing));
+  }
+  private Pinger(  XMPPConnection connection,  Collection<Future<Boolean>> pongFutures,  List<Jid> toPing){
+    this.toPing=toPing;
+    this.pongFutures=pongFutures;
+    this.pingManager=PingManager.getInstanceFor(connection);
+  }
+  @Override public void run(){
+    List<Future<Boolean>> futures=new ArrayList<>();
+    for (    Jid jid : toPing) {
+      Future<Boolean> future=pingManager.pingAsync(jid);
+      futures.add(future);
+    }
+    pongFutures.addAll(futures);
+  }
+}

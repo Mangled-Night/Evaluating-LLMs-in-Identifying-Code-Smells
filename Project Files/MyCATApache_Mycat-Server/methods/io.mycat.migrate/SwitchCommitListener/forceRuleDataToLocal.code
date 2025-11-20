@@ -1,0 +1,13 @@
+private void forceRuleDataToLocal(TaskNode taskNode) throws Exception {
+  SchemaConfig schemaConfig=MycatServer.getInstance().getConfig().getSchemas().get(taskNode.getSchema());
+  TableConfig tableConfig=schemaConfig.getTables().get(taskNode.getTable().toUpperCase());
+  RuleConfig ruleConfig=tableConfig.getRule();
+  String ruleName=((TableRuleAware)ruleConfig.getRuleAlgorithm()).getRuleName() + ".properties";
+  String rulePath=ZKUtils.getZKBasePath() + "ruledata/" + ruleName;
+  CuratorFramework zk=ZKUtils.getConnection();
+  byte[] ruleData=zk.getData().forPath(rulePath);
+  LOGGER.info("-----------------------------------从zookeeper中拉取的新的ruleData的信息--------------------------------------------------\n");
+  LOGGER.info(new String(ruleData));
+  Path file=Paths.get(SystemConfig.getHomePath(),"conf","ruledata");
+  Files.write(file.resolve(ruleName),ruleData);
+}

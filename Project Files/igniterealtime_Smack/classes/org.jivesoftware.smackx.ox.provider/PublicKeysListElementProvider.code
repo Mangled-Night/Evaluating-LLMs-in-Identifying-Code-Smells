@@ -1,0 +1,30 @@
+public final class PublicKeysListElementProvider extends ExtensionElementProvider<PublicKeysListElement> {
+  public static final PublicKeysListElementProvider TEST_INSTANCE=new PublicKeysListElementProvider();
+  @Override public PublicKeysListElement parse(  XmlPullParser parser,  int initialDepth,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, ParseException {
+    PublicKeysListElement.Builder builder=PublicKeysListElement.builder();
+    while (true) {
+      XmlPullParser.TagEvent tag=parser.nextTag();
+      String name;
+switch (tag) {
+case START_ELEMENT:
+        name=parser.getName();
+      if (PublicKeysListElement.PubkeyMetadataElement.ELEMENT.equals(name)) {
+        String finger=parser.getAttributeValue(null,PublicKeysListElement.PubkeyMetadataElement.ATTR_V4_FINGERPRINT);
+        String dt=parser.getAttributeValue(null,PublicKeysListElement.PubkeyMetadataElement.ATTR_DATE);
+        OpenPgpV4Fingerprint fingerprint=new OpenPgpV4Fingerprint(finger);
+        Date date=ParserUtils.getDateFromXep82String(dt);
+        builder.addMetadata(new PublicKeysListElement.PubkeyMetadataElement(fingerprint,date));
+      }
+    break;
+case END_ELEMENT:
+  name=parser.getName();
+if (name.equals(PublicKeysListElement.ELEMENT)) {
+  return builder.build();
+}
+break;
+default :
+break;
+}
+}
+}
+}

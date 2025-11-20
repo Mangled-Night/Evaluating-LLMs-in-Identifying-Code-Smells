@@ -1,0 +1,14 @@
+@ApiOperation(value="修改专题") @RequiresPermissions("cms:topic:update") @RequestMapping(value="/update/{id}",method=RequestMethod.GET) public String update(@PathVariable("id") int id,ModelMap modelMap){
+  CmsTopic topic=cmsTopicService.selectByPrimaryKey(id);
+  modelMap.put("topic",topic);
+  return "/manage/topic/update.jsp";
+}
+@ApiOperation(value="修改专题") @RequiresPermissions("cms:topic:update") @RequestMapping(value="/update/{id}",method=RequestMethod.POST) @ResponseBody public Object update(@PathVariable("id") int id,CmsTopic cmsTopic){
+  ComplexResult result=FluentValidator.checkAll().on(cmsTopic.getTitle(),new LengthValidator(1,100,"标题")).doValidate().result(ResultCollectors.toComplex());
+  if (!result.isSuccess()) {
+    return new CmsResult(CmsResultConstant.INVALID_LENGTH,result.getErrors());
+  }
+  cmsTopic.setTopicId(id);
+  int count=cmsTopicService.updateByPrimaryKeySelective(cmsTopic);
+  return new CmsResult(CmsResultConstant.SUCCESS,count);
+}

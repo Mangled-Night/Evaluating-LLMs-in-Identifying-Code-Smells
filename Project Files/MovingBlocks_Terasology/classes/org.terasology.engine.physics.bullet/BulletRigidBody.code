@@ -1,0 +1,82 @@
+private static class BulletRigidBody implements RigidBody {
+  public final btRigidBody rb;
+  public final btRigidBody.btRigidBodyConstructionInfo info;
+  public short collidesWith;
+  public boolean isDisposed;
+  private final Vector3f pendingImpulse=new Vector3f();
+  private final Vector3f pendingForce=new Vector3f();
+  BulletRigidBody(  btRigidBody.btRigidBodyConstructionInfo info){
+    this.info=info;
+    rb=new btRigidBody(info);
+    isDisposed=false;
+  }
+  @Override public void applyImpulse(  Vector3f impulse){
+    pendingImpulse.add(impulse);
+  }
+  @Override public void applyForce(  Vector3f force){
+    pendingForce.add(force);
+  }
+  @Override public void translate(  Vector3f translation){
+    rb.translate(translation);
+  }
+  @Override public Quaternionf getOrientation(  Quaternionf out){
+    return out.setFromUnnormalized(rb.getWorldTransform());
+  }
+  @Override public Vector3f getLocation(  Vector3f out){
+    Vector3f result=rb.getWorldTransform().getTranslation(new Vector3f());
+    out.x=result.x;
+    out.y=result.y;
+    out.z=result.z;
+    return out;
+  }
+  @Override public Matrix4f getWorldTransform(){
+    return rb.getWorldTransform();
+  }
+  @Override public Matrix4f setWorldTransform(  Matrix4f trans){
+    rb.setWorldTransform(trans);
+    return trans;
+  }
+  @Override public Vector3f getLinearVelocity(  Vector3f out){
+    return rb.getLinearVelocity();
+  }
+  @Override public Vector3f getAngularVelocity(  Vector3f out){
+    return rb.getAngularVelocity();
+  }
+  @Override public void setLinearVelocity(  Vector3f value){
+    rb.activate();
+    rb.setLinearVelocity(value);
+  }
+  @Override public void setAngularVelocity(  Vector3f value){
+    rb.activate();
+    rb.setAngularVelocity(value);
+  }
+  @Override public void setOrientation(  Quaternionf orientation){
+    Matrix4f transform=rb.getWorldTransform();
+    rb.setWorldTransform(new Matrix4f().translationRotateScale(transform.getTranslation(new Vector3f()),orientation,1.0f));
+  }
+  @Override public void setLocation(  Vector3f location){
+    Matrix4f translation=rb.getWorldTransform();
+    Quaternionf quaternion=new Quaternionf().setFromUnnormalized(translation);
+    rb.setWorldTransform(new Matrix4f().translationRotateScale(location,quaternion,1.0f));
+  }
+  @Override public void setVelocity(  Vector3f linear,  Vector3f angular){
+    rb.setLinearVelocity(linear);
+    rb.setAngularVelocity(angular);
+  }
+  @Override public void setTransform(  Vector3f location,  Quaternionf orientation){
+    Matrix4f transform=new Matrix4f(rb.getWorldTransform());
+    transform.set(new Matrix4f().translationRotateScale(location,orientation,1.0f));
+    rb.setWorldTransform(transform);
+  }
+  @Override public boolean isActive(){
+    return rb.isActive();
+  }
+  public void dispose(){
+    if (isDisposed) {
+      return;
+    }
+    this.info.dispose();
+    this.rb.dispose();
+    isDisposed=true;
+  }
+}

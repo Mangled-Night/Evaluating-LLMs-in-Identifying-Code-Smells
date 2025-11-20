@@ -1,0 +1,23 @@
+public class DefaultHTMLDocumentBuilder implements HTMLDocumentBuilder {
+  private Map<String,HTMLBlockBuilderFactory> paragraphBuilderFactoryMap=Maps.newHashMap();
+  private HTMLFontResolver htmlFontResolver;
+  private DocumentRenderStyle documentRenderStyle;
+  public DefaultHTMLDocumentBuilder(  HTMLFontResolver htmlFontResolver,  DocumentRenderStyle documentRenderStyle){
+    this.htmlFontResolver=htmlFontResolver;
+    this.documentRenderStyle=documentRenderStyle;
+  }
+  public void addKnownTag(  String tag,  HTMLBlockBuilderFactory htmlBlockBuilderFactory){
+    paragraphBuilderFactoryMap.put(tag,htmlBlockBuilderFactory);
+  }
+  @Override public HTMLBlockBuilder startTag(  String tag,  Attributes attributes){
+    for (    Map.Entry<String,HTMLBlockBuilderFactory> paragraphBuilderFactoryEntry : paragraphBuilderFactoryMap.entrySet()) {
+      if (paragraphBuilderFactoryEntry.getKey().equalsIgnoreCase(tag)) {
+        return paragraphBuilderFactoryEntry.getValue().create(htmlFontResolver,attributes);
+      }
+    }
+    return null;
+  }
+  @Override public HTMLDocument createDocument(){
+    return new HTMLDocument(documentRenderStyle);
+  }
+}

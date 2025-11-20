@@ -1,0 +1,14 @@
+@Override public void cancelDelayedAction(EntityRef entity,String actionId){
+  DelayedActionComponent delayedComponent=entity.getComponent(DelayedActionComponent.class);
+  long oldWakeUp=delayedComponent.getLowestWakeUp();
+  delayedComponent.removeActionId(actionId);
+  long newWakeUp=delayedComponent.getLowestWakeUp();
+  if (!delayedComponent.isEmpty() && oldWakeUp < newWakeUp) {
+    delayedOperationsSortedByTime.remove(oldWakeUp,entity);
+    delayedOperationsSortedByTime.put(newWakeUp,entity);
+  }
+ else   if (delayedComponent.isEmpty()) {
+    delayedOperationsSortedByTime.remove(oldWakeUp,entity);
+  }
+  saveOrRemoveComponent(entity,delayedComponent);
+}

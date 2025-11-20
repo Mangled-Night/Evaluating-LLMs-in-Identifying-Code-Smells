@@ -1,0 +1,23 @@
+private ByteBuffer ensureFreeSpaceOfReadBuffer(ByteBuffer buffer,int offset,final int pkgLength){
+  if (pkgLength > maxPacketSize) {
+    throw new IllegalArgumentException("Packet size over the limit.");
+  }
+ else   if (buffer.capacity() < pkgLength) {
+    ByteBuffer newBuffer=processor.getBufferPool().allocate(pkgLength);
+    lastLargeMessageTime=TimeUtil.currentTimeMillis();
+    buffer.position(offset);
+    newBuffer.put(buffer);
+    readBuffer=newBuffer;
+    recycle(buffer);
+    readBufferOffset=0;
+    return newBuffer;
+  }
+ else {
+    if (offset != 0) {
+      return compactReadBuffer(buffer,offset);
+    }
+ else {
+      throw new RuntimeException(" not enough space");
+    }
+  }
+}

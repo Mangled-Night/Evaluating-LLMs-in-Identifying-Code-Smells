@@ -1,0 +1,56 @@
+public static StreamError parseStreamError(XmlPullParser parser) throws XmlPullParserException, IOException, SmackParsingException {
+  return parseStreamError(parser,null);
+}
+/** 
+ * Parses stream error packets.
+ * @param parser the XML parser.
+ * @param outerXmlEnvironment the outer XML environment (optional).
+ * @return an stream error packet.
+ * @throws IOException if an I/O error occurred.
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ * @throws SmackParsingException if the Smack parser (provider) encountered invalid input.
+ */
+public static StreamError parseStreamError(XmlPullParser parser,XmlEnvironment outerXmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+  final int initialDepth=parser.getDepth();
+  List<XmlElement> extensions=new ArrayList<>();
+  Map<String,String> descriptiveTexts=null;
+  StreamError.Condition condition=null;
+  String conditionText=null;
+  XmlEnvironment streamErrorXmlEnvironment=XmlEnvironment.from(parser,outerXmlEnvironment);
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String name=parser.getName();
+    String namespace=parser.getNamespace();
+switch (namespace) {
+case StreamError.NAMESPACE:
+switch (name) {
+case "text":
+      descriptiveTexts=parseDescriptiveTexts(parser,descriptiveTexts);
+    break;
+default :
+  condition=StreamError.Condition.fromString(name);
+conditionText=parser.nextText();
+if (conditionText.isEmpty()) {
+conditionText=null;
+}
+break;
+}
+break;
+default :
+PacketParserUtils.addExtensionElement(extensions,parser,name,namespace,streamErrorXmlEnvironment);
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return new StreamError(condition,conditionText,descriptiveTexts,extensions);
+}

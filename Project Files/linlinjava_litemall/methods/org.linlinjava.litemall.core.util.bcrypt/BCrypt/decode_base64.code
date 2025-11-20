@@ -1,0 +1,44 @@
+/** 
+ * Decode a string encoded using bcrypt's base64 scheme to a byte array. Note that this is *not* compatible with the standard MIME-base64 encoding.
+ * @param s       the string to decode
+ * @param maxolen the maximum number of bytes to decode
+ * @return an array containing the decoded bytes
+ * @throws IllegalArgumentException if maxolen is invalid
+ */
+static byte[] decode_base64(String s,int maxolen) throws IllegalArgumentException {
+  ByteArrayOutputStream out=new ByteArrayOutputStream(maxolen);
+  int off=0, slen=s.length(), olen=0;
+  byte c1, c2, c3, c4, o;
+  if (maxolen <= 0) {
+    throw new IllegalArgumentException("Invalid maxolen");
+  }
+  while (off < slen - 1 && olen < maxolen) {
+    c1=char64(s.charAt(off++));
+    c2=char64(s.charAt(off++));
+    if (c1 == -1 || c2 == -1) {
+      break;
+    }
+    o=(byte)(c1 << 2);
+    o|=(c2 & 0x30) >> 4;
+    out.write(o);
+    if (++olen >= maxolen || off >= slen) {
+      break;
+    }
+    c3=char64(s.charAt(off++));
+    if (c3 == -1) {
+      break;
+    }
+    o=(byte)((c2 & 0x0f) << 4);
+    o|=(c3 & 0x3c) >> 2;
+    out.write(o);
+    if (++olen >= maxolen || off >= slen) {
+      break;
+    }
+    c4=char64(s.charAt(off++));
+    o=(byte)((c3 & 0x03) << 6);
+    o|=c4;
+    out.write(o);
+    ++olen;
+  }
+  return out.toByteArray();
+}

@@ -1,0 +1,42 @@
+/** 
+ * Extending this class is the recommended way to implement serialization handlers for tera arrays. Tera arrays should implement their serialization handlers as a static subclass called SerializationHandler.
+ * @see TeraDenseArray16Bit.SerializationHandler
+ * @see TeraDenseArray16Bit.Factory
+ */
+protected abstract static class BasicSerializationHandler<T extends TeraArray> implements SerializationHandler<T> {
+  protected abstract int internalComputeMinimumBufferSize(  T array);
+  protected abstract void internalSerialize(  T array,  ByteBuffer buffer);
+  protected abstract T internalDeserialize(  int sizeX,  int sizeY,  int sizeZ,  ByteBuffer buffer);
+  @Override public final int computeMinimumBufferSize(  T array){
+    checkNotNull(array,"The parameter 'array' must not be null");
+    return 16 + internalComputeMinimumBufferSize(array);
+  }
+  @Override public final ByteBuffer serialize(  T array){
+    checkNotNull(array,"The parameter 'array' must not be null");
+    return serialize(array,ByteBuffer.allocateDirect(computeMinimumBufferSize(array)));
+  }
+  @Override public final ByteBuffer serialize(  T array,  ByteBuffer toBuffer){
+    checkNotNull(array,"The parameter 'array' must not be null");
+    checkNotNull(toBuffer,"The parameter 'toBuffer' must not be null");
+    checkArgument(canHandle(array.getClass()),"Unable to handle the supplied array (" + array.getClass().getName() + ")");
+    final int lengthPos=toBuffer.position();
+    toBuffer.putInt(0);
+    toBuffer.putInt(array.getSizeX());
+    toBuffer.putInt(array.getSizeY());
+    toBuffer.putInt(array.getSizeZ());
+    internalSerialize(array,toBuffer);
+    toBuffer.putInt(lengthPos,toBuffer.position() - lengthPos - 4);
+    return toBuffer;
+  }
+  @Override public final T deserialize(  ByteBuffer buffer){
+    checkNotNull(buffer,"The parameter 'buffer' must not be null");
+    final int length=buffer.getInt();
+    if (buffer.remaining() < length) {
+      throw new BufferUnderflowException();
+    }
+    final int sizeX=buffer.getInt();
+    final int sizeY=buffer.getInt();
+    final int sizeZ=buffer.getInt();
+    return internalDeserialize(sizeX,sizeY,sizeZ,buffer);
+  }
+}

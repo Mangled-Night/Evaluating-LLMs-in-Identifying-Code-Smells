@@ -1,0 +1,18 @@
+/** 
+ * @author hengyunabc 2020-10-29
+ */
+@Configuration @AutoConfigureAfter(value={RedisAutoConfiguration.class,CacheAutoConfiguration.class}) @Import(RedisTunnelClusterStoreConfiguration.class) public class TunnelClusterStoreConfiguration {
+  @Bean @ConditionalOnMissingBean @ConditionalOnProperty(name="spring.cache.type",havingValue="caffeine") public TunnelClusterStore tunnelClusterStore(  @Autowired CacheManager cacheManager){
+    Cache inMemoryClusterCache=cacheManager.getCache("inMemoryClusterCache");
+    InMemoryClusterStore inMemoryClusterStore=new InMemoryClusterStore();
+    inMemoryClusterStore.setCache(inMemoryClusterCache);
+    return inMemoryClusterStore;
+  }
+static class RedisTunnelClusterStoreConfiguration {
+    @Bean @ConditionalOnClass(StringRedisTemplate.class) @ConditionalOnProperty("spring.redis.host") @ConditionalOnMissingBean public TunnelClusterStore tunnelClusterStore(    @Autowired StringRedisTemplate redisTemplate){
+      RedisTunnelClusterStore redisTunnelClusterStore=new RedisTunnelClusterStore();
+      redisTunnelClusterStore.setRedisTemplate(redisTemplate);
+      return redisTunnelClusterStore;
+    }
+  }
+}

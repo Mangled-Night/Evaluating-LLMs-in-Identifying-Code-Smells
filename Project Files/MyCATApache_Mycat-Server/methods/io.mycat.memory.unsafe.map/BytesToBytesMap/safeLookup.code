@@ -1,0 +1,39 @@
+/** 
+ * Looks up a key, and saves the result in provided `loc`. This is a thread-safe version of `lookup`, could be used by multiple threads.
+ */
+public void safeLookup(Object keyBase,long keyOffset,int keyLength,Location loc,int hash){
+  assert (longArray != null);
+  if (enablePerfMetrics) {
+    numKeyLookups++;
+  }
+  int pos=hash & mask;
+  int step=1;
+  while (true) {
+    if (enablePerfMetrics) {
+      numProbes++;
+    }
+    if (longArray.get(pos * 2) == 0) {
+      loc.with(pos,hash,false);
+      return;
+    }
+ else {
+      long stored=longArray.get(pos * 2 + 1);
+      if ((int)(stored) == hash) {
+        loc.with(pos,hash,true);
+        if (loc.getKeyLength() == keyLength) {
+          final boolean areEqual=ByteArrayMethods.arrayEquals(keyBase,keyOffset,loc.getKeyBase(),loc.getKeyOffset(),keyLength);
+          if (areEqual) {
+            return;
+          }
+ else {
+            if (enablePerfMetrics) {
+              numHashCollisions++;
+            }
+          }
+        }
+      }
+    }
+    pos=(pos + step) & mask;
+    step++;
+  }
+}

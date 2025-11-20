@@ -1,0 +1,14 @@
+@Override public JsonElement serialize(BindsConfig bindsConfig,Type typeOfBindsConfig,JsonSerializationContext context){
+  JsonObject result=new JsonObject();
+  SetMultimap<Name,SimpleUri> bindingByModuleName=listBindingsByModuleName(bindsConfig);
+  List<Name> sortedModuleNames=bindingByModuleName.keySet().stream().sorted().collect(toList());
+  for (  Name moduleName : sortedModuleNames) {
+    SetMultimap<String,Input> moduleBinds=HashMultimap.create();
+    for (    SimpleUri bindingUri : bindingByModuleName.get(moduleName)) {
+      moduleBinds.putAll(bindingUri.getObjectName().toString(),bindsConfig.uriBoundInputs.get(bindingUri));
+    }
+    JsonElement map=context.serialize(moduleBinds,SetMultimap.class);
+    result.add(moduleName.toString(),map);
+  }
+  return result;
+}

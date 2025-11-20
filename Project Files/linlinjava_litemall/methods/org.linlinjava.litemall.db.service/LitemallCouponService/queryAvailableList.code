@@ -1,0 +1,9 @@
+public List<LitemallCoupon> queryAvailableList(Integer userId,int offset,int limit){
+  assert userId != null;
+  LitemallCouponExample.Criteria c=LitemallCouponExample.newAndCreateCriteria();
+  List<LitemallCouponUser> used=couponUserMapper.selectByExample(LitemallCouponUserExample.newAndCreateCriteria().andUserIdEqualTo(userId).example());
+  if (used != null && !used.isEmpty()) {
+    c.andIdNotIn(used.stream().map(LitemallCouponUser::getCouponId).collect(Collectors.toList()));
+  }
+  return queryList(c,offset,limit,"add_time","desc");
+}

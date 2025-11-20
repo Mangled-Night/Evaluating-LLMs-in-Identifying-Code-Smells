@@ -1,0 +1,25 @@
+public static void readVec4FBuffer(byte[] buffer,GLTFAccessor accessor,GLTFBufferView bufferView,VertexAttributeBinding<Vector4fc,Vector4f> mapping){
+  if (accessor.getComponentType() != GLTFComponentType.FLOAT) {
+    return;
+  }
+  ByteBuffer byteBuffer=ByteBuffer.wrap(buffer,bufferView.getByteOffset() + accessor.getByteOffset(),bufferView.getByteLength() - accessor.getByteOffset());
+  byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+  int gap=0;
+  if (bufferView.getByteStride() > 0) {
+    gap=bufferView.getByteStride() - accessor.getComponentType().getByteLength() * accessor.getType().getDimension();
+  }
+  Vector4f pos=new Vector4f();
+  if (byteBuffer.position() < byteBuffer.limit()) {
+    for (int i=0; i < accessor.getType().getDimension(); i++) {
+      pos.setComponent(i,byteBuffer.getFloat());
+    }
+    mapping.put(pos);
+  }
+  while (byteBuffer.position() < byteBuffer.limit() - gap) {
+    byteBuffer.position(byteBuffer.position() + gap);
+    for (int i=0; i < accessor.getType().getDimension(); i++) {
+      pos.setComponent(i,byteBuffer.getFloat());
+    }
+    mapping.put(pos);
+  }
+}

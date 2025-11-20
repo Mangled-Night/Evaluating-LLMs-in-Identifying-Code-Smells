@@ -1,0 +1,39 @@
+/** 
+ * Open a new connection to a Redis server that treats keys and values as UTF-8 strings.
+ * @return A new stateful Redis connection
+ */
+public StatefulRedisConnection<String,String> connect(){
+  return connect(newStringStringCodec());
+}
+/** 
+ * Open a new connection to a Redis server. Use the supplied  {@link RedisCodec codec} to encode/decode keys and values.
+ * @param codec Use this codec to encode/decode keys and values, must not be {@code null}
+ * @param < K > Key type
+ * @param < V > Value type
+ * @return A new stateful Redis connection
+ */
+public <K,V>StatefulRedisConnection<K,V> connect(RedisCodec<K,V> codec){
+  checkForRedisURI();
+  return getConnection(connectStandaloneAsync(codec,this.redisURI,getDefaultTimeout()));
+}
+/** 
+ * Open a new connection to a Redis server using the supplied  {@link RedisURI} that treats keys and values as UTF-8 strings.
+ * @param redisURI the Redis server to connect to, must not be {@code null}
+ * @return A new connection
+ */
+public StatefulRedisConnection<String,String> connect(RedisURI redisURI){
+  assertNotNull(redisURI);
+  return getConnection(connectStandaloneAsync(newStringStringCodec(),redisURI,redisURI.getTimeout()));
+}
+/** 
+ * Open a new connection to a Redis server using the supplied  {@link RedisURI} and the supplied {@link RedisCodec codec} toencode/decode keys.
+ * @param codec Use this codec to encode/decode keys and values, must not be {@code null}
+ * @param redisURI the Redis server to connect to, must not be {@code null}
+ * @param < K > Key type
+ * @param < V > Value type
+ * @return A new connection
+ */
+public <K,V>StatefulRedisConnection<K,V> connect(RedisCodec<K,V> codec,RedisURI redisURI){
+  assertNotNull(redisURI);
+  return getConnection(connectStandaloneAsync(codec,redisURI,redisURI.getTimeout()));
+}

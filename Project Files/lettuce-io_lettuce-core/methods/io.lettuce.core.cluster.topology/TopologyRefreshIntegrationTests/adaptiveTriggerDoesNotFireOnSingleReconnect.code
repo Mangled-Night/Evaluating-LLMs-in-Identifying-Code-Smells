@@ -1,0 +1,10 @@
+@Test void adaptiveTriggerDoesNotFireOnSingleReconnect(){
+  ClusterTopologyRefreshOptions topologyRefreshOptions=ClusterTopologyRefreshOptions.builder().enableAllAdaptiveRefreshTriggers().build();
+  clusterClient.setOptions(ClusterClientOptions.builder().topologyRefreshOptions(topologyRefreshOptions).build());
+  RedisAdvancedClusterAsyncCommands<String,String> clusterConnection=clusterClient.connect().async();
+  clusterClient.getPartitions().clear();
+  clusterConnection.quit();
+  Delay.delay(Duration.ofMillis(500));
+  assertThat(clusterClient.getPartitions()).isEmpty();
+  clusterConnection.getStatefulConnection().close();
+}

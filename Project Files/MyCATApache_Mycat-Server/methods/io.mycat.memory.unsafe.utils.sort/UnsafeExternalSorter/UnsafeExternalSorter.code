@@ -1,0 +1,21 @@
+private UnsafeExternalSorter(DataNodeMemoryManager dataNodeMemoryManager,DataNodeDiskManager blockManager,SerializerManager serializerManager,RecordComparator recordComparator,PrefixComparator prefixComparator,long initialSize,long pageSizeBytes,@Nullable UnsafeInMemorySorter existingInMemorySorter,boolean canUseRadixSort,boolean enableSort){
+  super(dataNodeMemoryManager,pageSizeBytes);
+  this.dataNodeMemoryManager=dataNodeMemoryManager;
+  this.blockManager=blockManager;
+  this.serializerManager=serializerManager;
+  this.recordComparator=recordComparator;
+  this.prefixComparator=prefixComparator;
+  if (MycatServer.getInstance().getMyCatMemory() != null) {
+    this.fileBufferSizeBytes=(int)MycatServer.getInstance().getMyCatMemory().getConf().getSizeAsBytes("mycat.merge.file.buffer","32k");
+  }
+ else {
+    this.fileBufferSizeBytes=32 * 1024;
+  }
+  if (existingInMemorySorter == null) {
+    this.inMemSorter=new UnsafeInMemorySorter(this,dataNodeMemoryManager,recordComparator,prefixComparator,initialSize,canUseRadixSort,enableSort);
+  }
+ else {
+    this.inMemSorter=existingInMemorySorter;
+  }
+  this.peakMemoryUsedBytes=getMemoryUsage();
+}

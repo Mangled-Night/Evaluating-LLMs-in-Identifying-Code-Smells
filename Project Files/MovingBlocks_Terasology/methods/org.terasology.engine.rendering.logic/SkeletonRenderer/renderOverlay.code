@@ -1,0 +1,56 @@
+@Override public void renderOverlay(){
+  if (config.getRendering().getDebug().isRenderSkeletons()) {
+    meshData.reallocate(0,0);
+    meshData.indices.rewind();
+    meshData.position.rewind();
+    meshData.color0.rewind();
+    Vector3f cameraPosition=worldRenderer.getActiveCamera().getPosition();
+    Matrix4f relMat=new Matrix4f();
+    Matrix4f relFinal=new Matrix4f();
+    Matrix4f entityTransform=new Matrix4f();
+    Matrix4f result=new Matrix4f();
+    Vector3f currentPos=new Vector3f();
+    int index=0;
+    for (    EntityRef entity : entityManager.getEntitiesWith(SkeletalMeshComponent.class,LocationComponent.class)) {
+      SkeletalMeshComponent skeletalMesh=entity.getComponent(SkeletalMeshComponent.class);
+      LocationComponent locationComponent=entity.getComponent(LocationComponent.class);
+      if (skeletalMesh.boneEntities == null) {
+        continue;
+      }
+      Vector3f location=locationComponent.getWorldPosition(new Vector3f());
+      Quaternionf rotation=locationComponent.getWorldRotation(new Quaternionf());
+      entityTransform.translationRotateScale(location,rotation,1.0f);
+      Vector3f worldPositionCameraSpace=cameraPosition.negate(new Vector3f());
+      worldPositionCameraSpace.y+=skeletalMesh.heightOffset;
+      Matrix4f matrixCameraSpace=new Matrix4f().translationRotateScale(worldPositionCameraSpace,new Quaternionf(),1.0f);
+      Matrix4f modelViewMatrix=new Matrix4f(worldRenderer.getActiveCamera().getViewMatrix()).mul(matrixCameraSpace);
+      material.setMatrix4("projectionMatrix",worldRenderer.getActiveCamera().getProjectionMatrix());
+      material.setMatrix4("modelViewMatrix",modelViewMatrix,true);
+      for (      Bone bone : skeletalMesh.mesh.getBones()) {
+        Bone parentBone=bone.getParent();
+        EntityRef boneEntity=skeletalMesh.boneEntities.get(bone.getName());
+        if (parentBone == null) {
+          continue;
+        }
+        EntityRef boneParentEntity=skeletalMesh.boneEntities.get(parentBone.getName());
+        LocationComponent locCompA=boneEntity.getComponent(LocationComponent.class);
+        LocationComponent locCompB=boneParentEntity.getComponent(LocationComponent.class);
+        locCompA.getRelativeTransform(relMat.identity(),entity);
+        result.set(entityTransform).mul(relFinal.identity().scale(skeletalMesh.scale).translate(skeletalMesh.translate).mul(relMat)).transformPosition(currentPos.zero());
+        meshData.position.put(currentPos);
+        locCompB.getRelativeTransform(relMat.identity(),entity);
+        result.set(entityTransform).mul(relFinal.identity().scale(skeletalMesh.scale).translate(skeletalMesh.translate).mul(relMat)).transformPosition(currentPos.zero());
+        meshData.position.put(currentPos);
+        meshData.color0.put(Color.white);
+        meshData.color0.put(Color.white);
+        meshData.indices.putAll(new int[]{index,index + 1});
+        index+=2;
+      }
+    }
+    GL33.glDepthFunc(GL33.GL_ALWAYS);
+    material.enable();
+    mesh.reload(meshData);
+    mesh.render();
+    GL33.glDepthFunc(GL33.GL_LEQUAL);
+  }
+}

@@ -1,0 +1,39 @@
+@Override protected List<SRV> lookupSrvRecords0(DnsName name,List<RemoteConnectionEndpointLookupFailure> lookupFailures,DnssecMode dnssecMode){
+  Attribute srvAttribute;
+  try {
+    Attributes dnsLookup=dirContext.getAttributes(name.ace,new String[]{"SRV"});
+    srvAttribute=dnsLookup.get("SRV");
+    if (srvAttribute == null)     return null;
+  }
+ catch (  NameNotFoundException e) {
+    LOGGER.log(Level.FINEST,"No DNS SRV RR found for " + name,e);
+    return null;
+  }
+catch (  NamingException e) {
+    RemoteConnectionEndpointLookupFailure failure=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,e);
+    lookupFailures.add(failure);
+    return null;
+  }
+  List<SRV> res=new ArrayList<>();
+  try {
+    @SuppressWarnings("unchecked") NamingEnumeration<String> srvRecords=(NamingEnumeration<String>)srvAttribute.getAll();
+    while (srvRecords.hasMore()) {
+      String srvRecordString=srvRecords.next();
+      String[] srvRecordEntries=srvRecordString.split(" ");
+      int priority=Integer.parseInt(srvRecordEntries[srvRecordEntries.length - 4]);
+      int port=Integer.parseInt(srvRecordEntries[srvRecordEntries.length - 2]);
+      int weight=Integer.parseInt(srvRecordEntries[srvRecordEntries.length - 3]);
+      String srvTarget=srvRecordEntries[srvRecordEntries.length - 1];
+      if (srvTarget.length() > 0 && srvTarget.charAt(srvTarget.length() - 1) == '.') {
+        srvTarget=srvTarget.substring(0,srvTarget.length() - 1);
+      }
+      SRV srvRecord=new SRV(priority,weight,port,srvTarget);
+      res.add(srvRecord);
+    }
+  }
+ catch (  NamingException e) {
+    RemoteConnectionEndpointLookupFailure failure=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,e);
+    lookupFailures.add(failure);
+  }
+  return res;
+}

@@ -1,0 +1,23 @@
+private static <T>Type getTypeParameterForSuperInterface(Type target,Class<T> superClass,int index){
+  Class targetClass=getRawType(target);
+  if (Object.class.equals(targetClass)) {
+    return null;
+  }
+  if (targetClass.equals(superClass)) {
+    return getTypeParameter(target,index);
+  }
+  Type genericSuperclass=resolveType(target,targetClass.getGenericSuperclass());
+  if (!Object.class.equals(genericSuperclass) && genericSuperclass != null) {
+    Type fromSuperClass=getTypeParameterForSuperInterface(genericSuperclass,superClass,index);
+    if (fromSuperClass != null) {
+      return fromSuperClass;
+    }
+  }
+  for (  Type genericInterface : targetClass.getGenericInterfaces()) {
+    Type typeParameter=getTypeParameterForSuperInterface(resolveType(target,genericInterface),superClass,index);
+    if (typeParameter != null) {
+      return typeParameter;
+    }
+  }
+  return null;
+}

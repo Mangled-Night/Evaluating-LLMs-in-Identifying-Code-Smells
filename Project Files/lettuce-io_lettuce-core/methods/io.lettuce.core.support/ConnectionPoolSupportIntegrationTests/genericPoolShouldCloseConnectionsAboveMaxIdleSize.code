@@ -1,0 +1,19 @@
+@Test void genericPoolShouldCloseConnectionsAboveMaxIdleSize() throws Exception {
+  GenericObjectPoolConfig<StatefulRedisConnection<String,String>> poolConfig=new GenericObjectPoolConfig<>();
+  poolConfig.setMaxIdle(2);
+  GenericObjectPool<StatefulRedisConnection<String,String>> pool=ConnectionPoolSupport.createGenericObjectPool(() -> client.connect(),poolConfig);
+  borrowAndReturn(pool);
+  borrowAndClose(pool);
+  borrowAndCloseTryWithResources(pool);
+  StatefulRedisConnection<String,String> c1=pool.borrowObject();
+  StatefulRedisConnection<String,String> c2=pool.borrowObject();
+  StatefulRedisConnection<String,String> c3=pool.borrowObject();
+  assertThat(channels).hasSize(3);
+  pool.returnObject(c1);
+  pool.returnObject(c2);
+  pool.returnObject(c3);
+  assertThat(channels).hasSize(2);
+  pool.close();
+  Wait.untilTrue(channels::isEmpty).waitOrTimeout();
+  assertThat(channels).isEmpty();
+}

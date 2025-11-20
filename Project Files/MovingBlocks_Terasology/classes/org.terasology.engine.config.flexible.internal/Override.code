@@ -1,0 +1,23 @@
+@Nested class Override {
+  private static final int TEST_CONFIG_OVERRIDE_VALUE=75;
+  private Integer override;
+  private Setting<Integer> setting;
+  private int eventResult;
+  @BeforeEach public void setUp(){
+    setting=new SettingImpl<>(TypeInfo.of(Integer.class),50,new NumberRangeConstraint<>(0,100,false,false),"","",() -> Optional.ofNullable(override));
+    eventResult=-1;
+    setting.subscribe((setting1,oldValue) -> eventResult=setting1.get());
+  }
+  @Test void testSystemPropertyValue(){
+    override=TEST_CONFIG_OVERRIDE_VALUE;
+    assertEquals(75,setting.get());
+  }
+  @Test void testSystemPropertyValueNotPresent(){
+    override=null;
+    assertEquals(50,setting.get());
+  }
+  @Test void testDoesNotSetValue(){
+    assertFalse(setting.set(101));
+    assertEquals(-1,eventResult);
+  }
+}

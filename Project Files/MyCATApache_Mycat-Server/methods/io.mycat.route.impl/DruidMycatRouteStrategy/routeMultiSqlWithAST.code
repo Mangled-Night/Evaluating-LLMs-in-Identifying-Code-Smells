@@ -1,0 +1,32 @@
+private RouteResultset routeMultiSqlWithAST(SchemaConfig schema,String stmt,RouteResultset rrs,String charset,LayerCachePool cachePool,int sqlType,ServerConnection sc) throws SQLNonTransientException {
+  List<RouteResultsetNode> allNodes=new ArrayList<>(64);
+  String remingSql=stmt;
+  String eachSqlItem=null;
+  do {
+    int index=ParseUtil.findNextBreak(remingSql);
+    if (index + 1 < remingSql.length() && !ParseUtil.isEOF(remingSql,index)) {
+      eachSqlItem=remingSql.substring(0,index);
+      remingSql=remingSql.substring(index + 1,remingSql.length());
+      RouteResultset rrsTemp=new RouteResultset(eachSqlItem,sqlType);
+      RouteResultset tempRrs=routeNormalSqlWithAST0(schema,eachSqlItem,rrsTemp,charset,cachePool,sqlType,sc);
+      allNodes.addAll(Arrays.asList(tempRrs.getNodes()));
+    }
+ else {
+      RouteResultset rrsTemp=new RouteResultset(remingSql,sqlType);
+      RouteResultset tempRrs=routeNormalSqlWithAST0(schema,remingSql,rrsTemp,charset,cachePool,sqlType,sc);
+      allNodes.addAll(Arrays.asList(tempRrs.getNodes()));
+      rrs=rrsTemp;
+      break;
+    }
+  }
+ while (true);
+  if (allNodes.size() >= 1) {
+    rrs.setStatement(stmt);
+    rrs.setNodes(allNodes.toArray(new RouteResultsetNode[0]));
+    rrs.mergeSameNode();
+    return rrs;
+  }
+ else {
+    throw new SQLNonTransientException("mycat parse error on sql:" + stmt);
+  }
+}

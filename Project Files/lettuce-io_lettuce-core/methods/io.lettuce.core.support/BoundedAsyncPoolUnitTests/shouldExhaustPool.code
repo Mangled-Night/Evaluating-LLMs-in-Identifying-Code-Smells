@@ -1,0 +1,18 @@
+@Test void shouldExhaustPool(){
+  BoundedAsyncPool<String> pool=new BoundedAsyncPool<>(STRING_OBJECT_FACTORY,BoundedPoolConfig.builder().maxTotal(4).build());
+  String object1=TestFutures.getOrTimeout(pool.acquire());
+  String object2=TestFutures.getOrTimeout(pool.acquire());
+  String object3=TestFutures.getOrTimeout(pool.acquire());
+  String object4=TestFutures.getOrTimeout(pool.acquire());
+  assertThat(pool.getIdle()).isZero();
+  assertThat(pool.getObjectCount()).isEqualTo(4);
+  assertThat(pool.acquire()).isCompletedExceptionally();
+  assertThat(pool.getIdle()).isZero();
+  assertThat(pool.getObjectCount()).isEqualTo(4);
+  pool.release(object1);
+  pool.release(object2);
+  pool.release(object3);
+  pool.release(object4);
+  assertThat(pool.getIdle()).isEqualTo(4);
+  assertThat(pool.getObjectCount()).isEqualTo(4);
+}

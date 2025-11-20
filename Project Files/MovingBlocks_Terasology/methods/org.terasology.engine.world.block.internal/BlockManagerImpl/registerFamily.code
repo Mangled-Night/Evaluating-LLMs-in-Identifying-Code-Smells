@@ -1,0 +1,19 @@
+@VisibleForTesting protected void registerFamily(BlockFamily family){
+  Preconditions.checkNotNull(family);
+  logger.info("Registered {}",family);
+  lock.lock();
+  try {
+    RegisteredState newState=new RegisteredState(registeredBlockInfo.get());
+    newState.registeredFamilyByUri.put(family.getURI(),family);
+    for (    Block block : family.getBlocks()) {
+      registerBlock(block,newState);
+    }
+    registeredBlockInfo.set(newState);
+  }
+  finally {
+    lock.unlock();
+  }
+  for (  BlockRegistrationListener listener : listeners) {
+    listener.onBlockFamilyRegistered(family);
+  }
+}

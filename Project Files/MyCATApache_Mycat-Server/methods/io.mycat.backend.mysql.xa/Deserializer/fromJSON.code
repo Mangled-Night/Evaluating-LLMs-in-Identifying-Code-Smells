@@ -1,0 +1,19 @@
+public CoordinatorLogEntry fromJSON(String coordinatorLogEntryStr) throws DeserialisationException {
+  try {
+    String jsonContent=coordinatorLogEntryStr.trim();
+    validateJSONContent(jsonContent);
+    Map<String,String> header=extractHeader(jsonContent);
+    String coordinatorId=header.get("id");
+    String arrayContent=extractArrayPart(jsonContent);
+    List<String> elements=tokenize(arrayContent);
+    ParticipantLogEntry[] participantLogEntries=new ParticipantLogEntry[elements.size()];
+    for (int i=0; i < participantLogEntries.length; i++) {
+      participantLogEntries[i]=recreateParticipantLogEntry(coordinatorId,elements.get(i));
+    }
+    CoordinatorLogEntry actual=new CoordinatorLogEntry(header.get("id"),Boolean.valueOf(header.get("wasCommitted")),participantLogEntries,header.get("superiorCoordinatorId"),Long.valueOf(header.get("createTime")));
+    return actual;
+  }
+ catch (  Exception unexpectedEOF) {
+    throw new DeserialisationException(coordinatorLogEntryStr);
+  }
+}

@@ -1,0 +1,23 @@
+private boolean isFromProvisioningService(Stanza stanza,boolean log){
+  Jid provisioningServer;
+  try {
+    provisioningServer=getConfiguredProvisioningServer();
+  }
+ catch (  NotConnectedException|InterruptedException|NoResponseException|XMPPErrorException e) {
+    LOGGER.log(Level.WARNING,"Could determine provisioning server",e);
+    return false;
+  }
+  if (provisioningServer == null) {
+    if (log) {
+      LOGGER.warning("Ignoring request '" + stanza + "' because no provisioning server configured.");
+    }
+    return false;
+  }
+  if (!provisioningServer.equals(stanza.getFrom())) {
+    if (log) {
+      LOGGER.warning("Ignoring  request '" + stanza + "' because not from provisioning server '"+ provisioningServer+ "'.");
+    }
+    return false;
+  }
+  return true;
+}

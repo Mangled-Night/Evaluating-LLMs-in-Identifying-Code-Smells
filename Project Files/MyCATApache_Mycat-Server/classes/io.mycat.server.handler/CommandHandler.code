@@ -1,0 +1,43 @@
+/** 
+ * <pre> 用于解决mysql 协议中com_field_list命令的支持 https://dev.mysql.com/doc/internals/en/com-field-list.html </pre>
+ * @author stones_he@163.com
+ */
+public class CommandHandler {
+  private static final Logger logger=LoggerFactory.getLogger(CommandHandler.class);
+  public static void handle(  String stmt,  ServerConnection c,  int offset){
+    String table=stmt.substring(offset).trim();
+    String db=c.getSchema();
+    if (db == null) {
+      db=SchemaUtil.detectDefaultDb(stmt,ServerParse.COMMAND);
+      if (db == null) {
+        c.writeErrMessage(ErrorCode.ER_NO_DB_ERROR,"No database selected");
+        return;
+      }
+    }
+    SchemaConfig schema=MycatServer.getInstance().getConfig().getSchemas().get(db);
+    if (schema == null) {
+      c.writeErrMessage(ErrorCode.ER_BAD_DB_ERROR,"Unknown database '" + db + "'");
+      return;
+    }
+    SystemConfig system=MycatServer.getInstance().getConfig().getSystem();
+    RouteResultset rrs=null;
+    try {
+      rrs=MycatServer.getInstance().getRouterservice().route(system,schema,ServerParse.COMMAND,stmt,c.getCharset(),c);
+      if (rrs == null) {
+        return;
+      }
+    }
+ catch (    SQLNonTransientException e) {
+      logger.warn("",e);
+      c.writeErrMessage(ErrorCode.ERR_HANDLE_DATA,e.toString());
+    }
+    CommandExecResultHandler handler=new CommandExecResultHandler(rrs,c.getSession2(),table);
+    try {
+      handler.execute();
+    }
+ catch (    Exception e1) {
+      logger.warn("",e1);
+      c.writeErrMessage(ErrorCode.ERR_HANDLE_DATA,e1.toString());
+    }
+  }
+}

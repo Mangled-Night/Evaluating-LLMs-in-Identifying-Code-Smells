@@ -1,0 +1,24 @@
+@Override public void update(float delta){
+  Iterable<EntityRef> characterEntities=entityManager.getEntitiesWith(CharacterComponent.class,LocationComponent.class);
+  for (  EntityRef characterEntity : characterEntities) {
+    CharacterComponent characterComponent=characterEntity.getComponent(CharacterComponent.class);
+    if (characterComponent == null) {
+      continue;
+    }
+    LocationComponent characterLocation=characterEntity.getComponent(LocationComponent.class);
+    if (characterLocation == null) {
+      continue;
+    }
+    EntityRef target=characterComponent.authorizedInteractionTarget;
+    if (target.isActive()) {
+      LocationComponent targetLocation=target.getComponent(LocationComponent.class);
+      if (targetLocation == null) {
+        continue;
+      }
+      float maxInteractionRange=characterComponent.interactionRange;
+      if (isDistanceToLarge(characterLocation,targetLocation,maxInteractionRange)) {
+        InteractionUtil.cancelInteractionAsServer(characterEntity);
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+@Test void pexpireat(){
+  Date expiration=new Date(System.currentTimeMillis() + 5000);
+  assertThat(redis.pexpireat(key,expiration)).isFalse();
+  redis.set(key,value);
+  assertThat(redis.pexpireat(key,expiration)).isTrue();
+  assertThat(redis.pttl(key)).isGreaterThan(0).isLessThanOrEqualTo(5000);
+  assertThat(redis.pexpireat(key,Instant.now().plusSeconds(15))).isTrue();
+  assertThat(redis.ttl(key)).isBetween(10L,20L);
+}

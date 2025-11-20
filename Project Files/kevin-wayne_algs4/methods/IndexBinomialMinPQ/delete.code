@@ -1,0 +1,30 @@
+/** 
+ * Deletes the key associated the given index Worst case is O(log(n))
+ * @param i an index
+ * @throws java.lang.IllegalArgumentException if the specified index is invalid
+ * @throws java.util.NoSuchElementException if the given index has no key associated with
+ */
+public void delete(int i){
+  if (i < 0 || i >= n)   throw new IllegalArgumentException();
+  if (!contains(i))   throw new NoSuchElementException("Specified index is not in the queue");
+  toTheRoot(i);
+  Node<Key> x=erase(i);
+  if (x.child != null) {
+    Node<Key> y=x;
+    x=x.child;
+    y.child=null;
+    Node<Key> prevx=null, nextx=x.sibling;
+    while (nextx != null) {
+      x.parent=null;
+      x.sibling=prevx;
+      prevx=x;
+      x=nextx;
+      nextx=nextx.sibling;
+    }
+    x.parent=null;
+    x.sibling=prevx;
+    IndexBinomialMinPQ<Key> H=new IndexBinomialMinPQ<Key>();
+    H.head=x;
+    head=union(H).head;
+  }
+}

@@ -1,0 +1,50 @@
+@Override public void initialise(){
+  nameText=find("name",UIText.class);
+  ownerText=find("owner",UIText.class);
+  addressText=find("address",UIText.class);
+  portText=find("port",UIText.class);
+  okButton=find("ok",UIButton.class);
+  cancelButton=find("cancel",UIButton.class);
+  tip=find("tip",UILabel.class);
+  okButton.subscribe(button -> {
+    String name=nameText.getText();
+    String owner=ownerText.getText();
+    String address=addressText.getText();
+    Integer portBoxed=Ints.tryParse(portText.getText().trim());
+    int port=(portBoxed != null) ? portBoxed : TerasologyConstants.DEFAULT_PORT;
+    if (serverInfo == null) {
+      serverInfo=new ServerInfo(name,address,port);
+      serverInfo.setOwner(owner);
+    }
+ else {
+      serverInfo.setName(name);
+      serverInfo.setAddress(address);
+      serverInfo.setPort(port);
+      serverInfo.setOwner(owner);
+    }
+    if (successFunc != null) {
+      successFunc.accept(serverInfo);
+    }
+    getManager().popScreen();
+  }
+);
+  okButton.bindEnabled(new ReadOnlyBinding<Boolean>(){
+    @Override public Boolean get(){
+      return !nameText.getText().isEmpty() && !addressText.getText().isEmpty() && Ints.tryParse(portText.getText().trim()) != null;
+    }
+  }
+);
+  cancelButton.subscribe(button -> getManager().popScreen());
+  nameText.subscribe(widget -> {
+    if (addressText.getText().isEmpty()) {
+      addressText.setText(nameText.getText());
+      addressText.setCursorPosition(addressText.getText().length());
+    }
+    getManager().setFocus(addressText);
+  }
+);
+  addressText.subscribe(widget -> {
+    getManager().setFocus(portText);
+  }
+);
+}

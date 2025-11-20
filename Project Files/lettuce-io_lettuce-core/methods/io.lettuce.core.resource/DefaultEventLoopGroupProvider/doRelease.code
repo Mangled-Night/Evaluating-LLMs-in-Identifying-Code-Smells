@@ -1,0 +1,11 @@
+private Future<?> doRelease(EventExecutorGroup eventLoopGroup,long quietPeriod,long timeout,TimeUnit unit){
+  logger.debug("Release executor {}",eventLoopGroup);
+  Class<?> key=getKey(release(eventLoopGroup));
+  if ((key == null && eventLoopGroup.isShuttingDown()) || refCounter.containsKey(eventLoopGroup)) {
+    return new SucceededFuture<>(ImmediateEventExecutor.INSTANCE,true);
+  }
+  if (key != null) {
+    eventLoopGroups.remove(key);
+  }
+  return eventLoopGroup.shutdownGracefully(quietPeriod,timeout,unit);
+}

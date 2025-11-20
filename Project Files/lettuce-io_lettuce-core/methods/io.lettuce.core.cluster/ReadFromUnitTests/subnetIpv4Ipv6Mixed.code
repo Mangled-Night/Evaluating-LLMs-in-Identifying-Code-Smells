@@ -1,0 +1,9 @@
+@Test void subnetIpv4Ipv6Mixed(){
+  ReadFrom sut=ReadFrom.subnet("192.0.2.0/24","2001:db8:abcd:0000::/52");
+  RedisClusterNode nodeInSubnetIpv4=createNodeWithHost("192.0.2.1");
+  RedisClusterNode nodeNotInSubnetIpv4=createNodeWithHost("198.51.100.1");
+  RedisClusterNode nodeInSubnetIpv6=createNodeWithHost("2001:db8:abcd:0000::1");
+  RedisClusterNode nodeNotInSubnetIpv6=createNodeWithHost("2001:db8:abcd:1000::");
+  List<RedisNodeDescription> result=sut.select(getNodes(nodeInSubnetIpv4,nodeNotInSubnetIpv4,nodeInSubnetIpv6,nodeNotInSubnetIpv6));
+  assertThat(result).hasSize(2).containsExactly(nodeInSubnetIpv4,nodeInSubnetIpv6);
+}

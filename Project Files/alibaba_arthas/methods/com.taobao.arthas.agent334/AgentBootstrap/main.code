@@ -1,0 +1,77 @@
+private static synchronized void main(String args,final Instrumentation inst){
+  try {
+    Class.forName("java.arthas.SpyAPI");
+    if (SpyAPI.isInited()) {
+      ps.println("Arthas server already stared, skip attach.");
+      ps.flush();
+      return;
+    }
+  }
+ catch (  Throwable e) {
+  }
+  try {
+    ps.println("Arthas server agent start...");
+    if (args == null) {
+      args="";
+    }
+    args=decodeArg(args);
+    String arthasCoreJar;
+    final String agentArgs;
+    int index=args.indexOf(';');
+    if (index != -1) {
+      arthasCoreJar=args.substring(0,index);
+      agentArgs=args.substring(index);
+    }
+ else {
+      arthasCoreJar="";
+      agentArgs=args;
+    }
+    File arthasCoreJarFile=new File(arthasCoreJar);
+    if (!arthasCoreJarFile.exists()) {
+      ps.println("Can not find arthas-core jar file from args: " + arthasCoreJarFile);
+      CodeSource codeSource=AgentBootstrap.class.getProtectionDomain().getCodeSource();
+      if (codeSource != null) {
+        try {
+          File arthasAgentJarFile=new File(codeSource.getLocation().toURI().getSchemeSpecificPart());
+          arthasCoreJarFile=new File(arthasAgentJarFile.getParentFile(),ARTHAS_CORE_JAR);
+          if (!arthasCoreJarFile.exists()) {
+            ps.println("Can not find arthas-core jar file from agent jar directory: " + arthasAgentJarFile);
+          }
+        }
+ catch (        Throwable e) {
+          ps.println("Can not find arthas-core jar file from " + codeSource.getLocation());
+          e.printStackTrace(ps);
+        }
+      }
+    }
+    if (!arthasCoreJarFile.exists()) {
+      return;
+    }
+    final ClassLoader agentLoader=getClassLoader(inst,arthasCoreJarFile);
+    Thread bindingThread=new Thread(){
+      @Override public void run(){
+        try {
+          bind(inst,agentLoader,agentArgs);
+        }
+ catch (        Throwable throwable) {
+          throwable.printStackTrace(ps);
+        }
+      }
+    }
+;
+    bindingThread.setName("arthas-binding-thread");
+    bindingThread.start();
+    bindingThread.join();
+  }
+ catch (  Throwable t) {
+    t.printStackTrace(ps);
+    try {
+      if (ps != System.err) {
+        ps.close();
+      }
+    }
+ catch (    Throwable tt) {
+    }
+    throw new RuntimeException(t);
+  }
+}

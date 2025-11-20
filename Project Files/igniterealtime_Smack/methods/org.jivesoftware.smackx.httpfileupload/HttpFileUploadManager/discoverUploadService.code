@@ -1,0 +1,21 @@
+/** 
+ * Discover upload service. Called automatically when connection is authenticated. Note that this is a synchronous call -- Smack must wait for the server response.
+ * @return true if upload service was discovered
+ * @throws XMPPException.XMPPErrorException if there was an XMPP error returned.
+ * @throws SmackException.NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws SmackException.NoResponseException if there was no response from the remote entity.
+ */
+public boolean discoverUploadService() throws XMPPException.XMPPErrorException, SmackException.NotConnectedException, InterruptedException, SmackException.NoResponseException {
+  ServiceDiscoveryManager sdm=ServiceDiscoveryManager.getInstanceFor(connection());
+  List<DiscoverInfo> servicesDiscoverInfo=sdm.findServicesDiscoverInfo(NAMESPACE,true,true);
+  if (servicesDiscoverInfo.isEmpty()) {
+    servicesDiscoverInfo=sdm.findServicesDiscoverInfo(NAMESPACE_0_2,true,true);
+    if (servicesDiscoverInfo.isEmpty()) {
+      return false;
+    }
+  }
+  DiscoverInfo discoverInfo=servicesDiscoverInfo.get(0);
+  defaultUploadService=uploadServiceFrom(discoverInfo);
+  return true;
+}

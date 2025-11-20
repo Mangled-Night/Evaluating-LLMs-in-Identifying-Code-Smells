@@ -1,0 +1,29 @@
+private void processChildTables(Map<String,TableConfig> tables,TableConfig parentTable,String dataNodes,Element tableNode){
+  NodeList childNodeList=tableNode.getChildNodes();
+  for (int j=0; j < childNodeList.getLength(); j++) {
+    Node theNode=childNodeList.item(j);
+    if (!theNode.getNodeName().equals("childTable")) {
+      continue;
+    }
+    Element childTbElement=(Element)theNode;
+    String cdTbName=childTbElement.getAttribute("name").toUpperCase();
+    String primaryKey=childTbElement.hasAttribute("primaryKey") ? childTbElement.getAttribute("primaryKey").toUpperCase() : null;
+    boolean autoIncrement=false;
+    if (childTbElement.hasAttribute("autoIncrement")) {
+      autoIncrement=Boolean.parseBoolean(childTbElement.getAttribute("autoIncrement"));
+    }
+    boolean needAddLimit=true;
+    if (childTbElement.hasAttribute("needAddLimit")) {
+      needAddLimit=Boolean.parseBoolean(childTbElement.getAttribute("needAddLimit"));
+    }
+    String subTables=childTbElement.getAttribute("subTables");
+    String joinKey=childTbElement.getAttribute("joinKey").toUpperCase();
+    String parentKey=childTbElement.getAttribute("parentKey").toUpperCase();
+    TableConfig table=new TableConfig(cdTbName,primaryKey,autoIncrement,needAddLimit,TableConfig.TYPE_GLOBAL_DEFAULT,dataNodes,getDbType(dataNodes),null,false,parentTable,true,joinKey,parentKey,subTables,false);
+    if (tables.containsKey(table.getName())) {
+      throw new ConfigException("table " + table.getName() + " duplicated!");
+    }
+    tables.put(table.getName(),table);
+    processChildTables(tables,table,dataNodes,childTbElement);
+  }
+}

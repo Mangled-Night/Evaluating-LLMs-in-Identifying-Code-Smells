@@ -1,0 +1,61 @@
+static final class WindowManagerToast extends AbsToast {
+  private WindowManager mWM;
+  private WindowManager.LayoutParams mParams;
+  WindowManagerToast(  ToastUtils toastUtils,  int type){
+    super(toastUtils);
+    mParams=new WindowManager.LayoutParams();
+    mWM=(WindowManager)Utils.getApp().getSystemService(Context.WINDOW_SERVICE);
+    mParams.type=type;
+  }
+  WindowManagerToast(  ToastUtils toastUtils,  WindowManager wm,  int type){
+    super(toastUtils);
+    mParams=new WindowManager.LayoutParams();
+    mWM=wm;
+    mParams.type=type;
+  }
+  @Override public void show(  final int duration){
+    if (mToast == null)     return;
+    mParams.height=WindowManager.LayoutParams.WRAP_CONTENT;
+    mParams.width=WindowManager.LayoutParams.WRAP_CONTENT;
+    mParams.format=PixelFormat.TRANSLUCENT;
+    mParams.windowAnimations=android.R.style.Animation_Toast;
+    mParams.setTitle("ToastWithoutNotification");
+    mParams.flags=WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+    mParams.packageName=Utils.getApp().getPackageName();
+    mParams.gravity=mToast.getGravity();
+    if ((mParams.gravity & Gravity.HORIZONTAL_GRAVITY_MASK) == Gravity.FILL_HORIZONTAL) {
+      mParams.horizontalWeight=1.0f;
+    }
+    if ((mParams.gravity & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.FILL_VERTICAL) {
+      mParams.verticalWeight=1.0f;
+    }
+    mParams.x=mToast.getXOffset();
+    mParams.y=mToast.getYOffset();
+    mParams.horizontalMargin=mToast.getHorizontalMargin();
+    mParams.verticalMargin=mToast.getVerticalMargin();
+    try {
+      if (mWM != null) {
+        mWM.addView(mToastView,mParams);
+      }
+    }
+ catch (    Exception ignored) {
+    }
+    UtilsBridge.runOnUiThreadDelayed(new Runnable(){
+      @Override public void run(){
+        cancel();
+      }
+    }
+,duration == Toast.LENGTH_SHORT ? 2000 : 3500);
+  }
+  @Override public void cancel(){
+    try {
+      if (mWM != null) {
+        mWM.removeViewImmediate(mToastView);
+        mWM=null;
+      }
+    }
+ catch (    Exception ignored) {
+    }
+    super.cancel();
+  }
+}

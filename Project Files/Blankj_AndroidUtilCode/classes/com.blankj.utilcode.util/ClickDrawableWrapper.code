@@ -1,0 +1,42 @@
+static class ClickDrawableWrapper extends ShadowUtils.DrawableWrapper {
+  private BitmapDrawable mBitmapDrawable=null;
+  private Paint mColorPaint=null;
+  public ClickDrawableWrapper(  Drawable drawable){
+    super(drawable);
+    if (drawable instanceof ColorDrawable) {
+      mColorPaint=new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+      mColorPaint.setColor(((ColorDrawable)drawable).getColor());
+    }
+  }
+  @Override public void setColorFilter(  ColorFilter cf){
+    super.setColorFilter(cf);
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+      if (mColorPaint != null) {
+        mColorPaint.setColorFilter(cf);
+      }
+    }
+  }
+  @Override public void setAlpha(  int alpha){
+    super.setAlpha(alpha);
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+      if (mColorPaint != null) {
+        mColorPaint.setColor(((ColorDrawable)getWrappedDrawable()).getColor());
+      }
+    }
+  }
+  @Override public void draw(  Canvas canvas){
+    if (mBitmapDrawable == null) {
+      Bitmap bitmap=Bitmap.createBitmap(getBounds().width(),getBounds().height(),Bitmap.Config.ARGB_8888);
+      Canvas myCanvas=new Canvas(bitmap);
+      if (mColorPaint != null) {
+        myCanvas.drawRect(getBounds(),mColorPaint);
+      }
+ else {
+        super.draw(myCanvas);
+      }
+      mBitmapDrawable=new BitmapDrawable(Resources.getSystem(),bitmap);
+      mBitmapDrawable.setBounds(getBounds());
+    }
+    mBitmapDrawable.draw(canvas);
+  }
+}

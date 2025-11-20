@@ -1,0 +1,20 @@
+@Override public boolean step(){
+  NetworkSystem networkSystem=context.get(NetworkSystem.class);
+  WorldAtlas atlas=new WorldAtlasImpl(context.get(Config.class).getRendering().getMaxTextureAtlasResolution());
+  context.put(WorldAtlas.class,atlas);
+  ModuleEnvironment environment=context.get(ModuleManager.class).getEnvironment();
+  context.put(BlockFamilyLibrary.class,new BlockFamilyLibrary(environment,context));
+  BlockManagerImpl blockManager;
+  if (networkSystem.getMode().isAuthority()) {
+    blockManager=new BlockManagerImpl(atlas,context.get(AssetManager.class),true);
+    blockManager.subscribe(context.get(NetworkSystem.class));
+  }
+ else {
+    blockManager=new BlockManagerImpl(atlas,context.get(AssetManager.class),false);
+  }
+  context.put(BlockManager.class,blockManager);
+  context.get(TypeHandlerLibrary.class).addTypeHandler(Block.class,new BlockTypeHandler(blockManager));
+  context.get(TypeHandlerLibrary.class).addTypeHandler(BlockFamily.class,new BlockFamilyTypeHandler(blockManager));
+  blockManager.initialise(gameManifest.getRegisteredBlockFamilies(),gameManifest.getBlockIdMap());
+  return true;
+}

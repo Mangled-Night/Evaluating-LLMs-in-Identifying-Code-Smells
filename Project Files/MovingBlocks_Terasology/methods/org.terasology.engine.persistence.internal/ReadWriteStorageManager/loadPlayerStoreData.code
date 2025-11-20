@@ -1,0 +1,17 @@
+@Override protected EntityData.PlayerStore loadPlayerStoreData(String playerId){
+  EntityData.PlayerStore disposedUnsavedPlayer=unloadedAndUnsavedPlayerMap.get(playerId);
+  if (disposedUnsavedPlayer != null) {
+    return disposedUnsavedPlayer;
+  }
+  EntityData.PlayerStore disposedSavingPlayer=unloadedAndSavingPlayerMap.get(playerId);
+  if (disposedSavingPlayer != null) {
+    return disposedSavingPlayer;
+  }
+  worldDirectoryReadLock.lock();
+  try {
+    return super.loadPlayerStoreData(playerId);
+  }
+  finally {
+    worldDirectoryReadLock.unlock();
+  }
+}

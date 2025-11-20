@@ -1,0 +1,31 @@
+/** 
+ * Attempt to find a  {@link Field field} on the supplied {@link Class} with the supplied {@code name}. Searches all superclasses up to  {@link Object}.
+ * @param clazz the class to introspect
+ * @param name the name of the field
+ * @return the corresponding Field object, or {@code null} if not found
+ */
+public static Field findField(Class<?> clazz,String name){
+  return findField(clazz,name,null);
+}
+/** 
+ * Attempt to find a  {@link Field field} on the supplied {@link Class} with the supplied {@code name} and/or {@link Class type}. Searches all superclasses up to  {@link Object}.
+ * @param clazz the class to introspect
+ * @param name the name of the field (may be {@code null} if type is specified)
+ * @param type the type of the field (may be {@code null} if name is specified)
+ * @return the corresponding Field object, or {@code null} if not found
+ */
+public static Field findField(Class<?> clazz,String name,Class<?> type){
+  LettuceAssert.notNull(clazz,"Class must not be null");
+  LettuceAssert.isTrue(name != null || type != null,"Either name or type of the field must be specified");
+  Class<?> searchType=clazz;
+  while (Object.class != searchType && searchType != null) {
+    Field[] fields=searchType.getDeclaredFields();
+    for (    Field field : fields) {
+      if ((name == null || name.equals(field.getName())) && (type == null || type.equals(field.getType()))) {
+        return field;
+      }
+    }
+    searchType=searchType.getSuperclass();
+  }
+  return null;
+}

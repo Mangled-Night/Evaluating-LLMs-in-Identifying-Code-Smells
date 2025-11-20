@@ -1,0 +1,23 @@
+/** 
+ * 解压数据包,同时做分包处理
+ * @param data
+ * @param decompressUnfinishedDataQueue
+ * @return
+ */
+public static List<byte[]> decompressMysqlPacket(byte[] data,ConcurrentLinkedQueue<byte[]> decompressUnfinishedDataQueue){
+  MySQLMessage msg=new MySQLMessage(data);
+  int packetLength=msg.readUB3();
+  byte packetId=msg.read();
+  int oldLen=msg.readUB3();
+  if (packetLength == data.length - 4) {
+    return Lists.newArrayList(data);
+  }
+ else   if (oldLen == 0) {
+    byte[] readBytes=msg.readBytes();
+    return splitPack(readBytes,decompressUnfinishedDataQueue);
+  }
+ else {
+    byte[] de=decompress(data,7,data.length - 7);
+    return splitPack(de,decompressUnfinishedDataQueue);
+  }
+}

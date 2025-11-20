@@ -1,0 +1,42 @@
+@Override public TeraArray deflateDenseArray16Bit(short[] data,int rowSize,int sizeX,int sizeY,int sizeZ){
+  final short[][] inflated=new short[sizeY][];
+  final short[] deflated=new short[sizeY];
+  int packed=0;
+  for (int y=0; y < sizeY; y++) {
+    final int start=y * rowSize;
+    final short first=data[start];
+    boolean packable=true;
+    for (int i=1; i < rowSize; i++) {
+      if (data[start + i] != first) {
+        packable=false;
+        break;
+      }
+    }
+    if (packable) {
+      deflated[y]=first;
+      ++packed;
+    }
+ else {
+      short[] tmp=new short[rowSize];
+      System.arraycopy(data,start,tmp,0,rowSize);
+      inflated[y]=tmp;
+    }
+  }
+  if (packed == sizeY) {
+    final short first=deflated[0];
+    boolean packable=true;
+    for (int i=1; i < sizeY; i++) {
+      if (deflated[i] != first) {
+        packable=false;
+        break;
+      }
+    }
+    if (packable) {
+      return new TeraSparseArray16Bit(sizeX,sizeY,sizeZ,first);
+    }
+  }
+  if (packed > DEFLATE_MINIMUM_16BIT) {
+    return new TeraSparseArray16Bit(sizeX,sizeY,sizeZ,inflated,deflated);
+  }
+  return null;
+}

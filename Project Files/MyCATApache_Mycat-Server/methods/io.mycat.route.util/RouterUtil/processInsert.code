@@ -1,0 +1,58 @@
+public static boolean processInsert(SchemaConfig schema,int sqlType,String origSQL,ServerConnection sc) throws SQLNonTransientException {
+  String tableName=StringUtil.getTableName(origSQL).toUpperCase();
+  TableConfig tableConfig=schema.getTables().get(tableName);
+  boolean processedInsert=false;
+  if (null != tableConfig && tableConfig.isAutoIncrement()) {
+    String primaryKey=tableConfig.getPrimaryKey();
+    processedInsert=processInsert(sc,schema,sqlType,origSQL,tableName,primaryKey);
+  }
+  return processedInsert;
+}
+public static boolean processInsert(ServerConnection sc,SchemaConfig schema,int sqlType,String origSQL,String tableName,String primaryKey) throws SQLNonTransientException {
+  int firstLeftBracketIndex=origSQL.indexOf("(");
+  int firstRightBracketIndex=origSQL.indexOf(")");
+  String upperSql=origSQL.toUpperCase();
+  int valuesIndex=upperSql.indexOf("VALUES");
+  int selectIndex=upperSql.indexOf("SELECT");
+  int fromIndex=upperSql.indexOf("FROM");
+  if (firstLeftBracketIndex < 0) {
+    String msg="invalid sql:" + origSQL;
+    LOGGER.warn(msg);
+    throw new SQLNonTransientException(msg);
+  }
+  if (selectIndex > 0 && fromIndex > 0 && selectIndex > firstRightBracketIndex && valuesIndex < 0) {
+    String msg="multi insert not provided";
+    LOGGER.warn(msg);
+    throw new SQLNonTransientException(msg);
+  }
+  if (valuesIndex + "VALUES".length() <= firstLeftBracketIndex) {
+    throw new SQLSyntaxErrorException("insert must provide ColumnList");
+  }
+  Object[] vauleArrayAndSuffixStr=parseSqlValueArrayAndSuffixStr(origSQL,valuesIndex);
+  List<List<String>> vauleArray=(List<List<String>>)vauleArrayAndSuffixStr[0];
+  String suffixStr=null;
+  if (vauleArrayAndSuffixStr.length > 1) {
+    suffixStr=(String)vauleArrayAndSuffixStr[1];
+  }
+  boolean processedInsert=false;
+  int pkStart=isPKInFields(origSQL,primaryKey,firstLeftBracketIndex,firstRightBracketIndex);
+  if (pkStart == -1) {
+    processedInsert=true;
+    handleBatchInsert(sc,schema,sqlType,origSQL,valuesIndex,tableName,primaryKey,vauleArray,suffixStr);
+  }
+ else {
+    if (pkStart != -1) {
+      String subPrefix=origSQL.substring(0,pkStart);
+      char c;
+      int pkIndex=0;
+      for (int index=0, len=subPrefix.length(); index < len; index++) {
+        c=subPrefix.charAt(index);
+        if (c == ',') {
+          pkIndex++;
+        }
+      }
+      processedInsert=handleBatchInsertWithPK(sc,schema,sqlType,origSQL,valuesIndex,tableName,primaryKey,vauleArray,suffixStr,pkIndex);
+    }
+  }
+  return processedInsert;
+}

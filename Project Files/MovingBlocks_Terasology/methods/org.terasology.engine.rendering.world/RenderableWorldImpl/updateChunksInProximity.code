@@ -1,0 +1,37 @@
+/** 
+ * Updates the list of chunks around the player.
+ * @return True if the list was changed
+ */
+@Override public boolean updateChunksInProximity(BlockRegion newRenderableRegion){
+  if (!newRenderableRegion.equals(renderableRegion)) {
+    for (    Vector3ic chunkPositionToRemove : renderableRegion) {
+      if (!newRenderableRegion.contains(chunkPositionToRemove)) {
+        chunkWorker.remove(chunkPositionToRemove);
+      }
+    }
+    for (    Vector3ic chunkPositionToAdd : newRenderableRegion) {
+      if (!renderableRegion.contains(chunkPositionToAdd)) {
+        Chunk chunk=chunkProvider.getChunk(chunkPositionToAdd);
+        if (chunk != null) {
+          chunkWorker.add(chunk);
+        }
+      }
+    }
+    renderableRegion=newRenderableRegion;
+    return true;
+  }
+  return false;
+}
+@Override public boolean updateChunksInProximity(ViewDistance newViewDistance,int chunkLods){
+  if (newViewDistance != currentViewDistance || (lodChunkProvider != null && chunkLods != lodChunkProvider.getChunkLods())) {
+    logger.info("New Viewing Distance: {}",newViewDistance);
+    currentViewDistance=newViewDistance;
+    if (lodChunkProvider != null) {
+      lodChunkProvider.updateRenderableRegion(newViewDistance,chunkLods,calcCameraCoordinatesInChunkUnits());
+    }
+    return updateChunksInProximity(calculateRenderableRegion(newViewDistance));
+  }
+ else {
+    return false;
+  }
+}

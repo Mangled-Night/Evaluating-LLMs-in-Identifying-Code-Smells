@@ -1,0 +1,58 @@
+@Override public void process(final CommandProcess process){
+  RowAffect affect=new RowAffect();
+  Instrumentation inst=process.session().getInstrumentation();
+  if (hashCode == null && (classLoaderClass != null || classLoaderToString != null)) {
+    List<ClassLoader> matchedClassLoaders=ClassLoaderUtils.getClassLoader(inst,classLoaderClass,classLoaderToString);
+    String tips="";
+    if (classLoaderClass != null) {
+      tips="class name: " + classLoaderClass;
+    }
+    if (classLoaderToString != null) {
+      tips=tips + (StringUtils.isEmpty(tips) ? "ClassLoader#toString(): " : ", ClassLoader#toString(): ") + classLoaderToString;
+    }
+    if (matchedClassLoaders.size() == 1) {
+      hashCode=Integer.toHexString(matchedClassLoaders.get(0).hashCode());
+    }
+ else     if (matchedClassLoaders.size() > 1) {
+      Collection<ClassLoaderVO> classLoaderVOList=ClassUtils.createClassLoaderVOList(matchedClassLoaders);
+      SearchClassModel searchclassModel=new SearchClassModel().setClassLoaderClass(classLoaderClass).setMatchedClassLoaders(classLoaderVOList);
+      process.appendResult(searchclassModel);
+      process.end(-1,"Found more than one classloader by " + tips + ", please specify classloader with '-c <classloader hash>'");
+      return;
+    }
+ else {
+      process.end(-1,"Can not find classloader by " + tips + ".");
+      return;
+    }
+  }
+  List<Class<?>> matchedClasses=new ArrayList<Class<?>>(SearchUtils.searchClass(inst,classPattern,isRegEx,hashCode));
+  Collections.sort(matchedClasses,new Comparator<Class<?>>(){
+    @Override public int compare(    Class<?> c1,    Class<?> c2){
+      return StringUtils.classname(c1).compareTo(StringUtils.classname(c2));
+    }
+  }
+);
+  if (isDetail) {
+    if (numberOfLimit > 0 && matchedClasses.size() > numberOfLimit) {
+      process.end(-1,"The number of matching classes is greater than : " + numberOfLimit + ". \n"+ "Please specify a more accurate 'class-patten' or use the parameter '-n' to change the maximum number of matching classes.");
+      return;
+    }
+    for (    Class<?> clazz : matchedClasses) {
+      ClassDetailVO classInfo=ClassUtils.createClassInfo(clazz,isField,expand);
+      process.appendResult(new SearchClassModel(classInfo,isDetail,isField));
+    }
+  }
+ else {
+    int pageSize=256;
+    ResultUtils.processClassNames(matchedClasses,pageSize,new ResultUtils.PaginationHandler<List<String>>(){
+      @Override public boolean handle(      List<String> classNames,      int segment){
+        process.appendResult(new SearchClassModel(classNames,segment));
+        return true;
+      }
+    }
+);
+  }
+  affect.rCnt(matchedClasses.size());
+  process.appendResult(new RowAffectModel(affect));
+  process.end();
+}

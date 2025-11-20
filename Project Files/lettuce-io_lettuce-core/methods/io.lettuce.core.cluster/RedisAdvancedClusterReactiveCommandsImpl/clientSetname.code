@@ -1,0 +1,23 @@
+@Override public Mono<String> clientSetname(K name){
+  List<Publisher<String>> publishers=new ArrayList<>();
+  publishers.add(super.clientSetname(name));
+  for (  RedisClusterNode redisClusterNode : getStatefulConnection().getPartitions()) {
+    Mono<RedisClusterReactiveCommands<K,V>> byNodeId=getConnectionReactive(redisClusterNode.getNodeId());
+    publishers.add(byNodeId.flatMap(conn -> {
+      if (conn.isOpen()) {
+        return conn.clientSetname(name);
+      }
+      return Mono.empty();
+    }
+));
+    Mono<RedisClusterReactiveCommands<K,V>> byHost=getConnectionReactive(redisClusterNode.getUri().getHost(),redisClusterNode.getUri().getPort());
+    publishers.add(byHost.flatMap(conn -> {
+      if (conn.isOpen()) {
+        return conn.clientSetname(name);
+      }
+      return Mono.empty();
+    }
+));
+  }
+  return Flux.merge(publishers).last();
+}

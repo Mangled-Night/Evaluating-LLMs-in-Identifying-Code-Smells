@@ -1,0 +1,21 @@
+@Override public void renderOverlay(){
+  for (  EntityRef entity : entityManager.getEntitiesWith(BlockSelectionComponent.class)) {
+    BlockSelectionComponent blockSelectionComponent=entity.getComponent(BlockSelectionComponent.class);
+    if (blockSelectionComponent.shouldRender) {
+      Texture texture=blockSelectionComponent.texture;
+      if (null == texture) {
+        texture=Assets.getTexture("engine:selection").get();
+      }
+      Vector2i textureDimensions=new Vector2i(texture.getWidth(),texture.getHeight());
+      BlockSelectionRenderer selectionRenderer=cachedBlockSelectionRendererByTextureDimensionsMap.get(textureDimensions);
+      if (null == selectionRenderer) {
+        selectionRenderer=new BlockSelectionRenderer(texture);
+        cachedBlockSelectionRendererByTextureDimensionsMap.put(textureDimensions,selectionRenderer);
+      }
+ else {
+        selectionRenderer.setEffectsTexture(texture);
+      }
+      renderOverlayForOneBlockSelection(blockSelectionComponent,selectionRenderer);
+    }
+  }
+}

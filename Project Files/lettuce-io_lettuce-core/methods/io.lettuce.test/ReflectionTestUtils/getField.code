@@ -1,0 +1,45 @@
+/** 
+ * Get the value of the  {@linkplain Field field} with the given {@code name} from the provided {@code targetObject}. <p> This method delegates to  {@link #getField(Object,Class,String)}, supplying  {@code null} for the {@code targetClass}argument.
+ * @param targetObject the target object from which to get the field; never {@code null}
+ * @param name the name of the field to get; never {@code null}
+ * @return the field's current value
+ * @see #getField(Class,String)
+ */
+public static <T>T getField(Object targetObject,String name){
+  return getField(targetObject,null,name);
+}
+/** 
+ * Get the value of the static  {@linkplain Field field} with the given {@code name} from the provided {@code targetClass}. <p> This method delegates to  {@link #getField(Object,Class,String)}, supplying  {@code null} for the {@code targetObject}argument.
+ * @param targetClass the target class from which to get the static field; never {@code null}
+ * @param name the name of the field to get; never {@code null}
+ * @return the field's current value
+ * @see #getField(Object,String)
+ */
+public static <T>T getField(Class<?> targetClass,String name){
+  return getField(null,targetClass,name);
+}
+/** 
+ * Get the value of the  {@linkplain Field field} with the given {@code name} from the provided{@code targetObject}/ {@code targetClass}. <p> This method traverses the class hierarchy in search of the desired field. In addition, an attempt will be made to make non- {@code public} fields <em>accessible</em>, thus allowing one to get {@code protected},  {@code private}, and <em>package-private</em> fields.
+ * @param targetObject the target object from which to get the field; may be {@code null} if the field is static
+ * @param targetClass the target class from which to get the field; may be {@code null} if the field is an instance field
+ * @param name the name of the field to get; never {@code null}
+ * @return the field's current value
+ */
+public static <T>T getField(Object targetObject,Class<?> targetClass,String name){
+  LettuceAssert.isTrue(targetObject != null || targetClass != null,"Either targetObject or targetClass for the field must be specified");
+  if (targetClass == null) {
+    targetClass=targetObject.getClass();
+  }
+  Field field=findField(targetClass,name);
+  if (field == null) {
+    throw new IllegalArgumentException(String.format("Could not find field '%s' on %s or target class [%s]",name,safeToString(targetObject),targetClass));
+  }
+  makeAccessible(field);
+  try {
+    return (T)field.get(targetObject);
+  }
+ catch (  IllegalAccessException ex) {
+    ReflectionUtils.handleReflectionException(ex);
+    throw new IllegalStateException("Unexpected reflection exception - " + ex.getClass().getName() + ": "+ ex.getMessage());
+  }
+}

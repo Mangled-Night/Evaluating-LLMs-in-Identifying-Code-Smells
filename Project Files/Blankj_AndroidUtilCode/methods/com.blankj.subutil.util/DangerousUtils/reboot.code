@@ -1,0 +1,34 @@
+/** 
+ * Reboot the device. <p>Requires root permission or hold  {@code android:sharedUserId="android.uid.system"} in manifest.</p>
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean reboot(){
+  try {
+    ShellUtils.CommandResult result=ShellUtils.execCmd("reboot",true);
+    if (result.result == 0)     return true;
+    Intent intent=new Intent(Intent.ACTION_REBOOT);
+    intent.putExtra("nowait",1);
+    intent.putExtra("interval",1);
+    intent.putExtra("window",0);
+    Utils.getApp().sendBroadcast(intent);
+    return true;
+  }
+ catch (  Exception e) {
+    return false;
+  }
+}
+/** 
+ * Reboot the device. <p>Requires root permission or hold  {@code android:sharedUserId="android.uid.system"}, {@code <uses-permission android:name="android.permission.REBOOT" />}</p>
+ * @param reason code to pass to the kernel (e.g., "recovery") torequest special boot modes, or null.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean reboot(final String reason){
+  try {
+    PowerManager pm=(PowerManager)Utils.getApp().getSystemService(Context.POWER_SERVICE);
+    pm.reboot(reason);
+    return true;
+  }
+ catch (  Exception e) {
+    return false;
+  }
+}

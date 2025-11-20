@@ -1,0 +1,118 @@
+private static class ValueHandler implements JsonSerializer<EntityData.Value>, JsonDeserializer<EntityData.Value> {
+  @Override public JsonElement serialize(  EntityData.Value src,  Type typeOfSrc,  JsonSerializationContext context){
+    if (src.getBooleanCount() > 1) {
+      return context.serialize(src.getBooleanList());
+    }
+ else     if (src.getBooleanCount() == 1) {
+      return context.serialize(src.getBoolean(0));
+    }
+ else     if (src.getDoubleCount() > 1) {
+      return context.serialize(src.getDoubleList());
+    }
+ else     if (src.getDoubleCount() == 1) {
+      return context.serialize(src.getDouble(0));
+    }
+ else     if (src.getFloatCount() > 1) {
+      return context.serialize(src.getFloatList());
+    }
+ else     if (src.getFloatCount() == 1) {
+      return context.serialize(src.getFloat(0));
+    }
+ else     if (src.getIntegerCount() > 1) {
+      return context.serialize(src.getIntegerList());
+    }
+ else     if (src.getIntegerCount() == 1) {
+      return context.serialize(src.getInteger(0));
+    }
+ else     if (src.getLongCount() > 1) {
+      return context.serialize(src.getLongList());
+    }
+ else     if (src.getLongCount() == 1) {
+      return context.serialize(src.getLong(0));
+    }
+ else     if (src.getStringCount() > 1) {
+      return context.serialize(src.getStringList());
+    }
+ else     if (src.getStringCount() == 1) {
+      return context.serialize(src.getString(0));
+    }
+ else     if (src.getValueCount() > 0) {
+      return context.serialize(src.getValueList());
+    }
+ else     if (src.hasBytes()) {
+      return context.serialize(src.getBytes().toByteArray());
+    }
+ else     if (src.getNameValueCount() > 0) {
+      JsonObject obj=new JsonObject();
+      for (      EntityData.NameValue nameValue : src.getNameValueList()) {
+        obj.add(nameValue.getName(),context.serialize(nameValue.getValue()));
+      }
+      return obj;
+    }
+    return JsonNull.INSTANCE;
+  }
+  @Override public EntityData.Value deserialize(  JsonElement json,  Type typeOfT,  JsonDeserializationContext context) throws JsonParseException {
+    EntityData.Value.Builder value=EntityData.Value.newBuilder();
+    if (json.isJsonPrimitive()) {
+      extractPrimitive(value,json);
+    }
+ else     if (json.isJsonObject()) {
+      extractMap(json,context,value);
+    }
+ else     if (json.isJsonArray()) {
+      JsonArray jsonArray=json.getAsJsonArray();
+      TByteList byteList=new TByteArrayList();
+      for (      JsonElement element : jsonArray) {
+        if (element.isJsonArray()) {
+          value.addValue((EntityData.Value)context.deserialize(element,EntityData.Value.class));
+        }
+ else         if (element.isJsonObject()) {
+          value.addValue((EntityData.Value)context.deserialize(element,EntityData.Value.class));
+        }
+ else         if (element.isJsonPrimitive()) {
+          extractPrimitive(value,element);
+          if (element.getAsJsonPrimitive().isNumber()) {
+            try {
+              byteList.add(element.getAsByte());
+            }
+ catch (            NumberFormatException nfe) {
+              byteList.add((byte)0);
+            }
+          }
+        }
+      }
+      if (byteList.size() > 0) {
+        value.setBytes(ByteString.copyFrom(byteList.toArray()));
+      }
+    }
+    return value.build();
+  }
+  private void extractMap(  JsonElement json,  JsonDeserializationContext context,  EntityData.Value.Builder value){
+    JsonObject nameValueObject=json.getAsJsonObject();
+    for (    Map.Entry<String,JsonElement> nameValue : nameValueObject.entrySet()) {
+      EntityData.Value innerValue=context.deserialize(nameValue.getValue(),EntityData.Value.class);
+      value.addNameValue(EntityData.NameValue.newBuilder().setName(nameValue.getKey()).setValue(innerValue));
+    }
+  }
+  private void extractPrimitive(  EntityData.Value.Builder value,  JsonElement element){
+    JsonPrimitive primitive=element.getAsJsonPrimitive();
+    if (primitive.isNumber()) {
+      value.addDouble(primitive.getAsDouble());
+      value.addFloat(primitive.getAsFloat());
+      try {
+        value.addInteger(primitive.getAsInt());
+        value.addLong(primitive.getAsLong());
+      }
+ catch (      NumberFormatException e) {
+        value.addInteger(0);
+        value.addLong(0);
+      }
+    }
+    if (primitive.isBoolean()) {
+      value.addBoolean(primitive.getAsBoolean());
+    }
+    if (primitive.isString()) {
+      value.addString(primitive.getAsString());
+    }
+  }
+}

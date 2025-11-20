@@ -1,0 +1,24 @@
+@Override public IQ handleIQRequest(IQ iqRequest){
+  DnsOverXmppResolver resolver=DnsOverXmppManager.this.resolver;
+  if (resolver == null) {
+    LOGGER.info("Resolver was null while attempting to handle " + iqRequest);
+    return null;
+  }
+  DnsIq dnsIqRequest=(DnsIq)iqRequest;
+  DnsMessage query=dnsIqRequest.getDnsMessage();
+  DnsMessage response;
+  try {
+    response=resolver.resolve(query);
+  }
+ catch (  IOException exception) {
+    StanzaError errorBuilder=StanzaError.getBuilder().setType(StanzaError.Type.CANCEL).setCondition(Condition.internal_server_error).setDescriptiveEnText("Exception while resolving your DNS query",exception).build();
+    IQ errorResponse=IQ.createErrorResponse(iqRequest,errorBuilder);
+    return errorResponse;
+  }
+  if (query.id != response.id) {
+    response=response.asBuilder().setId(query.id).build();
+  }
+  DnsIq dnsIqResult=new DnsIq(response);
+  dnsIqResult.setType(IQ.Type.result);
+  return dnsIqResult;
+}

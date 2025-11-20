@@ -1,0 +1,33 @@
+private List<String> parseMethodName(String name,Strategy strategy){
+  if (strategy == Strategy.METHOD_NAME) {
+    return Collections.singletonList(name);
+  }
+  List<String> parts=new ArrayList<>();
+  char[] chars=name.toCharArray();
+  boolean previousUpperCase=false;
+  StringBuffer buffer=new StringBuffer(chars.length);
+  for (  char theChar : chars) {
+    if (!Character.isUpperCase(theChar)) {
+      buffer.append(theChar);
+      previousUpperCase=false;
+      continue;
+    }
+    if (!previousUpperCase) {
+      if (!LettuceStrings.isEmpty(buffer)) {
+        if (strategy == Strategy.DOT) {
+          buffer.append('.');
+        }
+        if (strategy == Strategy.SPLIT) {
+          parts.add(buffer.toString());
+          buffer=new StringBuffer(chars.length);
+        }
+      }
+    }
+    previousUpperCase=true;
+    buffer.append(theChar);
+  }
+  if (LettuceStrings.isNotEmpty(buffer)) {
+    parts.add(buffer.toString());
+  }
+  return parts;
+}

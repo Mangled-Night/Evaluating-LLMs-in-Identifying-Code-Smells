@@ -1,0 +1,28 @@
+/** 
+ * Tests that receiving an empty roster result causes the roster to be populated by all entries of the roster store.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws InterruptedException if interrupted.
+ * @throws IOException if IO exception.
+ */
+@Test(timeout=300000) public void testEqualVersionStored() throws InterruptedException, IOException, XMPPException, SmackException {
+  answerWithEmptyRosterResult();
+  roster.waitUntilLoaded();
+  Collection<RosterEntry> entries=roster.getEntries();
+  assertSame("Size of the roster",3,entries.size());
+  HashSet<Item> items=new HashSet<>();
+  for (  RosterEntry entry : entries) {
+    items.add(RosterEntry.toRosterItem(entry));
+  }
+  RosterStore store=DirectoryRosterStore.init(tmpFolder.newFolder());
+  populateStore(store);
+  assertEquals("Elements of the roster",new HashSet<>(store.getEntries()),items);
+  for (  RosterEntry entry : entries) {
+    assertTrue("joe stevens".equals(entry.getName()) || "geoff hurley".equals(entry.getName()) || "higgins mcmann".equals(entry.getName()));
+  }
+  Collection<RosterGroup> groups=roster.getGroups();
+  assertSame(3,groups.size());
+  for (  RosterGroup group : groups) {
+    assertTrue("all".equals(group.getName()) || "friends".equals(group.getName()) || "partners".equals(group.getName()));
+  }
+}

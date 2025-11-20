@@ -1,0 +1,8 @@
+static NodeTopologyView from(RedisURI redisURI,Requests clusterNodesRequests,Requests infoRequests){
+  TimedAsyncCommand<String,String,String> nodes=clusterNodesRequests.getRequest(redisURI);
+  TimedAsyncCommand<String,String,String> info=infoRequests.getRequest(redisURI);
+  if (resultAvailable(nodes) && !nodes.isCompletedExceptionally() && resultAvailable(info)) {
+    return new NodeTopologyView(redisURI,nodes.join(),optionallyGet(info),nodes.duration());
+  }
+  return new NodeTopologyView(redisURI);
+}

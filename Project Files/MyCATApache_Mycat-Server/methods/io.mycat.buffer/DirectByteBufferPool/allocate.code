@@ -1,0 +1,25 @@
+public ByteBuffer allocate(int size){
+  final int theChunkCount=size / chunkSize + (size % chunkSize == 0 ? 0 : 1);
+  int selectedPage=(int)(prevAllocatedPage.incrementAndGet() % allPages.length);
+  ByteBuffer byteBuf=allocateBuffer(theChunkCount,0,selectedPage);
+  if (byteBuf == null) {
+    byteBuf=allocateBuffer(theChunkCount,selectedPage,allPages.length);
+  }
+  final long threadId=Thread.currentThread().getId();
+  if (byteBuf != null) {
+    final ByteBuffer finlBuffer=byteBuf;
+    memoryUsage.compute(threadId,(aLong,aLong2) -> {
+      if (aLong2 != null) {
+        return memoryUsage.get(threadId) + finlBuffer.capacity();
+      }
+ else {
+        return (long)finlBuffer.capacity();
+      }
+    }
+);
+  }
+  if (byteBuf == null) {
+    return ByteBuffer.allocate(size);
+  }
+  return byteBuf;
+}

@@ -1,0 +1,12 @@
+@Override public <R,A>CompletionStage<R> thenCollect(Collector<? super T,A,R> collector){
+  return publicStage().thenApply(items -> {
+    A container=collector.supplier().get();
+    BiConsumer<A,? super T> accumulator=collector.accumulator();
+    items.forEach(item -> accumulator.accept(container,item));
+    if (collector.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)) {
+      return (R)container;
+    }
+    return collector.finisher().apply(container);
+  }
+);
+}

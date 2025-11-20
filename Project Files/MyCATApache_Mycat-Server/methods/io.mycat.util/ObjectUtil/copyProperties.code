@@ -1,0 +1,29 @@
+public static void copyProperties(Object fromObj,Object toObj){
+  Class<? extends Object> fromClass=fromObj.getClass();
+  Class<? extends Object> toClass=toObj.getClass();
+  try {
+    BeanInfo fromBean=Introspector.getBeanInfo(fromClass);
+    BeanInfo toBean=Introspector.getBeanInfo(toClass);
+    PropertyDescriptor[] toPd=toBean.getPropertyDescriptors();
+    List<PropertyDescriptor> fromPd=Arrays.asList(fromBean.getPropertyDescriptors());
+    for (    PropertyDescriptor propertyDescriptor : toPd) {
+      propertyDescriptor.getDisplayName();
+      PropertyDescriptor pd=fromPd.get(fromPd.indexOf(propertyDescriptor));
+      if (pd.getDisplayName().equals(propertyDescriptor.getDisplayName()) && !pd.getDisplayName().equals("class") && propertyDescriptor.getWriteMethod() != null) {
+        propertyDescriptor.getWriteMethod().invoke(toObj,pd.getReadMethod().invoke(fromObj,null));
+      }
+    }
+  }
+ catch (  IntrospectionException e) {
+    throw new RuntimeException(e);
+  }
+catch (  IllegalArgumentException e) {
+    throw new RuntimeException(e);
+  }
+catch (  IllegalAccessException e) {
+    throw new RuntimeException(e);
+  }
+catch (  InvocationTargetException e) {
+    throw new RuntimeException(e);
+  }
+}

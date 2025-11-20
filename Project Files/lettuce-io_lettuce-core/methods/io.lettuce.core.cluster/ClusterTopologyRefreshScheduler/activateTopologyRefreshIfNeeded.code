@@ -1,0 +1,11 @@
+protected void activateTopologyRefreshIfNeeded(){
+  ClusterClientOptions options=clientOptions.get();
+  ClusterTopologyRefreshOptions topologyRefreshOptions=options.getTopologyRefreshOptions();
+  if (!topologyRefreshOptions.isPeriodicRefreshEnabled() || clusterTopologyRefreshActivated.get()) {
+    return;
+  }
+  if (clusterTopologyRefreshActivated.compareAndSet(false,true)) {
+    ScheduledFuture<?> scheduledFuture=genericWorkerPool.scheduleAtFixedRate(this,options.getRefreshPeriod().toNanos(),options.getRefreshPeriod().toNanos(),TimeUnit.NANOSECONDS);
+    clusterTopologyRefreshFuture.set(scheduledFuture);
+  }
+}

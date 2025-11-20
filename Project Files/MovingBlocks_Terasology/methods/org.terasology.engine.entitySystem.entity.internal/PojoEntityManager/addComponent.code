@@ -1,0 +1,29 @@
+/** 
+ * Adds (or replaces) a component to an entity
+ * @param entityId
+ * @param component
+ * @param < T >
+ * @return The added component
+ */
+@Override public <T extends Component>T addComponent(long entityId,T component){
+  Preconditions.checkNotNull(component);
+  Optional<Component> oldComponent=getPool(entityId).map(pool -> pool.getComponentStore().put(entityId,component));
+  if (!oldComponent.isPresent()) {
+    notifyComponentAdded(getEntity(entityId),component.getClass());
+  }
+ else {
+    logger.error("Adding a component ({}) over an existing component for entity {}",component.getClass(),entityId);
+    notifyComponentChanged(getEntity(entityId),component.getClass());
+  }
+  if (eventSystem != null) {
+    EntityRef entityRef=getEntity(entityId);
+    if (!oldComponent.isPresent()) {
+      eventSystem.send(entityRef,OnAddedComponent.newInstance(),component);
+      eventSystem.send(entityRef,OnActivatedComponent.newInstance(),component);
+    }
+ else {
+      eventSystem.send(entityRef,OnChangedComponent.newInstance(),component);
+    }
+  }
+  return component;
+}

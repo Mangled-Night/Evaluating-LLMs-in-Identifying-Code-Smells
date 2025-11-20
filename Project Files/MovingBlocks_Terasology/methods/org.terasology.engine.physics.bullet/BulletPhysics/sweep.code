@@ -1,0 +1,10 @@
+@Override public SweepCallback sweep(Vector3f startPos,Vector3f endPos,float allowedPenetration,float slopeFactor){
+  Matrix4f startTransform=new Matrix4f().translationRotateScale(startPos,new Quaternionf(),1.0f);
+  Matrix4f endTransform=new Matrix4f().translationRotateScale(endPos,new Quaternionf(),1.0f);
+  BulletSweepCallback callback=new BulletSweepCallback(collider,startPos,slopeFactor);
+  callback.setCollisionFilterGroup(collider.getBroadphaseHandle().getCollisionFilterGroup());
+  callback.setCollisionFilterMask(collider.getBroadphaseHandle().getCollisionFilterMask());
+  callback.setCollisionFilterGroup((short)(callback.getCollisionFilterGroup() & (~StandardCollisionGroup.SENSOR.getFlag())));
+  collider.convexSweepTest((btConvexShape)(collider.getCollisionShape()),startTransform,endTransform,callback,allowedPenetration);
+  return callback;
+}

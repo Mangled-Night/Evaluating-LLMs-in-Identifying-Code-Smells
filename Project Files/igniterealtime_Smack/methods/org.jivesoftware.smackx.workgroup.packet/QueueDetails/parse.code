@@ -1,0 +1,39 @@
+@Override public QueueDetails parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, TextParseException, ParseException {
+  SimpleDateFormat dateFormat=new SimpleDateFormat(DATE_FORMAT);
+  QueueDetails queueDetails=new QueueDetails();
+  XmlPullParser.Event eventType=parser.getEventType();
+  while (eventType != XmlPullParser.Event.END_ELEMENT && "notify-queue-details".equals(parser.getName())) {
+    eventType=parser.next();
+    while ((eventType == XmlPullParser.Event.START_ELEMENT) && "user".equals(parser.getName())) {
+      String uid;
+      int position=-1;
+      int time=-1;
+      Date joinTime=null;
+      uid=parser.getAttributeValue("","jid");
+      if (uid == null) {
+      }
+      eventType=parser.next();
+      while (eventType != XmlPullParser.Event.END_ELEMENT || !"user".equals(parser.getName())) {
+        if ("position".equals(parser.getName())) {
+          position=Integer.parseInt(parser.nextText());
+        }
+ else         if ("time".equals(parser.getName())) {
+          time=Integer.parseInt(parser.nextText());
+        }
+ else         if ("join-time".equals(parser.getName())) {
+          joinTime=dateFormat.parse(parser.nextText());
+        }
+ else         if (parser.getName().equals("waitTime")) {
+          Date wait=dateFormat.parse(parser.nextText());
+          LOGGER.fine(wait.toString());
+        }
+        eventType=parser.next();
+        if (eventType != XmlPullParser.Event.END_ELEMENT) {
+        }
+      }
+      queueDetails.addUser(new QueueUser(uid,position,time,joinTime));
+      eventType=parser.next();
+    }
+  }
+  return queueDetails;
+}

@@ -1,0 +1,31 @@
+@Test void shouldConcurrentlyFail(){
+  List<CompletableFuture<String>> progress=new ArrayList<>();
+  AsyncObjectFactory<String> IN_PROGRESS=new AsyncObjectFactory<String>(){
+    @Override public CompletableFuture<String> create(){
+      CompletableFuture<String> future=new CompletableFuture<>();
+      progress.add(future);
+      return future;
+    }
+    @Override public CompletableFuture<Void> destroy(    String object){
+      destroyed.add(object);
+      return CompletableFuture.completedFuture(null);
+    }
+    @Override public CompletableFuture<Boolean> validate(    String object){
+      return CompletableFuture.completedFuture(true);
+    }
+  }
+;
+  BoundedAsyncPool<String> pool=new BoundedAsyncPool<>(IN_PROGRESS,BoundedPoolConfig.builder().maxTotal(4).build());
+  CompletableFuture<String> object1=pool.acquire();
+  CompletableFuture<String> object2=pool.acquire();
+  CompletableFuture<String> object3=pool.acquire();
+  CompletableFuture<String> object4=pool.acquire();
+  progress.forEach(it -> it.completeExceptionally(new IllegalStateException()));
+  assertThat(object1).isCompletedExceptionally();
+  assertThat(object2).isCompletedExceptionally();
+  assertThat(object3).isCompletedExceptionally();
+  assertThat(object4).isCompletedExceptionally();
+  assertThat(pool.getIdle()).isZero();
+  assertThat(pool.getObjectCount()).isZero();
+  assertThat(pool.getCreationInProgress()).isZero();
+}

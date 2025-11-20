@@ -1,0 +1,17 @@
+static class DefaultClusterNodeConnectionFactory<K,V> extends AbstractClusterNodeConnectionFactory<K,V> {
+  private final RedisClusterClient redisClusterClient;
+  private final RedisCodec<K,V> redisCodec;
+  private final RedisChannelWriter clusterWriter;
+  DefaultClusterNodeConnectionFactory(  RedisClusterClient redisClusterClient,  RedisCodec<K,V> redisCodec,  RedisChannelWriter clusterWriter){
+    super(redisClusterClient.getResources());
+    this.redisClusterClient=redisClusterClient;
+    this.redisCodec=redisCodec;
+    this.clusterWriter=clusterWriter;
+  }
+  @Override public ConnectionFuture<StatefulRedisConnection<K,V>> apply(  ConnectionKey key){
+    if (key.nodeId != null) {
+      return redisClusterClient.connectToNodeAsync(redisCodec,key.nodeId,null,getSocketAddressSupplier(key));
+    }
+    return redisClusterClient.connectToNodeAsync(redisCodec,key.host + ":" + key.port,clusterWriter,getSocketAddressSupplier(key));
+  }
+}

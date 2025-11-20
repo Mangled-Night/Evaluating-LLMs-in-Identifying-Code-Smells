@@ -1,0 +1,26 @@
+/** 
+ * Creates the components for the entity being deserialized based on its prefab (if any)
+ * @param entityData
+ * @return The mapping of components
+ */
+private Map<Class<? extends Component>,Component> createInitialComponents(EntityData.Entity entityData){
+  Set<ComponentMetadata<?>> removedComponents=Sets.newHashSet();
+  for (  String removedComp : entityData.getRemovedComponentList()) {
+    ComponentMetadata<?> removedMetadata=componentLibrary.resolve(removedComp);
+    if (removedMetadata != null) {
+      removedComponents.add(removedMetadata);
+    }
+  }
+  Map<Class<? extends Component>,Component> componentMap=Maps.newHashMap();
+  if (entityData.hasParentPrefab() && !entityData.getParentPrefab().isEmpty() && prefabManager.exists(entityData.getParentPrefab())) {
+    Prefab prefab=prefabManager.getPrefab(entityData.getParentPrefab());
+    for (    Component component : prefab.iterateComponents()) {
+      ComponentMetadata<?> metadata=componentLibrary.getMetadata(component);
+      if (!removedComponents.contains(metadata)) {
+        componentMap.put(component.getClass(),componentLibrary.copy(component));
+      }
+    }
+    componentMap.put(EntityInfoComponent.class,new EntityInfoComponent(prefab,true,prefab.isAlwaysRelevant()));
+  }
+  return componentMap;
+}

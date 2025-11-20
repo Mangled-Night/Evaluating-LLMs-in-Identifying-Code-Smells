@@ -1,0 +1,17 @@
+private static class TextureResources implements DisposableResource {
+  private final LwjglGraphicsManager graphicsManager;
+  private volatile int id;
+  private volatile LoadedTextureInfo loadedTextureInfo;
+  private final List<DisposableResource> disposalSubscribers=Lists.newArrayList();
+  TextureResources(  LwjglGraphicsManager graphicsManager){
+    this.graphicsManager=graphicsManager;
+  }
+  @Override public void close(){
+    if (loadedTextureInfo != null) {
+      disposalSubscribers.forEach(DisposableResource::close);
+      graphicsManager.disposeTexture(id);
+      loadedTextureInfo=null;
+      id=0;
+    }
+  }
+}

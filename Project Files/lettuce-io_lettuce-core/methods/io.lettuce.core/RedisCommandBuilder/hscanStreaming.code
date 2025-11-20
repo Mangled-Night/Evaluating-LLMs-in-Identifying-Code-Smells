@@ -1,0 +1,24 @@
+Command<K,V,StreamScanCursor> hscanStreaming(KeyValueStreamingChannel<K,V> channel,K key){
+  notNullKey(key);
+  notNull(channel);
+  return hscanStreaming(channel,key,ScanCursor.INITIAL,null);
+}
+Command<K,V,StreamScanCursor> hscanStreaming(KeyValueStreamingChannel<K,V> channel,K key,ScanCursor scanCursor){
+  notNullKey(key);
+  notNull(channel);
+  return hscanStreaming(channel,key,scanCursor,null);
+}
+Command<K,V,StreamScanCursor> hscanStreaming(KeyValueStreamingChannel<K,V> channel,K key,ScanArgs scanArgs){
+  notNullKey(key);
+  notNull(channel);
+  return hscanStreaming(channel,key,ScanCursor.INITIAL,scanArgs);
+}
+Command<K,V,StreamScanCursor> hscanStreaming(KeyValueStreamingChannel<K,V> channel,K key,ScanCursor scanCursor,ScanArgs scanArgs){
+  notNullKey(key);
+  notNull(channel);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  args.addKey(key);
+  scanArgs(scanCursor,scanArgs,args);
+  KeyValueScanStreamingOutput<K,V> output=new KeyValueScanStreamingOutput<>(codec,channel);
+  return createCommand(HSCAN,output,args);
+}

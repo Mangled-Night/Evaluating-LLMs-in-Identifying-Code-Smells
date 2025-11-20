@@ -1,0 +1,9 @@
+public void setRelevanceSystem(RelevanceSystem relevanceSystem){
+  this.relevanceSystem=relevanceSystem;
+  loadingPipeline=new ChunkProcessingPipeline(this::getChunk,relevanceSystem.createChunkTaskComporator());
+  loadingPipeline.addStage(ChunkTaskProvider.create("Chunk generate internal lightning",(Consumer<Chunk>)InternalLightProcessor::generateInternalLighting)).addStage(ChunkTaskProvider.create("Chunk deflate",Chunk::deflate)).addStage(ChunkTaskProvider.createMulti("Light merging",chunks -> {
+    Chunk[] localChunks=chunks.toArray(new Chunk[0]);
+    return LightMerger.merge(localChunks);
+  }
+,LightMerger::requiredChunks)).addStage(ChunkTaskProvider.create("Chunk ready",readyChunks::add));
+}

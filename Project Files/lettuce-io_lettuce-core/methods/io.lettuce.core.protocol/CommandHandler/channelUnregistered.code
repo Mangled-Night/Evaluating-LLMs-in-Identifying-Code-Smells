@@ -1,0 +1,20 @@
+/** 
+ * @see io.netty.channel.ChannelInboundHandlerAdapter#channelUnregistered(io.netty.channel.ChannelHandlerContext)
+ */
+@Override public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+  if (debugEnabled) {
+    logger.debug("{} channelUnregistered()",logPrefix());
+  }
+  if (channel != null && ctx.channel() != channel) {
+    logger.debug("{} My channel and ctx.channel mismatch. Propagating event to other listeners",logPrefix());
+    ctx.fireChannelUnregistered();
+    return;
+  }
+  channel=null;
+  buffer.release();
+  rsm.close();
+  rsm=null;
+  reset();
+  setState(LifecycleState.CLOSED);
+  ctx.fireChannelUnregistered();
+}

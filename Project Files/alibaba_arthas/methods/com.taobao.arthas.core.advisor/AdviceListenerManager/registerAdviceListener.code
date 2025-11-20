@@ -1,0 +1,24 @@
+public void registerAdviceListener(String className,String methodName,String methodDesc,AdviceListener listener){
+synchronized (this) {
+    className=className.replace('/','.');
+    String key=key(className,methodName,methodDesc);
+    List<AdviceListener> listeners=map.get(key);
+    if (listeners == null) {
+      listeners=new ArrayList<AdviceListener>();
+      map.put(key,listeners);
+    }
+    if (!listeners.contains(listener)) {
+      listeners.add(listener);
+    }
+  }
+}
+public static void registerAdviceListener(ClassLoader classLoader,String className,String methodName,String methodDesc,AdviceListener listener){
+  classLoader=wrap(classLoader);
+  className=className.replace('/','.');
+  ClassLoaderAdviceListenerManager manager=adviceListenerMap.get(classLoader);
+  if (manager == null) {
+    manager=new ClassLoaderAdviceListenerManager();
+    adviceListenerMap.put(classLoader,manager);
+  }
+  manager.registerAdviceListener(className,methodName,methodDesc,listener);
+}

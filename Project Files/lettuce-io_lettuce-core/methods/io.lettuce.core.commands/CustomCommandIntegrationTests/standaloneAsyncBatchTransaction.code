@@ -1,0 +1,14 @@
+@Test void standaloneAsyncBatchTransaction(){
+  RedisCommand<String,String,String> multi=new Command<>(CommandType.MULTI,new StatusOutput<>(StringCodec.UTF8));
+  RedisCommand<String,String,String> set=new Command<>(CommandType.SET,new StatusOutput<>(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).addKey("key").add("value"));
+  RedisCommand<String,String,TransactionResult> exec=new Command<>(CommandType.EXEC,null);
+  AsyncCommand<String,String,String> async1=new AsyncCommand<>(multi);
+  AsyncCommand<String,String,String> async2=new AsyncCommand<>(set);
+  AsyncCommand<String,String,TransactionResult> async3=new AsyncCommand<>(exec);
+  getStandaloneConnection().dispatch(Arrays.asList(async1,async2,async3));
+  assertThat(TestFutures.getOrTimeout(async1.toCompletableFuture())).isEqualTo("OK");
+  assertThat(TestFutures.getOrTimeout(async2.toCompletableFuture())).isEqualTo("OK");
+  TransactionResult transactionResult=TestFutures.getOrTimeout(async3.toCompletableFuture());
+  assertThat(transactionResult.wasDiscarded()).isFalse();
+  assertThat(transactionResult.<String>get(0)).isEqualTo("OK");
+}

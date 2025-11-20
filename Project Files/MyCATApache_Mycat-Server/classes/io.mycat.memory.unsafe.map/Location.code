@@ -1,0 +1,187 @@
+/** 
+ * Handle returned by  {@link BytesToBytesMap#lookup(Object,long,int)} function.
+ */
+public final class Location {
+  /** 
+ * An index into the hash map's Long array 
+ */
+  private int pos;
+  /** 
+ * True if this location points to a position where a key is defined, false otherwise 
+ */
+  private boolean isDefined;
+  /** 
+ * The hashcode of the most recent key passed to {@link BytesToBytesMap#lookup(Object,long,int,int)}. Caching this hashcode here allows us to avoid re-hashing the key when storing a value for that key.
+ */
+  private int keyHashcode;
+  private Object baseObject;
+  private long keyOffset;
+  private int keyLength;
+  private long valueOffset;
+  private int valueLength;
+  /** 
+ * Memory page containing the record. Only set if created by  {@link BytesToBytesMap#iterator()}.
+ */
+  @Nullable private MemoryBlock memoryPage;
+  private void updateAddressesAndSizes(  long fullKeyAddress){
+    updateAddressesAndSizes(dataNodeMemoryManager.getPage(fullKeyAddress),dataNodeMemoryManager.getOffsetInPage(fullKeyAddress));
+  }
+  private void updateAddressesAndSizes(  final Object base,  long offset){
+    baseObject=base;
+    final int totalLength=Platform.getInt(base,offset);
+    offset+=4;
+    keyLength=Platform.getInt(base,offset);
+    offset+=4;
+    keyOffset=offset;
+    valueOffset=offset + keyLength;
+    valueLength=totalLength - keyLength - 4;
+  }
+  private Location with(  int pos,  int keyHashcode,  boolean isDefined){
+    assert (longArray != null);
+    this.pos=pos;
+    this.isDefined=isDefined;
+    this.keyHashcode=keyHashcode;
+    if (isDefined) {
+      final long fullKeyAddress=longArray.get(pos * 2);
+      updateAddressesAndSizes(fullKeyAddress);
+    }
+    return this;
+  }
+  private Location with(  MemoryBlock page,  long offsetInPage){
+    this.isDefined=true;
+    this.memoryPage=page;
+    updateAddressesAndSizes(page.getBaseObject(),offsetInPage);
+    return this;
+  }
+  /** 
+ * This is only used for spilling
+ */
+  private Location with(  Object base,  long offset,  int length){
+    this.isDefined=true;
+    this.memoryPage=null;
+    baseObject=base;
+    keyOffset=offset + 4;
+    keyLength=Platform.getInt(base,offset);
+    valueOffset=offset + 4 + keyLength;
+    valueLength=length - 4 - keyLength;
+    return this;
+  }
+  /** 
+ * Find the next pair that has the same key as current one.
+ */
+  public boolean nextValue(){
+    assert isDefined;
+    long nextAddr=Platform.getLong(baseObject,valueOffset + valueLength);
+    if (nextAddr == 0) {
+      return false;
+    }
+ else {
+      updateAddressesAndSizes(nextAddr);
+      return true;
+    }
+  }
+  /** 
+ * Returns the memory page that contains the current record. This is only valid if this is returned by  {@link BytesToBytesMap#iterator()}.
+ */
+  public MemoryBlock getMemoryPage(){
+    return this.memoryPage;
+  }
+  /** 
+ * Returns true if the key is defined at this position, and false otherwise.
+ */
+  public boolean isDefined(){
+    return isDefined;
+  }
+  /** 
+ * Returns the base object for key.
+ */
+  public Object getKeyBase(){
+    assert (isDefined);
+    return baseObject;
+  }
+  /** 
+ * Returns the offset for key.
+ */
+  public long getKeyOffset(){
+    assert (isDefined);
+    return keyOffset;
+  }
+  /** 
+ * Returns the base object for value.
+ */
+  public Object getValueBase(){
+    assert (isDefined);
+    return baseObject;
+  }
+  /** 
+ * Returns the offset for value.
+ */
+  public long getValueOffset(){
+    assert (isDefined);
+    return valueOffset;
+  }
+  /** 
+ * Returns the length of the key defined at this position. Unspecified behavior if the key is not defined.
+ */
+  public int getKeyLength(){
+    assert (isDefined);
+    return keyLength;
+  }
+  /** 
+ * Returns the length of the value defined at this position. Unspecified behavior if the key is not defined.
+ */
+  public int getValueLength(){
+    assert (isDefined);
+    return valueLength;
+  }
+  /** 
+ * Append a new value for the key. This method could be called multiple times for a given key. The return value indicates whether the put succeeded or whether it failed because additional memory could not be acquired. <p> It is only valid to call this method immediately after calling `lookup()` using the same key. </p> <p> The key and value must be word-aligned (that is, their sizes must multiples of 8). </p> <p> After calling this method, calls to `get[Key|Value]Address()` and `get[Key|Value]Length` will return information on the data stored by this `append` call. </p> <p> As an example usage, here's the proper way to store a new key: </p> <pre> Location loc = map.lookup(keyBase, keyOffset, keyLength); if (!loc.isDefined()) { if (!loc.append(keyBase, keyOffset, keyLength, ...)) { // handle failure to grow map (by spilling, for example) } } </pre> <p> Unspecified behavior if the key is not defined. </p>
+ * @return true if the put() was successful and false if the put() failed because memory couldnot be acquired.
+ */
+  public boolean append(  Object kbase,  long koff,  int klen,  Object vbase,  long voff,  int vlen){
+    assert (klen % 8 == 0);
+    assert (vlen % 8 == 0);
+    assert (longArray != null);
+    if (numKeys == MAX_CAPACITY || !canGrowArray && numKeys > growthThreshold) {
+      return false;
+    }
+    final long recordLength=8 + klen + vlen+ 8;
+    if (currentPage == null || currentPage.size() - pageCursor < recordLength) {
+      if (!acquireNewPage(recordLength + 4L)) {
+        return false;
+      }
+    }
+    final Object base=currentPage.getBaseObject();
+    long offset=currentPage.getBaseOffset() + pageCursor;
+    final long recordOffset=offset;
+    Platform.putInt(base,offset,klen + vlen + 4);
+    Platform.putInt(base,offset + 4,klen);
+    offset+=8;
+    Platform.copyMemory(kbase,koff,base,offset,klen);
+    offset+=klen;
+    Platform.copyMemory(vbase,voff,base,offset,vlen);
+    offset+=vlen;
+    Platform.putLong(base,offset,isDefined ? longArray.get(pos * 2) : 0);
+    offset=currentPage.getBaseOffset();
+    Platform.putInt(base,offset,Platform.getInt(base,offset) + 1);
+    pageCursor+=recordLength;
+    final long storedKeyAddress=dataNodeMemoryManager.encodePageNumberAndOffset(currentPage,recordOffset);
+    longArray.set(pos * 2,storedKeyAddress);
+    updateAddressesAndSizes(storedKeyAddress);
+    numValues++;
+    if (!isDefined) {
+      numKeys++;
+      longArray.set(pos * 2 + 1,keyHashcode);
+      isDefined=true;
+      if (numKeys > growthThreshold && longArray.size() < MAX_CAPACITY) {
+        try {
+          growAndRehash();
+        }
+ catch (        OutOfMemoryError oom) {
+          canGrowArray=false;
+        }
+      }
+    }
+    return true;
+  }
+}

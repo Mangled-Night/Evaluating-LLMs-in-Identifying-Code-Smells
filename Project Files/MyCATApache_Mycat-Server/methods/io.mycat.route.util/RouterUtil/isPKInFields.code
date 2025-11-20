@@ -1,0 +1,31 @@
+private static int isPKInFields(String origSQL,String primaryKey,int firstLeftBracketIndex,int firstRightBracketIndex){
+  if (primaryKey == null) {
+    throw new RuntimeException("please make sure the primaryKey's config is not null in schemal.xml");
+  }
+  boolean isPrimaryKeyInFields=false;
+  int pkStart=0;
+  String upperSQL=origSQL.substring(firstLeftBracketIndex,firstRightBracketIndex + 1).toUpperCase();
+  for (int pkOffset=0, primaryKeyLength=primaryKey.length(); ; ) {
+    pkStart=upperSQL.indexOf(primaryKey,pkOffset);
+    if (pkStart >= 0 && pkStart < firstRightBracketIndex) {
+      char pkSide=upperSQL.charAt(pkStart - 1);
+      if (pkSide <= ' ' || pkSide == '`' || pkSide == ',' || pkSide == '(') {
+        pkSide=upperSQL.charAt(pkStart + primaryKey.length());
+        isPrimaryKeyInFields=pkSide <= ' ' || pkSide == '`' || pkSide == ',' || pkSide == ')';
+      }
+      if (isPrimaryKeyInFields) {
+        break;
+      }
+      pkOffset=pkStart + primaryKeyLength;
+    }
+ else {
+      break;
+    }
+  }
+  if (isPrimaryKeyInFields) {
+    return firstLeftBracketIndex + pkStart;
+  }
+ else {
+    return -1;
+  }
+}

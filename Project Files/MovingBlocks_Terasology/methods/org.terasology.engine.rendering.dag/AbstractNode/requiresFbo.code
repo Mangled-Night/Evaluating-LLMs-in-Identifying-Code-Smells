@@ -1,0 +1,22 @@
+/** 
+ * Used by inheriting classes to declare the need for a specific Frame Buffer Object and obtain it. The characteristics of the required FBO are described in the fboConfig provided in input. Within the context of the given fboManager an fboConfig uniquely identifies the FBO: if the FBO exists already it is returned, if it doesn't, the FBO is first created and then returned. If the fboManager already contains an FBO with the same fboUri but different characteristics from those described in the fboConfig object, an IllegalArgumentException is thrown.
+ * @param fboConfig an FboConfig object describing the required FBO.
+ * @param fboManager a BaseFboManager object from which to obtain the FBO.
+ * @return the requested FBO object, either newly created or a pre-existing one.
+ * @throws IllegalArgumentException if the fboUri in fboConfig already in use by FBO with different characteristics.
+ */
+protected FBO requiresFbo(FboConfig fboConfig,BaseFboManager fboManager){
+  SimpleUri fboName=fboConfig.getName();
+  FBO fbo;
+  if (!fboUsages.containsKey(fboName)) {
+    fboUsages.put(fboName,fboManager);
+  }
+ else {
+    logger.warn("FBO " + fboName + " is already requested.");
+    fbo=fboManager.get(fboName);
+    this.addInputFboConnection(inputConnections.size() + 1,fbo);
+    return fbo;
+  }
+  fbo=fboManager.request(fboConfig);
+  return fbo;
+}

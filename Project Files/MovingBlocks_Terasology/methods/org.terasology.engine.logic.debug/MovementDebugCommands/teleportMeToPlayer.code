@@ -1,0 +1,18 @@
+@Command(shortDescription="Teleport to player",runOnServer=true,requiredPermission=PermissionManager.CHEAT_PERMISSION) public String teleportMeToPlayer(@Sender EntityRef sender,@CommandParam("username") String username){
+  for (  EntityRef clientEntity : entityManager.getEntitiesWith(ClientComponent.class)) {
+    EntityRef clientInfo=clientEntity.getComponent(ClientComponent.class).clientInfo;
+    DisplayNameComponent name=clientInfo.getComponent(DisplayNameComponent.class);
+    if (username.equalsIgnoreCase(name.name)) {
+      LocationComponent locationComponent=clientEntity.getComponent(LocationComponent.class);
+      if (locationComponent != null) {
+        Vector3f vLocation=locationComponent.getWorldPosition(new Vector3f());
+        ClientComponent clientComp=sender.getComponent(ClientComponent.class);
+        if (clientComp != null) {
+          clientComp.character.send(new CharacterTeleportEvent(vLocation));
+          return "Teleporting you to " + username + " at "+ vLocation.x+ " "+ vLocation.y+ " "+ vLocation.z;
+        }
+      }
+    }
+  }
+  throw new IllegalArgumentException("No such user '" + username + "'");
+}

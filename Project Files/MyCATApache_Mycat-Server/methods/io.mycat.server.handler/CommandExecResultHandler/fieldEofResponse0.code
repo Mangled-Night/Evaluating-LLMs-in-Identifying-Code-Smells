@@ -1,0 +1,23 @@
+private void fieldEofResponse0(byte[] header,List<byte[]> fields,byte[] eof,BackendConnection conn){
+  byte packetId=0;
+  this.netOutBytes+=header.length;
+  for (int i=0, len=fields.size(); i < len; ++i) {
+    byte[] field=fields.get(i);
+    this.netOutBytes+=field.length;
+  }
+  header[3]=++packetId;
+  ServerConnection source=getSession().getSource();
+  buffer=source.writeToBuffer(header,allocBuffer());
+  for (int i=0, len=fields.size(); i < len; ++i) {
+    byte[] field=fields.get(i);
+    field[3]=++packetId;
+    FieldPacket fieldPk=new FieldPacket();
+    fieldPk.read(field);
+    fieldPackets.add(fieldPk);
+    buffer=source.writeToBuffer(field,buffer);
+  }
+  fieldCount=fieldPackets.size();
+  eof[3]=++packetId;
+  this.netOutBytes+=eof.length;
+  buffer=source.writeToBuffer(eof,buffer);
+}

@@ -1,0 +1,11 @@
+@Test void multi(){
+  assertThat(TestFutures.getOrTimeout(async.multi())).isEqualTo("OK");
+  Future<String> set=async.set(key,value);
+  Future<Long> rpush=async.rpush("list","1","2");
+  Future<List<String>> lrange=async.lrange("list",0,-1);
+  assertThat(!set.isDone() && !rpush.isDone() && !rpush.isDone()).isTrue();
+  assertThat(TestFutures.getOrTimeout(async.exec())).contains("OK",2L,list("1","2"));
+  assertThat(TestFutures.getOrTimeout(set)).isEqualTo("OK");
+  assertThat(TestFutures.getOrTimeout(rpush)).isEqualTo(2L);
+  assertThat(TestFutures.getOrTimeout(lrange)).isEqualTo(list("1","2"));
+}

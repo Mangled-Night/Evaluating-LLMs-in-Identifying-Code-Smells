@@ -1,0 +1,13 @@
+XmppTcpTransportModule(XmppTcpTransportModuleDescriptor moduleDescriptor,ModularXmppClientToServerConnectionInternal connectionInternal){
+  super(moduleDescriptor,connectionInternal);
+  tcpNioTransport=new XmppTcpNioTransport(connectionInternal);
+  XmlPrinter incomingDebugPrettyPrinter=null;
+  final SmackDebugger debugger=connectionInternal.smackDebugger;
+  if (debugger != null) {
+    incomingDebugPrettyPrinter=XmlPrettyPrinter.builder().setPrettyWriter(sb -> debugger.incomingStreamSink(sb)).build();
+    XmlPrinter outgoingDebugPrettyPrinter=XmlPrettyPrinter.builder().setPrettyWriter(sb -> debugger.outgoingStreamSink(sb)).build();
+    outputDebugSplitter=new XmppXmlSplitter(outgoingDebugPrettyPrinter);
+  }
+  XmppXmlSplitter xmppXmlSplitter=new XmppXmlSplitter(MAX_ELEMENT_SIZE,xmppElementCallback,incomingDebugPrettyPrinter);
+  splitter=new Utf8ByteXmppXmlSplitter(xmppXmlSplitter);
+}

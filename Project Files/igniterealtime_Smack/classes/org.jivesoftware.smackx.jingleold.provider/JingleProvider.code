@@ -1,0 +1,73 @@
+/** 
+ * The JingleProvider parses Jingle packets.
+ * @author Alvaro Saurin
+ */
+public class JingleProvider extends IqProvider<Jingle> {
+  /** 
+ * Parse a iq/jingle element.
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ * @throws IOException if an I/O error occurred.
+ * @throws SmackParsingException if the Smack parser (provider) encountered invalid input.
+ */
+  @Override public Jingle parse(  XmlPullParser parser,  int intialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws IOException, XmlPullParserException, SmackParsingException {
+    Jingle jingle=new Jingle();
+    String sid;
+    JingleActionEnum action;
+    Jid initiator, responder;
+    boolean done=false;
+    JingleContent currentContent=null;
+    JingleContentProvider jcp=new JingleContentProvider();
+    JingleDescriptionProvider jdpAudio=new JingleDescriptionProvider.Audio();
+    JingleTransportProvider jtpRawUdp=new JingleTransportProvider.RawUdp();
+    JingleTransportProvider jtpIce=new JingleTransportProvider.Ice();
+    ExtensionElementProvider<?> jmipAudio=new JingleContentInfoProvider.Audio();
+    XmlPullParser.Event eventType;
+    String elementName;
+    String namespace;
+    sid=parser.getAttributeValue("","sid");
+    action=JingleActionEnum.getAction(parser.getAttributeValue("","action"));
+    initiator=ParserUtils.getJidAttribute(parser,"initiator");
+    responder=ParserUtils.getJidAttribute(parser,"responder");
+    jingle.setSid(sid);
+    jingle.setAction(action);
+    jingle.setInitiator(initiator);
+    jingle.setResponder(responder);
+    while (!done) {
+      eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT) {
+        elementName=parser.getName();
+        namespace=parser.getNamespace();
+        if (elementName.equals(JingleContent.NODENAME)) {
+          currentContent=jcp.parse(parser);
+          jingle.addContent(currentContent);
+        }
+ else         if (elementName.equals(JingleDescription.NODENAME) && namespace.equals(JingleDescription.Audio.NAMESPACE)) {
+          currentContent.setDescription(jdpAudio.parse(parser));
+        }
+ else         if (elementName.equals(JingleTransport.NODENAME)) {
+          if (namespace.equals(JingleTransport.RawUdp.NAMESPACE)) {
+            currentContent.addJingleTransport(jtpRawUdp.parse(parser));
+          }
+ else           if (namespace.equals(JingleTransport.Ice.NAMESPACE)) {
+            currentContent.addJingleTransport(jtpIce.parse(parser));
+          }
+ else {
+            throw new IOException("Unknown transport namespace \"" + namespace + "\" in Jingle packet.");
+          }
+        }
+ else         if (namespace.equals(JingleContentInfo.Audio.NAMESPACE)) {
+          jingle.setContentInfo((JingleContentInfo)jmipAudio.parse(parser));
+        }
+ else {
+          throw new IOException("Unknown combination of namespace \"" + namespace + "\" and element name \""+ elementName+ "\" in Jingle packet.");
+        }
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT) {
+        if (parser.getName().equals(Jingle.NODENAME)) {
+          done=true;
+        }
+      }
+    }
+    return jingle;
+  }
+}

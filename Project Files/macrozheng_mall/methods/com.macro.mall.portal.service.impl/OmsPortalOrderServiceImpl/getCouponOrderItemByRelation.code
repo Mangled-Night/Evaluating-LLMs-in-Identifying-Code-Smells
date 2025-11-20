@@ -1,0 +1,38 @@
+/** 
+ * 获取与优惠券有关系的下单商品
+ * @param couponHistoryDetail 优惠券详情
+ * @param orderItemList       下单商品
+ * @param type                使用关系类型：0->相关分类；1->指定商品
+ */
+private List<OmsOrderItem> getCouponOrderItemByRelation(SmsCouponHistoryDetail couponHistoryDetail,List<OmsOrderItem> orderItemList,int type){
+  List<OmsOrderItem> result=new ArrayList<>();
+  if (type == 0) {
+    List<Long> categoryIdList=new ArrayList<>();
+    for (    SmsCouponProductCategoryRelation productCategoryRelation : couponHistoryDetail.getCategoryRelationList()) {
+      categoryIdList.add(productCategoryRelation.getProductCategoryId());
+    }
+    for (    OmsOrderItem orderItem : orderItemList) {
+      if (categoryIdList.contains(orderItem.getProductCategoryId())) {
+        result.add(orderItem);
+      }
+ else {
+        orderItem.setCouponAmount(new BigDecimal(0));
+      }
+    }
+  }
+ else   if (type == 1) {
+    List<Long> productIdList=new ArrayList<>();
+    for (    SmsCouponProductRelation productRelation : couponHistoryDetail.getProductRelationList()) {
+      productIdList.add(productRelation.getProductId());
+    }
+    for (    OmsOrderItem orderItem : orderItemList) {
+      if (productIdList.contains(orderItem.getProductId())) {
+        result.add(orderItem);
+      }
+ else {
+        orderItem.setCouponAmount(new BigDecimal(0));
+      }
+    }
+  }
+  return result;
+}

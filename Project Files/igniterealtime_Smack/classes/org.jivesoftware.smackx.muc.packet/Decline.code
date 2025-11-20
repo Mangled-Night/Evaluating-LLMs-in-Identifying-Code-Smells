@@ -1,0 +1,55 @@
+/** 
+ * Represents a rejection to an invitation from another user to a room. The rejection will be sent to the room which in turn will forward the refusal to the inviting user.
+ * @author Gaston Dombiak
+ */
+public static class Decline implements ExtensionElement {
+  public static final String ELEMENT="decline";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  private final String reason;
+  private final EntityBareJid from;
+  private final EntityBareJid to;
+  public Decline(  String reason,  EntityBareJid to){
+    this(reason,null,to);
+  }
+  public Decline(  String reason,  EntityBareJid from,  EntityBareJid to){
+    this.reason=reason;
+    this.from=from;
+    this.to=to;
+  }
+  /** 
+ * Returns the bare JID of the invitee that rejected the invitation. (e.g. 'crone1@shakespeare.lit').
+ * @return the bare JID of the invitee that rejected the invitation.
+ */
+  public EntityBareJid getFrom(){
+    return from;
+  }
+  /** 
+ * Returns the message explaining why the invitation was rejected.
+ * @return the message explaining the reason for the rejection.
+ */
+  public String getReason(){
+    return reason;
+  }
+  /** 
+ * Returns the bare JID of the inviting user. (e.g. 'hecate@shakespeare.lit')
+ * @return the bare JID of the inviting user.
+ */
+  public EntityBareJid getTo(){
+    return to;
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this,enclosingNamespace);
+    xml.optAttribute("to",getTo());
+    xml.optAttribute("from",getFrom());
+    xml.rightAngleBracket();
+    xml.optElement("reason",getReason());
+    xml.closeElement(this);
+    return xml;
+  }
+  @Override public String getElementName(){
+    return QNAME.getLocalPart();
+  }
+  @Override public String getNamespace(){
+    return QNAME.getNamespaceURI();
+  }
+}

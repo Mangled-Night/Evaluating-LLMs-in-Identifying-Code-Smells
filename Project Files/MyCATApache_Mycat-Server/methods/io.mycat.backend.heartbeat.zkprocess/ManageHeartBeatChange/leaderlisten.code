@@ -1,0 +1,48 @@
+public void leaderlisten(){
+  try {
+    if (manageVoteCache != null) {
+      manageVoteCache.close();
+    }
+    manageVoteCache=new PathChildrenCache(client,manageVotePath,true);
+    final ManageHeartBeatChange manager=this;
+    manageVoteCache.getListenable().addListener(new PathChildrenCacheListener(){
+      @Override public void childEvent(      CuratorFramework client,      PathChildrenCacheEvent event){
+        LOGGER.debug("event Type " + event.getType());
+        if (null != event.getData()) {
+          Type type=event.getType();
+switch (type) {
+case CHILD_ADDED:
+{
+            }
+case CHILD_UPDATED:
+{
+            manager.addPath(event.getData().getPath());
+            break;
+          }
+case CHILD_REMOVED:
+{
+          manager.removePath(event.getData().getPath());
+          break;
+        }
+default :
+      break;
+  }
+  if (manager.hasCollectFinish()) {
+    manager.run();
+  }
+}
+}
+}
+);
+manageVoteCache.start();
+if (changingResultNode != null) {
+changingResultNode.close();
+}
+changingResultNode=new NodeCache(client,changingResultPath);
+changingResultNode.start();
+}
+ catch (Exception e) {
+LOGGER.error(e.getMessage());
+e.printStackTrace();
+}
+}

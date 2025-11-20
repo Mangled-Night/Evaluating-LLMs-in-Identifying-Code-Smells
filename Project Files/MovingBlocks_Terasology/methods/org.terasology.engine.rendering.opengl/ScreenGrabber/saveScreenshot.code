@@ -1,0 +1,26 @@
+/** 
+ * Schedules the saving of screenshot data to file. Screenshot data from the GPU is obtained as soon as this method executes. However, the data is only scheduled to be written to file, by submitting a task to the ThreadManager. The task is then executed as soon as possible but not necessarily immediately. The file is then saved in the designated screenshot folder, or if it's a game preview image, it'll be placed in the save game folder. If no screenshot data is available an error is logged and the method returns doing nothing.
+ */
+public void saveScreenshot(){
+  if (displayResolutionDependentFBOs == null) {
+    displayResolutionDependentFBOs=CoreRegistry.get(DisplayResolutionDependentFbo.class);
+  }
+  FBO sceneFinalFbo=displayResolutionDependentFBOs.get(DisplayResolutionDependentFbo.FINAL_BUFFER);
+  final ByteBuffer buffer=sceneFinalFbo.getColorBufferRawData();
+  if (buffer == null) {
+    logger.error("No screenshot data available. No screenshot will be saved.");
+    return;
+  }
+  int width=sceneFinalFbo.width();
+  int height=sceneFinalFbo.height();
+  Runnable task;
+  if (savingGamePreview) {
+    task=() -> saveGamePreviewTask(buffer,width,height);
+    this.savingGamePreview=false;
+  }
+ else {
+    task=() -> saveScreenshotTask(buffer,width,height);
+  }
+  GameScheduler.scheduleParallel("Write screenshot",task);
+  isTakingScreenshot=false;
+}

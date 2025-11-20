@@ -1,0 +1,32 @@
+@Override public RouteResultset route(SystemConfig sysConfig,SchemaConfig schema,int sqlType,String realSQL,String charset,ServerConnection sc,LayerCachePool cachePool,String hintSQLValue,int hintSqlType,Map hintMap) throws SQLNonTransientException {
+  RouteResultset rrs=RouteStrategyFactory.getRouteStrategy().route(sysConfig,schema,sqlType,realSQL,charset,sc,cachePool);
+  LOGGER.debug("schema.rrs(): " + rrs);
+  Boolean isRouteToMaster=null;
+  LOGGER.debug("hintSQLValue:::::::::" + hintSQLValue);
+  if (hintSQLValue != null && !hintSQLValue.trim().equals("")) {
+    if (hintSQLValue.trim().equalsIgnoreCase("master")) {
+      isRouteToMaster=true;
+    }
+    if (hintSQLValue.trim().equalsIgnoreCase("slave")) {
+      if (sqlType == ServerParse.DELETE || sqlType == ServerParse.INSERT || sqlType == ServerParse.REPLACE || sqlType == ServerParse.UPDATE || sqlType == ServerParse.DDL) {
+        LOGGER.error("should not use hint 'db_type' to route 'delete', 'insert', 'replace', 'update', 'ddl' to a slave db.");
+        isRouteToMaster=null;
+      }
+ else {
+        isRouteToMaster=false;
+      }
+    }
+  }
+  if (isRouteToMaster == null) {
+    LOGGER.warn(" sql hint 'db_type' error, ignore this hint.");
+    return rrs;
+  }
+  if (isRouteToMaster) {
+    rrs.setRunOnSlave(false);
+  }
+  if (!isRouteToMaster) {
+    rrs.setRunOnSlave(true);
+  }
+  LOGGER.debug("rrs.getRunOnSlave():" + rrs.getRunOnSlaveDebugInfo());
+  return rrs;
+}

@@ -1,0 +1,10 @@
+@ParameterizedTest @EnumSource(SmackTestUtil.XmlPullParserKind.class) public void testParsingOfStreamErrorWithTextAndOptionalElement(SmackTestUtil.XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+  final String xml="<stream:stream from='im.example.com' id='++TR84Sm6A3hnt3Q065SnAbbk3Y=' xmlns:stream='http://etherx.jabber.org/streams'>" + "<stream:error>" + "<conflict xmlns='urn:ietf:params:xml:ns:xmpp-streams' />"+ "<text xml:lang='' xmlns='urn:ietf:params:xml:ns:xmpp-streams'>"+ "Replaced by new connection"+ "</text>"+ "<appSpecificElement xmlns='myns'>"+ "Text contents of application-specific condition element: Foo Bar"+ "</appSpecificElement>"+ "</stream:error>"+ "</stream:stream>";
+  XmlPullParser parser=SmackTestUtil.getParserFor(xml,"error",parserKind);
+  StreamError error=PacketParserUtils.parseStreamError(parser);
+  assertNotNull(error);
+  assertEquals(Condition.conflict,error.getCondition());
+  assertEquals("Replaced by new connection",error.getDescriptiveText());
+  XmlElement appSpecificElement=error.getExtension("appSpecificElement","myns");
+  assertNotNull(appSpecificElement);
+}

@@ -1,0 +1,24 @@
+/** 
+ * Ephemera Trust Callback used to make trust decisions in tests.
+ */
+public class EphemeralTrustCallback implements OmemoTrustCallback {
+  private final HashMap<OmemoDevice,HashMap<OmemoFingerprint,TrustState>> trustStates=new HashMap<>();
+  @Override public TrustState getTrust(  OmemoDevice device,  OmemoFingerprint fingerprint){
+    HashMap<OmemoFingerprint,TrustState> states=trustStates.get(device);
+    if (states != null) {
+      TrustState state=states.get(fingerprint);
+      if (state != null) {
+        return state;
+      }
+    }
+    return TrustState.undecided;
+  }
+  @Override public void setTrust(  OmemoDevice device,  OmemoFingerprint fingerprint,  TrustState state){
+    HashMap<OmemoFingerprint,TrustState> states=trustStates.get(device);
+    if (states == null) {
+      states=new HashMap<>();
+      trustStates.put(device,states);
+    }
+    states.put(fingerprint,state);
+  }
+}

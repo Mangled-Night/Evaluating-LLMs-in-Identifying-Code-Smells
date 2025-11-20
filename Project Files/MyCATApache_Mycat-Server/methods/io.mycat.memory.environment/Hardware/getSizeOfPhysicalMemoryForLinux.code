@@ -1,0 +1,26 @@
+/** 
+ * Returns the size of the physical memory in bytes on a Linux-based operating system.
+ * @return the size of the physical memory in bytes or <code>-1</code> ifthe size could not be determined
+ */
+private static long getSizeOfPhysicalMemoryForLinux(){
+  try (BufferedReader lineReader=new BufferedReader(new FileReader(LINUX_MEMORY_INFO_PATH))){
+    String line;
+    while ((line=lineReader.readLine()) != null) {
+      Matcher matcher=LINUX_MEMORY_REGEX.matcher(line);
+      if (matcher.matches()) {
+        String totalMemory=matcher.group(1);
+        return Long.parseLong(totalMemory) * 1024L;
+      }
+    }
+    LOG.error("Cannot determine the size of the physical memory for Linux host (using '/proc/meminfo'). Unexpected format.");
+    return -1;
+  }
+ catch (  NumberFormatException e) {
+    LOG.error("Cannot determine the size of the physical memory for Linux host (using '/proc/meminfo'). Unexpected format.");
+    return -1;
+  }
+catch (  Throwable t) {
+    LOG.error("Cannot determine the size of the physical memory for Linux host (using '/proc/meminfo'): " + t.getMessage(),t);
+    return -1;
+  }
+}

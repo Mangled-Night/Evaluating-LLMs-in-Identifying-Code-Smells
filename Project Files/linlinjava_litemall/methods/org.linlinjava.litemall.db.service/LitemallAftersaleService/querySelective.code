@@ -1,0 +1,22 @@
+public List<LitemallAftersale> querySelective(Integer orderId,String aftersaleSn,Short status,Integer page,Integer limit,String sort,String order){
+  LitemallAftersaleExample example=new LitemallAftersaleExample();
+  LitemallAftersaleExample.Criteria criteria=example.or();
+  if (orderId != null) {
+    criteria.andOrderIdEqualTo(orderId);
+  }
+  if (!StringUtils.isEmpty(aftersaleSn)) {
+    criteria.andAftersaleSnEqualTo(aftersaleSn);
+  }
+  if (status != null) {
+    criteria.andStatusEqualTo(status);
+  }
+  criteria.andDeletedEqualTo(false);
+  if (!StringUtils.isEmpty(sort) && !StringUtils.isEmpty(order)) {
+    example.setOrderByClause(sort + " " + order);
+  }
+ else {
+    example.setOrderByClause(LitemallAftersale.Column.addTime.desc());
+  }
+  PageHelper.startPage(page,limit);
+  return aftersaleMapper.selectByExample(example);
+}

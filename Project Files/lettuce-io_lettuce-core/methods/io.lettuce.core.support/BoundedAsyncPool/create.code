@@ -1,0 +1,25 @@
+/** 
+ * Create and initialize  {@link BoundedAsyncPool} asynchronously.
+ * @param factory must not be {@code null}.
+ * @param poolConfig must not be {@code null}.
+ * @param < T > object type that is managed by the pool.
+ * @return a {@link CompletionStage} that completes with the {@link BoundedAsyncPool} when created and pre-initializedsuccessfully. Completes exceptionally if the pool initialization failed.
+ * @since 5.3.3
+ */
+public static <T>CompletionStage<BoundedAsyncPool<T>> create(AsyncObjectFactory<T> factory,BoundedPoolConfig poolConfig){
+  BoundedAsyncPool<T> pool=new BoundedAsyncPool<>(factory,poolConfig,false);
+  CompletableFuture<BoundedAsyncPool<T>> future=new CompletableFuture<>();
+  pool.createIdle().whenComplete((v,throwable) -> {
+    if (throwable == null) {
+      future.complete(pool);
+    }
+ else {
+      pool.closeAsync().whenComplete((v1,throwable1) -> {
+        future.completeExceptionally(new RedisConnectionException("Could not create pool",throwable));
+      }
+);
+    }
+  }
+);
+  return future;
+}

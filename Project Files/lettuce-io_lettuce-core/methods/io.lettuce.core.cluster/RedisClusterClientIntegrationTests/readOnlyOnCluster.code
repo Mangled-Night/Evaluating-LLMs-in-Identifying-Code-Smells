@@ -1,0 +1,19 @@
+@Test void readOnlyOnCluster(){
+  sync.readOnly();
+  sync.set(ClusterTestSettings.KEY_B,value);
+  TestFutures.awaitOrTimeout(connection.async().quit());
+  assertThat(connection).extracting("connectionState").extracting("readOnly").isEqualTo(Boolean.TRUE);
+  sync.readWrite();
+  assertThat(connection).extracting("connectionState").extracting("readOnly").isEqualTo(Boolean.FALSE);
+  RedisClusterClient clusterClient=RedisClusterClient.create(TestClientResources.get(),RedisURI.Builder.redis(host,40400).build());
+  try {
+    clusterClient.connect();
+    fail("Missing RedisException");
+  }
+ catch (  RedisException e) {
+    assertThat(e).isInstanceOf(RedisException.class);
+  }
+ finally {
+    FastShutdown.shutdown(clusterClient);
+  }
+}

@@ -1,0 +1,11 @@
+/** 
+ * Get completed Chunks as a list. <p> Applies the given function to a new  {@link ChunkMeshWorker}, and returns the list of completed {@link Chunk Chunks}. <p> Assumes the work will not be delayed by more than  {@link #EXPECTED_DURATION}.
+ */
+protected List<Chunk> getChunksThatResultFrom(Consumer<ChunkMeshWorker> withWorker){
+  var scheduler=VirtualTimeScheduler.create();
+  var workerB=new ChunkMeshWorker(ChunkMeshWorkerTest::alwaysCreateMesh,comparator,scheduler,scheduler);
+  var completed=workerB.getCompletedChunks().subscribeWith(TestSubscriber.create());
+  withWorker.accept(workerB);
+  scheduler.advanceTimeBy(EXPECTED_DURATION);
+  return completed.getReceivedOnNext();
+}

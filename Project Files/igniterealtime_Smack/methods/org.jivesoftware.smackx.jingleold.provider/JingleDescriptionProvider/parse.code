@@ -1,0 +1,28 @@
+/** 
+ * Parse a iq/jingle/description element.
+ * @param parser TODO javadoc me pleasethe input to parse
+ * @return a description element
+ * @throws IOException if an I/O error occurred.
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ */
+@Override public JingleDescription parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  JingleDescription desc=getInstance();
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      String name=parser.getName();
+      if (name.equals(PayloadType.NODENAME)) {
+        desc.addPayloadType(parsePayload(parser));
+      }
+ else {
+        throw new IOException("Unknow element \"" + name + "\" in content.");
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getDepth() == initialDepth) {
+        break outerloop;
+      }
+    }
+  }
+  return desc;
+}

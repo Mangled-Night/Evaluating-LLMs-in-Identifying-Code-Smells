@@ -1,0 +1,17 @@
+@Override public int onStartCommand(Intent intent,int flags,int startId){
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+    Notification notification=UtilsBridge.getNotification(NotificationUtils.ChannelConfig.DEFAULT_CHANNEL_CONFIG,null);
+    startForeground(1,notification);
+  }
+  if (intent != null) {
+    Bundle extras=intent.getExtras();
+    if (extras != null) {
+      Message msg=Message.obtain(mReceiveClientMsgHandler,WHAT_SEND);
+      msg.replyTo=messenger;
+      msg.setData(extras);
+      sendMsg2Client(msg);
+      consumeServerProcessCallback(msg);
+    }
+  }
+  return START_NOT_STICKY;
+}

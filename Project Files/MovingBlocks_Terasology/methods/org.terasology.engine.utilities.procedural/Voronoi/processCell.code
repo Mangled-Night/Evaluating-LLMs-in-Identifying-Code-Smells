@@ -1,0 +1,28 @@
+private void processCell(int cellX,int cellY,Vector2f at,VoronoiResult[] results){
+  long seed=(702395077 * (long)cellX + 915488749 * (long)cellY);
+  int count=poissonCount[(int)(seed >> 24)];
+  seed=incrementSeed(seed);
+  for (int point=0; point < count; point++) {
+    long id=seed;
+    seed=incrementSeed(seed);
+    float x=(seed + 0.5f) / 4294967296.0f;
+    seed=incrementSeed(seed);
+    float y=(seed + 0.5f) / 4294967296.0f;
+    seed=incrementSeed(seed);
+    Vector2f innerPos=new Vector2f(x,y);
+    Vector2f delta=new Vector2f(cellX + innerPos.x - at.x,cellY + innerPos.y - at.y);
+    float dist=standardDistanceFunction(delta);
+    if (dist < results[results.length - 1].distance) {
+      int index=results.length - 1;
+      while (index > 0 && dist < results[index - 1].distance) {
+        index--;
+      }
+      for (int i=results.length - 1; i > index; i--) {
+        results[i]=results[i - 1];
+      }
+      results[index].distance=dist;
+      results[index].delta=new Vector2f(delta);
+      results[index].id=(int)id;
+    }
+  }
+}

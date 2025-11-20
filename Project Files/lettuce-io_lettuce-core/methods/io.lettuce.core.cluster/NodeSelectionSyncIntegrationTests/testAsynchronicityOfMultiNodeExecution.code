@@ -1,0 +1,15 @@
+@Test void testAsynchronicityOfMultiNodeExecution(){
+  RedisAdvancedClusterCommands<String,String> connection2=clusterClient.connect().sync();
+  connection2.setTimeout(Duration.ofSeconds(1));
+  NodeSelection<String,String> masters=connection2.masters();
+  masters.commands().configSet("lua-time-limit","10");
+  Executions<Object> eval=null;
+  try {
+    eval=masters.commands().eval("while true do end",STATUS,new String[0]);
+    fail("missing exception");
+  }
+ catch (  RedisCommandTimeoutException e) {
+    assertThat(e).hasMessageContaining("Command timed out for node(s)");
+  }
+  commands.masters().commands().scriptKill();
+}

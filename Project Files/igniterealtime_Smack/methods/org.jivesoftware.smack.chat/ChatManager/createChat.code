@@ -1,0 +1,67 @@
+/** 
+ * Creates a new chat and returns it.
+ * @param userJID the user this chat is with.
+ * @return the created chat.
+ */
+public Chat createChat(EntityJid userJID){
+  return createChat(userJID,null);
+}
+/** 
+ * Creates a new chat and returns it.
+ * @param userJID the user this chat is with.
+ * @param listener the optional listener which will listen for new messages from this chat.
+ * @return the created chat.
+ */
+public Chat createChat(EntityJid userJID,ChatMessageListener listener){
+  return createChat(userJID,null,listener);
+}
+/** 
+ * Creates a new chat using the specified thread ID, then returns it.
+ * @param userJID the jid of the user this chat is with
+ * @param thread the thread of the created chat.
+ * @param listener the optional listener to add to the chat
+ * @return the created chat.
+ */
+public Chat createChat(EntityJid userJID,String thread,ChatMessageListener listener){
+  if (thread == null) {
+    thread=nextID();
+  }
+  Chat chat=threadChats.get(thread);
+  if (chat != null) {
+    throw new IllegalArgumentException("ThreadID is already used");
+  }
+  chat=createChat(userJID,thread,true);
+  chat.addMessageListener(listener);
+  return chat;
+}
+private Chat createChat(EntityJid userJID,String threadID,boolean createdLocally){
+  Chat chat=new Chat(this,userJID,threadID);
+  threadChats.put(threadID,chat);
+  jidChats.put(userJID,chat);
+  baseJidChats.put(userJID.asEntityBareJid(),chat);
+  for (  ChatManagerListener listener : chatManagerListeners) {
+    listener.chatCreated(chat,createdLocally);
+  }
+  return chat;
+}
+/** 
+ * Creates a new  {@link Chat} based on the message. May returns null if no chat could becreated, e.g. because the message comes without from.
+ * @param message TODO javadoc me please
+ * @return a Chat or null if none can be created
+ */
+private Chat createChat(Message message){
+  Jid from=message.getFrom();
+  if (from == null) {
+    return null;
+  }
+  EntityJid userJID=from.asEntityJidIfPossible();
+  if (userJID == null) {
+    LOGGER.warning("Message from JID without localpart: '" + message.toXML() + "'");
+    return null;
+  }
+  String threadID=message.getThread();
+  if (threadID == null) {
+    threadID=nextID();
+  }
+  return createChat(userJID,threadID,false);
+}

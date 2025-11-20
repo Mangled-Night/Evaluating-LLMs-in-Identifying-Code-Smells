@@ -1,0 +1,9 @@
+@Override public void cancel(){
+  Object[] consumers=ONCOMPLETE.get(this);
+  if (consumers != COMPLETE && ONCOMPLETE.compareAndSet(this,consumers,COMPLETE)) {
+    command.cancel();
+    CancellationException exception=new CancellationException();
+    doOnError(exception);
+    notifyBiConsumer(consumers,exception);
+  }
+}

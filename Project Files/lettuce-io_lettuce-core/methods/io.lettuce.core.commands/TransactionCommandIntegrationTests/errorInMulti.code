@@ -1,0 +1,11 @@
+@Test void errorInMulti(){
+  redis.multi();
+  redis.set(key,value);
+  redis.lpop(key);
+  redis.get(key);
+  TransactionResult values=redis.exec();
+  assertThat(values.wasDiscarded()).isFalse();
+  assertThat((String)values.get(0)).isEqualTo("OK");
+  assertThat(values.get(1) instanceof RedisException).isTrue();
+  assertThat((String)values.get(2)).isEqualTo(value);
+}

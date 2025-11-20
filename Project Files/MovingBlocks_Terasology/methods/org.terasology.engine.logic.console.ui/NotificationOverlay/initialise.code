@@ -1,0 +1,28 @@
+@Override public void initialise(){
+  message=find("message",UILabel.class);
+  message.bindText(new ReadOnlyBinding<String>(){
+    @Override public String get(){
+      Iterable<Message> msgs=console.getMessages(CoreMessageType.CHAT,CoreMessageType.NOTIFICATION);
+      StringBuilder messageHistory=new StringBuilder();
+      int count=1;
+      int size=Iterables.size(msgs);
+      for (      Message msg : msgs) {
+        if (count > size - MAX_MESSAGES) {
+          messageHistory.append(StringUtils.abbreviate(msg.getMessage(),MAX_CHAR_PER_MSG));
+          if (count < size && msg.hasNewLine()) {
+            messageHistory.append(Console.NEW_LINE);
+          }
+        }
+        count++;
+      }
+      return messageHistory.toString();
+    }
+  }
+);
+  Binding<Boolean> visible=new DefaultBinding<>(true);
+  this.bindVisible(visible);
+  config.getRendering().getDebug().subscribe(RenderingDebugConfig.HUD_HIDDEN,evt -> {
+    visible.set(!(Boolean)evt.getNewValue());
+  }
+);
+}

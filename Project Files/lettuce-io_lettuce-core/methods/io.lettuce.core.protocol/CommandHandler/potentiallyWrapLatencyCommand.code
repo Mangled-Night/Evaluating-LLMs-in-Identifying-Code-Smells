@@ -1,0 +1,15 @@
+private RedisCommand<?,?,?> potentiallyWrapLatencyCommand(RedisCommand<?,?,?> command){
+  if (!latencyMetricsEnabled) {
+    return command;
+  }
+  if (command instanceof WithLatency) {
+    WithLatency withLatency=(WithLatency)command;
+    withLatency.firstResponse(-1);
+    withLatency.sent(nanoTime());
+    return command;
+  }
+  LatencyMeteredCommand<?,?,?> latencyMeteredCommand=new LatencyMeteredCommand<>(command);
+  latencyMeteredCommand.firstResponse(-1);
+  latencyMeteredCommand.sent(nanoTime());
+  return latencyMeteredCommand;
+}

@@ -1,0 +1,8 @@
+@Test void shouldCustomizeSpan(){
+  BraveTracing tracing=BraveTracing.builder().tracing(clientTracing).spanCustomizer((command,span) -> span.tag("cmd",command.getType().name())).build();
+  BraveTracing.BraveSpan span=(BraveTracing.BraveSpan)tracing.getTracerProvider().getTracer().nextSpan();
+  span.start(new AsyncCommand<>(new Command<>(CommandType.AUTH,null)));
+  MutableSpan braveSpan=ReflectionTestUtils.getField(span.getSpan(),"state");
+  Object[] tags=ReflectionTestUtils.getField(braveSpan,"tags");
+  assertThat(tags).contains("cmd","AUTH");
+}

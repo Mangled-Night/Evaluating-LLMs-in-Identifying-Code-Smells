@@ -1,0 +1,34 @@
+public static PutElement_V0_4_Content parsePutElement_V0_4(XmlPullParser parser) throws XmlPullParserException, IOException {
+  final int initialDepth=parser.getDepth();
+  String putUrlString=parser.getAttributeValue(null,"url");
+  URL putUrl=new URL(putUrlString);
+  Map<String,String> headers=null;
+  outerloop:   while (true) {
+    XmlPullParser.Event next=parser.next();
+switch (next) {
+case START_ELEMENT:
+      String name=parser.getName();
+switch (name) {
+case "header":
+      String headerName=ParserUtils.getRequiredAttribute(parser,"name");
+    String headerValue=ParserUtils.getRequiredNextText(parser);
+  if (headers == null) {
+    headers=new HashMap<>();
+  }
+headers.put(headerName,headerValue);
+break;
+default :
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return new PutElement_V0_4_Content(putUrl,headers);
+}

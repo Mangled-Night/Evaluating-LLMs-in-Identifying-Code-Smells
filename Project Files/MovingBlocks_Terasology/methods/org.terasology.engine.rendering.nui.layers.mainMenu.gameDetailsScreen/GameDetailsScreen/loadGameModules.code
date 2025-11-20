@@ -1,0 +1,23 @@
+private void loadGameModules(){
+  final List<ModuleSelectionInfo> sortedGameModules=gameInfo.getManifest().getModules().stream().sorted(Comparator.comparing(NameVersion::getName)).map(nameVersion -> {
+    Module module=moduleManager.getRegistry().getModule(nameVersion.getName(),nameVersion.getVersion());
+    if (module != null) {
+      return ModuleSelectionInfo.strictVersion(module);
+    }
+ else {
+      logger.warn("Can't find module in your classpath - {}:{}",nameVersion.getName(),nameVersion.getVersion());
+      module=moduleManager.getRegistry().getLatestModuleVersion(nameVersion.getName());
+      if (module != null) {
+        logger.debug("Get the latest available version of module {} in your classpath",nameVersion.getName());
+        errors.add(String.format("Can't find module %s:%s in your classpath; " + "loaded description for the latest available version.",nameVersion.getName(),nameVersion.getVersion()));
+        return ModuleSelectionInfo.latestVersion(module);
+      }
+      logger.error("Can't find any versions of module {} in your classpath!",nameVersion.getName());
+      errors.add(String.format("Can't find any versions of module %s in your classpath!",nameVersion.getName()));
+      return ModuleSelectionInfo.unavailableVersion(nameVersion.getName().toString(),nameVersion.getVersion().toString());
+    }
+  }
+).filter(Objects::nonNull).collect(Collectors.toList());
+  gameModules.setList(sortedGameModules);
+  gameModules.select(0);
+}

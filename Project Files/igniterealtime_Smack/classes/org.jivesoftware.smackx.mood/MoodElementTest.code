@@ -1,0 +1,38 @@
+public class MoodElementTest extends SmackTestSuite {
+  @Test public void toXmlTest() throws Exception {
+    String xml="<mood xmlns='http://jabber.org/protocol/mood'>" + "<happy/>" + "<text>Yay, the mood spec has been approved!</text>"+ "</mood>";
+    MoodElement moodElement=new MoodElement(new MoodElement.MoodSubjectElement(Mood.happy,null),"Yay, the mood spec has been approved!");
+    assertXmlSimilar(xml,moodElement.toXML().toString());
+    assertFalse(moodElement.hasConcretisation());
+    assertEquals(Mood.happy,moodElement.getMood());
+    XmlPullParser parser=TestUtils.getParser(xml);
+    MoodElement parsed=MoodProvider.INSTANCE.parse(parser);
+    assertEquals(xml,parsed.toXML().toString());
+  }
+  @Test public void illegalArgumentsTest(){
+    assertThrows(IllegalArgumentException.class,() -> {
+      new MoodElement(null,"Text alone is not allowed.");
+    }
+);
+  }
+  @Test public void emptyMoodTest() throws Exception {
+    MoodElement empty=new MoodElement(null,null);
+    assertNull(empty.getText());
+    assertNull(empty.getMood());
+    assertNull(empty.getMoodConcretisation());
+    assertFalse(empty.hasText());
+    assertFalse(empty.hasConcretisation());
+    String xml="<mood xmlns='http://jabber.org/protocol/mood'/>";
+    XmlPullParser parser=TestUtils.getParser(xml);
+    MoodElement emptyParsed=MoodProvider.INSTANCE.parse(parser);
+    assertEquals(empty.toXML().toString(),emptyParsed.toXML().toString());
+  }
+  @Test public void unknownMoodValueExceptionTest() throws Exception {
+    String xml="<mood xmlns='http://jabber.org/protocol/mood'>" + "<unknown/>" + "</mood>";
+    XmlPullParser parser=TestUtils.getParser(xml);
+    assertThrows(XmlPullParserException.class,() -> {
+      MoodProvider.INSTANCE.parse(parser);
+    }
+);
+  }
+}

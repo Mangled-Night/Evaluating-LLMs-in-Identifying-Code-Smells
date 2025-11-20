@@ -1,0 +1,19 @@
+private static String changeCreateTable(SchemaConfig schema,String tableName,String sql){
+  if (schema.getTables().containsKey(tableName)) {
+    MySqlStatementParser parser=new MySqlStatementParser(sql);
+    SQLStatement insertStatement=parser.parseStatement();
+    if (insertStatement instanceof MySqlCreateTableStatement) {
+      TableConfig tableConfig=schema.getTables().get(tableName);
+      AbstractPartitionAlgorithm algorithm=tableConfig.getRule().getRuleAlgorithm();
+      if (algorithm instanceof SlotFunction) {
+        SQLColumnDefinition column=new SQLColumnDefinition();
+        column.setDataType(new SQLCharacterDataType("int"));
+        column.setName(new SQLIdentifierExpr("_slot"));
+        column.setComment(new SQLCharExpr("自动迁移算法slot,禁止修改"));
+        ((SQLCreateTableStatement)insertStatement).getTableElementList().add(column);
+        return insertStatement.toString();
+      }
+    }
+  }
+  return sql;
+}

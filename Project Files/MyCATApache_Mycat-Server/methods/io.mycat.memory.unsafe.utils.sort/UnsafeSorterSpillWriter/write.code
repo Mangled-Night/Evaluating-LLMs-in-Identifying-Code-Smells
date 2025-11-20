@@ -1,0 +1,32 @@
+/** 
+ * Write a record to a spill file.
+ * @param baseObject the base object / memory page containing the record
+ * @param baseOffset the base offset which points directly to the record data.
+ * @param recordLength the length of the record.
+ * @param keyPrefix a sort key prefix
+ */
+public void write(Object baseObject,long baseOffset,int recordLength,long keyPrefix) throws IOException {
+  if (numRecordsSpilled == numRecordsToWrite) {
+    throw new IllegalStateException("Number of records written exceeded numRecordsToWrite = " + numRecordsToWrite);
+  }
+ else {
+    numRecordsSpilled++;
+  }
+  writeIntToBuffer(recordLength,0);
+  writeLongToBuffer(keyPrefix,4);
+  int dataRemaining=recordLength;
+  int freeSpaceInWriteBuffer=DISK_WRITE_BUFFER_SIZE - 4 - 8;
+  long recordReadPosition=baseOffset;
+  while (dataRemaining > 0) {
+    final int toTransfer=Math.min(freeSpaceInWriteBuffer,dataRemaining);
+    Platform.copyMemory(baseObject,recordReadPosition,writeBuffer,Platform.BYTE_ARRAY_OFFSET + (DISK_WRITE_BUFFER_SIZE - freeSpaceInWriteBuffer),toTransfer);
+    writer.write(writeBuffer,0,(DISK_WRITE_BUFFER_SIZE - freeSpaceInWriteBuffer) + toTransfer);
+    recordReadPosition+=toTransfer;
+    dataRemaining-=toTransfer;
+    freeSpaceInWriteBuffer=DISK_WRITE_BUFFER_SIZE;
+  }
+  if (freeSpaceInWriteBuffer < DISK_WRITE_BUFFER_SIZE) {
+    writer.write(writeBuffer,0,(DISK_WRITE_BUFFER_SIZE - freeSpaceInWriteBuffer));
+  }
+  writer.recordWritten();
+}

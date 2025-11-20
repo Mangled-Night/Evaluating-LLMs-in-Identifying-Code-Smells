@@ -1,0 +1,15 @@
+@Test void shouldApplyAuthentication(){
+  RedisURI source=new RedisURI();
+  source.setUsername("foo");
+  source.setPassword("bar");
+  RedisURI target=RedisURI.builder().withHost("localhost").withAuthentication(source).build();
+  assertThat(target.getUsername()).isEqualTo("foo");
+  assertThat(target.getPassword()).isEqualTo("bar".toCharArray());
+  RedisCredentialsProvider provider=RedisCredentialsProvider.from(() -> RedisCredentials.just("suppliedUsername","suppliedPassword".toCharArray()));
+  RedisURI sourceCp=new RedisURI();
+  sourceCp.setCredentialsProvider(provider);
+  RedisURI targetCp=RedisURI.builder().withHost("localhost").withAuthentication(sourceCp).build();
+  assertThat(targetCp.getUsername()).isNull();
+  assertThat(targetCp.getPassword()).isNull();
+  assertThat(sourceCp.getCredentialsProvider()).isEqualTo(targetCp.getCredentialsProvider());
+}

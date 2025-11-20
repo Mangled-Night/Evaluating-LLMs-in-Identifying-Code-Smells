@@ -1,0 +1,18 @@
+@Override protected boolean onAccessDenied(ServletRequest request,ServletResponse response) throws Exception {
+  StringBuffer ssoServerUrl=new StringBuffer(PropertiesFileUtil.getInstance("zheng-upms-client").get("zheng.upms.sso.server.url"));
+  String upmsType=PropertiesFileUtil.getInstance("zheng-upms-client").get("zheng.upms.type");
+  if ("server".equals(upmsType)) {
+    WebUtils.toHttp(response).sendRedirect(ssoServerUrl.append("/sso/login").toString());
+    return false;
+  }
+  ssoServerUrl.append("/sso/index").append("?").append("appid").append("=").append(PropertiesFileUtil.getInstance("zheng-upms-client").get("zheng.upms.appID"));
+  HttpServletRequest httpServletRequest=WebUtils.toHttp(request);
+  StringBuffer backurl=httpServletRequest.getRequestURL();
+  String queryString=httpServletRequest.getQueryString();
+  if (StringUtils.isNotBlank(queryString)) {
+    backurl.append("?").append(queryString);
+  }
+  ssoServerUrl.append("&").append("backurl").append("=").append(URLEncoder.encode(backurl.toString(),"utf-8"));
+  WebUtils.toHttp(response).sendRedirect(ssoServerUrl.toString());
+  return false;
+}

@@ -1,0 +1,20 @@
+public static void ensureProviderAtFirstPosition(Class<? extends Provider> providerClass){
+  if (INSERTED_PROVIDERS_CACHE.containsKey(providerClass)) {
+    return;
+  }
+  Provider provider;
+  try {
+    provider=providerClass.getDeclaredConstructor().newInstance();
+  }
+ catch (  InstantiationException|IllegalAccessException|IllegalArgumentException|InvocationTargetException|NoSuchMethodException|SecurityException e) {
+    throw new IllegalArgumentException(e);
+  }
+  String providerName=provider.getName();
+  int installedPosition;
+synchronized (Security.class) {
+    Security.removeProvider(providerName);
+    installedPosition=Security.insertProviderAt(provider,1);
+  }
+  assert installedPosition == 1;
+  INSERTED_PROVIDERS_CACHE.put(providerClass,null);
+}

@@ -1,0 +1,30 @@
+/** 
+ * Transforms counts into the proper unsafe output offsets for the sort type.
+ * @param counts counts for each byte value. This routine destructively modifies this array.
+ * @param numRecords number of data records in the original data array.
+ * @param outputOffset output offset in bytes from the base array object.
+ * @param bytesPerRecord size of each record (8 for plain sort, 16 for key-prefix sort).
+ * @param desc whether this is a descending (binary-order) sort.
+ * @param signed whether this is a signed (two's complement) sort.
+ * @return the input counts array.
+ */
+private static long[] transformCountsToOffsets(long[] counts,int numRecords,long outputOffset,int bytesPerRecord,boolean desc,boolean signed){
+  assert counts.length == 256;
+  int start=signed ? 128 : 0;
+  if (desc) {
+    int pos=numRecords;
+    for (int i=start; i < start + 256; i++) {
+      pos-=counts[i & 0xff];
+      counts[i & 0xff]=outputOffset + pos * bytesPerRecord;
+    }
+  }
+ else {
+    int pos=0;
+    for (int i=start; i < start + 256; i++) {
+      long tmp=counts[i & 0xff];
+      counts[i & 0xff]=outputOffset + pos * bytesPerRecord;
+      pos+=tmp;
+    }
+  }
+  return counts;
+}

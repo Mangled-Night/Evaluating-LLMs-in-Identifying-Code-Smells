@@ -1,0 +1,17 @@
+@Override public final ByteBuffer serialize(T array){
+  checkNotNull(array,"The parameter 'array' must not be null");
+  return serialize(array,ByteBuffer.allocateDirect(computeMinimumBufferSize(array)));
+}
+@Override public final ByteBuffer serialize(T array,ByteBuffer toBuffer){
+  checkNotNull(array,"The parameter 'array' must not be null");
+  checkNotNull(toBuffer,"The parameter 'toBuffer' must not be null");
+  checkArgument(canHandle(array.getClass()),"Unable to handle the supplied array (" + array.getClass().getName() + ")");
+  final int lengthPos=toBuffer.position();
+  toBuffer.putInt(0);
+  toBuffer.putInt(array.getSizeX());
+  toBuffer.putInt(array.getSizeY());
+  toBuffer.putInt(array.getSizeZ());
+  internalSerialize(array,toBuffer);
+  toBuffer.putInt(lengthPos,toBuffer.position() - lengthPos - 4);
+  return toBuffer;
+}

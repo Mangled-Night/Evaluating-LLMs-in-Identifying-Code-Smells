@@ -1,0 +1,352 @@
+private void renderObject(Object obj,int deep,int expand,final StringBuilder buf) throws ObjectTooLargeException {
+  if (null == obj) {
+    appendStringBuilder(buf,"null");
+  }
+ else {
+    final Class<?> clazz=obj.getClass();
+    final String className=clazz.getSimpleName();
+    if (Integer.class.isInstance(obj) || Long.class.isInstance(obj) || Float.class.isInstance(obj)|| Double.class.isInstance(obj)|| Short.class.isInstance(obj)|| Byte.class.isInstance(obj)|| Boolean.class.isInstance(obj)) {
+      appendStringBuilder(buf,format("@%s[%s]",className,obj));
+    }
+ else     if (Character.class.isInstance(obj)) {
+      final Character c=(Character)obj;
+      if (c >= 32 && c <= 126) {
+        appendStringBuilder(buf,format("@%s[%s]",className,c));
+      }
+ else       if (ASCII_MAP.containsKey((byte)c.charValue())) {
+        appendStringBuilder(buf,format("@%s[%s]",className,ASCII_MAP.get((byte)c.charValue())));
+      }
+ else {
+        appendStringBuilder(buf,format("@%s[%s]",className,c));
+      }
+    }
+ else     if (String.class.isInstance(obj)) {
+      appendStringBuilder(buf,"@");
+      appendStringBuilder(buf,className);
+      appendStringBuilder(buf,"[");
+      for (      Character c : ((String)obj).toCharArray()) {
+switch (c) {
+case '\n':
+          appendStringBuilder(buf,"\\n");
+        break;
+case '\r':
+      appendStringBuilder(buf,"\\r");
+    break;
+default :
+  appendStringBuilder(buf,c.toString());
+}
+}
+appendStringBuilder(buf,"]");
+}
+ else if (Collection.class.isInstance(obj)) {
+@SuppressWarnings("unchecked") final Collection<Object> collection=(Collection<Object>)obj;
+if (!isExpand(deep,expand) || collection.isEmpty()) {
+appendStringBuilder(buf,format("@%s[isEmpty=%s;size=%d]",className,collection.isEmpty(),collection.size()));
+}
+ else {
+appendStringBuilder(buf,format("@%s[",className));
+for (Object e : collection) {
+appendStringBuilder(buf,"\n");
+for (int i=0; i < deep + 1; i++) {
+  appendStringBuilder(buf,TAB);
+}
+renderObject(e,deep + 1,expand,buf);
+appendStringBuilder(buf,",");
+}
+appendStringBuilder(buf,"\n");
+for (int i=0; i < deep; i++) {
+appendStringBuilder(buf,TAB);
+}
+appendStringBuilder(buf,"]");
+}
+}
+ else if (Map.class.isInstance(obj)) {
+@SuppressWarnings("unchecked") final Map<Object,Object> map=(Map<Object,Object>)obj;
+if (!isExpand(deep,expand) || map.isEmpty()) {
+appendStringBuilder(buf,format("@%s[isEmpty=%s;size=%d]",className,map.isEmpty(),map.size()));
+}
+ else {
+appendStringBuilder(buf,format("@%s[",className));
+for (Map.Entry<Object,Object> entry : map.entrySet()) {
+appendStringBuilder(buf,"\n");
+for (int i=0; i < deep + 1; i++) {
+  appendStringBuilder(buf,TAB);
+}
+renderObject(entry.getKey(),deep + 1,expand,buf);
+appendStringBuilder(buf,":");
+renderObject(entry.getValue(),deep + 1,expand,buf);
+appendStringBuilder(buf,",");
+}
+appendStringBuilder(buf,"\n");
+for (int i=0; i < deep; i++) {
+appendStringBuilder(buf,TAB);
+}
+appendStringBuilder(buf,"]");
+}
+}
+ else if (obj.getClass().isArray()) {
+final String typeName=obj.getClass().getSimpleName();
+if (typeName.equals("int[]")) {
+final int[] arrays=(int[])obj;
+if (!isExpand(deep,expand) || arrays.length == 0) {
+appendStringBuilder(buf,format("@%s[isEmpty=%s;size=%d]",typeName,arrays.length == 0,arrays.length));
+}
+ else {
+appendStringBuilder(buf,format("@%s[",className));
+for (int e : arrays) {
+  appendStringBuilder(buf,"\n");
+  for (int i=0; i < deep + 1; i++) {
+    appendStringBuilder(buf,TAB);
+  }
+  renderObject(e,deep + 1,expand,buf);
+  appendStringBuilder(buf,",");
+}
+appendStringBuilder(buf,"\n");
+for (int i=0; i < deep; i++) {
+  appendStringBuilder(buf,TAB);
+}
+appendStringBuilder(buf,"]");
+}
+}
+ else if (typeName.equals("long[]")) {
+final long[] arrays=(long[])obj;
+if (!isExpand(deep,expand) || arrays.length == 0) {
+appendStringBuilder(buf,format("@%s[isEmpty=%s;size=%d]",typeName,arrays.length == 0,arrays.length));
+}
+ else {
+appendStringBuilder(buf,format("@%s[",className));
+for (long e : arrays) {
+  appendStringBuilder(buf,"\n");
+  for (int i=0; i < deep + 1; i++) {
+    appendStringBuilder(buf,TAB);
+  }
+  renderObject(e,deep + 1,expand,buf);
+  appendStringBuilder(buf,",");
+}
+appendStringBuilder(buf,"\n");
+for (int i=0; i < deep; i++) {
+  appendStringBuilder(buf,TAB);
+}
+appendStringBuilder(buf,"]");
+}
+}
+ else if (typeName.equals("short[]")) {
+final short[] arrays=(short[])obj;
+if (!isExpand(deep,expand) || arrays.length == 0) {
+appendStringBuilder(buf,format("@%s[isEmpty=%s;size=%d]",typeName,arrays.length == 0,arrays.length));
+}
+ else {
+appendStringBuilder(buf,format("@%s[",className));
+for (short e : arrays) {
+  appendStringBuilder(buf,"\n");
+  for (int i=0; i < deep + 1; i++) {
+    appendStringBuilder(buf,TAB);
+  }
+  renderObject(e,deep + 1,expand,buf);
+  appendStringBuilder(buf,",");
+}
+appendStringBuilder(buf,"\n");
+for (int i=0; i < deep; i++) {
+  appendStringBuilder(buf,TAB);
+}
+appendStringBuilder(buf,"]");
+}
+}
+ else if (typeName.equals("float[]")) {
+final float[] arrays=(float[])obj;
+if (!isExpand(deep,expand) || arrays.length == 0) {
+appendStringBuilder(buf,format("@%s[isEmpty=%s;size=%d]",typeName,arrays.length == 0,arrays.length));
+}
+ else {
+appendStringBuilder(buf,format("@%s[",className));
+for (float e : arrays) {
+  appendStringBuilder(buf,"\n");
+  for (int i=0; i < deep + 1; i++) {
+    appendStringBuilder(buf,TAB);
+  }
+  renderObject(e,deep + 1,expand,buf);
+  appendStringBuilder(buf,",");
+}
+appendStringBuilder(buf,"\n");
+for (int i=0; i < deep; i++) {
+  appendStringBuilder(buf,TAB);
+}
+appendStringBuilder(buf,"]");
+}
+}
+ else if (typeName.equals("double[]")) {
+final double[] arrays=(double[])obj;
+if (!isExpand(deep,expand) || arrays.length == 0) {
+appendStringBuilder(buf,format("@%s[isEmpty=%s;size=%d]",typeName,arrays.length == 0,arrays.length));
+}
+ else {
+appendStringBuilder(buf,format("@%s[",className));
+for (double e : arrays) {
+  appendStringBuilder(buf,"\n");
+  for (int i=0; i < deep + 1; i++) {
+    appendStringBuilder(buf,TAB);
+  }
+  renderObject(e,deep + 1,expand,buf);
+  appendStringBuilder(buf,",");
+}
+appendStringBuilder(buf,"\n");
+for (int i=0; i < deep; i++) {
+  appendStringBuilder(buf,TAB);
+}
+appendStringBuilder(buf,"]");
+}
+}
+ else if (typeName.equals("boolean[]")) {
+final boolean[] arrays=(boolean[])obj;
+if (!isExpand(deep,expand) || arrays.length == 0) {
+appendStringBuilder(buf,format("@%s[isEmpty=%s;size=%d]",typeName,arrays.length == 0,arrays.length));
+}
+ else {
+appendStringBuilder(buf,format("@%s[",className));
+for (boolean e : arrays) {
+  appendStringBuilder(buf,"\n");
+  for (int i=0; i < deep + 1; i++) {
+    appendStringBuilder(buf,TAB);
+  }
+  renderObject(e,deep + 1,expand,buf);
+  appendStringBuilder(buf,",");
+}
+appendStringBuilder(buf,"\n");
+for (int i=0; i < deep; i++) {
+  appendStringBuilder(buf,TAB);
+}
+appendStringBuilder(buf,"]");
+}
+}
+ else if (typeName.equals("char[]")) {
+final char[] arrays=(char[])obj;
+if (!isExpand(deep,expand) || arrays.length == 0) {
+appendStringBuilder(buf,format("@%s[isEmpty=%s;size=%d]",typeName,arrays.length == 0,arrays.length));
+}
+ else {
+appendStringBuilder(buf,format("@%s[",className));
+for (char e : arrays) {
+  appendStringBuilder(buf,"\n");
+  for (int i=0; i < deep + 1; i++) {
+    appendStringBuilder(buf,TAB);
+  }
+  renderObject(e,deep + 1,expand,buf);
+  appendStringBuilder(buf,",");
+}
+appendStringBuilder(buf,"\n");
+for (int i=0; i < deep; i++) {
+  appendStringBuilder(buf,TAB);
+}
+appendStringBuilder(buf,"]");
+}
+}
+ else if (typeName.equals("byte[]")) {
+final byte[] arrays=(byte[])obj;
+if (!isExpand(deep,expand) || arrays.length == 0) {
+appendStringBuilder(buf,format("@%s[isEmpty=%s;size=%d]",typeName,arrays.length == 0,arrays.length));
+}
+ else {
+appendStringBuilder(buf,format("@%s[",className));
+for (byte e : arrays) {
+  appendStringBuilder(buf,"\n");
+  for (int i=0; i < deep + 1; i++) {
+    appendStringBuilder(buf,TAB);
+  }
+  renderObject(e,deep + 1,expand,buf);
+  appendStringBuilder(buf,",");
+}
+appendStringBuilder(buf,"\n");
+for (int i=0; i < deep; i++) {
+  appendStringBuilder(buf,TAB);
+}
+appendStringBuilder(buf,"]");
+}
+}
+ else {
+final Object[] arrays=(Object[])obj;
+if (!isExpand(deep,expand) || arrays.length == 0) {
+appendStringBuilder(buf,format("@%s[isEmpty=%s;size=%d]",typeName,arrays.length == 0,arrays.length));
+}
+ else {
+appendStringBuilder(buf,format("@%s[",className));
+for (Object e : arrays) {
+  appendStringBuilder(buf,"\n");
+  for (int i=0; i < deep + 1; i++) {
+    appendStringBuilder(buf,TAB);
+  }
+  renderObject(e,deep + 1,expand,buf);
+  appendStringBuilder(buf,",");
+}
+appendStringBuilder(buf,"\n");
+for (int i=0; i < deep; i++) {
+  appendStringBuilder(buf,TAB);
+}
+appendStringBuilder(buf,"]");
+}
+}
+}
+ else if (Throwable.class.isInstance(obj)) {
+if (!isExpand(deep,expand)) {
+appendStringBuilder(buf,format("@%s[%s]",className,obj));
+}
+ else {
+final Throwable throwable=(Throwable)obj;
+final StringWriter sw=new StringWriter();
+final PrintWriter pw=new PrintWriter(sw);
+throwable.printStackTrace(pw);
+appendStringBuilder(buf,sw.toString());
+}
+}
+ else if (Date.class.isInstance(obj)) {
+appendStringBuilder(buf,format("@%s[%s]",className,new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS").format(obj)));
+}
+ else if (object instanceof Enum<?>) {
+appendStringBuilder(buf,format("@%s[%s]",className,obj));
+}
+ else {
+if (!isExpand(deep,expand)) {
+appendStringBuilder(buf,format("@%s[%s]",className,obj));
+}
+ else {
+appendStringBuilder(buf,format("@%s[",className));
+final List<Field> fields;
+Class<?> objClass=obj.getClass();
+if (GlobalOptions.printParentFields) {
+fields=new ArrayList<Field>();
+while (objClass != null) {
+  fields.addAll(Arrays.asList(objClass.getDeclaredFields()));
+  objClass=objClass.getSuperclass();
+}
+}
+ else {
+fields=new ArrayList<Field>(Arrays.asList(objClass.getDeclaredFields()));
+}
+for (Field field : fields) {
+field.setAccessible(true);
+try {
+  final Object value=field.get(obj);
+  appendStringBuilder(buf,"\n");
+  for (int i=0; i < deep + 1; i++) {
+    appendStringBuilder(buf,TAB);
+  }
+  appendStringBuilder(buf,field.getName());
+  appendStringBuilder(buf,"=");
+  renderObject(value,deep + 1,expand,buf);
+  appendStringBuilder(buf,",");
+}
+ catch (ObjectTooLargeException t) {
+  buf.append("...");
+  break;
+}
+catch (Throwable t) {
+}
+}
+appendStringBuilder(buf,"\n");
+for (int i=0; i < deep; i++) {
+appendStringBuilder(buf,TAB);
+}
+appendStringBuilder(buf,"]");
+}
+}
+}
+}

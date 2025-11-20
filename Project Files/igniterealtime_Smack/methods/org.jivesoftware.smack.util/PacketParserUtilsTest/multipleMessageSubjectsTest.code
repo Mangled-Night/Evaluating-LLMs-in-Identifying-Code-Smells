@@ -1,0 +1,22 @@
+@Test public void multipleMessageSubjectsTest() throws Exception {
+  String defaultLanguage=Stanza.getDefaultLanguage();
+  String otherLanguage=determineNonDefaultLanguage();
+  String control;
+  Message message;
+  control=XMLBuilder.create("message").ns(StreamOpen.CLIENT_NAMESPACE).a("from","romeo@montague.lit/orchard").a("to","juliet@capulet.lit/balcony").a("id","zid615d9").a("type","chat").a("xml:lang",defaultLanguage).e("subject").t(defaultLanguage).up().e("subject").a("xml:lang",otherLanguage).t(otherLanguage).asString(outputProperties);
+  message=PacketParserUtils.parseMessage(PacketParserUtils.getParserFor(control));
+  assertEquals(defaultLanguage,message.getSubject());
+  assertEquals(otherLanguage,message.getSubject(otherLanguage));
+  assertEquals(2,message.getSubjects().size());
+  assertEquals(1,message.getSubjectLanguages().size());
+  assertTrue(message.getSubjectLanguages().contains(otherLanguage));
+  assertXmlSimilar(control,message.toXML());
+  control=XMLBuilder.create("message").ns(StreamOpen.CLIENT_NAMESPACE).a("from","romeo@montague.lit/orchard").a("to","juliet@capulet.lit/balcony").a("id","zid615d9").a("type","chat").a("xml:lang",otherLanguage).e("subject").t(otherLanguage).up().e("subject").a("xml:lang",defaultLanguage).t(defaultLanguage).asString(outputProperties);
+  message=PacketParserUtils.parseMessage(PacketParserUtils.getParserFor(control));
+  assertEquals(otherLanguage,message.getSubject());
+  assertEquals(defaultLanguage,message.getSubject(defaultLanguage));
+  assertEquals(2,message.getSubjects().size());
+  assertEquals(1,message.getSubjectLanguages().size());
+  assertTrue(message.getSubjectLanguages().contains(defaultLanguage));
+  assertXmlSimilar(control,message.toXML());
+}

@@ -1,0 +1,32 @@
+/** 
+ * 将传入的值<code>value</code>转换成对应的类型<code>type</code>返回。
+ * @param columnLabel 列名
+ * @param value       值
+ * @param type        对应的类型
+ * @return 转换后的对象
+ */
+public static Object valueMapper(String columnLabel,Object value,Class<?> type){
+  if (value == null) {
+    return null;
+  }
+  if (type.isAssignableFrom(ObjectId.class) && (value instanceof ObjectId || value instanceof String)) {
+    return new ObjectId(value.toString());
+  }
+  if (type.isEnum()) {
+    return value.toString();
+  }
+  if ((type.isAssignableFrom(List.class) || type.isAssignableFrom(Set.class)) && value instanceof BasicDBList) {
+    LOG.debug("column:[{}],type:[{}]为内嵌列表,无法获取范型类,无法映射.return null.",columnLabel,type);
+    return null;
+  }
+  if (value instanceof BasicDBObject) {
+    BasicDBObject dbObj=(BasicDBObject)value;
+    return beanMapper(dbObj,type);
+  }
+  if (type.isArray() && value instanceof BasicDBList) {
+    BasicDBList basicDBList=(BasicDBList)value;
+    return arrayMapper(basicDBList,type);
+  }
+  LOG.debug("column:[{}],type:[{}] unsupported type yet.return null",columnLabel,type);
+  return null;
+}

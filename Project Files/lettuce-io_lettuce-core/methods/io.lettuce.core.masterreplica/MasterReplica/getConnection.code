@@ -1,0 +1,26 @@
+/** 
+ * Retrieve the connection from  {@link ConnectionFuture}. Performs a blocking  {@link ConnectionFuture#get()} to synchronizethe channel/connection initialization. Any exception is rethrown as  {@link RedisConnectionException}.
+ * @param connectionFuture must not be null.
+ * @param context context information (single RedisURI, multiple URIs), used as connection target in the reported exception.
+ * @param < T > Connection type.
+ * @return the connection.
+ * @throws RedisConnectionException in case of connection failures.
+ */
+private static <T>T getConnection(CompletableFuture<T> connectionFuture,Object context){
+  try {
+    return connectionFuture.get();
+  }
+ catch (  InterruptedException e) {
+    Thread.currentThread().interrupt();
+    throw RedisConnectionException.create(context.toString(),e);
+  }
+catch (  Exception e) {
+    if (e instanceof ExecutionException) {
+      if (e.getCause() instanceof RedisConnectionException && e.getCause().getCause() instanceof RedisConnectionException) {
+        throw RedisConnectionException.create(context.toString(),e.getCause().getCause());
+      }
+      throw RedisConnectionException.create(context.toString(),e.getCause());
+    }
+    throw RedisConnectionException.create(context.toString(),e);
+  }
+}

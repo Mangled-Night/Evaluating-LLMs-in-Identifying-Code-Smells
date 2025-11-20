@@ -1,0 +1,25 @@
+public List<LitemallOrder> querySelective(Integer userId,String orderSn,LocalDateTime start,LocalDateTime end,List<Short> orderStatusArray,Integer page,Integer limit,String sort,String order){
+  LitemallOrderExample example=new LitemallOrderExample();
+  LitemallOrderExample.Criteria criteria=example.createCriteria();
+  if (userId != null) {
+    criteria.andUserIdEqualTo(userId);
+  }
+  if (!StringUtils.isEmpty(orderSn)) {
+    criteria.andOrderSnEqualTo(orderSn);
+  }
+  if (start != null) {
+    criteria.andAddTimeGreaterThanOrEqualTo(start);
+  }
+  if (end != null) {
+    criteria.andAddTimeLessThanOrEqualTo(end);
+  }
+  if (orderStatusArray != null && orderStatusArray.size() != 0) {
+    criteria.andOrderStatusIn(orderStatusArray);
+  }
+  criteria.andDeletedEqualTo(false);
+  if (!StringUtils.isEmpty(sort) && !StringUtils.isEmpty(order)) {
+    example.setOrderByClause(sort + " " + order);
+  }
+  PageHelper.startPage(page,limit);
+  return litemallOrderMapper.selectByExample(example);
+}

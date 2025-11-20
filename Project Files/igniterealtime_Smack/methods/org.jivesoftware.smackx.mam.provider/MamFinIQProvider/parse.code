@@ -1,0 +1,25 @@
+@Override public MamFinIQ parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+  MamElementFactory elementFactory=MamElementFactory.forParser(parser);
+  String queryId=parser.getAttributeValue("","queryid");
+  boolean complete=ParserUtils.getBooleanAttribute(parser,"complete",false);
+  boolean stable=ParserUtils.getBooleanAttribute(parser,"stable",true);
+  RSMSet rsmSet=null;
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      if (parser.getName().equals(RSMSet.ELEMENT)) {
+        rsmSet=RSMSetProvider.INSTANCE.parse(parser);
+      }
+    break;
+case END_ELEMENT:
+  if (parser.getDepth() == initialDepth) {
+    break outerloop;
+  }
+break;
+default :
+break;
+}
+}
+return elementFactory.newFinIQ(queryId,rsmSet,complete,stable);
+}

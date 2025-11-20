@@ -1,0 +1,28 @@
+static final void appendJdbcTypeMappingQuery(StringBuffer buf,String mysqlTypeColumnName){
+  buf.append("CASE ");
+  Map<String,Integer> typesMap=new HashMap<String,Integer>();
+  typesMap.putAll(mysqlToJdbcTypesMap);
+  typesMap.put("BINARY",new Integer(Types.BINARY));
+  typesMap.put("VARBINARY",new Integer(Types.VARBINARY));
+  Iterator<String> mysqlTypes=typesMap.keySet().iterator();
+  while (mysqlTypes.hasNext()) {
+    String mysqlTypeName=(String)mysqlTypes.next();
+    buf.append(" WHEN ");
+    buf.append(mysqlTypeColumnName);
+    buf.append("='");
+    buf.append(mysqlTypeName);
+    buf.append("' THEN ");
+    buf.append(typesMap.get(mysqlTypeName));
+    if (mysqlTypeName.equalsIgnoreCase("DOUBLE") || mysqlTypeName.equalsIgnoreCase("FLOAT") || mysqlTypeName.equalsIgnoreCase("DECIMAL")|| mysqlTypeName.equalsIgnoreCase("NUMERIC")) {
+      buf.append(" WHEN ");
+      buf.append(mysqlTypeColumnName);
+      buf.append("='");
+      buf.append(mysqlTypeName);
+      buf.append(" unsigned' THEN ");
+      buf.append(typesMap.get(mysqlTypeName));
+    }
+  }
+  buf.append(" ELSE ");
+  buf.append(Types.OTHER);
+  buf.append(" END ");
+}

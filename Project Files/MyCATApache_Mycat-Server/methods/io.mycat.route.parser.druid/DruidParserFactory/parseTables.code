@@ -1,0 +1,25 @@
+private static List<String> parseTables(SQLStatement stmt,MycatSchemaStatVisitor schemaStatVisitor){
+  List<String> tables=new ArrayList<>();
+  stmt.accept(schemaStatVisitor);
+  if (schemaStatVisitor.getAliasMap() != null) {
+    for (    Map.Entry<String,String> entry : schemaStatVisitor.getAliasMap().entrySet()) {
+      String key=entry.getKey();
+      String value=entry.getValue();
+      if (value != null && value.indexOf("`") >= 0) {
+        value=value.replaceAll("`","");
+      }
+      if (key != null) {
+        int pos=key.indexOf("`");
+        if (pos > 0) {
+          key=key.replaceAll("`","");
+        }
+        pos=key.indexOf(".");
+        if (pos > 0) {
+          key=key.substring(pos + 1);
+        }
+        tables.add(value.toUpperCase());
+      }
+    }
+  }
+  return tables;
+}

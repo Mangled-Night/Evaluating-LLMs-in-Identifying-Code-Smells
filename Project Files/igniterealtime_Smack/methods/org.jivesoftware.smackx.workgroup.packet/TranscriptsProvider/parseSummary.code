@@ -1,0 +1,31 @@
+private static Transcripts.TranscriptSummary parseSummary(XmlPullParser parser) throws IOException, XmlPullParserException, ParseException {
+  String sessionID=parser.getAttributeValue("","sessionID");
+  Date joinTime=null;
+  Date leftTime=null;
+  List<Transcripts.AgentDetail> agents=new ArrayList<>();
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      if (parser.getName().equals("joinTime")) {
+synchronized (UTC_FORMAT) {
+          joinTime=UTC_FORMAT.parse(parser.nextText());
+        }
+      }
+ else       if (parser.getName().equals("leftTime")) {
+synchronized (UTC_FORMAT) {
+          leftTime=UTC_FORMAT.parse(parser.nextText());
+        }
+      }
+ else       if (parser.getName().equals("agents")) {
+        agents=parseAgents(parser);
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getName().equals("transcript")) {
+        done=true;
+      }
+    }
+  }
+  return new Transcripts.TranscriptSummary(sessionID,joinTime,leftTime,agents);
+}

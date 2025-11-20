@@ -1,0 +1,13 @@
+private void deleteDataDependFile(String data,long offset,Connection con) throws IOException, SQLException {
+  while ((data=DataMigratorUtil.readData(tempFile,offset,DataMigrator.margs.getQueryPageSize())).length() > 0) {
+    offset+=data.getBytes().length;
+    if (data.startsWith(",")) {
+      data=data.substring(1,data.length());
+    }
+    if (data.endsWith(",")) {
+      data=data.substring(0,data.length() - 1);
+    }
+    String sql="delete from " + tableInfo.getTableName() + " where "+ tableInfo.getColumn()+ " in ("+ data+ ")";
+    JdbcUtils.execute(con,sql,new ArrayList<>());
+  }
+}

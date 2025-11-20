@@ -1,0 +1,19 @@
+@Override public void init(GameEngine gameEngine){
+  context=gameEngine.createChildContext();
+  initEntityAndComponentManagers(true);
+  createLocalPlayer(context);
+  GameManifest gameManifest;
+  List<GameInfo> savedGames=GameProvider.getSavedGames();
+  if (savedGames.size() > 0) {
+    gameManifest=savedGames.get(0).getManifest();
+  }
+ else {
+    gameManifest=createGameManifest();
+  }
+  Config config=context.get(Config.class);
+  WorldInfo worldInfo=gameManifest.getWorldInfo(TerasologyConstants.MAIN_WORLD);
+  config.getUniverseConfig().addWorldManager(worldInfo);
+  config.getUniverseConfig().setSpawnWorldTitle(worldInfo.getTitle());
+  config.getUniverseConfig().setUniverseSeed(gameManifest.getSeed());
+  gameEngine.changeState(new StateLoading(gameManifest,networkMode));
+}

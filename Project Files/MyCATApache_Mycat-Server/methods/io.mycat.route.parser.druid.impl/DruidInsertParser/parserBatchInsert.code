@@ -1,0 +1,89 @@
+/** 
+ * insert into .... select .... 或insert into table() values (),(),....
+ * @param schema
+ * @param rrs
+ * @param insertStmt
+ * @throws SQLNonTransientException
+ */
+private void parserBatchInsert(SchemaConfig schema,RouteResultset rrs,String partitionColumn,String tableName,MySqlInsertStatement insertStmt) throws SQLNonTransientException {
+  if (insertStmt.getValuesList().size() > 1) {
+    int columnNum=insertStmt.getColumns().size();
+    int shardingColIndex=getShardingColIndex(insertStmt,partitionColumn);
+    if (shardingColIndex == -1) {
+      String msg="bad insert sql (sharding column:" + partitionColumn + " not provided,"+ insertStmt;
+      LOGGER.warn(msg);
+      throw new SQLNonTransientException(msg);
+    }
+ else {
+      List<ValuesClause> valueClauseList=insertStmt.getValuesList();
+      Map<Integer,List<ValuesClause>> nodeValuesMap=new HashMap<Integer,List<ValuesClause>>();
+      Map<Integer,Integer> slotsMap=new HashMap<>();
+      TableConfig tableConfig=schema.getTables().get(tableName);
+      AbstractPartitionAlgorithm algorithm=tableConfig.getRule().getRuleAlgorithm();
+      for (      ValuesClause valueClause : valueClauseList) {
+        if (valueClause.getValues().size() != columnNum) {
+          String msg="bad insert sql columnSize != valueSize:" + columnNum + " != "+ valueClause.getValues().size()+ "values:"+ valueClause;
+          LOGGER.warn(msg);
+          throw new SQLNonTransientException(msg);
+        }
+        SQLExpr expr=valueClause.getValues().get(shardingColIndex);
+        String shardingValue=StringUtil.removeBackquote(getShardingValue(expr));
+        valueClause.getValues().set(shardingColIndex,new SQLCharExpr(shardingValue));
+        Integer nodeIndex=algorithm.calculate(StringUtil.removeBackquote(shardingValue));
+        if (algorithm instanceof SlotFunction) {
+          slotsMap.put(nodeIndex,((SlotFunction)algorithm).slotValue());
+        }
+        if (nodeIndex == null) {
+          String msg="can't find any valid datanode :" + tableName + " -> "+ partitionColumn+ " -> "+ shardingValue;
+          LOGGER.warn(msg);
+          throw new SQLNonTransientException(msg);
+        }
+        if (nodeValuesMap.get(nodeIndex) == null) {
+          nodeValuesMap.put(nodeIndex,new ArrayList<ValuesClause>());
+        }
+        nodeValuesMap.get(nodeIndex).add(valueClause);
+      }
+      RouteResultsetNode[] nodes=new RouteResultsetNode[nodeValuesMap.size()];
+      int count=0;
+      for (      Map.Entry<Integer,List<ValuesClause>> node : nodeValuesMap.entrySet()) {
+        Integer nodeIndex=node.getKey();
+        List<ValuesClause> valuesList=node.getValue();
+        insertStmt.getValuesList().clear();
+        insertStmt.getValuesList().addAll(valuesList);
+        if (tableConfig.isDistTable()) {
+          nodes[count]=new RouteResultsetNode(tableConfig.getDataNodes().get(0),rrs.getSqlType(),insertStmt.toString());
+          if (tableConfig.getDistTables() == null) {
+            String msg=" sub table not exists for " + nodes[count].getName() + " on "+ tableName;
+            LOGGER.error("DruidMycatRouteStrategyError " + msg);
+            throw new SQLSyntaxErrorException(msg);
+          }
+          String subTableName=tableConfig.getDistTables().get(nodeIndex);
+          nodes[count].setSubTableName(subTableName);
+          SQLInsertStatement insertStatement=(SQLInsertStatement)insertStmt;
+          SQLExprTableSource tableSource=insertStatement.getTableSource();
+          SQLIdentifierExpr sqlIdentifierExpr=new SQLIdentifierExpr();
+          sqlIdentifierExpr.setParent(tableSource.getParent());
+          sqlIdentifierExpr.setName(subTableName);
+          SQLExprTableSource from2=new SQLExprTableSource(sqlIdentifierExpr);
+          insertStatement.setTableSource(from2);
+          nodes[count].setStatement(insertStatement.toString());
+        }
+ else {
+          nodes[count]=new RouteResultsetNode(tableConfig.getDataNodes().get(nodeIndex),rrs.getSqlType(),insertStmt.toString());
+        }
+        if (algorithm instanceof SlotFunction) {
+          nodes[count].setSlot(slotsMap.get(nodeIndex));
+          nodes[count].setStatement(ParseUtil.changeInsertAddSlot(nodes[count].getStatement(),nodes[count].getSlot()));
+        }
+        nodes[count++].setSource(rrs);
+      }
+      rrs.setNodes(nodes);
+      rrs.setFinishedRoute(true);
+    }
+  }
+ else   if (insertStmt.getQuery() != null) {
+    String msg="TODO:insert into .... select .... not supported!";
+    LOGGER.warn(msg);
+    throw new SQLNonTransientException(msg);
+  }
+}

@@ -1,0 +1,47 @@
+/** 
+ * Target should not try to connect to SOCKS5 proxies that already failed twice.
+ * @throws Exception should not happen
+ */
+@Test public void shouldBlacklistInvalidProxyAfter2Failures() throws Exception {
+  final Protocol protocol=new Protocol();
+  final XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,targetJID);
+  Bytestream bytestreamInitialization=Socks5PacketUtils.createBytestreamInitiation(initiatorJID,targetJID,sessionID);
+  bytestreamInitialization.addStreamHost(JidCreate.from("invalid." + proxyJID),"127.0.0.2",7778);
+  Socks5BytestreamManager byteStreamManager=Socks5BytestreamManager.getBytestreamManager(connection);
+  for (int i=0; i < 2; i++) {
+    assertThrows(Socks5Exception.CouldNotConnectToAnyProvidedSocks5Host.class,() -> {
+      Socks5BytestreamRequest byteStreamRequest=new Socks5BytestreamRequest(byteStreamManager,bytestreamInitialization);
+      byteStreamRequest.setTotalConnectTimeout(600);
+      byteStreamRequest.setMinimumConnectTimeout(300);
+      byteStreamRequest.accept();
+    }
+);
+    assertEquals(1,protocol.getRequests().size());
+    Stanza targetResponse=protocol.getRequests().remove(0);
+    assertTrue(IQ.class.isInstance(targetResponse));
+    assertEquals(initiatorJID,targetResponse.getTo());
+    assertEquals(IQ.Type.error,((IQ)targetResponse).getType());
+    assertEquals(StanzaError.Condition.item_not_found,targetResponse.getError().getCondition());
+  }
+  byte[] data=new byte[]{1,2,3};
+  try (Socks5TestProxy socks5Proxy=new Socks5TestProxy()){
+    assertTrue(socks5Proxy.isRunning());
+    bytestreamInitialization.addStreamHost(proxyJID,proxyAddress,socks5Proxy.getPort());
+    Socks5BytestreamRequest byteStreamRequest=new Socks5BytestreamRequest(byteStreamManager,bytestreamInitialization);
+    byteStreamRequest.setTotalConnectTimeout(600);
+    byteStreamRequest.setMinimumConnectTimeout(300);
+    InputStream inputStream=byteStreamRequest.accept().getInputStream();
+    String digest=Socks5Utils.createDigest(sessionID,initiatorJID,targetJID);
+    OutputStream outputStream=socks5Proxy.getSocket(digest).getOutputStream();
+    outputStream.write(data);
+    byte[] result=new byte[3];
+    inputStream.read(result);
+    assertArrayEquals(data,result);
+    assertEquals(1,protocol.getRequests().size());
+    Stanza targetResponse=protocol.getRequests().remove(0);
+    assertEquals(Bytestream.class,targetResponse.getClass());
+    assertEquals(initiatorJID,targetResponse.getTo());
+    assertEquals(IQ.Type.result,((Bytestream)targetResponse).getType());
+    assertEquals(proxyJID,((Bytestream)targetResponse).getUsedHost().getJID());
+  }
+ }

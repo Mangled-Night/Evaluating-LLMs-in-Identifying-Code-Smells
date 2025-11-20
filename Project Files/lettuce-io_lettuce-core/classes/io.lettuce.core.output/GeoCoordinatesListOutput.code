@@ -1,0 +1,45 @@
+/** 
+ * A list output that creates a list with  {@link GeoCoordinates}'s.
+ * @author Mark Paluch
+ */
+public class GeoCoordinatesListOutput<K,V> extends CommandOutput<K,V,List<GeoCoordinates>> implements StreamingOutput<GeoCoordinates> {
+  private Double x;
+  private boolean initialized;
+  private Subscriber<GeoCoordinates> subscriber;
+  public GeoCoordinatesListOutput(  RedisCodec<K,V> codec){
+    super(codec,Collections.emptyList());
+    setSubscriber(ListSubscriber.instance());
+  }
+  @Override public void set(  ByteBuffer bytes){
+    if (bytes == null) {
+      subscriber.onNext(output,null);
+      return;
+    }
+    double value=(bytes == null) ? 0 : parseDouble(decodeAscii(bytes));
+    set(value);
+  }
+  @Override public void set(  double number){
+    if (x == null) {
+      x=number;
+      return;
+    }
+    subscriber.onNext(output,new GeoCoordinates(x,number));
+    x=null;
+  }
+  @Override public void multi(  int count){
+    if (!initialized) {
+      output=OutputFactory.newList(count);
+      initialized=true;
+    }
+    if (count == -1) {
+      subscriber.onNext(output,null);
+    }
+  }
+  @Override public void setSubscriber(  Subscriber<GeoCoordinates> subscriber){
+    LettuceAssert.notNull(subscriber,"Subscriber must not be null");
+    this.subscriber=subscriber;
+  }
+  @Override public Subscriber<GeoCoordinates> getSubscriber(){
+    return subscriber;
+  }
+}

@@ -1,0 +1,10 @@
+@Test public void testChangedComponentsRevertedBeforeCleanUp(){
+  worldStub.setBlock(new Vector3i(),blockWithString);
+  EntityRef entity=worldProvider.getBlockEntityAt(new Vector3i());
+  StringComponent comp=entity.getComponent(StringComponent.class);
+  comp.value="Moo";
+  entity.saveComponent(comp);
+  LifecycleEventChecker checker=new LifecycleEventChecker(entityManager.getEventSystem(),StringComponent.class);
+  worldProvider.update(1.0f);
+  assertEquals(Lists.newArrayList(new EventInfo(OnChangedComponent.newInstance(),entity)),checker.receivedEvents);
+}

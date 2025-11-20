@@ -1,0 +1,17 @@
+@Test void pingWithTraceShouldCatchErrors(){
+  ScopedSpan foo=clientTracing.tracer().startScopedSpan("foo");
+  StatefulRedisConnection<String,String> connect=client.connect();
+  connect.sync().set("foo","bar");
+  try {
+    connect.sync().hgetall("foo");
+  }
+ catch (  Exception e) {
+  }
+  Wait.untilTrue(() -> spans.size() > 2).waitOrTimeout();
+  foo.finish();
+  List<Span> spans=new ArrayList<>(BraveTracingIntegrationTests.spans);
+  assertThat(spans.get(1).name()).isEqualTo("set");
+  assertThat(spans.get(2).name()).isEqualTo("hgetall");
+  assertThat(spans.get(2).tags()).containsEntry("error","WRONGTYPE Operation against a key holding the wrong kind of value");
+  assertThat(spans.get(3).name()).isEqualTo("foo");
+}

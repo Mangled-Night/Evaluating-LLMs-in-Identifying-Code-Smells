@@ -1,0 +1,83 @@
+/** 
+ * IQ stanza for retrieving and changing the Agent personal information.
+ */
+public class AgentInfo extends IQ {
+  /** 
+ * Element name of the stanza extension.
+ */
+  public static final String ELEMENT_NAME="agent-info";
+  /** 
+ * Namespace of the stanza extension.
+ */
+  public static final String NAMESPACE="http://jivesoftware.com/protocol/workgroup";
+  private String jid;
+  private String name;
+  public AgentInfo(){
+    super(ELEMENT_NAME,NAMESPACE);
+  }
+  /** 
+ * Returns the Agent's jid.
+ * @return the Agent's jid.
+ */
+  public String getJid(){
+    return jid;
+  }
+  /** 
+ * Sets the Agent's jid.
+ * @param jid the jid of the agent.
+ */
+  public void setJid(  String jid){
+    this.jid=jid;
+  }
+  /** 
+ * Returns the Agent's name. The name of the agent may be different than the user's name. This property may be shown in the webchat client.
+ * @return the Agent's name.
+ */
+  public String getName(){
+    return name;
+  }
+  /** 
+ * Sets the Agent's name. The name of the agent may be different than the user's name. This property may be shown in the webchat client.
+ * @param name the new name of the agent.
+ */
+  public void setName(  String name){
+    this.name=name;
+  }
+  @Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(  IQChildElementXmlStringBuilder buf){
+    buf.rightAngleBracket();
+    if (jid != null) {
+      buf.append("<jid>").append(getJid()).append("</jid>");
+    }
+    if (name != null) {
+      buf.append("<name>").append(getName()).append("</name>");
+    }
+    return buf;
+  }
+  /** 
+ * An IQProvider for AgentInfo packets.
+ * @author Gaston Dombiak
+ */
+public static class Provider extends IqProvider<AgentInfo> {
+    @Override public AgentInfo parse(    XmlPullParser parser,    int initialDepth,    IqData iqData,    XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+      AgentInfo answer=new AgentInfo();
+      boolean done=false;
+      while (!done) {
+        XmlPullParser.Event eventType=parser.next();
+        if (eventType == XmlPullParser.Event.START_ELEMENT) {
+          if (parser.getName().equals("jid")) {
+            answer.setJid(parser.nextText());
+          }
+ else           if (parser.getName().equals("name")) {
+            answer.setName(parser.nextText());
+          }
+        }
+ else         if (eventType == XmlPullParser.Event.END_ELEMENT) {
+          if (parser.getName().equals(ELEMENT_NAME)) {
+            done=true;
+          }
+        }
+      }
+      return answer;
+    }
+  }
+}

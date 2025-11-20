@@ -1,0 +1,56 @@
+@Override public Page<EsProduct> search(String keyword,Integer pageNum,Integer pageSize){
+  Pageable pageable=PageRequest.of(pageNum,pageSize);
+  return productRepository.findByNameOrSubTitleOrKeywords(keyword,keyword,keyword,pageable);
+}
+@Override public Page<EsProduct> search(String keyword,Long brandId,Long productCategoryId,Integer pageNum,Integer pageSize,Integer sort){
+  Pageable pageable=PageRequest.of(pageNum,pageSize);
+  NativeSearchQueryBuilder nativeSearchQueryBuilder=new NativeSearchQueryBuilder();
+  nativeSearchQueryBuilder.withPageable(pageable);
+  if (brandId != null || productCategoryId != null) {
+    BoolQueryBuilder boolQueryBuilder=QueryBuilders.boolQuery();
+    if (brandId != null) {
+      boolQueryBuilder.must(QueryBuilders.termQuery("brandId",brandId));
+    }
+    if (productCategoryId != null) {
+      boolQueryBuilder.must(QueryBuilders.termQuery("productCategoryId",productCategoryId));
+    }
+    nativeSearchQueryBuilder.withFilter(boolQueryBuilder);
+  }
+  if (StrUtil.isEmpty(keyword)) {
+    nativeSearchQueryBuilder.withQuery(QueryBuilders.matchAllQuery());
+  }
+ else {
+    List<FunctionScoreQueryBuilder.FilterFunctionBuilder> filterFunctionBuilders=new ArrayList<>();
+    filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(QueryBuilders.matchQuery("name",keyword),ScoreFunctionBuilders.weightFactorFunction(10)));
+    filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(QueryBuilders.matchQuery("subTitle",keyword),ScoreFunctionBuilders.weightFactorFunction(5)));
+    filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(QueryBuilders.matchQuery("keywords",keyword),ScoreFunctionBuilders.weightFactorFunction(2)));
+    FunctionScoreQueryBuilder.FilterFunctionBuilder[] builders=new FunctionScoreQueryBuilder.FilterFunctionBuilder[filterFunctionBuilders.size()];
+    filterFunctionBuilders.toArray(builders);
+    FunctionScoreQueryBuilder functionScoreQueryBuilder=QueryBuilders.functionScoreQuery(builders).scoreMode(FunctionScoreQuery.ScoreMode.SUM).setMinScore(2);
+    nativeSearchQueryBuilder.withQuery(functionScoreQueryBuilder);
+  }
+  if (sort == 1) {
+    nativeSearchQueryBuilder.withSorts(SortBuilders.fieldSort("id").order(SortOrder.DESC));
+  }
+ else   if (sort == 2) {
+    nativeSearchQueryBuilder.withSorts(SortBuilders.fieldSort("sale").order(SortOrder.DESC));
+  }
+ else   if (sort == 3) {
+    nativeSearchQueryBuilder.withSorts(SortBuilders.fieldSort("price").order(SortOrder.ASC));
+  }
+ else   if (sort == 4) {
+    nativeSearchQueryBuilder.withSorts(SortBuilders.fieldSort("price").order(SortOrder.DESC));
+  }
+ else {
+    nativeSearchQueryBuilder.withSorts(SortBuilders.scoreSort().order(SortOrder.DESC));
+  }
+  nativeSearchQueryBuilder.withSorts(SortBuilders.scoreSort().order(SortOrder.DESC));
+  NativeSearchQuery searchQuery=nativeSearchQueryBuilder.build();
+  LOGGER.info("DSL:{}",searchQuery.getQuery().toString());
+  SearchHits<EsProduct> searchHits=elasticsearchRestTemplate.search(searchQuery,EsProduct.class);
+  if (searchHits.getTotalHits() <= 0) {
+    return new PageImpl<>(ListUtil.empty(),pageable,0);
+  }
+  List<EsProduct> searchProductList=searchHits.stream().map(SearchHit::getContent).collect(Collectors.toList());
+  return new PageImpl<>(searchProductList,pageable,searchHits.getTotalHits());
+}

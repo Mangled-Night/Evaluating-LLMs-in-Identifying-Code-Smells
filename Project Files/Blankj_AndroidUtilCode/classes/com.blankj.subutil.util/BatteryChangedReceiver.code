@@ -1,0 +1,55 @@
+public static final class BatteryChangedReceiver extends BroadcastReceiver {
+  private static BatteryChangedReceiver getInstance(){
+    return BatteryChangedReceiver.LazyHolder.INSTANCE;
+  }
+  private Set<OnBatteryStatusChangedListener> mListeners=new HashSet<>();
+  void registerListener(  final OnBatteryStatusChangedListener listener){
+    if (listener == null)     return;
+    ThreadUtils.runOnUiThread(new Runnable(){
+      @Override public void run(){
+        int preSize=mListeners.size();
+        mListeners.add(listener);
+        if (preSize == 0 && mListeners.size() == 1) {
+          IntentFilter intentFilter=new IntentFilter();
+          intentFilter.addAction(Intent.ACTION_BATTERY_CHANGED);
+          Utils.getApp().registerReceiver(BatteryChangedReceiver.getInstance(),intentFilter);
+        }
+      }
+    }
+);
+  }
+  boolean isRegistered(  final OnBatteryStatusChangedListener listener){
+    if (listener == null)     return false;
+    return mListeners.contains(listener);
+  }
+  void unregisterListener(  final OnBatteryStatusChangedListener listener){
+    if (listener == null)     return;
+    ThreadUtils.runOnUiThread(new Runnable(){
+      @Override public void run(){
+        int preSize=mListeners.size();
+        mListeners.remove(listener);
+        if (preSize == 1 && mListeners.size() == 0) {
+          Utils.getApp().unregisterReceiver(BatteryChangedReceiver.getInstance());
+        }
+      }
+    }
+);
+  }
+  @Override public void onReceive(  Context context,  final Intent intent){
+    if (Intent.ACTION_BATTERY_CHANGED.equals(intent.getAction())) {
+      ThreadUtils.runOnUiThread(new Runnable(){
+        @Override public void run(){
+          int level=intent.getIntExtra(BatteryManager.EXTRA_LEVEL,-1);
+          int status=intent.getIntExtra(BatteryManager.EXTRA_STATUS,BatteryStatus.UNKNOWN);
+          for (          OnBatteryStatusChangedListener listener : mListeners) {
+            listener.onBatteryStatusChanged(new Status(level,status));
+          }
+        }
+      }
+);
+    }
+  }
+private static class LazyHolder {
+    private static final BatteryChangedReceiver INSTANCE=new BatteryChangedReceiver();
+  }
+}

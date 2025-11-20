@@ -1,0 +1,11 @@
+@Override public void deletePublicKeyRing(BareJid owner,OpenPgpV4Fingerprint fingerprint) throws IOException, PGPException {
+  PGPPublicKeyRingCollection publicKeyRings=getPublicKeysOf(owner);
+  if (publicKeyRings.contains(fingerprint.getKeyId())) {
+    publicKeyRings=PGPPublicKeyRingCollection.removePublicKeyRing(publicKeyRings,publicKeyRings.getPublicKeyRing(fingerprint.getKeyId()));
+    if (!publicKeyRings.iterator().hasNext()) {
+      publicKeyRings=null;
+    }
+    this.publicKeyRingCollections.put(owner,publicKeyRings);
+    writePublicKeysOf(owner,publicKeyRings);
+  }
+}

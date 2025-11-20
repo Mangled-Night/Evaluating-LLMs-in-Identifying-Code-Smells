@@ -1,0 +1,35 @@
+private void loadMigratorTable(TableConfig oldTable,TableConfig newTable,String schemaName,String tableName){
+  if (oldTable == null || newTable == null) {
+    throw new ConfigException("please check tableFile.properties,make sure " + schemaName + ":"+ tableName+ " is sharding table ");
+  }
+  if (oldTable.isGlobalTable() || newTable.isGlobalTable()) {
+    String message="global table: " + schemaName + ":"+ tableName+ " is ignore!";
+    System.out.println("Warn: " + message);
+    LOGGER.warn(message);
+  }
+ else {
+    List<DataNode> oldDN=getDataNodes(oldTable,oldDataNodes,oldDataHosts);
+    List<DataNode> newDN=getDataNodes(newTable,newDataNodes,newDataHosts);
+    if (isNeedMigrate(oldDN,newDN)) {
+      LOGGER.info("old table:{}",oldTable);
+      LOGGER.info("new table:{}",newTable);
+      if (oldTable.getRule() == null) {
+        LOGGER.info("beacuse {} rule is null,skip it,check it is er child table",oldTable);
+        return;
+      }
+      if (newTable.getRule() == null) {
+        LOGGER.info("beacuse {} rule is null,skip it,check it is er child table.",newTable);
+        return;
+      }
+      checkRuleConfig(oldTable.getRule(),newTable.getRule(),schemaName,tableName);
+      RuleConfig newRC=newTable.getRule();
+      TableMigrateInfo tmi=new TableMigrateInfo(schemaName,tableName,oldDN,newDN,newRC.getRuleAlgorithm(),newRC.getColumn());
+      migratorTables.add(tmi);
+    }
+ else {
+      String message=schemaName + ":" + tableName+ " is ignore,no need to migrate!";
+      LOGGER.warn(message);
+      System.out.println("Warn: " + message);
+    }
+  }
+}

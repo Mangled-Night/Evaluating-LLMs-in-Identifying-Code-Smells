@@ -1,0 +1,15 @@
+private <T>void onAllConnections(Function<RedisClusterAsyncCommands<?,?>,Future<T>> function){
+  onAllConnections(function,false);
+}
+private <T>void onAllConnections(Function<RedisClusterAsyncCommands<?,?>,Future<T>> function,boolean ignoreExecutionException){
+  List<Future<?>> futures=new ArrayList<>();
+  for (  RedisClusterAsyncCommands<?,?> connection : connectionCache.values()) {
+    futures.add(function.apply(connection));
+  }
+  try {
+    await(futures,ignoreExecutionException);
+  }
+ catch (  InterruptedException|ExecutionException|TimeoutException e) {
+    throw new IllegalStateException(e);
+  }
+}

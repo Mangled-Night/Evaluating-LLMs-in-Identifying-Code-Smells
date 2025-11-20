@@ -1,0 +1,29 @@
+/** 
+ * A content info has been received. This is done for publishing the list of payload types...
+ * @param jingle TODO javadoc me pleaseThe input packet
+ * @return a Jingle packet
+ * @throws JingleException in case of an jingle exception.
+ */
+private IQ receiveSessionInfoAction(Jingle jingle,JingleDescription description) throws JingleException {
+  IQ response=null;
+  PayloadType oldBestCommonAudioPt=bestCommonAudioPt;
+  List<PayloadType> offeredPayloads;
+  boolean ptChange=false;
+  offeredPayloads=description.getAudioPayloadTypesList();
+  if (!offeredPayloads.isEmpty()) {
+synchronized (remoteAudioPts) {
+      remoteAudioPts.clear();
+      remoteAudioPts.addAll(offeredPayloads);
+    }
+    bestCommonAudioPt=calculateBestCommonAudioPt(remoteAudioPts);
+    if (bestCommonAudioPt != null) {
+      ptChange=!bestCommonAudioPt.equals(oldBestCommonAudioPt);
+      if (oldBestCommonAudioPt == null || ptChange) {
+      }
+    }
+ else {
+      throw new JingleException(JingleError.NO_COMMON_PAYLOAD);
+    }
+  }
+  return response;
+}

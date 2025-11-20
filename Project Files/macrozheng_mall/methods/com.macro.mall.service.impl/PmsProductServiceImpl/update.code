@@ -1,0 +1,33 @@
+@Override public int update(Long id,PmsProductParam productParam){
+  int count;
+  PmsProduct product=productParam;
+  product.setId(id);
+  productMapper.updateByPrimaryKeySelective(product);
+  PmsMemberPriceExample pmsMemberPriceExample=new PmsMemberPriceExample();
+  pmsMemberPriceExample.createCriteria().andProductIdEqualTo(id);
+  memberPriceMapper.deleteByExample(pmsMemberPriceExample);
+  relateAndInsertList(memberPriceDao,productParam.getMemberPriceList(),id);
+  PmsProductLadderExample ladderExample=new PmsProductLadderExample();
+  ladderExample.createCriteria().andProductIdEqualTo(id);
+  productLadderMapper.deleteByExample(ladderExample);
+  relateAndInsertList(productLadderDao,productParam.getProductLadderList(),id);
+  PmsProductFullReductionExample fullReductionExample=new PmsProductFullReductionExample();
+  fullReductionExample.createCriteria().andProductIdEqualTo(id);
+  productFullReductionMapper.deleteByExample(fullReductionExample);
+  relateAndInsertList(productFullReductionDao,productParam.getProductFullReductionList(),id);
+  handleUpdateSkuStockList(id,productParam);
+  PmsProductAttributeValueExample productAttributeValueExample=new PmsProductAttributeValueExample();
+  productAttributeValueExample.createCriteria().andProductIdEqualTo(id);
+  productAttributeValueMapper.deleteByExample(productAttributeValueExample);
+  relateAndInsertList(productAttributeValueDao,productParam.getProductAttributeValueList(),id);
+  CmsSubjectProductRelationExample subjectProductRelationExample=new CmsSubjectProductRelationExample();
+  subjectProductRelationExample.createCriteria().andProductIdEqualTo(id);
+  subjectProductRelationMapper.deleteByExample(subjectProductRelationExample);
+  relateAndInsertList(subjectProductRelationDao,productParam.getSubjectProductRelationList(),id);
+  CmsPrefrenceAreaProductRelationExample prefrenceAreaExample=new CmsPrefrenceAreaProductRelationExample();
+  prefrenceAreaExample.createCriteria().andProductIdEqualTo(id);
+  prefrenceAreaProductRelationMapper.deleteByExample(prefrenceAreaExample);
+  relateAndInsertList(prefrenceAreaProductRelationDao,productParam.getPrefrenceAreaProductRelationList(),id);
+  count=1;
+  return count;
+}

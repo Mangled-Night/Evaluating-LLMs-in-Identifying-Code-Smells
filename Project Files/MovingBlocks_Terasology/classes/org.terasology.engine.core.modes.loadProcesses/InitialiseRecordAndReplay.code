@@ -1,0 +1,31 @@
+/** 
+ * Initialises Record and Replay if they were selected in the main menu.
+ */
+public class InitialiseRecordAndReplay extends SingleStepLoadProcess {
+  private Context context;
+  private RecordAndReplaySerializer recordAndReplaySerializer;
+  private RecordAndReplayCurrentStatus recordAndReplayCurrentStatus;
+  public InitialiseRecordAndReplay(  Context context){
+    this.context=context;
+  }
+  @Override public String getMessage(){
+    return "${engine:menu#init-record-replay}";
+  }
+  @Override public boolean step(){
+    if (recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.PREPARING_RECORD) {
+      recordAndReplayCurrentStatus.setStatus(RecordAndReplayStatus.RECORDING);
+    }
+    if (recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.PREPARING_REPLAY) {
+      recordAndReplaySerializer.deserializeRecordAndReplayData();
+      recordAndReplayCurrentStatus.setStatus(RecordAndReplayStatus.REPLAYING);
+    }
+    return true;
+  }
+  @Override public void begin(){
+    this.recordAndReplayCurrentStatus=context.get(RecordAndReplayCurrentStatus.class);
+    this.recordAndReplaySerializer=context.get(RecordAndReplaySerializer.class);
+  }
+  @Override public int getExpectedCost(){
+    return 1;
+  }
+}

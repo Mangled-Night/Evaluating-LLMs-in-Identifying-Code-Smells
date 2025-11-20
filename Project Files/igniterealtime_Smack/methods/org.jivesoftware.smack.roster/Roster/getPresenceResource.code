@@ -1,0 +1,24 @@
+/** 
+ * Returns the presence info for a particular user's resource, or unavailable presence if the user is offline or if no presence information is available, such as when you are not subscribed to the user's presence updates.
+ * @param userWithResource a fully qualified XMPP ID including a resource (user@domain/resource).
+ * @return the user's current presence, or unavailable presence if the user is offlineor if no presence information is available.
+ */
+public Presence getPresenceResource(FullJid userWithResource){
+  BareJid key=userWithResource.asBareJid();
+  Resourcepart resource=userWithResource.getResourcepart();
+  Map<Resourcepart,Presence> userPresences=getPresencesInternal(key);
+  if (userPresences == null) {
+    Presence presence=synthesizeUnvailablePresence(userWithResource);
+    return presence;
+  }
+ else {
+    Presence presence=userPresences.get(resource);
+    if (presence == null) {
+      presence=synthesizeUnvailablePresence(userWithResource);
+      return presence;
+    }
+ else {
+      return presence;
+    }
+  }
+}

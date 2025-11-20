@@ -1,0 +1,20 @@
+public Object detail(Integer id){
+  LitemallGoods goods=goodsService.findById(id);
+  List<LitemallGoodsProduct> products=productService.queryByGid(id);
+  List<LitemallGoodsSpecification> specifications=specificationService.queryByGid(id);
+  List<LitemallGoodsAttribute> attributes=attributeService.queryByGid(id);
+  Integer categoryId=goods.getCategoryId();
+  LitemallCategory category=categoryService.findById(categoryId);
+  Integer[] categoryIds=new Integer[]{};
+  if (category != null) {
+    Integer parentCategoryId=category.getPid();
+    categoryIds=new Integer[]{parentCategoryId,categoryId};
+  }
+  Map<String,Object> data=new HashMap<>();
+  data.put("goods",goods);
+  data.put("specifications",specifications);
+  data.put("products",products);
+  data.put("attributes",attributes);
+  data.put("categoryIds",categoryIds);
+  return ResponseUtil.ok(data);
+}

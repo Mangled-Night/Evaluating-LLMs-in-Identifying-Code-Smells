@@ -1,0 +1,36 @@
+/** 
+ * Provides a lexicographical comparer implementation; either a Java implementation or a faster implementation based on  {@link Unsafe}. <p>Uses reflection to gracefully fall back to the Java implementation if {@code Unsafe} isn't available.
+ */
+@VisibleForTesting static class LexicographicalComparerHolder {
+  static final String UNSAFE_COMPARER_NAME=LexicographicalComparerHolder.class.getName() + "$UnsafeComparer";
+  static final Comparer<byte[]> BEST_COMPARER=getBestComparer();
+  /** 
+ * Returns the Unsafe-using Comparer, or falls back to the pure-Java implementation if unable to do so.
+ */
+  static Comparer<byte[]> getBestComparer(){
+    try {
+      Class<?> theClass=Class.forName(UNSAFE_COMPARER_NAME);
+      @SuppressWarnings("unchecked") Comparer<byte[]> comparer=(Comparer<byte[]>)theClass.getEnumConstants()[0];
+      return comparer;
+    }
+ catch (    Throwable t) {
+      return lexicographicalComparerJavaImpl();
+    }
+  }
+  enum PureJavaComparer implements Comparer<byte[]> {  INSTANCE;   @Override public int compareTo(  byte[] buffer1,  int offset1,  int length1,  byte[] buffer2,  int offset2,  int length2){
+    if (buffer1 == buffer2 && offset1 == offset2 && length1 == length2) {
+      return 0;
+    }
+    int end1=offset1 + length1;
+    int end2=offset2 + length2;
+    for (int i=offset1, j=offset2; i < end1 && j < end2; i++, j++) {
+      int a=(buffer1[i] & 0xff);
+      int b=(buffer2[j] & 0xff);
+      if (a != b) {
+        return a - b;
+      }
+    }
+    return length1 - length2;
+  }
+}
+}

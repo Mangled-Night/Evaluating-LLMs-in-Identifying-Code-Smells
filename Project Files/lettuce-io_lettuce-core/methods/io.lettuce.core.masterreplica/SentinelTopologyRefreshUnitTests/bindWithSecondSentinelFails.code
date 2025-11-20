@@ -1,0 +1,7 @@
+@Test void bindWithSecondSentinelFails(){
+  sut=new SentinelTopologyRefresh(redisClient,"mymaster",Arrays.asList(host1,host2));
+  when(redisClient.connectPubSubAsync(any(StringCodec.class),eq(host2))).thenReturn(ConnectionFuture.from(null,Futures.failed(new RedisConnectionException("err"))));
+  sut.bind(refreshRunnable);
+  Map<RedisURI,StatefulRedisPubSubConnection<String,String>> connections=(Map)ReflectionTestUtils.getField(sut,"pubSubConnections");
+  assertThat(connections).containsKey(host1).hasSize(1);
+}

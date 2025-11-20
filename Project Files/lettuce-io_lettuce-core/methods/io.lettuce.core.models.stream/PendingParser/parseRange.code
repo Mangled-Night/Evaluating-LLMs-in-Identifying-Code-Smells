@@ -1,0 +1,19 @@
+/** 
+ * Parse the output of the Redis  {@literal XPENDING} command with {@link Range}.
+ * @param xpendingOutput output of the Redis {@literal XPENDING}.
+ * @return list of {@link PendingMessage}s.
+ */
+@SuppressWarnings("unchecked") public static List<PendingMessage> parseRange(List<?> xpendingOutput){
+  LettuceAssert.notNull(xpendingOutput,"XPENDING output must not be null");
+  List<PendingMessage> result=new ArrayList<>();
+  for (  Object element : xpendingOutput) {
+    LettuceAssert.isTrue(element instanceof List,"Output elements must be a List");
+    List<Object> message=(List)element;
+    String messageId=(String)message.get(0);
+    String consumer=(String)message.get(1);
+    Long msSinceLastDelivery=(Long)message.get(2);
+    Long deliveryCount=(Long)message.get(3);
+    result.add(new PendingMessage(messageId,consumer,msSinceLastDelivery,deliveryCount));
+  }
+  return result;
+}

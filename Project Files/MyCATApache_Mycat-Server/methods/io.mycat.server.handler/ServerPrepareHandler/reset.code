@@ -1,0 +1,17 @@
+@Override public void reset(byte[] data){
+  ResetPacket packet=new ResetPacket();
+  packet.read(data);
+  long pstmtId=packet.getPstmtId();
+  LOGGER.info("preparestatement  long data id:{}",pstmtId);
+  PreparedStatement pstmt=pstmtForId.get(pstmtId);
+  if (pstmt != null) {
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("reset prepare sql : " + pstmtForId.get(pstmtId));
+    }
+    pstmt.resetLongData();
+    source.write(OkPacket.OK);
+  }
+ else {
+    source.writeErrMessage(ErrorCode.ERR_FOUND_EXCEPTION,"can not reset prepare statement : " + pstmtForId.get(pstmtId));
+  }
+}

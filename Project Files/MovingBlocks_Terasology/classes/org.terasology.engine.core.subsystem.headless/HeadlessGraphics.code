@@ -1,0 +1,28 @@
+public class HeadlessGraphics implements EngineSubsystem {
+  @Override public String getName(){
+    return "Graphics";
+  }
+  @Override public void registerCoreAssetTypes(  ModuleAwareAssetTypeManager assetTypeManager){
+    assetTypeManager.createAssetType(Font.class,FontImpl::new,"fonts");
+    AssetType<Texture,TextureData> texture=assetTypeManager.createAssetType(Texture.class,(urn,assetType,data) -> new HeadlessTexture(urn,assetType,data,new HeadlessTexture.DisposalAction()),"textures","fonts");
+    assetTypeManager.getAssetFileDataProducer(texture).addAssetFormat(new PNGTextureFormat(Texture.FilterMode.NEAREST,path -> path.getPath().get(1).equals("textures")));
+    assetTypeManager.getAssetFileDataProducer(texture).addAssetFormat(new PNGTextureFormat(Texture.FilterMode.LINEAR,path -> path.getPath().get(1).equals("fonts")));
+    assetTypeManager.createAssetType(Shader.class,HeadlessShader::new,"shaders");
+    assetTypeManager.createAssetType(Material.class,HeadlessMaterial::new,"materials");
+    assetTypeManager.createAssetType(Mesh.class,HeadlessMesh::new,"mesh");
+    assetTypeManager.createAssetType(SkeletalMesh.class,HeadlessSkeletalMesh::new,"skeletalMesh");
+    assetTypeManager.createAssetType(MeshAnimation.class,MeshAnimationImpl::new,"animations");
+    assetTypeManager.createAssetType(Atlas.class,Atlas::new,"atlas");
+    assetTypeManager.createAssetType(Subtexture.class,Subtexture::new);
+  }
+  @Override public void postInitialise(  Context context){
+    context.put(RenderingSubsystemFactory.class,new HeadlessRenderingSubsystemFactory());
+    HeadlessDisplayDevice headlessDisplay=new HeadlessDisplayDevice();
+    context.put(DisplayDevice.class,headlessDisplay);
+    initHeadless(context);
+    context.put(CanvasRenderer.class,new HeadlessCanvasRenderer());
+  }
+  private void initHeadless(  Context context){
+    context.put(ShaderManager.class,new ShaderManagerHeadless());
+  }
+}

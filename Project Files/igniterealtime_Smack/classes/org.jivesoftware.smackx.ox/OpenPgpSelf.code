@@ -1,0 +1,75 @@
+/** 
+ * This class acts as our own OpenPGP identity. It can be seen as a special view on the  {@link OpenPgpStore}, giving access to our own encryption keys etc.
+ */
+public class OpenPgpSelf extends OpenPgpContact {
+  /** 
+ * Constructor.
+ * @param jid our own {@link BareJid}. This is needed to access our keys in the store.
+ * @param store the store.
+ */
+  OpenPgpSelf(  BareJid jid,  OpenPgpStore store){
+    super(jid,store);
+  }
+  /** 
+ * Return true, if we have a usable secret key available.
+ * @return true if we have secret key, otherwise false.
+ * @throws IOException IO is dangerous
+ * @throws PGPException PGP is brittle
+ */
+  public boolean hasSecretKeyAvailable() throws IOException, PGPException {
+    return getSecretKeys() != null;
+  }
+  /** 
+ * Return a  {@link PGPSecretKeyRingCollection} which contains all of our {@link PGPSecretKeyRing}s.
+ * @return collection of our secret keys
+ * @throws IOException IO is dangerous
+ * @throws PGPException PGP is brittle
+ */
+  public PGPSecretKeyRingCollection getSecretKeys() throws IOException, PGPException {
+    return store.getSecretKeysOf(jid);
+  }
+  /** 
+ * Return the  {@link PGPSecretKeyRing} which we will use to sign our messages.
+ * @return signing key
+ * @throws IOException IO is dangerous
+ * @throws PGPException PGP is brittle
+ */
+  public PGPSecretKeyRing getSigningKeyRing() throws IOException, PGPException {
+    PGPSecretKeyRingCollection secretKeyRings=getSecretKeys();
+    if (secretKeyRings == null) {
+      return null;
+    }
+    PGPSecretKeyRing signingKeyRing=null;
+    for (    PGPSecretKeyRing ring : secretKeyRings) {
+      if (signingKeyRing == null) {
+        signingKeyRing=ring;
+        continue;
+      }
+      if (ring.getPublicKey().getCreationTime().after(signingKeyRing.getPublicKey().getCreationTime())) {
+        signingKeyRing=ring;
+      }
+    }
+    return signingKeyRing;
+  }
+  /** 
+ * Return the  {@link OpenPgpV4Fingerprint} of our signing key.
+ * @return fingerprint of signing key
+ * @throws IOException IO is dangerous
+ * @throws PGPException PGP is brittle
+ */
+  public OpenPgpV4Fingerprint getSigningKeyFingerprint() throws IOException, PGPException {
+    PGPSecretKeyRing signingKeyRing=getSigningKeyRing();
+    return signingKeyRing != null ? new OpenPgpV4Fingerprint(signingKeyRing.getPublicKey()) : null;
+  }
+  /** 
+ * Return a  {@link PGPPublicKeyRingCollection} containing only the public keys belonging to our signing key ring.TODO: Add support for public keys of other devices of the owner.
+ * @return public keys
+ * @throws IOException IO is dangerous.
+ * @throws PGPException PGP is brittle.
+ */
+  @Override public PGPPublicKeyRingCollection getAnnouncedPublicKeys() throws IOException, PGPException {
+    PGPSecretKeyRing secretKeys=getSigningKeyRing();
+    PGPPublicKeyRing publicKeys=getAnyPublicKeys().getPublicKeyRing(secretKeys.getPublicKey().getKeyID());
+    return new PGPPublicKeyRingCollection(Collections.singleton(publicKeys));
+  }
+}

@@ -1,0 +1,38 @@
+private class DashboardTimerTask extends TimerTask {
+  private CommandProcess process;
+  private ThreadSampler threadSampler;
+  public DashboardTimerTask(  CommandProcess process){
+    this.process=process;
+    this.threadSampler=new ThreadSampler();
+  }
+  @Override public void run(){
+    try {
+      if (count.get() >= getNumOfExecutions()) {
+        timer.cancel();
+        timer.purge();
+        process.end(0,"Process ends after " + getNumOfExecutions() + " time(s).");
+        return;
+      }
+      DashboardModel dashboardModel=new DashboardModel();
+      List<ThreadVO> threads=ThreadUtil.getThreads();
+      dashboardModel.setThreads(threadSampler.sample(threads));
+      dashboardModel.setMemoryInfo(MemoryCommand.memoryInfo());
+      addGcInfo(dashboardModel);
+      addRuntimeInfo(dashboardModel);
+      try {
+        addTomcatInfo(dashboardModel);
+      }
+ catch (      Throwable e) {
+        logger.error("try to read tomcat info error",e);
+      }
+      process.appendResult(dashboardModel);
+      count.getAndIncrement();
+      process.times().incrementAndGet();
+    }
+ catch (    Throwable e) {
+      String msg="process dashboard failed: " + e.getMessage();
+      logger.error(msg,e);
+      process.end(-1,msg);
+    }
+  }
+}

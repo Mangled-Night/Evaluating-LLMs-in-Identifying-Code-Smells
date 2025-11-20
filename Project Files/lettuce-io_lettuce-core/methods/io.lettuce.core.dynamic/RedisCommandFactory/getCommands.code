@@ -1,0 +1,34 @@
+@SuppressWarnings("unchecked") private List<CommandDetail> getCommands(StatefulConnection<?,?> connection){
+  List<Object> commands=Collections.emptyList();
+  try {
+    if (connection instanceof StatefulRedisConnection) {
+      commands=((StatefulRedisConnection)connection).sync().command();
+    }
+    if (connection instanceof StatefulRedisClusterConnection) {
+      commands=((StatefulRedisClusterConnection)connection).sync().command();
+    }
+  }
+ catch (  RedisCommandExecutionException e) {
+    log.debug("Cannot obtain command metadata",e);
+  }
+  if (commands.isEmpty()) {
+    setVerifyCommandMethods(false);
+  }
+  return CommandDetailParser.parse(commands);
+}
+/** 
+ * Returns a Redis Commands interface instance for the given interface.
+ * @param commandInterface must not be {@code null}.
+ * @param < T > command interface type.
+ * @return the implemented Redis Commands interface.
+ */
+public <T extends Commands>T getCommands(Class<T> commandInterface){
+  LettuceAssert.notNull(commandInterface,"Redis Command Interface must not be null");
+  RedisCommandsMetadata metadata=new DefaultRedisCommandsMetadata(commandInterface);
+  InvocationProxyFactory factory=new InvocationProxyFactory();
+  factory.addInterface(commandInterface);
+  BatchAwareCommandLookupStrategy lookupStrategy=new BatchAwareCommandLookupStrategy(new CompositeCommandLookupStrategy(),metadata);
+  factory.addInterceptor(new DefaultMethodInvokingInterceptor());
+  factory.addInterceptor(new CommandFactoryExecutorMethodInterceptor(metadata,lookupStrategy));
+  return factory.createProxy(commandInterface.getClassLoader());
+}

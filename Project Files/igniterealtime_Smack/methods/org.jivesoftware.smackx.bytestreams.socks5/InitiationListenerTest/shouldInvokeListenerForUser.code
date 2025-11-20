@@ -1,0 +1,12 @@
+/** 
+ * If a listener for a specific user in registered it should be notified on incoming requests for that user.
+ * @throws Exception should not happen
+ */
+@Test public void shouldInvokeListenerForUser() throws Exception {
+  Socks5BytestreamListener listener=mock(Socks5BytestreamListener.class);
+  byteStreamManager.addIncomingBytestreamListener(listener,initiatorJID);
+  initiationListener.handleIQRequest(initBytestream);
+  ArgumentCaptor<BytestreamRequest> byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+  verify(listener,timeout(TIMEOUT)).incomingBytestreamRequest(byteStreamRequest.capture());
+  assertEquals(initiatorJID,byteStreamRequest.getValue().getFrom());
+}

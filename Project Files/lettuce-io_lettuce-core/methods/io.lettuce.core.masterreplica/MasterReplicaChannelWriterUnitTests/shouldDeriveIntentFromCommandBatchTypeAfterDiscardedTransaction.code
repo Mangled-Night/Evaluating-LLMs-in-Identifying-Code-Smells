@@ -1,0 +1,9 @@
+@Test void shouldDeriveIntentFromCommandBatchTypeAfterDiscardedTransaction(){
+  MasterReplicaChannelWriter writer=new MasterReplicaChannelWriter(connectionProvider,clientResources);
+  when(connectionProvider.getConnectionAsync(any(ConnectionIntent.class))).thenReturn(CompletableFuture.completedFuture(connection));
+  List<Command<String,String,String>> commands=Arrays.asList(mockCommand(CommandType.MULTI),mockCommand(CommandType.EXEC));
+  writer.write(commands);
+  writer.write(Collections.singletonList(mockCommand(CommandType.GET)));
+  verify(connectionProvider).getConnectionAsync(ConnectionIntent.WRITE);
+  verify(connectionProvider).getConnectionAsync(ConnectionIntent.READ);
+}

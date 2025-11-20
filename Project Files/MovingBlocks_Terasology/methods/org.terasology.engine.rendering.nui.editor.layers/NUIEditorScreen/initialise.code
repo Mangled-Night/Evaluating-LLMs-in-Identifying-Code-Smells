@@ -1,0 +1,117 @@
+@Override public void initialise(){
+  UIDropdownScrollable<String> availableAssetDropdown=find(AVAILABLE_ASSETS_ID,UIDropdownScrollable.class);
+  JsonEditorTreeView editor=find(EDITOR_TREE_VIEW_ID,JsonEditorTreeView.class);
+  selectedScreenBox=find(SELECTED_SCREEN_ID,UIBox.class);
+  super.setEditorSystem(nuiEditorSystem);
+  super.setEditor(editor);
+  List<String> availableAssetList=Lists.newArrayList();
+  availableAssetList.add(CREATE_NEW_SCREEN);
+  availableAssetList.addAll(assetManager.getAvailableAssets(UIElement.class).stream().map(Object::toString).collect(Collectors.toList()));
+  Collections.sort(availableAssetList);
+  if (availableAssetDropdown != null) {
+    availableAssetDropdown.setOptions(availableAssetList);
+    availableAssetDropdown.bindSelection(new Binding<String>(){
+      @Override public String get(){
+        return selectedAsset;
+      }
+      @Override public void set(      String value){
+        selectedAssetPending=value;
+        if (CREATE_NEW_SCREEN.equals(value)) {
+          selectedAssetPath=null;
+          resetState(NUIEditorNodeUtils.createNewScreen());
+        }
+ else {
+          selectAsset(new ResourceUrn(value));
+        }
+      }
+    }
+);
+  }
+  if (editor != null) {
+    editor.subscribeTreeViewUpdate(() -> {
+      getEditor().addToHistory();
+      resetPreviewWidget();
+      updateConfig();
+      setUnsavedChangesPresent(true);
+      updateAutosave();
+    }
+);
+    editor.setContextMenuTreeProducer(node -> {
+      NUIEditorMenuTreeBuilder nuiEditorMenuTreeBuilder=new NUIEditorMenuTreeBuilder();
+      nuiEditorMenuTreeBuilder.setManager(getManager());
+      nuiEditorMenuTreeBuilder.putConsumer(NUIEditorMenuTreeBuilder.OPTION_COPY,getEditor()::copyNode);
+      nuiEditorMenuTreeBuilder.putConsumer(NUIEditorMenuTreeBuilder.OPTION_PASTE,getEditor()::pasteNode);
+      nuiEditorMenuTreeBuilder.putConsumer(NUIEditorMenuTreeBuilder.OPTION_EDIT,this::editNode);
+      nuiEditorMenuTreeBuilder.putConsumer(NUIEditorMenuTreeBuilder.OPTION_DELETE,getEditor()::deleteNode);
+      nuiEditorMenuTreeBuilder.putConsumer(NUIEditorMenuTreeBuilder.OPTION_ADD_WIDGET,this::addWidget);
+      nuiEditorMenuTreeBuilder.subscribeAddContextMenu(n -> {
+        getEditor().fireUpdateListeners();
+        if (n.getValue().getType() == JsonTreeValue.Type.KEY_VALUE_PAIR) {
+          getEditor().getModel().getNode(getEditor().getSelectedIndex()).setExpanded(true);
+          getEditor().getModel().resetNodes();
+          getEditor().setSelectedIndex(getEditor().getModel().indexOf(n));
+          editNode(n);
+        }
+      }
+);
+      return nuiEditorMenuTreeBuilder.createPrimaryContextMenu(node);
+    }
+);
+    editor.setEditor(this::editNode,getManager());
+  }
+  UIButton save=find("save",UIButton.class);
+  save.bindEnabled(new ReadOnlyBinding<Boolean>(){
+    @Override public Boolean get(){
+      return CREATE_NEW_SCREEN.equals(selectedAsset) || areUnsavedChangesPresent();
+    }
+  }
+);
+  save.subscribe(button -> {
+    LookAndFeel currentLookAndFeel=UIManager.getLookAndFeel();
+    try {
+      UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+    }
+ catch (    ClassNotFoundException|IllegalAccessException|InstantiationException|UnsupportedLookAndFeelException ignored) {
+    }
+    JFileChooser fileChooser=new JFileChooser(){
+      @Override protected JDialog createDialog(      Component parent){
+        JDialog dialog=super.createDialog(parent);
+        dialog.setLocationByPlatform(true);
+        dialog.setAlwaysOnTop(true);
+        return dialog;
+      }
+    }
+;
+    fileChooser.setSelectedFile(new File(CREATE_NEW_SCREEN.equals(selectedAsset) ? "untitled.ui" : selectedAsset.split(":")[1] + ".ui"));
+    fileChooser.setFileFilter(new FileNameExtensionFilter("UI asset file (*.ui)","ui"));
+    if (fileChooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+      saveToFile(fileChooser.getSelectedFile());
+      deleteAutosave();
+    }
+    try {
+      UIManager.setLookAndFeel(currentLookAndFeel);
+    }
+ catch (    UnsupportedLookAndFeelException ignored) {
+    }
+  }
+);
+  UIButton override=find("override",UIButton.class);
+  override.bindEnabled(new ReadOnlyBinding<Boolean>(){
+    @Override public Boolean get(){
+      return selectedAssetPath != null && areUnsavedChangesPresent();
+    }
+  }
+);
+  override.subscribe(button -> {
+    saveToFile(selectedAssetPath);
+    deleteAutosave();
+  }
+);
+  WidgetUtil.trySubscribe(this,"settings",button -> getManager().pushScreen(NUIEditorSettingsScreen.ASSET_URI,NUIEditorSettingsScreen.class));
+  WidgetUtil.trySubscribe(this,"copy",button -> copyJson());
+  WidgetUtil.trySubscribe(this,"paste",button -> pasteJson());
+  WidgetUtil.trySubscribe(this,"undo",button -> undo());
+  WidgetUtil.trySubscribe(this,"redo",button -> redo());
+  WidgetUtil.trySubscribe(this,"close",button -> nuiEditorSystem.toggleEditor());
+  updateConfig();
+}

@@ -1,0 +1,31 @@
+/** 
+ * Receives the sound played event and calls on the AudioManager to play it.
+ * @param playSoundEvent The sound event.
+ * @param entity The entity that instigated the event.
+ */
+@ReceiveEvent public void onPlaySound(PlaySoundEvent playSoundEvent,EntityRef entity){
+  LocationComponent location=entity.getComponent(LocationComponent.class);
+  if (location != null) {
+    Vector3f pos=location.getWorldPosition(new Vector3f());
+    if (pos.isFinite()) {
+      audioManager.playSound(playSoundEvent.getSound(),pos,playSoundEvent.getVolume(),AudioManager.PRIORITY_NORMAL);
+      return;
+    }
+ else {
+      logger.warn("Can't play sound with non-finite position/rotation?! Entity: {}",entity);
+    }
+  }
+  audioManager.playSound(playSoundEvent.getSound(),playSoundEvent.getVolume());
+}
+/** 
+ * Receives an event send when a sound should be played for the entity owner as well. Calls on the AudioManager to play it.
+ * @param playSoundEvent The sound event.
+ * @param entity The entity that instigated the event.
+ */
+@ReceiveEvent public void onPlaySound(PlaySoundForOwnerEvent playSoundEvent,EntityRef entity){
+  ClientComponent clientComponent=networkSystem.getOwnerEntity(entity).getComponent(ClientComponent.class);
+  if (clientComponent != null && !clientComponent.local) {
+    return;
+  }
+  audioManager.playSound(playSoundEvent.getSound(),playSoundEvent.getVolume(),AudioManager.PRIORITY_HIGH);
+}

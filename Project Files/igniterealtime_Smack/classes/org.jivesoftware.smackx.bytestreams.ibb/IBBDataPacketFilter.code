@@ -1,0 +1,24 @@
+/** 
+ * IBBDataPacketFilter class filters all packets from the remote peer of this session, containing an In-Band Bytestream data stanza extension whose session ID matches this sessions ID.
+ */
+private class IBBDataPacketFilter implements StanzaFilter {
+  @Override public boolean accept(  Stanza packet){
+    if (!packet.getFrom().equals(remoteJID)) {
+      return false;
+    }
+    DataPacketExtension data;
+    if (packet instanceof Data) {
+      data=((Data)packet).getDataPacketExtension();
+    }
+ else {
+      data=packet.getExtension(DataPacketExtension.class);
+      if (data == null) {
+        return false;
+      }
+    }
+    if (!data.getSessionID().equals(byteStreamRequest.getSessionID())) {
+      return false;
+    }
+    return true;
+  }
+}

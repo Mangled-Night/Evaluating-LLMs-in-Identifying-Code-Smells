@@ -1,0 +1,23 @@
+/** 
+ * This is a test to check if a denied LastActivity response is handled correctly.
+ */
+public void testOnlinePermisionDenied(){
+  TCPConnection conn0=getConnection(0);
+  TCPConnection conn2=getConnection(2);
+  conn2.sendStanza(new Message(getBareJID(0)));
+  try {
+    Thread.sleep(1000);
+  }
+ catch (  InterruptedException e) {
+    e.printStackTrace();
+    fail("Thread sleep interrupted");
+  }
+  try {
+    LastActivityManager.getLastActivity(conn0,getFullJID(2));
+    fail("No error was received from the server. User was able to get info of other user not in his roster.");
+  }
+ catch (  XMPPException e) {
+    assertNotNull("No error was returned from the server",e.getStanzaError());
+    assertEquals("Forbidden error was not returned from the server",403,e.getStanzaError().getCode());
+  }
+}

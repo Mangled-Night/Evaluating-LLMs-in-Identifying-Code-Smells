@@ -1,0 +1,40 @@
+public void registerToAwtGlCanvas(AWTGLCanvas canvas){
+  canvas.addMouseListener(new MouseListener(){
+    @Override public void mouseClicked(    MouseEvent e){
+    }
+    @Override public void mousePressed(    MouseEvent e){
+      int button=e.getButton() - 1;
+      buttonStates.add(button);
+      MouseInput mouseInput=MouseInput.find(InputType.MOUSE_BUTTON,button);
+      queue.offer(new MouseAction(mouseInput,ButtonState.DOWN,getPosition()));
+    }
+    @Override public void mouseReleased(    MouseEvent e){
+      int button=e.getButton() - 1;
+      buttonStates.remove(button);
+      MouseInput mouseInput=MouseInput.find(InputType.MOUSE_BUTTON,button);
+      queue.offer(new MouseAction(mouseInput,ButtonState.UP,getPosition()));
+    }
+    @Override public void mouseEntered(    MouseEvent e){
+    }
+    @Override public void mouseExited(    MouseEvent e){
+    }
+  }
+);
+  canvas.addMouseMotionListener(new MouseMotionListener(){
+    @Override public void mouseDragged(    MouseEvent e){
+      updateMouse(e.getX(),e.getY());
+    }
+    @Override public void mouseMoved(    MouseEvent e){
+      updateMouse(e.getX(),e.getY());
+    }
+  }
+);
+  canvas.addMouseWheelListener(e -> {
+    int yOffset=e.getUnitsToScroll();
+    if (yOffset != 0.0) {
+      int id=(yOffset > 0) ? 1 : -1;
+      queue.offer(new MouseAction(InputType.MOUSE_WHEEL.getInput(id),1,getPosition()));
+    }
+  }
+);
+}

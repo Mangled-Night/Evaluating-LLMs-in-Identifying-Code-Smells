@@ -1,0 +1,15 @@
+public CharArray allocateCharArray(long size){
+  long required=size * 2L;
+  MemoryBlock page=dataNodeMemoryManager.allocatePage(required,this);
+  if (page == null || page.size() < required) {
+    long got=0;
+    if (page != null) {
+      got=page.size();
+      dataNodeMemoryManager.freePage(page,this);
+    }
+    dataNodeMemoryManager.showMemoryUsage();
+    throw new OutOfMemoryError("Unable to acquire " + required + " bytes of memory, got "+ got);
+  }
+  used+=required;
+  return new CharArray(page,this);
+}

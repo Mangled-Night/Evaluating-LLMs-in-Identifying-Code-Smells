@@ -1,0 +1,16 @@
+protected final void parseFeaturesAndNotify(XmlPullParser parser) throws Exception {
+  parseFeatures(parser);
+  if (hasFeature(Mechanisms.ELEMENT,Mechanisms.NAMESPACE)) {
+    if (!hasFeature(StartTls.ELEMENT,StartTls.NAMESPACE) || config.getSecurityMode() == SecurityMode.disabled) {
+      tlsHandled=saslFeatureReceived=true;
+      notifyWaitingThreads();
+    }
+  }
+  if (hasFeature(Bind.ELEMENT,Bind.NAMESPACE)) {
+    if (!hasFeature(Compress.Feature.ELEMENT,Compress.NAMESPACE) || !config.isCompressionEnabled()) {
+      lastFeaturesReceived=true;
+      notifyWaitingThreads();
+    }
+  }
+  afterFeaturesReceived();
+}

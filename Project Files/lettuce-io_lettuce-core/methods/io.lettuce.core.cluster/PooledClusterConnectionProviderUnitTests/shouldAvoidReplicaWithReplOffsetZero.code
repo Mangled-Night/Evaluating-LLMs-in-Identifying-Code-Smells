@@ -1,0 +1,10 @@
+@Test void shouldAvoidReplicaWithReplOffsetZero(){
+  for (  RedisClusterNode partition : partitions) {
+    partition.setReplOffset(0);
+  }
+  AsyncCommand<String,String,String> async=new AsyncCommand<>(new Command<>(CommandType.READONLY,null,null));
+  async.complete();
+  when(asyncCommandsMock.readOnly()).thenReturn(async);
+  sut.setReadFrom(ReadFrom.REPLICA);
+  assertThatExceptionOfType(PartitionSelectorException.class).isThrownBy(() -> sut.getConnection(ConnectionIntent.READ,1));
+}

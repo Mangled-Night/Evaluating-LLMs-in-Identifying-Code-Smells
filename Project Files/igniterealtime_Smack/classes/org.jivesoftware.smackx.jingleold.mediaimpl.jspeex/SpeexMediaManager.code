@@ -1,0 +1,66 @@
+/** 
+ * Implements a jingleMediaManager using JMF based API and JSpeex. It supports Speex codec. <i>This API only currently works on windows.</i>
+ * @author Thiago Camargo
+ */
+public class SpeexMediaManager extends JingleMediaManager {
+  private static final Logger LOGGER=Logger.getLogger(SpeexMediaManager.class.getName());
+  public static final String MEDIA_NAME="Speex";
+  private List<PayloadType> payloads=new ArrayList<>();
+  public SpeexMediaManager(  JingleTransportManager transportManager){
+    super(transportManager);
+    setupPayloads();
+    setupJMF();
+  }
+  /** 
+ * Returns a new jingleMediaSession.
+ * @param payloadType payloadType
+ * @param remote      remote Candidate
+ * @param local       local Candidate
+ * @return JingleMediaSession TODO javadoc me please
+ */
+  @Override public JingleMediaSession createMediaSession(  PayloadType payloadType,  final TransportCandidate remote,  final TransportCandidate local,  final JingleSession jingleSession){
+    return new AudioMediaSession(payloadType,remote,local,null,null);
+  }
+  /** 
+ * Setup API supported Payloads
+ */
+  private void setupPayloads(){
+    payloads.add(new PayloadType.Audio(15,"speex"));
+  }
+  /** 
+ * Return all supported Payloads for this Manager.
+ * @return The Payload List
+ */
+  @Override public List<PayloadType> getPayloads(){
+    return payloads;
+  }
+  /** 
+ * Runs JMFInit the first time the application is started so that capture devices are properly detected and initialized by JMF.
+ */
+  public static void setupJMF(){
+    String homeDir=System.getProperty("user.home");
+    File jmfDir=new File(homeDir,".jmf");
+    String classpath=System.getProperty("java.class.path");
+    classpath+=System.getProperty("path.separator") + jmfDir.getAbsolutePath();
+    System.setProperty("java.class.path",classpath);
+    if (!jmfDir.exists())     jmfDir.mkdir();
+    File jmfProperties=new File(jmfDir,"jmf.properties");
+    if (!jmfProperties.exists()) {
+      try {
+        jmfProperties.createNewFile();
+      }
+ catch (      IOException ex) {
+        LOGGER.log(Level.FINE,"Failed to create jmf.properties",ex);
+      }
+    }
+    runLinuxPreInstall();
+    if (jmfProperties.length() == 0) {
+      new JMFInit(null,false);
+    }
+  }
+  private static void runLinuxPreInstall(){
+  }
+  @Override public String getName(){
+    return MEDIA_NAME;
+  }
+}

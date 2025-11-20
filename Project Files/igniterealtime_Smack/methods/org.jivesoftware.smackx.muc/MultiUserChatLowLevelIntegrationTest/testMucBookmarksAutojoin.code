@@ -1,0 +1,22 @@
+@SmackIntegrationTest public void testMucBookmarksAutojoin(AbstractXMPPConnection connection) throws InterruptedException, TestNotPossibleException, XMPPException, SmackException, IOException {
+  final BookmarkManager bookmarkManager=BookmarkManager.getBookmarkManager(connection);
+  if (!bookmarkManager.isSupported()) {
+    throw new TestNotPossibleException("Private data storage not supported");
+  }
+  final MultiUserChatManager multiUserChatManager=MultiUserChatManager.getInstanceFor(connection);
+  final Resourcepart mucNickname=Resourcepart.from("Nick-" + StringUtils.randomString(6));
+  final String randomMucName=StringUtils.randomString(6);
+  final DomainBareJid mucComponent=multiUserChatManager.getMucServiceDomains().get(0);
+  final MultiUserChat muc=multiUserChatManager.getMultiUserChat(JidCreate.entityBareFrom(Localpart.from(randomMucName),mucComponent));
+  MucCreateConfigFormHandle handle=muc.createOrJoin(mucNickname);
+  if (handle != null) {
+    handle.makeInstant();
+  }
+  muc.leave();
+  bookmarkManager.addBookmarkedConference("Smack Inttest: " + testRunId,muc.getRoom(),true,mucNickname,null);
+  connection.disconnect();
+  connection.connect().login();
+  MucBookmarkAutojoinManager.getInstanceFor(connection).autojoinBookmarkedConferences();
+  assertTrue(muc.isJoined());
+  muc.leave();
+}

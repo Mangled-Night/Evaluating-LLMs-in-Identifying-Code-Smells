@@ -1,0 +1,9 @@
+protected <T>Mono<T> createMono(CommandType type,CommandOutput<K,V,T> output,CommandArgs<K,V> args){
+  return createMono(() -> new Command<>(type,output,args));
+}
+public <T>Mono<T> createMono(Supplier<RedisCommand<K,V,T>> commandSupplier){
+  if (tracingEnabled) {
+    return withTraceContext().flatMap(it -> Mono.from(new RedisPublisher<>(decorate(commandSupplier,it),connection,false,getScheduler().next())));
+  }
+  return Mono.from(new RedisPublisher<>(commandSupplier,connection,false,getScheduler().next()));
+}

@@ -1,0 +1,38 @@
+/** 
+ * Create coroutine-reactive API based on the templates.
+ * @author Mikhael Sokolov
+ */
+public class CreateKotlinCoroutinesApi {
+  /** 
+ * Supply additional imports.
+ * @return
+ */
+  Supplier<List<String>> importSupplier(){
+    return () -> Arrays.asList("io.lettuce.core.ExperimentalLettuceCoroutinesApi","kotlinx.coroutines.flow.Flow");
+  }
+  /** 
+ * Mutate type comment.
+ * @return
+ */
+  Function<String,String> commentInjector(){
+    return s -> s.replaceAll("\\$\\{intent}","Coroutine executed commands").replaceAll("\\$\\{author}","Mikhael Sokolov").replaceAll("\\$\\{since}","6.0").replaceAll("\\$\\{generator}",getClass().getName());
+  }
+  @ParameterizedTest @MethodSource("arguments") void createInterface(  String argument) throws Exception {
+    createFactory(argument).create();
+  }
+  static List<String> arguments(){
+    return Arrays.asList(Constants.TEMPLATE_NAMES);
+  }
+  private KotlinCompilationUnitFactory createFactory(  String templateName){
+    String targetName=templateName.replace("Commands","CoroutinesCommands");
+    File templateFile=new File(TEMPLATES,"io/lettuce/core/api/" + templateName + ".java");
+    String targetPackage;
+    if (templateName.contains("RedisSentinel")) {
+      targetPackage="io.lettuce.core.sentinel.api.coroutines";
+    }
+ else {
+      targetPackage="io.lettuce.core.api.coroutines";
+    }
+    return new KotlinCompilationUnitFactory(templateFile,KOTLIN_SOURCES,targetPackage,targetName,importSupplier(),commentInjector());
+  }
+}

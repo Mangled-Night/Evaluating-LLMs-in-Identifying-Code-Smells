@@ -1,0 +1,16 @@
+public void writeErrMessage(int errno,String msg){
+  if (this.canResponse()) {
+    LOGGER.error("{}{} write errorMsg:{} error",this,msg + getStack());
+    writeErrMessage((byte)1,errno,msg);
+  }
+ else {
+    LOGGER.error("{} write errorMsg:{} error",this,msg);
+  }
+}
+public void writeErrMessage(byte id,int errno,String msg){
+  ErrorPacket err=new ErrorPacket();
+  err.packetId=id;
+  err.errno=errno;
+  err.message=encodeString(msg,charset);
+  err.write(this);
+}

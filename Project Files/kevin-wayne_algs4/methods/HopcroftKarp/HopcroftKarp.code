@@ -1,0 +1,47 @@
+/** 
+ * Determines a maximum matching (and a minimum vertex cover) in a bipartite graph.
+ * @param G the bipartite graph
+ * @throws IllegalArgumentException if {@code G} is not bipartite
+ */
+public HopcroftKarp(Graph G){
+  bipartition=new BipartiteX(G);
+  if (!bipartition.isBipartite()) {
+    throw new IllegalArgumentException("graph is not bipartite");
+  }
+  this.V=G.V();
+  mate=new int[V];
+  for (int v=0; v < V; v++)   mate[v]=UNMATCHED;
+  while (hasAugmentingPath(G)) {
+    Iterator<Integer>[] adj=(Iterator<Integer>[])new Iterator[G.V()];
+    for (int v=0; v < G.V(); v++)     adj[v]=G.adj(v).iterator();
+    for (int s=0; s < V; s++) {
+      if (isMatched(s) || !bipartition.color(s))       continue;
+      Stack<Integer> path=new Stack<Integer>();
+      path.push(s);
+      while (!path.isEmpty()) {
+        int v=path.peek();
+        if (!adj[v].hasNext())         path.pop();
+ else {
+          int w=adj[v].next();
+          if (!isLevelGraphEdge(v,w))           continue;
+          path.push(w);
+          if (!isMatched(w)) {
+            while (!path.isEmpty()) {
+              int x=path.pop();
+              int y=path.pop();
+              mate[x]=y;
+              mate[y]=x;
+            }
+            cardinality++;
+          }
+        }
+      }
+    }
+  }
+  inMinVertexCover=new boolean[V];
+  for (int v=0; v < V; v++) {
+    if (bipartition.color(v) && !marked[v])     inMinVertexCover[v]=true;
+    if (!bipartition.color(v) && marked[v])     inMinVertexCover[v]=true;
+  }
+  assert certifySolution(G);
+}

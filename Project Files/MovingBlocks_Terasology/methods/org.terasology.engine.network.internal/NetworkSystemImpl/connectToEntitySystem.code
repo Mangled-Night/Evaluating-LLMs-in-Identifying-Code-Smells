@@ -1,0 +1,25 @@
+@Override public void connectToEntitySystem(EngineEntityManager newEntityManager,EventLibrary newEventLibrary,BlockEntityRegistry blockEntityRegistry){
+  if (this.entityManager != null) {
+    this.entityManager.unsubscribe(this);
+  }
+  this.entityManager=newEntityManager;
+  this.entityManager.subscribeForChanges(this);
+  this.blockManager=context.getValue(BlockManager.class);
+  this.ownershipHelper=new OwnershipHelper(newEntityManager.getComponentLibrary());
+  this.storageManager=context.get(StorageManager.class);
+  this.eventLibrary=newEventLibrary;
+  this.componentLibrary=entityManager.getComponentLibrary();
+  context.get(ComponentSystemManager.class).register(new NetworkEntitySystem(this),"engine:networkEntitySystem");
+  TypeHandlerLibrary typeHandlerLibrary=entityManager.getTypeSerializerLibrary().copy();
+  typeHandlerLibrary.addTypeHandler(EntityRef.class,new NetEntityRefTypeHandler(this,blockEntityRegistry));
+  eventSerializer=new EventSerializer(eventLibrary,typeHandlerLibrary);
+  entitySerializer=new NetworkEntitySerializer(newEntityManager,entityManager.getComponentLibrary(),typeHandlerLibrary);
+  entitySerializer.setComponentSerializeCheck(new NetComponentSerializeCheck());
+  if (mode == NetworkMode.CLIENT) {
+    entityManager.setEntityRefStrategy(new NetworkClientRefStrategy(this));
+    applySerializationTables();
+  }
+  if (server != null) {
+    server.connectToEntitySystem(newEntityManager,entitySerializer,eventSerializer,blockEntityRegistry,context);
+  }
+}

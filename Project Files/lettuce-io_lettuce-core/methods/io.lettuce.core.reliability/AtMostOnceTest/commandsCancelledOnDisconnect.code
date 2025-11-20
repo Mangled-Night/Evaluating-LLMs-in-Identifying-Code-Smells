@@ -1,0 +1,15 @@
+@Test void commandsCancelledOnDisconnect(){
+  StatefulRedisConnection<String,String> connection=client.connect();
+  try {
+    RedisAsyncCommands<String,String> async=connection.async();
+    async.setAutoFlushCommands(false);
+    async.quit();
+    RedisFuture<Long> incr=async.incr(key);
+    connection.flushCommands();
+    TestFutures.awaitOrTimeout(incr);
+  }
+ catch (  Exception e) {
+    assertThat(e).hasRootCauseInstanceOf(RedisException.class).hasMessageContaining("Connection disconnected");
+  }
+  connection.close();
+}

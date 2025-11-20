@@ -1,0 +1,21 @@
+public class IoTFieldsExtensionFilter extends FlexibleStanzaTypeFilter<Message> {
+  private final int seqNr;
+  private final boolean onlyDone;
+  public IoTFieldsExtensionFilter(  int seqNr,  boolean onlyDone){
+    this.seqNr=seqNr;
+    this.onlyDone=onlyDone;
+  }
+  @Override protected boolean acceptSpecific(  Message message){
+    IoTFieldsExtension iotFieldsExtension=IoTFieldsExtension.from(message);
+    if (iotFieldsExtension == null) {
+      return false;
+    }
+    if (iotFieldsExtension.getSequenceNr() != seqNr) {
+      return false;
+    }
+    if (onlyDone && !iotFieldsExtension.isDone()) {
+      return false;
+    }
+    return true;
+  }
+}

@@ -1,0 +1,12 @@
+@Override public Future<Boolean> shutdown(long quietPeriod,long timeout,TimeUnit timeUnit){
+  logger.debug("Initiate shutdown ({}, {}, {})",quietPeriod,timeout,timeUnit);
+  shutdownCalled=true;
+  Map<Class<? extends EventExecutorGroup>,EventExecutorGroup> copy=new HashMap<>(eventLoopGroups);
+  DefaultPromise<Void> overall=new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+  PromiseCombiner combiner=new PromiseCombiner(ImmediateEventExecutor.INSTANCE);
+  for (  EventExecutorGroup executorGroup : copy.values()) {
+    combiner.add(doRelease(executorGroup,quietPeriod,timeout,timeUnit));
+  }
+  combiner.finish(overall);
+  return PromiseAdapter.toBooleanPromise(overall);
+}

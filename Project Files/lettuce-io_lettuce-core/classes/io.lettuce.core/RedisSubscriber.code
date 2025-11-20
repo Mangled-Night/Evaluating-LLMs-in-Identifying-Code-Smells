@@ -1,0 +1,21 @@
+/** 
+ * Lettuce-specific interface.
+ * @param < T >
+ */
+interface RedisSubscriber<T> extends CoreSubscriber<T> {
+  /** 
+ * Create a new  {@link RedisSubscriber}. Optimizes for immediate executor usage.
+ * @param delegate
+ * @param executor
+ * @param < T >
+ * @return
+ * @see ImmediateSubscriber
+ * @see PublishOnSubscriber
+ */
+  @SuppressWarnings({"unchecked","rawtypes"}) static <T>RedisSubscriber<T> create(  Subscriber<?> delegate,  Executor executor){
+    if (executor == ImmediateEventExecutor.INSTANCE) {
+      return new ImmediateSubscriber(delegate);
+    }
+    return new PublishOnSubscriber(delegate,executor);
+  }
+}

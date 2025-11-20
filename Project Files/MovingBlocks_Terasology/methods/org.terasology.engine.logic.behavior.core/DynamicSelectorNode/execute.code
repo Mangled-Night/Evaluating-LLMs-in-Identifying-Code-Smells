@@ -1,0 +1,20 @@
+@Override public BehaviorState execute(Actor actor){
+  BehaviorState result;
+  for (int i=0; i < children.size(); i++) {
+    BehaviorNode child=children.get(i);
+    if (!constructed.get(i)) {
+      child.construct(actor);
+      constructed.set(i);
+    }
+    result=child.execute(actor);
+    if (result == BehaviorState.RUNNING) {
+      return BehaviorState.RUNNING;
+    }
+    child.destruct(actor);
+    constructed.clear(i);
+    if (result == BehaviorState.SUCCESS) {
+      return BehaviorState.SUCCESS;
+    }
+  }
+  return BehaviorState.FAILURE;
+}

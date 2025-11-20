@@ -1,0 +1,18 @@
+@ApiOperation(value="修改权限") @RequiresPermissions("upms:permission:update") @RequestMapping(value="/update/{id}",method=RequestMethod.GET) public String update(@PathVariable("id") int id,ModelMap modelMap){
+  UpmsSystemExample upmsSystemExample=new UpmsSystemExample();
+  upmsSystemExample.createCriteria().andStatusEqualTo((byte)1);
+  List<UpmsSystem> upmsSystems=upmsSystemService.selectByExample(upmsSystemExample);
+  UpmsPermission permission=upmsPermissionService.selectByPrimaryKey(id);
+  modelMap.put("permission",permission);
+  modelMap.put("upmsSystems",upmsSystems);
+  return "/manage/permission/update.jsp";
+}
+@ApiOperation(value="修改权限") @RequiresPermissions("upms:permission:update") @RequestMapping(value="/update/{id}",method=RequestMethod.POST) @ResponseBody public Object update(@PathVariable("id") int id,UpmsPermission upmsPermission){
+  ComplexResult result=FluentValidator.checkAll().on(upmsPermission.getName(),new LengthValidator(1,20,"名称")).doValidate().result(ResultCollectors.toComplex());
+  if (!result.isSuccess()) {
+    return new UpmsResult(UpmsResultConstant.INVALID_LENGTH,result.getErrors());
+  }
+  upmsPermission.setPermissionId(id);
+  int count=upmsPermissionService.updateByPrimaryKeySelective(upmsPermission);
+  return new UpmsResult(UpmsResultConstant.SUCCESS,count);
+}

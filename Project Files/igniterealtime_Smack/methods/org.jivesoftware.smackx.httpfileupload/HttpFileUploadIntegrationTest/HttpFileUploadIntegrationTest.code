@@ -1,0 +1,14 @@
+public HttpFileUploadIntegrationTest(SmackIntegrationTestEnvironment environment) throws XMPPErrorException, NotConnectedException, NoResponseException, InterruptedException, TestNotPossibleException {
+  super(environment);
+  hfumOne=HttpFileUploadManager.getInstanceFor(conOne);
+  if (!hfumOne.discoverUploadService()) {
+    throw new TestNotPossibleException("HttpFileUploadManager was unable to discover a HTTP File Upload service");
+  }
+  UploadService uploadService=hfumOne.getDefaultUploadService();
+  if (!uploadService.acceptsFileOfSize(FILE_SIZE)) {
+    throw new TestNotPossibleException("The upload service at " + uploadService.getAddress() + " does not accept files of size "+ FILE_SIZE+ ". It only accepts files with  a maximum size of "+ uploadService.getMaxFileSize());
+  }
+  if (environment.configuration.sslContextFactory != null) {
+    hfumOne.setTlsContext(environment.configuration.sslContextFactory.createSslContext());
+  }
+}

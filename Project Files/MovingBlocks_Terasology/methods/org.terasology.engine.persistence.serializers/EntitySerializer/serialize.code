@@ -1,0 +1,37 @@
+/** 
+ * @param entityRef
+ * @return The serialized entity
+ */
+public EntityData.Entity serialize(EntityRef entityRef){
+  return serialize(entityRef,true,FieldSerializeCheck.NullCheck.<Component>newInstance());
+}
+/** 
+ * @param entityRef
+ * @param deltaAgainstPrefab Whether the serialized entity should be a delta against its prefab (if any)
+ * @return The serialized entity
+ */
+public EntityData.Entity serialize(EntityRef entityRef,boolean deltaAgainstPrefab){
+  return serialize(entityRef,deltaAgainstPrefab,FieldSerializeCheck.NullCheck.<Component>newInstance());
+}
+/** 
+ * @param entityRef
+ * @param fieldCheck Used to check whether each field in each component of the entity should be serialized.
+ * @return The serialized entity
+ */
+public EntityData.Entity serialize(EntityRef entityRef,FieldSerializeCheck<Component> fieldCheck){
+  return serialize(entityRef,true,fieldCheck);
+}
+/** 
+ * @param entityRef
+ * @param fieldCheck Used to check whether each field in each component of the entity should be serialized.
+ * @return The serialized entity
+ */
+public EntityData.Entity serialize(EntityRef entityRef,boolean deltaAgainstPrefab,FieldSerializeCheck<Component> fieldCheck){
+  Prefab prefab=entityRef.getParentPrefab();
+  if (prefab != null && deltaAgainstPrefab) {
+    return serializeEntityDelta(entityRef,prefab,fieldCheck);
+  }
+ else {
+    return serializeEntityFull(entityRef,fieldCheck);
+  }
+}

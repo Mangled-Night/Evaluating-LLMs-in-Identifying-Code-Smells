@@ -1,0 +1,49 @@
+public class SoundSettings extends SimpleIQ {
+  private String outgoingSound;
+  private String incomingSound;
+  public void setOutgoingSound(  String outgoingSound){
+    this.outgoingSound=outgoingSound;
+  }
+  public void setIncomingSound(  String incomingSound){
+    this.incomingSound=incomingSound;
+  }
+  public byte[] getIncomingSoundBytes(){
+    return Base64.decode(incomingSound);
+  }
+  public byte[] getOutgoingSoundBytes(){
+    return Base64.decode(outgoingSound);
+  }
+  /** 
+ * Element name of the stanza extension.
+ */
+  public static final String ELEMENT_NAME="sound-settings";
+  /** 
+ * Namespace of the stanza extension.
+ */
+  public static final String NAMESPACE="http://jivesoftware.com/protocol/workgroup";
+  public SoundSettings(){
+    super(ELEMENT_NAME,NAMESPACE);
+  }
+  /** 
+ * Stanza extension provider for SoundSetting Packets.
+ */
+public static class InternalProvider extends IqProvider<SoundSettings> {
+    @Override public SoundSettings parse(    XmlPullParser parser,    int initialDepth,    IqData iqData,    XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+      SoundSettings soundSettings=new SoundSettings();
+      boolean done=false;
+      while (!done) {
+        XmlPullParser.Event eventType=parser.next();
+        if (eventType == XmlPullParser.Event.START_ELEMENT && "outgoingSound".equals(parser.getName())) {
+          soundSettings.setOutgoingSound(parser.nextText());
+        }
+ else         if ((eventType == XmlPullParser.Event.START_ELEMENT) && "incomingSound".equals(parser.getName())) {
+          soundSettings.setIncomingSound(parser.nextText());
+        }
+ else         if (eventType == XmlPullParser.Event.END_ELEMENT && "sound-settings".equals(parser.getName())) {
+          done=true;
+        }
+      }
+      return soundSettings;
+    }
+  }
+}

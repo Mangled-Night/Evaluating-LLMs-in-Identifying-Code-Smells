@@ -1,0 +1,60 @@
+/** 
+ * Represents a <b>message delivery receipt</b> entry as specified by <a href="http://xmpp.org/extensions/xep-0184.html">Message Delivery Receipts</a>.
+ * @author Georg Lukas
+ */
+public class DeliveryReceipt implements ExtensionElement {
+  public static final String NAMESPACE="urn:xmpp:receipts";
+  public static final String ELEMENT="received";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  /** 
+ * original ID of the delivered message
+ */
+  private final String id;
+  public DeliveryReceipt(  String id){
+    this.id=id;
+  }
+  /** 
+ * Get the id of the message that has been delivered.
+ * @return id of the delivered message or {@code null}.
+ */
+  public String getId(){
+    return id;
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this);
+    xml.optAttribute("id",id);
+    xml.closeEmptyElement();
+    return xml;
+  }
+  /** 
+ * Get the  {@link DeliveryReceipt} extension of the packet, if any.
+ * @param p the packet
+ * @return the {@link DeliveryReceipt} extension or {@code null}
+ * @deprecated use {@link #from(Message)} instead
+ */
+  @Deprecated public static DeliveryReceipt getFrom(  Message p){
+    return from(p);
+  }
+  /** 
+ * Get the  {@link DeliveryReceipt} extension of the message, if any.
+ * @param message the message.
+ * @return the {@link DeliveryReceipt} extension or {@code null}
+ */
+  public static DeliveryReceipt from(  Message message){
+    return message.getExtension(DeliveryReceipt.class);
+  }
+  /** 
+ * This Provider parses and returns DeliveryReceipt packets.
+ */
+public static class Provider extends EmbeddedExtensionProvider<DeliveryReceipt> {
+    @Override protected DeliveryReceipt createReturnExtension(    String currentElement,    String currentNamespace,    Map<String,String> attributeMap,    List<? extends XmlElement> content){
+      return new DeliveryReceipt(attributeMap.get("id"));
+    }
+  }
+}

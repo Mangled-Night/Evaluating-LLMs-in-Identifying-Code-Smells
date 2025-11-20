@@ -1,0 +1,39 @@
+@Override public PhysicalDatasource doSelect(String hostName,ArrayList<PhysicalDatasource> okSources){
+  Map<String,WeightedRoundRobin> map=weightedRoundRobinMap.get(hostName);
+  if (map == null) {
+    Map<String,WeightedRoundRobin> newMap=new ConcurrentHashMap<>();
+    map=weightedRoundRobinMap.putIfAbsent(hostName,newMap);
+    if (map == null) {
+      map=newMap;
+    }
+  }
+  int totalWeight=0;
+  int maxCurrent=Integer.MIN_VALUE;
+  PhysicalDatasource selectedOkSource=null;
+  WeightedRoundRobin selectedWeightedRoundRobin=null;
+  for (  PhysicalDatasource okSource : okSources) {
+    String name=okSource.getName();
+    WeightedRoundRobin weightedRoundRobin=map.get(name);
+    int weight=okSource.getConfig().getWeight();
+    if (weight <= 0) {
+      continue;
+    }
+    if (weightedRoundRobin == null) {
+      weightedRoundRobin=new WeightedRoundRobin();
+      weightedRoundRobin.setWeight(weight);
+      map.putIfAbsent(name,weightedRoundRobin);
+    }
+    int current=weightedRoundRobin.increaseCurrent();
+    if (current > maxCurrent) {
+      maxCurrent=current;
+      selectedOkSource=okSource;
+      selectedWeightedRoundRobin=weightedRoundRobin;
+    }
+    totalWeight+=weight;
+  }
+  if (selectedOkSource == null) {
+    return okSources.get(ThreadLocalRandom.current().nextInt(okSources.size()));
+  }
+  selectedWeightedRoundRobin.select(totalWeight);
+  return selectedOkSource;
+}

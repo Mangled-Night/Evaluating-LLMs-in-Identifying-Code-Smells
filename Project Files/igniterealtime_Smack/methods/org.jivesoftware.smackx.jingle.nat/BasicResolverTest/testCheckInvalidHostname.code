@@ -1,0 +1,24 @@
+public void testCheckInvalidHostname(){
+  String invalidHostname=new String("camupilosupino.org");
+  BasicResolver br=new BasicResolver();
+  TransportCandidate tc=new TransportCandidate.Fixed(invalidHostname,0);
+  resetCounter();
+  tc.addListener(new TransportResolverListener.Checker(){
+    public void candidateChecked(    TransportCandidate cand,    boolean result){
+      if (result == false) {
+        System.out.println(cand.getIp() + " is _not_ reachable (as expected)");
+        incCounter();
+      }
+    }
+    public void candidateChecking(    TransportCandidate cand){
+    }
+  }
+);
+  tc.check(new ArrayList<TransportCandidate>());
+  try {
+    Thread.sleep(TransportResolver.CHECK_TIMEOUT);
+  }
+ catch (  Exception e) {
+  }
+  assertTrue(valCounter() > 0);
+}

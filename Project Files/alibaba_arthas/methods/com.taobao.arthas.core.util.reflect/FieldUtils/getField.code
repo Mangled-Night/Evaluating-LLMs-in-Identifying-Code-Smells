@@ -1,0 +1,51 @@
+/** 
+ * Gets an accessible  {@link Field} by name respecting scope. Superclasses/interfaces will be considered.
+ * @param cls the  {@link Class} to reflect, must not be {@code null}
+ * @param fieldName the field name to obtain
+ * @return the Field object
+ * @throws IllegalArgumentException if the class is  {@code null}, or the field name is blank or empty
+ */
+public static Field getField(final Class<?> cls,final String fieldName){
+  final Field field=getField(cls,fieldName,false);
+  setAccessibleWorkaround(field);
+  return field;
+}
+/** 
+ * Gets an accessible  {@link Field} by name, breaking scope if requested. Superclasses/interfaces will beconsidered.
+ * @param cls the  {@link Class} to reflect, must not be {@code null}
+ * @param fieldName the field name to obtain
+ * @param forceAccess whether to break scope restrictions using the {@link java.lang.reflect.AccessibleObject#setAccessible(boolean)} method. {@code false} will onlymatch  {@code public} fields.
+ * @return the Field object
+ * @throws IllegalArgumentException if the class is  {@code null}, or the field name is blank or empty or is matched at multiple places in the inheritance hierarchy
+ */
+public static Field getField(final Class<?> cls,final String fieldName,final boolean forceAccess){
+  isTrue(cls != null,"The class must not be null");
+  isTrue(!StringUtils.isBlank(fieldName),"The field name must not be blank/empty");
+  for (Class<?> acls=cls; acls != null; acls=acls.getSuperclass()) {
+    try {
+      final Field field=acls.getDeclaredField(fieldName);
+      if (!Modifier.isPublic(field.getModifiers())) {
+        if (forceAccess) {
+          field.setAccessible(true);
+        }
+ else {
+          continue;
+        }
+      }
+      return field;
+    }
+ catch (    final NoSuchFieldException ex) {
+    }
+  }
+  Field match=null;
+  for (  final Class<?> class1 : getAllInterfaces(cls)) {
+    try {
+      final Field test=class1.getField(fieldName);
+      isTrue(match == null,"Reference to field %s is ambiguous relative to %s" + "; a matching field exists on two or more implemented interfaces.",fieldName,cls);
+      match=test;
+    }
+ catch (    final NoSuchFieldException ex) {
+    }
+  }
+  return match;
+}

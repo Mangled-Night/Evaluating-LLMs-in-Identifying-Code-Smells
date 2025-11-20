@@ -1,0 +1,43 @@
+/** 
+ * Asserts that a moderated room assigns the correct default roles for a given affiliation <p>From XEP-0045 § 5.1.2:</p> <blockquote> ...the initial default roles that a service SHOULD set based on the user's affiliation... </blockquote>
+ * @throws Exception when errors occur
+ */
+@SmackIntegrationTest public void mucTestDefaultRoleForAffiliationInModeratedRoom() throws Exception {
+  EntityBareJid mucAddress=getRandomRoom("smack-inttest-moderatedroles");
+  MultiUserChat mucAsSeenByOne=mucManagerOne.getMultiUserChat(mucAddress);
+  MultiUserChat mucAsSeenByTwo=mucManagerTwo.getMultiUserChat(mucAddress);
+  MultiUserChat mucAsSeenByThree=mucManagerThree.getMultiUserChat(mucAddress);
+  final Resourcepart nicknameOne=Resourcepart.from("one-" + randomString);
+  final Resourcepart nicknameTwo=Resourcepart.from("two-" + randomString);
+  final Resourcepart nicknameThree=Resourcepart.from("three-" + randomString);
+  final ResultSyncPoint<String,Exception> resultSyncPoint=new ResultSyncPoint<>();
+  mucAsSeenByOne.addParticipantStatusListener(new ParticipantStatusListener(){
+    @Override public void adminGranted(    EntityFullJid participant){
+      resultSyncPoint.signal("done");
+    }
+  }
+);
+  createModeratedMuc(mucAsSeenByOne,nicknameOne);
+  final MUCRole threeRole;
+switch (sinttestConfiguration.compatibilityMode) {
+default :
+    threeRole=MUCRole.visitor;
+  break;
+case ejabberd:
+threeRole=MUCRole.participant;
+break;
+}
+try {
+mucAsSeenByTwo.join(nicknameTwo);
+mucAsSeenByThree.join(nicknameThree);
+mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
+resultSyncPoint.waitForResult(timeout);
+assertEquals(mucAsSeenByOne.getOccupantsCount(),3);
+assertEquals(MUCRole.moderator,mucAsSeenByOne.getOccupant(JidCreate.entityFullFrom(mucAddress,nicknameOne)).getRole());
+assertEquals(MUCRole.moderator,mucAsSeenByOne.getOccupant(JidCreate.entityFullFrom(mucAddress,nicknameTwo)).getRole());
+assertEquals(threeRole,mucAsSeenByOne.getOccupant(JidCreate.entityFullFrom(mucAddress,nicknameThree)).getRole());
+}
+  finally {
+tryDestroy(mucAsSeenByOne);
+}
+}

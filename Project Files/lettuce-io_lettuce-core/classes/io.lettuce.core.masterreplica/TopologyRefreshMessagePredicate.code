@@ -1,0 +1,28 @@
+/** 
+ * {@link MessagePredicate} to check whether the channel and message contain topology changes related to the monitoredmaster.
+ */
+private static class TopologyRefreshMessagePredicate implements MessagePredicate {
+  private final String masterId;
+  private Set<String> TOPOLOGY_CHANGE_CHANNELS=new HashSet<>(Arrays.asList("+slave","+sdown","-sdown","fix-slave-config","+convert-to-slave","+role-change"));
+  TopologyRefreshMessagePredicate(  String masterId){
+    this.masterId=masterId;
+  }
+  @Override public boolean test(  String channel,  String message){
+    if (channel.equals("+elected-leader") || channel.equals("+reset-master")) {
+      if (message.startsWith(String.format("master %s ",masterId))) {
+        return true;
+      }
+    }
+    if (TOPOLOGY_CHANGE_CHANNELS.contains(channel)) {
+      if (message.contains(String.format("@ %s ",masterId))) {
+        return true;
+      }
+    }
+    if (channel.equals("+switch-master")) {
+      if (message.startsWith(String.format("%s ",masterId))) {
+        return true;
+      }
+    }
+    return PROCESSING_CHANNELS.contains(channel);
+  }
+}

@@ -1,0 +1,47 @@
+/** 
+ * Attempt to enter a state. Note that this method may return <code>null</code> if this state can be safely ignored.
+ * @param successorStateVertex the successor state vertex.
+ * @param walkStateGraphContext the "walk state graph" context.
+ * @return A state transition result or <code>null</code> if this state can be ignored.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws IOException if an I/O error occurred.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+private StateTransitionResult attemptEnterState(GraphVertex<State> successorStateVertex,WalkStateGraphContext walkStateGraphContext) throws SmackException, XMPPException, IOException, InterruptedException {
+  final GraphVertex<State> initialStateVertex=currentStateVertex;
+  final State initialState=initialStateVertex.getElement();
+  final State successorState=successorStateVertex.getElement();
+  final StateDescriptor successorStateDescriptor=successorState.getStateDescriptor();
+  if (!successorStateDescriptor.isMultiVisitState() && walkStateGraphContext.stateAlreadyVisited(successorState)) {
+    return null;
+  }
+  if (successorStateDescriptor.isNotImplemented()) {
+    StateTransitionResult.TransitionImpossibleBecauseNotImplemented transtionImpossibleBecauseNotImplemented=new StateTransitionResult.TransitionImpossibleBecauseNotImplemented(successorStateDescriptor);
+    invokeConnectionStateMachineListener(new ConnectionStateEvent.TransitionNotPossible(initialState,successorState,transtionImpossibleBecauseNotImplemented));
+    return transtionImpossibleBecauseNotImplemented;
+  }
+  final StateTransitionResult.AttemptResult transitionAttemptResult;
+  try {
+    StateTransitionResult.TransitionImpossible transitionImpossible=successorState.isTransitionToPossible(walkStateGraphContext);
+    if (transitionImpossible != null) {
+      invokeConnectionStateMachineListener(new ConnectionStateEvent.TransitionNotPossible(initialState,successorState,transitionImpossible));
+      return transitionImpossible;
+    }
+    invokeConnectionStateMachineListener(new ConnectionStateEvent.AboutToTransitionInto(initialState,successorState));
+    transitionAttemptResult=successorState.transitionInto(walkStateGraphContext);
+  }
+ catch (  SmackException|IOException|InterruptedException|XMPPException e) {
+    unwindState(successorState);
+    throw e;
+  }
+  if (transitionAttemptResult instanceof StateTransitionResult.Failure) {
+    StateTransitionResult.Failure transitionFailureResult=(StateTransitionResult.Failure)transitionAttemptResult;
+    invokeConnectionStateMachineListener(new ConnectionStateEvent.TransitionFailed(initialState,successorState,transitionFailureResult));
+    return transitionAttemptResult;
+  }
+  StateTransitionResult.Success transitionSuccessResult=(StateTransitionResult.Success)transitionAttemptResult;
+  currentStateVertex=successorStateVertex;
+  invokeConnectionStateMachineListener(new ConnectionStateEvent.SuccessfullyTransitionedInto(successorState,transitionSuccessResult));
+  return transitionSuccessResult;
+}

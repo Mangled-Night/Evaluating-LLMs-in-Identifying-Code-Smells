@@ -1,0 +1,27 @@
+public static final void writeWithLength(ByteBuffer buffer,byte[] src){
+  int length=src.length;
+  if (length < 251) {
+    buffer.put((byte)length);
+  }
+ else   if (length < 0x10000L) {
+    buffer.put((byte)252);
+    writeUB2(buffer,length);
+  }
+ else   if (length < 0x1000000L) {
+    buffer.put((byte)253);
+    writeUB3(buffer,length);
+  }
+ else {
+    buffer.put((byte)254);
+    writeLong(buffer,length);
+  }
+  buffer.put(src);
+}
+public static final void writeWithLength(ByteBuffer buffer,byte[] src,byte nullValue){
+  if (src == null) {
+    buffer.put(nullValue);
+  }
+ else {
+    writeWithLength(buffer,src);
+  }
+}

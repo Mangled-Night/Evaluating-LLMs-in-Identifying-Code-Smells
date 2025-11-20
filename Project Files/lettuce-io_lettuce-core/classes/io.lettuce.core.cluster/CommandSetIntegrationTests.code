@@ -1,0 +1,19 @@
+/** 
+ * @author Mark Paluch
+ */
+@ExtendWith(LettuceExtension.class) public class CommandSetIntegrationTests {
+  private final RedisCommands<String,String> redis;
+  @Inject CommandSetIntegrationTests(  StatefulRedisConnection<String,String> connection){
+    this.redis=connection.sync();
+  }
+  @Test void shouldDiscoverCommands(){
+    List<CommandDetail> commandDetails=CommandDetailParser.parse(redis.command());
+    CommandSet state=new CommandSet(commandDetails);
+    assertThat(state.hasCommand(CommandType.GEOADD)).isTrue();
+    assertThat(state.hasCommand(UnknownCommand.FOO)).isFalse();
+  }
+  enum UnknownCommand implements ProtocolKeyword {  FOO;   @Override public byte[] getBytes(){
+    return name().getBytes();
+  }
+}
+}

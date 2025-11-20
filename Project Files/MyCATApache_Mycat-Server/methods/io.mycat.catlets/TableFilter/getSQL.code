@@ -1,0 +1,41 @@
+public String getSQL(){
+  String sql="";
+  Iterator<Entry<String,String>> iter=fieldAliasMap.entrySet().iterator();
+  while (iter.hasNext()) {
+    Map.Entry<String,String> entry=(Map.Entry<String,String>)iter.next();
+    String key=entry.getKey();
+    String val=entry.getValue();
+    if (val == null) {
+      sql=unionsql(sql,getFieldfrom(key),",");
+    }
+ else {
+      sql=unionsql(sql,getFieldfrom(key) + " as " + val,",");
+    }
+  }
+  if (parent == null) {
+    String parentJoinKey=getJoinKey(true);
+    if (sql != null && parentJoinKey != null && sql.toUpperCase().indexOf(parentJoinKey.trim().toUpperCase()) == -1) {
+      sql+=", " + parentJoinKey;
+    }
+    sql="select " + sql + " from "+ tName;
+    if (!(where.trim().equals(""))) {
+      sql+=" where " + where.trim();
+    }
+  }
+ else {
+    if (allField) {
+      sql="select " + sql + " from "+ tName;
+    }
+ else {
+      sql=unionField("select " + joinKey,sql,",");
+      sql=sql + " from " + tName;
+    }
+    if (!(where.trim().equals(""))) {
+      sql+=" where " + where.trim() + " and ("+ joinKey+ " in %s )";
+    }
+ else {
+      sql+=" where " + joinKey + " in %s ";
+    }
+  }
+  return sql;
+}

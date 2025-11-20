@@ -1,0 +1,40 @@
+/** 
+ * User1 is connected from 2 resources. User1 adds User0 to his roster. Ensure that presences are correctly retrieved for User1. User1 logs off from one resource and ensure that presences are still correct for User1.
+ */
+public void testMultipleResources() throws Exception {
+  ConnectionConfiguration connectionConfiguration=new ConnectionConfiguration(getHost(),getPort(),getXMPPServiceDomain());
+  XMPPTCPConnection conn4=new XMPPConnection(connectionConfiguration);
+  conn4.connect();
+  conn4.login(getUsername(1),getPassword(1),"Home");
+  Roster roster=getConnection(0).getRoster();
+  roster.createEntry(getBareJID(1),"gato1",null);
+  long initial=System.currentTimeMillis();
+  while (System.currentTimeMillis() - initial < 2000 && (!roster.getPresence(getBareJID(1)).isAvailable())) {
+    Thread.sleep(100);
+  }
+  Presence presence=roster.getPresence(getBareJID(1));
+  assertTrue("Returned an offline Presence for an existing user",presence.isAvailable());
+  presence=roster.getPresenceResource(getBareJID(1) + "/Home");
+  assertTrue("Returned an offline Presence for Home resource",presence.isAvailable());
+  presence=roster.getPresenceResource(getFullJID(1));
+  assertTrue("Returned an offline Presence for Smack resource",presence.isAvailable());
+  Iterator<Presence> presences=roster.getPresences(getBareJID(1));
+  assertTrue("Returned an offline Presence for an existing user",presence.isAvailable());
+  assertNotNull("No presence was found for user1",presences);
+  assertTrue("No presence was found for user1",presences.hasNext());
+  presences.next();
+  assertTrue("Only one presence was found for user1",presences.hasNext());
+  conn4.disconnect();
+  Thread.sleep(700);
+  presence=roster.getPresence(getBareJID(1));
+  assertTrue("Returned a null Presence for an existing user",presence.isAvailable());
+  presence=roster.getPresenceResource(getFullJID(1));
+  assertTrue("Returned a null Presence for Smack resource",presence.isAvailable());
+  presence=roster.getPresenceResource(getBareJID(1) + "/Home");
+  assertTrue("Returned a Presence for no longer connected resource",!presence.isAvailable());
+  presences=roster.getPresences(getBareJID(1));
+  assertNotNull("No presence was found for user1",presences);
+  Presence value=presences.next();
+  assertTrue("No presence was found for user1",value.isAvailable());
+  assertFalse("More than one presence was found for user1",presences.hasNext());
+}

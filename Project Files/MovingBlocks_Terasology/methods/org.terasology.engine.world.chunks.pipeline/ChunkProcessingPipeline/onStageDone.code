@@ -1,0 +1,22 @@
+private void onStageDone(PositionFuture<Chunk> future,ChunkProcessingInfo chunkProcessingInfo) throws InterruptedException {
+  try {
+    chunkProcessingInfo.resetTaskState();
+    chunkProcessingInfo.setChunk(future.get());
+    if (chunkProcessingInfo.hasNextStage(stages)) {
+      chunkProcessingInfo.nextStage(stages);
+      chunkProcessingInfo.makeChunkTask();
+    }
+ else {
+      chunkProcessingInfo.endProcessing();
+      cleanup(chunkProcessingInfo);
+    }
+    processChunkTasks();
+  }
+ catch (  ExecutionException e) {
+    String stageName=chunkProcessingInfo.getChunkTaskProvider() == null ? "Generation or Loading" : chunkProcessingInfo.getChunkTaskProvider().getName();
+    logger.error(String.format("ChunkTask at position %s and stage [%s] catch error: ",chunkProcessingInfo.getPosition(),stageName),e);
+    chunkProcessingInfo.getExternalFuture().setException(e);
+  }
+catch (  CancellationException ignored) {
+  }
+}

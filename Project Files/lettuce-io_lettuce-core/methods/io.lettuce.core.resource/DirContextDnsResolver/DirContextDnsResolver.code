@@ -1,0 +1,38 @@
+/** 
+ * Creates a new  {@link DirContextDnsResolver} using system-configured DNS servers.
+ */
+public DirContextDnsResolver(){
+  this(new Properties(),new StackPreference());
+}
+/** 
+ * Creates a new  {@link DirContextDnsResolver} using a collection of DNS servers.
+ * @param dnsServer must not be {@code null} and not empty.
+ */
+public DirContextDnsResolver(String dnsServer){
+  this(Collections.singleton(dnsServer));
+}
+/** 
+ * Creates a new  {@link DirContextDnsResolver} using a collection of DNS servers.
+ * @param dnsServers must not be {@code null} and not empty.
+ */
+public DirContextDnsResolver(Iterable<String> dnsServers){
+  this(getProperties(dnsServers),new StackPreference());
+}
+/** 
+ * Creates a new  {@link DirContextDnsResolver} for the given stack preference and {@code properties}.
+ * @param preferIpv4 flag to prefer IPv4 over IPv6 address resolution.
+ * @param preferIpv6 flag to prefer IPv6 over IPv4 address resolution.
+ * @param properties custom properties for creating the context, must not be {@code null}.
+ */
+public DirContextDnsResolver(boolean preferIpv4,boolean preferIpv6,Properties properties){
+  this.preferIpv4=preferIpv4;
+  this.preferIpv6=preferIpv6;
+  this.properties=properties;
+  this.context=createContext(properties);
+}
+private DirContextDnsResolver(Properties properties,StackPreference stackPreference){
+  this.properties=new Properties(properties);
+  this.preferIpv4=stackPreference.preferIpv4;
+  this.preferIpv6=stackPreference.preferIpv6;
+  this.context=createContext(properties);
+}

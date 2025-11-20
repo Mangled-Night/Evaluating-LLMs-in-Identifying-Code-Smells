@@ -1,0 +1,16 @@
+private int compileShader(int type,Set<ShaderProgramFeature> features){
+  int shaderId=GL20.glCreateShader(type);
+  String shader=assembleShader(type,features);
+  if (config.getRendering().isDumpShaders()) {
+    dumpCode(type,features,shader);
+  }
+  GL20.glShaderSource(shaderId,shader);
+  GL20.glCompileShader(shaderId);
+  int[] compileStatus=new int[1];
+  GL30.glGetShaderiv(shaderId,GL30.GL_COMPILE_STATUS,compileStatus);
+  if (compileStatus[0] == GL33.GL_FALSE) {
+    dumpCode(type,features,assembleShader(type,features));
+    throw new RuntimeException(String.format("Shader '%s' failed to compile for features '%s'.%n%n" + "Shader Info: %n%s%n",getUrn(),features,GL30.glGetShaderInfoLog(shaderId)));
+  }
+  return shaderId;
+}

@@ -1,0 +1,22 @@
+public SkeletalMeshData build(){
+  int rootBones=0;
+  for (  Bone bone : bones) {
+    if (bone.getParent() == null) {
+      rootBones++;
+    }
+  }
+  Vector3f minOfAABB=new Vector3f(vertices.get(0));
+  Vector3f maxOfAABB=new Vector3f(vertices.get(0));
+  for (  Vector3f vert : vertices) {
+    minOfAABB.min(vert);
+    maxOfAABB.max(vert);
+  }
+  if (rootBones == 0) {
+    throw new IllegalStateException("Cannot create a skeleton with no root bones");
+  }
+ else   if (rootBones > 1) {
+    throw new IllegalStateException("Cannot create a skeleton with multiple root bones");
+  }
+  AABBf staticAabb=new AABBf(minOfAABB,maxOfAABB);
+  return new SkeletalMeshData(bones,vertices,normals,weights,uvs,indices,staticAabb);
+}

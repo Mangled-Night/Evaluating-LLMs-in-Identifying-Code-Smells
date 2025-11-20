@@ -1,0 +1,19 @@
+@Override public void initiateIncomingSession(final JingleTransportInitiationCallback callback){
+  LOGGER.log(Level.INFO,"Await Jingle InBandBytestream session.");
+  InBandBytestreamManager.getByteStreamManager(jingleSession.getConnection()).addIncomingBytestreamListener(new BytestreamListener(){
+    @Override public void incomingBytestreamRequest(    BytestreamRequest request){
+      if (request.getFrom().asFullJidIfPossible().equals(jingleSession.getRemote()) && request.getSessionID().equals(theirProposal.getSessionId())) {
+        BytestreamSession session;
+        try {
+          session=request.accept();
+        }
+ catch (        InterruptedException|SmackException|XMPPException.XMPPErrorException e) {
+          callback.onException(e);
+          return;
+        }
+        callback.onSessionInitiated(session);
+      }
+    }
+  }
+);
+}

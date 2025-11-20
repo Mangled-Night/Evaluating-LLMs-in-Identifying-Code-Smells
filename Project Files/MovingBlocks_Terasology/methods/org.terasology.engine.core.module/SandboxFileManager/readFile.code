@@ -1,0 +1,19 @@
+/** 
+ * Reads the file that matches the passed filename. <p> How to use: <ul> <li>First of all, we need to create a file read consumer, for example: <pre> {@code}Consumer<InputStream> consumer = inputStream ->  try { int value = inputStream.read(); while (value != -1) { doSomething(value); value = inputStream.read(); } } catch (IOException e) { logger.error("Cannot read file."); } }; }</pre></li> <li>Call  {@code readFile} passing in the filename and the consumer as parameter.</li><li>When the execution is completed the  {@code InputStream} is automatically closed.</li></ul>
+ * @param filename Filename.
+ * @param consumer Consumer to read the file.
+ */
+public void readFile(String filename,Consumer<InputStream> consumer){
+  String sandboxPath=pathManager.getSandboxPath(filename).toString();
+  AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
+    try (InputStream inputStream=new FileInputStream(sandboxPath)){
+      ModuleInputStream moduleInputStream=new ModuleInputStream(inputStream);
+      consumer.accept(moduleInputStream);
+    }
+ catch (    IOException e) {
+      logger.error("Could not read the file: " + filename,e);
+    }
+    return null;
+  }
+);
+}

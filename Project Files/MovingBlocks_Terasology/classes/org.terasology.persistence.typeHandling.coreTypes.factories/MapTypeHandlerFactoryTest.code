@@ -1,0 +1,37 @@
+class MapTypeHandlerFactoryTest {
+  private final TypeHandlerLibrary typeHandlerLibrary=mock(TypeHandlerLibrary.class);
+  private final MapTypeHandlerFactory typeHandlerFactory=new MapTypeHandlerFactory();
+  private final TypeHandlerContext context=new TypeHandlerContext(typeHandlerLibrary,mock(SerializationSandbox.class));
+  @Test void testStringMap(){
+    TypeInfo<Map<String,Integer>> listTypeInfo=new TypeInfo<Map<String,Integer>>(){
+    }
+;
+    Optional<TypeHandler<Map<String,Integer>>> typeHandler=typeHandlerFactory.create(listTypeInfo,context);
+    assertTrue(typeHandler.isPresent());
+    assertTrue(typeHandler.get() instanceof StringMapTypeHandler);
+    verify(typeHandlerLibrary).getTypeHandler(ArgumentMatchers.eq(TypeInfo.of(Integer.class).getType()));
+  }
+  @Test void testNonStringMap(){
+    TypeInfo<Set<Integer>> listTypeInfo=new TypeInfo<Set<Integer>>(){
+    }
+;
+    Optional<TypeHandler<Set<Integer>>> typeHandler=typeHandlerFactory.create(listTypeInfo,context);
+    assertFalse(typeHandler.isPresent());
+  }
+  @Test void testNonGenericMap(){
+@SuppressWarnings("checkstyle:IllegalType") class IntMap extends HashMap<String,Integer> {
+    }
+    Optional<TypeHandler<IntMap>> typeHandler=typeHandlerFactory.create(TypeInfo.of(IntMap.class),context);
+    assertTrue(typeHandler.isPresent());
+    assertTrue(typeHandler.get() instanceof StringMapTypeHandler);
+    verify(typeHandlerLibrary).getTypeHandler(ArgumentMatchers.eq(TypeInfo.of(Integer.class).getType()));
+  }
+  @Test void testGenericMap(){
+    TypeInfo<Map<Integer,Integer>> listTypeInfo=new TypeInfo<Map<Integer,Integer>>(){
+    }
+;
+    Optional<TypeHandler<Map<Integer,Integer>>> typeHandler=typeHandlerFactory.create(listTypeInfo,context);
+    assertTrue(typeHandler.isPresent());
+    assertTrue(typeHandler.get() instanceof GenericMapTypeHandler);
+  }
+}

@@ -1,0 +1,15 @@
+Set<Class<?>> findTypes(CommandMethod commandMethod,Class<?> annotation){
+  Set<Class<?>> types=new LinkedHashSet<>();
+  for (  Parameter parameter : commandMethod.getParameters().getBindableParameters()) {
+    types.addAll(parameter.getAnnotations().stream().filter(parameterAnnotation -> annotation.isAssignableFrom(parameterAnnotation.getClass())).map(parameterAnnotation -> {
+      TypeInformation<?> typeInformation=parameter.getTypeInformation();
+      if (annotation == Key.class && ParameterWrappers.hasKeyType(typeInformation)) {
+        TypeInformation<?> parameterKeyType=ParameterWrappers.getKeyType(typeInformation);
+        return parameterKeyType.getType();
+      }
+      return ParameterWrappers.getValueType(typeInformation).getType();
+    }
+).collect(Collectors.toList()));
+  }
+  return types;
+}

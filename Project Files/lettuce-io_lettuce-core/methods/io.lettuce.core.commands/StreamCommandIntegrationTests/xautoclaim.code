@@ -1,0 +1,9 @@
+@Test @EnabledOnCommand("XAUTOCLAIM") void xautoclaim(){
+  redis.xgroupCreate(StreamOffset.latest(key),"group",XGroupCreateArgs.Builder.mkstream());
+  String id1=redis.xadd(key,Collections.singletonMap("key1","value1"));
+  redis.xadd(key,Collections.singletonMap("key2","value2"));
+  List<StreamMessage<String,String>> messages=redis.xreadgroup(Consumer.from("group","consumer1"),StreamOffset.lastConsumed(key));
+  ClaimedMessages<String,String> claimedMessages=redis.xautoclaim(key,XAutoClaimArgs.Builder.xautoclaim(Consumer.from("group","consumer2"),Duration.ZERO,id1).count(20));
+  assertThat(claimedMessages.getId()).isNotNull();
+  assertThat(claimedMessages.getMessages()).hasSize(2).contains(messages.get(0));
+}

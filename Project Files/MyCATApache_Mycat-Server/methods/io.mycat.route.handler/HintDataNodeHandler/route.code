@@ -1,0 +1,21 @@
+@Override public RouteResultset route(SystemConfig sysConfig,SchemaConfig schema,int sqlType,String realSQL,String charset,ServerConnection sc,LayerCachePool cachePool,String hintSQLValue,int hintSqlType,Map hintMap) throws SQLNonTransientException {
+  String stmt=realSQL;
+  if (LOGGER.isDebugEnabled()) {
+    LOGGER.debug("route datanode sql hint from " + stmt);
+  }
+  RouteResultset rrs=new RouteResultset(stmt,sqlType);
+  PhysicalDBNode dataNode=MycatServer.getInstance().getConfig().getDataNodes().get(hintSQLValue);
+  if (dataNode != null) {
+    rrs=RouterUtil.routeToSingleNode(rrs,dataNode.getName(),stmt);
+  }
+ else {
+    String msg="can't find hint datanode:" + hintSQLValue;
+    LOGGER.warn(msg);
+    throw new SQLNonTransientException(msg);
+  }
+  if (rrs.getSqlType() == ServerParse.LOAD_DATA_INFILE_SQL) {
+    LOGGER.info("load data use annotation datanode");
+    rrs.getNodes()[0].setLoadData(parseLoadDataPram(stmt,charset));
+  }
+  return rrs;
+}

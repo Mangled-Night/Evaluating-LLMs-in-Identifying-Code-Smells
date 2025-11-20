@@ -1,0 +1,27 @@
+@Override public IoTFieldsExtension parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws IOException, XmlPullParserException, ParseException {
+  int seqNr=ParserUtils.getIntegerAttributeOrThrow(parser,"seqnr","IoT data request <accepted/> without sequence number");
+  boolean done=ParserUtils.getBooleanAttribute(parser,"done",false);
+  List<NodeElement> nodes=new ArrayList<>();
+  outerloop:   while (true) {
+    final XmlPullParser.Event eventType=parser.next();
+    final String name=parser.getName();
+switch (eventType) {
+case START_ELEMENT:
+switch (name) {
+case NodeElement.ELEMENT:
+        NodeElement node=parseNode(parser);
+      nodes.add(node);
+    break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return new IoTFieldsExtension(seqNr,done,nodes);
+}

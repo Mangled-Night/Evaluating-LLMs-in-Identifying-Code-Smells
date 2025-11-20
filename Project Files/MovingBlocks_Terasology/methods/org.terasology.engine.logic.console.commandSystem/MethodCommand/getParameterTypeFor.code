@@ -1,0 +1,22 @@
+private static Parameter getParameterTypeFor(Class<?> type,Annotation[] annotations,Context context){
+  for (  Annotation annotation : annotations) {
+    if (annotation instanceof CommandParam) {
+      CommandParam parameterAnnotation=(CommandParam)annotation;
+      String name=parameterAnnotation.value();
+      Class<? extends CommandParameterSuggester> suggesterClass=parameterAnnotation.suggester();
+      boolean required=parameterAnnotation.required();
+      CommandParameterSuggester suggester=InjectionHelper.createWithConstructorInjection(suggesterClass,context);
+      if (type.isArray()) {
+        Class<?> childType=type.getComponentType();
+        return CommandParameter.array(name,childType,required,suggester,context);
+      }
+ else {
+        return CommandParameter.single(name,type,required,suggester,context);
+      }
+    }
+ else     if (annotation instanceof Sender) {
+      return MarkerParameters.SENDER;
+    }
+  }
+  return MarkerParameters.INVALID;
+}

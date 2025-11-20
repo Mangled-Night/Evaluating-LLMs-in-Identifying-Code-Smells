@@ -1,0 +1,18 @@
+/** 
+ * CarbonCopyListener that listens for incoming carbon copies which contain OMEMO elements.
+ */
+private void internalOmemoCarbonCopyListener(final CarbonExtension.Direction direction,final Message carbonCopy,final Message wrappingMessage){
+  Async.go(new Runnable(){
+    @Override public void run(){
+      if (isOmemoMessage(carbonCopy)) {
+        try {
+          getOmemoService().onOmemoCarbonCopyReceived(direction,carbonCopy,wrappingMessage,new LoggedInOmemoManager(OmemoManager.this));
+        }
+ catch (        SmackException.NotLoggedInException|IOException e) {
+          LOGGER.log(Level.SEVERE,"Exception while processing OMEMO stanza",e);
+        }
+      }
+    }
+  }
+);
+}

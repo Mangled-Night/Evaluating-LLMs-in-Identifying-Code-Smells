@@ -1,0 +1,22 @@
+public DomainBareJid findService(String feature,boolean useCache,String category,String type) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  boolean noCategory=StringUtils.isNullOrEmpty(category);
+  boolean noType=StringUtils.isNullOrEmpty(type);
+  if (noType != noCategory) {
+    throw new IllegalArgumentException("Must specify either both, category and type, or none");
+  }
+  List<DiscoverInfo> services=findServicesDiscoverInfo(feature,false,useCache);
+  if (services.isEmpty()) {
+    return null;
+  }
+  if (!noCategory && !noType) {
+    for (    DiscoverInfo info : services) {
+      if (info.hasIdentity(category,type)) {
+        return info.getFrom().asDomainBareJid();
+      }
+    }
+  }
+  return services.get(0).getFrom().asDomainBareJid();
+}
+public DomainBareJid findService(String feature,boolean useCache) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  return findService(feature,useCache,null,null);
+}

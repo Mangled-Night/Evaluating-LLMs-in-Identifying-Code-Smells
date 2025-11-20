@@ -1,0 +1,46 @@
+@NetFilterEvent(netFilter=RegisterMode.CLIENT) @ReceiveEvent(components=CharacterComponent.class) public void onAttackRequest(AttackButton event,EntityRef entity,CharacterHeldItemComponent characterHeldItemComponent){
+  if (!event.isDown()) {
+    return;
+  }
+  boolean attackRequestIsValid;
+  if (networkSystem.getMode().isAuthority()) {
+    attackRequestIsValid=true;
+  }
+ else {
+    OnItemUseEvent onItemUseEvent=new OnItemUseEvent();
+    entity.send(onItemUseEvent);
+    attackRequestIsValid=!onItemUseEvent.isConsumed();
+  }
+  if (attackRequestIsValid) {
+    EntityRef selectedItemEntity=characterHeldItemComponent.selectedItem;
+    entity.send(new AttackRequest(selectedItemEntity));
+    event.consume();
+  }
+}
+@NetFilterEvent(netFilter=RegisterMode.AUTHORITY) @ReceiveEvent(components=LocationComponent.class) public void onAttackRequest(AttackRequest event,EntityRef character,CharacterComponent characterComponent){
+  if (event.getItem().exists()) {
+    if (!character.equals(event.getItem().getOwner())) {
+      return;
+    }
+  }
+  OnItemUseEvent onItemUseEvent=new OnItemUseEvent();
+  character.send(onItemUseEvent);
+  if (!onItemUseEvent.isConsumed()) {
+    EntityRef gazeEntity=GazeAuthoritySystem.getGazeEntityForCharacter(character);
+    LocationComponent gazeLocation=gazeEntity.getComponent(LocationComponent.class);
+    Vector3f direction=gazeLocation.getWorldDirection(new Vector3f());
+    Vector3f originPos=gazeLocation.getWorldPosition(new Vector3f());
+    if (recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.RECORDING) {
+      directionAndOriginPosRecorderList.getAttackEventDirectionAndOriginPosRecorder().add(direction,originPos);
+    }
+ else     if (recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.REPLAYING) {
+      Vector3f[] data=directionAndOriginPosRecorderList.getAttackEventDirectionAndOriginPosRecorder().poll();
+      direction=data[0];
+      originPos=data[1];
+    }
+    HitResult result=physics.rayTrace(originPos,direction,characterComponent.interactionRange,Sets.newHashSet(character),DEFAULTPHYSICSFILTER);
+    if (result.isHit()) {
+      result.getEntity().send(new AttackEvent(character,event.getItem()));
+    }
+  }
+}

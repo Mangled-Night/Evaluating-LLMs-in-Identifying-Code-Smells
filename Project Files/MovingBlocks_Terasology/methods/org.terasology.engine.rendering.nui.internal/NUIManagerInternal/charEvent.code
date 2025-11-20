@@ -1,0 +1,21 @@
+@Priority(EventPriority.PRIORITY_HIGH) @ReceiveEvent(components=ClientComponent.class) public void charEvent(CharEvent ev,EntityRef entity){
+  NUICharEvent nuiEvent=new NUICharEvent(mouse,keyboard,ev.getCharacter());
+  if (focus != null) {
+    if (focus.onCharEvent(nuiEvent)) {
+      ev.consume();
+    }
+  }
+  if (!ev.isConsumed()) {
+    for (    UIScreenLayer screen : screens) {
+      if (screen != focus) {
+        if (screen.onCharEvent(nuiEvent)) {
+          ev.consume();
+          break;
+        }
+      }
+      if (screen.isModal()) {
+        break;
+      }
+    }
+  }
+}

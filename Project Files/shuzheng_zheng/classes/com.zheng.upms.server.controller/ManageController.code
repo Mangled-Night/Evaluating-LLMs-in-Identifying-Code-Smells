@@ -1,0 +1,20 @@
+/** 
+ * 后台controller Created by ZhangShuzheng on 2017/01/19.
+ */
+@Controller @RequestMapping("/manage") @Api(value="后台管理",description="后台管理") public class ManageController extends BaseController {
+  private static final Logger LOGGER=LoggerFactory.getLogger(ManageController.class);
+  @Autowired private UpmsSystemService upmsSystemService;
+  @Autowired private UpmsApiService upmsApiService;
+  @ApiOperation(value="后台首页") @RequestMapping(value="/index",method=RequestMethod.GET) public String index(  ModelMap modelMap){
+    UpmsSystemExample upmsSystemExample=new UpmsSystemExample();
+    upmsSystemExample.createCriteria().andStatusEqualTo((byte)1);
+    List<UpmsSystem> upmsSystems=upmsSystemService.selectByExample(upmsSystemExample);
+    modelMap.put("upmsSystems",upmsSystems);
+    Subject subject=SecurityUtils.getSubject();
+    String username=(String)subject.getPrincipal();
+    UpmsUser upmsUser=upmsApiService.selectUpmsUserByUsername(username);
+    List<UpmsPermission> upmsPermissions=upmsApiService.selectUpmsPermissionByUpmsUserId(upmsUser.getUserId());
+    modelMap.put("upmsPermissions",upmsPermissions);
+    return "/manage/index.jsp";
+  }
+}

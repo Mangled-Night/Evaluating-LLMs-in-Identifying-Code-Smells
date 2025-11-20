@@ -1,0 +1,18 @@
+private void setTelemetryDestination(Context rootContext){
+  Config config=rootContext.get(Config.class);
+  TelemetryConfig telemetryConfig=config.getTelemetryConfig();
+  String telemetryDestination=telemetryConfig.getTelemetryDestination();
+  if (telemetryDestination != null) {
+    try {
+      URL url=new URL(telemetryDestination);
+      TelemetryEmitter telemetryEmitter=(TelemetryEmitter)emitter;
+      telemetryEmitter.changeUrl(url);
+    }
+ catch (    MalformedURLException e) {
+      logger.error("URL malformed",e);
+    }
+  }
+ else {
+    telemetryConfig.setTelemetryDestination(TelemetryEmitter.getDefaultCollectorURL(DEFAULT_COLLECTOR_PROTOCOL,DEFAULT_COLLECTOR_HOST,DEFAULT_COLLECTOR_PORT).toString());
+  }
+}

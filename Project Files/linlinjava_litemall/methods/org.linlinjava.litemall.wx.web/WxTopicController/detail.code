@@ -1,0 +1,22 @@
+/** 
+ * 专题详情
+ * @param id 专题ID
+ * @return 专题详情
+ */
+@GetMapping("detail") public Object detail(@LoginUser Integer userId,@NotNull Integer id){
+  LitemallTopic topic=topicService.findById(id);
+  List<LitemallGoods> goods=new ArrayList<>();
+  for (  Integer i : topic.getGoods()) {
+    LitemallGoods good=goodsService.findByIdVO(i);
+    if (null != good)     goods.add(good);
+  }
+  int userHasCollect=0;
+  if (userId != null) {
+    userHasCollect=collectService.count(userId,(byte)1,id);
+  }
+  Map<String,Object> entity=new HashMap<String,Object>();
+  entity.put("topic",topic);
+  entity.put("goods",goods);
+  entity.put("userHasCollect",userHasCollect);
+  return ResponseUtil.ok(entity);
+}

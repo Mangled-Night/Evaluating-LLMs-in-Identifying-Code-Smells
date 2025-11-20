@@ -1,0 +1,44 @@
+public abstract class RemoteConnectionEndpointLookupFailure {
+  private final String description;
+  private final Exception exception;
+  public RemoteConnectionEndpointLookupFailure(  String description,  Exception exception){
+    this.description=description;
+    this.exception=exception;
+  }
+  public final String getDescription(){
+    return description;
+  }
+  public final Exception getException(){
+    return exception;
+  }
+  public String getErrorMessage(){
+    return description + " because: " + exception;
+  }
+  private transient String toStringCache;
+  @Override public String toString(){
+    if (toStringCache == null) {
+      toStringCache=ToStringUtil.builderFor(RemoteConnectionEndpointLookupFailure.class).addValue("description",description).addValue("exception",exception).build();
+    }
+    return toStringCache;
+  }
+public static class DnsLookupFailure extends RemoteConnectionEndpointLookupFailure {
+    private final DnsName dnsName;
+    public DnsLookupFailure(    DnsName dnsName,    Exception exception){
+      super("DNS lookup exception for " + dnsName,exception);
+      this.dnsName=dnsName;
+    }
+    public DnsName getDnsName(){
+      return dnsName;
+    }
+  }
+public static class HttpLookupFailure extends RemoteConnectionEndpointLookupFailure {
+    private final DomainBareJid host;
+    public HttpLookupFailure(    DomainBareJid host,    Exception exception){
+      super("Http lookup exception for " + host,exception);
+      this.host=host;
+    }
+    public DomainBareJid getHost(){
+      return host;
+    }
+  }
+}

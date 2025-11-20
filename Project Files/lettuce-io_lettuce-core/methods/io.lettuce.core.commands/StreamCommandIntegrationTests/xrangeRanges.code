@@ -1,0 +1,9 @@
+@Test @EnabledOnCommand("XAUTOCLAIM") void xrangeRanges(){
+  String id1=redis.xadd(key,Collections.singletonMap("key","value"));
+  String id2=redis.xadd(key,Collections.singletonMap("key","value"));
+  String id3=redis.xadd(key,Collections.singletonMap("key","value"));
+  assertThat(redis.xrange(key,Range.unbounded())).hasSize(3);
+  assertThat(redis.xrange(key,Range.from(Range.Boundary.including(id1),Range.Boundary.excluding(id3)))).hasSize(2);
+  assertThat(redis.xrange(key,Range.from(Range.Boundary.excluding(id1),Range.Boundary.excluding(id3)))).hasSize(1);
+  assertThat(redis.xrange(key,Range.from(Range.Boundary.excluding(id1),Range.Boundary.including(id3)))).hasSize(2);
+}

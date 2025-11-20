@@ -1,0 +1,11 @@
+@Test @EnabledOnCommand("SORT_RO") void sortReadOnlyStreaming(){
+  redis.rpush(key,"3","2","1");
+  ListStreamingAdapter<String> streamingAdapter=new ListStreamingAdapter<>();
+  Long count=redis.sortReadOnly(streamingAdapter,key);
+  assertThat(count.longValue()).isEqualTo(3);
+  assertThat(streamingAdapter.getList()).isEqualTo(list("1","2","3"));
+  streamingAdapter.getList().clear();
+  count=redis.sortReadOnly(streamingAdapter,key,desc());
+  assertThat(count.longValue()).isEqualTo(3);
+  assertThat(streamingAdapter.getList()).isEqualTo(list("3","2","1"));
+}

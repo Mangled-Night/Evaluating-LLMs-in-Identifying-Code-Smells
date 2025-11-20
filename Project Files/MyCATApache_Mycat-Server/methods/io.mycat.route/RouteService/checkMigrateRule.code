@@ -1,0 +1,26 @@
+private void checkMigrateRule(String schemal,RouteResultset rrs,int sqlType) throws SQLNonTransientException {
+  if (rrs != null && rrs.getTables() != null) {
+    boolean isUpdate=isUpdateSql(sqlType);
+    if (!isUpdate)     return;
+    ConcurrentMap<String,List<PartitionByCRC32PreSlot.Range>> tableRules=RouteCheckRule.migrateRuleMap.get(schemal.toUpperCase());
+    if (tableRules != null) {
+      for (      String table : rrs.getTables()) {
+        List<PartitionByCRC32PreSlot.Range> rangeList=tableRules.get(table.toUpperCase());
+        if (rangeList != null && !rangeList.isEmpty()) {
+          if (rrs.getNodes().length > 1 && isUpdate) {
+            throw new SQLNonTransientException("schema:" + schemal + ",table:"+ table+ ",sql:"+ rrs.getStatement()+ " is not allowed,because table is migrate switching,please wait for a moment");
+          }
+          for (          PartitionByCRC32PreSlot.Range range : rangeList) {
+            RouteResultsetNode[] routeResultsetNodes=rrs.getNodes();
+            for (            RouteResultsetNode routeResultsetNode : routeResultsetNodes) {
+              int slot=routeResultsetNode.getSlot();
+              if (isUpdate && slot >= range.start && slot <= range.end) {
+                throw new SQLNonTransientException("schema:" + schemal + ",table:"+ table+ ",sql:"+ rrs.getStatement()+ " is not allowed,because table is migrate switching,please wait for a moment");
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

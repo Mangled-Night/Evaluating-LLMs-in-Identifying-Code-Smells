@@ -1,0 +1,35 @@
+private static String handleDDLSQL(String sql){
+  MySqlStatementParser parser=new MySqlStatementParser(sql);
+  SQLStatement statement=parser.parseStatement();
+  SQLExprTableSource source=getDDLTableSource(statement);
+  if (source == null)   return sql;
+  String tableName=StringUtil.removeBackquote(source.toString());
+  if (StringUtils.isNotBlank(tableName))   tableName=tableName.trim();
+ else   return sql;
+  if (!isGlobalTable(tableName))   return sql;
+  sql=addColumnIfCreate(sql,statement);
+  final String tn=tableName;
+  MycatServer.getInstance().getListeningExecutorService().execute(new Runnable(){
+    public void run(){
+      try {
+        TimeUnit.SECONDS.sleep(3);
+      }
+ catch (      InterruptedException e) {
+      }
+      reGetColumnsForTable(tn);
+    }
+  }
+);
+  MycatServer.getInstance().getListeningExecutorService().execute(new Runnable(){
+    public void run(){
+      try {
+        TimeUnit.MINUTES.sleep(10);
+      }
+ catch (      InterruptedException e) {
+      }
+      reGetColumnsForTable(tn);
+    }
+  }
+);
+  return sql;
+}

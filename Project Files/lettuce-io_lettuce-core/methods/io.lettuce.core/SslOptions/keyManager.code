@@ -1,0 +1,49 @@
+/** 
+ * Sets the key file and its certificate to use for client authentication. The key is reloaded on each connection attempt that allows to replace certificates during runtime.
+ * @param keyCertChainFile an X.509 certificate chain file in PEM format.
+ * @param keyFile a PKCS#8 private key file in PEM format.
+ * @param keyPassword the password of the {@code keyFile}, or  {@code null} if it's not password-protected.
+ * @return {@code this}
+ * @since 5.3
+ */
+public Builder keyManager(File keyCertChainFile,File keyFile,char[] keyPassword){
+  LettuceAssert.notNull(keyCertChainFile,"Key certificate file must not be null");
+  LettuceAssert.notNull(keyFile,"Key file must not be null");
+  LettuceAssert.isTrue(keyCertChainFile.exists(),() -> String.format("Key certificate file %s does not exist",keyCertChainFile));
+  LettuceAssert.isTrue(keyCertChainFile.isFile(),() -> String.format("Key certificate %s is not a file",keyCertChainFile));
+  LettuceAssert.isTrue(keyFile.exists(),() -> String.format("Key file %s does not exist",keyFile));
+  LettuceAssert.isTrue(keyFile.isFile(),() -> String.format("Key %s is not a file",keyFile));
+  return keyManager(Resource.from(keyCertChainFile),Resource.from(keyFile),keyPassword);
+}
+/** 
+ * Sets the key and its certificate to use for client authentication. The key is reloaded on each connection attempt that allows to replace certificates during runtime.
+ * @param keyCertChain an {@link Resource} for a X.509 certificate chain in PEM format.
+ * @param key an {@link Resource} for a PKCS#8 private key in PEM format.
+ * @param keyPassword the password of the {@code keyFile}, or  {@code null} if it's not password-protected.
+ * @return {@code this}
+ * @since 5.3
+ * @see Resource
+ */
+public Builder keyManager(Resource keyCertChain,Resource key,char[] keyPassword){
+  LettuceAssert.notNull(keyCertChain,"KeyChain InputStreamProvider must not be null");
+  LettuceAssert.notNull(key,"Key InputStreamProvider must not be null");
+  char[] passwordToUse=getPassword(keyPassword);
+  this.keymanager=(builder,keyStoreType) -> {
+    try (InputStream keyCertChainIs=keyCertChain.get();InputStream keyIs=key.get()){
+      builder.keyManager(keyCertChainIs,keyIs,passwordToUse == null || passwordToUse.length == 0 ? null : new String(passwordToUse));
+    }
+   }
+;
+  return this;
+}
+/** 
+ * Sets the  {@link KeyManagerFactory}.
+ * @param keyManagerFactory the {@link KeyManagerFactory} to use.
+ * @return {@code this}
+ * @since 5.3
+ */
+public Builder keyManager(KeyManagerFactory keyManagerFactory){
+  LettuceAssert.notNull(keyManagerFactory,"KeyManagerFactory must not be null");
+  this.keymanager=(builder,keyStoreType) -> builder.keyManager(keyManagerFactory);
+  return this;
+}

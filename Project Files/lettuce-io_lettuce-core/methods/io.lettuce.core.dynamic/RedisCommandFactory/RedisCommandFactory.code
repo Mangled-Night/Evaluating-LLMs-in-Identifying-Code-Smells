@@ -1,0 +1,19 @@
+/** 
+ * Create a new  {@link CommandFactory} given {@link StatefulConnection}.
+ * @param connection must not be {@code null}.
+ */
+public RedisCommandFactory(StatefulConnection<?,?> connection){
+  this(connection,LettuceLists.newList(new ByteArrayCodec(),new StringCodec(StandardCharsets.UTF_8)));
+}
+/** 
+ * Create a new  {@link CommandFactory} given {@link StatefulConnection} and a {@link List} of {@link RedisCodec}s to use
+ * @param connection must not be {@code null}.
+ * @param redisCodecs must not be {@code null}.
+ */
+public RedisCommandFactory(StatefulConnection<?,?> connection,Iterable<? extends RedisCodec<?,?>> redisCodecs){
+  LettuceAssert.notNull(connection,"Redis Connection must not be null");
+  LettuceAssert.notNull(redisCodecs,"Iterable of RedisCodec must not be null");
+  this.connection=connection;
+  this.redisCodecs.addAll(LettuceLists.newList(redisCodecs));
+  this.commandMethodVerifier=new DefaultCommandMethodVerifier(getCommands(connection));
+}

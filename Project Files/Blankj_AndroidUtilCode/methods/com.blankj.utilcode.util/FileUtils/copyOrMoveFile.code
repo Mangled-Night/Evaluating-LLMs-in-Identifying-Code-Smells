@@ -1,0 +1,23 @@
+private static boolean copyOrMoveFile(final File srcFile,final File destFile,final OnReplaceListener listener,final boolean isMove){
+  if (srcFile == null || destFile == null)   return false;
+  if (srcFile.equals(destFile))   return false;
+  if (!srcFile.exists() || !srcFile.isFile())   return false;
+  if (destFile.exists()) {
+    if (listener == null || listener.onReplace(srcFile,destFile)) {
+      if (!destFile.delete()) {
+        return false;
+      }
+    }
+ else {
+      return true;
+    }
+  }
+  if (!createOrExistsDir(destFile.getParentFile()))   return false;
+  try {
+    return UtilsBridge.writeFileFromIS(destFile.getAbsolutePath(),new FileInputStream(srcFile)) && !(isMove && !deleteFile(srcFile));
+  }
+ catch (  FileNotFoundException e) {
+    e.printStackTrace();
+    return false;
+  }
+}

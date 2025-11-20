@@ -1,0 +1,12 @@
+private static <T>CompletableFuture<T> transformAsyncConnectionException(CompletionStage<T> future,Object context){
+  return ConnectionFuture.from(null,future.toCompletableFuture()).thenCompose((v,e) -> {
+    if (e != null) {
+      if (e.getCause() instanceof RedisConnectionException && e.getCause().getCause() instanceof RedisConnectionException) {
+        return Futures.failed(RedisConnectionException.create(context.toString(),e.getCause()));
+      }
+      return Futures.failed(RedisConnectionException.create(context.toString(),e));
+    }
+    return CompletableFuture.completedFuture(v);
+  }
+).toCompletableFuture();
+}

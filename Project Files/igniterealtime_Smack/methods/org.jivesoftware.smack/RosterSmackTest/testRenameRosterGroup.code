@@ -1,0 +1,36 @@
+/** 
+ * Test if renaming a roster group works fine.
+ */
+public void testRenameRosterGroup(){
+  try {
+    Thread.sleep(200);
+    Roster roster=getConnection(0).getRoster();
+    roster.createEntry(getBareJID(1),"gato11",new String[]{"Friends"});
+    roster.createEntry(getBareJID(2),"gato12",new String[]{"Friends"});
+    long initial=System.currentTimeMillis();
+    while (System.currentTimeMillis() - initial < 2000 && (!roster.getPresence(getBareJID(1)).isAvailable() || !roster.getPresence(getBareJID(2)).isAvailable())) {
+      Thread.sleep(100);
+    }
+    roster.getGroup("Friends").setName("Amigos");
+    initial=System.currentTimeMillis();
+    while (System.currentTimeMillis() - initial < 2000 && (roster.getGroup("Friends") != null)) {
+      Thread.sleep(100);
+    }
+    assertNull("The group Friends still exists",roster.getGroup("Friends"));
+    assertNotNull("The group Amigos does not exist",roster.getGroup("Amigos"));
+    assertEquals("Wrong number of entries in the group Amigos",2,roster.getGroup("Amigos").getEntryCount());
+    roster.getGroup("Amigos").setName("");
+    initial=System.currentTimeMillis();
+    while (System.currentTimeMillis() - initial < 2000 && (roster.getGroup("Amigos") != null)) {
+      Thread.sleep(100);
+    }
+    assertNull("The group Amigos still exists",roster.getGroup("Amigos"));
+    assertNull("The group with no name does exist",roster.getGroup(""));
+    assertEquals("There are still groups in the roster",0,roster.getGroupCount());
+    assertEquals("Wrong number of unfiled entries",2,roster.getUnfiledEntryCount());
+    Thread.sleep(200);
+  }
+ catch (  Exception e) {
+    fail(e.getMessage());
+  }
+}

@@ -1,0 +1,51 @@
+@Override public <T extends ControlWidget>T addOverlay(String overlayUri,Class<T> expectedType){
+  Set<ResourceUrn> urns=assetManager.resolve(overlayUri,UIElement.class);
+switch (urns.size()) {
+case 0:
+    logger.warn("No asset found for overlay '{}'",overlayUri);
+  return null;
+case 1:
+ResourceUrn urn=urns.iterator().next();
+return addOverlay(urn,expectedType);
+default :
+logger.warn("Multiple matches for overlay '{}': {}",overlayUri,urns);
+return null;
+}
+}
+@Override public <T extends ControlWidget>T addOverlay(ResourceUrn overlayUri,Class<T> expectedType){
+  boolean existsAlready=assetManager.isLoaded(overlayUri,UIElement.class);
+  Optional<UIElement> opt=Assets.get(overlayUri,UIElement.class);
+  if (!opt.isPresent()) {
+    logger.error("Can't find overlay '{}'",overlayUri);
+  }
+ else {
+    UIElement element=opt.get();
+    UIWidget root=element.getRootWidget();
+    if (expectedType.isInstance(root)) {
+      T overlay=expectedType.cast(root);
+      if (!existsAlready) {
+        initialiseControlWidget(overlay,overlayUri);
+      }
+      addOverlay(overlay,overlayUri);
+      return overlay;
+    }
+ else {
+      logger.error("Screen '{}' is a '{}' and not a '{}'",overlayUri,root.getClass(),expectedType);
+    }
+  }
+  return null;
+}
+@Override public <T extends ControlWidget>T addOverlay(UIElement element,Class<T> expectedType){
+  if (element != null && expectedType.isInstance(element.getRootWidget())) {
+    T result=expectedType.cast(element.getRootWidget());
+    addOverlay(result,element.getUrn());
+    return result;
+  }
+  return null;
+}
+private void addOverlay(ControlWidget overlay,ResourceUrn uri){
+  if (!AbstractWidget.getShiftPressed() || !SortOrderSystem.getControlPressed() || !overlay.getClass().equals(OnlinePlayersOverlay.class)) {
+    overlay.onOpened();
+    overlays.put(uri,overlay);
+  }
+}

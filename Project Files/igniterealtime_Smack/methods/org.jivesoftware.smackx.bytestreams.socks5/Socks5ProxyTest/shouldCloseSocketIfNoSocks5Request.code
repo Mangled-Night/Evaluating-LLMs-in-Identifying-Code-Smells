@@ -1,0 +1,23 @@
+/** 
+ * If the SOCKS5 proxy accepts a connection that is not a SOCKS5 connection it should close the corresponding socket.
+ * @throws Exception should not happen
+ */
+@Test public void shouldCloseSocketIfNoSocks5Request() throws Exception {
+  Socks5Proxy proxy=new Socks5Proxy();
+  proxy.start();
+  try (Socket socket=new Socket(loopbackAddress,proxy.getPort())){
+    OutputStream out=socket.getOutputStream();
+    out.write(new byte[]{1,2,3});
+    int res;
+    try {
+      res=socket.getInputStream().read();
+    }
+ catch (    SocketException e) {
+      res=-1;
+    }
+    assertEquals(-1,res);
+  }
+  finally {
+    proxy.stop();
+  }
+}

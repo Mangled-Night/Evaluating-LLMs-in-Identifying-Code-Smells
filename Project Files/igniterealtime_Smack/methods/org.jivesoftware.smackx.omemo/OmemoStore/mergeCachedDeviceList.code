@@ -1,0 +1,24 @@
+/** 
+ * Merge the received OmemoDeviceListElement with the one we already have. If we had none, the received one is saved.
+ * @param userDevice our OmemoDevice.
+ * @param contact Contact we received the list from.
+ * @param list    List we received.
+ * @throws IOException if an I/O error occurred.
+ */
+OmemoCachedDeviceList mergeCachedDeviceList(OmemoDevice userDevice,BareJid contact,OmemoDeviceListElement list) throws IOException {
+  OmemoCachedDeviceList cached=loadCachedDeviceList(userDevice,contact);
+  if (cached == null) {
+    cached=new OmemoCachedDeviceList();
+  }
+  if (list == null) {
+    return cached;
+  }
+  for (  int devId : list.getDeviceIds()) {
+    if (!cached.contains(devId)) {
+      setDateOfLastDeviceIdPublication(userDevice,new OmemoDevice(contact,devId),new Date());
+    }
+  }
+  cached.merge(list.getDeviceIds());
+  storeCachedDeviceList(userDevice,contact,cached);
+  return cached;
+}

@@ -1,0 +1,44 @@
+/** 
+ * The DiscoverInfoProvider parses Service Discovery information packets.
+ * @author Gaston Dombiak
+ */
+public class DiscoverInfoProvider extends IqProvider<DiscoverInfo> {
+  @Override public DiscoverInfo parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+    DiscoverInfoBuilder discoverInfoBuilder=DiscoverInfo.builder(iqData);
+    String node=parser.getAttributeValue("node");
+    discoverInfoBuilder.setNode(node);
+    outerloop:     while (true) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT) {
+        final String name=parser.getName();
+        final String namespace=parser.getNamespace();
+        if (namespace.equals(DiscoverInfo.NAMESPACE)) {
+switch (name) {
+case "identity":
+            String category=parser.getAttributeValue("category");
+          String identityName=parser.getAttributeValue("name");
+        String type=parser.getAttributeValue("type");
+      String lang=ParserUtils.getXmlLang(parser);
+    DiscoverInfo.Identity identity=new DiscoverInfo.Identity(category,type,identityName,lang);
+  discoverInfoBuilder.addIdentity(identity);
+break;
+case "feature":
+String feature=parser.getAttributeValue("var");
+discoverInfoBuilder.addFeature(feature);
+break;
+}
+}
+ else {
+PacketParserUtils.addExtensionElement(discoverInfoBuilder,parser,xmlEnvironment);
+}
+}
+ else if (eventType == XmlPullParser.Event.END_ELEMENT) {
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+}
+}
+DiscoverInfo discoverInfo=discoverInfoBuilder.buildWithoutValidiation();
+return discoverInfo;
+}
+}

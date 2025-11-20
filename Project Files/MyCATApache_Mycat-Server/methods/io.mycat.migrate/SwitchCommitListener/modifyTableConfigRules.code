@@ -1,0 +1,29 @@
+private static CuratorTransactionFinal modifyTableConfigRules(CuratorTransactionFinal transactionFinal,String schemal,String table,List<String> newDataNodes) throws Exception {
+  CuratorFramework client=ZKUtils.getConnection();
+  String rulePath=ZKUtils.getZKBasePath() + "schema/schema";
+  JSONArray jsonArray=JSON.parseArray(new String(client.getData().forPath(rulePath),"UTF-8"));
+  for (  Object obj : jsonArray) {
+    JSONObject func=(JSONObject)obj;
+    if (schemal.equalsIgnoreCase(func.getString("name"))) {
+      JSONArray property=func.getJSONArray("table");
+      for (      Object o : property) {
+        JSONObject tt=(JSONObject)o;
+        String tableName=tt.getString("name");
+        String dataNode=tt.getString("dataNode");
+        if (table.equalsIgnoreCase(tableName)) {
+          List<String> allDataNodes=new ArrayList<>();
+          allDataNodes.add(dataNode);
+          allDataNodes.addAll(newDataNodes);
+          tt.put("dataNode",Joiner.on(",").join(allDataNodes));
+          if (transactionFinal == null) {
+            transactionFinal=ZKUtils.getConnection().inTransaction().setData().forPath(rulePath,JSON.toJSONBytes(jsonArray)).and();
+          }
+ else {
+            transactionFinal.setData().forPath(rulePath,JSON.toJSONBytes(jsonArray));
+          }
+        }
+      }
+    }
+  }
+  return transactionFinal;
+}

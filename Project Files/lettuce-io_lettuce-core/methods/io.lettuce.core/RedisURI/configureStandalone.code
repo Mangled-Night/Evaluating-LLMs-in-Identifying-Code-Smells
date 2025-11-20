@@ -1,0 +1,38 @@
+private static Builder configureStandalone(URI uri){
+  Builder builder=null;
+  Set<String> allowedSchemes=LettuceSets.unmodifiableSet(URI_SCHEME_REDIS,URI_SCHEME_REDIS_SECURE,URI_SCHEME_REDIS_SOCKET,URI_SCHEME_REDIS_SOCKET_ALT,URI_SCHEME_REDIS_SECURE_ALT,URI_SCHEME_REDIS_TLS_ALT);
+  if (!allowedSchemes.contains(uri.getScheme())) {
+    throw new IllegalArgumentException("Scheme " + uri.getScheme() + " not supported");
+  }
+  if (URI_SCHEME_REDIS_SOCKET.equals(uri.getScheme()) || URI_SCHEME_REDIS_SOCKET_ALT.equals(uri.getScheme())) {
+    builder=Builder.socket(uri.getPath());
+  }
+ else {
+    if (isNotEmpty(uri.getHost())) {
+      if (uri.getPort() > 0) {
+        builder=Builder.redis(uri.getHost(),uri.getPort());
+      }
+ else {
+        builder=Builder.redis(uri.getHost());
+      }
+    }
+ else {
+      if (isNotEmpty(uri.getAuthority())) {
+        String authority=uri.getAuthority();
+        if (authority.indexOf('@') > -1) {
+          authority=authority.substring(authority.lastIndexOf('@') + 1);
+        }
+        builder=Builder.redis(authority);
+      }
+    }
+  }
+  LettuceAssert.notNull(builder,"Invalid URI, cannot get host or socket part");
+  if (URI_SCHEME_REDIS_SECURE.equals(uri.getScheme()) || URI_SCHEME_REDIS_SECURE_ALT.equals(uri.getScheme())) {
+    builder.withSsl(true);
+  }
+  if (URI_SCHEME_REDIS_TLS_ALT.equals(uri.getScheme())) {
+    builder.withSsl(true);
+    builder.withStartTls(true);
+  }
+  return builder;
+}

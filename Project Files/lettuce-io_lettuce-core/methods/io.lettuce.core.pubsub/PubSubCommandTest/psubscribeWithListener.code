@@ -1,0 +1,9 @@
+@Test void psubscribeWithListener() throws Exception {
+  RedisFuture<Void> psubscribe=pubsub.psubscribe(pattern);
+  final List<Object> listener=new ArrayList<>();
+  psubscribe.thenAccept(aVoid -> listener.add("done"));
+  psubscribe.await(1,TimeUnit.MINUTES);
+  assertThat(patterns.take()).isEqualTo(pattern);
+  assertThat((long)counts.take()).isEqualTo(1);
+  assertThat(listener).hasSize(1);
+}

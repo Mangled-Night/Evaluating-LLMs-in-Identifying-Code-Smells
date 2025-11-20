@@ -1,0 +1,27 @@
+/** 
+ * Quick and dirty load step to create a dummy world entity on remote clients TODO: The World Entity should be replicated, and the replicated entity linked. TODO: Further from that each world will have a world entity, and it should drive the creation of the world classes in the first place.
+ */
+public class CreateRemoteWorldEntity extends SingleStepLoadProcess {
+  private final Context context;
+  private EntityManager entityManager;
+  private ChunkProvider chunkProvider;
+  public CreateRemoteWorldEntity(  Context context){
+    this.context=context;
+  }
+  @Override public String getMessage(){
+    return "Linking world";
+  }
+  @Override public void begin(){
+    entityManager=context.get(EntityManager.class);
+    chunkProvider=context.get(ChunkProvider.class);
+  }
+  @Override public boolean step(){
+    EntityRef worldEntity=entityManager.create();
+    worldEntity.addComponent(new WorldComponent());
+    chunkProvider.setWorldEntity(worldEntity);
+    return true;
+  }
+  @Override public int getExpectedCost(){
+    return 1;
+  }
+}

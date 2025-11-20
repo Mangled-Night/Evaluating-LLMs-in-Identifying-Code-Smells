@@ -1,0 +1,31 @@
+/** 
+ * Test deleting a roster item according to the example in <a href="http://xmpp.org/rfcs/rfc3921.html#roster-delete" >RFC3921: Deleting a Roster Item</a>.
+ * @throws Throwable if throwable is thrown.
+ */
+@Test public void testDeleteRosterItem() throws Throwable {
+  final BareJid contactJID=JidCreate.entityBareFrom("romeo@example.net");
+  assertNotNull("Can't get the roster from the provided connection!",roster);
+  initRoster();
+  rosterListener.reset();
+  final RosterUpdateResponder serverSimulator=new RosterUpdateResponder(){
+    @Override void verifyUpdateRequest(    final RosterPacket updateRequest){
+      final Item item=updateRequest.getRosterItems().iterator().next();
+      assertEquals("The provided JID doesn't match the requested!",contactJID,item.getJid());
+    }
+  }
+;
+  serverSimulator.start();
+  roster.removeEntry(roster.getEntry(contactJID));
+  serverSimulator.join();
+  final Throwable exception=serverSimulator.getException();
+  if (exception != null) {
+    throw exception;
+  }
+  rosterListener.waitUntilInvocationOrTimeout();
+  final RosterEntry deletedEntry=roster.getEntry(contactJID);
+  assertNull("The contact wasn't deleted from the roster!",deletedEntry);
+  assertTrue("The roster listener wasn't invoked for the deleted contact!",rosterListener.getDeletedAddresses().contains(contactJID));
+  verifyMercutiosEntry(roster.getEntry(JidCreate.entityBareFrom("mercutio@example.com")));
+  verifyBenvoliosEntry(roster.getEntry(JidCreate.entityBareFrom("benvolio@example.net")));
+  assertSame("Wrong number of roster entries (" + roster.getEntries() + ").",2,roster.getEntries().size());
+}

@@ -1,0 +1,32 @@
+public void init(int index){
+  init(index,"");
+}
+public void init(int index,String reason){
+  if (!checkIndex(index)) {
+    index=0;
+  }
+  int active=-1;
+  for (int i=0; i < writeSources.length; i++) {
+    int j=loop(i + index);
+    if (initSource(j,writeSources[j])) {
+      boolean isNotSwitchDs=(dataHostConfig.getSwitchType() == DataHostConfig.NOT_SWITCH_DS) && !"MANAGER".equals(reason);
+      if (isNotSwitchDs && j > 0) {
+        break;
+      }
+      active=j;
+      activedIndex=active;
+      initSuccess=true;
+      LOGGER.info(getMessage(active," init success"));
+      if (this.writeType == WRITE_ONLYONE_NODE) {
+        MycatServer.getInstance().saveDataHostIndex(hostName,activedIndex);
+        break;
+      }
+    }
+  }
+  if (!checkIndex(active)) {
+    initSuccess=false;
+    StringBuilder s=new StringBuilder();
+    s.append(Alarms.DEFAULT).append(hostName).append(" init failure");
+    LOGGER.error(s.toString());
+  }
+}

@@ -1,0 +1,16 @@
+private <T extends Component>void updateComponent(EntityRef blockEntity,ComponentMetadata<T> metadata,T targetComponent){
+  T currentComp=blockEntity.getComponent(metadata.getType());
+  if (currentComp != null) {
+    boolean changed=false;
+    for (    FieldMetadata<T,?> field : metadata.getFields()) {
+      Object newVal=field.getValue(targetComponent);
+      if (!Objects.equal(field.getValue(currentComp),newVal)) {
+        field.setValue(currentComp,newVal);
+        changed=true;
+      }
+    }
+    if (changed) {
+      blockEntity.saveComponent(currentComp);
+    }
+  }
+}

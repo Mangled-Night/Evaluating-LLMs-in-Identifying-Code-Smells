@@ -1,0 +1,39 @@
+/** 
+ * Return whether the view is not in a jitter state.
+ * @param view The view.
+ * @return {@code true}: yes<br> {@code false}: no
+ */
+public static boolean isValid(@NonNull final View view){
+  return isValid(view,DEBOUNCING_DEFAULT_VALUE);
+}
+/** 
+ * Return whether the view is not in a jitter state.
+ * @param view     The view.
+ * @param duration The duration.
+ * @return {@code true}: yes<br> {@code false}: no
+ */
+public static boolean isValid(@NonNull final View view,final long duration){
+  return isValid(String.valueOf(view.hashCode()),duration);
+}
+/** 
+ * Return whether the key is not in a jitter state.
+ * @param key      The key.
+ * @param duration The duration.
+ * @return {@code true}: yes<br> {@code false}: no
+ */
+public static boolean isValid(@NonNull String key,final long duration){
+  if (TextUtils.isEmpty(key)) {
+    throw new IllegalArgumentException("The key is null.");
+  }
+  if (duration < 0) {
+    throw new IllegalArgumentException("The duration is less than 0.");
+  }
+  long curTime=SystemClock.elapsedRealtime();
+  clearIfNecessary(curTime);
+  Long validTime=KEY_MILLIS_MAP.get(key);
+  if (validTime == null || curTime >= validTime) {
+    KEY_MILLIS_MAP.put(key,curTime + duration);
+    return true;
+  }
+  return false;
+}

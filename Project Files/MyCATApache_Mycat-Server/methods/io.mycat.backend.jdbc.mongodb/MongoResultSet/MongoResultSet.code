@@ -1,0 +1,35 @@
+public MongoResultSet(MongoData mongo,String schema) throws SQLException {
+  this._cursor=mongo.getCursor();
+  this._schema=schema;
+  this._table=mongo.getTable();
+  this.isSum=mongo.getCount() > 0;
+  this._sum=mongo.getCount();
+  this.isGroupBy=mongo.getType();
+  if (this.isGroupBy) {
+    dblist=mongo.getGrouyBys();
+    this.isSum=true;
+  }
+  if (this._cursor != null) {
+    select=(String[])_cursor.getKeysWanted().keySet().toArray(new String[0]);
+    if (this._cursor.hasNext()) {
+      _cur=_cursor.next();
+      if (_cur != null) {
+        if (select.length == 0) {
+          SetFields(_cur.keySet());
+        }
+        _row=1;
+      }
+    }
+    if (select.length == 0) {
+      select=new String[]{"_id"};
+      SetFieldType(true);
+    }
+ else {
+      SetFieldType(false);
+    }
+  }
+ else {
+    SetFields(mongo.getFields().keySet());
+    SetFieldType(mongo.getFields());
+  }
+}

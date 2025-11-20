@@ -1,0 +1,79 @@
+/** 
+ * Bind  {@link CommandSegments} and method parameters to {@link CommandArgs}.
+ * @param args the command arguments.
+ * @param codec the codec.
+ * @param commandSegments the command segments.
+ * @param accessor the parameter accessor.
+ * @return
+ */
+<K,V>CommandArgs<K,V> bind(CommandArgs<K,V> args,RedisCodec<K,V> codec,CommandSegments commandSegments,MethodParametersAccessor accessor){
+  int parameterCount=accessor.getParameterCount();
+  BitSet set=new BitSet(parameterCount);
+  for (  CommandSegment commandSegment : commandSegments) {
+    ArgumentContribution argumentContribution=commandSegment.contribute(accessor);
+    bind(args,codec,argumentContribution.getValue(),argumentContribution.getParameterIndex(),accessor);
+    if (argumentContribution.getParameterIndex() != -1) {
+      set.set(argumentContribution.getParameterIndex());
+    }
+  }
+  for (int i=0; i < parameterCount; i++) {
+    if (set.get(i)) {
+      continue;
+    }
+    Object bindableValue=accessor.getBindableValue(i);
+    bind(args,codec,bindableValue,i,accessor);
+    set.set(i);
+  }
+  return args;
+}
+@SuppressWarnings("unchecked") private <K,V>void bind(CommandArgs<K,V> args,RedisCodec<K,V> codec,Object argument,int index,MethodParametersAccessor accessor){
+  if (argument == null) {
+    if (accessor.isBindableNullValue(index)) {
+      args.add(new byte[0]);
+    }
+    return;
+  }
+  if (argument instanceof byte[]) {
+    if (index != -1 && accessor.isKey(index)) {
+      args.addKey((K)argument);
+    }
+ else {
+      args.add((byte[])argument);
+    }
+    return;
+  }
+  if (argument.getClass().isArray()) {
+    argument=asIterable(argument);
+  }
+  if (index != -1) {
+    if (accessor.isKey(index)) {
+      if (argument instanceof Iterable) {
+        args.addKeys((Iterable<K>)argument);
+      }
+ else {
+        args.addKey((K)argument);
+      }
+      return;
+    }
+    if (accessor.isValue(index)) {
+      if (argument instanceof Range) {
+        bindValueRange(args,codec,(Range<? extends V>)argument);
+        return;
+      }
+      if (argument instanceof Iterable) {
+        args.addValues((Iterable<V>)argument);
+      }
+ else {
+        args.addValue((V)argument);
+      }
+      return;
+    }
+  }
+  if (argument instanceof Iterable) {
+    for (    Object argumentElement : (Iterable<Object>)argument) {
+      bindArgument(args,argumentElement);
+    }
+    return;
+  }
+  bindArgument(args,argument);
+}

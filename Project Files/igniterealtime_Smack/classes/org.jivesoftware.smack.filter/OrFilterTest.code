@@ -1,0 +1,44 @@
+/** 
+ * A test case for the OrFilter class.
+ */
+public class OrFilterTest extends TestCase {
+  public void testNullArgs(){
+    PacketFilter filter=null;
+    try {
+      OrFilter or=new OrFilter(filter,filter);
+      fail("Should have thrown IllegalArgumentException");
+    }
+ catch (    IllegalArgumentException e) {
+      assertTrue(true);
+    }
+  }
+  public void testAccept(){
+    MockPacketFilter trueFilter=new MockPacketFilter(true);
+    MockPacketFilter falseFilter=new MockPacketFilter(false);
+    MockPacket packet=new MockPacket();
+    OrFilter orFilter=new OrFilter(trueFilter,trueFilter);
+    assertTrue(orFilter.accept(packet));
+    orFilter=new OrFilter(trueFilter,falseFilter);
+    assertTrue(orFilter.accept(packet));
+    orFilter=new OrFilter(falseFilter,trueFilter);
+    assertTrue(orFilter.accept(packet));
+    orFilter=new OrFilter(falseFilter,falseFilter);
+    assertFalse(orFilter.accept(packet));
+    orFilter=new OrFilter(new OrFilter(trueFilter,trueFilter),new OrFilter(trueFilter,trueFilter));
+    assertTrue(orFilter.accept(packet));
+    orFilter=new OrFilter(new OrFilter(trueFilter,falseFilter),new OrFilter(trueFilter,trueFilter));
+    assertTrue(orFilter.accept(packet));
+    orFilter=new OrFilter(new OrFilter(trueFilter,trueFilter),new OrFilter(falseFilter,trueFilter));
+    assertTrue(orFilter.accept(packet));
+    orFilter=new OrFilter(new OrFilter(trueFilter,trueFilter),new OrFilter(trueFilter,falseFilter));
+    assertTrue(orFilter.accept(packet));
+    orFilter=new OrFilter(new OrFilter(falseFilter,falseFilter),new OrFilter(falseFilter,falseFilter));
+    assertFalse(orFilter.accept(packet));
+    orFilter=new OrFilter();
+    orFilter.addFilter(trueFilter);
+    orFilter.addFilter(trueFilter);
+    orFilter.addFilter(falseFilter);
+    orFilter.addFilter(trueFilter);
+    assertTrue(orFilter.accept(packet));
+  }
+}

@@ -1,0 +1,18 @@
+private Set<EventSystemReplayImpl.EventHandlerInfo> selectEventHandlers(Class<? extends Event> eventType,EntityRef entity){
+  Set<EventSystemReplayImpl.EventHandlerInfo> result=Sets.newHashSet();
+  result.addAll(generalHandlers.get(eventType));
+  SetMultimap<Class<? extends Component>,EventSystemReplayImpl.EventHandlerInfo> handlers=componentSpecificHandlers.get(eventType);
+  if (handlers == null) {
+    return result;
+  }
+  for (  Class<? extends Component> compClass : handlers.keySet()) {
+    if (entity.hasComponent(compClass)) {
+      for (      EventSystemReplayImpl.EventHandlerInfo eventHandler : handlers.get(compClass)) {
+        if (eventHandler.isValidFor(entity)) {
+          result.add(eventHandler);
+        }
+      }
+    }
+  }
+  return result;
+}

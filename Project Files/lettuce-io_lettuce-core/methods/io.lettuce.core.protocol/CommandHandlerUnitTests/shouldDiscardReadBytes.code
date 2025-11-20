@@ -1,0 +1,19 @@
+@Test void shouldDiscardReadBytes() throws Exception {
+  ChannelPromise channelPromise=new DefaultChannelPromise(channel,ImmediateEventExecutor.INSTANCE);
+  channelPromise.setSuccess();
+  sut.channelRegistered(context);
+  sut.channelActive(context);
+  sut.getStack().add(new Command<>(CommandType.PING,new StatusOutput<>(StringCodec.UTF8)));
+  sut.getStack().add(new Command<>(CommandType.PING,new StatusOutput<>(StringCodec.UTF8)));
+  sut.getStack().add(new Command<>(CommandType.PING,new StatusOutput<>(StringCodec.UTF8)));
+  ByteBuf internalBuffer=context.alloc().buffer(30);
+  sut.setBuffer(internalBuffer);
+  ByteBuf msg=context.alloc().buffer(100);
+  msg.writeBytes("*1\r\n+OK\r\n".getBytes());
+  msg.writeBytes("*1\r\n+OK\r\n".getBytes());
+  msg.writeBytes("*1\r\n+OK\r\n".getBytes());
+  sut.channelRead(context,msg);
+  assertThat(internalBuffer.readerIndex()).isEqualTo(0);
+  assertThat(internalBuffer.writerIndex()).isEqualTo(0);
+  sut.channelUnregistered(context);
+}

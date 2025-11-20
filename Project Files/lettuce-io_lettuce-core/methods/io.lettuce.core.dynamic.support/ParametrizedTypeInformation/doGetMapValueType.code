@@ -1,0 +1,21 @@
+@Override protected TypeInformation<?> doGetMapValueType(){
+  if (Map.class.isAssignableFrom(getType())) {
+    Type[] arguments=type.getActualTypeArguments();
+    if (arguments.length > 1) {
+      return createInfo(arguments[1]);
+    }
+  }
+  Class<?> rawType=getType();
+  Set<Type> supertypes=new HashSet<Type>();
+  supertypes.add(rawType.getGenericSuperclass());
+  supertypes.addAll(Arrays.asList(rawType.getGenericInterfaces()));
+  for (  Type supertype : supertypes) {
+    Class<?> rawSuperType=resolveClass(supertype);
+    if (Map.class.isAssignableFrom(rawSuperType)) {
+      ParameterizedType parameterizedSupertype=(ParameterizedType)supertype;
+      Type[] arguments=parameterizedSupertype.getActualTypeArguments();
+      return createInfo(arguments[1]);
+    }
+  }
+  return super.doGetMapValueType();
+}

@@ -1,0 +1,300 @@
+public static final class Config {
+  private String mDefaultDir;
+  private String mDir;
+  private String mFilePrefix="util";
+  private String mFileExtension=".txt";
+  private boolean mLogSwitch=true;
+  private boolean mLog2ConsoleSwitch=true;
+  private String mGlobalTag="";
+  private boolean mTagIsSpace=true;
+  private boolean mLogHeadSwitch=true;
+  private boolean mLog2FileSwitch=false;
+  private boolean mLogBorderSwitch=true;
+  private boolean mSingleTagSwitch=true;
+  private int mConsoleFilter=V;
+  private int mFileFilter=V;
+  private int mStackDeep=1;
+  private int mStackOffset=0;
+  private int mSaveDays=-1;
+  private String mProcessName=UtilsBridge.getCurrentProcessName();
+  private IFileWriter mFileWriter;
+  private OnConsoleOutputListener mOnConsoleOutputListener;
+  private OnFileOutputListener mOnFileOutputListener;
+  private UtilsBridge.FileHead mFileHead=new UtilsBridge.FileHead("Log");
+  private Config(){
+    if (UtilsBridge.isSDCardEnableByEnvironment() && Utils.getApp().getExternalFilesDir(null) != null)     mDefaultDir=Utils.getApp().getExternalFilesDir(null) + FILE_SEP + "log"+ FILE_SEP;
+ else {
+      mDefaultDir=Utils.getApp().getFilesDir() + FILE_SEP + "log"+ FILE_SEP;
+    }
+  }
+  public final Config setLogSwitch(  final boolean logSwitch){
+    mLogSwitch=logSwitch;
+    return this;
+  }
+  public final Config setConsoleSwitch(  final boolean consoleSwitch){
+    mLog2ConsoleSwitch=consoleSwitch;
+    return this;
+  }
+  public final Config setGlobalTag(  final String tag){
+    if (UtilsBridge.isSpace(tag)) {
+      mGlobalTag="";
+      mTagIsSpace=true;
+    }
+ else {
+      mGlobalTag=tag;
+      mTagIsSpace=false;
+    }
+    return this;
+  }
+  public final Config setLogHeadSwitch(  final boolean logHeadSwitch){
+    mLogHeadSwitch=logHeadSwitch;
+    return this;
+  }
+  public final Config setLog2FileSwitch(  final boolean log2FileSwitch){
+    mLog2FileSwitch=log2FileSwitch;
+    return this;
+  }
+  public final Config setDir(  final String dir){
+    if (UtilsBridge.isSpace(dir)) {
+      mDir=null;
+    }
+ else {
+      mDir=dir.endsWith(FILE_SEP) ? dir : dir + FILE_SEP;
+    }
+    return this;
+  }
+  public final Config setDir(  final File dir){
+    mDir=dir == null ? null : (dir.getAbsolutePath() + FILE_SEP);
+    return this;
+  }
+  public final Config setFilePrefix(  final String filePrefix){
+    if (UtilsBridge.isSpace(filePrefix)) {
+      mFilePrefix="util";
+    }
+ else {
+      mFilePrefix=filePrefix;
+    }
+    return this;
+  }
+  public final Config setFileExtension(  final String fileExtension){
+    if (UtilsBridge.isSpace(fileExtension)) {
+      mFileExtension=".txt";
+    }
+ else {
+      if (fileExtension.startsWith(".")) {
+        mFileExtension=fileExtension;
+      }
+ else {
+        mFileExtension="." + fileExtension;
+      }
+    }
+    return this;
+  }
+  public final Config setBorderSwitch(  final boolean borderSwitch){
+    mLogBorderSwitch=borderSwitch;
+    return this;
+  }
+  public final Config setSingleTagSwitch(  final boolean singleTagSwitch){
+    mSingleTagSwitch=singleTagSwitch;
+    return this;
+  }
+  public final Config setConsoleFilter(  @TYPE final int consoleFilter){
+    mConsoleFilter=consoleFilter;
+    return this;
+  }
+  public final Config setFileFilter(  @TYPE final int fileFilter){
+    mFileFilter=fileFilter;
+    return this;
+  }
+  public final Config setStackDeep(  @IntRange(from=1) final int stackDeep){
+    mStackDeep=stackDeep;
+    return this;
+  }
+  public final Config setStackOffset(  @IntRange(from=0) final int stackOffset){
+    mStackOffset=stackOffset;
+    return this;
+  }
+  public final Config setSaveDays(  @IntRange(from=1) final int saveDays){
+    mSaveDays=saveDays;
+    return this;
+  }
+  public final <T>Config addFormatter(  final IFormatter<T> iFormatter){
+    if (iFormatter != null) {
+      I_FORMATTER_MAP.put(getTypeClassFromParadigm(iFormatter),iFormatter);
+    }
+    return this;
+  }
+  public final Config setFileWriter(  final IFileWriter fileWriter){
+    mFileWriter=fileWriter;
+    return this;
+  }
+  public final Config setOnConsoleOutputListener(  final OnConsoleOutputListener listener){
+    mOnConsoleOutputListener=listener;
+    return this;
+  }
+  public final Config setOnFileOutputListener(  final OnFileOutputListener listener){
+    mOnFileOutputListener=listener;
+    return this;
+  }
+  public final Config addFileExtraHead(  final Map<String,String> fileExtraHead){
+    mFileHead.append(fileExtraHead);
+    return this;
+  }
+  public final Config addFileExtraHead(  final String key,  final String value){
+    mFileHead.append(key,value);
+    return this;
+  }
+  public final String getProcessName(){
+    if (mProcessName == null)     return "";
+    return mProcessName.replace(":","_");
+  }
+  public final String getDefaultDir(){
+    return mDefaultDir;
+  }
+  public final String getDir(){
+    return mDir == null ? mDefaultDir : mDir;
+  }
+  public final String getFilePrefix(){
+    return mFilePrefix;
+  }
+  public final String getFileExtension(){
+    return mFileExtension;
+  }
+  public final boolean isLogSwitch(){
+    return mLogSwitch;
+  }
+  public final boolean isLog2ConsoleSwitch(){
+    return mLog2ConsoleSwitch;
+  }
+  public final String getGlobalTag(){
+    if (UtilsBridge.isSpace(mGlobalTag))     return "";
+    return mGlobalTag;
+  }
+  public final boolean isLogHeadSwitch(){
+    return mLogHeadSwitch;
+  }
+  public final boolean isLog2FileSwitch(){
+    return mLog2FileSwitch;
+  }
+  public final boolean isLogBorderSwitch(){
+    return mLogBorderSwitch;
+  }
+  public final boolean isSingleTagSwitch(){
+    return mSingleTagSwitch;
+  }
+  public final char getConsoleFilter(){
+    return T[mConsoleFilter - V];
+  }
+  public final char getFileFilter(){
+    return T[mFileFilter - V];
+  }
+  public final int getStackDeep(){
+    return mStackDeep;
+  }
+  public final int getStackOffset(){
+    return mStackOffset;
+  }
+  public final int getSaveDays(){
+    return mSaveDays;
+  }
+  public final boolean haveSetOnConsoleOutputListener(){
+    return mOnConsoleOutputListener != null;
+  }
+  public final boolean haveSetOnFileOutputListener(){
+    return mOnFileOutputListener != null;
+  }
+  @Override public String toString(){
+    return "process: " + getProcessName() + LINE_SEP+ "logSwitch: "+ isLogSwitch()+ LINE_SEP+ "consoleSwitch: "+ isLog2ConsoleSwitch()+ LINE_SEP+ "tag: "+ (getGlobalTag().equals("") ? "null" : getGlobalTag())+ LINE_SEP+ "headSwitch: "+ isLogHeadSwitch()+ LINE_SEP+ "fileSwitch: "+ isLog2FileSwitch()+ LINE_SEP+ "dir: "+ getDir()+ LINE_SEP+ "filePrefix: "+ getFilePrefix()+ LINE_SEP+ "borderSwitch: "+ isLogBorderSwitch()+ LINE_SEP+ "singleTagSwitch: "+ isSingleTagSwitch()+ LINE_SEP+ "consoleFilter: "+ getConsoleFilter()+ LINE_SEP+ "fileFilter: "+ getFileFilter()+ LINE_SEP+ "stackDeep: "+ getStackDeep()+ LINE_SEP+ "stackOffset: "+ getStackOffset()+ LINE_SEP+ "saveDays: "+ getSaveDays()+ LINE_SEP+ "formatter: "+ I_FORMATTER_MAP+ LINE_SEP+ "fileWriter: "+ mFileWriter+ LINE_SEP+ "onConsoleOutputListener: "+ mOnConsoleOutputListener+ LINE_SEP+ "onFileOutputListener: "+ mOnFileOutputListener+ LINE_SEP+ "fileExtraHeader: "+ mFileHead.getAppended();
+  }
+}
+public static class Config {
+  private static final int SHADOW_COLOR_DEFAULT=0x44000000;
+  private static final int SHADOW_SIZE=UtilsBridge.dp2px(8);
+  private float mShadowRadius=-1;
+  private float mShadowSizeNormal=-1;
+  private float mShadowSizePressed=-1;
+  private float mShadowMaxSizeNormal=-1;
+  private float mShadowMaxSizePressed=-1;
+  private int mShadowColorNormal=SHADOW_COLOR_DEFAULT;
+  private int mShadowColorPressed=SHADOW_COLOR_DEFAULT;
+  private boolean isCircle=false;
+  public Config(){
+  }
+  public Config setShadowRadius(  float radius){
+    this.mShadowRadius=radius;
+    if (isCircle) {
+      throw new IllegalArgumentException("Set circle needn't set radius.");
+    }
+    return this;
+  }
+  public Config setCircle(){
+    isCircle=true;
+    if (mShadowRadius != -1) {
+      throw new IllegalArgumentException("Set circle needn't set radius.");
+    }
+    return this;
+  }
+  public Config setShadowSize(  int size){
+    return setShadowSize(size,size);
+  }
+  public Config setShadowSize(  int sizeNormal,  int sizePressed){
+    this.mShadowSizeNormal=sizeNormal;
+    this.mShadowSizePressed=sizePressed;
+    return this;
+  }
+  public Config setShadowMaxSize(  int maxSize){
+    return setShadowMaxSize(maxSize,maxSize);
+  }
+  public Config setShadowMaxSize(  int maxSizeNormal,  int maxSizePressed){
+    this.mShadowMaxSizeNormal=maxSizeNormal;
+    this.mShadowMaxSizePressed=maxSizePressed;
+    return this;
+  }
+  public Config setShadowColor(  int color){
+    return setShadowColor(color,color);
+  }
+  public Config setShadowColor(  int colorNormal,  int colorPressed){
+    this.mShadowColorNormal=colorNormal;
+    this.mShadowColorPressed=colorPressed;
+    return this;
+  }
+  Drawable apply(  Drawable src){
+    if (src == null) {
+      src=new ColorDrawable(Color.TRANSPARENT);
+    }
+    StateListDrawable drawable=new StateListDrawable();
+    drawable.addState(new int[]{android.R.attr.state_pressed},new ShadowDrawable(src,getShadowRadius(),getShadowSizeNormal(),getShadowMaxSizeNormal(),mShadowColorPressed,isCircle));
+    drawable.addState(StateSet.WILD_CARD,new ShadowDrawable(src,getShadowRadius(),getShadowSizePressed(),getShadowMaxSizePressed(),mShadowColorNormal,isCircle));
+    return drawable;
+  }
+  private float getShadowRadius(){
+    if (mShadowRadius < 0) {
+      mShadowRadius=0;
+    }
+    return mShadowRadius;
+  }
+  private float getShadowSizeNormal(){
+    if (mShadowSizeNormal == -1) {
+      mShadowSizeNormal=SHADOW_SIZE;
+    }
+    return mShadowSizeNormal;
+  }
+  private float getShadowSizePressed(){
+    if (mShadowSizePressed == -1) {
+      mShadowSizePressed=getShadowSizeNormal();
+    }
+    return mShadowSizePressed;
+  }
+  private float getShadowMaxSizeNormal(){
+    if (mShadowMaxSizeNormal == -1) {
+      mShadowMaxSizeNormal=getShadowSizeNormal();
+    }
+    return mShadowMaxSizeNormal;
+  }
+  private float getShadowMaxSizePressed(){
+    if (mShadowMaxSizePressed == -1) {
+      mShadowMaxSizePressed=getShadowSizePressed();
+    }
+    return mShadowMaxSizePressed;
+  }
+}

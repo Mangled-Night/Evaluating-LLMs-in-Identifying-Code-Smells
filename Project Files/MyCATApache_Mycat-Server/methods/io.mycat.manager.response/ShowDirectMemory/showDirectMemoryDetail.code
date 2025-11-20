@@ -1,0 +1,44 @@
+public static void showDirectMemoryDetail(ManagerConnection c){
+  ByteBuffer buffer=c.allocate();
+  buffer=detailHeader.write(buffer,c,true);
+  for (  FieldPacket field : detailFields) {
+    buffer=field.write(buffer,c,true);
+  }
+  buffer=detailEof.write(buffer,c,true);
+  byte packetId=detailEof.packetId;
+  ConcurrentHashMap<Long,Long> bufferpoolUsageMap=bufferPool.getNetDirectMemoryUsage();
+  try {
+    if (useOffHeapForMerge == 1) {
+      ConcurrentHashMap<Long,Long> concurrentHashMap=MycatServer.getInstance().getMyCatMemory().getResultMergeMemoryManager().getDirectMemorUsage();
+      for (      Long key : concurrentHashMap.keySet()) {
+        RowDataPacket row=new RowDataPacket(DETAILl_FIELD_COUNT);
+        Long value=concurrentHashMap.get(key);
+        row.add(String.valueOf(key).getBytes(c.getCharset()));
+        row.add("MergeMemoryPool".getBytes(c.getCharset()));
+        row.add(JavaUtils.bytesToString2(value).getBytes(c.getCharset()));
+        row.packetId=++packetId;
+        buffer=row.write(buffer,c,true);
+      }
+    }
+    if (processorBufferPoolType == 2) {
+    }
+ else {
+      for (      Long key : bufferpoolUsageMap.keySet()) {
+        RowDataPacket row=new RowDataPacket(DETAILl_FIELD_COUNT);
+        Long value=bufferpoolUsageMap.get(key);
+        row.add(String.valueOf(key).getBytes(c.getCharset()));
+        row.add("NetWorkBufferPool".getBytes(c.getCharset()));
+        row.add(JavaUtils.bytesToString2(value).getBytes(c.getCharset()));
+        row.packetId=++packetId;
+        buffer=row.write(buffer,c,true);
+      }
+    }
+  }
+ catch (  UnsupportedEncodingException e) {
+    e.printStackTrace();
+  }
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

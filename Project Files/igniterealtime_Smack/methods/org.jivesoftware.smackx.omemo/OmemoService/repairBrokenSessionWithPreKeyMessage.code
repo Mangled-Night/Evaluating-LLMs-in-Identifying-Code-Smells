@@ -1,0 +1,23 @@
+/** 
+ * Fetch and process a fresh bundle and send an empty preKeyMessage in order to establish a fresh session.
+ * @param managerGuard authenticated OmemoManager.
+ * @param brokenDevice device which session broke.
+ * @throws IOException if an I/O error occurred.
+ */
+private void repairBrokenSessionWithPreKeyMessage(OmemoManager.LoggedInOmemoManager managerGuard,OmemoDevice brokenDevice) throws IOException {
+  LOGGER.log(Level.WARNING,"Attempt to repair the session by sending a fresh preKey message to " + brokenDevice);
+  OmemoManager manager=managerGuard.get();
+  try {
+    buildFreshSessionWithDevice(manager.getConnection(),manager.getOwnDevice(),brokenDevice);
+    sendRatchetUpdate(managerGuard,brokenDevice);
+  }
+ catch (  CannotEstablishOmemoSessionException|CorruptedOmemoKeyException e) {
+    LOGGER.log(Level.WARNING,"Unable to repair session with " + brokenDevice,e);
+  }
+catch (  SmackException.NotConnectedException|InterruptedException|SmackException.NoResponseException e) {
+    LOGGER.log(Level.WARNING,"Could not fetch fresh bundle for " + brokenDevice,e);
+  }
+catch (  CryptoFailedException|NoSuchAlgorithmException e) {
+    LOGGER.log(Level.WARNING,"Could not create PreKeyMessage",e);
+  }
+}

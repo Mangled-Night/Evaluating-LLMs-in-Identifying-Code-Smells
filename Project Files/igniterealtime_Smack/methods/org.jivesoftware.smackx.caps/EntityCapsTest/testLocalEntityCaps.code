@@ -1,0 +1,15 @@
+@SmackIntegrationTest public void testLocalEntityCaps() throws InterruptedException, NoResponseException, XMPPErrorException, NotConnectedException {
+  final String dummyFeature=getNewDummyFeature();
+  DiscoverInfo info=EntityCapsManager.getDiscoveryInfoByNodeVer(ecmTwo.getLocalNodeVer());
+  assertFalse(info.containsFeature(dummyFeature));
+  dropWholeEntityCapsCache();
+  performActionAndWaitUntilStanzaReceived(new Runnable(){
+    @Override public void run(){
+      sdmTwo.addFeature(dummyFeature);
+    }
+  }
+,conOne,new AndFilter(PresenceTypeFilter.AVAILABLE,FromMatchesFilter.create(conTwo.getUser())));
+  info=EntityCapsManager.getDiscoveryInfoByNodeVer(ecmTwo.getLocalNodeVer());
+  assertNotNull(info);
+  assertTrue(info.containsFeature(dummyFeature));
+}

@@ -1,0 +1,112 @@
+@Override public void run(){
+  if (!running.compareAndSet(false,true)) {
+    return;
+  }
+  boolean nulpack=false;
+  try {
+    for (; ; ) {
+      if (clearStatus == ClearStatusEnum.PREPARE_CLEAR || clearStatus == ClearStatusEnum.CLEARED) {
+        break;
+      }
+      final PackWraper pack=packs.poll();
+      if (pack == null) {
+        nulpack=true;
+        break;
+      }
+      if (pack == END_FLAG_PACK) {
+        hasEndFlag=true;
+        if (packs.peek() != null) {
+          packs.add(pack);
+          continue;
+        }
+        final int warningCount=0;
+        final EOFPacket eofp=new EOFPacket();
+        final ByteBuffer eof=ByteBuffer.allocate(9);
+        BufferUtil.writeUB3(eof,eofp.calcPacketSize());
+        eof.put(eofp.packetId);
+        eof.put(eofp.fieldCount);
+        BufferUtil.writeUB2(eof,warningCount);
+        BufferUtil.writeUB2(eof,eofp.status);
+        final ServerConnection source=multiQueryHandler.getSession().getSource();
+        final byte[] array=eof.array();
+        Iterator<UnsafeRow> iters=null;
+        if (unsafeRowGrouper != null) {
+          if (globalSorter != null) {
+            iters=unsafeRowGrouper.getResult(globalSorter);
+          }
+ else {
+            iters=unsafeRowGrouper.getResult(globalMergeResult);
+          }
+        }
+ else         if (globalSorter != null) {
+          iters=globalSorter.sort();
+        }
+ else         if (!isStreamOutputResult) {
+          iters=globalMergeResult.sort();
+        }
+        if (iters != null) {
+          multiQueryHandler.outputMergeResult(source,array,iters,isMiddleResultDone);
+        }
+        break;
+      }
+      unsafeRow=new UnsafeRow(fieldCount);
+      bufferHolder=new BufferHolder(unsafeRow,0);
+      unsafeRowWriter=new UnsafeRowWriter(bufferHolder,fieldCount);
+      bufferHolder.reset();
+      MySQLMessage mm=new MySQLMessage(pack.rowData);
+      unsafeRowWriter.grow((mm.getRowLength(fieldCount) + 1) / 2);
+      mm.readUB3();
+      mm.read();
+      int nullnum=0;
+      for (int i=0; i < fieldCount; i++) {
+        byte[] colValue=mm.readBytesWithLength();
+        if (colValue != null)         unsafeRowWriter.write(i,colValue);
+ else {
+          if (mergeColsIndex != null && mergeColsIndex.length > 0) {
+            if (Arrays.binarySearch(mergeColsIndex,i) < 0) {
+              nullnum++;
+            }
+          }
+          unsafeRow.setNullAt(i);
+        }
+      }
+      if (mergeColsIndex != null && mergeColsIndex.length > 0) {
+        if (nullnum == (fieldCount - mergeColsIndex.length)) {
+          if (!hasEndFlag) {
+            packs.add(pack);
+            continue;
+          }
+        }
+      }
+      unsafeRow.setTotalSize(bufferHolder.totalSize());
+      if (unsafeRowGrouper != null) {
+        unsafeRowGrouper.addRow(unsafeRow);
+      }
+ else       if (globalSorter != null) {
+        globalSorter.insertRow(unsafeRow);
+      }
+ else {
+        globalMergeResult.insertRow(unsafeRow);
+      }
+      unsafeRow=null;
+      bufferHolder=null;
+      unsafeRowWriter=null;
+    }
+  }
+ catch (  final Exception e) {
+    e.printStackTrace();
+    multiQueryHandler.handleDataProcessException(e);
+  }
+ finally {
+synchronized (this) {
+      running.set(false);
+      if (clearStatus == ClearStatusEnum.PREPARE_CLEAR) {
+        clear();
+        return;
+      }
+    }
+    if (nulpack && !packs.isEmpty()) {
+      this.run();
+    }
+  }
+}

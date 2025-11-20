@@ -1,0 +1,45 @@
+/** 
+ * Base class for XMPP address type filters.
+ * @author Florian Schmaus
+ */
+public abstract class AbstractJidTypeFilter implements StanzaFilter {
+  private final JidType jidType;
+  protected AbstractJidTypeFilter(  JidType jidType){
+    this.jidType=Objects.requireNonNull(jidType,"jidType must not be null");
+  }
+  @Override public boolean accept(  Stanza stanza){
+    Jid toMatch=getJidToMatchFrom(stanza);
+    if (toMatch == null) {
+      return false;
+    }
+    return jidType.isTypeOf(toMatch);
+  }
+  protected abstract Jid getJidToMatchFrom(  Stanza stanza);
+  @Override public final String toString(){
+    return getClass().getSimpleName() + ": " + jidType;
+  }
+  public enum JidType {  BareJid,   DomainBareJid,   DomainFullJid,   DomainJid,   EntityBareJid,   EntityFullJid,   EntityJid,   FullJid;   public boolean isTypeOf(  Jid jid){
+    if (jid == null) {
+      return false;
+    }
+switch (this) {
+case BareJid:
+      return jid.hasNoResource();
+case DomainBareJid:
+    return jid.isDomainBareJid();
+case DomainFullJid:
+  return jid.isDomainFullJid();
+case EntityBareJid:
+return jid.isEntityBareJid();
+case EntityFullJid:
+return jid.isEntityFullJid();
+case EntityJid:
+return jid.isEntityJid();
+case FullJid:
+return jid.hasResource();
+default :
+throw new IllegalStateException();
+}
+}
+}
+}

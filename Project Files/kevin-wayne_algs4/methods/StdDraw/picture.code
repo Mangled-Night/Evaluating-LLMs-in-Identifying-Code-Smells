@@ -1,0 +1,111 @@
+/** 
+ * Draws the specified image centered at (<em>x</em>, <em>y</em>). The supported image formats are typically JPEG, PNG, GIF TIFF, and BMP. As an optimization, the picture is cached, so there is no performance penalty for redrawing the same image multiple times (e.g., in an animation). However, if you change the picture file after drawing it, subsequent calls will draw the original picture.
+ * @param x the center <em>x</em>-coordinate of the image
+ * @param y the center <em>y</em>-coordinate of the image
+ * @param filename the name of the image/picture, e.g., "ball.gif"
+ * @throws IllegalArgumentException if the image filename is invalid
+ * @throws IllegalArgumentException if either {@code x} or {@code y} is either NaN or infinite
+ */
+public static void picture(double x,double y,String filename){
+  validate(x,"x");
+  validate(y,"y");
+  validateNotNull(filename,"filename");
+  Image image=getImage(filename);
+  double xs=scaleX(x);
+  double ys=scaleY(y);
+  int ws=image.getWidth(null);
+  int hs=image.getHeight(null);
+  if (ws < 0 || hs < 0)   throw new IllegalArgumentException("image " + filename + " is corrupt");
+  offscreen.drawImage(image,(int)Math.round(xs - ws / 2.0),(int)Math.round(ys - hs / 2.0),null);
+  draw();
+}
+/** 
+ * Draws the specified image centered at (<em>x</em>, <em>y</em>), rotated given number of degrees. The supported image formats are typically JPEG, PNG, GIF TIFF, and BMP.
+ * @param x the center <em>x</em>-coordinate of the image
+ * @param y the center <em>y</em>-coordinate of the image
+ * @param filename the name of the image/picture, e.g., "ball.gif"
+ * @param degrees is the number of degrees to rotate counterclockwise
+ * @throws IllegalArgumentException if the image filename is invalid
+ * @throws IllegalArgumentException if {@code x},  {@code y},  {@code degrees} is NaN or infinite
+ * @throws IllegalArgumentException if {@code filename} is {@code null}
+ */
+public static void picture(double x,double y,String filename,double degrees){
+  validate(x,"x");
+  validate(y,"y");
+  validate(degrees,"degrees");
+  validateNotNull(filename,"filename");
+  Image image=getImage(filename);
+  double xs=scaleX(x);
+  double ys=scaleY(y);
+  int ws=image.getWidth(null);
+  int hs=image.getHeight(null);
+  if (ws < 0 || hs < 0)   throw new IllegalArgumentException("image " + filename + " is corrupt");
+  offscreen.rotate(Math.toRadians(-degrees),xs,ys);
+  offscreen.drawImage(image,(int)Math.round(xs - ws / 2.0),(int)Math.round(ys - hs / 2.0),null);
+  offscreen.rotate(Math.toRadians(+degrees),xs,ys);
+  draw();
+}
+/** 
+ * Draws the specified image centered at (<em>x</em>, <em>y</em>), rescaled to the specified bounding box. The supported image formats are typically JPEG, PNG, GIF TIFF, and BMP.
+ * @param x the center <em>x</em>-coordinate of the image
+ * @param y the center <em>y</em>-coordinate of the image
+ * @param filename the name of the image/picture, e.g., "ball.gif"
+ * @param scaledWidth the width of the scaled image (in screen coordinates)
+ * @param scaledHeight the height of the scaled image (in screen coordinates)
+ * @throws IllegalArgumentException if either {@code scaledWidth}or  {@code scaledHeight} is negative
+ * @throws IllegalArgumentException if the image filename is invalid
+ * @throws IllegalArgumentException if {@code x} or {@code y} is either NaN or infinite
+ * @throws IllegalArgumentException if {@code filename} is {@code null}
+ */
+public static void picture(double x,double y,String filename,double scaledWidth,double scaledHeight){
+  validate(x,"x");
+  validate(y,"y");
+  validate(scaledWidth,"scaled width");
+  validate(scaledHeight,"scaled height");
+  validateNotNull(filename,"filename");
+  validateNonnegative(scaledWidth,"scaled width");
+  validateNonnegative(scaledHeight,"scaled height");
+  Image image=getImage(filename);
+  double xs=scaleX(x);
+  double ys=scaleY(y);
+  double ws=factorX(scaledWidth);
+  double hs=factorY(scaledHeight);
+  if (ws < 0 || hs < 0)   throw new IllegalArgumentException("image " + filename + " is corrupt");
+  if (ws <= 1 && hs <= 1)   pixel(x,y);
+ else {
+    offscreen.drawImage(image,(int)Math.round(xs - ws / 2.0),(int)Math.round(ys - hs / 2.0),(int)Math.round(ws),(int)Math.round(hs),null);
+  }
+  draw();
+}
+/** 
+ * Draws the specified image centered at (<em>x</em>, <em>y</em>), rotated given number of degrees, and rescaled to the specified bounding box. The supported image formats are typically JPEG, PNG, GIF TIFF, and BMP.
+ * @param x the center <em>x</em>-coordinate of the image
+ * @param y the center <em>y</em>-coordinate of the image
+ * @param filename the name of the image/picture, e.g., "ball.gif"
+ * @param scaledWidth the width of the scaled image (in screen coordinates)
+ * @param scaledHeight the height of the scaled image (in screen coordinates)
+ * @param degrees is the number of degrees to rotate counterclockwise
+ * @throws IllegalArgumentException if either {@code scaledWidth}or  {@code scaledHeight} is negative
+ * @throws IllegalArgumentException if the image filename is invalid
+ */
+public static void picture(double x,double y,String filename,double scaledWidth,double scaledHeight,double degrees){
+  validate(x,"x");
+  validate(y,"y");
+  validate(scaledWidth,"scaled width");
+  validate(scaledHeight,"scaled height");
+  validate(degrees,"degrees");
+  validateNotNull(filename,"filename");
+  validateNonnegative(scaledWidth,"scaled width");
+  validateNonnegative(scaledHeight,"scaled height");
+  Image image=getImage(filename);
+  double xs=scaleX(x);
+  double ys=scaleY(y);
+  double ws=factorX(scaledWidth);
+  double hs=factorY(scaledHeight);
+  if (ws < 0 || hs < 0)   throw new IllegalArgumentException("image " + filename + " is corrupt");
+  if (ws <= 1 && hs <= 1)   pixel(x,y);
+  offscreen.rotate(Math.toRadians(-degrees),xs,ys);
+  offscreen.drawImage(image,(int)Math.round(xs - ws / 2.0),(int)Math.round(ys - hs / 2.0),(int)Math.round(ws),(int)Math.round(hs),null);
+  offscreen.rotate(Math.toRadians(+degrees),xs,ys);
+  draw();
+}

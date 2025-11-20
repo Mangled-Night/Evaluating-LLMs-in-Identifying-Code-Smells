@@ -1,0 +1,40 @@
+/** 
+ * select  行数据返回时触发，将行数据写入缓冲区中
+ */
+@Override public void rowResponse(byte[] row,BackendConnection conn){
+  if (errorRepsponsed.get()) {
+    return;
+  }
+  this.netOutBytes+=row.length;
+  this.selectRows++;
+  if (isDefaultNodeShowTable || isDefaultNodeShowFullTable) {
+    RowDataPacket rowDataPacket=new RowDataPacket(1);
+    rowDataPacket.read(row);
+    String table=StringUtil.decode(rowDataPacket.fieldValues.get(0),session.getSource().getCharset());
+    if (shardingTablesSet.contains(table.toUpperCase())) {
+      return;
+    }
+  }
+  row[3]=++packetId;
+  if (prepared) {
+    RowDataPacket rowDataPk=new RowDataPacket(fieldCount);
+    rowDataPk.read(row);
+    BinaryRowDataPacket binRowDataPk=new BinaryRowDataPacket();
+    binRowDataPk.read(fieldPackets,rowDataPk);
+    binRowDataPk.packetId=rowDataPk.packetId;
+    buffer=binRowDataPk.write(buffer,session.getSource(),true);
+  }
+ else {
+    MiddlerResultHandler middlerResultHandler=session.getMiddlerResultHandler();
+    if (null == middlerResultHandler) {
+      buffer=session.getSource().writeToBuffer(row,allocBuffer());
+    }
+ else {
+      if (middlerResultHandler instanceof MiddlerQueryResultHandler) {
+        byte[] rv=ResultSetUtil.getColumnVal(row,fields,0);
+        String rowValue=rv == null ? "" : new String(rv);
+        middlerResultHandler.add(rowValue);
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+@Test @Inject void testCancelCommand(@New StatefulRedisConnection<String,String> connection){
+  RedisReactiveCommands<String,String> reactive=connection.reactive();
+  List<Object> result=new ArrayList<>();
+  reactive.clientPause(2000).subscribe();
+  Delay.delay(Duration.ofMillis(50));
+  reactive.set(key,value).subscribe(new CompletionSubscriber(result));
+  Delay.delay(Duration.ofMillis(50));
+  reactive.reset();
+  assertThat(result).isEmpty();
+}

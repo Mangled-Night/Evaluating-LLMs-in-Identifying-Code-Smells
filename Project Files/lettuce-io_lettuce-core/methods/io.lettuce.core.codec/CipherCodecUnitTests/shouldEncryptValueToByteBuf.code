@@ -1,0 +1,11 @@
+@ParameterizedTest @MethodSource("cryptoTestValues") void shouldEncryptValueToByteBuf(CryptoTestArgs testArgs){
+  RedisCodec<String,String> crypto=CipherCodec.forValues(StringCodec.UTF8,encrypt,decrypt);
+  ToByteBufEncoder<String,String> direct=(ToByteBufEncoder<String,String>)crypto;
+  ByteBufAllocator allocator=ByteBufAllocator.DEFAULT;
+  ByteBuf target=allocator.buffer();
+  direct.encodeValue(testArgs.content,target);
+  assertThat(target).isNotEqualTo(Unpooled.wrappedBuffer(testArgs.content.getBytes()));
+  assertThat(target.toString(0,20,StandardCharsets.US_ASCII)).startsWith("$foobar+142$");
+  String result=crypto.decodeValue(target.nioBuffer());
+  assertThat(result).isEqualTo(testArgs.content);
+}

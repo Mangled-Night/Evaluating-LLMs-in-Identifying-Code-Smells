@@ -1,0 +1,31 @@
+private void reduceTree(int numColors){
+  for (int level=MAX_LEVEL - 1; level >= 0; level--) {
+    Vector<OctTreeNode> v=colorList.get(level);
+    if (v != null && v.size() > 0) {
+      for (int j=0; j < v.size(); j++) {
+        OctTreeNode node=v.elementAt(j);
+        if (node.children > 0) {
+          for (int i=0; i < 8; i++) {
+            OctTreeNode child=node.leaf[i];
+            if (child != null) {
+              if (!child.isLeaf)               LOGGER.fine("not a leaf!");
+              node.count+=child.count;
+              node.totalRed+=child.totalRed;
+              node.totalGreen+=child.totalGreen;
+              node.totalBlue+=child.totalBlue;
+              node.leaf[i]=null;
+              node.children--;
+              colors--;
+              nodes--;
+              colorList.get(level + 1).removeElement(child);
+            }
+          }
+          node.isLeaf=true;
+          colors++;
+          if (colors <= numColors)           return;
+        }
+      }
+    }
+  }
+  LOGGER.fine("Unable to reduce the OctTree");
+}

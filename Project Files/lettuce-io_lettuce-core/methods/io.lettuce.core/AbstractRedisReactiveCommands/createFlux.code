@@ -1,0 +1,9 @@
+public <T>Flux<T> createFlux(Supplier<RedisCommand<K,V,T>> commandSupplier){
+  return createFlux(commandSupplier,false);
+}
+private <T>Flux<T> createFlux(Supplier<RedisCommand<K,V,T>> commandSupplier,boolean dissolve){
+  if (tracingEnabled) {
+    return withTraceContext().flatMapMany(it -> Flux.from(new RedisPublisher<>(decorate(commandSupplier,it),connection,dissolve,getScheduler().next())));
+  }
+  return Flux.from(new RedisPublisher<>(commandSupplier,connection,dissolve,getScheduler().next()));
+}

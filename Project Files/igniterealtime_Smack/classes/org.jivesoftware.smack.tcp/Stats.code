@@ -1,0 +1,44 @@
+public static final class Stats extends XmppClientToServerTransport.Stats {
+  public final long totalBytesWritten;
+  public final long totalBytesWrittenBeforeFilter;
+  public final double writeRatio;
+  public final long totalBytesRead;
+  public final long totalBytesReadAfterFilter;
+  public final double readRatio;
+  public final long handledChannelSelectedCallbacks;
+  public final long setWriteInterestAfterChannelSelectedCallback;
+  public final long reactorThreadAlreadyRacing;
+  public final long afterOutgoingElementsQueueModifiedSetInterestOps;
+  public final long rejectedChannelSelectedCallbacks;
+  public final long totalCallbackRequests;
+  public final long callbackPreemtBecauseBytesWritten;
+  public final long callbackPreemtBecauseBytesRead;
+  public final int sslEngineDelegatedTasks;
+  public final int maxPendingSslEngineDelegatedTasks;
+  private Stats(  XmppTcpTransportModule connection){
+    totalBytesWritten=connection.totalBytesWritten;
+    totalBytesWrittenBeforeFilter=connection.totalBytesWrittenBeforeFilter;
+    writeRatio=(double)totalBytesWritten / totalBytesWrittenBeforeFilter;
+    totalBytesReadAfterFilter=connection.totalBytesReadAfterFilter;
+    totalBytesRead=connection.totalBytesRead;
+    readRatio=(double)totalBytesRead / totalBytesReadAfterFilter;
+    handledChannelSelectedCallbacks=connection.handledChannelSelectedCallbacks;
+    setWriteInterestAfterChannelSelectedCallback=connection.setWriteInterestAfterChannelSelectedCallback.get();
+    reactorThreadAlreadyRacing=connection.reactorThreadAlreadyRacing.get();
+    afterOutgoingElementsQueueModifiedSetInterestOps=connection.afterOutgoingElementsQueueModifiedSetInterestOps.get();
+    rejectedChannelSelectedCallbacks=connection.rejectedChannelSelectedCallbacks.get();
+    totalCallbackRequests=handledChannelSelectedCallbacks + rejectedChannelSelectedCallbacks;
+    callbackPreemtBecauseBytesRead=connection.callbackPreemtBecauseBytesRead;
+    callbackPreemtBecauseBytesWritten=connection.callbackPreemtBecauseBytesWritten;
+    sslEngineDelegatedTasks=connection.sslEngineDelegatedTasks;
+    maxPendingSslEngineDelegatedTasks=connection.maxPendingSslEngineDelegatedTasks;
+  }
+  private transient String toStringCache;
+  @Override public String toString(){
+    if (toStringCache != null) {
+      return toStringCache;
+    }
+    toStringCache="Total bytes\n" + "recv: " + totalBytesRead + '\n'+ "send: "+ totalBytesWritten+ '\n'+ "recv-aft-filter: "+ totalBytesReadAfterFilter+ '\n'+ "send-bef-filter: "+ totalBytesWrittenBeforeFilter+ '\n'+ "read-ratio: "+ readRatio+ '\n'+ "write-ratio: "+ writeRatio+ '\n'+ "Events\n"+ "total-callback-requests: "+ totalCallbackRequests+ '\n'+ "handled-channel-selected-callbacks: "+ handledChannelSelectedCallbacks+ '\n'+ "rejected-channel-selected-callbacks: "+ rejectedChannelSelectedCallbacks+ '\n'+ "set-write-interest-after-callback: "+ setWriteInterestAfterChannelSelectedCallback+ '\n'+ "reactor-thread-already-racing: "+ reactorThreadAlreadyRacing+ '\n'+ "after-queue-modified-set-interest-ops: "+ afterOutgoingElementsQueueModifiedSetInterestOps+ '\n'+ "callback-preemt-because-bytes-read: "+ callbackPreemtBecauseBytesRead+ '\n'+ "callback-preemt-because-bytes-written: "+ callbackPreemtBecauseBytesWritten+ '\n'+ "ssl-engine-delegated-tasks: "+ sslEngineDelegatedTasks+ '\n'+ "max-pending-ssl-engine-delegated-tasks: "+ maxPendingSslEngineDelegatedTasks+ '\n';
+    return toStringCache;
+  }
+}

@@ -1,0 +1,38 @@
+@Override public void processStanza(Stanza stanza){
+  waitStart=System.currentTimeMillis();
+  EntityFullJid from=stanza.getFrom().asEntityFullJidOrThrow();
+  Message message=(Message)stanza;
+  JivePropertiesExtension extension=JivePropertiesExtension.from(message);
+  Integer messageNumber=(Integer)extension.getProperty(MESSAGE_NUMBER_PROPERTY);
+  boolean[] fromMarkers=myReceiveMarkers.get(from);
+  for (int i=0; i < fromMarkers.length; i++) {
+    final String inOrderViolation;
+    if (i < messageNumber && !fromMarkers[i]) {
+      inOrderViolation="not yet message #";
+    }
+ else     if (i >= messageNumber && fromMarkers[i]) {
+      inOrderViolation="we already received a later (or the same) message #";
+    }
+ else {
+      continue;
+    }
+    StringBuilder exceptionMessage=new StringBuilder();
+    exceptionMessage.append("We received message #").append(messageNumber).append(" but ");
+    exceptionMessage.append(inOrderViolation);
+    exceptionMessage.append(i);
+    exceptionMessage.append("\nMessage with id ").append(stanza.getStanzaId()).append(" from ").append(from).append(" to ").append(stanza.getTo()).append('\n');
+    exceptionMessage.append("From Markers: ").append(Arrays.toString(fromMarkers)).append('\n');
+    Exception exception=new Exception(exceptionMessage.toString());
+    receiveExceptions.put(connection,exception);
+    connection.removeSyncStanzaListener(this);
+    receivedSemaphore.release();
+    return;
+  }
+  fromMarkers[messageNumber]=true;
+  for (  boolean[] markers : myReceiveMarkers.values()) {
+    if (BooleansUtils.contains(markers,false)) {
+      return;
+    }
+  }
+  receivedSemaphore.release();
+}

@@ -1,0 +1,21 @@
+/** 
+ * Try to find an XMPP IoT registry.
+ * @return the JID of a Thing Registry if one could be found, <code>null</code> otherwise.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @see <a href="http://xmpp.org/extensions/xep-0347.html#findingregistry">XEP-0347 § 3.5 Finding Thing Registry</a>
+ */
+public Jid findRegistry() throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  if (preconfiguredRegistry != null) {
+    return preconfiguredRegistry;
+  }
+  final XMPPConnection connection=connection();
+  ServiceDiscoveryManager sdm=ServiceDiscoveryManager.getInstanceFor(connection);
+  List<DiscoverInfo> discoverInfos=sdm.findServicesDiscoverInfo(Constants.IOT_DISCOVERY_NAMESPACE,true,true);
+  if (!discoverInfos.isEmpty()) {
+    return discoverInfos.get(0).getFrom();
+  }
+  return null;
+}

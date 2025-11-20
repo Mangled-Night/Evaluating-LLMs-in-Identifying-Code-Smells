@@ -1,0 +1,10 @@
+@Test void testJavaSerializer(){
+  StatefulRedisConnection<String,Object> redisConnection=client.connect(new SerializedObjectCodec());
+  RedisCommands<String,Object> sync=redisConnection.sync();
+  List<String> list=list("one","two");
+  sync.set(key,list);
+  assertThat(sync.get(key)).isEqualTo(list);
+  assertThat(sync.set(key,list)).isEqualTo("OK");
+  assertThat(sync.set(key,list,SetArgs.Builder.ex(1))).isEqualTo("OK");
+  redisConnection.close();
+}

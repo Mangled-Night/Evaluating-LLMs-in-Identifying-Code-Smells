@@ -1,0 +1,54 @@
+public static void consistencyCheck(){
+  MycatConfig config=MycatServer.getInstance().getConfig();
+  for (  String key : globalTableMap.keySet()) {
+    TableConfig table=globalTableMap.get(key);
+    List<String> dataNodeList=table.getDataNodes();
+    Map<String,String> executedMap=new HashMap<>();
+    for (    String nodeName : dataNodeList) {
+      Map<String,PhysicalDBNode> map=config.getDataNodes();
+      for (      String k2 : map.keySet()) {
+        PhysicalDBNode dBnode=map.get(k2);
+        if (nodeName.equals(dBnode.getName())) {
+          PhysicalDBPool pool=dBnode.getDbPool();
+          Collection<PhysicalDatasource> allDS=pool.genAllDataSources();
+          for (          PhysicalDatasource pds : allDS) {
+            if (pds instanceof MySQLDataSource) {
+              MySQLDataSource mds=(MySQLDataSource)pds;
+              if (executedMap.get(pds.getName()) == null) {
+                MySQLConsistencyChecker checker=new MySQLConsistencyChecker(mds,table.getName());
+                isInnerColumnCheckFinished=0;
+                checker.checkInnerColumnExist();
+                while (isInnerColumnCheckFinished <= 0) {
+                  LOGGER.debug("isInnerColumnCheckFinished:" + isInnerColumnCheckFinished);
+                  try {
+                    TimeUnit.SECONDS.sleep(1);
+                  }
+ catch (                  InterruptedException e) {
+                    LOGGER.warn(e.getMessage());
+                  }
+                }
+                LOGGER.debug("isInnerColumnCheckFinished:" + isInnerColumnCheckFinished);
+                checker=new MySQLConsistencyChecker(mds,table.getName());
+                isColumnCountCheckFinished=0;
+                checker.checkRecordCout();
+                while (isColumnCountCheckFinished <= 0) {
+                  LOGGER.debug("isColumnCountCheckFinished:" + isColumnCountCheckFinished);
+                  try {
+                    TimeUnit.SECONDS.sleep(1);
+                  }
+ catch (                  InterruptedException e) {
+                    LOGGER.warn(e.getMessage());
+                  }
+                }
+                LOGGER.debug("isColumnCountCheckFinished:" + isColumnCountCheckFinished);
+                checker=new MySQLConsistencyChecker(mds,table.getName());
+                checker.checkMaxTimeStamp();
+                executedMap.put(pds.getName(),nodeName);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

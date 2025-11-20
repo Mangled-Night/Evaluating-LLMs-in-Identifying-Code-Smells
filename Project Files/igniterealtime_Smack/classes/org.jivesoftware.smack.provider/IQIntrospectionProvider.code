@@ -1,0 +1,18 @@
+/** 
+ * Parsing with introspection poses a security threat and results in mutable classes and is therefore discouraged.
+ * @deprecated use a proper parser.
+ */
+@Deprecated public abstract static class IQIntrospectionProvider<I extends IQ> extends IqProvider<I> {
+  private final Class<I> elementClass;
+  protected IQIntrospectionProvider(  Class<I> elementClass){
+    this.elementClass=elementClass;
+  }
+  @SuppressWarnings("unchecked") @Override public I parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    try {
+      return (I)parseWithIntrospection(elementClass,parser,initialDepth);
+    }
+ catch (    NoSuchMethodException|SecurityException|InstantiationException|IllegalAccessException|IllegalArgumentException|InvocationTargetException|ClassNotFoundException e) {
+      throw new IOException(e);
+    }
+  }
+}

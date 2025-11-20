@@ -1,0 +1,11 @@
+@Test void msetnxCrossSlot(){
+  Map<String,String> mset=prepareMset();
+  String key=mset.keySet().iterator().next();
+  Map<String,String> submap=Collections.singletonMap(key,mset.get(key));
+  assertThat(sync.msetnx(submap)).isTrue();
+  assertThat(sync.msetnx(mset)).isFalse();
+  for (  String mykey : mset.keySet()) {
+    String s1=sync.get(mykey);
+    assertThat(s1).isEqualTo("value-" + mykey);
+  }
+}

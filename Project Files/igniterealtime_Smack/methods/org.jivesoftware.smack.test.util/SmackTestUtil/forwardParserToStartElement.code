@@ -1,0 +1,20 @@
+private static void forwardParserToStartElement(XmlPullParser parser) throws XmlPullParserException, IOException {
+  forwardParserToStartElement(parser,p -> true);
+}
+private static void forwardParserToStartElement(XmlPullParser parser,Predicate<XmlPullParser> doneForwarding) throws XmlPullParserException, IOException {
+  outerloop:   while (true) {
+    XmlPullParser.Event event=parser.getEventType();
+switch (event) {
+case START_ELEMENT:
+      if (doneForwarding.test(parser)) {
+        break outerloop;
+      }
+    break;
+case END_DOCUMENT:
+  throw new IllegalArgumentException("Not matching START_ELEMENT found");
+default :
+break;
+}
+parser.next();
+}
+}

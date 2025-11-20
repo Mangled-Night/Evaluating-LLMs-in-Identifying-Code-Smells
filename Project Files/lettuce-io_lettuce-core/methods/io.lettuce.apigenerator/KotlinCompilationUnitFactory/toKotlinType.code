@@ -1,0 +1,26 @@
+private String toKotlinType(Type type,boolean isFlowable,boolean isForceNonNullable){
+  String fixedType;
+  if (type.isTypeParameter() || type.asString().equals("K") || type.asString().equals("V")) {
+    fixedType=type.asString();
+  }
+ else   if (type.isArrayType()) {
+    Type componentType=type.asArrayType().getComponentType();
+    if (componentType.asString().equals("byte")) {
+      fixedType="ByteArray";
+    }
+ else {
+      fixedType=String.format("Array<%s>",componentType.asString());
+    }
+  }
+ else   if (type.isPrimitiveType()) {
+    fixedType=type.asPrimitiveType().toBoxedType().getName().asString().replace("Integer","Int").replace("Object","Any");
+  }
+ else   if (isFlowable) {
+    fixedType=type.asString().replaceFirst("List|Map|Set","Flow").replace("T","Flow<T>").replace("Object","Any").replace(",",", ");
+  }
+ else {
+    fixedType=type.asString().replace("void","Unit").replace("Object","Any").replace("? extends","out").replace("? super","in").replace(",",", ");
+  }
+  boolean nullable=!isForceNonNullable && !isFlowable && !type.isPrimitiveType()&& !isCollection(type);
+  return fixedType.equals("Unit") ? "" : ": " + (nullable ? fixedType + "?" : fixedType);
+}

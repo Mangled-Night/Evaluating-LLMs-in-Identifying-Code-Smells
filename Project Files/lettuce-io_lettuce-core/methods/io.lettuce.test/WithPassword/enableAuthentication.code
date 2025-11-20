@@ -1,0 +1,14 @@
+/** 
+ * Enable password authentication via  {@code requirepass}.
+ * @param commands
+ */
+public static void enableAuthentication(RedisCommands<String,String> commands){
+  RedisConditions conditions=RedisConditions.of(commands);
+  if (conditions.hasCommand("CONFIG")) {
+    commands.configSet("requirepass",TestSettings.password().toString());
+  }
+  if (conditions.hasCommand("ACL")) {
+    Command<String,String,List<Object>> command=CliParser.parse("ACL SETUSER " + TestSettings.aclUsername() + " on >"+ TestSettings.aclPassword()+ " ~cached:* +@all");
+    commands.dispatch(command.getType(),command.getOutput(),command.getArgs());
+  }
+}

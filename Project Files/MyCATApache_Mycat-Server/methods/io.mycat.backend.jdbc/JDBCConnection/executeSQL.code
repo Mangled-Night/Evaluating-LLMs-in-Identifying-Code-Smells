@@ -1,0 +1,69 @@
+private void executeSQL(RouteResultsetNode rrn,ServerConnection sc,boolean autocommit) throws IOException {
+  String orgin=rrn.getStatement();
+  if (!modifiedSQLExecuted && rrn.isModifySQL()) {
+    modifiedSQLExecuted=true;
+  }
+  try {
+    syncIsolation(sc.getTxIsolation());
+    syncTxReadonly(sc.isTxReadonly());
+    if (!this.schema.equals(this.oldSchema)) {
+      con.setCatalog(schema);
+      if (!setSchemaFail) {
+        try {
+          con.setSchema(schema);
+        }
+ catch (        Throwable e) {
+          LOGGER.error("JDBC setSchema Exception for " + schema,e);
+          setSchemaFail=true;
+        }
+      }
+      this.oldSchema=schema;
+    }
+    if (!this.isSpark) {
+      con.setAutoCommit(autocommit);
+    }
+    int sqlType=rrn.getSqlType();
+    if (rrn.isCallStatement() && "oracle".equalsIgnoreCase(getDbType())) {
+      ouputCallStatement(rrn,sc,orgin);
+    }
+ else     if (sqlType == ServerParse.SELECT || sqlType == ServerParse.SHOW) {
+      if ((sqlType == ServerParse.SHOW) && (!dbType.equals("MYSQL"))) {
+        ShowVariables.execute(sc,orgin,this);
+      }
+ else       if ("SELECT CONNECTION_ID()".equalsIgnoreCase(orgin)) {
+        ShowVariables.justReturnValue(sc,String.valueOf(sc.getId()),this);
+      }
+ else {
+        ouputResultSet(sc,orgin);
+      }
+    }
+ else {
+      executeddl(sc,orgin);
+    }
+  }
+ catch (  SQLException e) {
+    String msg=e.getMessage();
+    ErrorPacket error=new ErrorPacket();
+    error.packetId=++packetId;
+    error.errno=e.getErrorCode();
+    error.message=msg.getBytes();
+    LOGGER.error("sql execute error, " + msg,e);
+    this.respHandler.errorResponse(error.writeToBytes(sc),this);
+  }
+catch (  Exception e) {
+    String msg=e.getMessage();
+    ErrorPacket error=new ErrorPacket();
+    error.packetId=++packetId;
+    error.errno=ErrorCode.ER_UNKNOWN_ERROR;
+    error.message=((msg == null) ? e.toString().getBytes() : msg.getBytes());
+    String err=null;
+    if (error.message != null) {
+      err=new String(error.message);
+    }
+    LOGGER.error("sql execute error, " + err,e);
+    this.respHandler.errorResponse(error.writeToBytes(sc),this);
+  }
+ finally {
+    this.running=false;
+  }
+}

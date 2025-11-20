@@ -1,0 +1,21 @@
+@Override public Integer calculate(String columnValue){
+  Integer targetPartition=-1;
+  try {
+    long targetTime=formatter.get().parse(columnValue).getTime();
+    Calendar now=Calendar.getInstance();
+    long nowTime=now.getTimeInMillis();
+    beginDate=nowTime - sLastTime * oneDay;
+    long diffDays=(nowTime - targetTime) / (1000 * 60 * 60* 24) + 1;
+    if (diffDays - sLastTime <= 0 || diffDays < 0) {
+      targetPartition=0;
+    }
+ else {
+      targetPartition=(int)((beginDate - targetTime) / partionTime) + 1;
+    }
+    LOGGER.debug("PartitionByHotDate calculate for " + columnValue + " return "+ targetPartition);
+    return targetPartition;
+  }
+ catch (  ParseException e) {
+    throw new IllegalArgumentException(new StringBuilder().append("columnValue:").append(columnValue).append(" Please check if the format satisfied.").toString(),e);
+  }
+}

@@ -1,0 +1,68 @@
+/** 
+ * Deserializes the componentData on top of the target component. Any fields that are not present in the componentData, or which cannot be deserialized, are left unaltered.
+ * @param target
+ * @param componentData
+ * @return The target component.
+ */
+public Component deserializeOnto(Component target,EntityData.Component componentData){
+  return deserializeOnto(target,componentData,FieldSerializeCheck.NullCheck.<Component>newInstance(),null);
+}
+/** 
+ * Deserializes the componentData on top of the target component. Any fields that are not present in the componentData, or which cannot be deserialized, are left unaltered.
+ * @param target
+ * @param componentData
+ * @param context       The module that contains the component being deserialized. May be null if it is not contained in a module.
+ * @return The target component.
+ */
+public Component deserializeOnto(Component target,EntityData.Component componentData,Module context){
+  return deserializeOnto(target,componentData,FieldSerializeCheck.NullCheck.<Component>newInstance(),context);
+}
+/** 
+ * Deserializes the componentData on top of the target component. Any fields that are not present in the componentData, or which cannot be deserialized, are left unaltered.
+ * @param target
+ * @param componentData
+ * @param fieldCheck
+ * @return The target component.
+ */
+public Component deserializeOnto(Component target,EntityData.Component componentData,FieldSerializeCheck<Component> fieldCheck){
+  return deserializeOnto(target,componentData,fieldCheck,null);
+}
+/** 
+ * Deserializes the componentData on top of the target component. Any fields that are not present in the componentData, or which cannot be deserialized, are left unaltered.
+ * @param target
+ * @param componentData
+ * @param fieldCheck
+ * @param context       The module this component is being deserialized from, or null if it isn't within a module
+ * @return The target component.
+ */
+public Component deserializeOnto(Component target,EntityData.Component componentData,FieldSerializeCheck<Component> fieldCheck,Module context){
+  ComponentMetadata<? extends Component> componentMetadata=getComponentMetadata(componentData,context);
+  if (componentMetadata != null) {
+    return deserializeOnto(target,componentData,componentMetadata,fieldCheck);
+  }
+ else {
+    logger.warn("Unable to deserialize unknown component type: {}",componentData.getType());
+  }
+  return target;
+}
+private <T extends Component>Component deserializeOnto(Component targetComponent,EntityData.Component componentData,ComponentMetadata<T> componentMetadata,FieldSerializeCheck<Component> fieldCheck){
+  Serializer serializer=typeHandlerLibrary.getSerializerFor(componentMetadata);
+  Map<FieldMetadata<?,?>,PersistedData> dataMap=Maps.newHashMapWithExpectedSize(componentData.getFieldCount());
+  for (  EntityData.NameValue field : componentData.getFieldList()) {
+    FieldMetadata<?,?> fieldInfo=null;
+    if (field.hasNameIndex()) {
+      fieldInfo=componentMetadata.getField(field.getNameIndex());
+    }
+ else     if (field.hasName()) {
+      fieldInfo=componentMetadata.getField(field.getName());
+    }
+    if (fieldInfo != null) {
+      dataMap.put(fieldInfo,new ProtobufPersistedData(field.getValue()));
+    }
+ else     if (field.hasName()) {
+      logger.warn("Cannot deserialize unknown field '{}' onto '{}'",field.getName(),componentMetadata.getId());
+    }
+  }
+  serializer.deserializeOnto(targetComponent,dataMap,fieldCheck);
+  return targetComponent;
+}

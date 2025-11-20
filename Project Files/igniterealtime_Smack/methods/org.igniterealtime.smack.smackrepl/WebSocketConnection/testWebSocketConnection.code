@@ -1,0 +1,14 @@
+public static void testWebSocketConnection(String jid,String password,String websocketEndpoint) throws URISyntaxException, SmackException, IOException, XMPPException, InterruptedException {
+  testWebSocketConnection(jid,password,websocketEndpoint,null);
+}
+public static void testWebSocketConnection(String jid,String password,String websocketEndpoint,String messageTo) throws URISyntaxException, SmackException, IOException, XMPPException, InterruptedException {
+  ModularXmppClientToServerConnectionConfiguration.Builder builder=ModularXmppClientToServerConnectionConfiguration.builder();
+  builder.removeAllModules().setXmppAddressAndPassword(jid,password);
+  XmppWebSocketTransportModuleDescriptor.Builder websocketBuilder=XmppWebSocketTransportModuleDescriptor.getBuilder(builder);
+  websocketBuilder.explicitlySetWebSocketEndpointAndDiscovery(websocketEndpoint,false);
+  builder.addModule(websocketBuilder.build());
+  ModularXmppClientToServerConnectionConfiguration config=builder.build();
+  ModularXmppClientToServerConnection connection=new ModularXmppClientToServerConnection(config);
+  connection.setReplyTimeout(5 * 60 * 1000);
+  XmppTools.modularConnectionTest(connection,messageTo);
+}

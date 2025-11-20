@@ -1,0 +1,40 @@
+@Override public Iterator<Vector3ic> iterator(){
+  Vector3i pos=new Vector3i();
+  final int[] level={this.startDistance};
+  final Vector3i offset=new Vector3i(-this.startDistance,0,0);
+  return new Iterator<Vector3ic>(){
+    @Override public boolean hasNext(){
+      return level[0] < endDistance;
+    }
+    @Override public Vector3ic next(){
+      origin.add(offset,pos);
+      if (offset.z < 0) {
+        offset.z*=-1;
+      }
+ else       if (offset.y() < 0) {
+        offset.y*=-1;
+        offset.z=-(level[0] - TeraMath.fastAbs(offset.x()) - TeraMath.fastAbs(offset.y()));
+      }
+ else {
+        offset.y=-offset.y() + 1;
+        if (offset.y > 0) {
+          if (++offset.x <= level[0]) {
+            offset.y=TeraMath.fastAbs(offset.x) - level[0];
+            offset.z=0;
+          }
+ else {
+            level[0]++;
+            offset.x=-level[0];
+            offset.y=0;
+            offset.z=0;
+          }
+        }
+ else {
+          offset.z=-(level[0] - TeraMath.fastAbs(offset.x) - TeraMath.fastAbs(offset.y));
+        }
+      }
+      return pos;
+    }
+  }
+;
+}

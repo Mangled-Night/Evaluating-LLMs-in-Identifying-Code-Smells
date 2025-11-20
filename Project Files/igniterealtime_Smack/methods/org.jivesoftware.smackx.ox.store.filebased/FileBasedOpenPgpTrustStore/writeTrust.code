@@ -1,0 +1,17 @@
+@Override protected void writeTrust(BareJid owner,OpenPgpV4Fingerprint fingerprint,Trust trust) throws IOException {
+  File file=getTrustPath(owner,fingerprint);
+  if (trust == null || trust == Trust.undecided) {
+    FileUtils.maybeDeleteFileOrThrow(file);
+  }
+  FileUtils.maybeCreateFileWithParentDirectories(file);
+  BufferedWriter writer=null;
+  try {
+    OutputStream outputStream=FileUtils.prepareFileOutputStream(file);
+    OutputStreamWriter osw=new OutputStreamWriter(outputStream,Util.UTF8);
+    writer=new BufferedWriter(osw);
+    writer.write(trust.toString());
+  }
+  finally {
+    CloseableUtil.maybeClose(writer,LOGGER);
+  }
+}

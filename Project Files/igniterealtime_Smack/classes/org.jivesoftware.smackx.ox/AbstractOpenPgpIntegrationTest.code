@@ -1,0 +1,34 @@
+public abstract class AbstractOpenPgpIntegrationTest extends AbstractSmackIntegrationTest {
+  protected final XMPPConnection aliceConnection;
+  protected final XMPPConnection bobConnection;
+  protected final XMPPConnection chloeConnection;
+  protected final BareJid alice;
+  protected final BareJid bob;
+  protected final BareJid chloe;
+  protected final PepManager alicePepManager;
+  protected final PepManager bobPepManager;
+  protected final PepManager chloePepManager;
+  protected AbstractOpenPgpIntegrationTest(  SmackIntegrationTestEnvironment environment) throws XMPPException.XMPPErrorException, TestNotPossibleException, SmackException.NotConnectedException, InterruptedException, SmackException.NoResponseException {
+    super(environment);
+    throwIfPubSubNotSupported(conOne);
+    throwIfPubSubNotSupported(conTwo);
+    throwIfPubSubNotSupported(conThree);
+    this.aliceConnection=conOne;
+    this.bobConnection=conTwo;
+    this.chloeConnection=conThree;
+    this.alice=aliceConnection.getUser().asBareJid();
+    this.bob=bobConnection.getUser().asBareJid();
+    this.chloe=chloeConnection.getUser().asBareJid();
+    this.alicePepManager=PepManager.getInstanceFor(aliceConnection);
+    this.bobPepManager=PepManager.getInstanceFor(bobConnection);
+    this.chloePepManager=PepManager.getInstanceFor(chloeConnection);
+    OpenPgpPubSubUtil.deletePubkeysListNode(alicePepManager);
+    OpenPgpPubSubUtil.deletePubkeysListNode(bobPepManager);
+    OpenPgpPubSubUtil.deletePubkeysListNode(chloePepManager);
+  }
+  private static void throwIfPubSubNotSupported(  XMPPConnection connection) throws XMPPException.XMPPErrorException, SmackException.NotConnectedException, InterruptedException, SmackException.NoResponseException, TestNotPossibleException {
+    if (!PepManager.getInstanceFor(connection).isSupported()) {
+      throw new TestNotPossibleException("Server " + connection.getXMPPServiceDomain().toString() + " does not support PEP.");
+    }
+  }
+}

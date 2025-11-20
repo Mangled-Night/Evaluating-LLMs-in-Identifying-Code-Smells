@@ -1,0 +1,1273 @@
+/** 
+ * Creates a socket connection to an XMPP server. This is the default connection to an XMPP server and is specified in the XMPP Core (RFC 6120).
+ * @see XMPPConnection
+ * @author Matt Tucker
+ */
+public class XMPPTCPConnection extends AbstractXMPPConnection {
+  private static final int QUEUE_SIZE=500;
+  private static final Logger LOGGER=Logger.getLogger(XMPPTCPConnection.class.getName());
+  /** 
+ * The socket which is used for this connection.
+ */
+  private Socket socket;
+  /** 
+ */
+  private boolean disconnectedButResumeable=false;
+  private SSLSocket secureSocket;
+  /** 
+ * Protected access level because of unit test purposes
+ */
+  protected final PacketWriter packetWriter=new PacketWriter();
+  /** 
+ * Protected access level because of unit test purposes
+ */
+  protected final PacketReader packetReader=new PacketReader();
+  /** 
+ */
+  private boolean streamFeaturesAfterAuthenticationReceived;
+  /** 
+ */
+  private boolean compressSyncPoint;
+  /** 
+ * The default bundle and defer callback, used for new connections.
+ * @see bundleAndDeferCallback
+ */
+  private static BundleAndDeferCallback defaultBundleAndDeferCallback;
+  /** 
+ * The used bundle and defer callback. <p> Although this field may be set concurrently, the 'volatile' keyword was deliberately not added, in order to avoid having a 'volatile' read within the writer threads loop. </p>
+ */
+  private BundleAndDeferCallback bundleAndDeferCallback=defaultBundleAndDeferCallback;
+  private static boolean useSmDefault=true;
+  private static boolean useSmResumptionDefault=true;
+  /** 
+ * The stream ID of the stream that is currently resumable, ie. the stream we hold the state for in  {@link #clientHandledStanzasCount},  {@link #serverHandledStanzasCount} and{@link #unacknowledgedStanzas}.
+ */
+  private String smSessionId;
+  /** 
+ * Represents the state of stream management resumption. <p> Unlike other sync points, this sync point is marked volatile because it is also read by the reader thread. </p>
+ */
+  private volatile SyncPointState smResumedSyncPoint;
+  private Failed smResumptionFailed;
+  /** 
+ * Represents the state of stream magement. <p> This boolean is marked volatile as it is read by various threads, including the reader thread via  {@link #isSmEnabled()}. </p>
+ */
+  private volatile boolean smEnabledSyncPoint;
+  /** 
+ * The client's preferred maximum resumption time in seconds.
+ */
+  private int smClientMaxResumptionTime=-1;
+  /** 
+ * The server's preferred maximum resumption time in seconds.
+ */
+  private int smServerMaxResumptionTime=-1;
+  /** 
+ * Indicates whether Stream Management (XEP-198) should be used if it's supported by the server.
+ */
+  private boolean useSm=useSmDefault;
+  private boolean useSmResumption=useSmResumptionDefault;
+  /** 
+ * The counter that the server sends the client about it's current height. For example, if the server sends {@code <a h='42'/>}, then this will be set to 42 (while also handling the  {@link #unacknowledgedStanzas} queue).
+ */
+  private long serverHandledStanzasCount=0;
+  /** 
+ * The counter for stanzas handled ("received") by the client. <p> Note that we don't need to synchronize this counter. Although JLS 17.7 states that reads and writes to longs are not atomic, it guarantees that there are at most 2 separate writes, one to each 32-bit half. And since {@link SMUtils#incrementHeight(long)} masks the lower 32 bit, we only operate on one half of the long andtherefore have no concurrency problem because the read/write operations on one half are guaranteed to be atomic. </p>
+ */
+  private long clientHandledStanzasCount=0;
+  private BlockingQueue<Stanza> unacknowledgedStanzas;
+  /** 
+ * Set to true if Stream Management was at least once enabled for this connection.
+ */
+  private boolean smWasEnabledAtLeastOnce=false;
+  /** 
+ * This listeners are invoked for every stanza that got acknowledged. <p> We use a  {@link ConcurrentLinkedQueue} here in order to allow the listeners to removethemselves after they have been invoked. </p>
+ */
+  private final Collection<StanzaListener> stanzaAcknowledgedListeners=new ConcurrentLinkedQueue<>();
+  /** 
+ * These listeners are invoked for every stanza that got dropped. <p> We use a  {@link ConcurrentLinkedQueue} here in order to allow the listeners to removethemselves after they have been invoked. </p>
+ */
+  private final Collection<StanzaListener> stanzaDroppedListeners=new ConcurrentLinkedQueue<>();
+  /** 
+ * This listeners are invoked for a acknowledged stanza that has the given stanza ID. They will only be invoked once and automatically removed after that.
+ */
+  private final Map<String,StanzaListener> stanzaIdAcknowledgedListeners=new ConcurrentHashMap<>();
+  /** 
+ * Predicates that determine if an stream management ack should be requested from the server. <p> We use a linked hash set here, so that the order how the predicates are added matches the order in which they are invoked in order to determine if an ack request should be send or not. </p>
+ */
+  private final Set<StanzaFilter> requestAckPredicates=new LinkedHashSet<>();
+  @SuppressWarnings("HidingField") private final XMPPTCPConnectionConfiguration config;
+  /** 
+ * Creates a new XMPP connection over TCP (optionally using proxies). <p> Note that XMPPTCPConnection constructors do not establish a connection to the server and you must call  {@link #connect()}. </p>
+ * @param config the connection configuration.
+ */
+  public XMPPTCPConnection(  XMPPTCPConnectionConfiguration config){
+    super(config);
+    this.config=config;
+    addConnectionListener(new ConnectionListener(){
+      @Override public void connectionClosedOnError(      Exception e){
+        if (e instanceof XMPPException.StreamErrorException || e instanceof StreamManagementException) {
+          dropSmState();
+        }
+      }
+    }
+);
+    buildNonzaCallback().listenFor(SaslNonza.Success.class,s -> resetParser()).install();
+  }
+  /** 
+ * Creates a new XMPP connection over TCP. <p> Note that  {@code jid} must be the bare JID, e.g. "user@example.org". More fine-grained control over theconnection settings is available using the  {@link #XMPPTCPConnection(XMPPTCPConnectionConfiguration)}constructor. </p>
+ * @param jid the bare JID used by the client.
+ * @param password the password or authentication token.
+ * @throws XmppStringprepException if the provided string is invalid.
+ */
+  public XMPPTCPConnection(  CharSequence jid,  String password) throws XmppStringprepException {
+    this(XMPPTCPConnectionConfiguration.builder().setXmppAddressAndPassword(jid,password).build());
+  }
+  /** 
+ * Creates a new XMPP connection over TCP. <p> This is the simplest constructor for connecting to an XMPP server. Alternatively, you can get fine-grained control over connection settings using the {@link #XMPPTCPConnection(XMPPTCPConnectionConfiguration)} constructor.</p>
+ * @param username TODO javadoc me please
+ * @param password TODO javadoc me please
+ * @param serviceName TODO javadoc me please
+ * @throws XmppStringprepException if the provided string is invalid.
+ */
+  public XMPPTCPConnection(  CharSequence username,  String password,  String serviceName) throws XmppStringprepException {
+    this(XMPPTCPConnectionConfiguration.builder().setUsernameAndPassword(username,password).setXmppDomain(JidCreate.domainBareFrom(serviceName)).build());
+  }
+  @Override protected void throwNotConnectedExceptionIfAppropriate() throws NotConnectedException {
+    if (packetWriter == null) {
+      throw new NotConnectedException();
+    }
+    packetWriter.throwNotConnectedExceptionIfDoneAndResumptionNotPossible();
+  }
+  @Override protected void throwAlreadyConnectedExceptionIfAppropriate() throws AlreadyConnectedException {
+    if (isConnected() && !disconnectedButResumeable) {
+      throw new AlreadyConnectedException();
+    }
+  }
+  @Override protected void throwAlreadyLoggedInExceptionIfAppropriate() throws AlreadyLoggedInException {
+    if (isAuthenticated() && !disconnectedButResumeable) {
+      throw new AlreadyLoggedInException();
+    }
+  }
+  @Override protected void afterSuccessfulLogin(  final boolean resumed) throws NotConnectedException, InterruptedException {
+    disconnectedButResumeable=false;
+    super.afterSuccessfulLogin(resumed);
+  }
+  @Override protected synchronized void loginInternal(  String username,  String password,  Resourcepart resource) throws XMPPException, SmackException, IOException, InterruptedException {
+    SSLSession sslSession=secureSocket != null ? secureSocket.getSession() : null;
+    streamFeaturesAfterAuthenticationReceived=false;
+    authenticate(username,password,config.getAuthzid(),sslSession);
+    waitForConditionOrThrowConnectionException(() -> streamFeaturesAfterAuthenticationReceived,"compress features from server");
+    maybeEnableCompression();
+    smResumedSyncPoint=SyncPointState.initial;
+    smResumptionFailed=null;
+    if (isSmResumptionPossible()) {
+      smResumedSyncPoint=SyncPointState.request_sent;
+      sendNonza(new Resume(clientHandledStanzasCount,smSessionId));
+      waitForConditionOrThrowConnectionException(() -> smResumedSyncPoint == SyncPointState.successful || smResumptionFailed != null,"resume previous stream");
+      if (smResumedSyncPoint == SyncPointState.successful) {
+        afterSuccessfulLogin(true);
+        return;
+      }
+      assert smResumptionFailed != null;
+      LOGGER.fine("Stream resumption failed, continuing with normal stream establishment process: " + smResumptionFailed);
+    }
+    smEnabledSyncPoint=false;
+    List<Stanza> previouslyUnackedStanzas=new LinkedList<Stanza>();
+    if (unacknowledgedStanzas != null) {
+      unacknowledgedStanzas.drainTo(previouslyUnackedStanzas);
+      dropSmState();
+    }
+    bindResourceAndEstablishSession(resource);
+    if (isSmAvailable() && useSm) {
+      serverHandledStanzasCount=0;
+      sendNonza(new Enable(useSmResumption,smClientMaxResumptionTime));
+      waitForConditionOrThrowConnectionException(() -> smEnabledSyncPoint,"enabling stream mangement");
+synchronized (requestAckPredicates) {
+        if (requestAckPredicates.isEmpty()) {
+          requestAckPredicates.add(Predicate.forMessagesOrAfter5Stanzas());
+        }
+      }
+    }
+    if (!stanzaDroppedListeners.isEmpty()) {
+      for (      Stanza stanza : previouslyUnackedStanzas) {
+        for (        StanzaListener listener : stanzaDroppedListeners) {
+          try {
+            listener.processStanza(stanza);
+          }
+ catch (          InterruptedException|NotConnectedException|NotLoggedInException e) {
+            LOGGER.log(Level.FINER,"StanzaDroppedListener received exception",e);
+          }
+        }
+      }
+    }
+ else {
+      for (      Stanza stanza : previouslyUnackedStanzas) {
+        sendInternal(stanza);
+      }
+    }
+    afterSuccessfulLogin(false);
+  }
+  @Override public boolean isSecureConnection(){
+    return secureSocket != null;
+  }
+  /** 
+ * Shuts the current connection down. After this method returns, the connection must be ready for re-use by connect.
+ */
+  @Override protected void shutdown(){
+    if (isSmEnabled()) {
+      try {
+        sendSmAcknowledgementInternal();
+      }
+ catch (      InterruptedException|NotConnectedException e) {
+        LOGGER.log(Level.FINE,"Can not send final SM ack as connection is not connected",e);
+      }
+    }
+    shutdown(false);
+  }
+  @Override public synchronized void instantShutdown(){
+    shutdown(true);
+  }
+  private void shutdown(  boolean instant){
+    if (!packetWriter.done()) {
+      LOGGER.finer(packetWriter.threadName + " shutdown()");
+      packetWriter.shutdown(instant);
+      LOGGER.finer(packetWriter.threadName + " shutdown() returned");
+      if (!instant) {
+        waitForClosingStreamTagFromServer();
+      }
+    }
+    LOGGER.finer(packetReader.threadName + " shutdown()");
+    packetReader.shutdown();
+    LOGGER.finer(packetReader.threadName + " shutdown() returned");
+    CloseableUtil.maybeClose(socket,LOGGER);
+    setWasAuthenticated();
+    try {
+      boolean readerAndWriterThreadsTermianted=waitFor(() -> !packetWriter.running && !packetReader.running);
+      if (!readerAndWriterThreadsTermianted) {
+        LOGGER.severe("Reader and/or writer threads did not terminate timely. Writer running: " + packetWriter.running + ", Reader running: "+ packetReader.running);
+      }
+ else {
+        LOGGER.fine("Reader and writer threads terminated");
+      }
+    }
+ catch (    InterruptedException e) {
+      LOGGER.log(Level.FINE,"Interrupted while waiting for reader and writer threads to terminate",e);
+    }
+    if (disconnectedButResumeable) {
+      return;
+    }
+    if (instant) {
+      disconnectedButResumeable=isSmResumptionPossible();
+      if (!disconnectedButResumeable) {
+        smSessionId=null;
+      }
+    }
+ else {
+      disconnectedButResumeable=false;
+      dropSmState();
+    }
+    authenticated=false;
+    connected=false;
+    secureSocket=null;
+    reader=null;
+    writer=null;
+    initState();
+  }
+private interface SmAckAction<E extends Exception> {
+    void run() throws NotConnectedException, E ;
+  }
+  private <E extends Exception>void requestSmAckIfNecessary(  TopLevelStreamElement element,  SmAckAction<E> smAckAction) throws NotConnectedException, E {
+    if (!isSmEnabled())     return;
+    if (element instanceof Stanza) {
+      Stanza stanza=(Stanza)element;
+      for (      StanzaFilter requestAckPredicate : requestAckPredicates) {
+        if (requestAckPredicate.accept(stanza)) {
+          smAckAction.run();
+          break;
+        }
+      }
+    }
+  }
+  @Override protected void sendInternal(  TopLevelStreamElement element) throws NotConnectedException, InterruptedException {
+    packetWriter.sendStreamElement(element);
+    requestSmAckIfNecessary(element,() -> requestSmAcknowledgementInternal());
+  }
+  @Override protected void sendNonBlockingInternal(  TopLevelStreamElement element) throws NotConnectedException, OutgoingQueueFullException {
+    packetWriter.sendNonBlocking(element);
+    requestSmAckIfNecessary(element,() -> requestSmAcknowledgementNonBlockingInternal());
+  }
+  private void connectUsingConfiguration() throws ConnectionException, IOException, InterruptedException {
+    RemoteXmppTcpConnectionEndpoints.Result<Rfc6120TcpRemoteConnectionEndpoint> result=RemoteXmppTcpConnectionEndpoints.lookup(config);
+    List<RemoteConnectionException<Rfc6120TcpRemoteConnectionEndpoint>> connectionExceptions=new ArrayList<>();
+    SocketFactory socketFactory=config.getSocketFactory();
+    ProxyInfo proxyInfo=config.getProxyInfo();
+    int timeout=config.getConnectTimeout();
+    if (socketFactory == null) {
+      socketFactory=SocketFactory.getDefault();
+    }
+    for (    Rfc6120TcpRemoteConnectionEndpoint endpoint : result.discoveredRemoteConnectionEndpoints) {
+      Iterator<? extends InetAddress> inetAddresses;
+      String host=endpoint.getHost().toString();
+      UInt16 portUint16=endpoint.getPort();
+      int port=portUint16.intValue();
+      if (proxyInfo == null) {
+        inetAddresses=endpoint.getInetAddresses().iterator();
+        assert inetAddresses.hasNext();
+        innerloop:         while (inetAddresses.hasNext()) {
+          SmackFuture.SocketFuture socketFuture=new SmackFuture.SocketFuture(socketFactory);
+          final InetAddress inetAddress=inetAddresses.next();
+          final InetSocketAddress inetSocketAddress=new InetSocketAddress(inetAddress,port);
+          LOGGER.finer("Trying to establish TCP connection to " + inetSocketAddress);
+          socketFuture.connectAsync(inetSocketAddress,timeout);
+          try {
+            socket=socketFuture.getOrThrow();
+          }
+ catch (          IOException e) {
+            RemoteConnectionException<Rfc6120TcpRemoteConnectionEndpoint> rce=new RemoteConnectionException<>(endpoint,inetAddress,e);
+            connectionExceptions.add(rce);
+            if (inetAddresses.hasNext()) {
+              continue innerloop;
+            }
+ else {
+              break innerloop;
+            }
+          }
+          LOGGER.finer("Established TCP connection to " + inetSocketAddress);
+          this.host=host;
+          this.port=portUint16;
+          return;
+        }
+      }
+ else {
+        socket=socketFactory.createSocket();
+        StringUtils.requireNotNullNorEmpty(host,"Host of endpoint " + endpoint + " must not be null when using a Proxy");
+        final String hostAndPort=host + " at port " + port;
+        LOGGER.finer("Trying to establish TCP connection via Proxy to " + hostAndPort);
+        try {
+          proxyInfo.getProxySocketConnection().connect(socket,host,port,timeout);
+        }
+ catch (        IOException e) {
+          CloseableUtil.maybeClose(socket,LOGGER);
+          RemoteConnectionException<Rfc6120TcpRemoteConnectionEndpoint> rce=new RemoteConnectionException<>(endpoint,null,e);
+          connectionExceptions.add(rce);
+          continue;
+        }
+        LOGGER.finer("Established TCP connection to " + hostAndPort);
+        this.host=host;
+        this.port=portUint16;
+        return;
+      }
+    }
+    throw EndpointConnectionException.from(result.lookupFailures,connectionExceptions);
+  }
+  /** 
+ * Initializes the connection by creating a stanza reader and writer and opening a XMPP stream to the server.
+ * @throws IOException if an I/O error occurred.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  private void initConnection() throws IOException, InterruptedException {
+    compressionHandler=null;
+    initReaderAndWriter();
+    packetWriter.init();
+    packetReader.init();
+  }
+  private void initReaderAndWriter() throws IOException {
+    InputStream is=socket.getInputStream();
+    OutputStream os=socket.getOutputStream();
+    if (compressionHandler != null) {
+      is=compressionHandler.getInputStream(is);
+      os=compressionHandler.getOutputStream(os);
+    }
+    writer=new OutputStreamWriter(os,"UTF-8");
+    reader=new BufferedReader(new InputStreamReader(is,"UTF-8"));
+    initDebugger();
+  }
+  /** 
+ * The server has indicated that TLS negotiation can start. We now need to secure the existing plain connection and perform a handshake. This method won't return until the connection has finished the handshake or an error occurred while securing the connection.
+ * @throws IOException if an I/O error occurred.
+ * @throws SecurityNotPossibleException if TLS is not possible.
+ * @throws CertificateException if there is an issue with the certificate.
+ */
+  @SuppressWarnings("LiteralClassName") private void proceedTLSReceived() throws IOException, SecurityNotPossibleException, CertificateException {
+    SmackTlsContext smackTlsContext=getSmackTlsContext();
+    Socket plain=socket;
+    int port=plain.getPort();
+    String xmppServiceDomainString=config.getXMPPServiceDomain().toString();
+    SSLSocketFactory sslSocketFactory=smackTlsContext.sslContext.getSocketFactory();
+    socket=sslSocketFactory.createSocket(plain,xmppServiceDomainString,port,true);
+    final SSLSocket sslSocket=(SSLSocket)socket;
+    TLSUtils.setEnabledProtocolsAndCiphers(sslSocket,config.getEnabledSSLProtocols(),config.getEnabledSSLCiphers());
+    initReaderAndWriter();
+    sslSocket.startHandshake();
+    if (smackTlsContext.daneVerifier != null) {
+      smackTlsContext.daneVerifier.finish(sslSocket.getSession());
+    }
+    final HostnameVerifier verifier=getConfiguration().getHostnameVerifier();
+    if (verifier == null) {
+      throw new IllegalStateException("No HostnameVerifier set. Use connectionConfiguration.setHostnameVerifier() to configure.");
+    }
+    final String verifierHostname;
+{
+      DnsName xmppServiceDomainDnsName=getConfiguration().getXmppServiceDomainAsDnsNameIfPossible();
+      if (xmppServiceDomainDnsName != null) {
+        verifierHostname=xmppServiceDomainDnsName.ace;
+      }
+ else {
+        LOGGER.log(Level.WARNING,"XMPP service domain name '" + getXMPPServiceDomain() + "' can not be represented as DNS name. TLS X.509 certificate validiation may fail.");
+        verifierHostname=getXMPPServiceDomain().toString();
+      }
+    }
+    final boolean verificationSuccessful;
+    verificationSuccessful=verifier.verify(verifierHostname,sslSocket.getSession());
+    if (!verificationSuccessful) {
+      throw new CertificateException("Hostname verification of certificate failed. Certificate does not authenticate " + getXMPPServiceDomain());
+    }
+    secureSocket=sslSocket;
+  }
+  /** 
+ * Returns the compression handler that can be used for one compression methods offered by the server.
+ * @return a instance of XMPPInputOutputStream or null if no suitable instance was found
+ */
+  private static XMPPInputOutputStream maybeGetCompressionHandler(  Compress.Feature compression){
+    for (    XMPPInputOutputStream handler : SmackConfiguration.getCompressionHandlers()) {
+      String method=handler.getCompressionMethod();
+      if (compression.getMethods().contains(method))       return handler;
+    }
+    return null;
+  }
+  @Override public boolean isUsingCompression(){
+    return compressionHandler != null && compressSyncPoint;
+  }
+  /** 
+ * <p> Starts using stream compression that will compress network traffic. Traffic can be reduced up to 90%. Therefore, stream compression is ideal when using a slow speed network connection. However, the server and the client will need to use more CPU time in order to un/compress network data so under high load the server performance might be affected. </p> <p> Stream compression has to have been previously offered by the server. Currently only the zlib method is supported by the client. Stream compression negotiation has to be done before authentication took place. </p>
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws XMPPException if an XMPP protocol error was received.
+ */
+  private void maybeEnableCompression() throws SmackException, InterruptedException, XMPPException {
+    if (!config.isCompressionEnabled()) {
+      return;
+    }
+    Compress.Feature compression=getFeature(Compress.Feature.class);
+    if (compression == null) {
+      return;
+    }
+    if ((compressionHandler=maybeGetCompressionHandler(compression)) != null) {
+      compressSyncPoint=false;
+      sendNonza(new Compress(compressionHandler.getCompressionMethod()));
+      waitForConditionOrThrowConnectionException(() -> compressSyncPoint,"establishing stream compression");
+    }
+ else {
+      LOGGER.warning("Could not enable compression because no matching handler/method pair was found");
+    }
+  }
+  /** 
+ * Establishes a connection to the XMPP server. It basically creates and maintains a socket connection to the server. <p> Listeners will be preserved from a previous connection if the reconnection occurs after an abrupt termination. </p>
+ * @throws XMPPException if an error occurs while trying to establish the connection.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws IOException if an I/O error occurred.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  @Override protected void connectInternal() throws SmackException, IOException, XMPPException, InterruptedException {
+    connectUsingConfiguration();
+    connected=true;
+    initConnection();
+    waitForConditionOrThrowConnectionException(() -> tlsHandled,"establishing TLS");
+    waitForConditionOrThrowConnectionException(() -> saslFeatureReceived,"SASL mechanisms stream feature from server");
+  }
+  /** 
+ * For unit testing purposes
+ * @param writer TODO javadoc me please
+ */
+  protected void setWriter(  Writer writer){
+    this.writer=writer;
+  }
+  @Override protected void afterFeaturesReceived() throws NotConnectedException, InterruptedException, SecurityRequiredByServerException {
+    StartTls startTlsFeature=getFeature(StartTls.class);
+    if (startTlsFeature != null) {
+      if (startTlsFeature.required() && config.getSecurityMode() == SecurityMode.disabled) {
+        SecurityRequiredByServerException smackException=new SecurityRequiredByServerException();
+        currentSmackException=smackException;
+        notifyWaitingThreads();
+        throw smackException;
+      }
+      if (config.getSecurityMode() != ConnectionConfiguration.SecurityMode.disabled) {
+        sendNonza(new StartTls());
+      }
+ else {
+        tlsHandled=true;
+        notifyWaitingThreads();
+      }
+    }
+ else {
+      tlsHandled=true;
+      notifyWaitingThreads();
+    }
+    if (isSaslAuthenticated()) {
+      streamFeaturesAfterAuthenticationReceived=true;
+      notifyWaitingThreads();
+    }
+  }
+  private void resetParser() throws IOException {
+    try {
+      packetReader.parser=SmackXmlParser.newXmlParser(reader);
+    }
+ catch (    XmlPullParserException e) {
+      throw new IOException(e);
+    }
+  }
+  private void openStreamAndResetParser() throws IOException, NotConnectedException, InterruptedException {
+    sendStreamOpen();
+    resetParser();
+  }
+protected class PacketReader {
+    private final String threadName="Smack Reader (" + getConnectionCounter() + ')';
+    XmlPullParser parser;
+    private volatile boolean done;
+    private boolean running;
+    /** 
+ * Initializes the reader in order to be used. The reader is initialized during the first connection and when reconnecting due to an abruptly disconnection.
+ */
+    void init(){
+      done=false;
+      running=true;
+      Async.go(new Runnable(){
+        @Override public void run(){
+          LOGGER.finer(threadName + " start");
+          try {
+            parsePackets();
+          }
+  finally {
+            LOGGER.finer(threadName + " exit");
+            running=false;
+            notifyWaitingThreads();
+          }
+        }
+      }
+,threadName);
+    }
+    /** 
+ * Shuts the stanza reader down. This method simply sets the 'done' flag to true.
+ */
+    void shutdown(){
+      done=true;
+    }
+    /** 
+ * Parse top-level packets in order to process them further.
+ */
+    private void parsePackets(){
+      try {
+        openStreamAndResetParser();
+        XmlPullParser.Event eventType=parser.getEventType();
+        while (!done) {
+switch (eventType) {
+case START_ELEMENT:
+            final String name=parser.getName();
+          final String namespace=parser.getNamespace();
+switch (name) {
+case Message.ELEMENT:
+case IQ.IQ_ELEMENT:
+case Presence.ELEMENT:
+          try {
+            parseAndProcessStanza(parser);
+          }
+  finally {
+            clientHandledStanzasCount=SMUtils.incrementHeight(clientHandledStanzasCount);
+          }
+        break;
+case "stream":
+      if (StreamOpen.ETHERX_JABBER_STREAMS_NAMESPACE.equals(namespace)) {
+        onStreamOpen(parser);
+      }
+    break;
+case "error":
+  StreamError streamError=PacketParserUtils.parseStreamError(parser);
+throw new StreamErrorException(streamError);
+case "features":
+parseFeaturesAndNotify(parser);
+break;
+case "proceed":
+proceedTLSReceived();
+openStreamAndResetParser();
+break;
+case "failure":
+switch (namespace) {
+case "urn:ietf:params:xml:ns:xmpp-tls":
+throw new SmackException.SmackMessageException("TLS negotiation has failed");
+case "http://jabber.org/protocol/compress":
+currentSmackException=new SmackException.SmackMessageException("Could not establish compression");
+notifyWaitingThreads();
+break;
+default :
+parseAndProcessNonza(parser);
+}
+break;
+case Compressed.ELEMENT:
+initReaderAndWriter();
+openStreamAndResetParser();
+compressSyncPoint=true;
+notifyWaitingThreads();
+break;
+case Enabled.ELEMENT:
+Enabled enabled=ParseStreamManagement.enabled(parser);
+if (enabled.isResumeSet()) {
+smSessionId=enabled.getId();
+if (StringUtils.isNullOrEmpty(smSessionId)) {
+SmackException xmppException=new SmackException.SmackMessageException("Stream Management 'enabled' element with resume attribute but without session id received");
+setCurrentConnectionExceptionAndNotify(xmppException);
+throw xmppException;
+}
+smServerMaxResumptionTime=enabled.getMaxResumptionTime();
+}
+ else {
+smSessionId=null;
+}
+clientHandledStanzasCount=0;
+smWasEnabledAtLeastOnce=true;
+smEnabledSyncPoint=true;
+notifyWaitingThreads();
+break;
+case Failed.ELEMENT:
+Failed failed=ParseStreamManagement.failed(parser);
+if (smResumedSyncPoint == SyncPointState.request_sent) {
+smResumptionFailed=failed;
+notifyWaitingThreads();
+}
+ else {
+FailedNonzaException xmppException=new FailedNonzaException(failed,failed.getStanzaErrorCondition());
+setCurrentConnectionExceptionAndNotify(xmppException);
+}
+break;
+case Resumed.ELEMENT:
+Resumed resumed=ParseStreamManagement.resumed(parser);
+if (!smSessionId.equals(resumed.getPrevId())) {
+throw new StreamIdDoesNotMatchException(smSessionId,resumed.getPrevId());
+}
+smEnabledSyncPoint=true;
+processHandledCount(resumed.getHandledCount());
+List<Stanza> stanzasToResend=new ArrayList<>(unacknowledgedStanzas.size());
+unacknowledgedStanzas.drainTo(stanzasToResend);
+for (Stanza stanza : stanzasToResend) {
+XMPPTCPConnection.this.sendInternal(stanza);
+}
+if (!stanzasToResend.isEmpty()) {
+requestSmAcknowledgementInternal();
+}
+smResumedSyncPoint=SyncPointState.successful;
+notifyWaitingThreads();
+break;
+case AckAnswer.ELEMENT:
+AckAnswer ackAnswer=ParseStreamManagement.ackAnswer(parser);
+processHandledCount(ackAnswer.getHandledCount());
+break;
+case AckRequest.ELEMENT:
+ParseStreamManagement.ackRequest(parser);
+if (smEnabledSyncPoint) {
+sendSmAcknowledgementInternal();
+}
+ else {
+LOGGER.warning("SM Ack Request received while SM is not enabled");
+}
+break;
+default :
+parseAndProcessNonza(parser);
+break;
+}
+break;
+case END_ELEMENT:
+final String endTagName=parser.getName();
+if ("stream".equals(endTagName)) {
+if (!parser.getNamespace().equals("http://etherx.jabber.org/streams")) {
+LOGGER.warning(XMPPTCPConnection.this + " </stream> but different namespace " + parser.getNamespace());
+break;
+}
+final boolean queueWasShutdown=packetWriter.queue.isShutdown();
+closingStreamReceived=true;
+notifyWaitingThreads();
+if (queueWasShutdown) {
+return;
+}
+ else {
+LOGGER.info(XMPPTCPConnection.this + " received closing </stream> element." + " Server wants to terminate the connection, calling disconnect()");
+ASYNC_BUT_ORDERED.performAsyncButOrdered(XMPPTCPConnection.this,new Runnable(){
+@Override public void run(){
+disconnect();
+}
+}
+);
+}
+}
+break;
+case END_DOCUMENT:
+throw new SmackException.SmackMessageException("Parser got END_DOCUMENT event. This could happen e.g. if the server closed the connection without sending a closing stream element");
+default :
+break;
+}
+eventType=parser.next();
+}
+}
+ catch (Exception e) {
+running=false;
+String ignoreReasonThread=null;
+boolean writerThreadWasShutDown=packetWriter.queue.isShutdown();
+if (writerThreadWasShutDown) {
+ignoreReasonThread="writer";
+}
+ else if (done) {
+ignoreReasonThread="reader";
+}
+if (ignoreReasonThread != null) {
+LOGGER.log(Level.FINER,"Ignoring " + e + " as "+ ignoreReasonThread+ " was already shut down");
+return;
+}
+notifyConnectionError(e);
+}
+}
+}
+protected class PacketWriter {
+public static final int QUEUE_SIZE=XMPPTCPConnection.QUEUE_SIZE;
+public static final int UNACKKNOWLEDGED_STANZAS_QUEUE_SIZE=1024;
+public static final int UNACKKNOWLEDGED_STANZAS_QUEUE_SIZE_HIGH_WATER_MARK=(int)(0.3 * UNACKKNOWLEDGED_STANZAS_QUEUE_SIZE);
+private final String threadName="Smack Writer (" + getConnectionCounter() + ')';
+private final ArrayBlockingQueueWithShutdown<Element> queue=new ArrayBlockingQueueWithShutdown<>(QUEUE_SIZE,true);
+/** 
+ * If set, the stanza writer is shut down
+ */
+protected volatile Long shutdownTimestamp=null;
+private volatile boolean instantShutdown;
+/** 
+ * True if some preconditions are given to start the bundle and defer mechanism. <p> This will likely get set to true right after the start of the writer thread, because {@link #nextStreamElement()} will check if {@link queue} is empty, which is probably the case, and then setthis field to true. </p>
+ */
+private boolean shouldBundleAndDefer;
+private boolean running;
+/** 
+ * Initializes the writer in order to be used. It is called at the first connection and also is invoked if the connection is disconnected by an error.
+ */
+void init(){
+shutdownTimestamp=null;
+if (unacknowledgedStanzas != null) {
+drainWriterQueueToUnacknowledgedStanzas();
+}
+queue.start();
+running=true;
+Async.go(new Runnable(){
+@Override public void run(){
+LOGGER.finer(threadName + " start");
+try {
+writePackets();
+}
+  finally {
+LOGGER.finer(threadName + " exit");
+running=false;
+notifyWaitingThreads();
+}
+}
+}
+,threadName);
+}
+private boolean done(){
+return shutdownTimestamp != null;
+}
+protected void throwNotConnectedExceptionIfDoneAndResumptionNotPossible() throws NotConnectedException {
+final boolean done=done();
+if (done) {
+final boolean smResumptionPossible=isSmResumptionPossible();
+if (!smResumptionPossible) {
+throw new NotConnectedException(XMPPTCPConnection.this,"done=" + done + " smResumptionPossible="+ smResumptionPossible);
+}
+}
+}
+/** 
+ * Sends the specified element to the server.
+ * @param element the element to send.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+protected void sendStreamElement(Element element) throws NotConnectedException, InterruptedException {
+throwNotConnectedExceptionIfDoneAndResumptionNotPossible();
+try {
+queue.put(element);
+}
+ catch (InterruptedException e) {
+throwNotConnectedExceptionIfDoneAndResumptionNotPossible();
+throw e;
+}
+}
+/** 
+ * Sends the specified element to the server.
+ * @param element the element to send.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws OutgoingQueueFullException if there is no space in the outgoing queue.
+ */
+protected void sendNonBlocking(Element element) throws NotConnectedException, OutgoingQueueFullException {
+throwNotConnectedExceptionIfDoneAndResumptionNotPossible();
+boolean enqueued=queue.offer(element);
+if (!enqueued) {
+throwNotConnectedExceptionIfDoneAndResumptionNotPossible();
+throw new OutgoingQueueFullException();
+}
+}
+/** 
+ * Shuts down the stanza writer. Once this method has been called, no further packets will be written to the server.
+ */
+void shutdown(boolean instant){
+instantShutdown=instant;
+queue.shutdown();
+shutdownTimestamp=System.currentTimeMillis();
+}
+/** 
+ * Maybe return the next available element from the queue for writing. If the queue is shut down <b>or</b> a spurious interrupt occurs, <code>null</code> is returned. So it is important to check the 'done' condition in that case.
+ * @return the next element for writing or null.
+ */
+private Element nextStreamElement(){
+if (queue.isEmpty()) {
+shouldBundleAndDefer=true;
+}
+Element packet=null;
+try {
+packet=queue.take();
+}
+ catch (InterruptedException e) {
+if (!queue.isShutdown()) {
+LOGGER.log(Level.WARNING,"Writer thread was interrupted. Don't do that. Use disconnect() instead.",e);
+}
+}
+return packet;
+}
+private void writePackets(){
+try {
+while (!done()) {
+Element element=nextStreamElement();
+if (element == null) {
+continue;
+}
+final BundleAndDeferCallback localBundleAndDeferCallback=bundleAndDeferCallback;
+if (localBundleAndDeferCallback != null && isAuthenticated() && shouldBundleAndDefer) {
+shouldBundleAndDefer=false;
+final AtomicBoolean bundlingAndDeferringStopped=new AtomicBoolean();
+final int bundleAndDeferMillis=localBundleAndDeferCallback.getBundleAndDeferMillis(new BundleAndDefer(bundlingAndDeferringStopped));
+if (bundleAndDeferMillis > 0) {
+long remainingWait=bundleAndDeferMillis;
+final long waitStart=System.currentTimeMillis();
+synchronized (bundlingAndDeferringStopped) {
+while (!bundlingAndDeferringStopped.get() && remainingWait > 0) {
+bundlingAndDeferringStopped.wait(remainingWait);
+remainingWait=bundleAndDeferMillis - (System.currentTimeMillis() - waitStart);
+}
+}
+}
+}
+Stanza packet=null;
+if (element instanceof Stanza) {
+packet=(Stanza)element;
+}
+ else if (element instanceof Enable) {
+unacknowledgedStanzas=new ArrayBlockingQueue<>(UNACKKNOWLEDGED_STANZAS_QUEUE_SIZE);
+}
+maybeAddToUnacknowledgedStanzas(packet);
+CharSequence elementXml=element.toXML(outgoingStreamXmlEnvironment);
+if (elementXml instanceof XmlStringBuilder) {
+try {
+((XmlStringBuilder)elementXml).write(writer,outgoingStreamXmlEnvironment);
+}
+ catch (NullPointerException npe) {
+LOGGER.log(Level.FINE,"NPE in XmlStringBuilder of " + element.getClass() + ": "+ element,npe);
+throw npe;
+}
+}
+ else {
+writer.write(elementXml.toString());
+}
+if (queue.isEmpty()) {
+writer.flush();
+}
+if (packet != null) {
+firePacketSendingListeners(packet);
+}
+}
+if (!instantShutdown) {
+try {
+while (!queue.isEmpty()) {
+Element packet=queue.remove();
+if (packet instanceof Stanza) {
+Stanza stanza=(Stanza)packet;
+maybeAddToUnacknowledgedStanzas(stanza);
+}
+writer.write(packet.toXML().toString());
+}
+}
+ catch (Exception e) {
+LOGGER.log(Level.WARNING,"Exception flushing queue during shutdown, ignore and continue",e);
+}
+try {
+writer.write("</stream:stream>");
+writer.flush();
+}
+ catch (Exception e) {
+LOGGER.log(Level.WARNING,"Exception writing closing stream element",e);
+}
+queue.clear();
+}
+ else if (instantShutdown && isSmEnabled()) {
+drainWriterQueueToUnacknowledgedStanzas();
+}
+}
+ catch (Exception e) {
+if (!(done() || queue.isShutdown())) {
+running=false;
+notifyConnectionError(e);
+}
+ else {
+LOGGER.log(Level.FINE,"Ignoring Exception in writePackets()",e);
+}
+}
+}
+private void drainWriterQueueToUnacknowledgedStanzas(){
+List<Element> elements=new ArrayList<>(queue.size());
+queue.drainTo(elements);
+for (int i=0; i < elements.size(); i++) {
+Element element=elements.get(i);
+if (unacknowledgedStanzas.remainingCapacity() == 0) {
+StreamManagementException.UnacknowledgedQueueFullException exception=StreamManagementException.UnacknowledgedQueueFullException.newWith(i,elements,unacknowledgedStanzas);
+LOGGER.log(Level.WARNING,"Some stanzas may be lost as not all could be drained to the unacknowledged stanzas queue",exception);
+return;
+}
+if (element instanceof Stanza) {
+unacknowledgedStanzas.add((Stanza)element);
+}
+}
+}
+private void maybeAddToUnacknowledgedStanzas(Stanza stanza) throws IOException {
+if (unacknowledgedStanzas != null && stanza != null) {
+if (unacknowledgedStanzas.size() == UNACKKNOWLEDGED_STANZAS_QUEUE_SIZE_HIGH_WATER_MARK) {
+writer.write(AckRequest.INSTANCE.toXML().toString());
+}
+try {
+unacknowledgedStanzas.put(stanza);
+}
+ catch (InterruptedException e) {
+throw new IllegalStateException(e);
+}
+}
+}
+}
+/** 
+ * Set if Stream Management should be used by default for new connections.
+ * @param useSmDefault true to use Stream Management for new connections.
+ */
+public static void setUseStreamManagementDefault(boolean useSmDefault){
+XMPPTCPConnection.useSmDefault=useSmDefault;
+}
+/** 
+ * Set if Stream Management resumption should be used by default for new connections.
+ * @param useSmResumptionDefault true to use Stream Management resumption for new connections.
+ * @deprecated use {@link #setUseStreamManagementResumptionDefault(boolean)} instead.
+ */
+@Deprecated public static void setUseStreamManagementResumptiodDefault(boolean useSmResumptionDefault){
+setUseStreamManagementResumptionDefault(useSmResumptionDefault);
+}
+/** 
+ * Set if Stream Management resumption should be used by default for new connections.
+ * @param useSmResumptionDefault true to use Stream Management resumption for new connections.
+ */
+public static void setUseStreamManagementResumptionDefault(boolean useSmResumptionDefault){
+if (useSmResumptionDefault) {
+setUseStreamManagementDefault(useSmResumptionDefault);
+}
+XMPPTCPConnection.useSmResumptionDefault=useSmResumptionDefault;
+}
+/** 
+ * Set if Stream Management should be used if supported by the server.
+ * @param useSm true to use Stream Management.
+ */
+public void setUseStreamManagement(boolean useSm){
+this.useSm=useSm;
+}
+/** 
+ * Set if Stream Management resumption should be used if supported by the server.
+ * @param useSmResumption true to use Stream Management resumption.
+ */
+public void setUseStreamManagementResumption(boolean useSmResumption){
+if (useSmResumption) {
+setUseStreamManagement(useSmResumption);
+}
+this.useSmResumption=useSmResumption;
+}
+/** 
+ * Set the preferred resumption time in seconds.
+ * @param resumptionTime the preferred resumption time in seconds
+ */
+public void setPreferredResumptionTime(int resumptionTime){
+smClientMaxResumptionTime=resumptionTime;
+}
+/** 
+ * Add a predicate for Stream Management acknowledgment requests. <p> Those predicates are used to determine when a Stream Management acknowledgement request is send to the server. Some pre-defined predicates are found in the <code>org.jivesoftware.smack.sm.predicates</code> package. </p> <p> If not predicate is configured, the  {@link Predicate#forMessagesOrAfter5Stanzas()} will be used.</p>
+ * @param predicate the predicate to add.
+ * @return if the predicate was not already active.
+ */
+public boolean addRequestAckPredicate(StanzaFilter predicate){
+synchronized (requestAckPredicates) {
+return requestAckPredicates.add(predicate);
+}
+}
+/** 
+ * Remove the given predicate for Stream Management acknowledgment request.
+ * @param predicate the predicate to remove.
+ * @return true if the predicate was removed.
+ */
+public boolean removeRequestAckPredicate(StanzaFilter predicate){
+synchronized (requestAckPredicates) {
+return requestAckPredicates.remove(predicate);
+}
+}
+/** 
+ * Remove all predicates for Stream Management acknowledgment requests.
+ */
+public void removeAllRequestAckPredicates(){
+synchronized (requestAckPredicates) {
+requestAckPredicates.clear();
+}
+}
+/** 
+ * Send an unconditional Stream Management acknowledgement request to the server.
+ * @throws StreamManagementNotEnabledException if Stream Management is not enabled.
+ * @throws NotConnectedException if the connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void requestSmAcknowledgement() throws StreamManagementNotEnabledException, NotConnectedException, InterruptedException {
+if (!isSmEnabled()) {
+throw new StreamManagementException.StreamManagementNotEnabledException();
+}
+requestSmAcknowledgementInternal();
+}
+private void requestSmAcknowledgementInternal() throws NotConnectedException, InterruptedException {
+packetWriter.sendStreamElement(AckRequest.INSTANCE);
+}
+private void requestSmAcknowledgementNonBlockingInternal() throws NotConnectedException, OutgoingQueueFullException {
+packetWriter.sendNonBlocking(AckRequest.INSTANCE);
+}
+/** 
+ * Send a unconditional Stream Management acknowledgment to the server. <p> See <a href="http://xmpp.org/extensions/xep-0198.html#acking">XEP-198: Stream Management § 4. Acks</a>: "Either party MAY send an &lt;a/&gt; element at any time (e.g., after it has received a certain number of stanzas, or after a certain period of time), even if it has not received an &lt;r/&gt; element from the other party." </p>
+ * @throws StreamManagementNotEnabledException if Stream Management is not enabled.
+ * @throws NotConnectedException if the connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void sendSmAcknowledgement() throws StreamManagementNotEnabledException, NotConnectedException, InterruptedException {
+if (!isSmEnabled()) {
+throw new StreamManagementException.StreamManagementNotEnabledException();
+}
+sendSmAcknowledgementInternal();
+}
+private void sendSmAcknowledgementInternal() throws NotConnectedException, InterruptedException {
+AckAnswer ackAnswer=new AckAnswer(clientHandledStanzasCount);
+packetWriter.queue.putIfNotShutdown(ackAnswer);
+}
+/** 
+ * Add a Stanza acknowledged listener. <p> Those listeners will be invoked every time a Stanza has been acknowledged by the server. The will not get automatically removed. Consider using  {@link #addStanzaIdAcknowledgedListener(String,StanzaListener)} whenpossible. </p>
+ * @param listener the listener to add.
+ */
+public void addStanzaAcknowledgedListener(StanzaListener listener){
+stanzaAcknowledgedListeners.add(listener);
+}
+/** 
+ * Remove the given Stanza acknowledged listener.
+ * @param listener the listener.
+ * @return true if the listener was removed.
+ */
+public boolean removeStanzaAcknowledgedListener(StanzaListener listener){
+return stanzaAcknowledgedListeners.remove(listener);
+}
+/** 
+ * Remove all stanza acknowledged listeners.
+ */
+public void removeAllStanzaAcknowledgedListeners(){
+stanzaAcknowledgedListeners.clear();
+}
+/** 
+ * Add a Stanza dropped listener. <p> Those listeners will be invoked every time a Stanza has been dropped due to a failed SM resume. They will not get automatically removed. If at least one StanzaDroppedListener is configured, no attempt will be made to retransmit the Stanzas. </p>
+ * @param listener the listener to add.
+ * @since 4.3.3
+ */
+public void addStanzaDroppedListener(StanzaListener listener){
+stanzaDroppedListeners.add(listener);
+}
+/** 
+ * Remove the given Stanza dropped listener.
+ * @param listener the listener.
+ * @return true if the listener was removed.
+ * @since 4.3.3
+ */
+public boolean removeStanzaDroppedListener(StanzaListener listener){
+return stanzaDroppedListeners.remove(listener);
+}
+/** 
+ * Add a new Stanza ID acknowledged listener for the given ID. <p> The listener will be invoked if the stanza with the given ID was acknowledged by the server. It will automatically be removed after the listener was run. </p>
+ * @param id the stanza ID.
+ * @param listener the listener to invoke.
+ * @return the previous listener for this stanza ID or null.
+ * @throws StreamManagementNotEnabledException if Stream Management is not enabled.
+ */
+@SuppressWarnings("FutureReturnValueIgnored") public StanzaListener addStanzaIdAcknowledgedListener(final String id,StanzaListener listener) throws StreamManagementNotEnabledException {
+if (!smWasEnabledAtLeastOnce) {
+throw new StreamManagementException.StreamManagementNotEnabledException();
+}
+final int removeAfterSeconds=Math.min(getMaxSmResumptionTime(),3 * 60 * 60);
+schedule(new Runnable(){
+@Override public void run(){
+stanzaIdAcknowledgedListeners.remove(id);
+}
+}
+,removeAfterSeconds,TimeUnit.SECONDS);
+return stanzaIdAcknowledgedListeners.put(id,listener);
+}
+/** 
+ * Remove the Stanza ID acknowledged listener for the given ID.
+ * @param id the stanza ID.
+ * @return true if the listener was found and removed, false otherwise.
+ */
+public StanzaListener removeStanzaIdAcknowledgedListener(String id){
+return stanzaIdAcknowledgedListeners.remove(id);
+}
+/** 
+ * Removes all Stanza ID acknowledged listeners.
+ */
+public void removeAllStanzaIdAcknowledgedListeners(){
+stanzaIdAcknowledgedListeners.clear();
+}
+/** 
+ * Returns true if Stream Management is supported by the server.
+ * @return true if Stream Management is supported by the server.
+ */
+public boolean isSmAvailable(){
+return hasFeature(StreamManagementFeature.ELEMENT,StreamManagement.NAMESPACE);
+}
+/** 
+ * Returns true if Stream Management was successfully negotiated with the server.
+ * @return true if Stream Management was negotiated.
+ */
+public boolean isSmEnabled(){
+return smEnabledSyncPoint;
+}
+/** 
+ * Returns true if the stream was successfully resumed with help of Stream Management.
+ * @return true if the stream was resumed.
+ */
+public boolean streamWasResumed(){
+return smResumedSyncPoint == SyncPointState.successful;
+}
+/** 
+ * Returns true if the connection is disconnected by a Stream resumption via Stream Management is possible.
+ * @return true if disconnected but resumption possible.
+ */
+public boolean isDisconnectedButSmResumptionPossible(){
+return disconnectedButResumeable && isSmResumptionPossible();
+}
+/** 
+ * Returns true if the stream is resumable.
+ * @return true if the stream is resumable.
+ */
+public boolean isSmResumptionPossible(){
+if (smSessionId == null) return false;
+final Long shutdownTimestamp=packetWriter.shutdownTimestamp;
+if (shutdownTimestamp == null) {
+return true;
+}
+long current=System.currentTimeMillis();
+long maxResumptionMillies=((long)getMaxSmResumptionTime()) * 1000;
+if (current > shutdownTimestamp + maxResumptionMillies) {
+return false;
+}
+ else {
+return true;
+}
+}
+/** 
+ * Drop the stream management state. Sets  {@link #smSessionId} and{@link #unacknowledgedStanzas} to <code>null</code>.
+ */
+private void dropSmState(){
+smSessionId=null;
+unacknowledgedStanzas=null;
+}
+/** 
+ * Get the maximum resumption time in seconds after which a managed stream can be resumed. <p> This method will return  {@link Integer#MAX_VALUE} if neither the client nor the server specify a maximumresumption time. Be aware of integer overflows when using this value, e.g. do not add arbitrary values to it without checking for overflows before. </p>
+ * @return the maximum resumption time in seconds or {@link Integer#MAX_VALUE} if none set.
+ */
+public int getMaxSmResumptionTime(){
+int clientResumptionTime=smClientMaxResumptionTime > 0 ? smClientMaxResumptionTime : Integer.MAX_VALUE;
+int serverResumptionTime=smServerMaxResumptionTime > 0 ? smServerMaxResumptionTime : Integer.MAX_VALUE;
+return Math.min(clientResumptionTime,serverResumptionTime);
+}
+private void processHandledCount(long handledCount) throws StreamManagementCounterError {
+long ackedStanzasCount=SMUtils.calculateDelta(handledCount,serverHandledStanzasCount);
+final List<Stanza> ackedStanzas=new ArrayList<>(ackedStanzasCount <= Integer.MAX_VALUE ? (int)ackedStanzasCount : Integer.MAX_VALUE);
+for (long i=0; i < ackedStanzasCount; i++) {
+Stanza ackedStanza=unacknowledgedStanzas.poll();
+if (ackedStanza == null) {
+throw new StreamManagementCounterError(handledCount,serverHandledStanzasCount,ackedStanzasCount,ackedStanzas);
+}
+ackedStanzas.add(ackedStanza);
+}
+boolean atLeastOneStanzaAcknowledgedListener=false;
+if (!stanzaAcknowledgedListeners.isEmpty()) {
+atLeastOneStanzaAcknowledgedListener=true;
+}
+ else {
+for (Stanza ackedStanza : ackedStanzas) {
+String id=ackedStanza.getStanzaId();
+if (id != null && stanzaIdAcknowledgedListeners.containsKey(id)) {
+atLeastOneStanzaAcknowledgedListener=true;
+break;
+}
+}
+}
+if (atLeastOneStanzaAcknowledgedListener) {
+asyncGo(new Runnable(){
+@Override public void run(){
+for (Stanza ackedStanza : ackedStanzas) {
+for (StanzaListener listener : stanzaAcknowledgedListeners) {
+try {
+listener.processStanza(ackedStanza);
+}
+ catch (InterruptedException|NotConnectedException|NotLoggedInException e) {
+LOGGER.log(Level.FINER,"Received exception",e);
+}
+}
+String id=ackedStanza.getStanzaId();
+if (StringUtils.isNullOrEmpty(id)) {
+continue;
+}
+StanzaListener listener=stanzaIdAcknowledgedListeners.remove(id);
+if (listener != null) {
+try {
+listener.processStanza(ackedStanza);
+}
+ catch (InterruptedException|NotConnectedException|NotLoggedInException e) {
+LOGGER.log(Level.FINER,"Received exception",e);
+}
+}
+}
+}
+}
+);
+}
+serverHandledStanzasCount=handledCount;
+}
+/** 
+ * Set the default bundle and defer callback used for new connections.
+ * @param defaultBundleAndDeferCallback TODO javadoc me please
+ * @see BundleAndDeferCallback
+ * @since 4.1
+ */
+public static void setDefaultBundleAndDeferCallback(BundleAndDeferCallback defaultBundleAndDeferCallback){
+XMPPTCPConnection.defaultBundleAndDeferCallback=defaultBundleAndDeferCallback;
+}
+/** 
+ * Set the bundle and defer callback used for this connection. <p> You can use <code>null</code> as argument to reset the callback. Outgoing stanzas will then no longer get deferred. </p>
+ * @param bundleAndDeferCallback the callback or <code>null</code>.
+ * @see BundleAndDeferCallback
+ * @since 4.1
+ */
+public void setBundleandDeferCallback(BundleAndDeferCallback bundleAndDeferCallback){
+this.bundleAndDeferCallback=bundleAndDeferCallback;
+}
+}

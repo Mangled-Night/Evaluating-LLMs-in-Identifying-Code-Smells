@@ -1,0 +1,59 @@
+public static void startArthasCore(long targetPid,List<String> attachArgs){
+  String javaHome=findJavaHome();
+  File javaPath=findJava(javaHome);
+  if (javaPath == null) {
+    throw new IllegalArgumentException("Can not find java/java.exe executable file under java home: " + javaHome);
+  }
+  File toolsJar=findToolsJar(javaHome);
+  if (JavaVersionUtils.isLessThanJava9()) {
+    if (toolsJar == null || !toolsJar.exists()) {
+      throw new IllegalArgumentException("Can not find tools.jar under java home: " + javaHome);
+    }
+  }
+  List<String> command=new ArrayList<String>();
+  command.add(javaPath.getAbsolutePath());
+  if (toolsJar != null && toolsJar.exists()) {
+    command.add("-Xbootclasspath/a:" + toolsJar.getAbsolutePath());
+  }
+  command.addAll(attachArgs);
+  ProcessBuilder pb=new ProcessBuilder(command);
+  pb.environment().put("JAVA_TOOL_OPTIONS","");
+  try {
+    final Process proc=pb.start();
+    Thread redirectStdout=new Thread(new Runnable(){
+      @Override public void run(){
+        InputStream inputStream=proc.getInputStream();
+        try {
+          IOUtils.copy(inputStream,System.out);
+        }
+ catch (        IOException e) {
+          IOUtils.close(inputStream);
+        }
+      }
+    }
+);
+    Thread redirectStderr=new Thread(new Runnable(){
+      @Override public void run(){
+        InputStream inputStream=proc.getErrorStream();
+        try {
+          IOUtils.copy(inputStream,System.err);
+        }
+ catch (        IOException e) {
+          IOUtils.close(inputStream);
+        }
+      }
+    }
+);
+    redirectStdout.start();
+    redirectStderr.start();
+    redirectStdout.join();
+    redirectStderr.join();
+    int exitValue=proc.exitValue();
+    if (exitValue != 0) {
+      AnsiLog.error("attach fail, targetPid: " + targetPid);
+      System.exit(1);
+    }
+  }
+ catch (  Throwable e) {
+  }
+}

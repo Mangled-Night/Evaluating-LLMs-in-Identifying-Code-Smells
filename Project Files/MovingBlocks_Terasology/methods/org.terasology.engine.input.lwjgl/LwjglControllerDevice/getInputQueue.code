@@ -1,0 +1,55 @@
+@Override public Queue<ControllerAction> getInputQueue(){
+  Queue<ControllerAction> controllerActions=Lists.newLinkedList();
+  for (  int jid : gamepadIds.toArray()) {
+    if (GLFW.glfwJoystickPresent(jid)) {
+      continue;
+    }
+    String controllerName=GLFW.glfwGetGamepadName(jid);
+    GLFWGamepadState gamepadState=GLFWGamepadState.create();
+    if (GLFW.glfwGetGamepadState(jid,gamepadState)) {
+      FloatBuffer axes=gamepadState.axes();
+      int axesIndex=0;
+      while (axes.hasRemaining()) {
+        int teraId=axisMapping.get(axesIndex);
+        Input input=InputType.CONTROLLER_AXIS.getInput(teraId);
+        float axisValue=axes.get();
+        if (Math.abs(axisValue) < getDeadzoneForInput(controllerName,input)) {
+          axisValue=0;
+        }
+        controllerActions.add(new ControllerAction(input,controllerName,ButtonState.UP,axisValue));
+        axesIndex++;
+      }
+      ByteBuffer buttonsStates=gamepadState.buttons();
+      int buttonIndex=0;
+      while (buttonsStates.hasRemaining()) {
+        int teraButtonId=buttonMap.get(buttonIndex);
+        if (teraButtonId == -1) {
+          if (GLFW.GLFW_GAMEPAD_BUTTON_DPAD_UP <= buttonIndex && buttonIndex <= GLFW.GLFW_GAMEPAD_BUTTON_DPAD_LEFT) {
+            boolean isX=(buttonIndex == GLFW.GLFW_GAMEPAD_BUTTON_DPAD_LEFT) || (buttonIndex == GLFW.GLFW_GAMEPAD_BUTTON_DPAD_RIGHT);
+            Input input=InputType.CONTROLLER_AXIS.getInput(isX ? ControllerId.POVX_AXIS : ControllerId.POVY_AXIS);
+            float axisValue;
+            if (buttonIndex == GLFW.GLFW_GAMEPAD_BUTTON_DPAD_RIGHT || buttonIndex == GLFW.GLFW_GAMEPAD_BUTTON_DPAD_DOWN) {
+              axisValue=-1;
+            }
+ else {
+              axisValue=1;
+            }
+            controllerActions.add(new ControllerAction(input,controllerName,ButtonState.UP,axisValue));
+          }
+          logger.error("Received unknown/unhandled buttonId for GLFW: {}",buttonIndex);
+        }
+ else {
+          Input input=InputType.CONTROLLER_BUTTON.getInput(teraButtonId);
+          short btnState=buttonsStates.get();
+          ButtonState buttonState=btnState == GLFW.GLFW_RELEASE ? ButtonState.UP : ButtonState.DOWN;
+          controllerActions.add(new ControllerAction(input,controllerName,buttonState,0.0F));
+        }
+        buttonIndex++;
+      }
+    }
+ else {
+      logger.error("Cannot get states for {}",GLFW.glfwGetGamepadName(jid));
+    }
+  }
+  return controllerActions;
+}

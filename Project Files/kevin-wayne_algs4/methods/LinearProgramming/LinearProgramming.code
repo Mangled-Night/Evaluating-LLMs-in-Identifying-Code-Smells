@@ -1,0 +1,22 @@
+/** 
+ * Determines an optimal solution to the linear program { max cx : Ax &le; b, x &ge; 0 }, where A is an m-by-n matrix, b is an m-length vector, and c is an n-length vector.
+ * @param A the <em>m</em>-by-<em>b</em> matrix
+ * @param b the <em>m</em>-length RHS vector
+ * @param c the <em>n</em>-length cost vector
+ * @throws IllegalArgumentException unless {@code b[i] >= 0} for each {@code i}
+ * @throws ArithmeticException if the linear program is unbounded
+ */
+public LinearProgramming(double[][] A,double[] b,double[] c){
+  m=b.length;
+  n=c.length;
+  for (int i=0; i < m; i++)   if (!(b[i] >= 0))   throw new IllegalArgumentException("RHS must be nonnegative");
+  a=new double[m + 1][n + m + 1];
+  for (int i=0; i < m; i++)   for (int j=0; j < n; j++)   a[i][j]=A[i][j];
+  for (int i=0; i < m; i++)   a[i][n + i]=1.0;
+  for (int j=0; j < n; j++)   a[m][j]=c[j];
+  for (int i=0; i < m; i++)   a[i][m + n]=b[i];
+  basis=new int[m];
+  for (int i=0; i < m; i++)   basis[i]=n + i;
+  solve();
+  assert check(A,b,c);
+}

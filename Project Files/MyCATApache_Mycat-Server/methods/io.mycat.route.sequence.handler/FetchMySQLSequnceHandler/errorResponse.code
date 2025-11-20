@@ -1,0 +1,10 @@
+@Override public void errorResponse(byte[] data,BackendConnection conn){
+  SequenceVal seqVal=((SequenceVal)conn.getAttachment());
+  seqVal.setDbfinished();
+  ErrorPacket err=new ErrorPacket();
+  err.read(data);
+  String errMsg=new String(err.message);
+  LOGGER.warn("errorResponse " + err.errno + " "+ errMsg);
+  IncrSequenceMySQLHandler.latestErrors.put(seqVal.seqName,errMsg);
+  conn.release();
+}

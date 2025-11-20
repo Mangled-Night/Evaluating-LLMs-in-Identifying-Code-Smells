@@ -1,0 +1,268 @@
+@Override public AgentInfo parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  AgentInfo answer=new AgentInfo();
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      if (parser.getName().equals("jid")) {
+        answer.setJid(parser.nextText());
+      }
+ else       if (parser.getName().equals("name")) {
+        answer.setName(parser.nextText());
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getName().equals(ELEMENT_NAME)) {
+        done=true;
+      }
+    }
+  }
+  return answer;
+}
+@Override public AgentStatus parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, ParseException {
+  AgentStatus agentStatus=new AgentStatus();
+  agentStatus.workgroupJID=ParserUtils.getBareJidAttribute(parser);
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      if ("chat".equals(parser.getName())) {
+        ChatInfo chatInfo=parseChatInfo(parser);
+        agentStatus.currentChats.add(chatInfo);
+      }
+ else       if ("max-chats".equals(parser.getName())) {
+        agentStatus.maxChats=Integer.parseInt(parser.nextText());
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT && ELEMENT_NAME.equals(parser.getName())) {
+      done=true;
+    }
+  }
+  return agentStatus;
+}
+@Override public AgentStatusRequest parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  AgentStatusRequest statusRequest=new AgentStatusRequest();
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT && "agent".equals(parser.getName())) {
+      statusRequest.agents.add(parseAgent(parser));
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT && "agent-status-request".equals(parser.getName())) {
+      done=true;
+    }
+  }
+  return statusRequest;
+}
+@Override public AgentWorkgroups parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  final Jid agentJID=ParserUtils.getJidAttribute(parser);
+  List<String> workgroups=new ArrayList<>();
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      if (parser.getName().equals("workgroup")) {
+        workgroups.add(parser.getAttributeValue("","jid"));
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getName().equals("workgroups")) {
+        done=true;
+      }
+    }
+  }
+  return new AgentWorkgroups(agentJID,workgroups);
+}
+@Override public OccupantsInfo parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, ParseException {
+  OccupantsInfo occupantsInfo=new OccupantsInfo(parser.getAttributeValue("","roomID"));
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT && "occupant".equals(parser.getName())) {
+      occupantsInfo.occupants.add(parseOccupantInfo(parser));
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT && ELEMENT_NAME.equals(parser.getName())) {
+      done=true;
+    }
+  }
+  return occupantsInfo;
+}
+@Override public QueueDetails parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, TextParseException, ParseException {
+  SimpleDateFormat dateFormat=new SimpleDateFormat(DATE_FORMAT);
+  QueueDetails queueDetails=new QueueDetails();
+  XmlPullParser.Event eventType=parser.getEventType();
+  while (eventType != XmlPullParser.Event.END_ELEMENT && "notify-queue-details".equals(parser.getName())) {
+    eventType=parser.next();
+    while ((eventType == XmlPullParser.Event.START_ELEMENT) && "user".equals(parser.getName())) {
+      String uid;
+      int position=-1;
+      int time=-1;
+      Date joinTime=null;
+      uid=parser.getAttributeValue("","jid");
+      if (uid == null) {
+      }
+      eventType=parser.next();
+      while (eventType != XmlPullParser.Event.END_ELEMENT || !"user".equals(parser.getName())) {
+        if ("position".equals(parser.getName())) {
+          position=Integer.parseInt(parser.nextText());
+        }
+ else         if ("time".equals(parser.getName())) {
+          time=Integer.parseInt(parser.nextText());
+        }
+ else         if ("join-time".equals(parser.getName())) {
+          joinTime=dateFormat.parse(parser.nextText());
+        }
+ else         if (parser.getName().equals("waitTime")) {
+          Date wait=dateFormat.parse(parser.nextText());
+          LOGGER.fine(wait.toString());
+        }
+        eventType=parser.next();
+        if (eventType != XmlPullParser.Event.END_ELEMENT) {
+        }
+      }
+      queueDetails.addUser(new QueueUser(uid,position,time,joinTime));
+      eventType=parser.next();
+    }
+  }
+  return queueDetails;
+}
+@Override public QueueOverview parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, TextParseException, ParseException {
+  QueueOverview queueOverview=new QueueOverview();
+  SimpleDateFormat dateFormat=new SimpleDateFormat(DATE_FORMAT);
+  XmlPullParser.Event eventType=parser.next();
+  while (eventType != XmlPullParser.Event.END_ELEMENT || !ELEMENT_NAME.equals(parser.getName())) {
+    if ("count".equals(parser.getName())) {
+      queueOverview.setUserCount(Integer.parseInt(parser.nextText()));
+    }
+ else     if ("time".equals(parser.getName())) {
+      queueOverview.setAverageWaitTime(Integer.parseInt(parser.nextText()));
+    }
+ else     if ("oldest".equals(parser.getName())) {
+      queueOverview.setOldestEntry(dateFormat.parse(parser.nextText()));
+    }
+ else     if ("status".equals(parser.getName())) {
+      queueOverview.setStatus(WorkgroupQueue.Status.fromString(parser.nextText()));
+    }
+    eventType=parser.next();
+    if (eventType != XmlPullParser.Event.END_ELEMENT) {
+    }
+  }
+  if (eventType != XmlPullParser.Event.END_ELEMENT) {
+  }
+  return queueOverview;
+}
+@Override public QueueUpdate parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  boolean done=false;
+  int position=-1;
+  int timeRemaining=-1;
+  while (!done) {
+    parser.next();
+    if (parser.getEventType() == XmlPullParser.Event.START_ELEMENT && "position".equals(parser.getName())) {
+      position=Integer.parseInt(parser.nextText());
+    }
+ else     if (parser.getEventType() == XmlPullParser.Event.START_ELEMENT && "time".equals(parser.getName())) {
+      timeRemaining=Integer.parseInt(parser.nextText());
+    }
+ else     if (parser.getEventType() == XmlPullParser.Event.END_ELEMENT && "queue-status".equals(parser.getName())) {
+      done=true;
+    }
+  }
+  return new QueueUpdate(position,timeRemaining);
+}
+@Override public RoomInvitation parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  final RoomInvitation invitation=new RoomInvitation();
+  invitation.type=Type.valueOf(parser.getAttributeValue("","type"));
+  outerloop:   while (true) {
+    parser.next();
+    if (parser.getEventType() == XmlPullParser.Event.START_ELEMENT) {
+      String elementName=parser.getName();
+      if ("session".equals(elementName)) {
+        invitation.sessionID=parser.getAttributeValue("","id");
+      }
+ else       if ("invitee".equals(elementName)) {
+        String inviteeString=parser.nextText();
+        invitation.invitee=JidCreate.from(inviteeString);
+      }
+ else       if ("inviter".equals(elementName)) {
+        String inviterString=parser.nextText();
+        invitation.inviter=JidCreate.entityFrom(inviterString);
+      }
+ else       if ("reason".equals(elementName)) {
+        invitation.reason=parser.nextText();
+      }
+ else       if ("room".equals(elementName)) {
+        String roomString=parser.nextText();
+        invitation.room=JidCreate.entityBareFrom(roomString);
+      }
+    }
+ else     if (parser.getEventType() == XmlPullParser.Event.END_ELEMENT && parser.getDepth() == initialDepth) {
+      break outerloop;
+    }
+  }
+  return invitation;
+}
+@Override public RoomTransfer parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  final RoomTransfer invitation=new RoomTransfer();
+  invitation.type=RoomTransfer.Type.valueOf(parser.getAttributeValue("","type"));
+  outerloop:   while (true) {
+    parser.next();
+    if (parser.getEventType() == XmlPullParser.Event.START_ELEMENT) {
+      String elementName=parser.getName();
+      if ("session".equals(elementName)) {
+        invitation.sessionID=parser.getAttributeValue("","id");
+      }
+ else       if ("invitee".equals(elementName)) {
+        invitation.invitee=parser.nextText();
+      }
+ else       if ("inviter".equals(elementName)) {
+        invitation.inviter=parser.nextText();
+      }
+ else       if ("reason".equals(elementName)) {
+        invitation.reason=parser.nextText();
+      }
+ else       if ("room".equals(elementName)) {
+        invitation.room=parser.nextText();
+      }
+    }
+ else     if (parser.getEventType() == XmlPullParser.Event.END_ELEMENT && parser.getDepth() == initialDepth) {
+      break outerloop;
+    }
+  }
+  return invitation;
+}
+@Override public SessionID parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  String sessionID=parser.getAttributeValue("","id");
+  parser.next();
+  return new SessionID(sessionID);
+}
+@Override public TranscriptSearch parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+  TranscriptSearch answer=new TranscriptSearch();
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      PacketParserUtils.addExtensionElement(answer,parser,xmlEnvironment);
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getName().equals(ELEMENT_NAME)) {
+        done=true;
+      }
+    }
+  }
+  return answer;
+}
+@Override public UserID parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  Jid userID=ParserUtils.getJidAttribute(parser,"id");
+  parser.next();
+  return new UserID(userID);
+}
+/** 
+ * PacketExtensionProvider implementation.
+ * @throws IOException if an I/O error occurred.
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ */
+@Override public WorkgroupInformation parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  EntityBareJid workgroupJID=ParserUtils.getBareJidAttribute(parser);
+  parser.next();
+  return new WorkgroupInformation(workgroupJID);
+}

@@ -1,0 +1,32 @@
+@Override public boolean isAssignableFrom(TypeInformation<?> target){
+  if (this.equals(target)) {
+    return true;
+  }
+  Class<T> rawType=getType();
+  Class<?> rawTargetType=target.getType();
+  if (!rawType.isAssignableFrom(rawTargetType)) {
+    return false;
+  }
+  TypeInformation<?> otherTypeInformation=rawType.equals(rawTargetType) ? target : target.getSuperTypeInformation(rawType);
+  List<TypeInformation<?>> myParameters=getTypeArguments();
+  List<TypeInformation<?>> typeParameters=otherTypeInformation.getTypeArguments();
+  if (myParameters.size() != typeParameters.size()) {
+    return false;
+  }
+  for (int i=0; i < myParameters.size(); i++) {
+    if (myParameters.get(i) instanceof WildcardTypeInformation) {
+      if (!myParameters.get(i).isAssignableFrom(typeParameters.get(i))) {
+        return false;
+      }
+    }
+ else {
+      if (!myParameters.get(i).getType().equals(typeParameters.get(i).getType())) {
+        return false;
+      }
+      if (!myParameters.get(i).isAssignableFrom(typeParameters.get(i))) {
+        return false;
+      }
+    }
+  }
+  return true;
+}

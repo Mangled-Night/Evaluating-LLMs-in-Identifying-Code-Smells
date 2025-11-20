@@ -1,0 +1,145 @@
+/** 
+ * @author mycat
+ * @author zhuam
+ */
+public final class ReloadConfig {
+  private static final Logger LOGGER=LoggerFactory.getLogger(ReloadConfig.class);
+  public static void execute(  ManagerConnection c,  final boolean loadAll){
+    if (loadAll && !NIOProcessor.backends_old.isEmpty()) {
+      c.writeErrMessage(ErrorCode.ER_YES,"The are several unfinished db transactions before executing \"reload @@config_all\", therefore the execution is terminated for logical integrity and please try again later.");
+      return;
+    }
+    final ReentrantLock lock=MycatServer.getInstance().getConfig().getLock();
+    lock.lock();
+    try {
+      ListenableFuture<Boolean> listenableFuture=MycatServer.getInstance().getListeningExecutorService().submit(new Callable<Boolean>(){
+        @Override public Boolean call() throws Exception {
+          return loadAll ? reload_all() : reload();
+        }
+      }
+);
+      Futures.addCallback(listenableFuture,new ReloadCallBack(c),MycatServer.getInstance().getListeningExecutorService());
+    }
+  finally {
+      lock.unlock();
+    }
+  }
+  public static boolean reload_all(){
+    ConfigInitializer loader=new ConfigInitializer(true);
+    Map<String,UserConfig> newUsers=loader.getUsers();
+    Map<String,SchemaConfig> newSchemas=loader.getSchemas();
+    Map<String,PhysicalDBNode> newDataNodes=loader.getDataNodes();
+    Map<String,PhysicalDBPool> newDataHosts=loader.getDataHosts();
+    MycatCluster newCluster=loader.getCluster();
+    FirewallConfig newFirewall=loader.getFirewall();
+    loader.testConnection();
+    MycatConfig config=MycatServer.getInstance().getConfig();
+    boolean isReloadStatusOK=true;
+    for (    PhysicalDBPool dbPool : newDataHosts.values()) {
+      String hostName=dbPool.getHostName();
+      ArrayList<String> dnSchemas=new ArrayList<String>(30);
+      for (      PhysicalDBNode dn : newDataNodes.values()) {
+        if (dn.getDbPool().getHostName().equals(hostName)) {
+          dnSchemas.add(dn.getDatabase());
+        }
+      }
+      dbPool.setSchemas(dnSchemas.toArray(new String[dnSchemas.size()]));
+      String dnIndex=DnPropertyUtil.loadDnIndexProps().getProperty(dbPool.getHostName(),"0");
+      if (!"0".equals(dnIndex)) {
+        LOGGER.info("init datahost: " + dbPool.getHostName() + "  to use datasource index:"+ dnIndex);
+      }
+      dbPool.init(Integer.valueOf(dnIndex));
+      if (!dbPool.isInitSuccess()) {
+        isReloadStatusOK=false;
+        break;
+      }
+    }
+    if (isReloadStatusOK) {
+      config.getSystem().setUseSqlStat(loader.getSystem().getUseSqlStat());
+      MycatServer.getInstance().ensureSqlstatRecycleFuture();
+      config.reload(newUsers,newSchemas,newDataNodes,newDataHosts,newCluster,newFirewall,true);
+      LOGGER.warn("1、clear old backend connection(size): " + NIOProcessor.backends_old.size());
+      Iterator<BackendConnection> iter=NIOProcessor.backends_old.iterator();
+      while (iter.hasNext()) {
+        BackendConnection con=iter.next();
+        con.close("clear old datasources");
+        iter.remove();
+      }
+      Map<String,PhysicalDBPool> oldDataHosts=config.getBackupDataHosts();
+      for (      PhysicalDBPool dbPool : oldDataHosts.values()) {
+        dbPool.stopHeartbeat();
+        for (        PhysicalDatasource ds : dbPool.getAllDataSources()) {
+          for (          NIOProcessor processor : MycatServer.getInstance().getProcessors()) {
+            for (            BackendConnection con : processor.getBackends().values()) {
+              if (con instanceof MySQLConnection) {
+                MySQLConnection mysqlCon=(MySQLConnection)con;
+                if (mysqlCon.getPool() == ds) {
+                  NIOProcessor.backends_old.add(con);
+                }
+              }
+ else               if (con instanceof JDBCConnection) {
+                JDBCConnection jdbcCon=(JDBCConnection)con;
+                if (jdbcCon.getPool() == ds) {
+                  NIOProcessor.backends_old.add(con);
+                }
+              }
+            }
+          }
+        }
+      }
+      LOGGER.warn("2、to be recycled old backend connection(size): " + NIOProcessor.backends_old.size());
+      MycatServer.getInstance().getCacheService().clearCache();
+      MycatServer.getInstance().initRuleData();
+      return true;
+    }
+ else {
+      LOGGER.warn("reload failed, clear previously created datasources ");
+      for (      PhysicalDBPool dbPool : newDataHosts.values()) {
+        dbPool.clearDataSources("reload config");
+        dbPool.stopHeartbeat();
+      }
+      return false;
+    }
+  }
+  public static boolean reload(){
+    ConfigInitializer loader=new ConfigInitializer(false);
+    Map<String,UserConfig> users=loader.getUsers();
+    Map<String,SchemaConfig> schemas=loader.getSchemas();
+    Map<String,PhysicalDBNode> dataNodes=loader.getDataNodes();
+    Map<String,PhysicalDBPool> dataHosts=loader.getDataHosts();
+    MycatCluster cluster=loader.getCluster();
+    FirewallConfig firewall=loader.getFirewall();
+    MycatServer.getInstance().getConfig().getSystem().setUseSqlStat(loader.getSystem().getUseSqlStat());
+    MycatServer.getInstance().ensureSqlstatRecycleFuture();
+    MycatServer.getInstance().getConfig().reload(users,schemas,dataNodes,dataHosts,cluster,firewall,false);
+    MycatServer.getInstance().getCacheService().clearCache();
+    MycatServer.getInstance().initRuleData();
+    return true;
+  }
+  /** 
+ * 异步执行回调类，用于回写数据给用户等。
+ */
+private static class ReloadCallBack implements FutureCallback<Boolean> {
+    private ManagerConnection mc;
+    private ReloadCallBack(    ManagerConnection c){
+      this.mc=c;
+    }
+    @Override public void onSuccess(    Boolean result){
+      if (result) {
+        LOGGER.warn("send ok package to client " + String.valueOf(mc));
+        OkPacket ok=new OkPacket();
+        ok.packetId=1;
+        ok.affectedRows=1;
+        ok.serverStatus=2;
+        ok.message="Reload config success".getBytes();
+        ok.write(mc);
+      }
+ else {
+        mc.writeErrMessage(ErrorCode.ER_YES,"Reload config failure");
+      }
+    }
+    @Override public void onFailure(    Throwable t){
+      mc.writeErrMessage(ErrorCode.ER_YES,"Reload config failure");
+    }
+  }
+}

@@ -1,0 +1,32 @@
+/** 
+ * Close the connection (asynchronous).
+ * @since 5.1
+ */
+public CompletableFuture<Void> closeAsync(){
+  if (debugEnabled) {
+    logger.debug("closeAsync()");
+  }
+  if (CLOSED.get(this) == ST_CLOSED) {
+    logger.warn("Connection is already closed");
+    return closeFuture;
+  }
+  if (CLOSED.compareAndSet(this,ST_OPEN,ST_CLOSED)) {
+    active=false;
+    CompletableFuture<Void> future=channelWriter.closeAsync();
+    future.whenComplete((v,t) -> {
+      closeEvents.fireEventClosed(this);
+      closeEvents=new CloseEvents();
+      if (t != null) {
+        closeFuture.completeExceptionally(t);
+      }
+ else {
+        closeFuture.complete(v);
+      }
+    }
+);
+  }
+ else {
+    logger.warn("Connection is already closed (concurrently)");
+  }
+  return closeFuture;
+}

@@ -1,0 +1,18 @@
+/** 
+ * Watched chunks are defined as the union of: <ul> <li>The chunk in which the  {@link LocationComponent#getWorldPosition(Vector3f)} resides, if any</li><li>The set of chunks in  {@link SectorRegionComponent#chunks}, if any</li> </ul>
+ * @param entity the entity to query the watched chunks of
+ * @return the set of positions of this entity's watched chunks
+ */
+public static Set<Vector3i> getWatchedChunks(EntityRef entity){
+  Set<Vector3i> chunks=new HashSet<>();
+  LocationComponent loc=entity.getComponent(LocationComponent.class);
+  Vector3f position=loc.getWorldPosition(new Vector3f());
+  if (position.isFinite()) {
+    chunks.add(Chunks.toChunkPos(position,new Vector3i()));
+  }
+  SectorRegionComponent regionComponent=entity.getComponent(SectorRegionComponent.class);
+  if (regionComponent != null) {
+    chunks.addAll(regionComponent.chunks);
+  }
+  return chunks;
+}

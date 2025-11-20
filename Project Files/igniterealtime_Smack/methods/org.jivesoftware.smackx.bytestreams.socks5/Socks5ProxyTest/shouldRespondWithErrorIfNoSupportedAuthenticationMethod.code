@@ -1,0 +1,19 @@
+/** 
+ * The SOCKS5 proxy should reply with an error message if no supported authentication methods are given in the SOCKS5 request.
+ * @throws Exception should not happen
+ */
+@Test public void shouldRespondWithErrorIfNoSupportedAuthenticationMethod() throws Exception {
+  Socks5Proxy proxy=new Socks5Proxy();
+  proxy.start();
+  try (Socket socket=new Socket(loopbackAddress,proxy.getPort())){
+    OutputStream out=socket.getOutputStream();
+    out.write(new byte[]{(byte)0x05,(byte)0x01,(byte)0x02});
+    InputStream in=socket.getInputStream();
+    assertEquals((byte)0x05,(byte)in.read());
+    assertEquals((byte)0xFF,(byte)in.read());
+    assertEquals(-1,in.read());
+  }
+  finally {
+    proxy.stop();
+  }
+}

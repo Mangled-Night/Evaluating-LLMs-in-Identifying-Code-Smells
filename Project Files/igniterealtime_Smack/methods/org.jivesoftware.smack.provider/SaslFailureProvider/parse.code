@@ -1,0 +1,25 @@
+@Override public SASLFailure parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  String condition=null;
+  Map<String,String> descriptiveTexts=null;
+  outerloop:   while (true) {
+    XmlPullParser.TagEvent eventType=parser.nextTag();
+switch (eventType) {
+case START_ELEMENT:
+      String name=parser.getName();
+    if (name.equals("text")) {
+      descriptiveTexts=PacketParserUtils.parseDescriptiveTexts(parser,descriptiveTexts);
+    }
+ else {
+      assert condition == null;
+      condition=parser.getName();
+    }
+  break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+  break outerloop;
+}
+break;
+}
+}
+return new SASLFailure(condition,descriptiveTexts);
+}

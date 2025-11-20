@@ -1,0 +1,22 @@
+@Override public void onReceive(Context context,Intent intent){
+  if (ConnectivityManager.CONNECTIVITY_ACTION.equals(intent.getAction())) {
+    UtilsBridge.runOnUiThreadDelayed(new Runnable(){
+      @Override @RequiresPermission(ACCESS_NETWORK_STATE) public void run(){
+        NetworkType networkType=NetworkUtils.getNetworkType();
+        if (mType == networkType)         return;
+        mType=networkType;
+        if (networkType == NetworkType.NETWORK_NO) {
+          for (          OnNetworkStatusChangedListener listener : mListeners) {
+            listener.onDisconnected();
+          }
+        }
+ else {
+          for (          OnNetworkStatusChangedListener listener : mListeners) {
+            listener.onConnected(networkType);
+          }
+        }
+      }
+    }
+,1000);
+  }
+}

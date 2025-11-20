@@ -1,0 +1,26 @@
+/** 
+ * @param schema
+ * @param ctx
+ * @param tc
+ * @return true表示校验通过，false表示检验不通过
+ */
+public static boolean checkRuleRequired(SchemaConfig schema,DruidShardingParseInfo ctx,RouteCalculateUnit routeUnit,TableConfig tc){
+  if (!tc.isRuleRequired()) {
+    return true;
+  }
+  boolean hasRequiredValue=false;
+  String tableName=tc.getName();
+  if (routeUnit.getTablesAndConditions().get(tableName) == null || routeUnit.getTablesAndConditions().get(tableName).size() == 0) {
+    hasRequiredValue=false;
+  }
+ else {
+    for (    Map.Entry<String,Set<ColumnRoutePair>> condition : routeUnit.getTablesAndConditions().get(tableName).entrySet()) {
+      String colName=condition.getKey();
+      if (colName.equals(tc.getPartitionColumn())) {
+        hasRequiredValue=true;
+        break;
+      }
+    }
+  }
+  return hasRequiredValue;
+}

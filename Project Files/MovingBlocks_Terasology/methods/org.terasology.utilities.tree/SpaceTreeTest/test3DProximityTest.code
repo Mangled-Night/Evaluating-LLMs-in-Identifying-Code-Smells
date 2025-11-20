@@ -1,0 +1,39 @@
+@Test public void test3DProximityTest(){
+  SpaceTree<Object> tree=new SpaceTree<>(3);
+  Object[] objects={new Object(),new Object(),new Object(),new Object(),new Object(),new Object()};
+  float[][] locations={{0f,0f,0f},{0f,0f,1f},{0f,0f,2f},{0f,0f,3f},{0f,0f,4f},{0f,0f,5f}};
+  for (int i=0; i < objects.length; i++) {
+    tree.add(locations[i],objects[i]);
+  }
+  float delta=0.0000001f;
+  for (int i=0; i < objects.length; i++) {
+    DimensionalMap.Entry<Object> nearest=tree.findNearest(locations[i]);
+    assertSame(objects[i],nearest.value);
+    assertEquals(0f,nearest.distance,delta);
+  }
+  DimensionalMap.Entry<Object> nearestOne=tree.findNearest(new float[]{0f,0f,-1f});
+  assertSame(objects[0],nearestOne.value);
+  assertEquals(1f,nearestOne.distance,delta);
+  DimensionalMap.Entry<Object> nearestRoot=tree.findNearest(new float[]{0f,1f,6f});
+  assertSame(objects[5],nearestRoot.value);
+  assertEquals((float)Math.sqrt(2),nearestRoot.distance,delta);
+  assertNull(tree.findNearest(new float[]{0f,0f,-1f},0.5f));
+  Collection<DimensionalMap.Entry<Object>> nearestTwo=tree.findNearest(new float[]{0f,0f,0f},2);
+  assertEquals(2,nearestTwo.size());
+  Iterator<DimensionalMap.Entry<Object>> nearestTwoIterator=nearestTwo.iterator();
+  DimensionalMap.Entry<Object> firstNearest=nearestTwoIterator.next();
+  DimensionalMap.Entry<Object> secondNearest=nearestTwoIterator.next();
+  assertSame(objects[0],firstNearest.value);
+  assertSame(objects[1],secondNearest.value);
+  assertEquals(0,firstNearest.distance,delta);
+  assertEquals(1,secondNearest.distance,delta);
+  Collection<DimensionalMap.Entry<Object>> nearestThree=tree.findNearest(new float[]{0f,0f,5f},3,1f);
+  assertEquals(2,nearestThree.size());
+  Iterator<DimensionalMap.Entry<Object>> nearestThreeIterator=nearestThree.iterator();
+  firstNearest=nearestThreeIterator.next();
+  secondNearest=nearestThreeIterator.next();
+  assertSame(objects[5],firstNearest.value);
+  assertSame(objects[4],secondNearest.value);
+  assertEquals(0,firstNearest.distance,delta);
+  assertEquals(1,secondNearest.distance,delta);
+}

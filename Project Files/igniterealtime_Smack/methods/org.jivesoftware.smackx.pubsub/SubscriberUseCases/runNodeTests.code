@@ -1,0 +1,48 @@
+private void runNodeTests(LeafNode node) throws Exception {
+  node.send((Item)null);
+  node.send((Item)null);
+  node.send((Item)null);
+  node.send((Item)null);
+  node.send((Item)null);
+  Collection<? extends Item> items=node.getItems();
+  assertTrue(items.size() == 5);
+  long curTime=System.currentTimeMillis();
+  node.send(new Item("1-" + curTime));
+  node.send(new Item("2-" + curTime));
+  node.send(new Item("3-" + curTime));
+  node.send(new Item("4-" + curTime));
+  node.send(new Item("5-" + curTime));
+  items=node.getItems();
+  assertTrue(items.size() == 10);
+  LeafNode payloadNode=getPubnode(true,true);
+  Map<String,String> idPayload=new HashMap<String,String>();
+  idPayload.put("6-" + curTime,"<a/>");
+  idPayload.put("7-" + curTime,"<a href=\"/up/here\"/>");
+  idPayload.put("8-" + curTime,"<entity>text<inner></inner></entity>");
+  idPayload.put("9-" + curTime,"<entity><inner><text></text></inner></entity>");
+  for (  Map.Entry<String,String> payload : idPayload.entrySet()) {
+    payloadNode.send(new PayloadItem<SimplePayload>(payload.getKey(),new SimplePayload("a","pubsub:test",payload.getValue())));
+  }
+  payloadNode.send(new PayloadItem<SimplePayload>("6-" + curTime,new SimplePayload("a","pubsub:test","<a xmlns='pubsub:test'/>")));
+  payloadNode.send(new PayloadItem<SimplePayload>("7-" + curTime,new SimplePayload("a","pubsub:test","<a xmlns='pubsub:test' href=\'/up/here\'/>")));
+  payloadNode.send(new PayloadItem<SimplePayload>("8-" + curTime,new SimplePayload("entity","pubsub:test","<entity xmlns='pubsub:test'>text<inner>a</inner></entity>")));
+  payloadNode.send(new PayloadItem<SimplePayload>("9-" + curTime,new SimplePayload("entity","pubsub:test","<entity xmlns='pubsub:test'><inner><text>b</text></inner></entity>")));
+  List<PayloadItem<SimplePayload>> payloadItems=payloadNode.getItems();
+  Map<String,PayloadItem<SimplePayload>> idMap=new HashMap<String,PayloadItem<SimplePayload>>();
+  for (  PayloadItem<SimplePayload> payloadItem : payloadItems) {
+    idMap.put(payloadItem.getId(),payloadItem);
+  }
+  assertEquals(4,payloadItems.size());
+  PayloadItem<SimplePayload> testItem=idMap.get("6-" + curTime);
+  assertNotNull(testItem);
+  assertXmlSimilar("<a xmlns='pubsub:test'/>",testItem.getPayload().toXML());
+  testItem=idMap.get("7-" + curTime);
+  assertNotNull(testItem);
+  assertXmlSimilar("<a xmlns='pubsub:test' href=\'/up/here\'/>",testItem.getPayload().toXML());
+  testItem=idMap.get("8-" + curTime);
+  assertNotNull(testItem);
+  assertXmlSimilar("<entity xmlns='pubsub:test'>text<inner>a</inner></entity>",testItem.getPayload().toXML());
+  testItem=idMap.get("9-" + curTime);
+  assertNotNull(testItem);
+  assertXmlSimilar("<entity xmlns='pubsub:test'><inner><text>b</text></inner></entity>",testItem.getPayload().toXML());
+}

@@ -1,0 +1,34 @@
+@API public class BlockTile extends Asset<TileData> {
+  private BufferedImage[] images;
+  private boolean autoBlock;
+  private List<Consumer<BlockTile>> reloadListeners=Collections.synchronizedList(Lists.newArrayList());
+  public BlockTile(  ResourceUrn urn,  AssetType<?,TileData> assetType,  TileData data){
+    super(urn,assetType);
+    reload(data);
+  }
+  public BufferedImage getImage(){
+    return getImage(0);
+  }
+  public BufferedImage getImage(  int i){
+    return images[i];
+  }
+  public int getLength(){
+    return images.length;
+  }
+  public boolean isAutoBlock(){
+    return autoBlock;
+  }
+  public synchronized void subscribe(  Consumer<BlockTile> reloadListener){
+    this.reloadListeners.add(reloadListener);
+  }
+  public synchronized void unsubscribe(  Consumer<BlockTile> reloadListener){
+    this.reloadListeners.remove(reloadListener);
+  }
+  @Override protected void doReload(  TileData tileData){
+    this.images=tileData.getImages();
+    this.autoBlock=tileData.isAutoBlock();
+    for (    Consumer<BlockTile> listener : reloadListeners) {
+      listener.accept(this);
+    }
+  }
+}

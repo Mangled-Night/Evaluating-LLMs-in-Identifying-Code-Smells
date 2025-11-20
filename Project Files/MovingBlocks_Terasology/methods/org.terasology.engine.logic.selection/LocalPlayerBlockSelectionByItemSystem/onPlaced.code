@@ -1,0 +1,19 @@
+@ReceiveEvent(components=OnItemActivateSelectionComponent.class) public void onPlaced(ActivateEvent event,EntityRef itemEntity){
+  if (event.getTargetLocation() == null) {
+    return;
+  }
+  EntityRef targetLocationEntity=event.getTarget();
+  this.blockSelectionComponentEntity=itemEntity;
+  BlockSelectionComponent blockSelectionComponent=itemEntity.getComponent(BlockSelectionComponent.class);
+  if (null == blockSelectionComponent.startPosition) {
+    targetLocationEntity.send(new SetBlockSelectionStartingPointEvent(itemEntity));
+    blockSelectionComponent.shouldRender=true;
+  }
+ else {
+    targetLocationEntity.send(new SetBlockSelectionEndingPointEvent(itemEntity));
+    localPlayer.getCharacterEntity().send(new ApplyBlockSelectionEvent(itemEntity,blockSelectionComponent.currentSelection));
+    blockSelectionComponent.shouldRender=false;
+    blockSelectionComponent.currentSelection=null;
+    blockSelectionComponent.startPosition=null;
+  }
+}

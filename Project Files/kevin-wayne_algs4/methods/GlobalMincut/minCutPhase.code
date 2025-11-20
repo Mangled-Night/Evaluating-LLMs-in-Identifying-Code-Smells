@@ -1,0 +1,27 @@
+/** 
+ * Returns the cut-of-the-phase. The cut-of-the-phase is a minimum s-t-cut in the current graph, where  {@code s} and {@code t} are the two verticesadded last in the phase. This algorithm is known in the literature as <em>maximum adjacency search</em> or <em>maximum cardinality search</em>.
+ * @param G the edge-weighted graph
+ * @param marked the array of contracted vertices, where {@code marked[v]}is  {@code true} if the vertex {@code v} was alreadycontracted; or  {@code false} otherwise
+ * @param cp the previous cut-of-the-phase
+ * @return the cut-of-the-phase
+ */
+private void minCutPhase(EdgeWeightedGraph G,boolean[] marked,CutPhase cp){
+  IndexMaxPQ<Double> pq=new IndexMaxPQ<Double>(G.V());
+  for (int v=0; v < G.V(); v++) {
+    if (v != cp.s && !marked[v])     pq.insert(v,0.0);
+  }
+  pq.insert(cp.s,Double.POSITIVE_INFINITY);
+  while (!pq.isEmpty()) {
+    int v=pq.delMax();
+    cp.s=cp.t;
+    cp.t=v;
+    for (    Edge e : G.adj(v)) {
+      int w=e.other(v);
+      if (pq.contains(w))       pq.increaseKey(w,pq.keyOf(w) + e.weight());
+    }
+  }
+  cp.weight=0.0;
+  for (  Edge e : G.adj(cp.t)) {
+    cp.weight+=e.weight();
+  }
+}

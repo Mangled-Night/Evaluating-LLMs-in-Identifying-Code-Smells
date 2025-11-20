@@ -1,0 +1,11 @@
+@Test public void georadiusInTransaction(){
+  prepareGeo();
+  redis.multi();
+  redis.georadius(key,8.6582861,49.5285695,1,GeoArgs.Unit.km);
+  redis.georadius(key,8.6582861,49.5285695,5,GeoArgs.Unit.km);
+  TransactionResult exec=redis.exec();
+  Set<String> georadius=exec.get(0);
+  Set<String> largerGeoradius=exec.get(1);
+  assertThat(georadius).hasSize(1).contains("Weinheim");
+  assertThat(largerGeoradius).hasSize(2).contains("Weinheim").contains("Bahn");
+}

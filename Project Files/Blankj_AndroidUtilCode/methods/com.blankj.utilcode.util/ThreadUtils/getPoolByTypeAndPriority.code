@@ -1,0 +1,23 @@
+private static ExecutorService getPoolByTypeAndPriority(final int type){
+  return getPoolByTypeAndPriority(type,Thread.NORM_PRIORITY);
+}
+private static ExecutorService getPoolByTypeAndPriority(final int type,final int priority){
+synchronized (TYPE_PRIORITY_POOLS) {
+    ExecutorService pool;
+    Map<Integer,ExecutorService> priorityPools=TYPE_PRIORITY_POOLS.get(type);
+    if (priorityPools == null) {
+      priorityPools=new ConcurrentHashMap<>();
+      pool=ThreadPoolExecutor4Util.createPool(type,priority);
+      priorityPools.put(priority,pool);
+      TYPE_PRIORITY_POOLS.put(type,priorityPools);
+    }
+ else {
+      pool=priorityPools.get(priority);
+      if (pool == null) {
+        pool=ThreadPoolExecutor4Util.createPool(type,priority);
+        priorityPools.put(priority,pool);
+      }
+    }
+    return pool;
+  }
+}

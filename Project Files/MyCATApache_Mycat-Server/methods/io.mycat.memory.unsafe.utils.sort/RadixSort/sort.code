@@ -1,0 +1,30 @@
+/** 
+ * Sorts a given array of longs using least-significant-digit radix sort. This routine assumes you have extra space at the end of the array at least equal to the number of records. The sort is destructive and may relocate the data positioned within the array.
+ * @param array array of long elements followed by at least that many empty slots.
+ * @param numRecords number of data records in the array.
+ * @param startByteIndex the first byte (in range [0, 7]) to sort each long by, counting from theleast significant byte.
+ * @param endByteIndex the last byte (in range [0, 7]) to sort each long by, counting from theleast significant byte. Must be greater than startByteIndex.
+ * @param desc whether this is a descending (binary-order) sort.
+ * @param signed whether this is a signed (two's complement) sort.
+ * @return The starting index of the sorted data within the given array. We return this insteadof always copying the data back to position zero for efficiency.
+ */
+public static int sort(LongArray array,int numRecords,int startByteIndex,int endByteIndex,boolean desc,boolean signed){
+  assert startByteIndex >= 0 : "startByteIndex (" + startByteIndex + ") should >= 0";
+  assert endByteIndex <= 7 : "endByteIndex (" + endByteIndex + ") should <= 7";
+  assert endByteIndex > startByteIndex;
+  assert numRecords * 2 <= array.size();
+  int inIndex=0;
+  int outIndex=numRecords;
+  if (numRecords > 0) {
+    long[][] counts=getCounts(array,numRecords,startByteIndex,endByteIndex);
+    for (int i=startByteIndex; i <= endByteIndex; i++) {
+      if (counts[i] != null) {
+        sortAtByte(array,numRecords,counts[i],i,inIndex,outIndex,desc,signed && i == endByteIndex);
+        int tmp=inIndex;
+        inIndex=outIndex;
+        outIndex=tmp;
+      }
+    }
+  }
+  return inIndex;
+}

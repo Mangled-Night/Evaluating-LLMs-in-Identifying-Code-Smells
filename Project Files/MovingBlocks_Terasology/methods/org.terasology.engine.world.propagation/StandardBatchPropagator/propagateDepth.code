@@ -1,0 +1,31 @@
+private void propagateDepth(Chunk adjChunk,Side side,boolean propagateExternal,Function<Vector3ic,Integer> indexProvider,BlockRegion edgeRegion,int[] depths){
+  Vector3i adjPos=new Vector3i();
+  int[] adjDepth=new int[depths.length];
+  int dimA=(side == Side.LEFT || side == Side.RIGHT) ? Chunks.SIZE_Y : Chunks.SIZE_X;
+  int dimB=(side == Side.FRONT || side == Side.BACK) ? Chunks.SIZE_Y : Chunks.SIZE_Z;
+  BatchPropagator.populateMinAdjacent2D(depths,adjDepth,dimA,dimB,!propagateExternal);
+  if (propagateExternal) {
+    for (int y=0; y < dimB; ++y) {
+      adjDepth[y * dimA]=0;
+      adjDepth[dimA - 1 + y * dimA]=0;
+    }
+    for (int x=0; x < dimA; ++x) {
+      adjDepth[x]=0;
+      adjDepth[x + dimA * (dimB - 1)]=0;
+    }
+  }
+  for (  Vector3ic pos : edgeRegion) {
+    int depthIndex=indexProvider.apply(pos);
+    int adjacentDepth=adjDepth[depthIndex];
+    for (int i=adjacentDepth; i < depths[depthIndex]; ++i) {
+      adjPos.set(side.direction());
+      adjPos.mul(i + 1);
+      adjPos.add(pos);
+      adjPos.add(chunkEdgeDeltas.get(side));
+      byte value=rules.getValue(adjChunk,adjPos);
+      if (value > 1) {
+        queueSpreadValue(adjChunk.chunkToWorldPosition(adjPos,new Vector3i()),value);
+      }
+    }
+  }
+}

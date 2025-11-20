@@ -1,0 +1,14 @@
+/** 
+ * Establishes a connection to the XMPP server. It basically creates and maintains a socket connection to the server. <p> Listeners will be preserved from a previous connection if the reconnection occurs after an abrupt termination. </p>
+ * @throws XMPPException if an error occurs while trying to establish the connection.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws IOException if an I/O error occurred.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+@Override protected void connectInternal() throws SmackException, IOException, XMPPException, InterruptedException {
+  connectUsingConfiguration();
+  connected=true;
+  initConnection();
+  waitForConditionOrThrowConnectionException(() -> tlsHandled,"establishing TLS");
+  waitForConditionOrThrowConnectionException(() -> saslFeatureReceived,"SASL mechanisms stream feature from server");
+}

@@ -1,0 +1,28 @@
+@Override public void appendResult(ResultModel result){
+  try {
+    if (!pendingResultQueue.offer(result,100,TimeUnit.MILLISECONDS)) {
+      ResultModel discardResult=pendingResultQueue.poll();
+      interruptJob("result queue is full: " + pendingResultQueue.size());
+    }
+  }
+ catch (  InterruptedException e) {
+  }
+}
+@Override public boolean appendResult(ResultModel result){
+  queueLock.lock();
+  try {
+    if (result instanceof InputStatusModel) {
+      lastInputStatus=(InputStatusModel)result;
+      return true;
+    }
+    while (!resultQueue.offer(result)) {
+      ResultModel discardResult=resultQueue.poll();
+    }
+  }
+  finally {
+    if (queueLock.isHeldByCurrentThread()) {
+      queueLock.unlock();
+    }
+  }
+  return true;
+}

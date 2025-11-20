@@ -1,0 +1,12 @@
+public static AuthenticationPacket parse(ByteBuffer buffer,int offset){
+  if (buffer.get(offset) != PacketMarker.B_Auth.getValue()) {
+    throw new IllegalArgumentException("this packetData not is AuthenticationPacket");
+  }
+  AuthenticationPacket packet=new AuthenticationPacket();
+  packet.length=PIOUtils.redInteger4(buffer,offset + 1);
+  packet.authType=AuthType.valueOf(PIOUtils.redInteger4(buffer,offset + 1 + 4));
+  if (packet.authType == AuthType.MD5Password) {
+    packet.salt=PIOUtils.redByteArray(buffer,offset + 1 + 4+ 4,4);
+  }
+  return packet;
+}

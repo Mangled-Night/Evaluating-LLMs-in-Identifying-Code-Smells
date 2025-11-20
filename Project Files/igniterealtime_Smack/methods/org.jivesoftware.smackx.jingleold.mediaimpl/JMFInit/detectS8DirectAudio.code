@@ -1,0 +1,31 @@
+private static void detectS8DirectAudio(){
+  Class<?> cls;
+  int plType=PlugInManager.RENDERER;
+  String dar="com.sun.media.renderer.audio.DirectAudioRenderer";
+  try {
+    cls=Class.forName("SunVideoAuto");
+    cls=Class.forName(dar);
+    Renderer rend=(Renderer)cls.getConstructor().newInstance();
+    if (rend instanceof ExclusiveUse && !((ExclusiveUse)rend).isExclusive()) {
+      @SuppressWarnings("unchecked") Vector<String> rendList=PlugInManager.getPlugInList(null,null,plType);
+      int listSize=rendList.size();
+      boolean found=false;
+      String rname;
+      for (int i=0; i < listSize; i++) {
+        rname=rendList.elementAt(i);
+        if (rname.equals(dar)) {
+          found=true;
+          rendList.removeElementAt(i);
+          break;
+        }
+      }
+      if (found) {
+        rendList.insertElementAt(dar,0);
+        PlugInManager.setPlugInList(rendList,plType);
+        PlugInManager.commit();
+      }
+    }
+  }
+ catch (  Throwable tt) {
+  }
+}

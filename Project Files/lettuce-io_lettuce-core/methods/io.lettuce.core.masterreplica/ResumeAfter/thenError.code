@@ -1,0 +1,14 @@
+public <T>Mono<T> thenError(Throwable t){
+  return Mono.defer(() -> {
+    if (firstCloseLatch()) {
+      return Mono.fromCompletionStage(closeable.closeAsync());
+    }
+    return Mono.empty();
+  }
+).then(Mono.<T>error(t)).doFinally(s -> {
+    if (firstCloseLatch()) {
+      closeable.closeAsync();
+    }
+  }
+);
+}

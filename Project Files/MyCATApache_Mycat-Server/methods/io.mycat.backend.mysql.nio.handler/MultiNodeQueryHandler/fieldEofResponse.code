@@ -1,0 +1,121 @@
+@Override public void fieldEofResponse(byte[] header,List<byte[]> fields,byte[] eof,BackendConnection conn){
+  if (errorRepsponsed.get() || this.isFail()) {
+    return;
+  }
+  this.header=header;
+  this.fields=fields;
+  MiddlerResultHandler middlerResultHandler=session.getMiddlerResultHandler();
+  this.netOutBytes+=header.length;
+  this.netOutBytes+=eof.length;
+  for (int i=0, len=fields.size(); i < len; ++i) {
+    byte[] field=fields.get(i);
+    this.netOutBytes+=field.length;
+  }
+  ServerConnection source=null;
+  if (fieldsReturned) {
+    return;
+  }
+  lock.lock();
+  try {
+    if (fieldsReturned) {
+      return;
+    }
+    fieldsReturned=true;
+    boolean needMerg=(dataMergeSvr != null) && dataMergeSvr.getRrs().needMerge();
+    Set<String> shouldRemoveAvgField=new HashSet<>();
+    Set<String> shouldRenameAvgField=new HashSet<>();
+    if (needMerg) {
+      Map<String,Integer> mergeColsMap=dataMergeSvr.getRrs().getMergeCols();
+      if (mergeColsMap != null) {
+        for (        Map.Entry<String,Integer> entry : mergeColsMap.entrySet()) {
+          String key=entry.getKey();
+          int mergeType=entry.getValue();
+          if (MergeCol.MERGE_AVG == mergeType && mergeColsMap.containsKey(key + "SUM")) {
+            shouldRemoveAvgField.add((key + "COUNT").toUpperCase());
+            shouldRenameAvgField.add((key + "SUM").toUpperCase());
+          }
+        }
+      }
+    }
+    source=session.getSource();
+    ByteBuffer buffer=source.allocate();
+    fieldCount=fields.size();
+    if (shouldRemoveAvgField.size() > 0) {
+      ResultSetHeaderPacket packet=new ResultSetHeaderPacket();
+      packet.packetId=++packetId;
+      packet.fieldCount=fieldCount - shouldRemoveAvgField.size();
+      buffer=packet.write(buffer,source,true);
+    }
+ else {
+      header[3]=++packetId;
+      buffer=source.writeToBuffer(header,buffer);
+    }
+    String primaryKey=null;
+    if (rrs.hasPrimaryKeyToCache()) {
+      String[] items=rrs.getPrimaryKeyItems();
+      priamaryKeyTable=items[0];
+      primaryKey=items[1];
+    }
+    Map<String,ColMeta> columToIndx=new HashMap<String,ColMeta>(fieldCount);
+    for (int i=0, len=fieldCount; i < len; ++i) {
+      boolean shouldSkip=false;
+      byte[] field=fields.get(i);
+      if (needMerg) {
+        FieldPacket fieldPkg=new FieldPacket();
+        fieldPkg.read(field);
+        fieldPackets.add(fieldPkg);
+        String charset=session.getSource().getCharset();
+        String fieldName=new String(fieldPkg.name,charset).toUpperCase();
+        if (columToIndx != null && !columToIndx.containsKey(fieldName)) {
+          if (shouldRemoveAvgField.contains(fieldName)) {
+            shouldSkip=true;
+            fieldPackets.remove(fieldPackets.size() - 1);
+          }
+          if (shouldRenameAvgField.contains(fieldName)) {
+            String newFieldName=fieldName.substring(0,fieldName.length() - 3);
+            fieldPkg.name=newFieldName.getBytes();
+            fieldPkg.packetId=++packetId;
+            shouldSkip=true;
+            fieldPkg.length=fieldPkg.length - 14;
+            fieldPkg.decimals=(byte)(fieldPkg.decimals + 4);
+            buffer=fieldPkg.write(buffer,source,false);
+            fieldPkg.decimals=(byte)(fieldPkg.decimals - 4);
+          }
+          ColMeta colMeta=new ColMeta(i,fieldPkg.type);
+          colMeta.decimals=fieldPkg.decimals;
+          columToIndx.put(fieldName,colMeta);
+        }
+      }
+ else {
+        FieldPacket fieldPkg=new FieldPacket();
+        fieldPkg.read(field);
+        fieldPackets.add(fieldPkg);
+        fieldCount=fields.size();
+        if (primaryKey != null && primaryKeyIndex == -1) {
+          String fieldName=new String(fieldPkg.name);
+          if (primaryKey.equalsIgnoreCase(fieldName)) {
+            primaryKeyIndex=i;
+          }
+        }
+      }
+      if (!shouldSkip) {
+        field[3]=++packetId;
+        buffer=source.writeToBuffer(field,buffer);
+      }
+    }
+    eof[3]=++packetId;
+    buffer=source.writeToBuffer(eof,buffer);
+    if (null == middlerResultHandler) {
+      source.write(buffer);
+    }
+    if (dataMergeSvr != null) {
+      dataMergeSvr.onRowMetaData(columToIndx,fieldCount);
+    }
+  }
+ catch (  Exception e) {
+    handleDataProcessException(e);
+  }
+ finally {
+    lock.unlock();
+  }
+}

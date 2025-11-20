@@ -1,0 +1,34 @@
+static class Ipv6SubnetRule implements SubnetRule {
+  private static final int IPV6_BYTE_COUNT=16;
+  private final BigInteger networkAddress;
+  private final BigInteger subnetMask;
+  private final ConcurrentLruCache<String,BigInteger> ipv6AddressCache;
+  public Ipv6SubnetRule(  String ipAddress,  int cidrPrefix,  ConcurrentLruCache<String,BigInteger> ipv6AddressCache){
+    LettuceAssert.isTrue(NetUtil.isValidIpV6Address(ipAddress),() -> String.format("Invalid IPv6 IP address %s",ipAddress));
+    LettuceAssert.isTrue(0 <= cidrPrefix && cidrPrefix <= 128,() -> String.format("Invalid CIDR prefix %d",cidrPrefix));
+    this.subnetMask=toSubnetMask(cidrPrefix);
+    this.networkAddress=toNetworkAddress(ipAddress,this.subnetMask);
+    this.ipv6AddressCache=ipv6AddressCache;
+  }
+  /** 
+ * return  {@code true} if the {@code ipAddress} is in this subnet. If {@code ipAddress} is not valid IPv6 style(e.g., IPv4 style)  {@code false} is always returned.
+ */
+  @Override public boolean isInSubnet(  String ipAddress){
+    if (LettuceStrings.isEmpty(ipAddress) || !NetUtil.isValidIpV6Address(ipAddress)) {
+      return false;
+    }
+    BigInteger address=ipv6AddressCache.get(ipAddress);
+    return address.and(subnetMask).equals(networkAddress);
+  }
+  private static BigInteger toSubnetMask(  int cidrPrefix){
+    return BigInteger.valueOf(-1).shiftLeft(128 - cidrPrefix);
+  }
+  private static BigInteger toNetworkAddress(  String ipAddress,  BigInteger subnetMask){
+    return toBigInteger(ipAddress).and(subnetMask);
+  }
+  static BigInteger toBigInteger(  String ipAddress){
+    byte[] octets=NetUtil.createByteArrayFromIpAddressString(ipAddress);
+    LettuceAssert.isTrue(octets != null && octets.length == IPV6_BYTE_COUNT,() -> String.format("Invalid IP address %s",ipAddress));
+    return new BigInteger(octets);
+  }
+}

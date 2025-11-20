@@ -1,0 +1,11 @@
+private static Stream<Map.Entry<Class<?>,Integer>> cascadeTypeVariableDeclarationToSupertypes(int typeVariableIndex,Class<?> declaration){
+  TypeVariable<?> typeVariable=declaration.getTypeParameters()[typeVariableIndex];
+  return Stream.concat(Stream.of(new AbstractMap.SimpleEntry<>(declaration,typeVariableIndex)),getGenericSupertypes(declaration).filter(supertype -> supertype instanceof ParameterizedType).map(supertype -> (ParameterizedType)supertype).flatMap(supertype -> {
+    int superTypeVariableIndex=Arrays.asList(supertype.getActualTypeArguments()).indexOf(typeVariable);
+    if (superTypeVariableIndex == -1) {
+      return Stream.empty();
+    }
+    return cascadeTypeVariableDeclarationToSupertypes(superTypeVariableIndex,getRawType(supertype));
+  }
+));
+}

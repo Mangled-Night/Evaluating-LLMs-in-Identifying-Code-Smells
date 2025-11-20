@@ -1,0 +1,19 @@
+/** 
+ * Dump the memory usage of all consumers.
+ */
+public void showMemoryUsage(){
+  logger.info("Memory used in Thread " + connectionAttemptId);
+synchronized (this) {
+    long memoryAccountedForByConsumers=0;
+    for (    MemoryConsumer c : consumers) {
+      long totalMemUsage=c.getUsed();
+      memoryAccountedForByConsumers+=totalMemUsage;
+      if (totalMemUsage > 0) {
+        logger.info("Acquired by " + c + ": "+ JavaUtils.bytesToString(totalMemUsage));
+      }
+    }
+    long memoryNotAccountedFor=memoryManager.getExecutionMemoryUsageForConnection(connectionAttemptId) - memoryAccountedForByConsumers;
+    logger.info("{} bytes of memory were used by task {} but are not associated with specific consumers",memoryNotAccountedFor,connectionAttemptId);
+    logger.info("{} bytes of memory are used for execution and {} bytes of memory are used for storage",memoryManager.executionMemoryUsed());
+  }
+}

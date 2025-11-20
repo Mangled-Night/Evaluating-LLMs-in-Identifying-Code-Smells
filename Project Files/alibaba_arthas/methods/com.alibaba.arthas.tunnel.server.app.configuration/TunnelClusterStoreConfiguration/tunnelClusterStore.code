@@ -1,0 +1,11 @@
+@Bean @ConditionalOnMissingBean @ConditionalOnProperty(name="spring.cache.type",havingValue="caffeine") public TunnelClusterStore tunnelClusterStore(@Autowired CacheManager cacheManager){
+  Cache inMemoryClusterCache=cacheManager.getCache("inMemoryClusterCache");
+  InMemoryClusterStore inMemoryClusterStore=new InMemoryClusterStore();
+  inMemoryClusterStore.setCache(inMemoryClusterCache);
+  return inMemoryClusterStore;
+}
+@Bean @ConditionalOnClass(StringRedisTemplate.class) @ConditionalOnProperty("spring.redis.host") @ConditionalOnMissingBean public TunnelClusterStore tunnelClusterStore(@Autowired StringRedisTemplate redisTemplate){
+  RedisTunnelClusterStore redisTunnelClusterStore=new RedisTunnelClusterStore();
+  redisTunnelClusterStore.setRedisTemplate(redisTemplate);
+  return redisTunnelClusterStore;
+}

@@ -1,0 +1,47 @@
+@SuppressWarnings("incomplete-switch") @Override protected List<SmackFuture<LookupConnectionEndpointsResult,Exception>> lookupConnectionEndpoints(){
+  assert discoveredWebSocketEndpoints == null;
+  InternalSmackFuture<LookupConnectionEndpointsResult,Exception> websocketEndpointsLookupFuture=new InternalSmackFuture<>();
+  connectionInternal.asyncGo(() -> {
+    Result result=null;
+    ModularXmppClientToServerConnectionConfiguration configuration=connectionInternal.connection.getConfiguration();
+    DomainBareJid host=configuration.getXMPPServiceDomain();
+    if (moduleDescriptor.isWebSocketEndpointDiscoveryEnabled()) {
+      result=WebSocketRemoteConnectionEndpointLookup.lookup(host);
+    }
+    WebSocketRemoteConnectionEndpoint providedEndpoint=moduleDescriptor.getExplicitlyProvidedEndpoint();
+    if (providedEndpoint != null) {
+      if (result == null) {
+        result=new Result();
+      }
+      final int INSERT_INDEX=0;
+      if (providedEndpoint instanceof SecureWebSocketRemoteConnectionEndpoint) {
+        SecureWebSocketRemoteConnectionEndpoint secureEndpoint=(SecureWebSocketRemoteConnectionEndpoint)providedEndpoint;
+        result.discoveredSecureEndpoints.add(INSERT_INDEX,secureEndpoint);
+      }
+ else       if (providedEndpoint instanceof InsecureWebSocketRemoteConnectionEndpoint) {
+        InsecureWebSocketRemoteConnectionEndpoint insecureEndpoint=(InsecureWebSocketRemoteConnectionEndpoint)providedEndpoint;
+        result.discoveredInsecureEndpoints.add(INSERT_INDEX,insecureEndpoint);
+      }
+ else {
+        throw new AssertionError();
+      }
+    }
+    if (moduleDescriptor.isImplicitWebSocketEndpointEnabled()) {
+      String urlWithoutScheme="://" + host + ":5443/ws";
+      SecureWebSocketRemoteConnectionEndpoint implicitSecureEndpoint=SecureWebSocketRemoteConnectionEndpoint.from(WebSocketRemoteConnectionEndpoint.SECURE_WEB_SOCKET_SCHEME + urlWithoutScheme);
+      result.discoveredSecureEndpoints.add(implicitSecureEndpoint);
+      InsecureWebSocketRemoteConnectionEndpoint implicitInsecureEndpoint=InsecureWebSocketRemoteConnectionEndpoint.from(WebSocketRemoteConnectionEndpoint.INSECURE_WEB_SOCKET_SCHEME + urlWithoutScheme);
+      result.discoveredInsecureEndpoints.add(implicitInsecureEndpoint);
+    }
+    final LookupConnectionEndpointsResult endpointsResult;
+    if (result.isEmpty()) {
+      endpointsResult=new WebSocketEndpointsDiscoveryFailed(result.lookupFailures);
+    }
+ else {
+      endpointsResult=new DiscoveredWebSocketEndpoints(result);
+    }
+    websocketEndpointsLookupFuture.setResult(endpointsResult);
+  }
+);
+  return Collections.singletonList(websocketEndpointsLookupFuture);
+}

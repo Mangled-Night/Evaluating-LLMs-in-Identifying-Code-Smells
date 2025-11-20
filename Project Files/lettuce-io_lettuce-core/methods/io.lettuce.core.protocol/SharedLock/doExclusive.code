@@ -1,0 +1,34 @@
+/** 
+ * Execute a  {@link Runnable} guarded by an exclusive lock.
+ * @param runnable the runnable, must not be {@code null}.
+ */
+void doExclusive(Runnable runnable){
+  LettuceAssert.notNull(runnable,"Runnable must not be null");
+  doExclusive(() -> {
+    runnable.run();
+    return null;
+  }
+);
+}
+/** 
+ * Retrieve a value produced by a  {@link Supplier} guarded by an exclusive lock.
+ * @param supplier the {@link Supplier}, must not be  {@code null}.
+ * @param < T > the return type
+ * @return the return value
+ */
+<T>T doExclusive(Supplier<T> supplier){
+  LettuceAssert.notNull(supplier,"Supplier must not be null");
+  lock.lock();
+  try {
+    try {
+      lockWritersExclusive();
+      return supplier.get();
+    }
+  finally {
+      unlockWritersExclusive();
+    }
+  }
+  finally {
+    lock.unlock();
+  }
+}

@@ -1,0 +1,22 @@
+/** 
+ * This method sets the world whose properties are to be changed. This function is called before the screen comes to the forefront.
+ * @param subContext    the new environment created in {@link UniverseSetupScreen}
+ * @param worldSelected the world whose configurations are to be changed.
+ * @throws UnresolvedWorldGeneratorException
+ */
+public void setWorld(Context subContext,WorldSetupWrapper worldSelected,UIDropdownScrollable dropDown) throws UnresolvedWorldGeneratorException {
+  world=worldSelected;
+  context=subContext;
+  worldsDropdown=dropDown;
+  SimpleUri worldGenUri=worldSelected.getWorldGeneratorInfo().getUri();
+  environment=context.get(ModuleEnvironment.class);
+  context.put(WorldGeneratorPluginLibrary.class,new TempWorldGeneratorPluginLibrary(environment,context));
+  if (world.getWorldGenerator() == null) {
+    worldGenerator=WorldGeneratorManager.createWorldGenerator(worldGenUri,context,environment);
+    world.setWorldGenerator(worldGenerator);
+  }
+ else {
+    worldGenerator=world.getWorldGenerator();
+  }
+  configureProperties();
+}

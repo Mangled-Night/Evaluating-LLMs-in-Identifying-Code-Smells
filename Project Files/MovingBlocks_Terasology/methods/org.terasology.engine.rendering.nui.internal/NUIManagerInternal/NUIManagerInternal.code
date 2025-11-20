@@ -1,0 +1,31 @@
+public NUIManagerInternal(TerasologyCanvasRenderer renderer,Context context){
+  this.context=context;
+  this.hudScreenLayer=new HUDScreenLayer();
+  InjectionHelper.inject(hudScreenLayer,context);
+  this.canvas=new TerasologyCanvasImpl(this,context,renderer);
+  this.keyboard=context.get(InputSystem.class).getKeyboard();
+  this.mouse=context.get(InputSystem.class).getMouseDevice();
+  this.bindsManager=context.get(BindsManager.class);
+  this.renderingConfig=context.get(Config.class).getRendering();
+  this.uiScale=this.renderingConfig.getUiScale() / 100f;
+  this.renderingConfig.subscribe(RenderingConfig.UI_SCALE,this);
+  this.display=context.get(DisplayDevice.class);
+  this.assetManager=context.get(AssetManager.class);
+  refreshWidgetsLibrary();
+  TranslationSystem system=context.get(TranslationSystem.class);
+  system.subscribe(proj -> invalidate());
+  ModuleAwareAssetTypeManager maaTypeManager=context.get(ModuleAwareAssetTypeManager.class);
+  maaTypeManager.getAssetType(UIElement.class).ifPresent(type -> type.disposeAll());
+  UIText.DEFAULT_CURSOR_TEXTURE=assetManager.getAsset("engine:white",Texture.class).get();
+  UIButton.DEFAULT_CLICK_SOUND=assetManager.getAsset("engine:click",StaticSound.class).get();
+  TabbingManager.setFocusManager(this);
+  if (bindsManager != null && bindsManager.getBindsConfig().hasBinds(new SimpleUri("engine:tabbingUI")) && bindsManager.getBindsConfig().hasBinds(new SimpleUri("engine:tabbingModifier")) && bindsManager.getBindsConfig().hasBinds(new SimpleUri("engine:activate"))) {
+    TabbingManager.tabForwardInput=bindsManager.getBindsConfig().getBinds(new SimpleUri("engine:tabbingUI")).get(0);
+    TabbingManager.tabBackInputModifier=bindsManager.getBindsConfig().getBinds(new SimpleUri("engine" + ":tabbingModifier")).get(0);
+    TabbingManager.activateInput=bindsManager.getBindsConfig().getBinds(new SimpleUri("engine:activate")).get(0);
+  }
+  moduleEnvironment=context.get(ModuleManager.class).getEnvironment();
+  typeWidgetFactoryRegistry=new TypeWidgetFactoryRegistryImpl(context);
+  context.put(TypeWidgetFactoryRegistry.class,typeWidgetFactoryRegistry);
+  registerTypeWidgetFactories();
+}

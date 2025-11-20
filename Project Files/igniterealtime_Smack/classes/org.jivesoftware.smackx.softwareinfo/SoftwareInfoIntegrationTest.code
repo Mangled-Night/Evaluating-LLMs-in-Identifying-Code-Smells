@@ -1,0 +1,29 @@
+public class SoftwareInfoIntegrationTest extends AbstractSmackIntegrationTest {
+  public final SoftwareInfoManager sim1;
+  public final SoftwareInfoManager sim2;
+  public SoftwareInfoIntegrationTest(  SmackIntegrationTestEnvironment environment) throws IOException, XmlPullParserException, SmackParsingException {
+    super(environment);
+    sim1=SoftwareInfoManager.getInstanceFor(conOne);
+    sim2=SoftwareInfoManager.getInstanceFor(conTwo);
+  }
+  @BeforeClass public void setUp() throws Exception {
+    IntegrationTestRosterUtil.ensureBothAccountsAreSubscribedToEachOther(conOne,conTwo,timeout);
+  }
+  @SmackIntegrationTest public void test() throws Exception {
+    SoftwareInfoForm softwareInfoSent=createSoftwareInfoForm();
+    performActionAndWaitForPresence(conTwo,conOne,new ThrowingRunnable(){
+      @Override public void runOrThrow() throws Exception {
+        sim1.publishSoftwareInformationForm(softwareInfoSent);
+      }
+    }
+);
+    SoftwareInfoForm softwareInfoFormReceived=sim2.fromJid(conOne.getUser());
+    assertEquals(softwareInfoSent,softwareInfoFormReceived);
+  }
+  private static SoftwareInfoForm createSoftwareInfoForm() throws URISyntaxException {
+    SoftwareInfoForm.Builder builder=SoftwareInfoForm.getBuilder();
+    MediaElement mediaElement=MediaElement.builder().addUri(new MediaElement.Uri(new URI("http://example.org"),"test-type")).setHeightAndWidth(16,16).build();
+    SoftwareInfoForm softwareInfoForm=builder.setIcon(mediaElement).setOS("Linux").setOSVersion("Debian").setSoftware("Gajim").setSoftwareVersion("1.4.0").build();
+    return softwareInfoForm;
+  }
+}

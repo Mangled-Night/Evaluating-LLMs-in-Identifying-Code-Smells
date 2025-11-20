@@ -1,0 +1,55 @@
+public class BaseEntityRefTest {
+  private static Context context;
+  private PojoEntityManager entityManager;
+  private EntityRef ref;
+  @BeforeAll public static void setupClass() throws Exception {
+    context=new ContextImpl();
+    ModuleManager moduleManager=ModuleManagerFactory.create();
+    context.put(ModuleManager.class,moduleManager);
+    ModuleAwareAssetTypeManager assetTypeManager=new ModuleAwareAssetTypeManagerImpl();
+    assetTypeManager.createAssetType(Prefab.class,PojoPrefab::new,"prefabs");
+    assetTypeManager.switchEnvironment(moduleManager.getEnvironment());
+    context.put(AssetManager.class,assetTypeManager.getAssetManager());
+    context.put(RecordAndReplayCurrentStatus.class,new RecordAndReplayCurrentStatus());
+    CoreRegistry.setContext(context);
+  }
+  @BeforeEach public void setup(){
+    NetworkSystem networkSystem=mock(NetworkSystem.class);
+    when(networkSystem.getMode()).thenReturn(NetworkMode.NONE);
+    context.put(NetworkSystem.class,networkSystem);
+    EntitySystemSetupUtil.addReflectionBasedLibraries(context);
+    EntitySystemSetupUtil.addEntityManagementRelatedClasses(context);
+    entityManager=(PojoEntityManager)context.get(EntityManager.class);
+    ref=entityManager.create();
+  }
+  @Test public void testSetScope(){
+    ref=entityManager.create();
+    assertEquals(CHUNK,ref.getScope());
+    for (    EntityScope scope : EntityScope.values()) {
+      ref.setScope(scope);
+      assertEquals(ref.getScope(),scope);
+    }
+    ref.setScope(SECTOR);
+    assertEquals(ref.getScope(),SECTOR);
+    assertTrue(entityManager.getSectorManager().contains(ref.getId()));
+    assertFalse(entityManager.getGlobalPool().contains(ref.getId()));
+    ref.setScope(GLOBAL);
+    assertEquals(ref.getScope(),GLOBAL);
+    assertTrue(entityManager.getGlobalPool().contains(ref.getId()));
+    assertFalse(entityManager.getSectorManager().contains(ref.getId()));
+  }
+  @Test public void testCreateWithScopeInfoComponent(){
+    EntityInfoComponent info=new EntityInfoComponent();
+    info.scope=SECTOR;
+    EntityInfoComponent info2=new EntityInfoComponent();
+    info2.scope=SECTOR;
+    ref=entityManager.create(info);
+    assertEquals(SECTOR,ref.getScope());
+    long safeId=ref.getId();
+    ref.destroy();
+    ref=entityManager.createEntityWithId(safeId,Lists.newArrayList(info2));
+    assertNotNull(ref);
+    assertNotEquals(EntityRef.NULL,ref);
+    assertEquals(SECTOR,ref.getScope());
+  }
+}

@@ -1,0 +1,42 @@
+public MenuTree createAddContextMenu(JsonTree node){
+  MenuTree addTree=new MenuTree(OPTION_ADD_EXTENDED);
+  JsonTreeValue.Type type=node.getValue().getType();
+  if (type == JsonTreeValue.Type.ARRAY) {
+    addTree.addOption("Boolean value",n -> {
+      JsonTree child=new JsonTree(new JsonTreeValue(null,false,JsonTreeValue.Type.VALUE));
+      n.addChild(child);
+      for (      Consumer<JsonTree> listener : addContextMenuListeners) {
+        listener.accept(child);
+      }
+    }
+,node);
+    addTree.addOption("Number value",n -> {
+      JsonTree child=new JsonTree((new JsonTreeValue(null,0.0f,JsonTreeValue.Type.VALUE)));
+      n.addChild(child);
+      for (      Consumer<JsonTree> listener : addContextMenuListeners) {
+        listener.accept(n);
+      }
+    }
+,node);
+    addTree.addOption("String value",n -> {
+      JsonTree child=new JsonTree((new JsonTreeValue(null,"",JsonTreeValue.Type.VALUE)));
+      n.addChild(child);
+      for (      Consumer<JsonTree> listener : addContextMenuListeners) {
+        listener.accept(child);
+      }
+    }
+,node);
+  }
+ else   if (type == JsonTreeValue.Type.OBJECT) {
+    addTree.addOption("Key/value pair",n -> {
+      JsonTree child=new JsonTree((new JsonTreeValue("","",JsonTreeValue.Type.KEY_VALUE_PAIR)));
+      n.addChild(child);
+      for (      Consumer<JsonTree> listener : addContextMenuListeners) {
+        listener.accept(child);
+      }
+    }
+,node);
+    populateContextMenu(node,addTree,false);
+  }
+  return addTree;
+}

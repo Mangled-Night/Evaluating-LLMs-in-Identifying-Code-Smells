@@ -1,0 +1,34 @@
+private static void parseAddress(XmlPullParser parser,VCard vCard) throws XmlPullParserException, IOException {
+  final int initialDepth=parser.getDepth();
+  boolean isWork=true;
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String name=parser.getName();
+    if ("HOME".equals(name)) {
+      isWork=false;
+    }
+ else {
+      for (      String adr : ADR) {
+        if (adr.equals(name)) {
+          if (isWork) {
+            vCard.setAddressFieldWork(name,parser.nextText());
+          }
+ else {
+            vCard.setAddressFieldHome(name,parser.nextText());
+          }
+        }
+      }
+    }
+  break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+  break outerloop;
+}
+break;
+default :
+break;
+}
+}
+}

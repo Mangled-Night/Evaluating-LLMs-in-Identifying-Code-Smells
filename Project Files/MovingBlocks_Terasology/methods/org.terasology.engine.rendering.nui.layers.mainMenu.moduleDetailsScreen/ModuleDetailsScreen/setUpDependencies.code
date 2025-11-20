@@ -1,0 +1,33 @@
+private void setUpDependencies(){
+  dependencies.setList(Collections.emptyList());
+  dependencies.setItemRenderer(new AbstractItemRenderer<DependencyInfo>(){
+    private String getString(    DependencyInfo value){
+      if (value != null) {
+        return value.getId().toString();
+      }
+      return "";
+    }
+    @Override public void draw(    DependencyInfo value,    Canvas canvas){
+      Module module=moduleManager.getRegistry().getLatestModuleVersion(value.getId());
+      if (module == null || !(value.versionPredicate().test(module.getVersion()))) {
+        canvas.setMode("invalid");
+      }
+ else {
+        canvas.setMode("available");
+      }
+      canvas.drawText(getString(value),canvas.getRegion());
+    }
+    @Override public Vector2i getPreferredSize(    DependencyInfo value,    Canvas canvas){
+      String text=getString(value);
+      canvas.getCurrentStyle().setTextColor(Color.RED);
+      return new Vector2i(canvas.getCurrentStyle().getFont().getWidth(text),canvas.getCurrentStyle().getFont().getLineHeight());
+    }
+  }
+);
+  dependencies.subscribe(((widget,item) -> {
+    if (item != null) {
+      modules.getList().stream().filter(m -> item.getId().equals(m.getId())).findFirst().ifPresent(m -> modules.setSelection(m));
+    }
+  }
+));
+}

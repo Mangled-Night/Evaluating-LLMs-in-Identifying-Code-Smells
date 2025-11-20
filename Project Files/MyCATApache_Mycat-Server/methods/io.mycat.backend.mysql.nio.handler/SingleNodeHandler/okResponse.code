@@ -1,0 +1,40 @@
+/** 
+ * insert/update/delete okResponse()：读取data字节数组，组成一个OKPacket，并调用ok.write(source)将结果写入前端连接FrontendConnection的写缓冲队列writeQueue中， 真正发送给应用是由对应的NIOSocketWR从写队列中读取ByteBuffer并返回的
+ */
+@Override public void okResponse(byte[] data,BackendConnection conn){
+  this.netOutBytes+=data.length;
+  boolean executeResponse=conn.syncAndExcute();
+  if (executeResponse) {
+    ServerConnection source=session.getSource();
+    OkPacket ok=new OkPacket();
+    ok.read(data);
+    this.affectedRows+=ok.affectedRows;
+    if (ok.hasMoreResultsExists()) {
+      return;
+    }
+    boolean isCanClose2Client=(!rrs.isCallStatement()) || (rrs.isCallStatement() && !rrs.getProcedure().isResultSimpleValue());
+    if (rrs.isLoadData()) {
+      ok.packetId=++packetId;
+      source.getLoadDataInfileHandler().clear();
+    }
+ else     if (isCanClose2Client) {
+      ok.packetId=++packetId;
+    }
+    if (isCanClose2Client) {
+      session.releaseConnectionIfSafe(conn,LOGGER.isDebugEnabled(),false);
+      endRunning();
+    }
+    ok.serverStatus=source.isAutocommit() ? 2 : 1;
+    recycleResources();
+    if (isCanClose2Client) {
+      source.setLastInsertId(ok.insertId);
+      if (!errorRepsponsed.get() && !session.closed() && source.canResponse()) {
+        ok.write(source);
+      }
+    }
+    source.setExecuteSql(null);
+    source.getListener().fireEvent(SqlExecuteStage.END);
+    QueryResult queryResult=new QueryResult(session.getSource().getSchema(),session.getSource().getUser(),rrs.getSqlType(),rrs.getStatement(),affectedRows,netInBytes,netOutBytes,startTime,System.currentTimeMillis(),0,source.getHost());
+    QueryResultDispatcher.dispatchQuery(queryResult);
+  }
+}

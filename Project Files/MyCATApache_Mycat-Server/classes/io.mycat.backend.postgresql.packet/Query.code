@@ -1,0 +1,21 @@
+/** 
+ * 查询数据包
+ * @author Coollf
+ */
+public class Query extends PostgreSQLPacket {
+  private String sql;
+  @Override public int getLength(){
+    return 4 + (sql == null ? 0 : (sql.getBytes(UTF8).length));
+  }
+  @Override public char getMarker(){
+    return PacketMarker.F_Query.getValue();
+  }
+  public Query(  String sql){
+    this.sql=sql.trim() + "\0";
+  }
+  public void write(  ByteBuffer buffer){
+    PIOUtils.SendChar(getMarker(),buffer);
+    PIOUtils.SendInteger4(getLength(),buffer);
+    PIOUtils.SendString(sql,buffer);
+  }
+}

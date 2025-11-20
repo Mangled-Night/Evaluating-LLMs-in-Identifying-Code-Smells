@@ -1,0 +1,119 @@
+static class Client {
+  String mPkgName;
+  Messenger mServer;
+  LinkedList<Bundle> mCached=new LinkedList<>();
+  @SuppressLint("HandlerLeak") Handler mReceiveServeMsgHandler=new Handler(){
+    @Override public void handleMessage(    Message msg){
+      Bundle data=msg.getData();
+      data.setClassLoader(MessengerUtils.class.getClassLoader());
+      String key=data.getString(KEY_STRING);
+      if (key != null) {
+        MessageCallback callback=subscribers.get(key);
+        if (callback != null) {
+          callback.messageCall(data);
+        }
+      }
+    }
+  }
+;
+  Messenger mClient=new Messenger(mReceiveServeMsgHandler);
+  ServiceConnection mConn=new ServiceConnection(){
+    @Override public void onServiceConnected(    ComponentName name,    IBinder service){
+      Log.d("MessengerUtils","client service connected " + name);
+      mServer=new Messenger(service);
+      int key=UtilsBridge.getCurrentProcessName().hashCode();
+      Message msg=Message.obtain(mReceiveServeMsgHandler,WHAT_SUBSCRIBE,key,0);
+      msg.getData().setClassLoader(MessengerUtils.class.getClassLoader());
+      msg.replyTo=mClient;
+      try {
+        mServer.send(msg);
+      }
+ catch (      RemoteException e) {
+        e.printStackTrace();
+      }
+      sendCachedMsg2Server();
+    }
+    @Override public void onServiceDisconnected(    ComponentName name){
+      Log.w("MessengerUtils","client service disconnected:" + name);
+      mServer=null;
+      if (!bind()) {
+        Log.e("MessengerUtils","client service rebind failed: " + name);
+      }
+    }
+  }
+;
+  Client(  String pkgName){
+    this.mPkgName=pkgName;
+  }
+  boolean bind(){
+    if (TextUtils.isEmpty(mPkgName)) {
+      Intent intent=new Intent(Utils.getApp(),ServerService.class);
+      return Utils.getApp().bindService(intent,mConn,Context.BIND_AUTO_CREATE);
+    }
+    if (UtilsBridge.isAppInstalled(mPkgName)) {
+      if (UtilsBridge.isAppRunning(mPkgName)) {
+        Intent intent=new Intent(mPkgName + ".messenger");
+        intent.setPackage(mPkgName);
+        return Utils.getApp().bindService(intent,mConn,Context.BIND_AUTO_CREATE);
+      }
+ else {
+        Log.e("MessengerUtils","bind: the app is not running -> " + mPkgName);
+        return false;
+      }
+    }
+ else {
+      Log.e("MessengerUtils","bind: the app is not installed -> " + mPkgName);
+      return false;
+    }
+  }
+  void unbind(){
+    int key=UtilsBridge.getCurrentProcessName().hashCode();
+    Message msg=Message.obtain(mReceiveServeMsgHandler,WHAT_UNSUBSCRIBE,key,0);
+    msg.replyTo=mClient;
+    try {
+      mServer.send(msg);
+    }
+ catch (    RemoteException e) {
+      e.printStackTrace();
+    }
+    try {
+      Utils.getApp().unbindService(mConn);
+    }
+ catch (    Exception ignore) {
+    }
+  }
+  void sendMsg2Server(  Bundle bundle){
+    if (mServer == null) {
+      mCached.addFirst(bundle);
+      Log.i("MessengerUtils","save the bundle " + bundle);
+    }
+ else {
+      sendCachedMsg2Server();
+      if (!send2Server(bundle)) {
+        mCached.addFirst(bundle);
+      }
+    }
+  }
+  private void sendCachedMsg2Server(){
+    if (mCached.isEmpty())     return;
+    for (int i=mCached.size() - 1; i >= 0; --i) {
+      if (send2Server(mCached.get(i))) {
+        mCached.remove(i);
+      }
+    }
+  }
+  private boolean send2Server(  Bundle bundle){
+    Message msg=Message.obtain(mReceiveServeMsgHandler,WHAT_SEND);
+    bundle.setClassLoader(MessengerUtils.class.getClassLoader());
+    msg.setData(bundle);
+    msg.replyTo=mClient;
+    try {
+      mServer.send(msg);
+      return true;
+    }
+ catch (    RemoteException e) {
+      e.printStackTrace();
+      return false;
+    }
+  }
+}

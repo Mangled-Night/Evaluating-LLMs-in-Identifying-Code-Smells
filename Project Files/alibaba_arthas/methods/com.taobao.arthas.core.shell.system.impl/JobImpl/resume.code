@@ -1,0 +1,23 @@
+@Override public Job resume(){
+  return resume(true);
+}
+@Override public Job resume(boolean foreground){
+  try {
+    process.resume(foreground,new ResumeHandler());
+  }
+ catch (  IllegalStateException ignore) {
+  }
+  runInBackground.set(!foreground);
+  if (statusUpdateHandler != null) {
+    statusUpdateHandler.handle(process.status());
+  }
+  if (this.status() == ExecStatus.RUNNING) {
+    if (foreground) {
+      jobHandler.onForeground(this);
+    }
+ else {
+      jobHandler.onBackground(this);
+    }
+  }
+  return this;
+}

@@ -1,0 +1,18 @@
+private static BookmarkedURL getURLStorage(XmlPullParser parser) throws IOException, XmlPullParserException {
+  String name=parser.getAttributeValue("","name");
+  String url=parser.getAttributeValue("","url");
+  String rssString=parser.getAttributeValue("","rss");
+  boolean rss=rssString != null && "true".equals(rssString);
+  BookmarkedURL urlStore=new BookmarkedURL(url,name,rss);
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT && "shared_bookmark".equals(parser.getName())) {
+      urlStore.setShared(true);
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT && "url".equals(parser.getName())) {
+      done=true;
+    }
+  }
+  return urlStore;
+}

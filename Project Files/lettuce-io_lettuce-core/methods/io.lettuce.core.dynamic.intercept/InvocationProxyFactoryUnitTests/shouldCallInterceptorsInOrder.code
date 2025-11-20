@@ -1,0 +1,9 @@
+@Test void shouldCallInterceptorsInOrder(){
+  InvocationProxyFactory factory=new InvocationProxyFactory();
+  factory.addInterface(TargetWithStringMethod.class);
+  factory.addInterceptor(new StringAppendingMethodInterceptor("-foo"));
+  factory.addInterceptor(new StringAppendingMethodInterceptor("-bar"));
+  factory.addInterceptor(new ReturnValue("actual"));
+  TargetWithStringMethod target=factory.createProxy(getClass().getClassLoader());
+  assertThat(target.run()).isEqualTo("actual-bar-foo");
+}

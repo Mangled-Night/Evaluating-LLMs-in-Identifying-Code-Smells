@@ -1,0 +1,38 @@
+private void selfChecking0() throws ConfigException {
+  if (users == null || users.isEmpty()) {
+    throw new ConfigException("SelfCheck### user all node is empty!");
+  }
+ else {
+    for (    UserConfig uc : users.values()) {
+      if (uc == null) {
+        throw new ConfigException("SelfCheck### users node within the item is empty!");
+      }
+      Set<String> authSchemas=uc.getSchemas();
+      if (authSchemas == null) {
+        throw new ConfigException("SelfCheck### user " + uc.getName() + "refered schemas is empty!");
+      }
+      for (      String schema : authSchemas) {
+        if (!schemas.containsKey(schema)) {
+          String errMsg="SelfCheck###  schema " + schema + " refered by user "+ uc.getName()+ " is not exist!";
+          throw new ConfigException(errMsg);
+        }
+      }
+    }
+  }
+  for (  SchemaConfig sc : schemas.values()) {
+    if (null == sc) {
+      throw new ConfigException("SelfCheck### schema all node is empty!");
+    }
+ else {
+      if (this.dataNodes != null && this.dataHosts != null) {
+        Set<String> dataNodeNames=sc.getAllDataNodes();
+        for (        String dataNodeName : dataNodeNames) {
+          PhysicalDBNode node=this.dataNodes.get(dataNodeName);
+          if (node == null) {
+            throw new ConfigException("SelfCheck### schema dbnode is empty!");
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,41 @@
+/** 
+ * 前端连接ID生成器
+ * @author mycat
+ */
+private static class AcceptIdGenerator {
+  private static final long MAX_VALUE=0xffffffffL;
+  private AtomicLong acceptId=new AtomicLong();
+  private final Object lock=new Object();
+  private long getId(){
+    long newValue=acceptId.getAndIncrement();
+    if (newValue >= MAX_VALUE) {
+synchronized (lock) {
+        newValue=acceptId.getAndIncrement();
+        if (newValue >= MAX_VALUE) {
+          acceptId.set(0);
+        }
+      }
+      return acceptId.getAndDecrement();
+    }
+ else {
+      return newValue;
+    }
+  }
+}
+/** 
+ * 前端连接ID生成器
+ * @author mycat
+ */
+private static class AcceptIdGenerator {
+  private static final long MAX_VALUE=0xffffffffL;
+  private long acceptId=0L;
+  private final Object lock=new Object();
+  private long getId(){
+synchronized (lock) {
+      if (acceptId >= MAX_VALUE) {
+        acceptId=0L;
+      }
+      return ++acceptId;
+    }
+  }
+}

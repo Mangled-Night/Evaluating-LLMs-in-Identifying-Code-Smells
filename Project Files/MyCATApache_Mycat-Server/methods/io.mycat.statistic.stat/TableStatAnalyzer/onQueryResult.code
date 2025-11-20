@@ -1,0 +1,28 @@
+@Override public void onQueryResult(QueryResult queryResult){
+  int sqlType=queryResult.getSqlType();
+  String sql=queryResult.getSql();
+switch (sqlType) {
+case ServerParse.SELECT:
+case ServerParse.UPDATE:
+case ServerParse.INSERT:
+case ServerParse.DELETE:
+case ServerParse.REPLACE:
+    String masterTable=null;
+  List<String> relaTables=new ArrayList<String>();
+List<String> tables=sqlParser.parseTableNames(sql);
+for (int i=0; i < tables.size(); i++) {
+String table=tables.get(i);
+if (i == 0) {
+  masterTable=table;
+}
+ else {
+  relaTables.add(table);
+}
+}
+if (masterTable != null) {
+TableStat tableStat=getTableStat(masterTable);
+tableStat.update(sqlType,sql,queryResult.getStartTime(),queryResult.getEndTime(),relaTables);
+}
+break;
+}
+}

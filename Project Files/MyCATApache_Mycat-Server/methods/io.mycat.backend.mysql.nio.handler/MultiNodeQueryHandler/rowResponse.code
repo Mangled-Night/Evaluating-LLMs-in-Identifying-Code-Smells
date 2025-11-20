@@ -1,0 +1,62 @@
+@Override public void rowResponse(final byte[] row,final BackendConnection conn){
+  if (errorRepsponsed.get() || this.isFail()) {
+    return;
+  }
+  lock.lock();
+  try {
+    this.selectRows++;
+    RouteResultsetNode rNode=(RouteResultsetNode)conn.getAttachment();
+    String dataNode=rNode.getName();
+    if (dataMergeSvr != null) {
+      dataMergeSvr.onNewRecord(dataNode,row);
+      MiddlerResultHandler middlerResultHandler=session.getMiddlerResultHandler();
+      if (null != middlerResultHandler) {
+        if (middlerResultHandler instanceof MiddlerQueryResultHandler) {
+          byte[] rv=ResultSetUtil.getColumnVal(row,fields,0);
+          String rowValue=rv == null ? "" : new String(rv);
+          middlerResultHandler.add(rowValue);
+        }
+      }
+    }
+ else {
+      row[3]=++packetId;
+      RowDataPacket rowDataPkg=null;
+      if (primaryKeyIndex != -1) {
+        rowDataPkg=new RowDataPacket(fieldCount);
+        rowDataPkg.read(row);
+        String primaryKey=new String(rowDataPkg.fieldValues.get(primaryKeyIndex));
+        LayerCachePool pool=MycatServer.getInstance().getRouterservice().getTableId2DataNodeCache();
+        if (priamaryKeyTable != null) {
+          pool.putIfAbsent(priamaryKeyTable.toUpperCase(),primaryKey,dataNode);
+        }
+      }
+      if (prepared) {
+        if (rowDataPkg == null) {
+          rowDataPkg=new RowDataPacket(fieldCount);
+          rowDataPkg.read(row);
+        }
+        BinaryRowDataPacket binRowDataPk=new BinaryRowDataPacket();
+        binRowDataPk.read(fieldPackets,rowDataPkg);
+        binRowDataPk.write(session.getSource());
+      }
+ else {
+        MiddlerResultHandler middlerResultHandler=session.getMiddlerResultHandler();
+        if (null == middlerResultHandler) {
+          session.getSource().write(row);
+        }
+ else {
+          if (middlerResultHandler instanceof MiddlerQueryResultHandler) {
+            String rowValue=ResultSetUtil.getColumnValAsString(row,fields,0);
+            middlerResultHandler.add(rowValue);
+          }
+        }
+      }
+    }
+  }
+ catch (  Exception e) {
+    handleDataProcessException(e);
+  }
+ finally {
+    lock.unlock();
+  }
+}

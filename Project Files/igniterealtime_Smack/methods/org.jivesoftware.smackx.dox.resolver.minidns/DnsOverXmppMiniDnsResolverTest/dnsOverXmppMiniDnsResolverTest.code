@@ -1,0 +1,31 @@
+@Test public void dnsOverXmppMiniDnsResolverTest() throws IOException {
+  TestDnsDataSource dnsSource=new TestDnsDataSource();
+  TestDnsDataSource dnssecSource=new TestDnsDataSource();
+  DnsClient dnsClient=new DnsClient(NoopDnsCache.INSTANCE);
+  dnsClient.setDataSource(dnsSource);
+  DnssecClient dnssecClient=new DnssecClient(NoopDnsCache.INSTANCE);
+  dnssecClient.setDataSource(dnssecSource);
+  DnsOverXmppMiniDnsResolver doxResolver=new DnsOverXmppMiniDnsResolver(dnsClient,dnssecClient);
+  Question question=new Question("example.org",TYPE.A);
+{
+    DnsMessage nondnssecQuery=question.asQueryMessage();
+    doxResolver.resolve(nondnssecQuery);
+    assertTrue(dnsSource.getAndResetWasQueried());
+    assertFalse(dnssecSource.getAndResetWasQueried());
+  }
+{
+    DnsMessage.Builder dnssecQueryBuilder=question.asMessageBuilder();
+    dnssecQueryBuilder.getEdnsBuilder().setDnssecOk();
+    DnsMessage dnssecQuery=dnssecQueryBuilder.build();
+    DnssecValidationFailedException dnssecValidationFailedException=null;
+    try {
+      doxResolver.resolve(dnssecQuery);
+    }
+ catch (    DnssecValidationFailedException e) {
+      dnssecValidationFailedException=e;
+    }
+    assertNotNull(dnssecValidationFailedException);
+    assertFalse(dnsSource.getAndResetWasQueried());
+    assertTrue(dnssecSource.getAndResetWasQueried());
+  }
+}

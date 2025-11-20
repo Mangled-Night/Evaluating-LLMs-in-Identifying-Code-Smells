@@ -1,0 +1,19 @@
+public List<Bytestream.StreamHost> determineStreamHostInfo(List<Jid> proxies){
+  XMPPConnection connection=getConnection();
+  List<Bytestream.StreamHost> streamHosts=new ArrayList<>();
+  Iterator<Jid> iterator=proxies.iterator();
+  while (iterator.hasNext()) {
+    Jid proxy=iterator.next();
+    Bytestream request=new Bytestream();
+    request.setType(IQ.Type.get);
+    request.setTo(proxy);
+    try {
+      Bytestream response=connection.sendIqRequestAndWaitForResponse(request);
+      streamHosts.addAll(response.getStreamHosts());
+    }
+ catch (    Exception e) {
+      iterator.remove();
+    }
+  }
+  return streamHosts;
+}

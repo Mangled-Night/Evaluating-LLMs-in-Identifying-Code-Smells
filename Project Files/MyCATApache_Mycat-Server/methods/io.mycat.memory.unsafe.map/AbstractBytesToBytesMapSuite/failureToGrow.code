@@ -1,0 +1,23 @@
+@Test public void failureToGrow(){
+  BytesToBytesMap map=new BytesToBytesMap(dataNodeMemoryManager,1,1024);
+  try {
+    boolean success=true;
+    int i;
+    for (i=0; i < 127; i++) {
+      if (i > 0) {
+        memoryManager.limit(0);
+      }
+      final long[] arr=new long[]{i};
+      final BytesToBytesMap.Location loc=map.lookup(arr,Platform.LONG_ARRAY_OFFSET,8);
+      success=loc.append(arr,Platform.LONG_ARRAY_OFFSET,8,arr,Platform.LONG_ARRAY_OFFSET,8);
+      if (!success) {
+        break;
+      }
+    }
+    Assert.assertThat(i,greaterThan(0));
+    Assert.assertFalse(success);
+  }
+  finally {
+    map.free();
+  }
+}

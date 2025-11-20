@@ -1,0 +1,60 @@
+/** 
+ * Resolves all  {@link TypeVariable}s in  {@code type} to concrete types as per the typeparameter definitions in  {@code contextType}. All  {@link TypeVariable}s in  {@code type}should have been declared in  {@code contextType} or one of its supertypes, otherwise thosevariables will be resolved to  {@link Object Object.class}.
+ * @param contextType The {@link Type} which contains all type parameter definitions used in {@code type}.
+ * @param type        The {@link Type} whose {@link TypeVariable}s are to be resolved.
+ * @return A copy of {@code type} with all {@link TypeVariable}s resolved.
+ */
+public static Type resolveType(Type contextType,Type type){
+  Class<?> contextClass=getRawType(contextType);
+  if (type instanceof TypeVariable<?>) {
+    TypeVariable<?> typeVariable=(TypeVariable<?>)type;
+    Type resolvedTypeVariable=resolveTypeVariable(contextType,typeVariable,contextClass);
+    if (resolvedTypeVariable == typeVariable) {
+      return typeVariable;
+    }
+    if (resolvedTypeVariable == null) {
+      return Object.class;
+    }
+    return resolveType(contextType,resolvedTypeVariable);
+  }
+  if (type instanceof ParameterizedType) {
+    ParameterizedType parameterizedType=(ParameterizedType)type;
+    Type ownerType=parameterizedType.getOwnerType();
+    Type resolvedOwnerType=resolveType(contextType,ownerType);
+    boolean changed=resolvedOwnerType != ownerType;
+    Type[] typeArguments=parameterizedType.getActualTypeArguments();
+    Type[] resolvedTypeArguments=resolveTypes(contextType,typeArguments);
+    changed|=resolvedTypeArguments != typeArguments;
+    if (!changed) {
+      return parameterizedType;
+    }
+    final Type rawType=parameterizedType.getRawType();
+    return parameterizedTypeOf(resolvedOwnerType,resolvedTypeArguments,rawType);
+  }
+  if (type instanceof GenericArrayType) {
+    GenericArrayType arrayType=(GenericArrayType)type;
+    Type componentType=arrayType.getGenericComponentType();
+    Type resolvedComponentType=resolveType(contextType,componentType);
+    if (resolvedComponentType == componentType) {
+      return type;
+    }
+ else {
+      return new GenericArrayTypeImpl(resolvedComponentType);
+    }
+  }
+  if (type instanceof WildcardType) {
+    WildcardType wildcardType=(WildcardType)type;
+    Type[] lowerBounds=wildcardType.getLowerBounds();
+    Type[] upperBounds=wildcardType.getUpperBounds();
+    boolean changed=false;
+    Type[] resolvedLowerBounds=resolveTypes(contextType,lowerBounds);
+    changed|=resolvedLowerBounds != lowerBounds;
+    Type[] resolvedUpperBounds=resolveTypes(contextType,upperBounds);
+    changed|=resolvedUpperBounds != upperBounds;
+    if (!changed) {
+      return wildcardType;
+    }
+    return new WildcardTypeImpl(resolvedUpperBounds,resolvedLowerBounds);
+  }
+  return type;
+}

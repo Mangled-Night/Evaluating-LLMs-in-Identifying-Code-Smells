@@ -1,0 +1,11 @@
+@Test void shouldRetrievePartitionsViaAdaptiveRefreshTriggeredEvent(){
+  ClusterClientOptions clusterClientOptions=ClusterClientOptions.builder().topologyRefreshOptions(immediateRefresh).build();
+  when(clusterClient.getClusterClientOptions()).thenReturn(clusterClientOptions);
+  sut.onMovedRedirection();
+  ArgumentCaptor<AdaptiveRefreshTriggeredEvent> captor=ArgumentCaptor.forClass(AdaptiveRefreshTriggeredEvent.class);
+  verify(eventBus).publish(captor.capture());
+  AdaptiveRefreshTriggeredEvent capture=captor.getValue();
+  Partitions partitions=new Partitions();
+  when(clusterClient.getPartitions()).thenReturn(partitions);
+  assertThat(capture.getPartitions()).isSameAs(partitions);
+}

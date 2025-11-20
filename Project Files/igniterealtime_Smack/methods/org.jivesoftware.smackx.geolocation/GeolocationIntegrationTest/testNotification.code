@@ -1,0 +1,30 @@
+/** 
+ * Verifies that a notification is sent when a publication is received, assuming that notification filtering has been adjusted to allow for the notification to be delivered.
+ * @throws Exception if the test fails
+ */
+@SmackIntegrationTest public void testNotification() throws Exception {
+  GeoLocation.Builder builder=GeoLocation.builder();
+  GeoLocation data=builder.setAccuracy(23d).setAlt(1000d).setAltAccuracy(10d).setArea("Delhi").setBearing(10d).setBuilding("Small Building").setCountry("India").setCountryCode("IN").setDescription("My Description").setFloor("top").setLat(25.098345d).setLocality("awesome").setLon(77.992034).setPostalcode("110085").setRegion("North").setRoom("small").setSpeed(250.0d).setStreet("Wall Street").setText("Unit Testing GeoLocation").setTimestamp(XmppDateTime.parseDate("2004-02-19")).setTzo("+5:30").setUri(new URI("http://xmpp.org")).build();
+  IntegrationTestRosterUtil.ensureBothAccountsAreSubscribedToEachOther(conOne,conTwo,timeout);
+  final SimpleResultSyncPoint geoLocationReceived=new SimpleResultSyncPoint();
+  final PepEventListener<GeoLocation> geoLocationListener=(jid,geoLocation,id,message) -> {
+    if (geoLocation.equals(data)) {
+      geoLocationReceived.signal();
+    }
+  }
+;
+  try {
+    registerListenerAndWait(glm2,ServiceDiscoveryManager.getInstanceFor(conTwo),geoLocationListener);
+    glm1.publishGeoLocation(data);
+    try {
+      Object result=geoLocationReceived.waitForResult(timeout);
+      Assertions.assertNotNull(result,"Expected to receive a PEP notification, but did not.");
+    }
+ catch (    TimeoutException e) {
+      Assertions.fail("Expected to receive a PEP notification, but did not.");
+    }
+  }
+  finally {
+    unregisterListener(glm2,geoLocationListener);
+  }
+}

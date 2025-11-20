@@ -1,0 +1,25 @@
+private void sendModules(List<NetData.ModuleRequest> moduleRequestList){
+  for (  NetData.ModuleRequest request : moduleRequestList) {
+    NetData.ModuleDataHeader.Builder result=NetData.ModuleDataHeader.newBuilder();
+    result.setId(request.getModuleId());
+    Module module=moduleManager.getEnvironment().get(new Name(request.getModuleId()));
+    if (!(module.getResources() instanceof ArchiveFileSource)) {
+      result.setError("Module not available for download");
+    }
+ else {
+      FileReference fileReference=module.getResources().getFiles().iterator().next();
+      try (InputStream stream=fileReference.open()){
+        ByteString byteString=ByteString.readFrom(stream,1024);
+        channelHandlerContext.channel().write(NetData.NetMessage.newBuilder().setModuleData(NetData.ModuleData.newBuilder().setModule(byteString)).build());
+        result.setVersion(module.getVersion().toString());
+        result.setSize(byteString.size());
+        channelHandlerContext.channel().write(NetData.NetMessage.newBuilder().setModuleDataHeader(result).build());
+      }
+ catch (      IOException e) {
+        logger.error("Error sending module",e);
+        channelHandlerContext.channel().close();
+        break;
+      }
+    }
+  }
+}

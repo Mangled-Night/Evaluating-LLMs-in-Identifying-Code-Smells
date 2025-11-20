@@ -1,0 +1,27 @@
+@Override public void run(){
+  if (isReplay()) {
+    return;
+  }
+  try {
+    if (Files.exists(storagePathProvider.getUnmergedChangesPath())) {
+      throw new IOException("Save ran while there were unmerged changes");
+    }
+    saveTransactionHelper.cleanupSaveTransactionDirectory();
+    applyDeltaToPrivateEntityManager();
+    prepareChunksPlayersAndGlobalStore();
+    createPreviewImagesFolder();
+    createSaveTransactionDirectory();
+    writePlayerStores();
+    writeGlobalStore();
+    writeChunkStores();
+    saveGameManifest();
+    perpareChangesForMerge();
+    mergeChanges();
+    logger.info("Save game finished");
+    saveRecordingData();
+  }
+ catch (  IOException t) {
+    logger.error("Save game creation failed",t);
+    throw new UncheckedIOException("Save game creation failed",t);
+  }
+}

@@ -1,0 +1,21 @@
+/** 
+ * Provides the normals of all vertices of the mesh, transformed based on the transformation matrices of all bones
+ * @param boneTransforms A transformation matrix for each bone in the skeletal mesh
+ * @return The normals of each vertex
+ */
+public List<Vector3f> getVertexNormals(List<Matrix4f> boneTransforms){
+  List<Vector3f> results=Lists.newArrayListWithCapacity(getVertexCount());
+  for (int i=0; i < normals.size(); i++) {
+    Vector3f norm=new Vector3f(normals.get(i));
+    Matrix4f skinMat=new Matrix4f().m00(0).m11(0).m22(0).m33(0);
+    BoneWeight weight=weights.get(i);
+    for (int w=0; w < weight.jointCount(); w++) {
+      Matrix4f jointMat=new Matrix4f(boneTransforms.get(weight.getJoint(w)));
+      jointMat.scale(weight.getBias(w));
+      skinMat.add(jointMat);
+    }
+    norm.mulTransposePosition(skinMat);
+    results.add(norm);
+  }
+  return results;
+}

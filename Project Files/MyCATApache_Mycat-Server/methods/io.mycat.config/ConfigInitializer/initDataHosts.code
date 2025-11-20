@@ -1,0 +1,13 @@
+private Map<String,PhysicalDBPool> initDataHosts(ConfigLoader configLoader){
+  Map<String,DataHostConfig> nodeConfs=configLoader.getDataHosts();
+  boolean isBooster="booster".equalsIgnoreCase(ZkConfig.getInstance().getValue(ZkParamCfg.MYCAT_SERVER_TYPE));
+  Map<String,PhysicalDBPool> nodes=new HashMap<String,PhysicalDBPool>(nodeConfs.size());
+  for (  DataHostConfig conf : nodeConfs.values()) {
+    if (isBooster) {
+      conf.setMinCon(2);
+    }
+    PhysicalDBPool pool=getPhysicalDBPool(conf,configLoader);
+    nodes.put(pool.getHostName(),pool);
+  }
+  return nodes;
+}

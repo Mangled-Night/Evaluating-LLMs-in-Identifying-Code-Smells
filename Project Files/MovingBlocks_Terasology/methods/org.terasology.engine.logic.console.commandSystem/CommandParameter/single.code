@@ -1,0 +1,14 @@
+public static <T>CommandParameter single(String name,Class<T> type,boolean required,CommandParameterSuggester<T> suggester,Context context){
+  if (type.isArray()) {
+    throw new IllegalArgumentException("The type of a simple CommandParameterDefinition must not be an array!");
+  }
+  ParameterAdapterManager parameterAdapterManager=context.get(ParameterAdapterManager.class);
+  return new CommandParameter(name,type,required,suggester,parameterAdapterManager);
+}
+public static <T>CommandParameter single(String name,Class<T> type,boolean required,Class<? extends CommandParameterSuggester<T>> suggesterClass,Context context) throws SuggesterInstantiationException {
+  CommandParameterSuggester<T> suggester=optionallyCreateSuggestor(suggesterClass,context);
+  return single(name,type,required,suggester,context);
+}
+@SuppressWarnings("unchecked") public static CommandParameter single(String name,Class<?> type,boolean required,Context context){
+  return single(name,type,required,(CommandParameterSuggester)null,context);
+}

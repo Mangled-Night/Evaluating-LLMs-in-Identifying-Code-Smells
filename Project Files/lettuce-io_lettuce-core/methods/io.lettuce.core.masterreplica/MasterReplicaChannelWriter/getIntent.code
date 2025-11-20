@@ -1,0 +1,26 @@
+/** 
+ * Optimization: Determine command intents and optimize for bulk execution preferring one node. <p> If there is only one ConnectionIntent, then we take the ConnectionIntent derived from the commands. If there is more than one ConnectionIntent, then use  {@link ConnectionIntent#WRITE}.
+ * @param commands {@link Collection} of {@link RedisCommand commands}.
+ * @return the ConnectionIntent.
+ */
+static ConnectionIntent getIntent(Collection<? extends RedisCommand<?,?,?>> commands){
+  boolean w=false;
+  boolean r=false;
+  ConnectionIntent singleIntent=ConnectionIntent.WRITE;
+  for (  RedisCommand<?,?,?> command : commands) {
+    singleIntent=getIntent(command.getType());
+    if (singleIntent == ConnectionIntent.READ) {
+      r=true;
+    }
+    if (singleIntent == ConnectionIntent.WRITE) {
+      w=true;
+    }
+    if (r && w) {
+      return ConnectionIntent.WRITE;
+    }
+  }
+  return singleIntent;
+}
+private static ConnectionIntent getIntent(ProtocolKeyword type){
+  return ReadOnlyCommands.isReadOnlyCommand(type) ? ConnectionIntent.READ : ConnectionIntent.WRITE;
+}

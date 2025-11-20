@@ -1,0 +1,74 @@
+/** 
+ * Indicate that the value should fall within a certain range.
+ * @see ValidateElement
+ */
+public static class RangeValidateElement extends ValidateElement {
+  public static final String METHOD="range";
+  private final String min;
+  private final String max;
+  /** 
+ * Range validate element constructor.
+ * @param datatype TODO javadoc me please
+ * @param min the minimum allowable value. This attribute is OPTIONAL. The value depends on the datatype in use.
+ * @param max the maximum allowable value. This attribute is OPTIONAL. The value depends on the datatype in use.
+ * @see #getDatatype()
+ */
+  public RangeValidateElement(  String datatype,  String min,  String max){
+    super(datatype);
+    this.min=min;
+    this.max=max;
+  }
+  @Override protected void appendXML(  XmlStringBuilder buf){
+    buf.halfOpenElement(METHOD);
+    buf.optAttribute("min",getMin());
+    buf.optAttribute("max",getMax());
+    buf.closeEmptyElement();
+  }
+  /** 
+ * The 'min' attribute specifies the minimum allowable value.
+ * @return the minimum allowable value. This attribute is OPTIONAL. The value depends on the datatype in use.
+ */
+  public String getMin(){
+    return min;
+  }
+  /** 
+ * The 'max' attribute specifies the maximum allowable value.
+ * @return the maximum allowable value. This attribute is OPTIONAL. The value depends on the datatype in use.
+ */
+  public String getMax(){
+    return max;
+  }
+  @Override public void checkConsistency(  FormField.Builder<?,?> formField){
+    checkNonMultiConsistency(formField,METHOD);
+    if (getDatatype().equals(ValidateElement.DATATYPE_XS_STRING)) {
+      throw new ValidationConsistencyException(String.format("Field data type '%1$s' is not consistent with validation method '%2$s'.",getDatatype(),RangeValidateElement.METHOD));
+    }
+  }
+  @Override public void validate(  FormField formField){
+    AbstractSingleStringValueFormField singleValueFormField=formField.ifPossibleAs(AbstractSingleStringValueFormField.class);
+    if (singleValueFormField == null) {
+      return;
+    }
+    String valueString=singleValueFormField.getValue();
+switch (getDatatype()) {
+case "xs:int":
+case "xs:integer":
+      BigInteger value=new BigInteger(valueString);
+    String minString=getMin();
+  if (minString != null) {
+    BigInteger min=new BigInteger(minString);
+    if (value.compareTo(min) < 0) {
+      throw new IllegalArgumentException("The provided value " + valueString + " is lower than the allowed minimum of "+ minString);
+    }
+  }
+String maxString=getMax();
+if (maxString != null) {
+BigInteger max=new BigInteger(maxString);
+if (value.compareTo(max) > 0) {
+  throw new IllegalArgumentException("The provided value " + valueString + " is higher than the allowed maximum of "+ maxString);
+}
+}
+break;
+}
+}
+}

@@ -1,0 +1,71 @@
+public void setAnswer(String fieldName,Collection<? extends CharSequence> answers){
+  FormField blankField=getFieldOrThrow(fieldName);
+  FormField.Type type=blankField.getType();
+  FormField filledFormField;
+switch (type) {
+case list_multi:
+case text_multi:
+    filledFormField=createMultiKindFieldbuilder(fieldName,type).addValues(answers).build();
+  break;
+case jid_multi:
+List<Jid> jids=new ArrayList<>(answers.size());
+List<XmppStringprepException> exceptions=new ArrayList<>();
+JidUtil.jidsFrom(answers,jids,exceptions);
+if (!exceptions.isEmpty()) {
+throw new IllegalArgumentException(exceptions.get(0));
+}
+filledFormField=FormField.jidMultiBuilder(fieldName).addValues(jids).build();
+break;
+default :
+throw new IllegalArgumentException("");
+}
+write(filledFormField);
+}
+public void setAnswer(String fieldName,int answer){
+  setAnswer(fieldName,Integer.toString(answer));
+}
+public void setAnswer(String fieldName,CharSequence answer){
+  FormField blankField=getFieldOrThrow(fieldName);
+  FormField.Type type=blankField.getType();
+  FormField filledFormField;
+switch (type) {
+case list_multi:
+case jid_multi:
+    throw new IllegalArgumentException("Can not answer fields of type '" + type + "' with a CharSequence");
+case fixed:
+  throw new IllegalArgumentException("Fields of type 'fixed' are not answerable");
+case list_single:
+case text_private:
+case text_single:
+case hidden:
+filledFormField=createSingleKindFieldBuilder(fieldName,type).setValue(answer).build();
+break;
+case bool:
+filledFormField=FormField.booleanBuilder(fieldName).setValue(answer).build();
+break;
+case jid_single:
+Jid jid;
+try {
+jid=JidCreate.from(answer);
+}
+ catch (XmppStringprepException e) {
+throw new IllegalArgumentException(e);
+}
+filledFormField=FormField.jidSingleBuilder(fieldName).setValue(jid).build();
+break;
+case text_multi:
+filledFormField=createMultiKindFieldbuilder(fieldName,type).addValue(answer).build();
+break;
+default :
+throw new AssertionError();
+}
+write(filledFormField);
+}
+public void setAnswer(String fieldName,boolean answer){
+  FormField blankField=getFieldOrThrow(fieldName);
+  if (blankField.getType() != FormField.Type.bool) {
+    throw new IllegalArgumentException();
+  }
+  FormField filledFormField=FormField.booleanBuilder(fieldName).setValue(answer).build();
+  write(filledFormField);
+}

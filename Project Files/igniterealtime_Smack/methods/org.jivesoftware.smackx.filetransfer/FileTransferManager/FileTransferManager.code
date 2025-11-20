@@ -1,0 +1,19 @@
+/** 
+ * Creates a file transfer manager to initiate and receive file transfers.
+ * @param connection TODO javadoc me pleaseThe XMPPConnection that the file transfers will use.
+ */
+private FileTransferManager(XMPPConnection connection){
+  super(connection);
+  this.fileTransferNegotiator=FileTransferNegotiator.getInstanceFor(connection);
+  connection.registerIQRequestHandler(new AbstractIqRequestHandler(StreamInitiation.ELEMENT,StreamInitiation.NAMESPACE,IQ.Type.set,Mode.async){
+    @Override public IQ handleIQRequest(    IQ packet){
+      StreamInitiation si=(StreamInitiation)packet;
+      final FileTransferRequest request=new FileTransferRequest(FileTransferManager.this,si);
+      for (      final FileTransferListener listener : listeners) {
+        listener.fileTransferRequest(request);
+      }
+      return null;
+    }
+  }
+);
+}

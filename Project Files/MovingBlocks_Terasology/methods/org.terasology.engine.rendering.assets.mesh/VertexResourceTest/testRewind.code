@@ -1,0 +1,30 @@
+@Test public void testRewind(){
+  VertexResourceBuilder builder=new VertexResourceBuilder();
+  VertexIntegerAttributeBinding a1=builder.add(0,GLAttributes.INT_1_VERTEX_ATTRIBUTE);
+  VertexResource resource=builder.build();
+  a1.put(10);
+  a1.put(20);
+  assertEquals(2,a1.getPosition());
+  resource.writeBuffer(buffer -> {
+    assertEquals(2 * Integer.BYTES,buffer.limit());
+    assertEquals(10,buffer.getInt(Integer.BYTES * 0));
+    assertEquals(20,buffer.getInt(Integer.BYTES * 1));
+  }
+);
+  a1.rewind();
+  assertEquals(0,a1.getPosition());
+  a1.put(15);
+  resource.writeBuffer(buffer -> {
+    assertEquals(2 * Integer.BYTES,buffer.limit());
+    assertEquals(15,buffer.getInt(Integer.BYTES * 0));
+    assertEquals(20,buffer.getInt(Integer.BYTES * 1));
+  }
+);
+  a1.put(5);
+  resource.writeBuffer(buffer -> {
+    assertEquals(2 * Integer.BYTES,buffer.limit());
+    assertEquals(15,buffer.getInt(Integer.BYTES * 0));
+    assertEquals(5,buffer.getInt(Integer.BYTES * 1));
+  }
+);
+}

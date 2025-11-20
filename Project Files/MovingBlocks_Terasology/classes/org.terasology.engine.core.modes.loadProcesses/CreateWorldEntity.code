@@ -1,0 +1,67 @@
+public class CreateWorldEntity extends SingleStepLoadProcess {
+  private static final Logger logger=LoggerFactory.getLogger(CreateWorldEntity.class);
+  protected EntityManager entityManager;
+  protected WorldGenerator worldGenerator;
+  protected WorldConfigurator worldConfigurator;
+  protected Config config;
+  protected ChunkProvider chunkProvider;
+  private final Context context;
+  private final GameManifest gameManifest;
+  public CreateWorldEntity(  Context context,  GameManifest gameManifest){
+    this.context=context;
+    this.gameManifest=gameManifest;
+  }
+  @Override public String getMessage(){
+    return "Creating World Entity...";
+  }
+  @Override public boolean step(){
+    this.entityManager=context.get(EntityManager.class);
+    this.worldGenerator=context.get(WorldGenerator.class);
+    this.config=context.get(Config.class);
+    this.chunkProvider=context.get(ChunkProvider.class);
+    this.worldConfigurator=worldGenerator.getConfigurator();
+    Iterator<EntityRef> worldEntityIterator=entityManager.getEntitiesWith(WorldComponent.class).iterator();
+    if (worldEntityIterator.hasNext()) {
+      EntityRef worldEntity=worldEntityIterator.next();
+      worldEntityIterator.forEachRemaining(w -> logger.warn("Ignored extra world {}",w));
+      chunkProvider.setWorldEntity(worldEntity);
+      worldConfigurator.getProperties().forEach((key,currentComponent) -> {
+        Component component=worldEntity.getComponent(currentComponent.getClass());
+        if (component != null) {
+          worldConfigurator.setProperty(key,component);
+        }
+      }
+);
+    }
+ else {
+      EntityRef worldEntity=createWorldPoolsAndEntity();
+      chunkProvider.setWorldEntity(worldEntity);
+      SimpleUri generatorUri=worldGenerator.getUri();
+      worldConfigurator.getProperties().forEach((key,currentComponent) -> {
+        Class<? extends Component> clazz=currentComponent.getClass();
+        Component moduleComponent=gameManifest.getModuleConfig(generatorUri,key,clazz);
+        if (moduleComponent != null) {
+          worldEntity.addComponent(moduleComponent);
+          worldConfigurator.setProperty(key,moduleComponent);
+        }
+ else {
+          worldEntity.addComponent(currentComponent);
+        }
+      }
+);
+    }
+    return true;
+  }
+  private EntityRef createWorldPoolsAndEntity(){
+    entityManager.createWorldPools(gameManifest);
+    EntityRef worldEntity=entityManager.create();
+    worldEntity.addComponent(new WorldComponent());
+    NetworkComponent networkComponent=new NetworkComponent();
+    networkComponent.replicateMode=NetworkComponent.ReplicateMode.ALWAYS;
+    worldEntity.addComponent(networkComponent);
+    return worldEntity;
+  }
+  @Override public int getExpectedCost(){
+    return 1;
+  }
+}

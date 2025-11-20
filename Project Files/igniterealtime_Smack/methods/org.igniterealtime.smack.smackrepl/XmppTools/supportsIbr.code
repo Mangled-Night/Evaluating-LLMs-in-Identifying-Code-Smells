@@ -1,0 +1,21 @@
+public static boolean supportsIbr(String xmppDomain) throws SmackException, IOException, XMPPException, InterruptedException, KeyManagementException, NoSuchAlgorithmException {
+  DomainBareJid xmppDomainJid=JidCreate.domainBareFrom(xmppDomain);
+  return supportsIbr(xmppDomainJid);
+}
+public static boolean supportsIbr(DomainBareJid xmppDomain) throws SmackException, IOException, XMPPException, InterruptedException, KeyManagementException, NoSuchAlgorithmException {
+  XMPPTCPConnectionConfiguration.Builder configBuilder=XMPPTCPConnectionConfiguration.builder().setXmppDomain(xmppDomain);
+  TLSUtils.acceptAllCertificates(configBuilder);
+  XMPPTCPConnectionConfiguration config=configBuilder.build();
+  XMPPTCPConnection connection=new XMPPTCPConnection(config);
+  connection.connect();
+  try {
+    return supportsIbr(connection);
+  }
+  finally {
+    connection.disconnect();
+  }
+}
+public static boolean supportsIbr(XMPPConnection connection) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  AccountManager accountManager=AccountManager.getInstance(connection);
+  return accountManager.supportsAccountCreation();
+}

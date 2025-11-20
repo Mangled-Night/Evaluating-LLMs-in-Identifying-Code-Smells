@@ -1,0 +1,24 @@
+private void doComplete(Future<Void> future){
+  Throwable cause=future.cause();
+  boolean success=future.isSuccess();
+  dequeue();
+  if (success) {
+    return;
+  }
+  if (cause instanceof EncoderException || cause instanceof Error || cause.getCause() instanceof Error) {
+    complete(cause);
+    return;
+  }
+  Channel channel=endpoint.channel;
+  RedisCommand<?,?,?> sentCommand=this.sentCommand;
+  Collection<? extends RedisCommand<?,?,?>> sentCommands=this.sentCommands;
+  potentiallyRequeueCommands(channel,sentCommand,sentCommands);
+  if (!(cause instanceof ClosedChannelException)) {
+    String message="Unexpected exception during request: {}";
+    InternalLogLevel logLevel=InternalLogLevel.WARN;
+    if (cause instanceof IOException && SUPPRESS_IO_EXCEPTION_MESSAGES.contains(cause.getMessage())) {
+      logLevel=InternalLogLevel.DEBUG;
+    }
+    logger.log(logLevel,message,cause.toString(),cause);
+  }
+}

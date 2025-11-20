@@ -1,0 +1,19 @@
+@Test @Inject void pipelining(@New StatefulRedisClusterConnection<String,String> connectionUnderTest){
+  RedisAdvancedClusterAsyncCommands<String,String> async=connectionUnderTest.async();
+  TestFutures.awaitOrTimeout(async.get(key(0)));
+  int iterations=1000;
+  async.setAutoFlushCommands(false);
+  List<RedisFuture<?>> futures=new ArrayList<>();
+  for (int i=0; i < iterations; i++) {
+    futures.add(async.set(key(i),value(i)));
+  }
+  for (int i=0; i < iterations; i++) {
+    assertThat(this.sync.get(key(i))).as("Key " + key(i) + " must be null").isNull();
+  }
+  async.flushCommands();
+  boolean result=TestFutures.awaitOrTimeout(futures);
+  assertThat(result).isTrue();
+  for (int i=0; i < iterations; i++) {
+    assertThat(this.sync.get(key(i))).as("Key " + key(i) + " must be "+ value(i)).isEqualTo(value(i));
+  }
+}

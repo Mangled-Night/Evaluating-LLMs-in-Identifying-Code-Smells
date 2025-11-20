@@ -1,0 +1,15 @@
+@Override public Session removeSession(String sessionId){
+  Session session=sessions.get(sessionId);
+  if (session == null) {
+    return null;
+  }
+  Job job=session.getForegroundJob();
+  if (job != null) {
+    job.interrupt();
+  }
+  SharingResultDistributor resultDistributor=session.getResultDistributor();
+  if (resultDistributor != null) {
+    resultDistributor.close();
+  }
+  return sessions.remove(sessionId);
+}

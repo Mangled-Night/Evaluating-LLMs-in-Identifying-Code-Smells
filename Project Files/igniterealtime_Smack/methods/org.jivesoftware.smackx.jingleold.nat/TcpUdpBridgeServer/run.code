@@ -1,0 +1,38 @@
+@Override public void run(){
+  try {
+    OutputStream out=localTcpSocket.getOutputStream();
+    while (true) {
+      byte[] b=new byte[500];
+      DatagramPacket p=new DatagramPacket(b,500);
+      localUdpSocket.receive(p);
+      if (p.getLength() == 0)       continue;
+      LOGGER.fine("UDP Server Received and Sending to TCP Client:" + new String(p.getData(),0,p.getLength(),"UTF-8"));
+      out.write(p.getData(),0,p.getLength());
+      out.flush();
+      LOGGER.fine("Server Flush");
+    }
+  }
+ catch (  IOException e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+}
+@Override public void run(){
+  try {
+    localTcpSocket=serverTcpSocket.accept();
+    process.start();
+    InputStream in=localTcpSocket.getInputStream();
+    InetAddress remoteHost=InetAddress.getByName(remoteUdpHost);
+    while (true) {
+      byte[] b=new byte[500];
+      int s=in.read(b);
+      LOGGER.fine("TCP Server:" + new String(b,0,s,"UTF-8"));
+      DatagramPacket udpPacket=new DatagramPacket(b,s);
+      udpPacket.setAddress(remoteHost);
+      udpPacket.setPort(remoteUdpPort);
+      localUdpSocket.send(udpPacket);
+    }
+  }
+ catch (  IOException e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+}

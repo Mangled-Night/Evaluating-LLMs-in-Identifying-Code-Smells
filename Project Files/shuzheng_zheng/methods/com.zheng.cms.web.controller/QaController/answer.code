@@ -1,0 +1,22 @@
+/** 
+ * 新增回复
+ * @param articleId
+ * @param cmsComment
+ * @param request
+ * @return
+ */
+@RequestMapping(value="/answer/{articleId}",method=RequestMethod.POST) @ResponseBody public Object answer(@PathVariable("articleId") int articleId,CmsComment cmsComment,HttpServletRequest request){
+  CmsSystemExample cmsSystemExample=new CmsSystemExample();
+  cmsSystemExample.createCriteria().andCodeEqualTo(CODE);
+  CmsSystem system=cmsSystemService.selectFirstByExample(cmsSystemExample);
+  long time=System.currentTimeMillis();
+  cmsComment.setCtime(time);
+  cmsComment.setArticleId(articleId);
+  cmsComment.setUserId(USERID);
+  cmsComment.setStatus((byte)1);
+  cmsComment.setIp(RequestUtil.getIpAddr(request));
+  cmsComment.setAgent(request.getHeader("User-Agent"));
+  cmsComment.setSystemId(system.getSystemId());
+  int count=cmsCommentService.insertSelective(cmsComment);
+  return new CmsResult(CmsResultConstant.SUCCESS,count);
+}

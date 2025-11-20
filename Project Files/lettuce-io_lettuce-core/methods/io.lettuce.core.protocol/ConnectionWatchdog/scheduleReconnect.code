@@ -1,0 +1,40 @@
+/** 
+ * Schedule reconnect if channel is not available/not active.
+ */
+public void scheduleReconnect(){
+  logger.debug("{} scheduleReconnect()",logPrefix());
+  if (!isEventLoopGroupActive()) {
+    logger.debug("isEventLoopGroupActive() == false");
+    return;
+  }
+  if (!isListenOnChannelInactive()) {
+    logger.debug("Skip reconnect scheduling, listener disabled");
+    return;
+  }
+  if ((channel == null || !channel.isActive()) && reconnectSchedulerSync.compareAndSet(false,true)) {
+    attempts++;
+    final int attempt=attempts;
+    Duration delay=reconnectDelay.createDelay(attempt);
+    int timeout=(int)delay.toMillis();
+    logger.debug("{} Reconnect attempt {}, delay {}ms",logPrefix(),attempt,timeout);
+    this.reconnectScheduleTimeout=timer.newTimeout(it -> {
+      reconnectScheduleTimeout=null;
+      if (!isEventLoopGroupActive()) {
+        logger.warn("Cannot execute scheduled reconnect timer, reconnect workers are terminated");
+        return;
+      }
+      reconnectWorkers.submit(() -> {
+        ConnectionWatchdog.this.run(attempt,delay);
+        return null;
+      }
+);
+    }
+,timeout,TimeUnit.MILLISECONDS);
+    if (!reconnectSchedulerSync.get()) {
+      reconnectScheduleTimeout=null;
+    }
+  }
+ else {
+    logger.debug("{} Skipping scheduleReconnect() because I have an active channel",logPrefix());
+  }
+}

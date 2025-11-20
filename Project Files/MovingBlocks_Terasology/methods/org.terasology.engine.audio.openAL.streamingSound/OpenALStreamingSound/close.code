@@ -1,0 +1,21 @@
+@Override public void close(){
+  try {
+    GameThread.synch(() -> {
+      OpenALStreamingSound sound=asset.get();
+      if (sound != null) {
+        sound.audioManager.purgeSound(sound);
+      }
+      for (      int buffer : buffers) {
+        if (buffer != 0) {
+          AL10.alDeleteBuffers(buffer);
+        }
+      }
+      OpenALException.checkState("Deleting buffer data");
+      buffers=new int[0];
+    }
+);
+  }
+ catch (  InterruptedException e) {
+    logger.error("Failed to dispose {}",urn,e);
+  }
+}

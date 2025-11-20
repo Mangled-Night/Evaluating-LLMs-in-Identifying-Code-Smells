@@ -1,0 +1,17 @@
+@Override public CompletionStage<Void> initialize(Channel channel){
+  CompletionStage<?> handshake;
+  if (this.requestedProtocolVersion == ProtocolVersion.RESP2) {
+    handshake=initializeResp2(channel);
+    negotiatedProtocolVersion=ProtocolVersion.RESP2;
+  }
+ else   if (this.requestedProtocolVersion == ProtocolVersion.RESP3) {
+    handshake=initializeResp3(channel);
+  }
+ else   if (this.requestedProtocolVersion == null) {
+    handshake=tryHandshakeResp3(channel);
+  }
+ else {
+    handshake=Futures.failed(new RedisConnectionException("Protocol version" + this.requestedProtocolVersion + " not supported"));
+  }
+  return handshake.thenCompose(ignore -> applyPostHandshake(channel,getNegotiatedProtocolVersion()));
+}

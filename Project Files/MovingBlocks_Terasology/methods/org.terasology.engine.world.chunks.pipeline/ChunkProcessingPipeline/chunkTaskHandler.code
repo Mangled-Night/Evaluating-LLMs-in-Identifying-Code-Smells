@@ -1,0 +1,21 @@
+/** 
+ * Reactor thread. Handles all ChunkTask dependency logic and running.
+ */
+private void chunkTaskHandler(){
+  try {
+    while (!executor.isTerminated()) {
+      PositionFuture<Chunk> future=(PositionFuture<Chunk>)chunkProcessor.take();
+      ChunkProcessingInfo chunkProcessingInfo=chunkProcessingInfoMap.get(future.getPosition());
+      if (chunkProcessingInfo == null) {
+        continue;
+      }
+      onStageDone(future,chunkProcessingInfo);
+    }
+  }
+ catch (  InterruptedException e) {
+    if (!executor.isTerminated()) {
+      logger.error("Reactor thread was interrupted",e);
+    }
+    reactor.interrupt();
+  }
+}

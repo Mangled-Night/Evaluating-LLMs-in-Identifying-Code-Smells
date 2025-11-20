@@ -1,0 +1,61 @@
+@SuppressWarnings("ReferenceEquality") @Override public ByteBuffer input(ByteBuffer inputData) throws SSLException {
+  ByteBuffer accumulatedData;
+  if (pendingInputData == null) {
+    accumulatedData=inputData;
+  }
+ else {
+    assert pendingInputData != inputData;
+    int accumulatedDataBytes=pendingInputData.remaining() + inputData.remaining();
+    accumulatedData=ByteBuffer.allocate(accumulatedDataBytes);
+    accumulatedData.put(pendingInputData).put(inputData).flip();
+    pendingInputData=null;
+  }
+  peerAppData.clear();
+  while (true) {
+    SSLEngineResult result;
+    try {
+      result=engine.unwrap(accumulatedData,peerAppData);
+    }
+ catch (    SSLException e) {
+      handleSslException(e);
+      throw e;
+    }
+    debugLogSslEngineResult("unwrap",result);
+    SSLEngineResult.Status engineResultStatus=result.getStatus();
+    if (engineResultStatus == SSLEngineResult.Status.OK) {
+      unwrapInBytes+=result.bytesConsumed();
+      unwrapOutBytes+=result.bytesProduced();
+      SSLEngineResult.HandshakeStatus handshakeStatus=handleHandshakeStatus(result);
+switch (handshakeStatus) {
+case NEED_TASK:
+        addAsPendingInputData(accumulatedData);
+      return null;
+case NEED_UNWRAP:
+    continue;
+case NEED_WRAP:
+  addAsPendingInputData(accumulatedData);
+connectionInternal.asyncGo(() -> callChannelSelectedCallback(false,true));
+return null;
+default :
+break;
+}
+}
+switch (engineResultStatus) {
+case OK:
+if (accumulatedData.hasRemaining()) {
+continue;
+}
+return peerAppData;
+case CLOSED:
+return null;
+case BUFFER_UNDERFLOW:
+addAsPendingInputData(accumulatedData);
+return null;
+case BUFFER_OVERFLOW:
+int applicationBufferSize=engine.getSession().getApplicationBufferSize();
+assert peerAppData.remaining() < applicationBufferSize;
+peerAppData=ByteBuffer.allocate(applicationBufferSize);
+continue;
+}
+}
+}

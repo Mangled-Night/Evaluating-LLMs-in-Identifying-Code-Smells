@@ -1,0 +1,15 @@
+public class ExplicitMessageEncryptionProviderTest {
+  private static final String OX_EME_ELEMENT="<encryption xmlns='urn:xmpp:eme:0' namespace='urn:xmpp:openpgp:0'/>";
+  private static final String UNKNOWN_NAMESPACE="urn:xmpp:foobar:0";
+  private static final String UNKNOWN_NAME="Foo Bar";
+  private static final String UNKNOWN_EME_ELEMENT="<encryption xmlns='urn:xmpp:eme:0' namespace='" + UNKNOWN_NAMESPACE + "' name='"+ UNKNOWN_NAME+ "'/>";
+  @ParameterizedTest @EnumSource(SmackTestUtil.XmlPullParserKind.class) public void testParseOxEmeElement(  SmackTestUtil.XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+    ExplicitMessageEncryptionElement eme=SmackTestUtil.parse(OX_EME_ELEMENT,ExplicitMessageEncryptionProvider.class,parserKind);
+    assertEquals(ExplicitMessageEncryptionProtocol.openpgpV0,eme.getProtocol());
+  }
+  @ParameterizedTest @EnumSource(SmackTestUtil.XmlPullParserKind.class) public void testParseUnknownEmeElement(  SmackTestUtil.XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+    ExplicitMessageEncryptionElement eme=SmackTestUtil.parse(UNKNOWN_EME_ELEMENT,ExplicitMessageEncryptionProvider.class,parserKind);
+    assertEquals(UNKNOWN_NAMESPACE,eme.getEncryptionNamespace());
+    assertEquals(UNKNOWN_NAME,eme.getName());
+  }
+}

@@ -1,0 +1,35 @@
+/** 
+ * Create a proxy for the wrapped object allowing to typesafely invoke methods on it using a custom interface.
+ * @param proxyType The interface type that is implemented by the proxy.
+ * @return a proxy for the wrapped object
+ */
+@SuppressWarnings("unchecked") public <P>P proxy(final Class<P> proxyType){
+  final boolean isMap=(object instanceof Map);
+  final InvocationHandler handler=new InvocationHandler(){
+    @Override @SuppressWarnings("null") public Object invoke(    Object proxy,    Method method,    Object[] args){
+      String name=method.getName();
+      try {
+        return reflect(object).method(name,args).get();
+      }
+ catch (      ReflectException e) {
+        if (isMap) {
+          Map<String,Object> map=(Map<String,Object>)object;
+          int length=(args == null ? 0 : args.length);
+          if (length == 0 && name.startsWith("get")) {
+            return map.get(property(name.substring(3)));
+          }
+ else           if (length == 0 && name.startsWith("is")) {
+            return map.get(property(name.substring(2)));
+          }
+ else           if (length == 1 && name.startsWith("set")) {
+            map.put(property(name.substring(3)),args[0]);
+            return null;
+          }
+        }
+        throw e;
+      }
+    }
+  }
+;
+  return (P)Proxy.newProxyInstance(proxyType.getClassLoader(),new Class[]{proxyType},handler);
+}

@@ -1,0 +1,27 @@
+private static List<RowDataPacket> getRows(ServerConnection c){
+  List<RowDataPacket> rows=new LinkedList<RowDataPacket>();
+  MycatConfig config=MycatServer.getInstance().getConfig();
+  MycatCluster cluster=config.getCluster();
+  Map<String,SchemaConfig> schemas=config.getSchemas();
+  SchemaConfig schema=(c.getSchema() == null) ? null : schemas.get(c.getSchema());
+  if (schema == null) {
+    Map<String,MycatNode> nodes=cluster.getNodes();
+    for (    MycatNode n : nodes.values()) {
+      if (n != null && n.isOnline()) {
+        rows.add(getRow(n,c.getCharset()));
+      }
+    }
+  }
+ else {
+    Map<String,MycatNode> nodes=cluster.getNodes();
+    for (    MycatNode n : nodes.values()) {
+      if (n != null && n.isOnline()) {
+        rows.add(getRow(n,c.getCharset()));
+      }
+    }
+  }
+  if (rows.size() == 0) {
+    alarm.error(Alarms.CLUSTER_EMPTY + c.toString());
+  }
+  return rows;
+}

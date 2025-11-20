@@ -1,0 +1,30 @@
+public class RandomPaddingAffixElement implements NamedElement, AffixElement {
+  private static final int minPaddingLength=1;
+  private static final int maxPaddingLength=200;
+  public static final String ELEMENT="rpad";
+  private final String padding;
+  public RandomPaddingAffixElement(  String padding){
+    this.padding=StringUtils.escapeForXmlText(StringUtils.requireNotNullNorEmpty(padding,"Value of 'rpad' MUST NOT be null nor empty.")).toString();
+  }
+  public RandomPaddingAffixElement(){
+    this(StringUtils.randomString(randomPaddingLength(),new SecureRandom()));
+  }
+  private static int randomPaddingLength(){
+    return minPaddingLength + RandomUtil.nextSecureRandomInt(maxPaddingLength - minPaddingLength);
+  }
+  public String getPadding(){
+    return padding;
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public XmlStringBuilder toXML(  XmlEnvironment xmlEnvironment){
+    return new XmlStringBuilder(this).rightAngleBracket().append(getPadding()).closeElement(this);
+  }
+  @Override public boolean equals(  Object obj){
+    return EqualsUtil.equals(this,obj,(e,o) -> e.append(getPadding(),o.getPadding()));
+  }
+  @Override public int hashCode(){
+    return getPadding().hashCode();
+  }
+}

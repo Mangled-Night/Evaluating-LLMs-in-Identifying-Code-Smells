@@ -1,0 +1,22 @@
+/** 
+ * Constructs a new  {@code TestEventReceiver} and registers it to listen for events.<p> The following signature of a  {@code TestEventReceiver} is equivalent to the event handler below:<pre> TestEventReceiver receiver = new TestEventReceiver&lt;&gt;(context, MyEvent.class, (event, entity) -&gt; { // do something with the event or entity }, MyComponent.class); // ... corresponds to &#64;ReceiveEvent(components = {MyComponent.class}) public void handler(MyEvent event, EntityRef entity) { // do something with the event or entity } </pre>
+ * @param context the context object for the test; this should probably be obtained through {@link ModuleTestingHelper#createClient()} and is needed so we can obtain an {@link EventSystem} instance toregister our event handler.
+ * @param eventClass the {@link Event} subclass to listen for
+ * @param handler an optional {@link BiConsumer} fired when events are received
+ * @param componentTypes list of component types that need to be present on the entity receiving the event
+ */
+public TestEventReceiver(Context context,Class<T> eventClass,BiConsumer<T,EntityRef> handler,Class<? extends Component>... componentTypes){
+  this.eventClass=eventClass;
+  this.handler=handler;
+  eventSystem=context.get(EventSystem.class);
+  Class<? extends Component>[] components=Lists.asList(EntityInfoComponent.class,componentTypes).toArray(new Class[componentTypes.length + 1]);
+  eventSystem.registerEventReceiver(this,eventClass,components);
+}
+/** 
+ * @see #TestEventReceiver(Context,Class,BiConsumer,Class[])
+ */
+public TestEventReceiver(Context context,Class<T> eventClass){
+  this(context,eventClass,(event,entity) -> {
+  }
+);
+}

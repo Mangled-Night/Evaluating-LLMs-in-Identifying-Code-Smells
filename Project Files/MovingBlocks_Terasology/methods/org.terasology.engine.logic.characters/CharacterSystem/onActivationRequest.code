@@ -1,0 +1,17 @@
+@NetFilterEvent(netFilter=RegisterMode.AUTHORITY) @ReceiveEvent(components={CharacterComponent.class,LocationComponent.class}) public void onActivationRequest(ActivationRequest event,EntityRef character){
+  if (isPredictionOfEventCorrect(character,event)) {
+    OnItemUseEvent onItemUseEvent=new OnItemUseEvent();
+    event.getInstigator().send(onItemUseEvent);
+    if (!onItemUseEvent.isConsumed()) {
+      if (event.getUsedOwnedEntity().exists()) {
+        event.getUsedOwnedEntity().send(new ActivateEvent(event));
+      }
+ else {
+        event.getTarget().send(new ActivateEvent(event));
+      }
+    }
+  }
+ else {
+    character.send(new ActivationRequestDenied(event.getActivationId()));
+  }
+}

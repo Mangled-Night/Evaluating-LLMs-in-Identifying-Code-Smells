@@ -1,0 +1,20 @@
+/** 
+ * Invoking  {@link Socks5BytestreamManager#establishSession(org.jxmpp.jid.Jid)} should throw an exceptionif the given target does not support SOCKS5 Bytestream.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws IOException if an I/O error occurred.
+ */
+@Test public void shouldFailIfTargetDoesNotSupportSocks5() throws XMPPException, SmackException, InterruptedException, IOException {
+  final Protocol protocol=new Protocol();
+  final XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+  Socks5BytestreamManager byteStreamManager=Socks5BytestreamManager.getBytestreamManager(connection);
+  FeatureNotSupportedException e=assertThrows(FeatureNotSupportedException.class,() -> {
+    DiscoverInfo discoverInfo=DiscoverInfo.builder("disco-1").build();
+    protocol.addResponse(discoverInfo);
+    byteStreamManager.establishSession(targetJID);
+  }
+);
+  assertTrue(e.getFeature().equals("SOCKS5 Bytestream"));
+  assertTrue(e.getJid().equals(targetJID));
+}

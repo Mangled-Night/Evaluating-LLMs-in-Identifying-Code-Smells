@@ -1,0 +1,14 @@
+@ApiOperation(value="用户角色") @RequiresPermissions("upms:user:role") @RequestMapping(value="/role/{id}",method=RequestMethod.GET) public String role(@PathVariable("id") int id,ModelMap modelMap){
+  List<UpmsRole> upmsRoles=upmsRoleService.selectByExample(new UpmsRoleExample());
+  UpmsUserRoleExample upmsUserRoleExample=new UpmsUserRoleExample();
+  upmsUserRoleExample.createCriteria().andUserIdEqualTo(id);
+  List<UpmsUserRole> upmsUserRoles=upmsUserRoleService.selectByExample(upmsUserRoleExample);
+  modelMap.put("upmsRoles",upmsRoles);
+  modelMap.put("upmsUserRoles",upmsUserRoles);
+  return "/manage/user/role.jsp";
+}
+@ApiOperation(value="用户角色") @RequiresPermissions("upms:user:role") @RequestMapping(value="/role/{id}",method=RequestMethod.POST) @ResponseBody public Object role(@PathVariable("id") int id,HttpServletRequest request){
+  String[] roleIds=request.getParameterValues("roleId");
+  upmsUserRoleService.role(roleIds,id);
+  return new UpmsResult(UpmsResultConstant.SUCCESS,"");
+}

@@ -1,0 +1,21 @@
+@Test void shouldHandleIncompleteResponses() throws Exception {
+  Command<String,String,List<String>> lrangeCommand=new Command<>(CommandType.LRANGE,new ValueListOutput<>(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).addKey("lrangeKey").add(0).add(1));
+  Command<String,String,List<KeyValue<String,String>>> hmgetCommand=new Command<>(CommandType.HMGET,new KeyValueListOutput<>(StringCodec.UTF8,Arrays.asList("KEY1","KEY2","KEY3")),new CommandArgs<>(StringCodec.UTF8).addKeys("hmgetKey","KEY1","KEY2","KEY3"));
+  ChannelPromise channelPromise=new DefaultChannelPromise(channel,ImmediateEventExecutor.INSTANCE);
+  channelPromise.setSuccess();
+  sut.channelRegistered(context);
+  sut.channelActive(context);
+  sut.write(context,lrangeCommand,channelPromise);
+  assertThat(stack).hasSize(1);
+  sut.channelRead(context,Unpooled.wrappedBuffer(("*4\r\n" + "$3\r\nONE\r\n" + "$4\r\n>TW").getBytes()));
+  assertThat(stack).hasSize(1);
+  sut.channelRead(context,Unpooled.wrappedBuffer(("O\r\n" + "$5\r\nTHREE\r\n" + "$4\r\nFOUR\r\n").getBytes()));
+  assertThat(stack).isEmpty();
+  assertThat(lrangeCommand.get()).isNotNull();
+  assertThat(lrangeCommand.get()).hasSize(4);
+  sut.write(context,hmgetCommand,channelPromise);
+  sut.channelRead(context,Unpooled.wrappedBuffer("*3\r\n$4\r\nVAL1\r\n$4\r\nVAL2\r\n$4\r\nVAL3\r\n".getBytes()));
+  assertThat(stack.isEmpty()).isTrue();
+  assertThat(hmgetCommand.get()).isNotNull();
+  assertThat(hmgetCommand.get()).hasSize(3);
+}

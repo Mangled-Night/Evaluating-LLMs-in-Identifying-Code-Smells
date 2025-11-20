@@ -1,0 +1,42 @@
+XmppConnectionManager(SmackIntegrationTestFramework sinttestFramework) throws SmackException, IOException, XMPPException, InterruptedException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+synchronized (CONNECTION_DESCRIPTORS) {
+    connectionDescriptors=CONNECTION_DESCRIPTORS.clone();
+    nicknameConnectionDescriptors=new HashMap<>(NICKNAME_CONNECTION_DESCRIPTORS);
+  }
+  this.sinttestFramework=sinttestFramework;
+  this.sinttestConfiguration=sinttestFramework.config;
+  this.testRunId=sinttestFramework.testRunResult.testRunId;
+  String configuredDefaultConnectionNickname=sinttestConfiguration.defaultConnectionNickname;
+  if (configuredDefaultConnectionNickname != null) {
+    defaultConnectionDescriptor=nicknameConnectionDescriptors.get(configuredDefaultConnectionNickname);
+    if (defaultConnectionDescriptor == null) {
+      throw new IllegalArgumentException("Could not find a connection descriptor for connection nickname '" + configuredDefaultConnectionNickname + "'");
+    }
+  }
+ else {
+    defaultConnectionDescriptor=DEFAULT_CONNECTION_DESCRIPTOR;
+  }
+switch (sinttestConfiguration.accountRegistration) {
+case serviceAdministration:
+case inBandRegistration:
+    accountRegistrationConnection=defaultConnectionDescriptor.construct(sinttestConfiguration);
+  accountRegistrationConnection.connect();
+accountRegistrationConnection.login(sinttestConfiguration.adminAccountUsername,sinttestConfiguration.adminAccountPassword);
+if (sinttestConfiguration.accountRegistration == AccountRegistration.inBandRegistration) {
+adminManager=null;
+accountManager=AccountManager.getInstance(accountRegistrationConnection);
+}
+ else {
+adminManager=ServiceAdministrationManager.getInstanceFor(accountRegistrationConnection);
+accountManager=null;
+}
+break;
+case disabled:
+accountRegistrationConnection=null;
+adminManager=null;
+accountManager=null;
+break;
+default :
+throw new AssertionError();
+}
+}

@@ -1,0 +1,20 @@
+/** 
+ * Retrieve a  {@link StatefulRedisConnection} by the intent. {@link ConnectionIntent#WRITE} intentions use the masterconnection,  {@link ConnectionIntent#READ} intentions lookup one or more read candidates using the {@link ReadFrom}setting.
+ * @param intent command intent
+ * @return the connection.
+ */
+public StatefulRedisConnection<K,V> getConnection(ConnectionIntent intent){
+  if (debugEnabled) {
+    logger.debug("getConnection(" + intent + ")");
+  }
+  try {
+    return getConnectionAsync(intent).get();
+  }
+ catch (  Exception e) {
+    throw Exceptions.bubble(e);
+  }
+}
+protected CompletableFuture<StatefulRedisConnection<K,V>> getConnection(RedisNodeDescription redisNodeDescription){
+  RedisURI uri=redisNodeDescription.getUri();
+  return connectionProvider.getConnection(toConnectionKey(uri)).toCompletableFuture();
+}

@@ -1,0 +1,51 @@
+private Process createCommandProcess(Command command,ListIterator<CliToken> tokens,int jobId,Term term,ResultDistributor resultDistributor) throws IOException {
+  List<CliToken> remaining=new ArrayList<CliToken>();
+  List<CliToken> pipelineTokens=new ArrayList<CliToken>();
+  boolean isPipeline=false;
+  RedirectHandler redirectHandler=null;
+  List<Function<String,String>> stdoutHandlerChain=new ArrayList<Function<String,String>>();
+  String cacheLocation=null;
+  while (tokens.hasNext()) {
+    CliToken remainingToken=tokens.next();
+    if (remainingToken.isText()) {
+      String tokenValue=remainingToken.value();
+      if ("|".equals(tokenValue)) {
+        isPipeline=true;
+        injectHandler(stdoutHandlerChain,pipelineTokens);
+        continue;
+      }
+ else       if (">>".equals(tokenValue) || ">".equals(tokenValue)) {
+        String name=getRedirectFileName(tokens);
+        if (name == null) {
+          name=LogUtil.cacheDir() + File.separator + Constants.PID+ File.separator+ jobId;
+          cacheLocation=name;
+          if (getRedirectJobCount() == 8) {
+            throw new IllegalStateException("The amount of async command that saving result to file can't > 8");
+          }
+        }
+        redirectHandler=new RedirectHandler(name,">>".equals(tokenValue));
+        break;
+      }
+    }
+    if (isPipeline) {
+      pipelineTokens.add(remainingToken);
+    }
+ else {
+      remaining.add(remainingToken);
+    }
+  }
+  injectHandler(stdoutHandlerChain,pipelineTokens);
+  if (redirectHandler != null) {
+    stdoutHandlerChain.add(redirectHandler);
+  }
+ else {
+    stdoutHandlerChain.add(new TermHandler(term));
+    if (GlobalOptions.isSaveResult) {
+      stdoutHandlerChain.add(new RedirectHandler());
+    }
+  }
+  ProcessOutput ProcessOutput=new ProcessOutput(stdoutHandlerChain,cacheLocation,term);
+  ProcessImpl process=new ProcessImpl(command,remaining,command.processHandler(),ProcessOutput,resultDistributor);
+  process.setTty(term);
+  return process;
+}

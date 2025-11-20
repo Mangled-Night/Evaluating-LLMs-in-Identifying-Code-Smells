@@ -1,0 +1,33 @@
+private void populateNullLayout(Binding<T> binding,ColumnLayout layout,UILabel nameWidget){
+  if (MODIFY_LABEL.equals(nameWidget.getText())) {
+    nameWidget.setText(NULL_LABEL);
+  }
+  List<Constructor<T>> constructors=Arrays.stream(type.getRawType().getConstructors()).map(constructor -> (Constructor<T>)constructor).collect(Collectors.toList());
+  if (constructors.isEmpty()) {
+    UIBox box=buildErrorWidget("No accessible constructors found");
+    layout.addWidget(box);
+    return;
+  }
+  ColumnLayout parameterLayout=createDefaultLayout();
+  UIButton createInstanceButton=new UIButton();
+  createInstanceButton.setText("Create Instance");
+  UIDropdownScrollable<Constructor<T>> constructorSelection=new UIDropdownScrollable<>();
+  Binding<Constructor<T>> selectedConstructor=new NotifyingBinding<Constructor<T>>(constructors.get(0)){
+    @Override protected void onSet(){
+      populateConstructorParameters(binding,parameterLayout,createInstanceButton,this);
+    }
+  }
+;
+  constructorSelection.setOptions(constructors);
+  constructorSelection.bindSelection(selectedConstructor);
+  constructorSelection.setOptionRenderer(new StringTextRenderer<Constructor<T>>(){
+    @Override public String getString(    Constructor<T> value){
+      return ReflectionUtil.resolvedMethodToString(type.getType(),value,true);
+    }
+  }
+);
+  constructorSelection.setTooltip("Select the constructor to use to create the new object");
+  layout.addWidget(constructorSelection);
+  layout.addWidget(parameterLayout);
+  layout.addWidget(createInstanceButton);
+}

@@ -1,0 +1,30 @@
+private void invokeDelayedOperations(long currentWorldTime){
+  List<EntityRef> operationsToInvoke=new LinkedList<>();
+  Iterator<Long> scheduledOperationsIterator=delayedOperationsSortedByTime.keySet().iterator();
+  long processedTime;
+  while (scheduledOperationsIterator.hasNext()) {
+    processedTime=scheduledOperationsIterator.next();
+    if (processedTime > currentWorldTime) {
+      break;
+    }
+    operationsToInvoke.addAll(delayedOperationsSortedByTime.get(processedTime));
+    scheduledOperationsIterator.remove();
+  }
+  operationsToInvoke.stream().filter(EntityRef::exists).forEach(delayedEntity -> {
+    final DelayedActionComponent delayedActions=delayedEntity.getComponent(DelayedActionComponent.class);
+    if (delayedActions != null) {
+      final Set<String> actionIds=delayedActions.removeActionsUpTo(currentWorldTime);
+      saveOrRemoveComponent(delayedEntity,delayedActions);
+      if (!delayedActions.isEmpty()) {
+        delayedOperationsSortedByTime.put(delayedActions.getLowestWakeUp(),delayedEntity);
+      }
+      for (      String actionId : actionIds) {
+        delayedEntity.send(new DelayedActionTriggeredEvent(actionId));
+      }
+    }
+ else {
+      logger.error("ERROR: This entity is missing a DelayedActionComponent: {}. " + "So skipping delayed actions for this entity.",delayedEntity);
+    }
+  }
+);
+}

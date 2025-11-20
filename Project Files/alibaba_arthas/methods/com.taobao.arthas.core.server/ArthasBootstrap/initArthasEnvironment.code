@@ -1,0 +1,21 @@
+private void initArthasEnvironment(Map<String,String> argsMap) throws IOException {
+  if (arthasEnvironment == null) {
+    arthasEnvironment=new ArthasEnvironment();
+  }
+  Map<String,Object> copyMap;
+  if (argsMap != null) {
+    copyMap=new HashMap<String,Object>(argsMap);
+    if (!copyMap.containsKey(ARTHAS_HOME_PROPERTY)) {
+      copyMap.put(ARTHAS_HOME_PROPERTY,arthasHome());
+    }
+  }
+ else {
+    copyMap=new HashMap<String,Object>(1);
+    copyMap.put(ARTHAS_HOME_PROPERTY,arthasHome());
+  }
+  MapPropertySource mapPropertySource=new MapPropertySource("args",copyMap);
+  arthasEnvironment.addFirst(mapPropertySource);
+  tryToLoadArthasProperties();
+  configure=new Configure();
+  BinderUtils.inject(arthasEnvironment,configure);
+}

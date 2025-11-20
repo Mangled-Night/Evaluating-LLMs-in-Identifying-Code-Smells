@@ -1,0 +1,28 @@
+@Override public void processStanza(Stanza packet) throws NotConnectedException {
+  DeliveryReceipt dr=DeliveryReceipt.from((Message)packet);
+  for (  ReceiptReceivedListener l : receiptReceivedListeners) {
+    l.onReceiptReceived(packet.getFrom(),packet.getTo(),dr.getId(),packet);
+  }
+}
+@Override public void processStanza(Stanza packet) throws NotConnectedException, InterruptedException {
+  final Jid from=packet.getFrom();
+  final XMPPConnection connection=connection();
+switch (autoReceiptMode) {
+case disabled:
+    return;
+case ifIsSubscribed:
+  if (!Roster.getInstanceFor(connection).isSubscribedToMyPresence(from)) {
+    return;
+  }
+break;
+case always:
+break;
+}
+final Message messageWithReceiptRequest=(Message)packet;
+Message ack=receiptMessageFor(messageWithReceiptRequest);
+if (ack == null) {
+LOGGER.warning("Received message stanza with receipt request from '" + from + "' without a stanza ID set. Message: "+ messageWithReceiptRequest);
+return;
+}
+connection.sendStanza(ack);
+}

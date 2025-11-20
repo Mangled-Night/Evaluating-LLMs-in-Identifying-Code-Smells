@@ -1,0 +1,39 @@
+public static String execReturnString(List<String> cmd){
+  Process process=null;
+  try {
+    ProcessBuilder pb=new ProcessBuilder(cmd);
+    pb.redirectErrorStream(true);
+    process=pb.start();
+    StreamGobble inputGobble=new StreamGobble(process.getInputStream(),"INFO");
+    inputGobble.start();
+    new StreamGobble(process.getErrorStream(),"ERROR").start();
+    process.waitFor();
+    return inputGobble.getResult();
+  }
+ catch (  Throwable t) {
+    LOGGER.error(t.getMessage());
+  }
+ finally {
+    if (process != null)     process.destroy();
+  }
+  return null;
+}
+public static String execReturnString(String cmd){
+  Process process=null;
+  try {
+    Runtime runtime=Runtime.getRuntime();
+    process=runtime.exec(cmd);
+    StreamGobble inputGobble=new StreamGobble(process.getInputStream(),"INFO");
+    inputGobble.start();
+    new StreamGobble(process.getErrorStream(),"ERROR").start();
+    process.waitFor();
+    return inputGobble.getResult();
+  }
+ catch (  Throwable t) {
+    LOGGER.error(t.getMessage());
+  }
+ finally {
+    if (process != null)     process.destroy();
+  }
+  return null;
+}

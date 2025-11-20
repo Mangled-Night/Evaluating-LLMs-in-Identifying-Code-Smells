@@ -1,0 +1,29 @@
+private static boolean initializeJOpenVR(){
+  hmdErrorStore=IntBuffer.allocate(1);
+  vrSystem=null;
+  JOpenVRLibrary.VR_InitInternal(hmdErrorStore,JOpenVRLibrary.EVRApplicationType.EVRApplicationType_VRApplication_Scene);
+  if (hmdErrorStore.get(0) == 0) {
+    vrSystem=new VR_IVRSystem_FnTable(JOpenVRLibrary.VR_GetGenericInterface(JOpenVRLibrary.IVRSystem_Version,hmdErrorStore));
+  }
+  if (vrSystem == null || hmdErrorStore.get(0) != 0) {
+    String errorString=jopenvr.JOpenVRLibrary.VR_GetVRInitErrorAsEnglishDescription(hmdErrorStore.get(0)).getString(0);
+    logger.info("vrSystem initialization failed:" + errorString);
+    return false;
+  }
+ else {
+    vrSystem.setAutoSynch(false);
+    vrSystem.read();
+    logger.info("OpenVR initialized & VR connected.");
+    hmdTrackedDevicePoseReference=new TrackedDevicePose_t.ByReference();
+    hmdTrackedDevicePoses=(TrackedDevicePose_t[])hmdTrackedDevicePoseReference.toArray(JOpenVRLibrary.k_unMaxTrackedDeviceCount);
+    hmdTrackedDevicePoseReference.setAutoRead(false);
+    hmdTrackedDevicePoseReference.setAutoWrite(false);
+    hmdTrackedDevicePoseReference.setAutoSynch(false);
+    for (int i=0; i < JOpenVRLibrary.k_unMaxTrackedDeviceCount; i++) {
+      hmdTrackedDevicePoses[i].setAutoRead(false);
+      hmdTrackedDevicePoses[i].setAutoWrite(false);
+      hmdTrackedDevicePoses[i].setAutoSynch(false);
+    }
+  }
+  return true;
+}

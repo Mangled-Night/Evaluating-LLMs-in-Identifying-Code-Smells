@@ -1,0 +1,34 @@
+private void acquire0(T object,CompletableFuture<T> res){
+  if (object != null) {
+    idleCount.decrementAndGet();
+    if (isTestOnAcquire()) {
+      factory.validate(object).whenComplete((state,throwable) -> {
+        if (!isPoolActive()) {
+          res.completeExceptionally(POOL_SHUTDOWN);
+          return;
+        }
+        if (state != null && state) {
+          completeAcquire(res,object);
+          return;
+        }
+        destroy0(object).whenComplete((aVoid,th) -> makeObject0(res));
+      }
+);
+      return;
+    }
+    if (isPoolActive()) {
+      completeAcquire(res,object);
+    }
+ else {
+      res.completeExceptionally(POOL_SHUTDOWN);
+    }
+    createIdle();
+    return;
+  }
+  long objects=(long)(getObjectCount() + getCreationInProgress());
+  if ((long)getActualMaxTotal() >= (objects + 1)) {
+    makeObject0(res);
+    return;
+  }
+  res.completeExceptionally(POOL_EXHAUSTED);
+}

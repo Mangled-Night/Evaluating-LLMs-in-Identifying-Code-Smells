@@ -1,0 +1,14 @@
+public TermImpl(TtyConnection conn){
+  this(com.taobao.arthas.core.shell.term.impl.Helper.loadKeymap(),conn);
+}
+public TermImpl(Keymap keymap,TtyConnection conn){
+  this.conn=conn;
+  readline=new Readline(keymap);
+  readline.setHistory(FileUtils.loadCommandHistory(new File(Constants.CMD_HISTORY_FILE)));
+  for (  Function function : readlineFunctions) {
+    readline.addFunction(function);
+  }
+  echoHandler=new DefaultTermStdinHandler(this);
+  conn.setStdinHandler(echoHandler);
+  conn.setEventHandler(new EventHandler(this));
+}

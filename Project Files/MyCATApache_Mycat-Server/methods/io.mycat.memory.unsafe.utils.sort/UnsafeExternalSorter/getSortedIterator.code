@@ -1,0 +1,22 @@
+/** 
+ * SpillableIterator是一个支持内存+外存排序的迭代器 Returns a sorted iterator. It is the caller's responsibility to call `cleanupResources()` after consuming this iterator.
+ */
+public UnsafeSorterIterator getSortedIterator() throws IOException {
+  assert (recordComparator != null);
+  if (spillWriters.isEmpty()) {
+    assert (inMemSorter != null);
+    readingIterator=new SpillableIterator(inMemSorter.getSortedIterator());
+    return readingIterator;
+  }
+ else {
+    final UnsafeSorterSpillMerger spillMerger=new UnsafeSorterSpillMerger(recordComparator,prefixComparator,spillWriters.size());
+    for (    UnsafeSorterSpillWriter spillWriter : spillWriters) {
+      spillMerger.addSpillIfNotEmpty(spillWriter.getReader(serializerManager));
+    }
+    if (inMemSorter != null) {
+      readingIterator=new SpillableIterator(inMemSorter.getSortedIterator());
+      spillMerger.addSpillIfNotEmpty(readingIterator);
+    }
+    return spillMerger.getSortedIterator();
+  }
+}

@@ -1,0 +1,40 @@
+static class Call implements Runnable {
+  private Request request;
+  private ResponseCallback callback;
+  public Call(  Request request,  ResponseCallback callback){
+    this.request=request;
+    this.callback=callback;
+  }
+  @Override public void run(){
+    HttpURLConnection conn=null;
+    try {
+      conn=getConnection(request);
+      int responseCode=conn.getResponseCode();
+      if (responseCode == 200) {
+        InputStream is=conn.getInputStream();
+        callback.onResponse(new Response(conn.getHeaderFields(),is));
+        is.close();
+      }
+ else       if (responseCode == 301 || responseCode == 302) {
+        String location=conn.getHeaderField("Location");
+        call(request,callback);
+      }
+ else {
+        String errorMsg=null;
+        InputStream es=conn.getErrorStream();
+        if (es != null) {
+          errorMsg=is2String(es,"utf-8");
+        }
+        callback.onFailed(new NetworkErrorException("error code: " + responseCode + (isSpace(errorMsg) ? "" : ("\n" + "error message: " + errorMsg))));
+      }
+    }
+ catch (    IOException e) {
+      callback.onFailed(e);
+    }
+ finally {
+      if (conn != null) {
+        conn.disconnect();
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+private Path modulePathFromMetadataJarUrl(URL jarUrl){
+  checkArgument(jarUrl.getProtocol().equals("jar"),"Not a jar URL: %s",jarUrl);
+  URL fileUrl;
+  try {
+    JarURLConnection connection=(JarURLConnection)jarUrl.openConnection();
+    fileUrl=connection.getJarFileURL();
+  }
+ catch (  IOException e) {
+    throw new RuntimeException("Failed to get file from " + jarUrl,e);
+  }
+  Path path=fromUrl(fileUrl);
+  Path relativePathFromModuleRoot=Paths.get(getDefaultLibsSubpath());
+  Path jarDirectory=path.getParent();
+  return findModuleRoot(relativePathFromModuleRoot,jarDirectory).orElse(path);
+}

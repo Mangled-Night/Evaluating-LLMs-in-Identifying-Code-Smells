@@ -1,0 +1,23 @@
+@Override public CompletableFuture<Void> release(T object){
+  if (!all.contains(object)) {
+    return Futures.failed(NOT_PART_OF_POOL);
+  }
+  if (idleCount.get() >= getActualMaxIdle()) {
+    return destroy0(object);
+  }
+  if (isTestOnRelease()) {
+    CompletableFuture<Boolean> valid=factory.validate(object);
+    CompletableFuture<Void> res=new CompletableFuture<>();
+    valid.whenComplete((state1,throwable) -> {
+      if (state1 != null && state1) {
+        return0(object).whenComplete((x,y) -> res.complete(null));
+      }
+ else {
+        destroy0(object).whenComplete((x,y) -> res.complete(null));
+      }
+    }
+);
+    return res;
+  }
+  return return0(object);
+}

@@ -1,0 +1,31 @@
+/** 
+ * Check when a client set a new active list.
+ */
+public void testCreateActiveList(){
+  try {
+    String listName="testCreateActiveList";
+    PrivacyListManager privacyManager=PrivacyListManager.getInstanceFor(getConnection(0));
+    PrivacyClient client=new PrivacyClient(privacyManager);
+    privacyManager.addListener(client);
+    ArrayList<PrivacyItem> items=new ArrayList<PrivacyItem>();
+    PrivacyItem item=new PrivacyItem(PrivacyItem.Type.jid.name(),true,1);
+    item.setValue(getConnection(0).getUser());
+    items.add(item);
+    privacyManager.createPrivacyList(listName,items);
+    Thread.sleep(500);
+    privacyManager.setActiveListName(listName);
+    Thread.sleep(500);
+    assertEquals(listName,privacyManager.getActiveList().toString());
+    List<PrivacyItem> privacyItems=privacyManager.getPrivacyList(listName).getItems();
+    assertEquals(1,privacyItems.size());
+    PrivacyItem receivedItem=privacyItems.get(0);
+    assertEquals(1,receivedItem.getOrder());
+    assertEquals(PrivacyItem.Type.jid,receivedItem.getType());
+    assertEquals(true,receivedItem.isAllow());
+    privacyManager.deletePrivacyList(listName);
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

@@ -1,0 +1,18 @@
+@SuppressWarnings("unchecked") private Object getExecutions(Map<RedisClusterNode,Object> executions,long timeoutNs) throws ExecutionException, InterruptedException {
+  if (executionModel == ExecutionModel.REACTIVE) {
+    Map<RedisClusterNode,CompletionStage<? extends Publisher<?>>> reactiveExecutions=(Map)executions;
+    return new ReactiveExecutionsImpl<>(reactiveExecutions);
+  }
+  Map<RedisClusterNode,CompletionStage<?>> asyncExecutions=(Map)executions;
+  if (executionModel == ExecutionModel.SYNC) {
+    long timeoutToUse=timeoutNs >= 0 ? timeoutNs : timeoutProvider.getTimeoutNs(null);
+    if (!awaitAll(timeoutToUse,TimeUnit.NANOSECONDS,asyncExecutions.values())) {
+      throw createTimeoutException(asyncExecutions,Duration.ofNanos(timeoutToUse));
+    }
+    if (atLeastOneFailed(asyncExecutions)) {
+      throw createExecutionException(asyncExecutions);
+    }
+    return new SyncExecutionsImpl<>(asyncExecutions);
+  }
+  return new AsyncExecutionsImpl<>(asyncExecutions);
+}

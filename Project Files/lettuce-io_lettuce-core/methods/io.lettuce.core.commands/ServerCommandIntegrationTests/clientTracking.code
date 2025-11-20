@@ -1,0 +1,15 @@
+@Test @EnabledOnCommand("ACL") void clientTracking(){
+  redis.clientTracking(TrackingArgs.Builder.enabled(false));
+  redis.clientTracking(TrackingArgs.Builder.enabled());
+  List<PushMessage> pushMessages=new CopyOnWriteArrayList<>();
+  redis.getStatefulConnection().addListener(pushMessages::add);
+  redis.set(key,value);
+  assertThat(pushMessages.isEmpty());
+  redis.get(key);
+  redis.set(key,"value2");
+  Wait.untilEquals(1,pushMessages::size).waitOrTimeout();
+  assertThat(pushMessages).hasSize(1);
+  PushMessage message=pushMessages.get(0);
+  assertThat(message.getType()).isEqualTo("invalidate");
+  assertThat((List)message.getContent(StringCodec.UTF8::decodeKey).get(1)).containsOnly(key);
+}

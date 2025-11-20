@@ -1,0 +1,18 @@
+private void writeToBuffer(Iterable<? extends RedisCommand<?,?,?>> commands){
+  for (  RedisCommand<?,?,?> command : commands) {
+    writeToBuffer(command);
+  }
+}
+protected <C extends RedisCommand<?,?,T>,T>void writeToBuffer(C command){
+  if (debugEnabled) {
+    logger.debug("{} writeToBuffer() buffering command {}",logPrefix(),command);
+  }
+  if (connectionError != null) {
+    if (debugEnabled) {
+      logger.debug("{} writeToBuffer() Completing command {} due to connection error",logPrefix(),command);
+    }
+    command.completeExceptionally(connectionError);
+    return;
+  }
+  commandBuffer.add(command);
+}

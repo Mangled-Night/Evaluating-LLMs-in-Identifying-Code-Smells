@@ -1,0 +1,24 @@
+/** 
+ * Fetch the OpenPGP public key of a  {@code contact}, identified by its OpenPGP  {@code v4_fingerprint}.
+ * @see <a href="https://xmpp.org/extensions/xep-0373.html#discover-pubkey">XEP-0373 §4.3</a>
+ * @param connection XMPP connection
+ * @param contact {@link BareJid} of the contact we want to fetch a key from.
+ * @param v4_fingerprint upper case, hex encoded v4 fingerprint of the contacts key.
+ * @return {@link PubkeyElement} containing the requested public key.
+ * @throws InterruptedException if the thread gets interrupted.A
+ * @throws XMPPException.XMPPErrorException in case of an XMPP protocol error.
+ * @throws PubSubException.NotAPubSubNodeException in case the targeted entity is not a PubSub node.
+ * @throws PubSubException.NotALeafNodeException in case the fetched node is not a {@link LeafNode}.
+ * @throws SmackException.NotConnectedException in case we are not connected.
+ * @throws SmackException.NoResponseException if the server doesn't respond.
+ */
+public static PubkeyElement fetchPubkey(XMPPConnection connection,BareJid contact,OpenPgpV4Fingerprint v4_fingerprint) throws InterruptedException, XMPPException.XMPPErrorException, PubSubException.NotAPubSubNodeException, PubSubException.NotALeafNodeException, SmackException.NotConnectedException, SmackException.NoResponseException {
+  PubSubManager pm=PubSubManager.getInstanceFor(connection,contact);
+  String nodeName=PEP_NODE_PUBLIC_KEY(v4_fingerprint);
+  LeafNode node=getLeafNode(pm,nodeName);
+  List<PayloadItem<PubkeyElement>> list=node.getItems(1);
+  if (list.isEmpty()) {
+    return null;
+  }
+  return list.get(0).getPayload();
+}

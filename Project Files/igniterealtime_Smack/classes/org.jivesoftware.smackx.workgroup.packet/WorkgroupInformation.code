@@ -1,0 +1,46 @@
+/** 
+ * A stanza extension that contains information about the user and agent in a workgroup chat. The stanza extension is attached to group chat invitations.
+ */
+public class WorkgroupInformation implements ExtensionElement {
+  /** 
+ * Element name of the stanza extension.
+ */
+  public static final String ELEMENT_NAME="workgroup";
+  /** 
+ * Namespace of the stanza extension.
+ */
+  public static final String NAMESPACE="http://jabber.org/protocol/workgroup";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT_NAME);
+  private final EntityBareJid workgroupJID;
+  public WorkgroupInformation(  EntityBareJid workgroupJID){
+    this.workgroupJID=workgroupJID;
+  }
+  public EntityBareJid getWorkgroupJID(){
+    return workgroupJID;
+  }
+  @Override public String getElementName(){
+    return ELEMENT_NAME;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  @Override public String toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    StringBuilder buf=new StringBuilder();
+    buf.append('<').append(ELEMENT_NAME);
+    buf.append(" jid=\"").append(getWorkgroupJID()).append('"');
+    buf.append(" xmlns=\"").append(NAMESPACE).append("\" />");
+    return buf.toString();
+  }
+public static class Provider extends ExtensionElementProvider<WorkgroupInformation> {
+    /** 
+ * PacketExtensionProvider implementation.
+ * @throws IOException if an I/O error occurred.
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ */
+    @Override public WorkgroupInformation parse(    XmlPullParser parser,    int initialDepth,    XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+      EntityBareJid workgroupJID=ParserUtils.getBareJidAttribute(parser);
+      parser.next();
+      return new WorkgroupInformation(workgroupJID);
+    }
+  }
+}

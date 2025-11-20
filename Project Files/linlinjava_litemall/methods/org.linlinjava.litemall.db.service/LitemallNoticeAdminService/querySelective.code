@@ -1,0 +1,20 @@
+public List<LitemallNoticeAdmin> querySelective(String title,String type,Integer adminId,Integer page,Integer limit,String sort,String order){
+  LitemallNoticeAdminExample example=new LitemallNoticeAdminExample();
+  LitemallNoticeAdminExample.Criteria criteria=example.createCriteria();
+  if (!StringUtils.isEmpty(title)) {
+    criteria.andNoticeTitleLike("%" + title + "%");
+  }
+  if (type.equals("read")) {
+    criteria.andReadTimeIsNotNull();
+  }
+ else   if (type.equals("unread")) {
+    criteria.andReadTimeIsNull();
+  }
+  criteria.andAdminIdEqualTo(adminId);
+  criteria.andDeletedEqualTo(false);
+  if (!StringUtils.isEmpty(sort) && !StringUtils.isEmpty(order)) {
+    example.setOrderByClause(sort + " " + order);
+  }
+  PageHelper.startPage(page,limit);
+  return noticeAdminMapper.selectByExample(example);
+}

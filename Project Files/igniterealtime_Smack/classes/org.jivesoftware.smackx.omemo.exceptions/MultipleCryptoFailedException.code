@@ -1,0 +1,25 @@
+public final class MultipleCryptoFailedException extends CryptoFailedException {
+  private static final long serialVersionUID=1L;
+  private final List<CryptoFailedException> cryptoFailedExceptions;
+  private MultipleCryptoFailedException(  String message,  List<CryptoFailedException> cryptoFailedExceptions){
+    super(message);
+    this.cryptoFailedExceptions=Collections.unmodifiableList(cryptoFailedExceptions);
+    if (cryptoFailedExceptions.isEmpty()) {
+      throw new IllegalArgumentException("Exception list must not be empty.");
+    }
+  }
+  public static MultipleCryptoFailedException from(  List<CryptoFailedException> cryptoFailedExceptions){
+    StringBuilder sb=new StringBuilder("Multiple CryptoFailedExceptions: ");
+    Iterator<CryptoFailedException> it=cryptoFailedExceptions.iterator();
+    while (it.hasNext()) {
+      sb.append(it.next());
+      if (it.hasNext()) {
+        sb.append(", ");
+      }
+    }
+    return new MultipleCryptoFailedException(sb.toString(),cryptoFailedExceptions);
+  }
+  public List<CryptoFailedException> getCryptoFailedExceptions(){
+    return cryptoFailedExceptions;
+  }
+}

@@ -1,0 +1,10 @@
+@Test void shouldPropagateAsyncFlow(){
+  AsyncPool<StatefulRedisConnection<String,String>> pool=AsyncConnectionPoolSupport.createBoundedObjectPool(() -> client.connectAsync(StringCodec.ASCII,uri),BoundedPoolConfig.create());
+  CompletableFuture<String> pingResponse=pool.acquire().thenCompose(c -> {
+    return c.async().ping().whenComplete((s,throwable) -> pool.release(c));
+  }
+);
+  TestFutures.awaitOrTimeout(pingResponse);
+  assertThat(pingResponse).isCompletedWithValue("PONG");
+  pool.close();
+}

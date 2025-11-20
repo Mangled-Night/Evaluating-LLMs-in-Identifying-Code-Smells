@@ -1,0 +1,29 @@
+public void testConfigureAndNotify() throws Exception {
+  String nodeId="TestNode" + System.currentTimeMillis();
+  PubSubManager creatorMgr=new PubSubManager(getConnection(0),getService());
+  LeafNode creatorNode=getPubnode(creatorMgr,nodeId,false,true);
+  BlockingQueue<NodeConfigCoordinator> queue=new ArrayBlockingQueue<NodeConfigCoordinator>(3);
+  PubSubManager subMgr=new PubSubManager(getConnection(1),getService());
+  LeafNode subNode=(LeafNode)subMgr.getNode(nodeId);
+  NodeConfigListener sub1Handler=new NodeConfigCoordinator(queue,"sub1");
+  subNode.subscribe(getConnection(1).getUser());
+  subNode.addConfigurationListener(sub1Handler);
+  ConfigureForm currentConfig=creatorNode.getNodeConfiguration();
+  ConfigureForm form=new ConfigureForm(currentConfig.createAnswerForm());
+  form.setPersistentItems(true);
+  form.setDeliverPayloads(false);
+  form.setNotifyConfig(true);
+  creatorNode.sendConfigurationForm(form);
+  ConfigurationEvent event=queue.poll(5,TimeUnit.SECONDS).event;
+  assertEquals(nodeId,event.getNode());
+  assertNull(event.getConfiguration());
+  currentConfig=creatorNode.getNodeConfiguration();
+  form=new ConfigureForm(currentConfig.createAnswerForm());
+  form.setDeliverPayloads(true);
+  creatorNode.sendConfigurationForm(form);
+  event=queue.poll(5,TimeUnit.SECONDS).event;
+  assertEquals(nodeId,event.getNode());
+  assertNotNull(event.getConfiguration());
+  assertTrue(event.getConfiguration().isPersistItems());
+  assertTrue(event.getConfiguration().isDeliverPayloads());
+}

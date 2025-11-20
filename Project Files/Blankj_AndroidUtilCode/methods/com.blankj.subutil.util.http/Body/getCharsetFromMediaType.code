@@ -1,0 +1,25 @@
+private static String getCharsetFromMediaType(String mediaType){
+  mediaType=mediaType.toLowerCase().replace(" ","");
+  int index=mediaType.indexOf("charset=");
+  if (index == -1)   return "utf-8";
+  int st=index + 8;
+  int end=mediaType.length();
+  if (st >= end) {
+    throw new IllegalArgumentException("MediaType is not correct: \"" + mediaType + "\"");
+  }
+  for (int i=st; i < end; i++) {
+    char c=mediaType.charAt(i);
+    if (c >= 'A' && c <= 'Z')     continue;
+    if (c >= 'a' && c <= 'z')     continue;
+    if (c >= '0' && c <= '9')     continue;
+    if (c == '-' && i != 0)     continue;
+    if (c == '+' && i != 0)     continue;
+    if (c == ':' && i != 0)     continue;
+    if (c == '_' && i != 0)     continue;
+    if (c == '.' && i != 0)     continue;
+    end=i;
+    break;
+  }
+  String charset=mediaType.substring(st,end);
+  return checkCharset(charset);
+}

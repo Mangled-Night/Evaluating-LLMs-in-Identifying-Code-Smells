@@ -1,0 +1,16 @@
+@Test void testSerialize(){
+  IntTypeHandler elementTypeHandler=mock(IntTypeHandler.class);
+  CollectionCopyConstructor<Queue<Integer>,Integer> constructor=Queues::newArrayDeque;
+  CollectionTypeHandler<Integer> typeHandler=new CollectionTypeHandler<>(elementTypeHandler,constructor);
+  Collection<Integer> collection=constructor.construct(Lists.newArrayList());
+  collection.addAll(Collections.nCopies(500,-1));
+  PersistedDataSerializer context=mock(PersistedDataSerializer.class);
+  typeHandler.serialize(collection,context);
+  verify(elementTypeHandler,times(collection.size())).serialize(any(),any());
+  verify(context).serialize(argThat(new ArgumentMatcher<Iterable<PersistedData>>(){
+    @Override public boolean matches(    Iterable<PersistedData> argument){
+      return argument instanceof Collection && ((Collection)argument).size() == collection.size();
+    }
+  }
+));
+}

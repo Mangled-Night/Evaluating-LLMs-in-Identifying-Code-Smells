@@ -1,0 +1,42 @@
+@SmackIntegrationTest public void basicInstantMessagingTest() throws Exception {
+  final SimpleResultSyncPoint bobReceivedMessage=new SimpleResultSyncPoint();
+  final String body="Writing integration tests is an annoying task, but it has to be done, so lets do it!!!";
+  FileBasedOpenPgpStore aliceStore=new FileBasedOpenPgpStore(aliceStorePath);
+  aliceStore.setKeyRingProtector(new UnprotectedKeysProtector());
+  FileBasedOpenPgpStore bobStore=new FileBasedOpenPgpStore(bobStorePath);
+  bobStore.setKeyRingProtector(new UnprotectedKeysProtector());
+  PainlessOpenPgpProvider aliceProvider=new PainlessOpenPgpProvider(aliceStore);
+  PainlessOpenPgpProvider bobProvider=new PainlessOpenPgpProvider(bobStore);
+  aliceOpenPgp=OpenPgpManager.getInstanceFor(aliceConnection);
+  bobOpenPgp=OpenPgpManager.getInstanceFor(bobConnection);
+  OXInstantMessagingManager aliceInstantMessaging=OXInstantMessagingManager.getInstanceFor(aliceConnection);
+  OXInstantMessagingManager bobInstantMessaging=OXInstantMessagingManager.getInstanceFor(bobConnection);
+  bobInstantMessaging.addOxMessageListener(new OxMessageListener(){
+    @Override public void newIncomingOxMessage(    OpenPgpContact contact,    Message originalMessage,    SigncryptElement decryptedPayload,    OpenPgpMetadata metadata){
+      if (((Message.Body)decryptedPayload.getExtension(Message.Body.NAMESPACE)).getMessage().equals(body)) {
+        bobReceivedMessage.signal();
+      }
+ else {
+        bobReceivedMessage.signalFailure();
+      }
+    }
+  }
+);
+  aliceOpenPgp.setOpenPgpProvider(aliceProvider);
+  bobOpenPgp.setOpenPgpProvider(bobProvider);
+  aliceFingerprint=aliceOpenPgp.generateAndImportKeyPair(alice);
+  bobFingerprint=bobOpenPgp.generateAndImportKeyPair(bob);
+  aliceOpenPgp.announceSupportAndPublish();
+  bobOpenPgp.announceSupportAndPublish();
+  OpenPgpContact bobForAlice=aliceOpenPgp.getOpenPgpContact(bob.asEntityBareJidIfPossible());
+  OpenPgpContact aliceForBob=bobOpenPgp.getOpenPgpContact(alice.asEntityBareJidIfPossible());
+  bobForAlice.updateKeys(aliceConnection);
+  assertFalse(bobForAlice.isTrusted(bobFingerprint));
+  assertFalse(aliceForBob.isTrusted(aliceFingerprint));
+  bobForAlice.trust(bobFingerprint);
+  aliceForBob.trust(aliceFingerprint);
+  assertTrue(bobForAlice.isTrusted(bobFingerprint));
+  assertTrue(aliceForBob.isTrusted(aliceFingerprint));
+  aliceInstantMessaging.sendOxMessage(bobForAlice,body);
+  bobReceivedMessage.waitForResult(timeout);
+}

@@ -1,0 +1,18 @@
+public AbstractConnection(NetworkChannel channel){
+  this.channel=channel;
+  boolean isAIO=(channel instanceof AsynchronousChannel);
+  if (isAIO) {
+    socketWR=new AIOSocketWR(this);
+  }
+ else {
+    socketWR=new NIOSocketWR(this);
+  }
+  this.isClosed=new AtomicBoolean(false);
+  this.startupTime=TimeUtil.currentTimeMillis();
+  this.lastReadTime=startupTime;
+  this.lastWriteTime=startupTime;
+  SystemConfig config=MycatServer.getInstance().getConfig().getSystem();
+  this.enableFlowController=config.isEnableWriteQueueFlowControl();
+  this.writeQueueStopThreshold=config.getWriteQueueStopThreshold();
+  this.writeQueueRecoverThreshold=config.getWriteQueueRecoverThreshold();
+}

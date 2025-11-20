@@ -1,0 +1,15 @@
+protected void deactivateOrDestroyEntityRecursive(EntityRef entity){
+  if (entity.isActive()) {
+    for (    EntityRef ownedEntity : helper.listOwnedEntities(entity)) {
+      if (!ownedEntity.isAlwaysRelevant()) {
+        if (!ownedEntity.isPersistent()) {
+          ownedEntity.destroy();
+        }
+ else {
+          deactivateOrDestroyEntityRecursive(ownedEntity);
+        }
+      }
+    }
+    getEntityManager().deactivateForStorage(entity);
+  }
+}

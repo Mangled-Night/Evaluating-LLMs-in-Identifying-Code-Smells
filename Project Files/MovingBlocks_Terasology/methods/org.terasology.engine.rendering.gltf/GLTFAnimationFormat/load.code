@@ -1,0 +1,38 @@
+@Override public MeshAnimationBundleData load(ResourceUrn urn,List<AssetDataFile> inputs) throws IOException {
+  try (Reader in=new InputStreamReader(inputs.get(0).openStream())){
+    GLTF gltf=gson.fromJson(in,GLTF.class);
+    checkVersionSupported(urn,gltf);
+    List<byte[]> loadedBuffers=loadBinaryBuffers(urn,gltf);
+    if (gltf.getSkins().isEmpty()) {
+      throw new IOException("Skeletal mesh '" + urn + "' missing skin");
+    }
+    GLTFSkin skin=gltf.getSkins().get(0);
+    List<String> boneNames=Lists.newArrayList();
+    TIntList boneParents=new TIntArrayList();
+    TIntIntMap nodeToJoint=new TIntIntHashMap();
+    for (int i=0; i < skin.getJoints().size(); i++) {
+      nodeToJoint.put(skin.getJoints().get(i),i);
+    }
+    List<Bone> bones=loadBones(gltf,skin,loadedBuffers);
+    bones.forEach(x -> boneNames.add(x.getName()));
+    bones.forEach(x -> {
+      if (x.getParentIndex() != -1) {
+        boneParents.add(x.getParentIndex());
+      }
+ else {
+        boneParents.add(MeshAnimationData.NO_PARENT);
+      }
+    }
+);
+    Map<ResourceUrn,MeshAnimationData> animations=new HashMap<>();
+    for (int index=0; index < gltf.getAnimations().size(); ++index) {
+      GLTFAnimation gltfAnimation=gltf.getAnimations().get(index);
+      String name=gltfAnimation.getName();
+      if (Strings.isNullOrEmpty(name)) {
+        name="anim_" + index;
+      }
+      animations.put(new ResourceUrn(urn,name),loadAnimation(gltf,gltfAnimation,loadedBuffers,nodeToJoint,boneNames,boneParents,bones));
+    }
+    return new MeshAnimationBundleData(animations);
+  }
+ }

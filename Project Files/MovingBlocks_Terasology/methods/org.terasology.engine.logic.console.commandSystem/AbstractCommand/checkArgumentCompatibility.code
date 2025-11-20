@@ -1,0 +1,22 @@
+private void checkArgumentCompatibility(Method method) throws CommandInitializationException {
+  Class<?>[] methodParameters=method.getParameterTypes();
+  int executionMethodParametersSize=executionMethodParameters.size();
+  int methodParameterCount=methodParameters.length;
+  for (int i=0; i < methodParameterCount || i < executionMethodParametersSize; i++) {
+    if (i >= methodParameterCount) {
+      throw new CommandInitializationException("Missing " + (executionMethodParametersSize - methodParameterCount) + " parameters in method "+ method.getName()+ ", follow the parameter definitions from the"+ " 'constructParameters' method.");
+    }
+ else     if (i >= executionMethodParametersSize) {
+      throw new CommandInitializationException("Too many (" + (methodParameterCount - executionMethodParametersSize) + ") parameters in method "+ method.getName()+ ", follow the parameter definitions from the"+ " 'constructParameters' method.");
+    }
+    Parameter expectedParameterType=executionMethodParameters.get(i);
+    Optional<? extends Class<?>> expectedType=expectedParameterType.getProvidedType();
+    Class<?> providedType=methodParameters[i];
+    if (providedType.isPrimitive()) {
+      providedType=Primitives.wrap(providedType);
+    }
+    if (expectedType.isPresent() && !expectedType.get().isAssignableFrom(providedType)) {
+      throw new CommandInitializationException("Cannot assign command argument from " + providedType.getSimpleName() + " to "+ expectedType.get().getSimpleName()+ "; "+ "command method parameter index: "+ i);
+    }
+  }
+}

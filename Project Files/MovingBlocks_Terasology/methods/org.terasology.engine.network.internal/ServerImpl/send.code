@@ -1,0 +1,15 @@
+@Override public void send(Event event,EntityRef target){
+  NetworkComponent netComp=target.getComponent(NetworkComponent.class);
+  if (netComp != null) {
+    try {
+      queuedOutgoingEvents.add(NetData.EventMessage.newBuilder().setEvent(eventSerializer.serialize(event)).setTargetId(netComp.getNetworkId()).build());
+    }
+ catch (    SerializationException e) {
+      logger.error("Failed to serialize event",e);
+    }
+  }
+}
+private void send(NetData.NetMessage data){
+  logger.trace("Sending with size {}",data.getSerializedSize());
+  channel.writeAndFlush(data);
+}

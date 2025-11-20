@@ -1,0 +1,34 @@
+/** 
+ * Process and respond to an incoming packet. This method is called from the stanza listener dispatcher when a new stanza has arrived. The method is responsible for recognizing the stanza type and, depending on the current state, delivering it to the right event handler and wait for a response. The response will be another Jingle stanza that will be sent to the other end point.
+ * @param iq TODO javadoc me pleasethe stanza received
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public synchronized void receivePacketAndRespond(IQ iq) throws XMPPException, SmackException, InterruptedException {
+  List<IQ> responses=new ArrayList<>();
+  String responseId;
+  LOGGER.fine("Packet: " + iq.toXML());
+  try {
+    responses.addAll(dispatchIncomingPacket(iq,null));
+    if (iq != null) {
+      responseId=iq.getStanzaId();
+      for (      ContentNegotiator contentNegotiator : contentNegotiators) {
+        if (!contentNegotiator.isStarted()) {
+          contentNegotiator.start();
+        }
+        responses.addAll(contentNegotiator.dispatchIncomingPacket(iq,responseId));
+      }
+    }
+  }
+ catch (  JingleException e) {
+    JingleError error=e.getError();
+    if (error != null) {
+      responses.add(createJingleError(iq,error));
+    }
+    triggerSessionClosedOnError(e);
+  }
+  for (  IQ response : responses) {
+    sendStanza(response);
+  }
+}

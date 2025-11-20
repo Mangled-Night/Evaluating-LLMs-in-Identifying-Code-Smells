@@ -1,0 +1,16 @@
+private void checkValueArray(PersistedData data,PersistedData entry,Set<TypeGetter> typeGetters){
+  Assertions.assertEquals(PersistedValueArray.class,data.getClass());
+  Assertions.assertEquals(entry,data.getAsArray().getArrayItem(0));
+  typeGetters.stream().forEach(typeGetter -> Assertions.assertEquals(typeGetter.getGetter().apply(entry),typeGetter.getGetter().apply(data)));
+  Assertions.assertFalse(data.isString());
+  Assertions.assertFalse(data.isNull());
+  Assertions.assertFalse(data.isNumber());
+  Assertions.assertFalse(data.isBoolean());
+  Assertions.assertFalse(data.isBytes());
+  Assertions.assertFalse(data.isValueMap());
+  Assertions.assertThrows(IllegalStateException.class,data::getAsValueMap);
+  Set<TypeGetter> deserializationExceptionGetters=Sets.newSet(TypeGetter.BYTE_BUFFER,TypeGetter.BYTES);
+  deserializationExceptionGetters.stream().filter(f -> !typeGetters.contains(f)).map(TypeGetter::getGetter).map(f -> (Executable)() -> f.apply(data)).forEach(e -> Assertions.assertThrows(DeserializationException.class,e));
+  Set<TypeGetter> classCastExceptionGetters=Sets.newSet(TypeGetter.BOOLEAN,TypeGetter.STRING,TypeGetter.INTEGER,TypeGetter.LONG,TypeGetter.FLOAT,TypeGetter.DOUBLE);
+  classCastExceptionGetters.stream().filter(f -> !typeGetters.contains(f)).map(TypeGetter::getGetter).map(f -> (Executable)() -> f.apply(data)).forEach(e -> Assertions.assertThrows(ClassCastException.class,e));
+}

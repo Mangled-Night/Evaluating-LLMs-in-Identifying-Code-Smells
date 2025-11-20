@@ -1,0 +1,14 @@
+@Test void resultOfMultiIsContainedInCommandFlux(){
+  StepVerifier.create(commands.multi()).expectNext("OK").verifyComplete();
+  StepVerifier.Step<String> set1=StepVerifier.create(commands.set("key1","value1")).expectNext("OK").thenAwait();
+  StepVerifier.Step<String> set2=StepVerifier.create(commands.set("key2","value2")).expectNext("OK").thenAwait();
+  StepVerifier.Step<KeyValue<String,String>> mget=StepVerifier.create(commands.mget("key1","key2")).expectNext(KeyValue.just("key1","value1"),KeyValue.just("key2","value2")).thenAwait();
+  StepVerifier.Step<Long> llen=StepVerifier.create(commands.llen("something")).expectNext(0L).thenAwait();
+  StepVerifier.create(commands.exec()).then(() -> {
+    set1.verifyComplete();
+    set2.verifyComplete();
+    mget.verifyComplete();
+    llen.verifyComplete();
+  }
+).expectNextCount(1).verifyComplete();
+}

@@ -1,0 +1,17 @@
+@Test void observeChannels() throws Exception {
+  block(pubsub.subscribe(channel));
+  BlockingQueue<ChannelMessage<String,String>> channelMessages=LettuceFactories.newBlockingQueue();
+  Disposable disposable=pubsub.observeChannels().doOnNext(channelMessages::add).subscribe();
+  redis.publish(channel,message);
+  redis.publish(channel,message);
+  redis.publish(channel,message);
+  Wait.untilEquals(3,channelMessages::size).waitOrTimeout();
+  assertThat(channelMessages).hasSize(3);
+  disposable.dispose();
+  redis.publish(channel,message);
+  Delay.delay(Duration.ofMillis(500));
+  assertThat(channelMessages).hasSize(3);
+  ChannelMessage<String,String> channelMessage=channelMessages.take();
+  assertThat(channelMessage.getChannel()).isEqualTo(channel);
+  assertThat(channelMessage.getMessage()).isEqualTo(message);
+}

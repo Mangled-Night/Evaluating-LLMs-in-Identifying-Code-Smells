@@ -1,0 +1,77 @@
+public SequoiaData query() throws SequoiaSQLException {
+  if (!(statement instanceof SQLSelectStatement)) {
+    throw new IllegalArgumentException("not a query sql statement");
+  }
+  SequoiaData mongo=new SequoiaData();
+  DBCursor c=null;
+  SQLSelectStatement selectStmt=(SQLSelectStatement)statement;
+  SQLSelectQuery sqlSelectQuery=selectStmt.getSelect().getQuery();
+  int icount=0;
+  if (sqlSelectQuery instanceof MySqlSelectQueryBlock) {
+    MySqlSelectQueryBlock mysqlSelectQuery=(MySqlSelectQueryBlock)selectStmt.getSelect().getQuery();
+    BasicBSONObject fields=new BasicBSONObject();
+    for (    SQLSelectItem item : mysqlSelectQuery.getSelectList()) {
+      if (!(item.getExpr() instanceof SQLAllColumnExpr)) {
+        if (item.getExpr() instanceof SQLAggregateExpr) {
+          SQLAggregateExpr expr=(SQLAggregateExpr)item.getExpr();
+          if (expr.getMethodName().equals("COUNT")) {
+            icount=1;
+            mongo.setField(getExprFieldName(expr),Types.BIGINT);
+          }
+          fields.put(getExprFieldName(expr),Integer.valueOf(1));
+        }
+ else {
+          fields.put(getFieldName(item),Integer.valueOf(1));
+        }
+      }
+    }
+    SQLTableSource table=mysqlSelectQuery.getFrom();
+    DBCollection coll=this._db.getCollection(table.toString());
+    mongo.setTable(table.toString());
+    SQLExpr expr=mysqlSelectQuery.getWhere();
+    BSONObject query=parserWhere(expr);
+    SQLSelectGroupByClause groupby=mysqlSelectQuery.getGroupBy();
+    BasicBSONObject gbkey=new BasicBSONObject();
+    if (groupby != null) {
+      for (      SQLExpr gbexpr : groupby.getItems()) {
+        if (gbexpr instanceof SQLIdentifierExpr) {
+          String name=((SQLIdentifierExpr)gbexpr).getName();
+          gbkey.put(name,Integer.valueOf(1));
+        }
+      }
+      icount=2;
+    }
+    int limitoff=0;
+    int limitnum=0;
+    if (mysqlSelectQuery.getLimit() != null) {
+      limitoff=getSQLExprToInt(mysqlSelectQuery.getLimit().getOffset());
+      limitnum=getSQLExprToInt(mysqlSelectQuery.getLimit().getRowCount());
+    }
+    SQLOrderBy orderby=mysqlSelectQuery.getOrderBy();
+    BasicBSONObject order=new BasicBSONObject();
+    if (orderby != null) {
+      for (int i=0; i < orderby.getItems().size(); i++) {
+        SQLSelectOrderByItem orderitem=orderby.getItems().get(i);
+        order.put(orderitem.getExpr().toString(),Integer.valueOf(getSQLExprToAsc(orderitem.getType())));
+      }
+    }
+    if (icount == 1) {
+      mongo.setCount(coll.getCount(query));
+    }
+ else     if (icount == 2) {
+      BasicBSONObject initial=new BasicBSONObject();
+      initial.put("num",0);
+      String reduce="function (obj, prev) { " + "  prev.num++}";
+    }
+ else {
+      if ((limitoff > 0) || (limitnum > 0)) {
+        c=coll.query(query,fields,order,null,limitoff,limitnum);
+      }
+ else {
+        c=coll.query(query,fields,order,null,0,-1);
+      }
+    }
+    mongo.setCursor(c);
+  }
+  return mongo;
+}

@@ -1,0 +1,25 @@
+/** 
+ * @param entitiesToSave all persistent entities within the given chunk
+ * @param chunkUnloaded if true the chunk data will be used directly.  If deactivate is false then the chunk will bebut in snapshot mode so that concurrent modifications (and possibly future unload) is possible.
+ */
+public CompressedChunkBuilder(EngineEntityManager entityManager,ChunkImpl chunk,Collection<EntityRef> entitiesToSave,boolean chunkUnloaded){
+  EntityStorer storer=new EntityStorer(entityManager);
+  entitiesToSave.stream().filter(EntityRef::isPersistent).forEach(storer::store);
+  storedEntities=storer.getStoredEntities();
+  this.entityStore=storer.finaliseStore();
+  this.chunk=chunk;
+  this.viaSnapshot=!chunkUnloaded;
+  if (viaSnapshot) {
+    this.chunk.createSnapshot();
+  }
+}
+/** 
+ * @param entityStore encoded entities to be stored.
+ * @param chunk       chunk for which {@link ChunkImpl#createSnapshot()} has been called.
+ * @param viaSnapshot specifies if the previously taken snapshot will be encoded or if
+ */
+public CompressedChunkBuilder(EntityData.EntityStore entityStore,ChunkImpl chunk,boolean viaSnapshot){
+  this.entityStore=entityStore;
+  this.chunk=chunk;
+  this.viaSnapshot=viaSnapshot;
+}

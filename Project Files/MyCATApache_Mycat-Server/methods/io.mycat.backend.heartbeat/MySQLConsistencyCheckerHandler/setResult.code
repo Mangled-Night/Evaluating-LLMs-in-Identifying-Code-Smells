@@ -1,0 +1,70 @@
+public void setResult(SQLQueryResult<Map<String,String>> result){
+  if (isStop) {
+    return;
+  }
+  if (result != null && result.isSuccess()) {
+    jobCount.decrementAndGet();
+    String dataNode=result.getDataNode();
+    result.setTableName(this.getTableName());
+    if (resultMap == null) {
+      resultMap=result;
+    }
+ else {
+      SQLQueryResult<Map<String,String>> r=resultMap;
+      Map<String,String> metaData=result.getResult();
+      for (      String key : metaData.keySet()) {
+        r.getResult().put(key,metaData.get(key));
+      }
+      resultMap=r;
+    }
+  }
+ else {
+    if (result != null && result.getResult() != null) {
+      String sql=null;
+      final int seq=sqlSeq;
+      if (seq == 0) {
+        sql=this.getColumnExistSQL();
+      }
+ else       if (seq == 1) {
+        sql=this.getMaxSQL();
+      }
+ else       if (seq == 2) {
+        sql=this.getCountSQL();
+      }
+ else {
+        sql=result.getErrMsg();
+      }
+      String errMsg=sql + " execute failed in db: " + result.getDataNode()+ " during global table consistency check task.";
+      LOGGER.warn(errMsg);
+      handler.onError(errMsg);
+    }
+  }
+  if (jobCount.get() == 0) {
+    final int seq=++sqlSeq;
+    if (seq == 1) {
+      this.checkMaxTimeStamp();
+    }
+ else     if (seq == 2) {
+      this.checkRecordCout();
+    }
+ else {
+      handler.onSuccess(resultMap);
+      isStop=true;
+    }
+  }
+ else   if (isTimeOut()) {
+    String execSql="";
+    final int seq=sqlSeq;
+    if (seq == 0) {
+      execSql=this.getColumnExistSQL();
+    }
+ else     if (seq == 1) {
+      execSql=this.getMaxSQL();
+    }
+ else     if (seq == 2) {
+      execSql=this.getCountSQL();
+    }
+    isStop=true;
+    handler.onError(String.format("sql %s time out",execSql));
+  }
+}

@@ -1,0 +1,12 @@
+@Test public void providerTest() throws Exception {
+  String expected="<public-keys-list xmlns='urn:xmpp:openpgp:0'>" + "<pubkey-metadata " + "v4-fingerprint='1357B01865B2503C18453D208CAC2A9678548E35' "+ "date='2018-03-01T15:26:12.000+00:00'"+ "/>"+ "<pubkey-metadata "+ "v4-fingerprint='67819B343B2AB70DED9320872C6464AF2A8E4C02' "+ "date='1953-05-16T12:00:00.000+00:00'"+ "/>"+ "</public-keys-list>";
+  Date date1=XmppDateTime.parseDate("2018-03-01T15:26:12.000+00:00");
+  Date date2=XmppDateTime.parseDate("1953-05-16T12:00:00.000+00:00");
+  PublicKeysListElement.PubkeyMetadataElement child1=new PublicKeysListElement.PubkeyMetadataElement(new OpenPgpV4Fingerprint("1357B01865B2503C18453D208CAC2A9678548E35"),date1);
+  PublicKeysListElement.PubkeyMetadataElement child2=new PublicKeysListElement.PubkeyMetadataElement(new OpenPgpV4Fingerprint("67819B343B2AB70DED9320872C6464AF2A8E4C02"),date2);
+  PublicKeysListElement element=PublicKeysListElement.builder().addMetadata(child1).addMetadata(child2).build();
+  assertXmlSimilar(expected,element.toXML().toString());
+  XmlPullParser parser=TestUtils.getParser(expected);
+  PublicKeysListElement parsed=PublicKeysListElementProvider.TEST_INSTANCE.parse(parser);
+  assertEquals(element.getMetadata(),parsed.getMetadata());
+}

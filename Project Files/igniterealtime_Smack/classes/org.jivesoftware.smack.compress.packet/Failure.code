@@ -1,0 +1,42 @@
+public class Failure implements Nonza {
+  public static final String ELEMENT="failure";
+  public static final String NAMESPACE=Compress.NAMESPACE;
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  public enum CompressFailureError {  setup_failed,   processing_failed,   unsupported_method;   private final String compressFailureError;
+  CompressFailureError(){
+    compressFailureError=name().replace('_','-');
+  }
+  @Override public String toString(){
+    return compressFailureError;
+  }
+}
+  private final CompressFailureError compressFailureError;
+  private final StanzaError stanzaError;
+  public Failure(  CompressFailureError compressFailureError){
+    this(compressFailureError,null);
+  }
+  public Failure(  CompressFailureError compressFailureError,  StanzaError stanzaError){
+    this.compressFailureError=Objects.requireNonNull(compressFailureError);
+    this.stanzaError=stanzaError;
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  public CompressFailureError getCompressFailureError(){
+    return compressFailureError;
+  }
+  public StanzaError getStanzaError(){
+    return stanzaError;
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this,enclosingNamespace);
+    xml.rightAngleBracket();
+    xml.emptyElement(compressFailureError);
+    xml.optElement(stanzaError);
+    xml.closeElement(this);
+    return xml;
+  }
+}

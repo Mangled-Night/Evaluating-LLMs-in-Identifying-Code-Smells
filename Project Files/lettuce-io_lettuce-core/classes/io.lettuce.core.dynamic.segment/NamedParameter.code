@@ -1,0 +1,17 @@
+private static class NamedParameter extends CommandSegment {
+  private final String name;
+  public NamedParameter(  String name){
+    LettuceAssert.notEmpty(name,"Parameter name must not be empty");
+    this.name=name;
+  }
+  @Override public String asString(){
+    return name;
+  }
+  @Override public boolean canConsume(  Parameter parameter){
+    return parameter.getName() != null && parameter.getName().equals(name);
+  }
+  @Override public ArgumentContribution contribute(  MethodParametersAccessor parametersAccessor){
+    int index=parametersAccessor.resolveParameterIndex(name);
+    return new ArgumentContribution(index,parametersAccessor.getBindableValue(index));
+  }
+}

@@ -1,0 +1,22 @@
+private JsonTree createChild(String name,JsonTree node,Field field,Class clazz) throws IllegalAccessException, InstantiationException {
+  JsonTreeValue childValue=new JsonTreeValue();
+  childValue.setKey(name);
+  if (UISkin.class.isAssignableFrom(field.getType())) {
+    childValue.setValue("engine:default");
+    childValue.setType(JsonTreeValue.Type.KEY_VALUE_PAIR);
+  }
+ else {
+    if (isWidget(field)) {
+      createWidgetChild(name,node);
+      return null;
+    }
+ else {
+      childValue.setValue(getFieldValue(field,clazz));
+      childValue.setType(getNodeType(field,getFieldValue(field,clazz)));
+    }
+  }
+  JsonTree child=new JsonTree(childValue);
+  child.setExpanded(true);
+  node.addChild(child);
+  return child;
+}

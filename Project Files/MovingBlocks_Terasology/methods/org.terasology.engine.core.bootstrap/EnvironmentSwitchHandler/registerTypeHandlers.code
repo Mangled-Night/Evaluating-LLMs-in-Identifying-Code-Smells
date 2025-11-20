@@ -1,0 +1,21 @@
+@SuppressWarnings({"rawtypes","unchecked"}) private static void registerTypeHandlers(Context context,TypeHandlerLibrary library,ModuleEnvironment environment){
+  for (  Class<? extends TypeHandler> handler : environment.getSubtypesOf(TypeHandler.class)) {
+    RegisterTypeHandler register=handler.getAnnotation(RegisterTypeHandler.class);
+    if (register != null) {
+      Optional<Type> opt=GenericsUtil.getTypeParameterBindingForInheritedClass(handler,TypeHandler.class,0);
+      if (opt.isPresent()) {
+        TypeHandler instance=InjectionHelper.createWithConstructorInjection(handler,context);
+        InjectionHelper.inject(instance,context);
+        library.addTypeHandler(TypeInfo.of(opt.get()),instance);
+      }
+    }
+  }
+  for (  Class<? extends TypeHandlerFactory> clazz : environment.getSubtypesOf(TypeHandlerFactory.class)) {
+    if (!clazz.isAnnotationPresent(RegisterTypeHandlerFactory.class)) {
+      continue;
+    }
+    TypeHandlerFactory instance=InjectionHelper.createWithConstructorInjection(clazz,context);
+    InjectionHelper.inject(instance,context);
+    library.addTypeHandlerFactory(instance);
+  }
+}

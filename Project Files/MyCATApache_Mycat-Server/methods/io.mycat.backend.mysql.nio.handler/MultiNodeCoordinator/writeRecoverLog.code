@@ -1,0 +1,28 @@
+private void writeRecoverLog(int initCount){
+  int started=0;
+  ParticipantLogEntry[] participantLogEntry=new ParticipantLogEntry[initCount];
+  for (  RouteResultsetNode rrn : session.getTargetKeys()) {
+    if (rrn == null) {
+      LOGGER.error("null is contained in RoutResultsetNodes, source = " + session.getSource());
+      continue;
+    }
+    final BackendConnection conn=session.getTarget(rrn);
+    if (conn != null) {
+      if (conn instanceof MySQLConnection) {
+        MySQLConnection mysqlCon=(MySQLConnection)conn;
+        String xaTxId=null;
+        if (session.getXaTXID() != null) {
+          xaTxId=session.getXaTXID() + ",'" + mysqlCon.getSchema()+ "'";
+        }
+        if (mysqlCon.getXaStatus() == TxState.TX_STARTED_STATE) {
+          participantLogEntry[started]=new ParticipantLogEntry(xaTxId,conn.getHost(),0,conn.getSchema(),((MySQLConnection)conn).getXaStatus());
+          prepareCount.incrementAndGet();
+        }
+      }
+    }
+    started++;
+  }
+  CoordinatorLogEntry coordinatorLogEntry=new CoordinatorLogEntry(session.getXaTXID(),false,participantLogEntry);
+  inMemoryRepository.put(session.getXaTXID(),coordinatorLogEntry);
+  fileRepository.writeCheckpoint(session.getXaTXID(),inMemoryRepository.getAllCoordinatorLogEntries());
+}

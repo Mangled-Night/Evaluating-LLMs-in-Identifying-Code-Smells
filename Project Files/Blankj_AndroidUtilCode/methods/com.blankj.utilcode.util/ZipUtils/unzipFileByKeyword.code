@@ -1,0 +1,55 @@
+/** 
+ * Unzip the file by keyword.
+ * @param zipFilePath The path of ZIP file.
+ * @param destDirPath The path of destination directory.
+ * @param keyword     The keyboard.
+ * @return the unzipped files
+ * @throws IOException if unzip unsuccessfully
+ */
+public static List<File> unzipFileByKeyword(final String zipFilePath,final String destDirPath,final String keyword) throws IOException {
+  return unzipFileByKeyword(UtilsBridge.getFileByPath(zipFilePath),UtilsBridge.getFileByPath(destDirPath),keyword);
+}
+/** 
+ * Unzip the file by keyword.
+ * @param zipFile The ZIP file.
+ * @param destDir The destination directory.
+ * @param keyword The keyboard.
+ * @return the unzipped files
+ * @throws IOException if unzip unsuccessfully
+ */
+public static List<File> unzipFileByKeyword(final File zipFile,final File destDir,final String keyword) throws IOException {
+  if (zipFile == null || destDir == null)   return null;
+  List<File> files=new ArrayList<>();
+  ZipFile zip=new ZipFile(zipFile);
+  Enumeration<?> entries=zip.entries();
+  try {
+    if (UtilsBridge.isSpace(keyword)) {
+      while (entries.hasMoreElements()) {
+        ZipEntry entry=((ZipEntry)entries.nextElement());
+        String entryName=entry.getName().replace("\\","/");
+        if (entryName.contains("../")) {
+          Log.e("ZipUtils","entryName: " + entryName + " is dangerous!");
+          continue;
+        }
+        if (!unzipChildFile(destDir,files,zip,entry,entryName))         return files;
+      }
+    }
+ else {
+      while (entries.hasMoreElements()) {
+        ZipEntry entry=((ZipEntry)entries.nextElement());
+        String entryName=entry.getName().replace("\\","/");
+        if (entryName.contains("../")) {
+          Log.e("ZipUtils","entryName: " + entryName + " is dangerous!");
+          continue;
+        }
+        if (entryName.contains(keyword)) {
+          if (!unzipChildFile(destDir,files,zip,entry,entryName))           return files;
+        }
+      }
+    }
+  }
+  finally {
+    zip.close();
+  }
+  return files;
+}

@@ -1,0 +1,16 @@
+/** 
+ * Returns the result of the last  {@link RedisFuture} and guarantee that all futures are finished.
+ * @param executions mapping of a key to the future
+ * @param < T > result type
+ * @return future returning the first result.
+ */
+public static <T>RedisFuture<T> lastOfAsync(Map<?,? extends CompletionStage<T>> executions){
+  return new PipelinedRedisFuture<>(executions,objectPipelinedRedisFuture -> {
+    T result=null;
+    for (    CompletionStage<T> future : executions.values()) {
+      result=execute(() -> future.toCompletableFuture().get());
+    }
+    return result;
+  }
+);
+}

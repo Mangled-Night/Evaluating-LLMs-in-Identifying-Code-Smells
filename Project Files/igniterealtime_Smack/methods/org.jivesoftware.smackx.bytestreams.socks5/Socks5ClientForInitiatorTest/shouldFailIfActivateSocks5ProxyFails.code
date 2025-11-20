@@ -1,0 +1,25 @@
+/** 
+ * If the initiator can connect to a SOCKS5 proxy but activating the stream fails an exception should be thrown.
+ * @throws Exception should not happen
+ */
+@Test public void shouldFailIfActivateSocks5ProxyFails() throws Exception {
+  Protocol protocol=new Protocol();
+  XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+  IQ error=new ErrorIQ(StanzaError.getBuilder(StanzaError.Condition.internal_server_error).build());
+  error.setFrom(proxyJID);
+  error.setTo(initiatorJID);
+  protocol.addResponse(error,Verification.correspondingSenderReceiver,Verification.requestTypeSET);
+  try (Socks5TestProxy socks5Proxy=new Socks5TestProxy()){
+    StreamHost streamHost=new StreamHost(proxyJID,loopbackAddress,socks5Proxy.getPort());
+    String digest=Socks5Utils.createDigest(sessionID,initiatorJID,targetJID);
+    Socks5ClientForInitiator socks5Client=new Socks5ClientForInitiator(streamHost,digest,connection,sessionID,targetJID);
+    try {
+      socks5Client.getSocket(GET_SOCKET_TIMEOUT);
+      fail("exception should be thrown");
+    }
+ catch (    XMPPErrorException e) {
+      assertTrue(StanzaError.Condition.internal_server_error.equals(e.getStanzaError().getCondition()));
+      protocol.verifyAll();
+    }
+  }
+ }

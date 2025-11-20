@@ -1,0 +1,27 @@
+public class AutoConfigTest {
+  @Test public void testGetSettings(){
+    TestAutoConfig config=new TestAutoConfig();
+    assertEquals(Sets.newHashSet(config.stringSetting,config.integerListSetting),config.getSettings());
+  }
+  @Test public void testGetSettingFieldsIn(){
+    Set<Field> settingFields=AutoConfig.getSettingFieldsIn(TestAutoConfig.class);
+    assertEquals(Sets.newHashSet("stringSetting","integerListSetting"),settingFields.stream().map(Field::getName).collect(Collectors.toSet()));
+    assertEquals(Sets.newHashSet(new TypeInfo<Setting<String>>(){
+    }
+,new TypeInfo<Setting<ImmutableList<Integer>>>(){
+    }
+),settingFields.stream().map(Field::getGenericType).map(TypeInfo::of).collect(Collectors.toSet()));
+  }
+  @Test public void testSettingDsl(){
+    Double defaultValue=10.0;
+    NumberRangeConstraint<Double> constraint=new NumberRangeConstraint<>(0.0,100.0,false,false);
+    String name="name";
+    String description="description";
+    Setting<Double> setting=AutoConfig.setting(type(Double.class),defaultValue(defaultValue),constraint(constraint),name(name),description(description));
+    assertEquals(defaultValue,setting.getDefaultValue());
+    assertEquals(constraint,setting.getConstraint());
+    assertEquals(name,setting.getHumanReadableName());
+    assertEquals(description,setting.getDescription());
+    assertEquals(defaultValue,setting.get());
+  }
+}

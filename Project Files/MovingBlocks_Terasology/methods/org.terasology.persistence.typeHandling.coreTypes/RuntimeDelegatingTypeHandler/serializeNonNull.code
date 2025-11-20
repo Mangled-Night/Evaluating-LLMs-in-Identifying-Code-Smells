@@ -1,0 +1,51 @@
+@SuppressWarnings("unchecked") @Override public PersistedData serializeNonNull(T value,PersistedDataSerializer serializer){
+  if (typeInfo.getRawType().isPrimitive() || Number.class.isAssignableFrom(typeInfo.getRawType())) {
+    if (delegateHandler != null) {
+      return delegateHandler.serialize(value,serializer);
+    }
+    LOGGER.error("Primitive '{}' does not have a TypeHandler",typeInfo);
+    return serializer.serializeNull();
+  }
+  TypeHandler<T> chosenHandler=delegateHandler;
+  Type runtimeType=getRuntimeTypeIfMoreSpecific(value);
+  if (!typeInfo.getType().equals(runtimeType)) {
+    Optional<TypeHandler<?>> runtimeTypeHandler=typeHandlerLibrary.getTypeHandler(runtimeType);
+    chosenHandler=(TypeHandler<T>)runtimeTypeHandler.map(typeHandler -> {
+      if (delegateHandler == null) {
+        return typeHandler;
+      }
+      if (!(typeHandler instanceof ObjectFieldMapTypeHandler) && typeHandler.getClass().equals(delegateHandler.getClass())) {
+        return delegateHandler;
+      }
+      if (!isDefaultTypeHandler(typeHandler)) {
+        return typeHandler;
+      }
+      if (!isDefaultTypeHandler(delegateHandler)) {
+        return delegateHandler;
+      }
+      return typeHandler;
+    }
+).orElse(delegateHandler);
+  }
+  if (chosenHandler == null) {
+    LOGGER.warn("Could not find appropriate TypeHandler for runtime type '{}', " + "serializing as base type '{}'",runtimeType,typeInfo);
+    return serializeViaDelegate(value,serializer);
+  }
+  if (chosenHandler == delegateHandler) {
+    return serializeViaDelegate(value,serializer);
+  }
+  Map<String,PersistedData> typeValuePersistedDataMap=Maps.newLinkedHashMap();
+  Class<? extends T> subType=(Class<? extends T>)ReflectionUtil.getRawType(runtimeType);
+  String subTypeIdentifier=sandbox.getSubTypeIdentifier(subType,typeInfo.getRawType());
+  typeValuePersistedDataMap.put(TYPE_FIELD,serializer.serialize(subTypeIdentifier));
+  PersistedData serialized=chosenHandler.serialize(value,serializer);
+  if (serialized.isValueMap()) {
+    for (    Map.Entry<String,PersistedData> entry : serialized.getAsValueMap().entrySet()) {
+      typeValuePersistedDataMap.put(entry.getKey(),entry.getValue());
+    }
+  }
+ else {
+    typeValuePersistedDataMap.put(VALUE_FIELD,serialized);
+  }
+  return serializer.serialize(typeValuePersistedDataMap);
+}

@@ -1,0 +1,18 @@
+private Collection<? extends Method> getMethods(Class<?> sourceClass){
+  Set<Method> result=new HashSet<>();
+  Class<?> searchType=sourceClass;
+  while (searchType != null && searchType != Object.class) {
+    result.addAll(filterPublicMethods(Arrays.asList(sourceClass.getDeclaredMethods())));
+    if (sourceClass.isInterface()) {
+      Class<?>[] interfaces=sourceClass.getInterfaces();
+      for (      Class<?> interfaceClass : interfaces) {
+        result.addAll(getMethods(interfaceClass));
+      }
+      searchType=null;
+    }
+ else {
+      searchType=searchType.getSuperclass();
+    }
+  }
+  return result;
+}

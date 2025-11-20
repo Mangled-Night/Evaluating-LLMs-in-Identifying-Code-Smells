@@ -1,0 +1,59 @@
+protected static OpenPgpContentElementData parseOpenPgpContentElementData(XmlPullParser parser,int initialDepth) throws XmlPullParserException, IOException, SmackParsingException, ParseException {
+  Set<Jid> to=new HashSet<>();
+  Date timestamp=null;
+  String rpad=null;
+  List<ExtensionElement> payload=new LinkedList<>();
+  outerloop:   while (true) {
+    XmlPullParser.Event tag=parser.next();
+    String name=parser.getName();
+switch (tag) {
+case START_ELEMENT:
+switch (name) {
+case OpenPgpContentElement.ELEM_TIME:
+        String stamp=parser.getAttributeValue("",OpenPgpContentElement.ATTR_STAMP);
+      timestamp=ParserUtils.getDateFromXep82String(stamp);
+    break;
+case OpenPgpContentElement.ELEM_TO:
+  String jid=parser.getAttributeValue("",OpenPgpContentElement.ATTR_JID);
+to.add(JidCreate.bareFrom(jid));
+break;
+case EncryptedOpenPgpContentElement.ELEM_RPAD:
+rpad=parser.nextText();
+break;
+case OpenPgpContentElement.ELEM_PAYLOAD:
+innerloop: while (true) {
+XmlPullParser.Event ptag=parser.next();
+String pname=parser.getName();
+String pns=parser.getNamespace();
+switch (ptag) {
+case START_ELEMENT:
+ExtensionElementProvider<ExtensionElement> provider=ProviderManager.getExtensionProvider(pname,pns);
+if (provider == null) {
+LOGGER.log(Level.INFO,"No provider found for " + pname + " "+ pns);
+continue innerloop;
+}
+payload.add(provider.parse(parser));
+break;
+case END_ELEMENT:
+break innerloop;
+default :
+break;
+}
+}
+break;
+}
+break;
+case END_ELEMENT:
+switch (name) {
+case CryptElement.ELEMENT:
+case SigncryptElement.ELEMENT:
+case SignElement.ELEMENT:
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return new OpenPgpContentElementData(to,timestamp,rpad,payload);
+}

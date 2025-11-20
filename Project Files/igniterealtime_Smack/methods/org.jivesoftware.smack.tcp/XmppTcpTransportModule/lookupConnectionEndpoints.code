@@ -1,0 +1,22 @@
+@Override protected List<SmackFuture<LookupConnectionEndpointsResult,Exception>> lookupConnectionEndpoints(){
+  assert discoveredTcpEndpoints == null;
+  List<SmackFuture<LookupConnectionEndpointsResult,Exception>> futures=new ArrayList<>(2);
+  InternalSmackFuture<LookupConnectionEndpointsResult,Exception> tcpEndpointsLookupFuture=new InternalSmackFuture<>();
+  connectionInternal.asyncGo(() -> {
+    Result<Rfc6120TcpRemoteConnectionEndpoint> result=RemoteXmppTcpConnectionEndpoints.lookup(connectionInternal.connection.getConfiguration());
+    LookupConnectionEndpointsResult endpointsResult;
+    if (result.discoveredRemoteConnectionEndpoints.isEmpty()) {
+      endpointsResult=new TcpEndpointDiscoveryFailed(result);
+    }
+ else {
+      endpointsResult=new DiscoveredTcpEndpoints(result);
+    }
+    tcpEndpointsLookupFuture.setResult(endpointsResult);
+  }
+);
+  futures.add(tcpEndpointsLookupFuture);
+  if (moduleDescriptor.isDirectTlsEnabled()) {
+    throw new IllegalArgumentException("DirectTLS is not implemented yet");
+  }
+  return futures;
+}

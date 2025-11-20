@@ -1,0 +1,20 @@
+private void createChunks(){
+  Block unloaded=blockManager.getBlock(BlockManager.UNLOADED_ID);
+  try {
+    while (true) {
+      Vector3ic pos=neededChunks.take();
+      Integer scale=requiredChunks.get(pos);
+      if (scale == null) {
+        continue;
+      }
+      Chunk chunk=new PreLodChunk(scaleDown(pos,scale),blockManager,extraDataManager);
+      generator.createChunk(chunk,(1 << scale) * (2f / (Chunks.SIZE_X - 2) + 1));
+      InternalLightProcessor.generateInternalLighting(chunk,1 << scale);
+      ChunkView view=new ChunkViewCoreImpl(new Chunk[]{chunk},new BlockRegion(chunk.getPosition()),new Vector3i(),unloaded);
+      ChunkMesh mesh=tessellator.generateMesh(view,1 << scale,1);
+      readyChunks.add(new LodChunk(pos,mesh,scale));
+    }
+  }
+ catch (  InterruptedException ignored) {
+  }
+}

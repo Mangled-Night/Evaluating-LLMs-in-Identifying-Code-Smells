@@ -1,0 +1,25 @@
+/** 
+ * Initialize/extend connections to Sentinel servers.
+ * @return
+ */
+private CompletionStage<Void> initializeSentinels(){
+  if (closed) {
+    return closeFuture;
+  }
+  Duration timeout=getTimeout();
+  List<ConnectionFuture<StatefulRedisPubSubConnection<String,String>>> connectionFutures=potentiallyConnectSentinels();
+  if (connectionFutures.isEmpty()) {
+    return CompletableFuture.completedFuture(null);
+  }
+  if (closed) {
+    return closeAsync();
+  }
+  SentinelTopologyRefreshConnections collector=collectConnections(connectionFutures);
+  CompletionStage<SentinelTopologyRefreshConnections> completionStage=collector.getOrTimeout(timeout,redisClient.getResources().eventExecutorGroup());
+  return completionStage.whenComplete((aVoid,throwable) -> {
+    if (throwable != null) {
+      closeAsync();
+    }
+  }
+).thenApply(noop -> (Void)null);
+}

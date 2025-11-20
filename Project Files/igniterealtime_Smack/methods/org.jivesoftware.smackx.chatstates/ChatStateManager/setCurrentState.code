@@ -1,0 +1,19 @@
+/** 
+ * Sets the current state of the provided chat. This method will send an empty bodied Message stanza with the state attached as a  {@link org.jivesoftware.smack.packet.ExtensionElement}, if and only if the new chat state is different than the last state.
+ * @param newState the new state of the chat
+ * @param chat the chat.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void setCurrentState(ChatState newState,Chat chat) throws NotConnectedException, InterruptedException {
+  if (chat == null || newState == null) {
+    throw new IllegalArgumentException("Arguments cannot be null.");
+  }
+  if (!updateChatState(chat,newState)) {
+    return;
+  }
+  Message message=StanzaBuilder.buildMessage().build();
+  ChatStateExtension extension=new ChatStateExtension(newState);
+  message.addExtension(extension);
+  chat.send(message);
+}

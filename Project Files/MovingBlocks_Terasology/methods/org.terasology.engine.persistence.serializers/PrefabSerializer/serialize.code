@@ -1,0 +1,32 @@
+/** 
+ * @param prefab
+ * @return The serialized prefab
+ */
+public EntityData.Prefab serialize(Prefab prefab){
+  EntityData.Prefab.Builder prefabData=EntityData.Prefab.newBuilder();
+  prefabData.setName(prefab.getName());
+  if (prefab.getParent() != null) {
+    prefabData.setParentName(prefab.getParent().getName());
+  }
+  prefabData.setAlwaysRelevant(prefab.isAlwaysRelevant());
+  prefabData.setPersisted(prefab.isPersisted());
+  for (  Component component : prefab.iterateComponents()) {
+    if (prefab.getParent() != null && prefab.getParent().hasComponent(component.getClass())) {
+      EntityData.Component serializedComponent=componentSerializer.serialize(prefab.getParent().getComponent(component.getClass()),component);
+      if (serializedComponent != null) {
+        prefabData.addComponent(serializedComponent);
+      }
+    }
+ else {
+      prefabData.addComponent(componentSerializer.serialize(component));
+    }
+  }
+  if (prefab.getParent() != null) {
+    for (    Component parentComp : prefab.getParent().iterateComponents()) {
+      if (!prefab.hasComponent(parentComp.getClass())) {
+        prefabData.addRemovedComponent(componentLibrary.getMetadata(parentComp).getId().toString());
+      }
+    }
+  }
+  return prefabData.build();
+}

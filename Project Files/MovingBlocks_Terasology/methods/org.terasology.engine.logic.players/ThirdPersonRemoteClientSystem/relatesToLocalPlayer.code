@@ -1,0 +1,35 @@
+/** 
+ * Checks a given entity in a variety of ways to see if it is immediately related to a local player. TODO: Is a bit of a shotgun blast approach to throwing out undesired player/client/character entities. Needs a more surgical approach.
+ * @param entity the entity to check (probably a player, client, or character entity)
+ * @return true if any such check passes, otherwise false
+ */
+private boolean relatesToLocalPlayer(EntityRef entity){
+  if (entity == null || entity.equals(EntityRef.NULL)) {
+    return false;
+  }
+  if (entity.equals(localPlayer.getClientEntity())) {
+    return true;
+  }
+  if (entity.equals(localPlayer.getCharacterEntity())) {
+    return true;
+  }
+  if (entity.equals(localPlayer.getClientInfoEntity())) {
+    return true;
+  }
+  EntityRef networkSystemProvidedClientEntity=localPlayerSystem.getClientEntityViaNetworkSystem();
+  if (entity.equals(networkSystemProvidedClientEntity)) {
+    logger.debug("checkForLocalPlayer found its entity to match the network system provided local client " + "entity! {}",entity);
+  }
+  if (entity.hasComponent(CharacterComponent.class)) {
+    EntityRef controller=entity.getComponent(CharacterComponent.class).controller;
+    if (controller != null) {
+      if (controller.equals(localPlayer.getClientEntity())) {
+        return true;
+      }
+      if (controller.equals(networkSystemProvidedClientEntity)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}

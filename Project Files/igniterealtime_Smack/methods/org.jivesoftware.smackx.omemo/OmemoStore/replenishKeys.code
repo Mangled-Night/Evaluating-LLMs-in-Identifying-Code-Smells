@@ -1,0 +1,24 @@
+/** 
+ * Replenish our supply of keys. If we are missing any type of keys, generate them fresh.
+ * @param userDevice our own OMEMO device
+ * @throws CorruptedOmemoKeyException if the OMEMO key is corrupted.
+ * @throws IOException if an I/O error occurred.
+ */
+public void replenishKeys(OmemoDevice userDevice) throws CorruptedOmemoKeyException, IOException {
+  T_IdKeyPair identityKeyPair=loadOmemoIdentityKeyPair(userDevice);
+  if (identityKeyPair == null) {
+    identityKeyPair=generateOmemoIdentityKeyPair();
+    storeOmemoIdentityKeyPair(userDevice,identityKeyPair);
+  }
+  TreeMap<Integer,T_SigPreKey> signedPreKeys=loadOmemoSignedPreKeys(userDevice);
+  if (signedPreKeys.size() == 0) {
+    changeSignedPreKey(userDevice);
+  }
+  TreeMap<Integer,T_PreKey> preKeys=loadOmemoPreKeys(userDevice);
+  int newKeysCount=PRE_KEY_COUNT_PER_BUNDLE - preKeys.size();
+  int startId=preKeys.size() == 0 ? 0 : preKeys.lastKey();
+  if (newKeysCount > 0) {
+    TreeMap<Integer,T_PreKey> newKeys=generateOmemoPreKeys(startId + 1,newKeysCount);
+    storeOmemoPreKeys(userDevice,newKeys);
+  }
+}

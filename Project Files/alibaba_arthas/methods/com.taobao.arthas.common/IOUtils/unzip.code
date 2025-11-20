@@ -1,0 +1,43 @@
+public static void unzip(String zipFile,String extractFolder) throws IOException {
+  File file=new File(zipFile);
+  ZipFile zip=null;
+  try {
+    int BUFFER=1024 * 8;
+    zip=new ZipFile(file);
+    File newPath=new File(extractFolder);
+    newPath.mkdirs();
+    Enumeration<? extends ZipEntry> zipFileEntries=zip.entries();
+    while (zipFileEntries.hasMoreElements()) {
+      ZipEntry entry=(ZipEntry)zipFileEntries.nextElement();
+      String currentEntry=entry.getName();
+      File destFile=new File(newPath,currentEntry);
+      if (!isSubFile(newPath,destFile)) {
+        throw new IOException("Bad zip entry: " + currentEntry);
+      }
+      File destinationParent=destFile.getParentFile();
+      destinationParent.mkdirs();
+      if (!entry.isDirectory()) {
+        BufferedInputStream is=null;
+        BufferedOutputStream dest=null;
+        try {
+          is=new BufferedInputStream(zip.getInputStream(entry));
+          int currentByte;
+          byte data[]=new byte[BUFFER];
+          FileOutputStream fos=new FileOutputStream(destFile);
+          dest=new BufferedOutputStream(fos,BUFFER);
+          while ((currentByte=is.read(data,0,BUFFER)) != -1) {
+            dest.write(data,0,currentByte);
+          }
+          dest.flush();
+        }
+  finally {
+          close(dest);
+          close(is);
+        }
+      }
+    }
+  }
+  finally {
+    close(zip);
+  }
+}

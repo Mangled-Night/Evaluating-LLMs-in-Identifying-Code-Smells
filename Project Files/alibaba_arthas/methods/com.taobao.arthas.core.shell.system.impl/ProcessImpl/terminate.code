@@ -1,0 +1,24 @@
+@Override public void terminate(){
+  terminate(null);
+}
+@Override public void terminate(Handler<Void> completionHandler){
+  if (!terminate(-10,completionHandler,null)) {
+    throw new IllegalStateException("Cannot terminate terminated process");
+  }
+}
+private synchronized boolean terminate(int exitCode,Handler<Void> completionHandler,String message){
+  if (processStatus != ExecStatus.TERMINATED) {
+    this.appendResult(new StatusModel(exitCode,message));
+    if (process != null) {
+      processOutput.close();
+    }
+    updateStatus(ExecStatus.TERMINATED,exitCode,false,endHandler,terminatedHandler,completionHandler);
+    if (process != null) {
+      process.unregister();
+    }
+    return true;
+  }
+ else {
+    return false;
+  }
+}

@@ -1,0 +1,48 @@
+public class IoTControlIntegrationTest extends AbstractSmackIntegrationTest {
+  private final IoTControlManager IoTControlManagerOne;
+  private final IoTControlManager IoTControlManagerTwo;
+  public IoTControlIntegrationTest(  SmackIntegrationTestEnvironment environment){
+    super(environment);
+    IoTControlManagerOne=IoTControlManager.getInstanceFor(conOne);
+    IoTControlManagerTwo=IoTControlManager.getInstanceFor(conTwo);
+  }
+  /** 
+ * Connection one provides a thing, which is controlled by connection two.
+ * @throws Exception if an exception occurs.
+ * @throws TimeoutException if there was a timeout.
+ */
+  @SmackIntegrationTest public void controlTest() throws Exception {
+    final String key=StringUtils.randomString(12);
+    final String sn=StringUtils.randomString(12);
+    final SimpleResultSyncPoint syncPoint=new SimpleResultSyncPoint();
+    Thing controlThing=Thing.builder().setKey(key).setSerialNumber(sn).setControlRequestHandler(new ThingControlRequest(){
+      @Override public void processRequest(      Jid from,      Collection<SetData> setData) throws XMPPErrorException {
+        if (!from.equals(conTwo.getUser())) {
+          return;
+        }
+        for (        final SetData data : setData) {
+          if (!data.getName().equals(testRunId))           continue;
+          if (!(data instanceof SetBoolData))           continue;
+          SetBoolData boolData=(SetBoolData)data;
+          if (boolData.getBooleanValue()) {
+            syncPoint.signal();
+            break;
+          }
+        }
+      }
+    }
+).build();
+    IoTControlManagerOne.installThing(controlThing);
+    try {
+      IntegrationTestRosterUtil.ensureBothAccountsAreSubscribedToEachOther(conOne,conTwo,timeout);
+      SetData data=new SetBoolData(testRunId,true);
+      IoTSetResponse response=IoTControlManagerTwo.setUsingIq(conOne.getUser(),data);
+      assertNotNull(response);
+    }
+  finally {
+      IoTControlManagerOne.uninstallThing(controlThing);
+      IntegrationTestRosterUtil.ensureBothAccountsAreNotInEachOthersRoster(conOne,conTwo);
+    }
+    syncPoint.waitForResult(timeout);
+  }
+}

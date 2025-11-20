@@ -1,0 +1,17 @@
+private PubSub sendPubsubPacket(IQ.Type type,XmlElement ext,PubSubNamespace ns) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  return sendPubsubPacket(pubSubService,type,Collections.singletonList(ext),ns);
+}
+PubSub sendPubsubPacket(Jid to,IQ.Type type,List<XmlElement> extList,PubSubNamespace ns) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  PubSub pubSub=new PubSub(to,type,ns);
+  for (  XmlElement pe : extList) {
+    pubSub.addExtension(pe);
+  }
+  return sendPubsubPacket(pubSub);
+}
+PubSub sendPubsubPacket(PubSub packet) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  IQ resultIQ=connection().sendIqRequestAndWaitForResponse(packet);
+  if (resultIQ instanceof EmptyResultIQ) {
+    return null;
+  }
+  return (PubSub)resultIQ;
+}

@@ -1,0 +1,38 @@
+private boolean initOpenVRCompositor(boolean set){
+  if (set && vrSystem != null) {
+    vrCompositor=new VR_IVRCompositor_FnTable(JOpenVRLibrary.VR_GetGenericInterface(JOpenVRLibrary.IVRCompositor_Version,hmdErrorStore));
+    if (hmdErrorStore.get(0) == 0) {
+      logger.info("OpenVR Compositor initialized OK.");
+      vrCompositor.setAutoSynch(false);
+      vrCompositor.read();
+      vrCompositor.SetTrackingSpace.apply(JOpenVRLibrary.ETrackingUniverseOrigin.ETrackingUniverseOrigin_TrackingUniverseStanding);
+    }
+ else {
+      String errorString=jopenvr.JOpenVRLibrary.VR_GetVRInitErrorAsEnglishDescription(hmdErrorStore.get(0)).getString(0);
+      logger.info("vrCompositor initialization failed:" + errorString);
+      return false;
+    }
+  }
+  if (vrCompositor == null) {
+    logger.info("Skipping VR Compositor...");
+  }
+  texBounds.uMax=1f;
+  texBounds.uMin=0f;
+  texBounds.vMax=1f;
+  texBounds.vMin=0f;
+  texBounds.setAutoSynch(false);
+  texBounds.setAutoRead(false);
+  texBounds.setAutoWrite(false);
+  texBounds.write();
+  for (int nEye=0; nEye < 2; nEye++) {
+    texType[0].eColorSpace=JOpenVRLibrary.EColorSpace.EColorSpace_ColorSpace_Gamma;
+    texType[0].eType=JOpenVRLibrary.EGraphicsAPIConvention.EGraphicsAPIConvention_API_OpenGL;
+    texType[0].setAutoSynch(false);
+    texType[0].setAutoRead(false);
+    texType[0].setAutoWrite(false);
+    texType[0].handle=-1;
+    texType[0].write();
+  }
+  logger.info("OpenVR Compositor initialized OK.");
+  return true;
+}

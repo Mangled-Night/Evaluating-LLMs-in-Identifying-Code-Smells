@@ -1,0 +1,28 @@
+public static void apply(View... views){
+  if (views == null)   return;
+  for (  View view : views) {
+    apply(view,new Config());
+  }
+}
+public static void apply(View view,Config builder){
+  if (view == null || builder == null)   return;
+  Drawable background=view.getBackground();
+  Object tag=view.getTag(SHADOW_TAG);
+  if (tag instanceof Drawable) {
+    ViewCompat.setBackground(view,(Drawable)tag);
+  }
+ else {
+    background=builder.apply(background);
+    ViewCompat.setBackground(view,background);
+    view.setTag(SHADOW_TAG,background);
+  }
+}
+Drawable apply(Drawable src){
+  if (src == null) {
+    src=new ColorDrawable(Color.TRANSPARENT);
+  }
+  StateListDrawable drawable=new StateListDrawable();
+  drawable.addState(new int[]{android.R.attr.state_pressed},new ShadowDrawable(src,getShadowRadius(),getShadowSizeNormal(),getShadowMaxSizeNormal(),mShadowColorPressed,isCircle));
+  drawable.addState(StateSet.WILD_CARD,new ShadowDrawable(src,getShadowRadius(),getShadowSizePressed(),getShadowMaxSizePressed(),mShadowColorNormal,isCircle));
+  return drawable;
+}

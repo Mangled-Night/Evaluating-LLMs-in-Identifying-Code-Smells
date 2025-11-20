@@ -1,0 +1,36 @@
+private void pushAddServerPopupAndStartLogBackAppender(){
+  AddServerPopup addServerPopup=nuiManager.pushScreen(AddServerPopup.ASSET_URI,AddServerPopup.class);
+  addServerPopup.removeTip();
+  ServerInfo serverInfo;
+  TelemetryConfig telemetryConfig=config.getTelemetryConfig();
+  if (telemetryConfig.getErrorReportingDestination() != null) {
+    try {
+      URL url=new URL("http://" + telemetryConfig.getErrorReportingDestination());
+      serverInfo=new ServerInfo(telemetryConfig.getErrorReportingServerName(),url.getHost(),url.getPort());
+      serverInfo.setOwner(telemetryConfig.getErrorReportingServerOwner());
+    }
+ catch (    Exception e) {
+      logger.error("Exception when get telemetry server information",e);
+      serverInfo=new ServerInfo(TelemetryLogstashAppender.DEFAULT_LOGSTASH_NAME,TelemetryLogstashAppender.DEFAULT_LOGSTASH_HOST,TelemetryLogstashAppender.DEFAULT_LOGSTASH_PORT);
+      serverInfo.setOwner(TelemetryLogstashAppender.DEFAULT_LOGSTASH_OWNER);
+    }
+  }
+ else {
+    serverInfo=new ServerInfo(TelemetryLogstashAppender.DEFAULT_LOGSTASH_NAME,TelemetryLogstashAppender.DEFAULT_LOGSTASH_HOST,TelemetryLogstashAppender.DEFAULT_LOGSTASH_PORT);
+    serverInfo.setOwner(TelemetryLogstashAppender.DEFAULT_LOGSTASH_OWNER);
+  }
+  addServerPopup.setServerInfo(serverInfo);
+  addServerPopup.onSuccess((item) -> {
+    String destinationLogstash=item.getAddress() + ":" + item.getPort();
+    TelemetryLogstashAppender telemetryLogstashAppender=TelemetryUtils.fetchTelemetryLogstashAppender();
+    if (telemetryLogstashAppender != null) {
+      telemetryLogstashAppender.addDestination(destinationLogstash);
+      telemetryLogstashAppender.start();
+    }
+    telemetryConfig.setErrorReportingDestination(destinationLogstash);
+    telemetryConfig.setErrorReportingServerName(item.getName());
+    telemetryConfig.setErrorReportingServerOwner(item.getOwner());
+  }
+);
+  addServerPopup.onCancel((button) -> telemetryConfig.setErrorReportingEnabled(false));
+}

@@ -1,0 +1,31 @@
+/** 
+ * Loops an audio file (in WAVE, AU, AIFF, or MIDI format) in its own background thread.
+ * @param filename the name of the audio file
+ * @throws IllegalArgumentException if {@code filename} is {@code null}
+ * @deprecated to be removed in a future update, as it doesn't interactwell with  {@link #playInBackground(String filename)} or{@link #stopInBackground()}.
+ */
+@Deprecated public static synchronized void loopInBackground(String filename){
+  if (filename == null)   throw new IllegalArgumentException();
+  final AudioInputStream ais=getAudioInputStreamFromFile(filename);
+  try {
+    Clip clip=AudioSystem.getClip();
+    clip.open(ais);
+    clip.loop(Clip.LOOP_CONTINUOUSLY);
+  }
+ catch (  IOException|LineUnavailableException e) {
+    e.printStackTrace();
+  }
+  new Thread(new Runnable(){
+    public void run(){
+      while (true) {
+        try {
+          Thread.sleep(1000);
+        }
+ catch (        InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+  }
+).start();
+}

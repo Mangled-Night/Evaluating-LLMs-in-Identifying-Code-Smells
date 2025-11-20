@@ -1,0 +1,36 @@
+/** 
+ * This is the starting point for intitiating a new session.
+ * @throws IllegalStateException if an illegal state was encountered
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void startOutgoing() throws IllegalStateException, SmackException, InterruptedException {
+  updatePacketListener();
+  setSessionState(JingleSessionStatePending.getInstance());
+  Jingle jingle=new Jingle(JingleActionEnum.SESSION_INITIATE);
+  for (  JingleMediaManager mediaManager : getMediaManagers()) {
+    ContentNegotiator contentNeg=new ContentNegotiator(this,ContentNegotiator.INITIATOR,mediaManager.getName());
+    contentNeg.setMediaNegotiator(new MediaNegotiator(this,mediaManager,mediaManager.getPayloads(),contentNeg));
+    JingleTransportManager transportManager=mediaManager.getTransportManager();
+    TransportResolver resolver=null;
+    try {
+      resolver=transportManager.getResolver(this);
+    }
+ catch (    XMPPException e) {
+      LOGGER.log(Level.WARNING,"exception",e);
+    }
+    if (resolver.getType().equals(TransportResolver.Type.rawupd)) {
+      contentNeg.setTransportNegotiator(new TransportNegotiator.RawUdp(this,resolver,contentNeg));
+    }
+    if (resolver.getType().equals(TransportResolver.Type.ice)) {
+      contentNeg.setTransportNegotiator(new TransportNegotiator.Ice(this,resolver,contentNeg));
+    }
+    addContentNegotiator(contentNeg);
+  }
+  for (  ContentNegotiator contentNegotiator : contentNegotiators) {
+    jingle.addContent(contentNegotiator.getJingleContent());
+  }
+  sessionInitPacketID=jingle.getStanzaId();
+  sendStanza(jingle);
+  setupListeners();
+}

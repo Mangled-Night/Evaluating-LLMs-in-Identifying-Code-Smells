@@ -1,0 +1,11 @@
+@Override public Integer calculate(String columnValue){
+  try {
+    long targetTime=formatter.get().parse(columnValue).getTime();
+    int targetPartition=(int)((targetTime - beginDate) / partionTime);
+    int innerIndex=Hashing.consistentHash(targetTime,intGroupPartionSize);
+    return targetPartition * intGroupPartionSize + innerIndex;
+  }
+ catch (  ParseException e) {
+    throw new IllegalArgumentException(new StringBuilder().append("columnValue:").append(columnValue).append(" Please check if the format satisfied.").toString(),e);
+  }
+}

@@ -1,0 +1,63 @@
+/** 
+ * A threaded dummy connection.
+ * @author Robin Collier
+ */
+public class ThreadedDummyConnection extends DummyConnection {
+  private static final Logger LOGGER=Logger.getLogger(ThreadedDummyConnection.class.getName());
+  private final BlockingQueue<IQ> replyQ=new ArrayBlockingQueue<>(1);
+  private final BlockingQueue<Stanza> messageQ=new LinkedBlockingQueue<>(5);
+  private volatile boolean timeout=false;
+  @Override protected void sendInternal(  TopLevelStreamElement element){
+    super.sendInternal(element);
+    if (element instanceof IQ && !timeout) {
+      IQ iq=(IQ)element;
+      timeout=false;
+      IQ replyPacket=replyQ.peek();
+      if (replyPacket == null) {
+        replyPacket=IQ.createResultIQ(iq);
+        replyQ.add(replyPacket);
+      }
+      replyPacket.setStanzaId(iq.getStanzaId());
+      replyPacket.setTo(iq.getFrom());
+      if (replyPacket.getType() == null) {
+        replyPacket.setType(IQ.Type.result);
+      }
+      new ProcessQueue(replyQ).start();
+    }
+  }
+  /** 
+ * Calling this method will cause the next sendStanza call with an IQ stanza to timeout. This is accomplished by simply stopping the auto creating of the reply stanza or processing one that was entered via  {@link #processStanza(Stanza)}.
+ */
+  public void setTimeout(){
+    timeout=true;
+  }
+  public void addMessage(  Message msgToProcess){
+    messageQ.add(msgToProcess);
+  }
+  public void addIQReply(  IQ reply){
+    replyQ.add(reply);
+  }
+  public void processMessages(){
+    if (!messageQ.isEmpty())     new ProcessQueue(messageQ).start();
+ else     LOGGER.warning("No messages to process");
+  }
+class ProcessQueue extends Thread {
+    private BlockingQueue<? extends Stanza> processQ;
+    ProcessQueue(    BlockingQueue<? extends Stanza> queue){
+      processQ=queue;
+    }
+    @Override public void run(){
+      try {
+        processStanza(processQ.take());
+      }
+ catch (      InterruptedException e) {
+        LOGGER.log(Level.WARNING,"exception",e);
+      }
+    }
+  }
+  public static ThreadedDummyConnection newInstance() throws SmackException, IOException, XMPPException, InterruptedException {
+    ThreadedDummyConnection threadedDummyConnection=new ThreadedDummyConnection();
+    threadedDummyConnection.connect();
+    return threadedDummyConnection;
+  }
+}

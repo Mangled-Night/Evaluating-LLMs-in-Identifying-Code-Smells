@@ -1,0 +1,9 @@
+@Test void publishToMultipleSubscribers() throws Exception {
+  EventBus sut=new DefaultEventBus(Schedulers.parallel());
+  ArrayBlockingQueue<Event> arrayQueue=new ArrayBlockingQueue<>(5);
+  Disposable disposable1=sut.get().doOnNext(arrayQueue::add).subscribe();
+  StepVerifier.create(sut.get().doOnNext(arrayQueue::add)).then(() -> sut.publish(event)).expectNext(event).thenCancel().verify();
+  assertThat(arrayQueue.take()).isEqualTo(event);
+  assertThat(arrayQueue.take()).isEqualTo(event);
+  disposable1.dispose();
+}

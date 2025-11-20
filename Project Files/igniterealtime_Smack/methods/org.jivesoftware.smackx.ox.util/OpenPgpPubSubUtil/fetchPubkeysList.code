@@ -1,0 +1,39 @@
+/** 
+ * Consult the public key metadata node and fetch a list of all of our published OpenPGP public keys.
+ * @see <a href="https://xmpp.org/extensions/xep-0373.html#discover-pubkey-list">
+     *      XEP-0373 §4.3: Discovering Public Keys of a User</a>
+ * @param connection XMPP connection
+ * @return content of our metadata node.
+ * @throws InterruptedException if the thread gets interrupted.
+ * @throws XMPPException.XMPPErrorException in case of an XMPP protocol exception.
+ * @throws PubSubException.NotAPubSubNodeException in case the queried entity is not a PubSub node
+ * @throws PubSubException.NotALeafNodeException in case the queried node is not a {@link LeafNode}
+ * @throws SmackException.NotConnectedException in case we are not connected
+ * @throws SmackException.NoResponseException in case the server doesn't respond
+ */
+public static PublicKeysListElement fetchPubkeysList(XMPPConnection connection) throws InterruptedException, XMPPException.XMPPErrorException, PubSubException.NotAPubSubNodeException, PubSubException.NotALeafNodeException, SmackException.NotConnectedException, SmackException.NoResponseException {
+  return fetchPubkeysList(connection,null);
+}
+/** 
+ * Consult the public key metadata node of  {@code contact} to fetch the list of their published OpenPGP public keys.
+ * @see <a href="https://xmpp.org/extensions/xep-0373.html#discover-pubkey-list">
+     *     XEP-0373 §4.3: Discovering Public Keys of a User</a>
+ * @param connection XMPP connection
+ * @param contact {@link BareJid} of the user we want to fetch the list from.
+ * @return content of {@code contact}'s metadata node.
+ * @throws InterruptedException if the thread gets interrupted.
+ * @throws XMPPException.XMPPErrorException in case of an XMPP protocol exception.
+ * @throws SmackException.NoResponseException in case the server doesn't respond
+ * @throws PubSubException.NotALeafNodeException in case the queried node is not a {@link LeafNode}
+ * @throws SmackException.NotConnectedException in case we are not connected
+ * @throws PubSubException.NotAPubSubNodeException in case the queried entity is not a PubSub node
+ */
+public static PublicKeysListElement fetchPubkeysList(XMPPConnection connection,BareJid contact) throws InterruptedException, XMPPException.XMPPErrorException, SmackException.NoResponseException, PubSubException.NotALeafNodeException, SmackException.NotConnectedException, PubSubException.NotAPubSubNodeException {
+  PubSubManager pm=PubSubManager.getInstanceFor(connection,contact);
+  LeafNode node=getLeafNode(pm,PEP_NODE_PUBLIC_KEYS);
+  List<PayloadItem<PublicKeysListElement>> list=node.getItems(1);
+  if (list.isEmpty()) {
+    return null;
+  }
+  return list.get(0).getPayload();
+}

@@ -1,0 +1,24 @@
+/** 
+ * Receives a PendingEvent and add it as a RecordedEvent in the RecordedEventStore if it is an event type that should be recorded.
+ * @param pendingEvent PendingEvent to be checked and added
+ * @return If the event was added to the RecordedEventStore
+ */
+public boolean addEvent(PendingEvent pendingEvent){
+  if (shouldRecordEvent(pendingEvent)) {
+    long timestamp=System.currentTimeMillis() - this.startTime;
+    Event e=this.eventCopier.copyEvent(pendingEvent.getEvent());
+    PendingEvent newPendingEvent=new PendingEvent(pendingEvent.getEntity(),e);
+    RecordedEvent recordedEvent;
+    if (pendingEvent.getComponent() == null) {
+      recordedEvent=new RecordedEvent(newPendingEvent.getEntity().getId(),newPendingEvent.getEvent(),timestamp,this.eventCounter);
+    }
+ else {
+      recordedEvent=new RecordedEvent(newPendingEvent.getEntity().getId(),newPendingEvent.getEvent(),newPendingEvent.getComponent(),timestamp,eventCounter);
+    }
+    this.eventCounter++;
+    return recordedEventStore.add(recordedEvent);
+  }
+ else {
+    return false;
+  }
+}

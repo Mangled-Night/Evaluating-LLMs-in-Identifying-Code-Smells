@@ -1,0 +1,33 @@
+private static RowDataPacket getRow(TableStat tableStat,long idx,String charset){
+  RowDataPacket row=new RowDataPacket(FIELD_COUNT);
+  row.add(LongUtil.toBytes(idx));
+  if (tableStat == null) {
+    row.add(StringUtil.encode(("not fond"),charset));
+    return row;
+  }
+  String table=tableStat.getTable();
+  long R=tableStat.getRCount();
+  long W=tableStat.getWCount();
+  String __R=decimalFormat.format(1.0D * R / (R + W));
+  StringBuffer relaTableNameBuffer=new StringBuffer();
+  StringBuffer relaTableCountBuffer=new StringBuffer();
+  List<TableStat.RelaTable> relaTables=tableStat.getRelaTables();
+  if (!relaTables.isEmpty()) {
+    for (    TableStat.RelaTable relaTable : relaTables) {
+      relaTableNameBuffer.append(relaTable.getTableName()).append(", ");
+      relaTableCountBuffer.append(relaTable.getCount()).append(", ");
+    }
+  }
+ else {
+    relaTableNameBuffer.append("NULL");
+    relaTableCountBuffer.append("NULL");
+  }
+  row.add(StringUtil.encode(table,charset));
+  row.add(LongUtil.toBytes(R));
+  row.add(LongUtil.toBytes(W));
+  row.add(StringUtil.encode(String.valueOf(__R),charset));
+  row.add(StringUtil.encode(relaTableNameBuffer.toString(),charset));
+  row.add(StringUtil.encode(relaTableCountBuffer.toString(),charset));
+  row.add(LongUtil.toBytes(tableStat.getLastExecuteTime()));
+  return row;
+}

@@ -1,0 +1,21 @@
+@Override public CapsExtension parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  String hash, version, node;
+  if (parser.getEventType() == XmlPullParser.Event.START_ELEMENT && parser.getName().equalsIgnoreCase(EntityCapsManager.ELEMENT)) {
+    hash=parser.getAttributeValue(null,"hash");
+    version=parser.getAttributeValue(null,"ver");
+    node=parser.getAttributeValue(null,"node");
+  }
+ else {
+    throw new IOException("Malformed Caps element");
+  }
+  parser.next();
+  if (!(parser.getEventType() == XmlPullParser.Event.END_ELEMENT && parser.getName().equalsIgnoreCase(EntityCapsManager.ELEMENT))) {
+    throw new IOException("Malformed nested Caps element");
+  }
+  if (hash != null && version != null && node != null) {
+    return new CapsExtension(node,version,hash);
+  }
+ else {
+    throw new IOException("Caps element with missing attributes. Attributes: hash=" + hash + " version="+ version+ " node="+ node);
+  }
+}

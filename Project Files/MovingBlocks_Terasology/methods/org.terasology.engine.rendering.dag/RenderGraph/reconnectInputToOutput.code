@@ -1,0 +1,135 @@
+/** 
+ * API for reconnecting input FBO dependency. Expects 2 existing nodes and an existing output connection on fromNode. Output connection must be created explicitly beforehand or simply exist already. If previous requirements are met, attempts to connectFbo or reconnect toNode's (toNodeUri) input (inputId) to fromNode's (fromNodeUri) output (outputId).
+ * @param toNodeUri toNode's SimpleUri name. Node must exist in the renderGraph.
+ * @param inputId Id of toNode's input. Input does NOT have to exist beforehand.
+ * @param fromNodeUri fromNode's SimpleUri name. Node must exist in the renderGraph.
+ * @param outputId Id of fromNode's output. Output must exist.
+ */
+public void reconnectInputToOutput(String fromNodeUri,int outputId,String toNodeUri,int inputId,boolean disconnectPrevious){
+  Node toNode=findNode(toNodeUri);
+  if (toNode == null) {
+    toNode=findAka(toNodeUri);
+    if (toNode == null) {
+      throw new RuntimeException(("No node is associated with URI '" + toNodeUri + "'"));
+    }
+  }
+  Node fromNode=findNode(fromNodeUri);
+  if (fromNode == null) {
+    fromNode=findAka(fromNodeUri);
+    if (fromNode == null) {
+      throw new RuntimeException(("No node is associated with URI '" + fromNodeUri + "'"));
+    }
+  }
+  reconnectInputToOutput(fromNode,outputId,toNode,inputId,ConnectionType.FBO,disconnectPrevious);
+}
+public void reconnectInputToOutput(String fromNodeUri,int outputId,Node toNode,int inputId,ConnectionType connectionType,boolean disconnectPrevious){
+  Node fromNode=findNode(new SimpleUri(fromNodeUri));
+  if (fromNode == null) {
+    fromNode=findAka(fromNodeUri);
+    if (fromNode == null) {
+      throw new RuntimeException(("No node is associated with URI '" + fromNodeUri + "'"));
+    }
+  }
+  reconnectInputToOutput(fromNode,outputId,toNode,inputId,connectionType,disconnectPrevious);
+}
+/** 
+ * API for reconnecting input dependency to another output. Attempts to connectFbo or reconnect toNode's input (inputId) to fromNode's (fromNodeUri) output (outputId).
+ * @param toNode toNode's SimpleUri name. Node must exist in the renderGraph.
+ * @param inputId Id of toNode's input. Input does NOT have to exist beforehand.
+ * @param fromConnection Id of fromNode's output connection. Connection must exist.
+ * @param connectionType {@link ConnectionType} saying whether the dependency is Fbo, BufferPair or something else
+ * @param disconnectPrevious  TO DEPRECATE; Whether to disconnect previous connection. This should now be always true.
+ */
+private void reconnectInputToOutput(Node toNode,int inputId,DependencyConnection fromConnection,ConnectionType connectionType,boolean disconnectPrevious){
+  logger.debug("Attempting reconnection of " + toNode.getUri() + " to "+ fromConnection.getParentNode()+ "'s output.");
+  Node fromNode;
+  fromNode=findNode(fromConnection.getParentNode());
+  if (!fromConnection.getConnectedConnections().isEmpty()) {
+    logger.warn("WARNING: destination connection (" + fromConnection + ") is already connected to ("+ fromConnection.getConnectedConnections());
+  }
+  DependencyConnection connectionToReconnect;
+switch (connectionType) {
+case FBO:
+    connectionToReconnect=toNode.getInputFboConnection(inputId);
+  break;
+case BUFFER_PAIR:
+connectionToReconnect=toNode.getInputBufferPairConnection(inputId);
+break;
+default :
+logger.error("Unknown type of connection: ");
+throw new RuntimeException("Unknown type of connection: ");
+}
+if (connectionToReconnect != null) {
+if (!connectionToReconnect.getConnectedConnections().isEmpty()) {
+DependencyConnection previousFromConnection=(DependencyConnection)connectionToReconnect.getConnectedConnections().values().iterator().next();
+Node previousFromNode=findNode((previousFromConnection).getParentNode());
+connectionToReconnect.getConnectedConnections().clear();
+if (previousFromNode == null) {
+throw new RuntimeException("Node uri " + previousFromNode + " not found in renderGraph.");
+}
+connectionToReconnect.connectInputToOutput(fromConnection);
+if (!toNode.isDependentOn(previousFromNode) && disconnectPrevious) {
+disconnect(previousFromNode,toNode);
+previousFromConnection.getConnectedConnections().remove(connectionToReconnect.getName());
+}
+}
+ else {
+logger.info(toNode + "'s connection " + connectionToReconnect+ " was not connected. Attempting new connection...");
+this.connectFbo(toNode,inputId,fromConnection);
+}
+}
+ else {
+String connectionName;
+switch (connectionType) {
+case FBO:
+connectionName=FboConnection.getConnectionName(inputId,toNode.getUri());
+break;
+case BUFFER_PAIR:
+connectionName=BufferPairConnection.getConnectionName(inputId,toNode.getUri());
+break;
+default :
+connectionName="[unsupported connection type]";
+}
+logger.info("No such input connection named " + connectionName + ". Attempting new connection...");
+switch (connectionType) {
+case FBO:
+this.connectFbo(toNode,inputId,fromConnection);
+break;
+case BUFFER_PAIR:
+this.connectBufferPair(toNode,inputId,fromConnection);
+break;
+default :
+logger.error("Unknown type of output connection: ");
+throw new RuntimeException("Unknown type of output connection: ");
+}
+}
+logger.debug("Reconnecting finished.");
+}
+/** 
+ * API for reconnecting input FBO dependency. Expects 2 existing nodes and an existing output connection on fromNode. Output connection must be created explicitly beforehand or simply exist already. If previous requirements are met, attempts to connectFbo or reconnect toNode's (toNodeUri) input (inputId) to fromNode's (fromNodeUri) output (outputId).
+ * @param toNode toNode's SimpleUri name. Node must exist in the renderGraph.
+ * @param inputId Id of toNode's input. Input does NOT have to exist beforehand.
+ * @param fromNode fromNode's SimpleUri name. Node must exist in the renderGraph.
+ * @param outputId Id of fromNode's output. Output must exist.
+ */
+public void reconnectInputToOutput(Node fromNode,int outputId,Node toNode,int inputId,ConnectionType connectionType,boolean disconnectPrevious){
+  if (toNode == null || fromNode == null) {
+    throw new RuntimeException("Reconnecting dependency failed. One of the nodes not found in the renderGraph." + "\n toNode: " + toNode + ". fromNode: "+ fromNode);
+  }
+  DependencyConnection fromConnection;
+switch (connectionType) {
+case FBO:
+    fromConnection=fromNode.getOutputFboConnection(outputId);
+  break;
+case BUFFER_PAIR:
+fromConnection=fromNode.getOutputBufferPairConnection(outputId);
+break;
+default :
+logger.error("Unknown type of output connection: ");
+throw new RuntimeException("Unknown type of output connection: ");
+}
+if (fromConnection == null) {
+throw new RuntimeException("Reconnecting dependency failed. Could not find output connection.");
+}
+reconnectInputToOutput(toNode,inputId,fromConnection,connectionType,disconnectPrevious);
+}

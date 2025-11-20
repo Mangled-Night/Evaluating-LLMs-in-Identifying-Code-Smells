@@ -1,0 +1,33 @@
+private RigidBody newRigidBody(EntityRef entity){
+  LocationComponent location=entity.getComponent(LocationComponent.class);
+  RigidBodyComponent rigidBody=entity.getComponent(RigidBodyComponent.class);
+  btCollisionShape shape=getShapeFor(entity);
+  if (location != null && rigidBody != null && shape != null) {
+    float scale=location.getWorldScale();
+    shape.setLocalScaling(new Vector3f(scale,scale,scale));
+    if (rigidBody.mass < 1) {
+      logger.warn("RigidBodyComponent.mass is set to less than 1.0, this can lead to strange behaviour, " + "such as the objects moving through walls. " + "Entity: {}",entity);
+    }
+    Vector3f inertia=new Vector3f();
+    shape.calculateLocalInertia(rigidBody.mass,inertia);
+    btRigidBody.btRigidBodyConstructionInfo info=new btRigidBody.btRigidBodyConstructionInfo(rigidBody.mass,new EntityMotionState(entity),shape,inertia);
+    BulletRigidBody collider=new BulletRigidBody(info);
+    collider.rb.userData=entity;
+    collider.rb.setAngularFactor(rigidBody.angularFactor);
+    collider.rb.setLinearFactor(rigidBody.linearFactor);
+    collider.rb.setFriction(rigidBody.friction);
+    collider.collidesWith=combineGroups(rigidBody.collidesWith);
+    collider.setVelocity(rigidBody.velocity,rigidBody.angularVelocity);
+    collider.setTransform(location.getWorldPosition(new Vector3f()),location.getWorldRotation(new Quaternionf()));
+    updateKinematicSettings(rigidBody,collider);
+    BulletRigidBody oldBody=entityRigidBodies.put(entity,collider);
+    addRigidBody(collider,Lists.newArrayList(rigidBody.collisionGroup),rigidBody.collidesWith);
+    if (oldBody != null) {
+      removeRigidBody(oldBody);
+    }
+    return collider;
+  }
+ else {
+    throw new IllegalArgumentException("Can only create a new rigid body for entities with a " + "LocationComponent," + " RigidBodyComponent and ShapeComponent, this entity misses at least one: "+ entity);
+  }
+}

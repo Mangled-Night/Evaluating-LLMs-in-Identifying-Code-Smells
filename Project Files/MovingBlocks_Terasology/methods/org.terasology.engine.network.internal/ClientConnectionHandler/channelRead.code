@@ -1,0 +1,36 @@
+@Override public void channelRead(ChannelHandlerContext ctx,Object msg) throws Exception {
+  if (joinStatus.getStatus() == JoinStatus.Status.FAILED) {
+    return;
+  }
+  scheduleTimeout(ctx.channel());
+  NetData.NetMessage message=(NetData.NetMessage)msg;
+  String errorMessage=message.getServerInfo().getErrorMessage();
+  if (errorMessage != null && !errorMessage.isEmpty()) {
+synchronized (joinStatus) {
+      joinStatus.setErrorMessage(errorMessage);
+      ctx.channel().close();
+      return;
+    }
+  }
+synchronized (joinStatus) {
+    timeoutPoint=System.currentTimeMillis() + timeoutThreshold;
+    if (message.hasServerInfo()) {
+      receivedServerInfo(ctx,message.getServerInfo());
+    }
+ else     if (message.hasModuleDataHeader()) {
+      receiveModuleStart(ctx,message.getModuleDataHeader());
+    }
+ else     if (message.hasModuleData()) {
+      receiveModule(ctx,message.getModuleData());
+    }
+ else     if (message.hasJoinComplete()) {
+      if (missingModules.size() > 0) {
+        logger.error("The server did not send all of the modules that were needed before ending module transmission.");
+      }
+      completeJoin(ctx,message.getJoinComplete());
+    }
+ else {
+      logger.error("Received unexpected message");
+    }
+  }
+}

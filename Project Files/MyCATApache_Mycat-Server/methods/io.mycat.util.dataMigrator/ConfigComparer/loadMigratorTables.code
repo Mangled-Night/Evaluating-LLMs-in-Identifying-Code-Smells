@@ -1,0 +1,29 @@
+private void loadMigratorTables(String schemaName,String[] tables){
+  if (!DataMigratorUtil.isKeyExistIgnoreCase(oldSchemas,schemaName)) {
+    throw new ConfigException("oldSchema:" + schemaName + " is not exists!");
+  }
+  if (!DataMigratorUtil.isKeyExistIgnoreCase(newSchemas,schemaName)) {
+    throw new ConfigException("newSchema:" + schemaName + " is not exists!");
+  }
+  Map<String,TableConfig> oldTables=DataMigratorUtil.getValueIgnoreCase(oldSchemas,schemaName).getTables();
+  Map<String,TableConfig> newTables=DataMigratorUtil.getValueIgnoreCase(newSchemas,schemaName).getTables();
+  if (tables.length > 0) {
+    for (int i=0; i < tables.length; i++) {
+      TableConfig oldTable=DataMigratorUtil.getValueIgnoreCase(oldTables,tables[i]);
+      TableConfig newTable=DataMigratorUtil.getValueIgnoreCase(newTables,tables[i]);
+      loadMigratorTable(oldTable,newTable,schemaName,tables[i]);
+    }
+  }
+ else {
+    Set<String> oldSet=oldTables.keySet();
+    Set<String> newSet=newTables.keySet();
+    if (!oldSet.equals(newSet)) {
+      throw new ConfigException("new & old table config is not equal!");
+    }
+    for (    String tableName : oldSet) {
+      TableConfig oldTable=oldTables.get(tableName);
+      TableConfig newTable=newTables.get(tableName);
+      loadMigratorTable(oldTable,newTable,schemaName,tableName);
+    }
+  }
+}

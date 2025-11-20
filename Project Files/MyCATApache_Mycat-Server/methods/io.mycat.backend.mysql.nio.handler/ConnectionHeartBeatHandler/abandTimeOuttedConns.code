@@ -1,0 +1,28 @@
+/** 
+ * remove timeout connections
+ */
+public void abandTimeOuttedConns(){
+  if (allCons.isEmpty()) {
+    return;
+  }
+  Collection<BackendConnection> abandCons=new LinkedList<BackendConnection>();
+  long curTime=System.currentTimeMillis();
+  Iterator<Entry<Long,HeartBeatCon>> itors=allCons.entrySet().iterator();
+  while (itors.hasNext()) {
+    HeartBeatCon hbCon=itors.next().getValue();
+    if (hbCon.timeOutTimestamp < curTime) {
+      abandCons.add(hbCon.conn);
+      itors.remove();
+    }
+  }
+  if (!abandCons.isEmpty()) {
+    for (    BackendConnection con : abandCons) {
+      try {
+        con.close("heartbeat timeout ");
+      }
+ catch (      Exception e) {
+        LOGGER.warn("close err:" + e);
+      }
+    }
+  }
+}

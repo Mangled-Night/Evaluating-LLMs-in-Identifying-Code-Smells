@@ -1,0 +1,11 @@
+@Test void dynamicSourcesProvidesClientCountForAllNodes(){
+  ClusterTopologyRefreshOptions topologyRefreshOptions=ClusterTopologyRefreshOptions.create();
+  clusterClient.setOptions(ClusterClientOptions.builder().topologyRefreshOptions(topologyRefreshOptions).build());
+  RedisAdvancedClusterAsyncCommands<String,String> clusterConnection=clusterClient.connect().async();
+  for (  RedisClusterNode redisClusterNode : clusterClient.getPartitions()) {
+    assertThat(redisClusterNode).isInstanceOf(RedisClusterNodeSnapshot.class);
+    RedisClusterNodeSnapshot snapshot=(RedisClusterNodeSnapshot)redisClusterNode;
+    assertThat(snapshot.getConnectedClients()).isNotNull().isGreaterThanOrEqualTo(0);
+  }
+  clusterConnection.getStatefulConnection().close();
+}

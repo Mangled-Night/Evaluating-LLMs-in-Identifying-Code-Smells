@@ -1,0 +1,17 @@
+private void runReconnectTest(BiFunction<RedisAdvancedClusterAsyncCommands<String,String>,RedisClusterNode,BaseRedisAsyncCommands> function){
+  ClusterTopologyRefreshOptions topologyRefreshOptions=ClusterTopologyRefreshOptions.builder().refreshTriggersReconnectAttempts(0).enableAllAdaptiveRefreshTriggers().build();
+  clusterClient.setOptions(ClusterClientOptions.builder().topologyRefreshOptions(topologyRefreshOptions).build());
+  RedisAdvancedClusterAsyncCommands<String,String> clusterConnection=clusterClient.connect().async();
+  RedisClusterNode node=clusterClient.getPartitions().getPartition(0);
+  BaseRedisAsyncCommands closeable=function.apply(clusterConnection,node);
+  clusterClient.getPartitions().clear();
+  closeable.quit();
+  Wait.untilTrue(() -> {
+    return !clusterClient.getPartitions().isEmpty();
+  }
+).waitOrTimeout();
+  if (closeable instanceof RedisAdvancedClusterCommands) {
+    ((RedisAdvancedClusterCommands)closeable).getStatefulConnection().close();
+  }
+  clusterConnection.getStatefulConnection().close();
+}

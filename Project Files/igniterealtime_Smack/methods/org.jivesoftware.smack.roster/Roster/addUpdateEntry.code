@@ -1,0 +1,49 @@
+private void addUpdateEntry(Collection<Jid> addedEntries,Collection<Jid> updatedEntries,Collection<Jid> unchangedEntries,RosterPacket.Item item,RosterEntry entry){
+  RosterEntry oldEntry;
+synchronized (rosterListenersAndEntriesLock) {
+    oldEntry=entries.put(item.getJid(),entry);
+  }
+  if (oldEntry == null) {
+    BareJid jid=item.getJid();
+    addedEntries.add(jid);
+    move(jid,nonRosterPresenceMap,presenceMap);
+  }
+ else {
+    RosterPacket.Item oldItem=RosterEntry.toRosterItem(oldEntry);
+    if (!oldEntry.equalsDeep(entry) || !item.getGroupNames().equals(oldItem.getGroupNames())) {
+      updatedEntries.add(item.getJid());
+      oldEntry.updateItem(item);
+    }
+ else {
+      unchangedEntries.add(item.getJid());
+    }
+  }
+  if (item.getGroupNames().isEmpty()) {
+    unfiledEntries.add(entry);
+  }
+ else {
+    unfiledEntries.remove(entry);
+  }
+  List<String> newGroupNames=new ArrayList<>();
+  for (  String groupName : item.getGroupNames()) {
+    newGroupNames.add(groupName);
+    RosterGroup group=getGroup(groupName);
+    if (group == null) {
+      group=createGroup(groupName);
+      groups.put(groupName,group);
+    }
+    group.addEntryLocal(entry);
+  }
+  List<String> oldGroupNames=new ArrayList<>();
+  for (  RosterGroup group : getGroups()) {
+    oldGroupNames.add(group.getName());
+  }
+  oldGroupNames.removeAll(newGroupNames);
+  for (  String groupName : oldGroupNames) {
+    RosterGroup group=getGroup(groupName);
+    group.removeEntryLocal(entry);
+    if (group.getEntryCount() == 0) {
+      groups.remove(groupName);
+    }
+  }
+}

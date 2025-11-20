@@ -1,0 +1,26 @@
+/** 
+ * 解决getRandomDataNode方法获取错误节点的问题.
+ * @param tc
+ * @return
+ */
+public static String getAliveRandomDataNode(TableConfig tc){
+  List<String> randomDns=(List<String>)tc.getDataNodes().clone();
+  MycatConfig mycatConfig=MycatServer.getInstance().getConfig();
+  if (mycatConfig != null) {
+    Collections.shuffle(randomDns);
+    for (    String randomDn : randomDns) {
+      PhysicalDBNode physicalDBNode=mycatConfig.getDataNodes().get(randomDn);
+      if (physicalDBNode != null) {
+        if (physicalDBNode.getDbPool().getSource().isAlive()) {
+          for (          PhysicalDBPool pool : MycatServer.getInstance().getConfig().getDataHosts().values()) {
+            PhysicalDatasource source=pool.getSource();
+            if (source.getHostConfig().containDataNode(randomDn) && pool.getSource().isAlive()) {
+              return randomDn;
+            }
+          }
+        }
+      }
+    }
+  }
+  return tc.getRandomDataNode();
+}

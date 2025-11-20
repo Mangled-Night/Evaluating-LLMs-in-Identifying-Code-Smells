@@ -1,0 +1,25 @@
+@Test void differentConnections(){
+  for (  RedisClusterNode redisClusterNode : clusterClient.getPartitions()) {
+    RedisClusterAsyncCommands<String,String> nodeId=async.getConnection(redisClusterNode.getNodeId());
+    RedisClusterAsyncCommands<String,String> hostAndPort=async.getConnection(redisClusterNode.getUri().getHost(),redisClusterNode.getUri().getPort());
+    assertThat(nodeId).isNotSameAs(hostAndPort);
+  }
+  StatefulRedisClusterConnection<String,String> statefulConnection=async.getStatefulConnection();
+  for (  RedisClusterNode redisClusterNode : clusterClient.getPartitions()) {
+    StatefulRedisConnection<String,String> nodeId=statefulConnection.getConnection(redisClusterNode.getNodeId());
+    StatefulRedisConnection<String,String> hostAndPort=statefulConnection.getConnection(redisClusterNode.getUri().getHost(),redisClusterNode.getUri().getPort());
+    assertThat(nodeId).isNotSameAs(hostAndPort);
+  }
+  RedisAdvancedClusterCommands<String,String> sync=statefulConnection.sync();
+  for (  RedisClusterNode redisClusterNode : clusterClient.getPartitions()) {
+    RedisClusterCommands<String,String> nodeId=sync.getConnection(redisClusterNode.getNodeId());
+    RedisClusterCommands<String,String> hostAndPort=sync.getConnection(redisClusterNode.getUri().getHost(),redisClusterNode.getUri().getPort());
+    assertThat(nodeId).isNotSameAs(hostAndPort);
+  }
+  RedisAdvancedClusterReactiveCommands<String,String> rx=statefulConnection.reactive();
+  for (  RedisClusterNode redisClusterNode : clusterClient.getPartitions()) {
+    RedisClusterReactiveCommands<String,String> nodeId=rx.getConnection(redisClusterNode.getNodeId());
+    RedisClusterReactiveCommands<String,String> hostAndPort=rx.getConnection(redisClusterNode.getUri().getHost(),redisClusterNode.getUri().getPort());
+    assertThat(nodeId).isNotSameAs(hostAndPort);
+  }
+}

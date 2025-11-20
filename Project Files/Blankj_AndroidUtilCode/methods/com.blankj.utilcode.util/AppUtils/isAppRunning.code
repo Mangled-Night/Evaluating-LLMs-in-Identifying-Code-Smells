@@ -1,0 +1,30 @@
+/** 
+ * Return whether application is running.
+ * @param pkgName The name of the package.
+ * @return {@code true}: yes<br> {@code false}: no
+ */
+public static boolean isAppRunning(final String pkgName){
+  if (UtilsBridge.isSpace(pkgName))   return false;
+  ActivityManager am=(ActivityManager)Utils.getApp().getSystemService(Context.ACTIVITY_SERVICE);
+  if (am != null) {
+    List<ActivityManager.RunningTaskInfo> taskInfo=am.getRunningTasks(Integer.MAX_VALUE);
+    if (taskInfo != null && taskInfo.size() > 0) {
+      for (      ActivityManager.RunningTaskInfo aInfo : taskInfo) {
+        if (aInfo.baseActivity != null) {
+          if (pkgName.equals(aInfo.baseActivity.getPackageName())) {
+            return true;
+          }
+        }
+      }
+    }
+    List<ActivityManager.RunningServiceInfo> serviceInfo=am.getRunningServices(Integer.MAX_VALUE);
+    if (serviceInfo != null && serviceInfo.size() > 0) {
+      for (      ActivityManager.RunningServiceInfo aInfo : serviceInfo) {
+        if (pkgName.equals(aInfo.service.getPackageName())) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}

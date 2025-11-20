@@ -1,0 +1,57 @@
+public static StanzaError parseError(XmlPullParser parser) throws XmlPullParserException, IOException, SmackParsingException {
+  return parseError(parser,null);
+}
+/** 
+ * Parses error sub-packets.
+ * @param parser the XML parser.
+ * @param outerXmlEnvironment the outer XML environment (optional).
+ * @return an error sub-packet.
+ * @throws IOException if an I/O error occurred.
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ * @throws SmackParsingException if the Smack parser (provider) encountered invalid input.
+ */
+public static StanzaError parseError(XmlPullParser parser,XmlEnvironment outerXmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+  final int initialDepth=parser.getDepth();
+  Map<String,String> descriptiveTexts=null;
+  XmlEnvironment stanzaErrorXmlEnvironment=XmlEnvironment.from(parser,outerXmlEnvironment);
+  List<XmlElement> extensions=new ArrayList<>();
+  StanzaError.Builder builder=StanzaError.getBuilder();
+  builder.setType(StanzaError.Type.fromString(parser.getAttributeValue("","type")));
+  builder.setErrorGenerator(parser.getAttributeValue("","by"));
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String name=parser.getName();
+    String namespace=parser.getNamespace();
+switch (namespace) {
+case StanzaError.ERROR_CONDITION_AND_TEXT_NAMESPACE:
+switch (name) {
+case Stanza.TEXT:
+      descriptiveTexts=parseDescriptiveTexts(parser,descriptiveTexts);
+    break;
+default :
+  builder.setCondition(StanzaError.Condition.fromString(name));
+String conditionText=parser.nextText();
+if (!conditionText.isEmpty()) {
+builder.setConditionText(conditionText);
+}
+break;
+}
+break;
+default :
+PacketParserUtils.addExtensionElement(extensions,parser,name,namespace,stanzaErrorXmlEnvironment);
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+builder.setExtensions(extensions).setDescriptiveTexts(descriptiveTexts);
+return builder.build();
+}

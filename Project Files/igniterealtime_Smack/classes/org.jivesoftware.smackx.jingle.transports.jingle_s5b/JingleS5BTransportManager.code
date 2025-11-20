@@ -1,0 +1,141 @@
+/** 
+ * Manager for Jingle SOCKS5 Bytestream transports (XEP-0261).
+ */
+public final class JingleS5BTransportManager extends JingleTransportManager<JingleS5BTransport> {
+  private static final Logger LOGGER=Logger.getLogger(JingleS5BTransportManager.class.getName());
+  private static final WeakHashMap<XMPPConnection,JingleS5BTransportManager> INSTANCES=new WeakHashMap<>();
+  private List<Bytestream.StreamHost> localStreamHosts=null;
+  private List<Bytestream.StreamHost> availableStreamHosts=null;
+  private static boolean useLocalCandidates=true;
+  private static boolean useExternalCandidates=true;
+  private JingleS5BTransportManager(  XMPPConnection connection){
+    super(connection);
+    JingleContentProviderManager.addJingleContentTransportProvider(getNamespace(),new JingleS5BTransportProvider());
+  }
+  public static synchronized JingleS5BTransportManager getInstanceFor(  XMPPConnection connection){
+    JingleS5BTransportManager manager=INSTANCES.get(connection);
+    if (manager == null) {
+      manager=new JingleS5BTransportManager(connection);
+      INSTANCES.put(connection,manager);
+    }
+    return manager;
+  }
+  @Override public String getNamespace(){
+    return JingleS5BTransport.NAMESPACE_V1;
+  }
+  @Override public JingleTransportSession<JingleS5BTransport> transportSession(  JingleSession jingleSession){
+    return new JingleS5BTransportSession(jingleSession);
+  }
+  private List<Bytestream.StreamHost> queryAvailableStreamHosts() throws XMPPException.XMPPErrorException, SmackException.NotConnectedException, InterruptedException, SmackException.NoResponseException {
+    Socks5BytestreamManager s5m=Socks5BytestreamManager.getBytestreamManager(getConnection());
+    List<Jid> proxies=s5m.determineProxies();
+    return determineStreamHostInfo(proxies);
+  }
+  private List<Bytestream.StreamHost> queryLocalStreamHosts(){
+    return Socks5BytestreamManager.getBytestreamManager(getConnection()).getLocalStreamHost();
+  }
+  public List<Bytestream.StreamHost> getAvailableStreamHosts() throws XMPPException.XMPPErrorException, SmackException.NotConnectedException, InterruptedException, SmackException.NoResponseException {
+    if (availableStreamHosts == null) {
+      availableStreamHosts=queryAvailableStreamHosts();
+    }
+    return availableStreamHosts;
+  }
+  public List<Bytestream.StreamHost> getLocalStreamHosts(){
+    if (localStreamHosts == null) {
+      localStreamHosts=queryLocalStreamHosts();
+    }
+    return localStreamHosts;
+  }
+  public List<Bytestream.StreamHost> determineStreamHostInfo(  List<Jid> proxies){
+    XMPPConnection connection=getConnection();
+    List<Bytestream.StreamHost> streamHosts=new ArrayList<>();
+    Iterator<Jid> iterator=proxies.iterator();
+    while (iterator.hasNext()) {
+      Jid proxy=iterator.next();
+      Bytestream request=new Bytestream();
+      request.setType(IQ.Type.get);
+      request.setTo(proxy);
+      try {
+        Bytestream response=connection.sendIqRequestAndWaitForResponse(request);
+        streamHosts.addAll(response.getStreamHosts());
+      }
+ catch (      Exception e) {
+        iterator.remove();
+      }
+    }
+    return streamHosts;
+  }
+  @Override public void authenticated(  XMPPConnection connection,  boolean resumed){
+    if (!resumed)     try {
+      Socks5Proxy socks5Proxy=Socks5Proxy.getSocks5Proxy();
+      if (!socks5Proxy.isRunning()) {
+        socks5Proxy.start();
+      }
+      localStreamHosts=queryLocalStreamHosts();
+      availableStreamHosts=queryAvailableStreamHosts();
+    }
+ catch (    InterruptedException|SmackException.NoResponseException|SmackException.NotConnectedException|XMPPException.XMPPErrorException e) {
+      LOGGER.log(Level.WARNING,"Could not query available StreamHosts: " + e,e);
+    }
+  }
+  public Jingle createCandidateUsed(  FullJid recipient,  FullJid initiator,  String sessionId,  JingleContent.Senders contentSenders,  JingleContent.Creator contentCreator,  String contentName,  String streamId,  String candidateId){
+    Jingle.Builder jb=Jingle.builder(connection());
+    jb.setSessionId(sessionId).setInitiator(initiator).setAction(JingleAction.transport_info);
+    JingleContent.Builder cb=JingleContent.getBuilder();
+    cb.setName(contentName).setCreator(contentCreator).setSenders(contentSenders);
+    JingleS5BTransport.Builder tb=JingleS5BTransport.getBuilder();
+    tb.setCandidateUsed(candidateId).setStreamId(streamId);
+    Jingle jingle=jb.addJingleContent(cb.setTransport(tb.build()).build()).build();
+    jingle.setFrom(getConnection().getUser().asFullJidOrThrow());
+    jingle.setTo(recipient);
+    return jingle;
+  }
+  public Jingle createCandidateError(  FullJid remote,  FullJid initiator,  String sessionId,  JingleContent.Senders senders,  JingleContent.Creator creator,  String name,  String streamId){
+    Jingle.Builder jb=Jingle.builder(connection());
+    jb.setSessionId(sessionId).setInitiator(initiator).setAction(JingleAction.transport_info);
+    JingleContent.Builder cb=JingleContent.getBuilder();
+    cb.setName(name).setCreator(creator).setSenders(senders);
+    JingleS5BTransport.Builder tb=JingleS5BTransport.getBuilder();
+    tb.setCandidateError().setStreamId(streamId);
+    Jingle jingle=jb.addJingleContent(cb.setTransport(tb.build()).build()).build();
+    jingle.setFrom(getConnection().getUser().asFullJidOrThrow());
+    jingle.setTo(remote);
+    return jingle;
+  }
+  public Jingle createProxyError(  FullJid remote,  FullJid initiator,  String sessionId,  JingleContent.Senders senders,  JingleContent.Creator creator,  String name,  String streamId){
+    Jingle.Builder jb=Jingle.builder(connection());
+    jb.setSessionId(sessionId).setAction(JingleAction.transport_info).setInitiator(initiator);
+    JingleContent.Builder cb=JingleContent.getBuilder();
+    cb.setSenders(senders).setCreator(creator).setName(name);
+    JingleS5BTransport.Builder tb=JingleS5BTransport.getBuilder();
+    tb.setStreamId(sessionId).setProxyError().setStreamId(streamId);
+    Jingle jingle=jb.addJingleContent(cb.setTransport(tb.build()).build()).build();
+    jingle.setTo(remote);
+    jingle.setFrom(getConnection().getUser().asFullJidOrThrow());
+    return jingle;
+  }
+  public Jingle createCandidateActivated(  FullJid remote,  FullJid initiator,  String sessionId,  JingleContent.Senders senders,  JingleContent.Creator creator,  String name,  String streamId,  String candidateId){
+    Jingle.Builder jb=Jingle.builder(connection());
+    jb.setInitiator(initiator).setSessionId(sessionId).setAction(JingleAction.transport_info);
+    JingleContent.Builder cb=JingleContent.getBuilder();
+    cb.setName(name).setCreator(creator).setSenders(senders);
+    JingleS5BTransport.Builder tb=JingleS5BTransport.getBuilder();
+    tb.setStreamId(streamId).setCandidateActivated(candidateId);
+    Jingle jingle=jb.addJingleContent(cb.setTransport(tb.build()).build()).build();
+    jingle.setFrom(getConnection().getUser().asFullJidOrThrow());
+    jingle.setTo(remote);
+    return jingle;
+  }
+  public static void setUseLocalCandidates(  boolean localCandidates){
+    JingleS5BTransportManager.useLocalCandidates=localCandidates;
+  }
+  public static void setUseExternalCandidates(  boolean externalCandidates){
+    JingleS5BTransportManager.useExternalCandidates=externalCandidates;
+  }
+  public static boolean isUseLocalCandidates(){
+    return useLocalCandidates;
+  }
+  public static boolean isUseExternalCandidates(){
+    return useExternalCandidates;
+  }
+}

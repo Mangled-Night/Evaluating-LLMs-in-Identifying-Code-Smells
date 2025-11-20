@@ -1,0 +1,48 @@
+@Test void emulateEntityMoving() throws InterruptedException {
+  final AtomicReference<Vector3ic> position=new AtomicReference<>();
+  Map<Vector3ic,Future<Chunk>> futures=Maps.newHashMap();
+  Map<Vector3ic,Chunk> chunkCache=Maps.newConcurrentMap();
+  pipeline=new ChunkProcessingPipeline(chunkCache::get,(o1,o2) -> {
+    if (position.get() != null) {
+      Vector3ic entityPos=position.get();
+      return (int)(entityPos.distance(((PositionFuture<?>)o1).getPosition()) - entityPos.distance(((PositionFuture<?>)o2).getPosition()));
+    }
+    return 0;
+  }
+);
+  pipeline.addStage(ChunkTaskProvider.createMulti("flat merging task",(chunks) -> chunks.stream().sorted((o1,o2) -> {
+    Function<Chunk,Vector3ic> pos=Chunk::getPosition;
+    return Comparator.comparing(pos.andThen(Vector3ic::x)).thenComparing(pos.andThen(Vector3ic::y)).thenComparing(pos.andThen(Vector3ic::z)).compare(o1,o2);
+  }
+).toArray(Chunk[]::new)[5],this::getNearChunkPositions));
+  pipeline.addStage(ChunkTaskProvider.create("finish chunk",(c) -> {
+    c.markReady();
+    chunkCache.put(c.getPosition(),c);
+  }
+));
+  Set<Vector3ic> relativeRegion=Collections.emptySet();
+  for (int i=0; i < 10; i++) {
+    position.set(new Vector3i(i,0,0));
+    Set<Vector3ic> newRegion=Sets.newHashSet(getNearChunkPositions(position.get(),10));
+    Sets.difference(newRegion,relativeRegion).forEach((pos) -> {
+      Future<Chunk> future=pipeline.invokeGeneratorTask(new Vector3i(pos),() -> createChunkAt(pos));
+      futures.put(pos,future);
+    }
+);
+    Sets.difference(relativeRegion,newRegion).forEach((pos) -> {
+      chunkCache.remove(pos);
+      if (pipeline.isPositionProcessing(pos)) {
+        pipeline.stopProcessingAt(new Vector3i(pos));
+      }
+    }
+);
+    relativeRegion=newRegion;
+    Assertions.assertTrue(Sets.difference(chunkCache.keySet(),relativeRegion).isEmpty(),"We must haven't " + "chunks not related to relativeRegion");
+    Assertions.assertTrue(Sets.difference(Sets.newHashSet(pipeline.getProcessingPosition()),relativeRegion).isEmpty(),"We must haven't chunks in processing not related to relativeRegion");
+    Stream<Future<Chunk>> relativeFutures=relativeRegion.stream().map(futures::get);
+    Assertions.assertTrue(relativeFutures.noneMatch(Future::isCancelled),"Relative futures must be not cancelled");
+    Stream<Future<Chunk>> nonRelativeFutures=Sets.difference(futures.keySet(),relativeRegion).stream().map(futures::get);
+    Assertions.assertTrue(nonRelativeFutures.allMatch((f) -> f.isCancelled() || f.isDone()),"Non relative futures must be cancelled or done");
+    Thread.sleep(new Random().nextInt(500));
+  }
+}

@@ -1,0 +1,21 @@
+/** 
+ * 是否超过最大连接数
+ * @return
+ */
+private void returnCon(BackendConnection c){
+  c.setAttachment(null);
+  c.setBorrowed(false);
+  c.setLastTime(TimeUtil.currentTimeMillis());
+  ConQueue queue=this.conMap.getSchemaConQueue(c.getSchema());
+  boolean ok=false;
+  if (c.isAutocommit()) {
+    ok=queue.getAutoCommitCons().offer(c);
+  }
+ else {
+    ok=queue.getManCommitCons().offer(c);
+  }
+  if (!ok) {
+    LOGGER.warn("can't return to pool ,so close con " + c);
+    c.close("can't return to pool ");
+  }
+}

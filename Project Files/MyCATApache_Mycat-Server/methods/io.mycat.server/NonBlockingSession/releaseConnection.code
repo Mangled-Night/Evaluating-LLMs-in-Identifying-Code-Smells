@@ -1,0 +1,38 @@
+public void releaseConnection(RouteResultsetNode rrn,boolean debug,final boolean needRollback){
+  BackendConnection c=target.remove(rrn);
+  if (c != null) {
+    if (debug) {
+      String sql=rrn.getStatement();
+      if (sql != null) {
+        sql=sql.replaceAll("[\r\n]+","");
+      }
+      LOGGER.debug("releaseConnection Connection@{} [id={}] for node={}, sql={}",new Object[]{c.hashCode(),c.getId(),rrn.getName(),sql});
+    }
+    if (c.getAttachment() != null) {
+      c.setAttachment(null);
+    }
+    if (!c.isClosedOrQuit()) {
+      if (c.isAutocommit()) {
+        c.release();
+      }
+ else {
+        c.setResponseHandler(new RollbackReleaseHandler());
+        c.rollback();
+      }
+    }
+  }
+}
+public void releaseConnection(BackendConnection con){
+  Iterator<Entry<RouteResultsetNode,BackendConnection>> itor=target.entrySet().iterator();
+  while (itor.hasNext()) {
+    BackendConnection theCon=itor.next().getValue();
+    if (theCon == con) {
+      itor.remove();
+      con.release();
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("realse connection " + con);
+      }
+      break;
+    }
+  }
+}

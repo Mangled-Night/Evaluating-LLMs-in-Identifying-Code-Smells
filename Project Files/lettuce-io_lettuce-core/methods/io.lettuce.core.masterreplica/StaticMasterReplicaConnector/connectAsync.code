@@ -1,0 +1,15 @@
+@Override public CompletableFuture<StatefulRedisMasterReplicaConnection<K,V>> connectAsync(){
+  Map<RedisURI,StatefulRedisConnection<K,V>> initialConnections=new HashMap<>();
+  TopologyProvider topologyProvider=new StaticMasterReplicaTopologyProvider(redisClient,redisURIs);
+  RedisURI seedNode=redisURIs.iterator().next();
+  MasterReplicaTopologyRefresh refresh=new MasterReplicaTopologyRefresh(redisClient,topologyProvider);
+  MasterReplicaConnectionProvider<K,V> connectionProvider=new MasterReplicaConnectionProvider<>(redisClient,codec,seedNode,initialConnections);
+  return refresh.getNodes(seedNode).flatMap(nodes -> {
+    EventRecorder.getInstance().record(new MasterReplicaTopologyChangedEvent(seedNode,nodes));
+    if (nodes.isEmpty()) {
+      return Mono.error(new RedisException(String.format("Cannot determine topology from %s",redisURIs)));
+    }
+    return initializeConnection(codec,seedNode,connectionProvider,nodes);
+  }
+).onErrorMap(ExecutionException.class,Throwable::getCause).toFuture();
+}

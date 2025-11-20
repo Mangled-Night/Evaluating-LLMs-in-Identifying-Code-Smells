@@ -1,0 +1,24 @@
+@Test void retryAfterConnectionIsDisconnected() throws Exception {
+  StatefulRedisConnection<String,String> connection=client.connect();
+  RedisCommands<String,String> verificationConnection=client.connect().sync();
+  connection.sync().set(key,"1");
+  ConnectionWatchdog connectionWatchdog=ConnectionTestUtil.getConnectionWatchdog(connection);
+  connectionWatchdog.setListenOnChannelInactive(false);
+  connection.async().quit();
+  while (connection.isOpen()) {
+    Delay.delay(Duration.ofMillis(100));
+  }
+  assertThat(connection.async().incr(key).await(1,TimeUnit.SECONDS)).isFalse();
+  assertThat(verificationConnection.get("key")).isEqualTo("1");
+  assertThat(ConnectionTestUtil.getDisconnectedBuffer(connection).size()).isGreaterThan(0);
+  assertThat(ConnectionTestUtil.getCommandBuffer(connection)).isEmpty();
+  connectionWatchdog.setListenOnChannelInactive(true);
+  connectionWatchdog.scheduleReconnect();
+  while (!ConnectionTestUtil.getCommandBuffer(connection).isEmpty() || !ConnectionTestUtil.getDisconnectedBuffer(connection).isEmpty()) {
+    Delay.delay(Duration.ofMillis(10));
+  }
+  assertThat(connection.sync().get(key)).isEqualTo("2");
+  assertThat(verificationConnection.get(key)).isEqualTo("2");
+  connection.close();
+  verificationConnection.getStatefulConnection().close();
+}

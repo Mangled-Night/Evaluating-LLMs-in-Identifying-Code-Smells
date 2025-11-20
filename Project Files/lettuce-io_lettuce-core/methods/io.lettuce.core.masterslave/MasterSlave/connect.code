@@ -1,0 +1,27 @@
+/** 
+ * Open a new connection to a Redis Master-Slave server/servers using the supplied  {@link RedisURI} and the supplied{@link RedisCodec codec} to encode/decode keys.<p> This  {@link MasterSlave} performs auto-discovery of nodes using either Redis Sentinel or Master/Slave. A {@link RedisURI}can point to either a master or a replica host. </p>
+ * @param redisClient the Redis client.
+ * @param codec Use this codec to encode/decode keys and values, must not be {@code null}.
+ * @param redisURI the Redis server to connect to, must not be {@code null}.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @return a new connection.
+ */
+public static <K,V>StatefulRedisMasterSlaveConnection<K,V> connect(RedisClient redisClient,RedisCodec<K,V> codec,RedisURI redisURI){
+  LettuceAssert.notNull(redisClient,"RedisClient must not be null");
+  LettuceAssert.notNull(codec,"RedisCodec must not be null");
+  LettuceAssert.notNull(redisURI,"RedisURI must not be null");
+  return new MasterSlaveConnectionWrapper<>(MasterReplica.connect(redisClient,codec,redisURI));
+}
+/** 
+ * Open a new connection to a Redis Master-Slave server/servers using the supplied  {@link RedisURI} and the supplied{@link RedisCodec codec} to encode/decode keys.<p> This  {@link MasterSlave} performs auto-discovery of nodes if the URI is a Redis Sentinel URI. Master/Slave URIs will betreated as static topology and no additional hosts are discovered in such case. Redis Standalone Master/Slave will discover the roles of the supplied  {@link RedisURI URIs} and issue commands to the appropriate node.</p> <p> When using Redis Sentinel, ensure that  {@link Iterable redisURIs} contains only a single entry as only the first URI isconsidered.  {@link RedisURI} pointing to multiple Sentinels can be configured through{@link RedisURI.Builder#withSentinel}. </p>
+ * @param redisClient the Redis client.
+ * @param codec Use this codec to encode/decode keys and values, must not be {@code null}.
+ * @param redisURIs the Redis server(s) to connect to, must not be {@code null}.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @return a new connection.
+ */
+public static <K,V>StatefulRedisMasterSlaveConnection<K,V> connect(RedisClient redisClient,RedisCodec<K,V> codec,Iterable<RedisURI> redisURIs){
+  return new MasterSlaveConnectionWrapper<>(MasterReplica.connect(redisClient,codec,redisURIs));
+}

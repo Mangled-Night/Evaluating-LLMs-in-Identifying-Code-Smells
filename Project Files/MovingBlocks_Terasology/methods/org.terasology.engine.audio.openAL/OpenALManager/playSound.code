@@ -1,0 +1,36 @@
+@Override public void playSound(StaticSound sound){
+  playSound(sound,(Vector3fc)null,1.0f,PRIORITY_NORMAL);
+}
+@Override public void playSound(StaticSound sound,float volume){
+  playSound(sound,(Vector3fc)null,volume,PRIORITY_NORMAL);
+}
+@Override public void playSound(StaticSound sound,float volume,int priority){
+  playSound(sound,(Vector3fc)null,volume,priority);
+}
+@Override public void playSound(StaticSound sound,Vector3fc position){
+  playSound(sound,position,1.0f,PRIORITY_NORMAL);
+}
+@Override public void playSound(StaticSound sound,Vector3fc position,float volume){
+  playSound(sound,position,volume,PRIORITY_NORMAL);
+}
+@Override public void playSound(StaticSound sound,Vector3fc position,float volume,int priority){
+  playSound(sound,position,volume,priority,null);
+}
+@Override public void playSound(StaticSound sound,Vector3fc position,float volume,int priority,AudioEndListener endListener){
+  if (position != null && !checkDistance(position)) {
+    return;
+  }
+  SoundPool<StaticSound,?> pool=(SoundPool<StaticSound,?>)pools.get("sfx");
+  SoundSource<?> source=pool.getSource(sound,priority);
+  if (source != null) {
+    source.setAbsolute(position != null);
+    if (position != null) {
+      source.setPosition(position);
+    }
+    source.setGain(volume);
+    source.play();
+    if (endListener != null) {
+      endListeners.put(source,endListener);
+    }
+  }
+}

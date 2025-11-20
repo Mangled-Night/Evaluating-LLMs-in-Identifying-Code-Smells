@@ -1,0 +1,22 @@
+public HttpServer(int port){
+  ServerSocket server_socket;
+  try {
+    server_socket=new ServerSocket(port);
+    LOGGER.fine("httpServer running on port " + server_socket.getLocalPort());
+    while (true) {
+      Socket socket=server_socket.accept();
+      LOGGER.fine("New connection accepted " + socket.getInetAddress() + ":"+ socket.getPort());
+      try {
+        HttpRequestHandler request=new HttpRequestHandler(socket);
+        Thread thread=new Thread(request);
+        thread.start();
+      }
+ catch (      Exception e) {
+        LOGGER.log(Level.FINE,"Exception",e);
+      }
+    }
+  }
+ catch (  IOException e) {
+    LOGGER.log(Level.FINE,"Exception",e);
+  }
+}

@@ -1,0 +1,39 @@
+/** 
+ * Low level API test. This is a simple test to use with an XMPP client, check if the client receives the message and display in the console any notification 1. User_1 will send a message to user_2 requesting to be notified when any of these events occurs: offline, composing, displayed or delivered 2. User_2 will use an XMPP client (like Exodus) to display the message and compose a reply 3. User_1 will display any notification that receives
+ */
+public void testSendMessageEventRequestAndDisplayNotifications(){
+  Chat chat1=getConnection(0).getChatManager().createChat(getBareJID(1),null);
+  PacketFilter packetFilter=new StanzaExtensionFilter("x","jabber:x:event");
+  PacketListener packetListener=new PacketListener(){
+    public void processStanza(    Packet packet){
+      Message message=(Message)packet;
+      try {
+        MessageEvent messageEvent=(MessageEvent)message.getExtension("x","jabber:x:event");
+        assertNotNull("Message without extension \"jabber:x:event\"",messageEvent);
+        assertTrue("Message event is a request not a notification",!messageEvent.isMessageEventRequest());
+        System.out.println(messageEvent.toXML());
+      }
+ catch (      ClassCastException e) {
+        fail("ClassCastException - Most probable cause is that smack providers is misconfigured");
+      }
+    }
+  }
+;
+  getConnection(0).addAsyncPacketListener(packetListener,packetFilter);
+  Message msg=new Message();
+  msg.setSubject("Any subject you want");
+  msg.setBody("An interesting body comes here...");
+  MessageEvent messageEvent=new MessageEvent();
+  messageEvent.setComposing(true);
+  messageEvent.setDelivered(true);
+  messageEvent.setDisplayed(true);
+  messageEvent.setOffline(true);
+  msg.addExtension(messageEvent);
+  try {
+    chat1.sendMessage(msg);
+    Thread.sleep(200);
+  }
+ catch (  Exception e) {
+    fail("An error occurred sending the message");
+  }
+}

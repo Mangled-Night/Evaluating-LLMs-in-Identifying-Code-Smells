@@ -1,0 +1,83 @@
+/** 
+ * 团购活动详情
+ * @param userId    用户ID
+ * @param grouponId 团购活动ID
+ * @return 团购活动详情
+ */
+@GetMapping("detail") public Object detail(@LoginUser Integer userId,@NotNull Integer grouponId){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  LitemallGroupon groupon=grouponService.queryById(userId,grouponId);
+  if (groupon == null) {
+    return ResponseUtil.badArgumentValue();
+  }
+  LitemallGrouponRules rules=rulesService.findById(groupon.getRulesId());
+  if (rules == null) {
+    return ResponseUtil.badArgumentValue();
+  }
+  LitemallOrder order=orderService.findById(userId,groupon.getOrderId());
+  if (null == order) {
+    return ResponseUtil.fail(ORDER_UNKNOWN,"订单不存在");
+  }
+  if (!order.getUserId().equals(userId)) {
+    return ResponseUtil.fail(ORDER_INVALID,"不是当前用户的订单");
+  }
+  Map<String,Object> orderVo=new HashMap<String,Object>();
+  orderVo.put("id",order.getId());
+  orderVo.put("orderSn",order.getOrderSn());
+  orderVo.put("addTime",order.getAddTime());
+  orderVo.put("consignee",order.getConsignee());
+  orderVo.put("mobile",order.getMobile());
+  orderVo.put("address",order.getAddress());
+  orderVo.put("goodsPrice",order.getGoodsPrice());
+  orderVo.put("freightPrice",order.getFreightPrice());
+  orderVo.put("actualPrice",order.getActualPrice());
+  orderVo.put("orderStatusText",OrderUtil.orderStatusText(order));
+  orderVo.put("handleOption",OrderUtil.build(order));
+  orderVo.put("expCode",order.getShipChannel());
+  orderVo.put("expNo",order.getShipSn());
+  List<LitemallOrderGoods> orderGoodsList=orderGoodsService.queryByOid(order.getId());
+  List<Map<String,Object>> orderGoodsVoList=new ArrayList<>(orderGoodsList.size());
+  for (  LitemallOrderGoods orderGoods : orderGoodsList) {
+    Map<String,Object> orderGoodsVo=new HashMap<>();
+    orderGoodsVo.put("id",orderGoods.getId());
+    orderGoodsVo.put("orderId",orderGoods.getOrderId());
+    orderGoodsVo.put("goodsId",orderGoods.getGoodsId());
+    orderGoodsVo.put("goodsName",orderGoods.getGoodsName());
+    orderGoodsVo.put("number",orderGoods.getNumber());
+    orderGoodsVo.put("retailPrice",orderGoods.getPrice());
+    orderGoodsVo.put("picUrl",orderGoods.getPicUrl());
+    orderGoodsVo.put("goodsSpecificationValues",orderGoods.getSpecifications());
+    orderGoodsVoList.add(orderGoodsVo);
+  }
+  Map<String,Object> result=new HashMap<>();
+  result.put("orderInfo",orderVo);
+  result.put("orderGoods",orderGoodsVoList);
+  if (order.getOrderStatus().equals(OrderUtil.STATUS_SHIP)) {
+    ExpressInfo ei=expressService.getExpressInfo(order.getShipChannel(),order.getShipSn());
+    result.put("expressInfo",ei);
+  }
+  UserVo creator=userService.findUserVoById(groupon.getCreatorUserId());
+  List<UserVo> joiners=new ArrayList<>();
+  joiners.add(creator);
+  int linkGrouponId;
+  if (groupon.getGrouponId() == 0) {
+    linkGrouponId=groupon.getId();
+  }
+ else {
+    linkGrouponId=groupon.getGrouponId();
+  }
+  List<LitemallGroupon> groupons=grouponService.queryJoinRecord(linkGrouponId);
+  UserVo joiner;
+  for (  LitemallGroupon grouponItem : groupons) {
+    joiner=userService.findUserVoById(grouponItem.getUserId());
+    joiners.add(joiner);
+  }
+  result.put("linkGrouponId",linkGrouponId);
+  result.put("creator",creator);
+  result.put("joiners",joiners);
+  result.put("groupon",groupon);
+  result.put("rules",rules);
+  return ResponseUtil.ok(result);
+}

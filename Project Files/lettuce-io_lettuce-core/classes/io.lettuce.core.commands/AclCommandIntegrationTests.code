@@ -1,0 +1,80 @@
+/** 
+ * Integration tests for ACL commands.
+ * @author Mikhael Sokolov
+ * @author Mark Paluch
+ */
+@ExtendWith(LettuceExtension.class) @TestInstance(TestInstance.Lifecycle.PER_CLASS) @EnabledOnCommand("ACL") public class AclCommandIntegrationTests extends TestSupport {
+  private final RedisCommands<String,String> redis;
+  @Inject protected AclCommandIntegrationTests(  RedisCommands<String,String> redis){
+    this.redis=redis;
+  }
+  @BeforeEach void setUp(){
+    redis.flushall();
+    redis.aclUsers().stream().filter(o -> !"default".equals(o)).forEach(redis::aclDeluser);
+    redis.aclLogReset();
+  }
+  @Test public void aclCat(){
+    assertThat(redis.aclCat()).isNotEmpty();
+    assertThat(redis.aclCat(AclCategory.SLOW)).isNotEmpty();
+  }
+  @Test void aclDeluser(){
+    assertThat(redis.aclDeluser("non-existing")).isZero();
+  }
+  @Test @EnabledOnCommand("EVAL_RO") void aclDryRun(){
+    assertThatThrownBy(() -> redis.aclDryRun("non-existing","GET","foo","bar")).isInstanceOf(RedisCommandExecutionException.class).hasMessageContaining("ERR User 'non-existing' not found");
+    assertThat(redis.aclDryRun("default","GET","foo")).isEqualTo("OK");
+    AclSetuserArgs args=AclSetuserArgs.Builder.on().addCommand(CommandType.GET).keyPattern("objects:*").addPassword("foobared");
+    assertThat(redis.aclSetuser("foo",args)).isEqualTo("OK");
+    assertThat(redis.aclDryRun("foo","GET","objects:foo")).isEqualTo("OK");
+    assertThat(redis.aclDryRun("foo","GET","baz")).contains("no permissions");
+    Command<String,String,String> getFoo=new Command<>(CommandType.GET,new StatusOutput<>(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).add("objects:foo"));
+    Command<String,String,String> getBaz=new Command<>(CommandType.GET,new StatusOutput<>(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).add("baz"));
+    assertThat(redis.aclDryRun("foo",getFoo)).isEqualTo("OK");
+    assertThat(redis.aclDryRun("foo",getBaz)).contains("no permissions");
+  }
+  @Test void aclGenpass(){
+    assertThat(redis.aclGenpass()).hasSize(64);
+    assertThat(redis.aclGenpass(128)).hasSize(32);
+  }
+  @Test void aclGetuser(){
+    assertThat(redis.aclGetuser("default")).contains("flags");
+  }
+  @Test void aclLoad(){
+    assertThatThrownBy(redis::aclLoad).isInstanceOf(RedisCommandExecutionException.class).hasMessageContaining("ERR This Redis instance is not configured to use an ACL file.");
+  }
+  @Test void aclLog(){
+    assertThat(redis.aclLogReset()).isEqualTo("OK");
+    assertThatThrownBy(() -> redis.auth("non-existing1","foobar"));
+    assertThatThrownBy(() -> redis.auth("non-existing2","foobar"));
+    assertThat(redis.aclLog()).hasSize(2).first().hasFieldOrProperty("reason");
+    assertThat(redis.aclLog(1)).hasSize(1);
+    assertThat(redis.aclLogReset()).isEqualTo("OK");
+    assertThat(redis.aclLog()).isEmpty();
+  }
+  @Test void aclList(){
+    assertThat(redis.aclList()).hasSize(1).first().asString().contains("user default");
+  }
+  @Test void aclSave(){
+    assertThatThrownBy(redis::aclSave).isInstanceOf(RedisCommandExecutionException.class).hasMessageContaining("ERR This Redis instance is not configured to use an ACL file.");
+  }
+  @Test void aclSetuser(){
+    assertThat(redis.aclDeluser("foo")).isNotNull();
+    AclSetuserArgs args=AclSetuserArgs.Builder.on().addCommand(CommandType.GET).keyPattern("objects:*").addPassword("foobared");
+    assertThat(redis.aclSetuser("foo",args)).isEqualTo("OK");
+    assertThat(redis.aclGetuser("foo")).contains("commands").contains("passwords").contains("keys");
+    assertThat(redis.aclDeluser("foo")).isNotNull();
+  }
+  @Test void aclSetuserWithCategories(){
+    assertThat(redis.aclDeluser("foo")).isNotNull();
+    AclSetuserArgs args=AclSetuserArgs.Builder.on().addCategory(AclCategory.CONNECTION);
+    assertThat(redis.aclSetuser("foo",args)).isEqualTo("OK");
+    assertThat(redis.aclGetuser("foo")).contains("-@all +@connection");
+    assertThat(redis.aclDeluser("foo")).isNotNull();
+  }
+  @Test void aclUsers(){
+    assertThat(redis.aclUsers()).hasSize(1).first().isEqualTo("default");
+  }
+  @Test void aclWhoami(){
+    assertThat(redis.aclWhoami()).isEqualTo("default");
+  }
+}

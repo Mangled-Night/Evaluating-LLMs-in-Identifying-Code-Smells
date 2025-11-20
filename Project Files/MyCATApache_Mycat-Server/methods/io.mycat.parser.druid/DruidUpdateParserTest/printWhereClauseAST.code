@@ -1,0 +1,35 @@
+public static void printWhereClauseAST(SQLExpr sqlExpr){
+  if (sqlExpr == null)   return;
+  ArrayList<SQLExpr> exprNode=new ArrayList<>();
+  int i=0, curLevel=1, nextLevel=0;
+  SQLExpr iterExpr;
+  exprNode.add(sqlExpr);
+  while (true) {
+    iterExpr=exprNode.get(i++);
+    if (iterExpr == null)     break;
+    if (iterExpr instanceof SQLBinaryOpExpr) {
+      System.out.print(((SQLBinaryOpExpr)iterExpr).getOperator());
+    }
+ else {
+      System.out.print(iterExpr.toString());
+    }
+    System.out.print("\t");
+    curLevel--;
+    if (iterExpr instanceof SQLBinaryOpExpr) {
+      if (((SQLBinaryOpExpr)iterExpr).getLeft() != null) {
+        exprNode.add(((SQLBinaryOpExpr)iterExpr).getLeft());
+        nextLevel++;
+      }
+      if (((SQLBinaryOpExpr)iterExpr).getRight() != null) {
+        exprNode.add(((SQLBinaryOpExpr)iterExpr).getRight());
+        nextLevel++;
+      }
+    }
+    if (curLevel == 0) {
+      System.out.println("\t\tNum of nodes in next level: " + nextLevel);
+      curLevel=nextLevel;
+      nextLevel=0;
+    }
+    if (exprNode.size() == i)     break;
+  }
+}

@@ -1,0 +1,23 @@
+/** 
+ * Determines the event class that the serialized event is for.
+ * @param eventData
+ * @return The event class the given eventData describes, or null if it is unknown.
+ */
+public Class<? extends Event> getEventClass(EntityData.Event eventData){
+  if (eventData.hasType()) {
+    EventMetadata<? extends Event> metadata=null;
+    if (!idTable.isEmpty()) {
+      Class<? extends Event> eventClass=idTable.inverse().get(eventData.getType());
+      if (eventClass != null) {
+        metadata=eventLibrary.getMetadata(eventClass);
+      }
+    }
+    if (metadata == null) {
+      logger.warn("Unable to deserialize unknown event with id: {}",eventData.getType());
+      return null;
+    }
+    return metadata.getType();
+  }
+  logger.warn("Unable to deserialize event, no type provided.");
+  return null;
+}

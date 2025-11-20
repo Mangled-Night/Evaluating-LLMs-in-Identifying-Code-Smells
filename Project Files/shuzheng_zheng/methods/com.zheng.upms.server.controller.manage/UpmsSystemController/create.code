@@ -1,0 +1,14 @@
+@ApiOperation(value="新增系统") @RequiresPermissions("upms:system:create") @RequestMapping(value="/create",method=RequestMethod.GET) public String create(){
+  return "/manage/system/create.jsp";
+}
+@ApiOperation(value="新增系统") @RequiresPermissions("upms:system:create") @RequestMapping(value="/create",method=RequestMethod.POST) @ResponseBody public Object create(UpmsSystem upmsSystem){
+  ComplexResult result=FluentValidator.checkAll().on(upmsSystem.getTitle(),new LengthValidator(1,20,"标题")).on(upmsSystem.getName(),new LengthValidator(1,20,"名称")).doValidate().result(ResultCollectors.toComplex());
+  if (!result.isSuccess()) {
+    return new UpmsResult(UpmsResultConstant.INVALID_LENGTH,result.getErrors());
+  }
+  long time=System.currentTimeMillis();
+  upmsSystem.setCtime(time);
+  upmsSystem.setOrders(time);
+  int count=upmsSystemService.insertSelective(upmsSystem);
+  return new UpmsResult(UpmsResultConstant.SUCCESS,count);
+}

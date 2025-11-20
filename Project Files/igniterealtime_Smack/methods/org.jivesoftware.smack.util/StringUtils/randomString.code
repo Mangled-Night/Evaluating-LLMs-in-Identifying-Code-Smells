@@ -1,0 +1,35 @@
+private static String randomString(Random random,char[] alphabet,int numRandomChars){
+  int bufferSize=numRandomChars + ((numRandomChars - 1) / RANDOM_STRING_CHUNK_SIZE);
+  CharBuffer charBuffer=CharBuffer.allocate(bufferSize);
+  try {
+    randomString(charBuffer,random,alphabet,numRandomChars);
+  }
+ catch (  IOException e) {
+    throw new AssertionError(e);
+  }
+  return charBuffer.flip().toString();
+}
+private static void randomString(Appendable appendable,Random random,char[] alphabet,int numRandomChars) throws IOException {
+  for (int randomCharNum=1; randomCharNum <= numRandomChars; randomCharNum++) {
+    int randomIndex=random.nextInt(alphabet.length);
+    char randomChar=alphabet[randomIndex];
+    appendable.append(randomChar);
+    if (randomCharNum % RANDOM_STRING_CHUNK_SIZE == 0 && randomCharNum < numRandomChars) {
+      appendable.append('-');
+    }
+  }
+}
+public static String randomString(final int length){
+  return randomString(length,RandomUtil.SECURE_RANDOM.get());
+}
+public static String randomString(final int length,Random random){
+  if (length == 0) {
+    return "";
+  }
+  char[] randomChars=new char[length];
+  for (int i=0; i < length; i++) {
+    int index=random.nextInt(UNAMBIGUOUS_NUMBERS_AND_LETTERS.length);
+    randomChars[i]=UNAMBIGUOUS_NUMBERS_AND_LETTERS[index];
+  }
+  return new String(randomChars);
+}

@@ -1,0 +1,29 @@
+@Override public final String execute(List<String> rawParameters,EntityRef sender) throws CommandExecutionException {
+  Object[] processedParameters;
+  try {
+    processedParameters=processParametersMethod(rawParameters,sender);
+  }
+ catch (  CommandParameterParseException e) {
+    String warning="Invalid parameter '" + e.getParameter() + "'";
+    String message=e.getMessage();
+    if (message != null) {
+      warning+=": " + message;
+    }
+    return warning;
+  }
+  try {
+    Object result=executionMethod.getAccessibleObject().invoke(executionMethod.getTarget(),processedParameters);
+    return result != null ? String.valueOf(result) : null;
+  }
+ catch (  InvocationTargetException t) {
+    if (t.getCause() != null) {
+      throw new CommandExecutionException(t.getCause());
+    }
+ else {
+      throw new CommandExecutionException(t);
+    }
+  }
+catch (  IllegalAccessException|RuntimeException t) {
+    throw new CommandExecutionException(t);
+  }
+}

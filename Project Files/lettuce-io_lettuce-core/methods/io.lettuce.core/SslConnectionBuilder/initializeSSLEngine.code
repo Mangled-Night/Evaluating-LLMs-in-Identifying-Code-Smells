@@ -1,0 +1,17 @@
+private SSLEngine initializeSSLEngine(ByteBufAllocator alloc) throws IOException, GeneralSecurityException {
+  SSLParameters sslParams=sslOptions.createSSLParameters();
+  SslContextBuilder sslContextBuilder=sslOptions.createSslContextBuilder();
+  if (verifyPeer == SslVerifyMode.FULL) {
+    sslParams.setEndpointIdentificationAlgorithm("HTTPS");
+  }
+ else   if (verifyPeer == SslVerifyMode.CA) {
+    sslParams.setEndpointIdentificationAlgorithm("");
+  }
+ else   if (verifyPeer == SslVerifyMode.NONE) {
+    sslContextBuilder.trustManager(InsecureTrustManagerFactory.INSTANCE);
+  }
+  SslContext sslContext=sslContextBuilder.build();
+  SSLEngine sslEngine=hostAndPort != null ? sslContext.newEngine(alloc,hostAndPort.getHostText(),hostAndPort.getPort()) : sslContext.newEngine(alloc);
+  sslEngine.setSSLParameters(sslParams);
+  return sslEngine;
+}

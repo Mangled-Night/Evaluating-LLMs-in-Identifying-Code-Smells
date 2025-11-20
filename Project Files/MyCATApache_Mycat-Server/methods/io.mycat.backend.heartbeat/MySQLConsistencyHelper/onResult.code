@@ -1,0 +1,44 @@
+@Override public void onResult(SQLQueryResult<Map<String,String>> result){
+  Map<String,String> rowMap=null;
+  String count=null;
+  String innerCol=null;
+  String maxTimestamp=null;
+  if (result != null)   rowMap=result.getResult();
+  if (rowMap != null) {
+    maxTimestamp=rowMap.get(GlobalTableUtil.MAX_COLUMN);
+    count=rowMap.get(GlobalTableUtil.COUNT_COLUMN);
+    innerCol=rowMap.get(GlobalTableUtil.INNER_COLUMN);
+    if ((rowMap.containsKey(GlobalTableUtil.MAX_COLUMN) && StringUtils.isNotBlank(maxTimestamp)) || (rowMap.containsKey(GlobalTableUtil.COUNT_COLUMN) && StringUtils.isNotBlank(count)) || (rowMap.containsKey(GlobalTableUtil.INNER_COLUMN) && StringUtils.isNotBlank(innerCol))) {
+      heartbeat.setResult(result);
+      return;
+    }
+ else {
+      if (this.retryTime.get() > 0) {
+        try {
+          TimeUnit.MICROSECONDS.sleep(10);
+        }
+ catch (        InterruptedException e) {
+        }
+        this.retryTime.decrementAndGet();
+        this.sqlJob.run();
+        return;
+      }
+      heartbeat.setResult(result);
+      return;
+    }
+  }
+ else {
+    if (this.retryTime.get() > 0) {
+      try {
+        TimeUnit.MICROSECONDS.sleep(3);
+      }
+ catch (      InterruptedException e) {
+      }
+      this.retryTime.decrementAndGet();
+      this.sqlJob.run();
+      return;
+    }
+    heartbeat.setResult(result);
+    return;
+  }
+}

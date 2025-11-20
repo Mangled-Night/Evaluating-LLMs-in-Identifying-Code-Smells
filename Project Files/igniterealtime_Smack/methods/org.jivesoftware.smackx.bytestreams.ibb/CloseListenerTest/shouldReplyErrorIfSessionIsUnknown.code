@@ -1,0 +1,19 @@
+/** 
+ * If a close request to an unknown session is received it should be replied with an &lt;item-not-found/&gt; error.
+ * @throws Exception should not happen
+ */
+@Test public void shouldReplyErrorIfSessionIsUnknown() throws Exception {
+  XMPPConnection connection=mock(XMPPConnection.class);
+  InBandBytestreamManager byteStreamManager=InBandBytestreamManager.getByteStreamManager(connection);
+  CloseListener closeListener=Whitebox.getInternalState(byteStreamManager,"closeListener",CloseListener.class);
+  Close close=new Close("unknownSessionId");
+  close.setFrom(initiatorJID);
+  close.setTo(targetJID);
+  closeListener.handleIQRequest(close);
+  Thread.sleep(200);
+  ArgumentCaptor<IQ> argument=ArgumentCaptor.forClass(IQ.class);
+  verify(connection).sendStanza(argument.capture());
+  assertEquals(initiatorJID,argument.getValue().getTo());
+  assertEquals(IQ.Type.error,argument.getValue().getType());
+  assertEquals(StanzaError.Condition.item_not_found,argument.getValue().getError().getCondition());
+}

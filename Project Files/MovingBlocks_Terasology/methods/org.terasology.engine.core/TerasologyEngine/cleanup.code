@@ -1,0 +1,28 @@
+public void cleanup(){
+  logger.info("Shutting down Terasology...");
+  changeStatus(StandardGameStatus.SHUTTING_DOWN);
+  if (currentState != null) {
+    currentState.dispose(true);
+    currentState=null;
+  }
+  Iterator<EngineSubsystem> preshutdownIter=allSubsystems.descendingIterator();
+  while (preshutdownIter.hasNext()) {
+    EngineSubsystem subsystem=preshutdownIter.next();
+    try {
+      subsystem.preShutdown();
+    }
+ catch (    RuntimeException e) {
+      logger.error("Error preparing to shutdown {} subsystem",subsystem.getName(),e);
+    }
+  }
+  Iterator<EngineSubsystem> shutdownIter=allSubsystems.descendingIterator();
+  while (shutdownIter.hasNext()) {
+    EngineSubsystem subsystem=shutdownIter.next();
+    try {
+      subsystem.shutdown();
+    }
+ catch (    RuntimeException e) {
+      logger.error("Error shutting down {} subsystem",subsystem.getName(),e);
+    }
+  }
+}

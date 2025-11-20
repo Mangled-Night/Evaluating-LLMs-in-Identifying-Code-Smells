@@ -1,0 +1,23 @@
+@Override public synchronized void initializeRun(GameState initialState){
+  Preconditions.checkState(!running);
+  running=true;
+  changeStatus(StandardGameStatus.INITIALIZING);
+  initialize();
+  try {
+    rootContext.put(GameEngine.class,this);
+    changeState(initialState);
+  }
+ catch (  Throwable e) {
+    logger.error("Uncaught exception, attempting clean game shutdown",e);
+    try {
+      cleanup();
+    }
+ catch (    RuntimeException t) {
+      logger.error("Clean game shutdown after an uncaught exception failed",t);
+    }
+    running=false;
+    shutdownRequested=false;
+    changeStatus(StandardGameStatus.UNSTARTED);
+    throw e;
+  }
+}

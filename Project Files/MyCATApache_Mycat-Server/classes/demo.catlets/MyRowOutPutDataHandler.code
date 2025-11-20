@@ -1,0 +1,28 @@
+class MyRowOutPutDataHandler implements SQLJobHandler {
+  private final List<byte[]> afields;
+  private List<byte[]> bfields;
+  private final EngineCtx ctx;
+  private final Map<String,byte[]> arows;
+  public MyRowOutPutDataHandler(  List<byte[]> afields,  EngineCtx ctx,  Map<String,byte[]> arows){
+    super();
+    this.afields=afields;
+    this.ctx=ctx;
+    this.arows=arows;
+  }
+  @Override public void onHeader(  String dataNode,  byte[] header,  List<byte[]> bfields){
+    this.bfields=bfields;
+    ctx.writeHeader(afields,bfields);
+  }
+  @Override public boolean onRowData(  String dataNode,  byte[] rowData){
+    RowDataPacket rowDataPkg=ResultSetUtil.parseRowData(rowData,bfields);
+    String id=ByteUtil.getString(rowDataPkg.fieldValues.get(0));
+    byte[] bname=rowDataPkg.fieldValues.get(1);
+    byte[] arow=arows.remove(id);
+    rowDataPkg=ResultSetUtil.parseRowData(arow,afields);
+    rowDataPkg.add(bname);
+    ctx.writeRow(rowDataPkg);
+    return false;
+  }
+  @Override public void finished(  String dataNode,  boolean failed,  String errorMsg){
+  }
+}

@@ -1,0 +1,31 @@
+private static void detectDirectAudio(){
+  Class<?> cls;
+  int plType=PlugInManager.RENDERER;
+  String dar="com.sun.media.renderer.audio.DirectAudioRenderer";
+  try {
+    cls=Class.forName("VFWAuto");
+    cls=Class.forName("com.sun.media.protocol.dsound.DSound");
+    cls=Class.forName(dar);
+    Renderer rend=(Renderer)cls.getConstructor().newInstance();
+    try {
+      AudioFormat af=new AudioFormat(AudioFormat.LINEAR,44100,16,2);
+      rend.setInputFormat(af);
+      rend.open();
+      Format[] inputFormats=rend.getSupportedInputFormats();
+      PlugInManager.addPlugIn(dar,inputFormats,new Format[0],plType);
+      @SuppressWarnings("unchecked") Vector<String> rendList=PlugInManager.getPlugInList(null,null,plType);
+      int listSize=rendList.size();
+      if (rendList.elementAt(listSize - 1).equals(dar)) {
+        rendList.removeElementAt(listSize - 1);
+        rendList.insertElementAt(dar,0);
+        PlugInManager.setPlugInList(rendList,plType);
+        PlugInManager.commit();
+      }
+      rend.close();
+    }
+ catch (    Throwable t) {
+    }
+  }
+ catch (  Throwable tt) {
+  }
+}

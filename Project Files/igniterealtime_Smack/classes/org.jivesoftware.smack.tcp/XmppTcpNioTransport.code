@@ -1,0 +1,92 @@
+final class XmppTcpNioTransport extends XmppClientToServerTransport {
+  XmppTcpNioTransport(  ModularXmppClientToServerConnectionInternal connectionInternal){
+    super(connectionInternal);
+  }
+  @Override public StreamOpenAndCloseFactory getStreamOpenAndCloseFactory(){
+    return new StreamOpenAndCloseFactory(){
+      @Override public StreamOpen createStreamOpen(      DomainBareJid to,      CharSequence from,      String id,      String lang){
+        String xmlLang=connectionInternal.connection.getConfiguration().getXmlLang();
+        StreamOpen streamOpen=new StreamOpen(to,from,id,xmlLang,StreamOpen.StreamContentNamespace.client);
+        return streamOpen;
+      }
+      @Override public StreamClose createStreamClose(){
+        return StreamClose.INSTANCE;
+      }
+    }
+;
+  }
+  @Override protected void resetDiscoveredConnectionEndpoints(){
+    discoveredTcpEndpoints=null;
+  }
+  @Override public boolean hasUseableConnectionEndpoints(){
+    return discoveredTcpEndpoints != null;
+  }
+  @Override protected List<SmackFuture<LookupConnectionEndpointsResult,Exception>> lookupConnectionEndpoints(){
+    assert discoveredTcpEndpoints == null;
+    List<SmackFuture<LookupConnectionEndpointsResult,Exception>> futures=new ArrayList<>(2);
+    InternalSmackFuture<LookupConnectionEndpointsResult,Exception> tcpEndpointsLookupFuture=new InternalSmackFuture<>();
+    connectionInternal.asyncGo(() -> {
+      Result<Rfc6120TcpRemoteConnectionEndpoint> result=RemoteXmppTcpConnectionEndpoints.lookup(connectionInternal.connection.getConfiguration());
+      LookupConnectionEndpointsResult endpointsResult;
+      if (result.discoveredRemoteConnectionEndpoints.isEmpty()) {
+        endpointsResult=new TcpEndpointDiscoveryFailed(result);
+      }
+ else {
+        endpointsResult=new DiscoveredTcpEndpoints(result);
+      }
+      tcpEndpointsLookupFuture.setResult(endpointsResult);
+    }
+);
+    futures.add(tcpEndpointsLookupFuture);
+    if (moduleDescriptor.isDirectTlsEnabled()) {
+      throw new IllegalArgumentException("DirectTLS is not implemented yet");
+    }
+    return futures;
+  }
+  @Override protected void loadConnectionEndpoints(  LookupConnectionEndpointsSuccess lookupConnectionEndpointsSuccess){
+    discoveredTcpEndpoints=(DiscoveredTcpEndpoints)lookupConnectionEndpointsSuccess;
+  }
+  @Override protected void afterFiltersClosed(){
+    pendingInputFilterData=pendingOutputFilterData=true;
+    afterOutgoingElementsQueueModified();
+  }
+  @Override protected void disconnect(){
+    XmppTcpTransportModule.this.closeSocketAndCleanup();
+  }
+  @Override protected void notifyAboutNewOutgoingElements(){
+    afterOutgoingElementsQueueModified();
+  }
+  @Override public SSLSession getSslSession(){
+    TlsState tlsState=XmppTcpTransportModule.this.tlsState;
+    if (tlsState == null) {
+      return null;
+    }
+    return tlsState.engine.getSession();
+  }
+  public boolean isConnected(){
+    SocketChannel socketChannel=XmppTcpTransportModule.this.socketChannel;
+    if (socketChannel == null) {
+      return false;
+    }
+    return socketChannel.isConnected();
+  }
+  @Override public boolean isTransportSecured(){
+    final TlsState tlsState=XmppTcpTransportModule.this.tlsState;
+    return tlsState != null && tlsState.handshakeStatus == TlsHandshakeStatus.successful;
+  }
+  @Override public XmppTcpTransportModule.Stats getStats(){
+    return XmppTcpTransportModule.this.getStats();
+  }
+final class DiscoveredTcpEndpoints implements LookupConnectionEndpointsSuccess {
+    final RemoteXmppTcpConnectionEndpoints.Result<Rfc6120TcpRemoteConnectionEndpoint> result;
+    DiscoveredTcpEndpoints(    RemoteXmppTcpConnectionEndpoints.Result<Rfc6120TcpRemoteConnectionEndpoint> result){
+      this.result=result;
+    }
+  }
+final class TcpEndpointDiscoveryFailed implements LookupConnectionEndpointsFailed {
+    final List<RemoteConnectionEndpointLookupFailure> lookupFailures;
+    TcpEndpointDiscoveryFailed(    RemoteXmppTcpConnectionEndpoints.Result<Rfc6120TcpRemoteConnectionEndpoint> result){
+      lookupFailures=result.lookupFailures;
+    }
+  }
+}

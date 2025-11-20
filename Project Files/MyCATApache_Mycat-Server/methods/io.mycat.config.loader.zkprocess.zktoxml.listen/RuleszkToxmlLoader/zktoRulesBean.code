@@ -1,0 +1,22 @@
+/** 
+ * 将zk上面的信息转换为javabean对象 方法描述
+ * @param zkDirectory
+ * @return
+ * @创建日期 2016年9月17日
+ */
+private Rules zktoRulesBean(DiretoryInf zkDirectory){
+  Rules Rules=new Rules();
+  DataInf RulesZkData=this.getZkData(zkDirectory,ZookeeperPath.FLOW_ZK_PATH_RULE_TABLERULE.getKey());
+  List<TableRule> tableRuleData=parseJsonTableRuleService.parseJsonToBean(RulesZkData.getDataValue());
+  Rules.setTableRule(tableRuleData);
+  String watchPath=ZookeeperPath.FLOW_ZK_PATH_RULE.getKey();
+  watchPath=watchPath + ZookeeperPath.ZK_SEPARATOR.getKey() + ZookeeperPath.FLOW_ZK_PATH_RULE_TABLERULE.getKey();
+  this.zookeeperListen.watchPath(currZkPath,watchPath);
+  DataInf functionZkData=this.getZkData(zkDirectory,ZookeeperPath.FLOW_ZK_PATH_RULE_FUNCTION.getKey());
+  List<Function> functionList=parseJsonFunctionService.parseJsonToBean(functionZkData.getDataValue());
+  Rules.setFunction(functionList);
+  String functionWatchPath=ZookeeperPath.FLOW_ZK_PATH_RULE.getKey();
+  functionWatchPath=functionWatchPath + ZookeeperPath.ZK_SEPARATOR.getKey() + ZookeeperPath.FLOW_ZK_PATH_RULE_FUNCTION.getKey();
+  this.zookeeperListen.watchPath(currZkPath,functionWatchPath);
+  return Rules;
+}

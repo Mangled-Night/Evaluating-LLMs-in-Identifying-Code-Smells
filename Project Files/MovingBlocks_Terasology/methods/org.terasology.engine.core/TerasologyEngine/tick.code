@@ -1,0 +1,41 @@
+/** 
+ * Runs a single "tick" of the engine
+ * @return true if the loop requesting a tick should continue running
+ */
+public boolean tick(){
+  if (shutdownRequested) {
+    return false;
+  }
+  if (assetTypeManager instanceof AutoReloadAssetTypeManager) {
+    ((AutoReloadAssetTypeManager)assetTypeManager).reloadChangedAssets();
+  }
+  processPendingState();
+  if (currentState == null) {
+    shutdown();
+    return false;
+  }
+  Iterator<Float> updateCycles=timeSubsystem.getEngineTime().tick();
+  CoreRegistry.setContext(currentState.getContext());
+  rootContext.get(NetworkSystem.class).setContext(currentState.getContext());
+  for (  EngineSubsystem subsystem : allSubsystems) {
+    try (Activity ignored=PerformanceMonitor.startActivity(subsystem.getName() + " PreUpdate")){
+      subsystem.preUpdate(currentState,timeSubsystem.getEngineTime().getRealDelta());
+    }
+   }
+  while (updateCycles.hasNext()) {
+    float updateDelta=updateCycles.next();
+    try (Activity ignored=PerformanceMonitor.startActivity("Main Update")){
+      currentState.update(updateDelta);
+    }
+   }
+  GameThread.processWaitingProcesses();
+  for (  EngineSubsystem subsystem : getSubsystems()) {
+    try (Activity ignored=PerformanceMonitor.startActivity(subsystem.getName() + " Subsystem postUpdate")){
+      subsystem.postUpdate(currentState,timeSubsystem.getEngineTime().getRealDelta());
+    }
+   }
+  assetTypeManager.disposedUnusedAssets();
+  PerformanceMonitor.rollCycle();
+  PerformanceMonitor.startActivity("Other");
+  return true;
+}

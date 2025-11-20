@@ -1,0 +1,8 @@
+@Test @EnabledOnCommand("ACL") void clientGetredir(){
+  try (StatefulRedisConnection<String,String> connection2=client.connect()){
+    Long processId=redis.clientId();
+    assertThat(connection2.sync().clientGetredir()).isLessThanOrEqualTo(0);
+    assertThat(connection2.sync().clientTracking(TrackingArgs.Builder.enabled(true).redirect(processId))).isEqualTo("OK");
+    assertThat(connection2.sync().clientGetredir()).isEqualTo(processId);
+  }
+ }

@@ -1,0 +1,34 @@
+public long spill(long numBytes) throws IOException {
+synchronized (this) {
+    if (!destructive || dataPages.size() == 1) {
+      return 0L;
+    }
+    long released=0L;
+    while (dataPages.size() > 0) {
+      MemoryBlock block=dataPages.getLast();
+      if (block == currentPage) {
+        break;
+      }
+      Object base=block.getBaseObject();
+      long offset=block.getBaseOffset();
+      int numRecords=Platform.getInt(base,offset);
+      offset+=4;
+      final UnsafeSorterSpillWriter writer=new UnsafeSorterSpillWriter(blockManager,32 * 1024,numRecords);
+      while (numRecords > 0) {
+        int length=Platform.getInt(base,offset);
+        writer.write(base,offset + 4,length,0);
+        offset+=4 + length + 8;
+        numRecords--;
+      }
+      writer.close();
+      spillWriters.add(writer);
+      dataPages.removeLast();
+      released+=block.size();
+      freePage(block);
+      if (released >= numBytes) {
+        break;
+      }
+    }
+    return released;
+  }
+}

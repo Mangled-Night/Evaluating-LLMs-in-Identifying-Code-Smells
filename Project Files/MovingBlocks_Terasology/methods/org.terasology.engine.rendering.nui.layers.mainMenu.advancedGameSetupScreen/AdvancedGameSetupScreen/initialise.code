@@ -1,0 +1,366 @@
+@Override public void initialise(){
+  setAnimationSystem(MenuAnimationSystems.createDefaultSwipeAnimation());
+  remoteModuleRegistryUpdater=Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat(new TargetLengthBasedClassNameAbbreviator(36).abbreviate(getClass().getName()) + "-%d").setDaemon(true).build()).submit(moduleManager.getInstallManager().updateRemoteRegistry());
+  final UIText seed=find("seed",UIText.class);
+  if (seed != null) {
+    seed.setText(new FastRandom().nextString(32));
+  }
+  selectModulesConfig=new SelectModulesConfig();
+  selectModulesConfig.getSelectedStandardModuleExtensions().forEach(selectModulesConfig::unselectStandardModuleExtension);
+  selectModulesConfig.toggleIsLocalOnlySelected();
+  dependencyResolver=new DependencyResolver(moduleManager.getRegistry());
+  modulesLookup=Maps.newHashMap();
+  sortedModules=Lists.newArrayList();
+  for (  Name moduleId : moduleManager.getRegistry().getModuleIds()) {
+    Module latestVersion=moduleManager.getRegistry().getLatestModuleVersion(moduleId);
+    ModuleSelectionInfo info=ModuleSelectionInfo.local(latestVersion);
+    modulesLookup.put(info.getMetadata().getId(),info);
+    sortedModules.add(info);
+  }
+  sortedModules.sort(moduleInfoComparator);
+  allSortedModules=new ArrayList<>(sortedModules);
+  final UIList<ModuleSelectionInfo> moduleList=find("moduleList",UIList.class);
+  if (moduleList != null) {
+    moduleList.setList(sortedModules);
+    moduleList.setItemRenderer(new AbstractItemRenderer<ModuleSelectionInfo>(){
+      String getString(      ModuleSelectionInfo value){
+        return value.getMetadata().getDisplayName().toString();
+      }
+      @Override public void draw(      ModuleSelectionInfo value,      Canvas canvas){
+        if (isSelectedGameplayModule(value) && value.isValidToSelect()) {
+          canvas.setMode("gameplay");
+        }
+ else         if (value.isSelected() && value.isExplicitSelection()) {
+          canvas.setMode("enabled");
+        }
+ else         if (value.isSelected()) {
+          canvas.setMode("dependency");
+        }
+ else         if (!value.isPresent()) {
+          canvas.setMode("disabled");
+        }
+ else         if (!value.isValidToSelect()) {
+          canvas.setMode("invalid");
+        }
+ else {
+          canvas.setMode("available");
+        }
+        canvas.drawText(getString(value),canvas.getRegion());
+      }
+      @Override public Vector2i getPreferredSize(      ModuleSelectionInfo value,      Canvas canvas){
+        String text=getString(value);
+        return new Vector2i(canvas.getCurrentStyle().getFont().getWidth(text),canvas.getCurrentStyle().getFont().getLineHeight());
+      }
+    }
+);
+    moduleList.subscribe((widget,item) -> {
+      if (item.isSelected() && moduleList.getSelection().isExplicitSelection()) {
+        deselect(item);
+      }
+ else       if (item.isValidToSelect()) {
+        select(item);
+      }
+    }
+);
+    moduleSearch=find("moduleSearch",ResettableUIText.class);
+    if (moduleSearch != null) {
+      moduleSearch.subscribe((TextChangeEventListener)(oldText,newText) -> filterModules());
+    }
+    final Binding<ModuleMetadata> moduleInfoBinding=new ReadOnlyBinding<ModuleMetadata>(){
+      @Override public ModuleMetadata get(){
+        if (moduleList.getSelection() != null) {
+          return moduleList.getSelection().getMetadata();
+        }
+        return null;
+      }
+    }
+;
+    UILabel name=find("name",UILabel.class);
+    if (name != null) {
+      name.bindText(new ReadOnlyBinding<String>(){
+        @Override public String get(){
+          if (moduleInfoBinding.get() != null) {
+            return moduleInfoBinding.get().getDisplayName().toString();
+          }
+          return "";
+        }
+      }
+);
+    }
+    UILabel installedVersion=find("installedVersion",UILabel.class);
+    if (installedVersion != null) {
+      installedVersion.bindText(new ReadOnlyBinding<String>(){
+        @Override public String get(){
+          ModuleSelectionInfo sel=moduleList.getSelection();
+          if (sel == null) {
+            return "";
+          }
+          return sel.isPresent() ? sel.getMetadata().getVersion().toString() : translationSystem.translate("${engine:menu#module-version-installed-none}");
+        }
+      }
+);
+    }
+    UILabel onlineVersion=find("onlineVersion",UILabel.class);
+    if (onlineVersion != null) {
+      onlineVersion.bindText(new ReadOnlyBinding<String>(){
+        @Override public String get(){
+          ModuleSelectionInfo sel=moduleList.getSelection();
+          if (sel == null) {
+            return "";
+          }
+          return (sel.getOnlineVersion() != null) ? sel.getOnlineVersion().getVersion().toString() : "none";
+        }
+      }
+);
+    }
+    UILabel description=find("description",UILabel.class);
+    if (description != null) {
+      description.bindText(new ReadOnlyBinding<String>(){
+        @Override public String get(){
+          ModuleMetadata moduleMetadata=moduleInfoBinding.get();
+          if (moduleMetadata != null) {
+            StringBuilder dependenciesNames;
+            List<DependencyInfo> dependencies=moduleMetadata.getDependencies();
+            if (dependencies != null && !dependencies.isEmpty()) {
+              dependenciesNames=new StringBuilder(translationSystem.translate("${engine:menu#module-dependencies-exist}") + ":" + '\n');
+              for (              DependencyInfo dependency : dependencies) {
+                dependenciesNames.append("   ").append(dependency.getId().toString()).append('\n');
+              }
+            }
+ else {
+              dependenciesNames=new StringBuilder(translationSystem.translate("${engine:menu#module-dependencies-empty}") + ".");
+            }
+            return moduleMetadata.getDescription().toString() + '\n' + '\n'+ dependenciesNames;
+          }
+          return "";
+        }
+      }
+);
+    }
+    UILabel status=find("status",UILabel.class);
+    if (status != null) {
+      status.bindText(new ReadOnlyBinding<String>(){
+        @Override public String get(){
+          ModuleSelectionInfo info=moduleList.getSelection();
+          if (info != null) {
+            if (isSelectedGameplayModule(info)) {
+              return translationSystem.translate("${engine:menu#module-status-activegameplay}");
+            }
+ else             if (info.isSelected() && info.isExplicitSelection()) {
+              return translationSystem.translate("${engine:menu#module-status-activated}");
+            }
+ else             if (info.isSelected()) {
+              return translationSystem.translate("${engine:menu#module-status-dependency}");
+            }
+ else             if (!info.isPresent()) {
+              return translationSystem.translate("${engine:menu#module-status-notpresent}");
+            }
+ else             if (info.isValidToSelect()) {
+              return translationSystem.translate("${engine:menu#module-status-available}");
+            }
+ else {
+              return translationSystem.translate("${engine:menu#module-status-error}");
+            }
+          }
+          return "";
+        }
+      }
+);
+    }
+    UIButton toggleActivate=find("toggleActivation",UIButton.class);
+    if (toggleActivate != null) {
+      toggleActivate.subscribe(button -> {
+        ModuleSelectionInfo info=moduleList.getSelection();
+        if (info != null) {
+          if (info.isSelected() && info.isExplicitSelection()) {
+            deselect(info);
+          }
+ else           if (info.isValidToSelect()) {
+            select(info);
+          }
+        }
+      }
+);
+      toggleActivate.bindEnabled(new ReadOnlyBinding<Boolean>(){
+        @Override public Boolean get(){
+          ModuleSelectionInfo info=moduleList.getSelection();
+          return info != null && info.isPresent() && !isSelectedGameplayModule(info) && (info.isSelected() || info.isValidToSelect());
+        }
+      }
+);
+      toggleActivate.bindText(new ReadOnlyBinding<String>(){
+        @Override public String get(){
+          if (moduleList.getSelection() != null) {
+            if (moduleList.getSelection().isExplicitSelection()) {
+              return translationSystem.translate("${engine:menu#deactivate-module}");
+            }
+ else {
+              return translationSystem.translate("${engine:menu#activate-module}");
+            }
+          }
+          return translationSystem.translate("${engine:menu#activate-module}");
+        }
+      }
+);
+    }
+    UIButton downloadButton=find("download",UIButton.class);
+    if (downloadButton != null) {
+      downloadButton.subscribe(button -> {
+        if (moduleList.getSelection() != null) {
+          ModuleSelectionInfo info=moduleList.getSelection();
+          startDownloadingNewestModulesRequiredFor(info);
+        }
+      }
+);
+      downloadButton.bindEnabled(new ReadOnlyBinding<Boolean>(){
+        @Override public Boolean get(){
+          ModuleSelectionInfo selection=moduleList.getSelection();
+          if (null == selection) {
+            return false;
+          }
+          return selection.getOnlineVersion() != null;
+        }
+      }
+);
+      downloadButton.bindText(new ReadOnlyBinding<String>(){
+        @Override public String get(){
+          ModuleSelectionInfo info=moduleList.getSelection();
+          if (info != null && !info.isPresent()) {
+            return translationSystem.translate("${engine:menu#download-module}");
+          }
+ else {
+            return translationSystem.translate("${engine:menu#update-module}");
+          }
+        }
+      }
+);
+    }
+    UIButton disableAll=find("disableAll",UIButton.class);
+    if (disableAll != null) {
+      disableAll.subscribe(button -> sortedModules.stream().filter(info -> info.isSelected() && info.isExplicitSelection()).forEach(this::deselect));
+    }
+    for (    CheckboxAssociationEnum checkboxAssociation : CheckboxAssociationEnum.values()) {
+      String checkboxName=checkboxAssociation.getCheckboxName();
+      StandardModuleExtension standardModuleExtension=checkboxAssociation.getStandardModuleExtension();
+      UICheckbox checkBox=find(checkboxName,UICheckbox.class);
+      if (null != checkBox) {
+        checkBox.setChecked(selectModulesConfig.isStandardModuleExtensionSelected(standardModuleExtension));
+        checkBox.subscribe(e -> {
+          selectModulesConfig.toggleStandardModuleExtensionSelected(standardModuleExtension);
+          checkBox.setChecked(selectModulesConfig.isStandardModuleExtensionSelected(standardModuleExtension));
+          filterModules();
+        }
+);
+      }
+ else {
+        logger.error("Unable to find checkbox named " + checkboxName + " in "+ ASSET_URI.toString());
+        selectModulesConfig.unselectStandardModuleExtension(standardModuleExtension);
+      }
+    }
+    UICheckbox localOnlyCheckbox=find("localOnlyCheckbox",UICheckbox.class);
+    localOnlyCheckbox.setChecked(selectModulesConfig.isLocalOnlySelected());
+    localOnlyCheckbox.subscribe(e -> {
+      selectModulesConfig.toggleIsLocalOnlySelected();
+      localOnlyCheckbox.setChecked(selectModulesConfig.isLocalOnlySelected());
+      filterModules();
+    }
+);
+    UICheckbox uncategorizedCheckbox=find("uncategorizedCheckbox",UICheckbox.class);
+    uncategorizedCheckbox.setChecked(selectModulesConfig.isUncategorizedSelected());
+    uncategorizedCheckbox.subscribe(e -> {
+      selectModulesConfig.toggleUncategorizedSelected();
+      boolean isUncategorizedSelected=selectModulesConfig.isUncategorizedSelected();
+      uncategorizedCheckbox.setChecked(isUncategorizedSelected);
+      for (      CheckboxAssociationEnum checkboxAssociation : CheckboxAssociationEnum.values()) {
+        final String checkboxName=checkboxAssociation.getCheckboxName();
+        UICheckbox checkbox=find(checkboxName,UICheckbox.class);
+        if (null != checkbox) {
+          checkbox.setEnabled(!isUncategorizedSelected);
+        }
+      }
+      filterModules();
+    }
+);
+    UIButton resetAdvancedFilters=find("resetFilters",UIButton.class);
+    if (resetAdvancedFilters != null) {
+      localOnlyCheckbox.setChecked(selectModulesConfig.isLocalOnlySelected());
+      uncategorizedCheckbox.setChecked(selectModulesConfig.isUncategorizedSelected());
+      resetAdvancedFilters.subscribe(button -> {
+        if (selectModulesConfig.isLocalOnlySelected()) {
+          selectModulesConfig.toggleIsLocalOnlySelected();
+          localOnlyCheckbox.setChecked(selectModulesConfig.isLocalOnlySelected());
+        }
+        if (selectModulesConfig.isUncategorizedSelected()) {
+          selectModulesConfig.toggleUncategorizedSelected();
+          uncategorizedCheckbox.setChecked(selectModulesConfig.isUncategorizedSelected());
+        }
+        filterModules();
+      }
+);
+      for (      CheckboxAssociationEnum checkboxAssociation : CheckboxAssociationEnum.values()) {
+        StandardModuleExtension standardModuleExtension=checkboxAssociation.getStandardModuleExtension();
+        String checkboxName=checkboxAssociation.getCheckboxName();
+        UICheckbox checkbox=find(checkboxName,UICheckbox.class);
+        if (null != checkbox) {
+          checkbox.setChecked(selectModulesConfig.isStandardModuleExtensionSelected(standardModuleExtension));
+          resetAdvancedFilters.subscribe(button -> {
+            checkbox.setEnabled(!selectModulesConfig.isUncategorizedSelected());
+            if (selectModulesConfig.isStandardModuleExtensionSelected(standardModuleExtension)) {
+              selectModulesConfig.toggleStandardModuleExtensionSelected(standardModuleExtension);
+              checkbox.setChecked(selectModulesConfig.isStandardModuleExtensionSelected(standardModuleExtension));
+            }
+            filterModules();
+          }
+);
+        }
+      }
+      final UIButton moduleDetails=find("moduleDetails",UIButton.class);
+      if (moduleDetails != null) {
+        moduleDetails.bindEnabled(new ReadOnlyBinding<Boolean>(){
+          @Override public Boolean get(){
+            return moduleInfoBinding.get() != null;
+          }
+        }
+);
+        moduleDetails.subscribe(b -> {
+          final ModuleDetailsScreen moduleDetailsScreen=getManager().createScreen(ModuleDetailsScreen.ASSET_URI,ModuleDetailsScreen.class);
+          final Collection<Module> modules=sortedModules.stream().map(ModuleSelectionInfo::getMetadata).filter(Objects::nonNull).map(meta -> moduleManager.getRegistry().getLatestModuleVersion(meta.getId())).filter(Objects::nonNull).collect(Collectors.toList());
+          moduleDetailsScreen.setModules(modules);
+          moduleDetailsScreen.setSelectedModule(modules.stream().filter(module -> module.getId().equals(moduleInfoBinding.get().getId())).findFirst().orElse(null));
+          getManager().pushScreen(moduleDetailsScreen);
+        }
+);
+      }
+    }
+  }
+  WidgetUtil.trySubscribe(this,"createWorld",button -> {
+    final UniverseSetupScreen universeSetupScreen=getManager().createScreen(UniverseSetupScreen.ASSET_URI,UniverseSetupScreen.class);
+    universeWrapper.setSeed(seed.getText());
+    saveConfiguration();
+    universeSetupScreen.setEnvironment(universeWrapper);
+    triggerForwardAnimation(universeSetupScreen);
+  }
+);
+  WidgetUtil.trySubscribe(this,"play",button -> {
+    if (StringUtils.isBlank(seed.getText())) {
+      getManager().createScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage("Error","Game seed cannot be empty!");
+    }
+ else {
+      universeWrapper.setSeed(seed.getText());
+      saveConfiguration();
+      final GameManifest gameManifest=GameManifestProvider.createGameManifest(universeWrapper,moduleManager,config);
+      if (gameManifest != null) {
+        gameEngine.changeState(new StateLoading(gameManifest,(universeWrapper.getLoadingAsServer()) ? NetworkMode.DEDICATED_SERVER : NetworkMode.NONE));
+      }
+ else {
+        getManager().createScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage("Error","Can't create new game!");
+      }
+    }
+  }
+);
+  WidgetUtil.trySubscribe(this,"return",button -> triggerBackAnimation());
+  WidgetUtil.trySubscribe(this,"mainMenu",button -> {
+    getManager().pushScreen("engine:mainMenuScreen");
+  }
+);
+}

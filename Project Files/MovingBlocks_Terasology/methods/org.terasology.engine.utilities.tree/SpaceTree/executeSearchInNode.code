@@ -1,0 +1,29 @@
+/** 
+ * The method for executing the search.
+ * @param position     The position of the node
+ * @param node         The node to be searched around
+ * @param treeSearch   The treeSearch object for searching
+ */
+private void executeSearchInNode(float[] position,Node node,TreeSearch<T> treeSearch){
+  if (node.center != null) {
+    float distance=distanceFunction.getDistance(position,node.center);
+    if (distance <= treeSearch.maxDistance) {
+      treeSearch.addEntry(new Entry<>(distance,node.centerValue));
+    }
+    for (    Node subNode : node.subNodes) {
+      if (subNode != null) {
+        if (distanceFunction.getPointRegionDistance(position,subNode.minValues,subNode.maxValues) <= treeSearch.maxDistance) {
+          executeSearchInNode(position,subNode,treeSearch);
+        }
+      }
+    }
+  }
+ else {
+    for (    NodeEntry<T> nodeEntry : node.nodeBucket) {
+      float distance=distanceFunction.getDistance(nodeEntry.position,position);
+      if (distance <= treeSearch.maxDistance) {
+        treeSearch.addEntry(new Entry<>(distance,nodeEntry.value));
+      }
+    }
+  }
+}

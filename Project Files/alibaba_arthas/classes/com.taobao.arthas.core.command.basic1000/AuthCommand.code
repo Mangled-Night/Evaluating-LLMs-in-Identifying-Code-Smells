@@ -1,0 +1,62 @@
+/** 
+ * TODO 支持更多的鉴权方式。目前只支持 username/password的方式
+ * @author hengyunabc 2021-03-03
+ */
+@Name(ArthasConstants.AUTH) @Summary("Authenticates the current session") @Description(Constants.EXAMPLE + "  auth" + "  auth <password>\n"+ "  auth --username <username> <password>\n"+ Constants.WIKI+ Constants.WIKI_HOME+ ArthasConstants.AUTH) public class AuthCommand extends AnnotatedCommand {
+  private static final Logger logger=LoggerFactory.getLogger(AuthCommand.class);
+  private String username;
+  private String password;
+  private SecurityAuthenticator authenticator=ArthasBootstrap.getInstance().getSecurityAuthenticator();
+  @Argument(argName="password",index=0,required=false) @Description("password") public void setPassword(  String password){
+    this.password=password;
+  }
+  @Option(shortName="n",longName="username") @Description("username, default value 'arthas'") @DefaultValue(ArthasConstants.DEFAULT_USERNAME) public void setUsername(  String username){
+    this.username=username;
+  }
+  @Override public void process(  CommandProcess process){
+    int status=0;
+    String message="";
+    try {
+      Session session=process.session();
+      if (username == null) {
+        status=1;
+        message="username can not be empty!";
+        return;
+      }
+      if (password == null) {
+        boolean authenticated=session.get(ArthasConstants.SUBJECT_KEY) != null;
+        boolean needLogin=this.authenticator.needLogin();
+        message="Authentication result: " + authenticated + ", Need authentication: "+ needLogin;
+        if (needLogin && !authenticated) {
+          status=1;
+        }
+        return;
+      }
+ else {
+        BasicPrincipal principal=new BasicPrincipal(username,password);
+        try {
+          Subject subject=authenticator.login(principal);
+          if (subject != null) {
+            session.put(ArthasConstants.SUBJECT_KEY,subject);
+            message="Authentication result: " + true + ", username: "+ username;
+          }
+ else {
+            status=1;
+            message="Authentication result: " + false + ", username: "+ username;
+          }
+        }
+ catch (        LoginException e) {
+          logger.error("Authentication error, username: {}",username,e);
+        }
+      }
+    }
+  finally {
+      process.end(status,message);
+    }
+  }
+  @Override public void complete(  Completion completion){
+    if (!CompletionUtils.completeFilePath(completion)) {
+      super.complete(completion);
+    }
+  }
+}

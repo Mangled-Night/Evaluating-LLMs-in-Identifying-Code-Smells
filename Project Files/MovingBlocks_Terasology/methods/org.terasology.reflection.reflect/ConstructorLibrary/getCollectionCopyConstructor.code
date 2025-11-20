@@ -1,0 +1,42 @@
+public static <E>CollectionCopyConstructor<? extends Collection<E>,E> getCollectionCopyConstructor(TypeInfo<? extends Collection<E>> typeInfo){
+  Class<? extends Collection<E>> rawType=typeInfo.getRawType();
+  Type type=typeInfo.getType();
+  if (Multiset.class.isAssignableFrom(rawType)) {
+    if (ImmutableMultiset.class.isAssignableFrom(rawType)) {
+      return ImmutableMultiset::copyOf;
+    }
+    return HashMultiset::create;
+  }
+  if (SortedSet.class.isAssignableFrom(rawType)) {
+    if (ImmutableSortedSet.class.isAssignableFrom(rawType)) {
+      return ImmutableSortedSet::copyOf;
+    }
+    return TreeSet::new;
+  }
+  if (EnumSet.class.isAssignableFrom(rawType)) {
+    return (items) -> {
+      if (!(type instanceof ParameterizedType)) {
+        throw new IllegalArgumentException("Invalid EnumSet type: " + type.toString());
+      }
+      Type elementType=((ParameterizedType)type).getActualTypeArguments()[0];
+      if (!(elementType instanceof Class)) {
+        throw new IllegalArgumentException("Invalid EnumSet type: " + type.toString());
+      }
+      return EnumSet.copyOf((Collection)items);
+    }
+;
+  }
+  if (Set.class.isAssignableFrom(rawType)) {
+    if (ImmutableSet.class.isAssignableFrom(rawType)) {
+      return ImmutableSet::copyOf;
+    }
+    return LinkedHashSet::new;
+  }
+  if (Queue.class.isAssignableFrom(rawType)) {
+    return ArrayDeque::new;
+  }
+  if (ImmutableList.class.isAssignableFrom(rawType)) {
+    return ImmutableList::copyOf;
+  }
+  return ArrayList::new;
+}

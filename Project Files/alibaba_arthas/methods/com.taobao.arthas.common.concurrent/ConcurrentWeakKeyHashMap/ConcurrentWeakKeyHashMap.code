@@ -1,0 +1,69 @@
+/** 
+ * Creates a new, empty map with the specified initial capacity, load factor and concurrency level.
+ * @param initialCapacity the initial capacity. The implementation performsinternal sizing to accommodate this many elements.
+ * @param loadFactor the load factor threshold, used to control resizing.Resizing may be performed when the average number of elements per bin exceeds this threshold.
+ * @param concurrencyLevel the estimated number of concurrently updatingthreads. The implementation performs internal sizing to try to accommodate this many threads.
+ * @throws IllegalArgumentException if the initial capacity is negative orthe load factor or concurrencyLevel are nonpositive.
+ */
+public ConcurrentWeakKeyHashMap(int initialCapacity,float loadFactor,int concurrencyLevel){
+  if (!(loadFactor > 0) || initialCapacity < 0 || concurrencyLevel <= 0) {
+    throw new IllegalArgumentException();
+  }
+  if (concurrencyLevel > MAX_SEGMENTS) {
+    concurrencyLevel=MAX_SEGMENTS;
+  }
+  int sshift=0;
+  int ssize=1;
+  while (ssize < concurrencyLevel) {
+    ++sshift;
+    ssize<<=1;
+  }
+  segmentShift=32 - sshift;
+  segmentMask=ssize - 1;
+  segments=Segment.newArray(ssize);
+  if (initialCapacity > MAXIMUM_CAPACITY) {
+    initialCapacity=MAXIMUM_CAPACITY;
+  }
+  int c=initialCapacity / ssize;
+  if (c * ssize < initialCapacity) {
+    ++c;
+  }
+  int cap=1;
+  while (cap < c) {
+    cap<<=1;
+  }
+  for (int i=0; i < segments.length; ++i) {
+    segments[i]=new Segment<K,V>(cap,loadFactor);
+  }
+}
+/** 
+ * Creates a new, empty map with the specified initial capacity and load factor and with the default reference types (weak keys, strong values), and concurrencyLevel (16).
+ * @param initialCapacity The implementation performs internal sizing toaccommodate this many elements.
+ * @param loadFactor the load factor threshold, used to control resizing.Resizing may be performed when the average number of elements per bin exceeds this threshold.
+ * @throws IllegalArgumentException if the initial capacity of elements isnegative or the load factor is nonpositive
+ */
+public ConcurrentWeakKeyHashMap(int initialCapacity,float loadFactor){
+  this(initialCapacity,loadFactor,DEFAULT_CONCURRENCY_LEVEL);
+}
+/** 
+ * Creates a new, empty map with the specified initial capacity, and with default reference types (weak keys, strong values), load factor (0.75) and concurrencyLevel (16).
+ * @param initialCapacity the initial capacity. The implementation performsinternal sizing to accommodate this many elements.
+ * @throws IllegalArgumentException if the initial capacity of elements isnegative.
+ */
+public ConcurrentWeakKeyHashMap(int initialCapacity){
+  this(initialCapacity,DEFAULT_LOAD_FACTOR,DEFAULT_CONCURRENCY_LEVEL);
+}
+/** 
+ * Creates a new, empty map with a default initial capacity (16), reference types (weak keys, strong values), default load factor (0.75) and concurrencyLevel (16).
+ */
+public ConcurrentWeakKeyHashMap(){
+  this(DEFAULT_INITIAL_CAPACITY,DEFAULT_LOAD_FACTOR,DEFAULT_CONCURRENCY_LEVEL);
+}
+/** 
+ * Creates a new map with the same mappings as the given map. The map is created with a capacity of 1.5 times the number of mappings in the given map or 16 (whichever is greater), and a default load factor (0.75) and concurrencyLevel (16).
+ * @param m the map
+ */
+public ConcurrentWeakKeyHashMap(Map<? extends K,? extends V> m){
+  this(Math.max((int)(m.size() / DEFAULT_LOAD_FACTOR) + 1,DEFAULT_INITIAL_CAPACITY),DEFAULT_LOAD_FACTOR,DEFAULT_CONCURRENCY_LEVEL);
+  putAll(m);
+}

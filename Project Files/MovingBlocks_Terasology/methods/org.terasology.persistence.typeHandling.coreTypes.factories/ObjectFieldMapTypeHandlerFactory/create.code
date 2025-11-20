@@ -1,0 +1,15 @@
+@Override public <T>Optional<TypeHandler<T>> create(TypeInfo<T> typeInfo,TypeHandlerContext context){
+  Class<? super T> typeClass=typeInfo.getRawType();
+  if (!Modifier.isAbstract(typeClass.getModifiers()) && !typeClass.isLocalClass() && !(typeClass.isMemberClass() && !Modifier.isStatic(typeClass.getModifiers()))) {
+    Map<Field,TypeHandler<?>> fieldTypeHandlerMap=Maps.newLinkedHashMap();
+    getResolvedFields(typeInfo).forEach((field,fieldType) -> {
+      Optional<TypeHandler<?>> declaredFieldTypeHandler=context.getTypeHandlerLibrary().getTypeHandler(fieldType);
+      TypeInfo<?> fieldTypeInfo=TypeInfo.of(fieldType);
+      fieldTypeHandlerMap.put(field,new RuntimeDelegatingTypeHandler(declaredFieldTypeHandler.orElse(null),fieldTypeInfo,context));
+    }
+);
+    ObjectFieldMapTypeHandler<T> mappedHandler=new ObjectFieldMapTypeHandler<>(constructorLibrary.get(typeInfo),fieldTypeHandlerMap);
+    return Optional.of(mappedHandler);
+  }
+  return Optional.empty();
+}

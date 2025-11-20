@@ -1,0 +1,34 @@
+private boolean canPlaceBlock(Block block,Vector3i targetBlock,Vector3i blockPos){
+  if (block == null) {
+    return false;
+  }
+  Block centerBlock=worldProvider.getBlock(targetBlock.x,targetBlock.y,targetBlock.z);
+  if (!centerBlock.isAttachmentAllowed()) {
+    return false;
+  }
+  Block adjBlock=worldProvider.getBlock(blockPos.x,blockPos.y,blockPos.z);
+  if (!adjBlock.isReplacementAllowed() || adjBlock.isTargetable()) {
+    return false;
+  }
+  if (block.getBlockFamily().equals(adjBlock.getBlockFamily())) {
+    return false;
+  }
+  if (!block.isPenetrable()) {
+    Physics physics=CoreRegistry.get(Physics.class);
+    AABBf blockBounds=block.getBounds(blockPos);
+    blockBounds.minX+=KinematicCharacterMover.HORIZONTAL_PENETRATION;
+    blockBounds.maxX-=KinematicCharacterMover.HORIZONTAL_PENETRATION;
+    blockBounds.minY+=KinematicCharacterMover.VERTICAL_PENETRATION;
+    blockBounds.maxY-=KinematicCharacterMover.VERTICAL_PENETRATION;
+    blockBounds.minZ+=KinematicCharacterMover.HORIZONTAL_PENETRATION;
+    blockBounds.maxZ-=KinematicCharacterMover.HORIZONTAL_PENETRATION;
+    blockBounds.minX+=ADDITIONAL_ALLOWED_PENETRATION;
+    blockBounds.minY+=ADDITIONAL_ALLOWED_PENETRATION;
+    blockBounds.minZ+=ADDITIONAL_ALLOWED_PENETRATION;
+    blockBounds.maxX-=ADDITIONAL_ALLOWED_PENETRATION;
+    blockBounds.maxY-=ADDITIONAL_ALLOWED_PENETRATION;
+    blockBounds.maxZ-=ADDITIONAL_ALLOWED_PENETRATION;
+    return physics.scanArea(blockBounds,StandardCollisionGroup.DEFAULT,StandardCollisionGroup.CHARACTER).isEmpty();
+  }
+  return true;
+}

@@ -1,0 +1,11 @@
+@Test void pubSubConnectionShouldSetClientName(){
+  RedisURI redisURI=RedisURI.create(host,port);
+  redisURI.setClientName("my-client");
+  StatefulRedisConnection<String,String> connection=client.connectPubSub(redisURI);
+  assertThat(connection.sync().clientGetname()).isEqualTo(redisURI.getClientName());
+  connection.sync().quit();
+  Delay.delay(Duration.ofMillis(100));
+  Wait.untilTrue(connection::isOpen).waitOrTimeout();
+  assertThat(connection.sync().clientGetname()).isEqualTo(redisURI.getClientName());
+  connection.close();
+}

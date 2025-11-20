@@ -1,0 +1,39 @@
+public void throwExceptionParse(String sql,boolean throwException) throws NoSuchMethodException {
+  MySqlStatementParser parser=new MySqlStatementParser(sql);
+  List<SQLStatement> statementList=parser.parseStatementList();
+  SQLStatement sqlStatement=statementList.get(0);
+  MySqlUpdateStatement update=(MySqlUpdateStatement)sqlStatement;
+  SchemaConfig schemaConfig=mock(SchemaConfig.class);
+  Map<String,TableConfig> tables=mock(Map.class);
+  TableConfig tableConfig=mock(TableConfig.class);
+  String tableName="hotnews";
+  when((schemaConfig).getTables()).thenReturn(tables);
+  when(tables.get(tableName)).thenReturn(tableConfig);
+  when(tableConfig.getParentTC()).thenReturn(null);
+  RouteResultset routeResultset=new RouteResultset(sql,11);
+  Class c=DruidUpdateParser.class;
+  Method method=c.getDeclaredMethod("confirmShardColumnNotUpdated",new Class[]{SQLUpdateStatement.class,SchemaConfig.class,String.class,String.class,String.class,RouteResultset.class});
+  method.setAccessible(true);
+  try {
+    method.invoke(c.newInstance(),update,schemaConfig,tableName,"ID","",routeResultset);
+    if (throwException) {
+      System.out.println("未抛异常，解析通过则不对！");
+      Assert.assertTrue(false);
+    }
+ else {
+      System.out.println("未抛异常，解析通过，此情况分片字段可能在update语句中但是实际不会被更新");
+      Assert.assertTrue(true);
+    }
+  }
+ catch (  Exception e) {
+    if (throwException) {
+      System.out.println(e.getCause().getClass());
+      Assert.assertTrue(e.getCause() instanceof SQLNonTransientException);
+      System.out.println("抛异常原因为SQLNonTransientException则正确");
+    }
+ else {
+      System.out.println("抛异常，需要检查");
+      Assert.assertTrue(false);
+    }
+  }
+}

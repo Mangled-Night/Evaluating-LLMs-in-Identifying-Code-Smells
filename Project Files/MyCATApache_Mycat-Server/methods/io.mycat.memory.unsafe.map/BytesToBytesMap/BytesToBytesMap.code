@@ -1,0 +1,26 @@
+public BytesToBytesMap(DataNodeMemoryManager dataNodeMemoryManager,DataNodeDiskManager blockManager,SerializerManager serializerManager,int initialCapacity,double loadFactor,long pageSizeBytes,boolean enablePerfMetrics){
+  super(dataNodeMemoryManager,pageSizeBytes);
+  this.dataNodeMemoryManager=dataNodeMemoryManager;
+  this.blockManager=blockManager;
+  this.serializerManager=serializerManager;
+  this.loadFactor=loadFactor;
+  this.loc=new Location();
+  this.pageSizeBytes=pageSizeBytes;
+  this.enablePerfMetrics=enablePerfMetrics;
+  if (initialCapacity <= 0) {
+    throw new IllegalArgumentException("Initial capacity must be greater than 0");
+  }
+  if (initialCapacity > MAX_CAPACITY) {
+    throw new IllegalArgumentException("Initial capacity " + initialCapacity + " exceeds maximum capacity of "+ MAX_CAPACITY);
+  }
+  if (pageSizeBytes > DataNodeMemoryManager.MAXIMUM_PAGE_SIZE_BYTES) {
+    throw new IllegalArgumentException("Page size " + pageSizeBytes + " cannot exceed "+ DataNodeMemoryManager.MAXIMUM_PAGE_SIZE_BYTES);
+  }
+  allocate(initialCapacity);
+}
+public BytesToBytesMap(DataNodeMemoryManager dataNodeMemoryManager,int initialCapacity,long pageSizeBytes){
+  this(dataNodeMemoryManager,initialCapacity,pageSizeBytes,false);
+}
+public BytesToBytesMap(DataNodeMemoryManager dataNodeMemoryManager,int initialCapacity,long pageSizeBytes,boolean enablePerfMetrics){
+  this(dataNodeMemoryManager,null,null,initialCapacity,0.70,pageSizeBytes,enablePerfMetrics);
+}

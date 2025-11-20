@@ -1,0 +1,27 @@
+/** 
+ * Abstract OMEMO integration test framing, which creates and initializes two OmemoManagers (for conOne and conTwo). Both users subscribe to one another and trust their identities. After the test traces in PubSub and in the users Rosters are removed.
+ */
+public abstract class AbstractTwoUsersOmemoIntegrationTest extends AbstractOmemoIntegrationTest {
+  protected OmemoManager alice, bob;
+  public AbstractTwoUsersOmemoIntegrationTest(  SmackIntegrationTestEnvironment environment) throws XMPPException.XMPPErrorException, SmackException.NotConnectedException, InterruptedException, SmackException.NoResponseException, TestNotPossibleException {
+    super(environment);
+  }
+  @BeforeClass public void setup() throws Exception {
+    alice=OmemoManagerSetupHelper.prepareOmemoManager(conOne);
+    bob=OmemoManagerSetupHelper.prepareOmemoManager(conTwo);
+    assertFalse(alice.getDeviceId().equals(bob.getDeviceId()));
+    IntegrationTestRosterUtil.ensureBothAccountsAreSubscribedToEachOther(alice.getConnection(),bob.getConnection(),timeout);
+    OmemoManagerSetupHelper.trustAllIdentitiesWithTests(alice,bob);
+    OmemoManagerSetupHelper.trustAllIdentitiesWithTests(bob,alice);
+    assertEquals(bob.getOwnFingerprint(),alice.getActiveFingerprints(bob.getOwnJid()).get(bob.getOwnDevice()));
+    assertEquals(alice.getOwnFingerprint(),bob.getActiveFingerprints(alice.getOwnJid()).get(alice.getOwnDevice()));
+  }
+  @AfterClass public void cleanUp() throws IOException, NotConnectedException, InterruptedException {
+    alice.stopStanzaAndPEPListeners();
+    bob.stopStanzaAndPEPListeners();
+    OmemoManagerSetupHelper.cleanUpPubSub(alice);
+    OmemoManagerSetupHelper.cleanUpRoster(alice);
+    OmemoManagerSetupHelper.cleanUpPubSub(bob);
+    OmemoManagerSetupHelper.cleanUpRoster(bob);
+  }
+}

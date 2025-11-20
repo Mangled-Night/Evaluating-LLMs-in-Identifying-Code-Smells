@@ -1,0 +1,141 @@
+private void addBasicPanels(){
+  JSplitPane allPane=new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+  allPane.setOneTouchExpandable(true);
+  messagesTable=new DefaultTableModel(new Object[]{"Hide","Timestamp","","","Message","Id","Type","To","From"},0){
+    private static final long serialVersionUID=8136121224474217264L;
+    @Override public boolean isCellEditable(    int rowIndex,    int mColIndex){
+      return false;
+    }
+    @Override public Class<?> getColumnClass(    int columnIndex){
+      if (columnIndex == 2 || columnIndex == 3) {
+        return Icon.class;
+      }
+      return super.getColumnClass(columnIndex);
+    }
+  }
+;
+  JTable table=new JTable(messagesTable);
+  table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+  table.getColumnModel().getColumn(0).setMaxWidth(0);
+  table.getColumnModel().getColumn(0).setMinWidth(0);
+  table.getTableHeader().getColumnModel().getColumn(0).setMaxWidth(0);
+  table.getTableHeader().getColumnModel().getColumn(0).setMinWidth(0);
+  table.getColumnModel().getColumn(1).setMaxWidth(300);
+  table.getColumnModel().getColumn(1).setPreferredWidth(90);
+  table.getColumnModel().getColumn(2).setMaxWidth(50);
+  table.getColumnModel().getColumn(2).setPreferredWidth(30);
+  table.getColumnModel().getColumn(3).setMaxWidth(50);
+  table.getColumnModel().getColumn(3).setPreferredWidth(30);
+  table.getColumnModel().getColumn(5).setMaxWidth(100);
+  table.getColumnModel().getColumn(5).setPreferredWidth(55);
+  table.getColumnModel().getColumn(6).setMaxWidth(200);
+  table.getColumnModel().getColumn(6).setPreferredWidth(50);
+  table.getColumnModel().getColumn(7).setMaxWidth(300);
+  table.getColumnModel().getColumn(7).setPreferredWidth(90);
+  table.getColumnModel().getColumn(8).setMaxWidth(300);
+  table.getColumnModel().getColumn(8).setPreferredWidth(90);
+  SelectionListener selectionListener=new SelectionListener(table);
+  table.getSelectionModel().addListSelectionListener(selectionListener);
+  table.getColumnModel().getSelectionModel().addListSelectionListener(selectionListener);
+  allPane.setTopComponent(new JScrollPane(table));
+  messageTextArea=new JTextArea();
+  messageTextArea.setEditable(false);
+  JPopupMenu menu=new JPopupMenu();
+  JMenuItem menuItem1=new JMenuItem("Copy");
+  menuItem1.addActionListener(new ActionListener(){
+    @Override public void actionPerformed(    ActionEvent e){
+      Clipboard clipboard=Toolkit.getDefaultToolkit().getSystemClipboard();
+      clipboard.setContents(new StringSelection(messageTextArea.getText()),null);
+    }
+  }
+);
+  menu.add(menuItem1);
+  messageTextArea.addMouseListener(new PopupListener(menu));
+  JPanel sublayout=new JPanel(new BorderLayout());
+  sublayout.add(new JScrollPane(messageTextArea),BorderLayout.CENTER);
+  JButton clearb=new JButton("Clear All Packets");
+  clearb.addActionListener(new AbstractAction(){
+    private static final long serialVersionUID=-8576045822764763613L;
+    @Override public void actionPerformed(    ActionEvent e){
+      messagesTable.setRowCount(0);
+    }
+  }
+);
+  sublayout.add(clearb,BorderLayout.NORTH);
+  allPane.setBottomComponent(sublayout);
+  allPane.setDividerLocation(150);
+  tabbedPane.add("All Packets",allPane);
+  tabbedPane.setToolTipTextAt(0,"Sent and received packets processed by Smack");
+  final JTextArea sentText=new JTextArea();
+  sentText.setWrapStyleWord(true);
+  sentText.setLineWrap(true);
+  sentText.setEditable(false);
+  sentText.setForeground(new Color(112,3,3));
+  tabbedPane.add("Raw Sent Packets",new JScrollPane(sentText));
+  tabbedPane.setToolTipTextAt(1,"Raw text of the sent packets");
+  menu=new JPopupMenu();
+  menuItem1=new JMenuItem("Copy");
+  menuItem1.addActionListener(new ActionListener(){
+    @Override public void actionPerformed(    ActionEvent e){
+      Clipboard clipboard=Toolkit.getDefaultToolkit().getSystemClipboard();
+      clipboard.setContents(new StringSelection(sentText.getText()),null);
+    }
+  }
+);
+  JMenuItem menuItem2=new JMenuItem("Clear");
+  menuItem2.addActionListener(new ActionListener(){
+    @Override public void actionPerformed(    ActionEvent e){
+      sentText.setText("");
+    }
+  }
+);
+  sentText.addMouseListener(new PopupListener(menu));
+  menu.add(menuItem1);
+  menu.add(menuItem2);
+  final JTextArea receivedText=new JTextArea();
+  receivedText.setWrapStyleWord(true);
+  receivedText.setLineWrap(true);
+  receivedText.setEditable(false);
+  receivedText.setForeground(new Color(6,76,133));
+  tabbedPane.add("Raw Received Packets",new JScrollPane(receivedText));
+  tabbedPane.setToolTipTextAt(2,"Raw text of the received packets before Smack process them");
+  menu=new JPopupMenu();
+  menuItem1=new JMenuItem("Copy");
+  menuItem1.addActionListener(new ActionListener(){
+    @Override public void actionPerformed(    ActionEvent e){
+      Clipboard clipboard=Toolkit.getDefaultToolkit().getSystemClipboard();
+      clipboard.setContents(new StringSelection(receivedText.getText()),null);
+    }
+  }
+);
+  menuItem2=new JMenuItem("Clear");
+  menuItem2.addActionListener(new ActionListener(){
+    @Override public void actionPerformed(    ActionEvent e){
+      receivedText.setText("");
+    }
+  }
+);
+  receivedText.addMouseListener(new PopupListener(menu));
+  menu.add(menuItem1);
+  menu.add(menuItem2);
+  ObservableReader debugReader=new ObservableReader(reader);
+  readerListener=new ReaderListener(){
+    private final PriorityBlockingQueue<String> buffer=new PriorityBlockingQueue<>();
+    @Override public void read(    final String string){
+      addBatched(string,buffer,receivedText);
+    }
+  }
+;
+  debugReader.addReaderListener(readerListener);
+  ObservableWriter debugWriter=new ObservableWriter(writer);
+  writerListener=new WriterListener(){
+    private final PriorityBlockingQueue<String> buffer=new PriorityBlockingQueue<>();
+    @Override public void write(    final String string){
+      addBatched(string,buffer,sentText);
+    }
+  }
+;
+  debugWriter.addWriterListener(writerListener);
+  reader=debugReader;
+  writer=debugWriter;
+}

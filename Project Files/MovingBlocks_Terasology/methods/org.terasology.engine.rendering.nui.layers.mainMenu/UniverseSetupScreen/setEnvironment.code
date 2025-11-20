@@ -1,0 +1,30 @@
+/** 
+ * This method switches the environment of the game to a temporary one needed for creating a game. It creates a new  {@link Context} and only puts the minimum classesneeded for successful game creation.
+ * @param wrapper takes the {@link AdvancedGameSetupScreen} and pushes it into the new context.
+ */
+public void setEnvironment(UniverseWrapper wrapper){
+  context=new ContextImpl();
+  CoreRegistry.setContext(context);
+  ReflectFactory reflectFactory=new ReflectionReflectFactory();
+  context.put(ReflectFactory.class,reflectFactory);
+  CopyStrategyLibrary copyStrategyLibrary=new CopyStrategyLibrary(reflectFactory);
+  context.put(CopyStrategyLibrary.class,copyStrategyLibrary);
+  context.put(NUIManager.class,getManager());
+  context.put(UniverseSetupScreen.class,this);
+  assetTypeManager=new AutoReloadAssetTypeManager();
+  context.put(AssetManager.class,assetTypeManager.getAssetManager());
+  context.put(ModuleAwareAssetTypeManager.class,assetTypeManager);
+  context.put(ModuleManager.class,moduleManager);
+  context.put(UniverseWrapper.class,wrapper);
+  DependencyResolver resolver=new DependencyResolver(moduleManager.getRegistry());
+  ResolutionResult result=resolver.resolve(config.getDefaultModSelection().listModules());
+  if (result.isSuccess()) {
+    environment=moduleManager.loadEnvironment(result.getModules(),false);
+    context.put(ModuleEnvironment.class,environment);
+    context.put(WorldGeneratorPluginLibrary.class,new TempWorldGeneratorPluginLibrary(environment,context));
+    initAssets();
+    EnvironmentSwitchHandler environmentSwitcher=new EnvironmentSwitchHandler();
+    context.put(EnvironmentSwitchHandler.class,environmentSwitcher);
+    environmentSwitcher.handleSwitchToPreviewEnvironment(context,environment);
+  }
+}

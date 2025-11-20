@@ -1,0 +1,33 @@
+/** 
+ * MUC Light Affiliations Change Provider class.
+ * @author Fernando Ramirez
+ */
+public class MUCLightAffiliationsChangeProvider extends ExtensionElementProvider<AffiliationsChangeExtension> {
+  @Override public AffiliationsChangeExtension parse(  XmlPullParser parser,  int initialDepth,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    HashMap<Jid,MUCLightAffiliation> affiliations=new HashMap<>();
+    String prevVersion=null;
+    String version=null;
+    outerloop:     while (true) {
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT) {
+        if (parser.getName().equals("prev-version")) {
+          prevVersion=parser.nextText();
+        }
+        if (parser.getName().equals("version")) {
+          version=parser.nextText();
+        }
+        if (parser.getName().equals("user")) {
+          MUCLightAffiliation mucLightAffiliation=MUCLightAffiliation.fromString(parser.getAttributeValue("","affiliation"));
+          Jid jid=JidCreate.from(parser.nextText());
+          affiliations.put(jid,mucLightAffiliation);
+        }
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT) {
+        if (parser.getDepth() == initialDepth) {
+          break outerloop;
+        }
+      }
+    }
+    return new AffiliationsChangeExtension(affiliations,prevVersion,version);
+  }
+}

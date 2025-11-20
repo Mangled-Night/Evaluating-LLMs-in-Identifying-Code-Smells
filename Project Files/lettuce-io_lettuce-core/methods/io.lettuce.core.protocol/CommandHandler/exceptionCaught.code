@@ -1,0 +1,30 @@
+@Override public void exceptionCaught(ChannelHandlerContext ctx,Throwable cause) throws Exception {
+  InternalLogLevel logLevel=InternalLogLevel.WARN;
+  if (!stack.isEmpty()) {
+    RedisCommand<?,?,?> command=stack.poll();
+    if (debugEnabled) {
+      logger.debug("{} Storing exception in {}",logPrefix(),command);
+    }
+    logLevel=InternalLogLevel.DEBUG;
+    try {
+      command.completeExceptionally(cause);
+    }
+ catch (    Exception ex) {
+      logger.warn("{} Unexpected exception during command completion exceptionally: {}",logPrefix,ex.toString(),ex);
+    }
+  }
+  if (channel == null || !channel.isActive() || !isConnected()) {
+    if (debugEnabled) {
+      logger.debug("{} Storing exception in connectionError",logPrefix());
+    }
+    logLevel=InternalLogLevel.DEBUG;
+    endpoint.notifyException(cause);
+  }
+  if (cause instanceof IOException && logLevel.ordinal() > InternalLogLevel.INFO.ordinal()) {
+    logLevel=InternalLogLevel.INFO;
+    if (SUPPRESS_IO_EXCEPTION_MESSAGES.contains(cause.getMessage())) {
+      logLevel=InternalLogLevel.DEBUG;
+    }
+  }
+  logger.log(logLevel,"{} Unexpected exception during request: {}",logPrefix,cause.toString(),cause);
+}

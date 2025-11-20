@@ -1,0 +1,31 @@
+public class XmppWebSocketTransportModuleTest {
+  @Test public void createWebSocketModuleConnectionInstanceTest() throws URISyntaxException, XmppStringprepException {
+    ModularXmppClientToServerConnectionConfiguration.Builder builder=ModularXmppClientToServerConnectionConfiguration.builder();
+    builder.removeAllModules();
+    builder.addModule(XmppWebSocketTransportModuleDescriptor.class);
+    builder.setXmppAddressAndPassword("user5@localhost.org","user5");
+    builder.setHost("localhost.org");
+    XmppWebSocketTransportModuleDescriptor.Builder websocketBuilder=XmppWebSocketTransportModuleDescriptor.getBuilder(builder);
+    websocketBuilder.explicitlySetWebSocketEndpointAndDiscovery(new URI("wss://localhost.org:7443/ws/"),false);
+    ModularXmppClientToServerConnectionConfiguration config=builder.build();
+    ModularXmppClientToServerConnection connection=new ModularXmppClientToServerConnection(config);
+    assertNotNull(connection);
+  }
+  @Test public void createDescriptorTest() throws URISyntaxException, XmppStringprepException {
+    XmppWebSocketTransportModuleDescriptor websocketTransportModuleDescriptor=getWebSocketDescriptor();
+    assertNotNull(websocketTransportModuleDescriptor);
+  }
+  @Test public void lookupConnectionEndpointsTest() throws URISyntaxException {
+    XmppWebSocketTransportModuleDescriptor websocketTransportModuleDescriptor=getWebSocketDescriptor();
+    ModularXmppClientToServerConnectionInternal connectionInternal=mock(ModularXmppClientToServerConnectionInternal.class);
+    XmppWebSocketTransportModule transportModule=new XmppWebSocketTransportModule(websocketTransportModuleDescriptor,connectionInternal);
+    XmppWebSocketTransportModule.XmppWebSocketTransport transport=transportModule.getTransport();
+    assertNotNull(transport.lookupConnectionEndpoints());
+  }
+  private static XmppWebSocketTransportModuleDescriptor getWebSocketDescriptor() throws URISyntaxException {
+    ModularXmppClientToServerConnectionConfiguration.Builder builder=ModularXmppClientToServerConnectionConfiguration.builder();
+    XmppWebSocketTransportModuleDescriptor.Builder websocketBuilder=XmppWebSocketTransportModuleDescriptor.getBuilder(builder);
+    websocketBuilder.explicitlySetWebSocketEndpointAndDiscovery(new URI("wss://localhost.org:7443/ws/"),false);
+    return (XmppWebSocketTransportModuleDescriptor)websocketBuilder.build();
+  }
+}

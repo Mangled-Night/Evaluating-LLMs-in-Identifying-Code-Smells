@@ -1,0 +1,29 @@
+/** 
+ * Sequentially iterate over elements in a set identified by  {@code key}. This method uses  {@code SSCAN} to perform aniterative scan.
+ * @param commands the commands interface, must not be {@code null}.
+ * @param key the set to scan.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @return a new {@link Flux}.
+ */
+public static <K,V>Flux<V> sscan(RedisSetReactiveCommands<K,V> commands,K key){
+  return sscan(commands,key,Optional.empty());
+}
+/** 
+ * Sequentially iterate over elements in a set identified by  {@code key}. This method uses  {@code SSCAN} to perform aniterative scan.
+ * @param commands the commands interface, must not be {@code null}.
+ * @param key the set to scan.
+ * @param scanArgs the scan arguments, must not be {@code null}.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @return a new {@link Flux}.
+ */
+public static <K,V>Flux<V> sscan(RedisSetReactiveCommands<K,V> commands,K key,ScanArgs scanArgs){
+  LettuceAssert.notNull(scanArgs,"ScanArgs must not be null");
+  return sscan(commands,key,Optional.of(scanArgs));
+}
+private static <K,V>Flux<V> sscan(RedisSetReactiveCommands<K,V> commands,K key,Optional<ScanArgs> scanArgs){
+  LettuceAssert.notNull(commands,"RedisSetReactiveCommands must not be null");
+  LettuceAssert.notNull(key,"Key must not be null");
+  return scanArgs.map(it -> commands.sscan(key,it)).orElseGet(() -> commands.sscan(key)).expand(c -> !c.isFinished() ? scanArgs.map(it -> commands.sscan(key,c,it)).orElseGet(() -> commands.sscan(key,c)) : Mono.empty()).flatMapIterable(ValueScanCursor::getValues);
+}

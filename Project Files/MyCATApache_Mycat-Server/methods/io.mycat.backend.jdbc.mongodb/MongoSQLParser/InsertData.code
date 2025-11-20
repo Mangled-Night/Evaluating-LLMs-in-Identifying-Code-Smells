@@ -1,0 +1,22 @@
+private int InsertData(SQLInsertStatement state){
+  if (state.getValues().getValues().size() == 0) {
+    throw new RuntimeException("number of  columns error");
+  }
+  if (state.getValues().getValues().size() != state.getColumns().size()) {
+    throw new RuntimeException("number of values and columns have to match");
+  }
+  SQLTableSource table=state.getTableSource();
+  BasicDBObject[] oList=new BasicDBObject[state.getValuesList().size()];
+  int i=0;
+  for (  SQLInsertStatement.ValuesClause values : state.getValuesList()) {
+    int j=0;
+    BasicDBObject o=new BasicDBObject();
+    oList[i++]=o;
+    for (    SQLExpr col : state.getColumns()) {
+      o.put(getFieldName2(col),getExpValue(values.getValues().get(j++)));
+    }
+  }
+  DBCollection coll=this._db.getCollection(table.toString());
+  WriteResult result=coll.insert(oList);
+  return i;
+}

@@ -1,0 +1,20 @@
+/** 
+ * If a request with a specific session ID should be ignored no listeners should be notified.
+ * @throws Exception should not happen
+ */
+@Test public void shouldIgnoreSocks5BytestreamRequestOnce() throws Exception {
+  Socks5BytestreamListener allRequestsListener=mock(Socks5BytestreamListener.class);
+  byteStreamManager.addIncomingBytestreamListener(allRequestsListener);
+  Socks5BytestreamListener userRequestsListener=mock(Socks5BytestreamListener.class);
+  byteStreamManager.addIncomingBytestreamListener(userRequestsListener,initiatorJID);
+  byteStreamManager.ignoreBytestreamRequestOnce(sessionID);
+  initiationListener.handleIQRequest(initBytestream);
+  ArgumentCaptor<BytestreamRequest> byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+  verify(userRequestsListener,never()).incomingBytestreamRequest(byteStreamRequest.capture());
+  byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+  verify(allRequestsListener,never()).incomingBytestreamRequest(byteStreamRequest.capture());
+  initiationListener.handleIQRequest(initBytestream);
+  verify(userRequestsListener,timeout(TIMEOUT)).incomingBytestreamRequest(byteStreamRequest.capture());
+  byteStreamRequest=ArgumentCaptor.forClass(BytestreamRequest.class);
+  verify(allRequestsListener,never()).incomingBytestreamRequest(byteStreamRequest.capture());
+}

@@ -1,0 +1,36 @@
+public static void execute(ManagerConnection c,String name){
+  ByteBuffer buffer=c.allocate();
+  buffer=header.write(buffer,c,true);
+  for (  FieldPacket field : fields) {
+    buffer=field.write(buffer,c,true);
+  }
+  buffer=eof.write(buffer,c,true);
+  byte packetId=eof.packetId;
+  MycatConfig conf=MycatServer.getInstance().getConfig();
+  Map<String,PhysicalDBNode> dataNodes=conf.getDataNodes();
+  List<String> keys=new ArrayList<String>();
+  if (StringUtil.isEmpty(name)) {
+    for (    String key : dataNodes.keySet()) {
+      MycatPrivileges myCatprivileges=(MycatPrivileges)(c.getPrivileges());
+      if (myCatprivileges.checkDataNodeDmlPrivilege(c.getUser(),key,c.getExecuteSql())) {
+        keys.add(key);
+      }
+    }
+  }
+ else {
+    SchemaConfig sc=conf.getSchemas().get(name);
+    if (null != sc) {
+      keys.addAll(sc.getAllDataNodes());
+    }
+  }
+  Collections.sort(keys,new Comparators<String>());
+  for (  String key : keys) {
+    RowDataPacket row=getRow(dataNodes.get(key),c.getCharset());
+    row.packetId=++packetId;
+    buffer=row.write(buffer,c,true);
+  }
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

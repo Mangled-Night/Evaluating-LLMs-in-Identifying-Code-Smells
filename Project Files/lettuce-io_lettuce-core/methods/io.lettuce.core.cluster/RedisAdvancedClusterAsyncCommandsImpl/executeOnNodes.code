@@ -1,0 +1,19 @@
+/** 
+ * Run a command on all available nodes that match  {@code filter}.
+ * @param function function producing the command
+ * @param filter filter function for the node selection
+ * @param < T > result type
+ * @return map of a key (counter) and commands.
+ */
+protected <T>Map<String,CompletableFuture<T>> executeOnNodes(Function<RedisClusterAsyncCommands<K,V>,RedisFuture<T>> function,Function<RedisClusterNode,Boolean> filter){
+  Map<String,CompletableFuture<T>> executions=new HashMap<>();
+  for (  RedisClusterNode redisClusterNode : getStatefulConnection().getPartitions()) {
+    if (!filter.apply(redisClusterNode)) {
+      continue;
+    }
+    RedisURI uri=redisClusterNode.getUri();
+    CompletableFuture<RedisClusterAsyncCommands<K,V>> connection=getConnectionAsync(uri.getHost(),uri.getPort());
+    executions.put(redisClusterNode.getNodeId(),connection.thenCompose(function::apply));
+  }
+  return executions;
+}

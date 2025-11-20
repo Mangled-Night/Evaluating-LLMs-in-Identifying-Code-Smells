@@ -1,0 +1,20 @@
+/** 
+ * Extract the disconnected buffer from a from a  {@link StatefulConnection}.
+ * @param connection the connection
+ * @return the queue
+ */
+public static Queue<Object> getDisconnectedBuffer(StatefulConnection<?,?> connection){
+  RedisChannelWriter channelWriter=ConnectionTestUtil.getChannelWriter(connection);
+  if (channelWriter instanceof DefaultEndpoint) {
+    return getDisconnectedBuffer((DefaultEndpoint)channelWriter);
+  }
+  throw new IllegalArgumentException("Cannot disconnected command buffer from " + connection);
+}
+/** 
+ * Extract the disconnected buffer from a  {@link DefaultEndpoint}.
+ * @param endpoint the endpoint
+ * @return the queue
+ */
+public static Queue<Object> getDisconnectedBuffer(DefaultEndpoint endpoint){
+  return (Queue)ReflectionTestUtils.getField(endpoint,"disconnectedBuffer");
+}

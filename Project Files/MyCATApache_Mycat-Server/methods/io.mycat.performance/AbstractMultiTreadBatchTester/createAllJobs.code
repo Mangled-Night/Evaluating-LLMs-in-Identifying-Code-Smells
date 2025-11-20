@@ -1,0 +1,23 @@
+@SuppressWarnings("unchecked") public ArrayList<Runnable>[] createAllJobs() throws Exception {
+  if (sqlFile != null) {
+    java.util.Properties pros=RandomDataValueUtil.loadFromPropertyFile(sqlFile);
+    long total=Long.valueOf(pros.getProperty("total"));
+    String sqlTemplate=pros.getProperty("sql");
+    String batchSizeStr=pros.getProperty("batch");
+    String autocommitStr=pros.getProperty("autocommit");
+    boolean autocommit=autocommitStr != null && Boolean.valueOf(autocommitStr);
+    int batchSize=batchSizeStr == null ? 100 : Integer.parseInt(batchSizeStr);
+    System.out.println("total record " + total + " batch size:"+ batchSize+ " autocomit "+ autocommit);
+    return createSQLTemplateJobs(total,sqlTemplate,batchSize,autocommit);
+  }
+ else {
+    ArrayList<Runnable>[] allJobs=new ArrayList[rangeItems.length];
+    for (int i=0; i < rangeItems.length; i++) {
+      String[] items=rangeItems[i].split("-");
+      long min=parseLong(items[0]);
+      long max=parseLong(items[1]);
+      allJobs[i]=createJobs(conPool,min,max);
+    }
+    return allJobs;
+  }
+}

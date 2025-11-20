@@ -1,0 +1,24 @@
+static void pollCheckAppContextLocal(final Locale destLocale,final int index,final Utils.Consumer<Boolean> consumer){
+  Resources appResources=Utils.getApp().getResources();
+  Configuration appConfig=appResources.getConfiguration();
+  Locale appLocal=getLocal(appConfig);
+  setLocal(appConfig,destLocale);
+  Utils.getApp().getResources().updateConfiguration(appConfig,appResources.getDisplayMetrics());
+  if (consumer == null)   return;
+  if (isSameLocale(appLocal,destLocale)) {
+    consumer.accept(true);
+  }
+ else {
+    if (index < 20) {
+      UtilsBridge.runOnUiThreadDelayed(new Runnable(){
+        @Override public void run(){
+          pollCheckAppContextLocal(destLocale,index + 1,consumer);
+        }
+      }
+,16);
+      return;
+    }
+    Log.e("LanguageUtils","appLocal didn't update.");
+    consumer.accept(false);
+  }
+}

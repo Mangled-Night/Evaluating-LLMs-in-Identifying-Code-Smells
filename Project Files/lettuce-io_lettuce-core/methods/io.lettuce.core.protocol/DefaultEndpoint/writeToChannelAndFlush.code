@@ -1,0 +1,24 @@
+private void writeToChannelAndFlush(RedisCommand<?,?,?> command){
+  QUEUE_SIZE.incrementAndGet(this);
+  ChannelFuture channelFuture=channelWriteAndFlush(command);
+  if (reliability == Reliability.AT_MOST_ONCE) {
+    channelFuture.addListener(AtMostOnceWriteListener.newInstance(this,command));
+  }
+  if (reliability == Reliability.AT_LEAST_ONCE) {
+    channelFuture.addListener(RetryListener.newInstance(this,command));
+  }
+}
+private void writeToChannelAndFlush(Collection<? extends RedisCommand<?,?,?>> commands){
+  QUEUE_SIZE.addAndGet(this,commands.size());
+  if (reliability == Reliability.AT_MOST_ONCE) {
+    for (    RedisCommand<?,?,?> command : commands) {
+      channelWrite(command).addListener(AtMostOnceWriteListener.newInstance(this,command));
+    }
+  }
+  if (reliability == Reliability.AT_LEAST_ONCE) {
+    for (    RedisCommand<?,?,?> command : commands) {
+      channelWrite(command).addListener(RetryListener.newInstance(this,command));
+    }
+  }
+  channelFlush();
+}

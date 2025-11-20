@@ -1,0 +1,20 @@
+@Nullable private static Activity getActivityByContextInner(@Nullable Context context){
+  if (context == null)   return null;
+  List<Context> list=new ArrayList<>();
+  while (context instanceof ContextWrapper) {
+    if (context instanceof Activity) {
+      return (Activity)context;
+    }
+    Activity activity=getActivityFromDecorContext(context);
+    if (activity != null)     return activity;
+    list.add(context);
+    context=((ContextWrapper)context).getBaseContext();
+    if (context == null) {
+      return null;
+    }
+    if (list.contains(context)) {
+      return null;
+    }
+  }
+  return null;
+}

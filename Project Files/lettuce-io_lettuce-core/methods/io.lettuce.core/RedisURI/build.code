@@ -1,0 +1,33 @@
+/** 
+ * @return the RedisURI.
+ */
+public RedisURI build(){
+  if (sentinels.isEmpty() && LettuceStrings.isEmpty(host) && LettuceStrings.isEmpty(socket)) {
+    throw new IllegalStateException("Cannot build a RedisURI. One of the following must be provided Host, Socket or Sentinel");
+  }
+  RedisURI redisURI=new RedisURI();
+  redisURI.setHost(host);
+  redisURI.setPort(port);
+  if (credentialsProvider != null) {
+    redisURI.setCredentialsProvider(credentialsProvider);
+  }
+ else {
+    redisURI.setUsername(username);
+    if (password != null) {
+      redisURI.setPassword(password);
+    }
+  }
+  redisURI.setDatabase(database);
+  redisURI.setClientName(clientName);
+  redisURI.setSentinelMasterId(sentinelMasterId);
+  for (  RedisURI sentinel : sentinels) {
+    sentinel.setTimeout(timeout);
+    redisURI.getSentinels().add(sentinel);
+  }
+  redisURI.setSocket(socket);
+  redisURI.setSsl(ssl);
+  redisURI.setStartTls(startTls);
+  redisURI.setVerifyPeer(verifyMode);
+  redisURI.setTimeout(timeout);
+  return redisURI;
+}

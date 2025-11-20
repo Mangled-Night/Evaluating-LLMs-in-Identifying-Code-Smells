@@ -1,0 +1,11 @@
+@Test void testSyncSubscription() throws Exception {
+  pubSubConnection.setNodeMessagePropagation(true);
+  pubSubConnection.addListener(connectionListener);
+  PubSubNodeSelection<String,String> masters=pubSubConnection.sync().masters();
+  NodeSelectionPubSubCommands<String,String> commands=masters.commands();
+  commands.psubscribe("chann*");
+  pubSubConnection2.sync().publish("channel","message");
+  assertThat(masters.size()).isEqualTo(2);
+  assertThat(connectionListener.getMessages().take()).isEqualTo("message");
+  assertThat(connectionListener.getMessages().take()).isEqualTo("message");
+}

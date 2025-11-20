@@ -1,0 +1,23 @@
+class BlockUriTypeHandlerTest {
+  private final BlockUriTypeHandler handler=new BlockUriTypeHandler();
+  @Test public void testDeserializeValidShortUri(){
+    PersistedData data=new PersistedString("foo:bar");
+    Optional<BlockUri> uri=handler.deserialize(data);
+    assertTrue(uri.isPresent());
+    assertEquals(new BlockUri(new ResourceUrn("foo","bar")),uri.get());
+  }
+  @Test public void testDeserializeValidFullUri(){
+    PersistedData data=new PersistedString("package:family:shapePackage:shapeName.identifier");
+    Optional<BlockUri> uri=handler.deserialize(data);
+    assertTrue(uri.isPresent());
+    assertEquals(new BlockUri(new ResourceUrn("package","family"),new ResourceUrn("shapePackage","shapeName"),new Name("identifier")),uri.get());
+  }
+  @Test public void testDeserializeInvalidUri(){
+    PersistedData data=new PersistedString("baz");
+    BlockUriParseException thrown=Assertions.assertThrows(BlockUriParseException.class,() -> {
+      handler.deserialize(data);
+    }
+);
+    Assertions.assertEquals("Could not parse block uri: 'baz'",thrown.getMessage());
+  }
+}

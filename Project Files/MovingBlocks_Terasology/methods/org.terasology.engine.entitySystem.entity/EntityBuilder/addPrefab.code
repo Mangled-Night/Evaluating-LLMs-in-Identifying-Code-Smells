@@ -1,0 +1,36 @@
+/** 
+ * Adds all of the components from a prefab to this builder
+ * @param prefabName the name of the prefab to add
+ * @return whether the prefab was successfully added
+ */
+public boolean addPrefab(String prefabName){
+  if (prefabName != null && !prefabName.isEmpty()) {
+    Prefab prefab=entityManager.getPrefabManager().getPrefab(prefabName);
+    if (prefab == null) {
+      logger.warn("Unable to instantiate unknown prefab: \"{}\"",prefabName);
+      return false;
+    }
+    addPrefab(prefab);
+    return true;
+  }
+ else {
+    return false;
+  }
+}
+/** 
+ * Adds all of the components from a prefab to this builder
+ * @param prefab the prefab to add
+ * @return whether the prefab was successfully added
+ */
+public void addPrefab(Prefab prefab){
+  if (prefab != null) {
+    for (    Component component : prefab.iterateComponents()) {
+      Component componentCopy=entityManager.getComponentLibrary().copy(component);
+      addComponent(verifyNotNull(componentCopy,"Component %s not registered (in prefab %s)",component,prefab));
+    }
+    addComponent(new EntityInfoComponent(prefab,prefab.isPersisted(),prefab.isAlwaysRelevant()));
+  }
+ else {
+    addComponent(new EntityInfoComponent());
+  }
+}

@@ -1,0 +1,22 @@
+@Test public void testStopSunlightVertical(){
+  for (  Vector3ic pos : new BlockRegion(0,16,0).union(Chunks.SIZE_X - 1,Chunks.SIZE_Y - 1,Chunks.SIZE_Z - 1)) {
+    regenWorldView.setValueAt(pos,Chunks.MAX_SUNLIGHT_REGEN);
+    lightWorldView.setValueAt(pos,Chunks.MAX_SUNLIGHT);
+  }
+  for (  Vector3ic pos : new BlockRegion(0,15,0).union(Chunks.SIZE_X - 1,15,Chunks.SIZE_Z - 1)) {
+    regenWorldView.setBlockAt(new Vector3i(pos),solid);
+  }
+  for (  Vector3ic pos : new BlockRegion(0,0,0).union(Chunks.SIZE_X - 1,14,Chunks.SIZE_Z - 1)) {
+    regenWorldView.setValueAt(pos,(byte)(14 - pos.y()));
+  }
+  regenWorldView.setBlockAt(new Vector3i(16,15,16),air);
+  propagator.process(new BlockChange(new Vector3i(16,15,16),solid,air));
+  sunlightPropagator.process(new BlockChange(new Vector3i(16,15,16),solid,air));
+  regenWorldView.setBlockAt(new Vector3i(16,15,16),solid);
+  propagator.process(new BlockChange(new Vector3i(16,15,16),air,solid));
+  sunlightPropagator.process(new BlockChange(new Vector3i(16,15,16),air,solid));
+  for (  Vector3ic pos : new BlockRegion(0,0,0).union(Chunks.SIZE_X - 1,15,Chunks.SIZE_Z - 1)) {
+    assertEquals(Math.max(0,14 - pos.y()),regenWorldView.getValueAt(pos),"Incorrect value at " + pos);
+    assertEquals(0,lightWorldView.getValueAt(pos),"Incorrect value at " + pos);
+  }
+}

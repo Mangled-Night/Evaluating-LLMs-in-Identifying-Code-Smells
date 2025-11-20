@@ -1,0 +1,9 @@
+@Test void hscanStreaming(){
+  redis.hset(key,key,value);
+  KeyValueStreamingAdapter<String,String> adapter=new KeyValueStreamingAdapter<>();
+  StreamScanCursor cursor=redis.hscan(adapter,key,ScanArgs.Builder.limit(100).match("*"));
+  assertThat(cursor.getCount()).isEqualTo(1);
+  assertThat(cursor.getCursor()).isEqualTo("0");
+  assertThat(cursor.isFinished()).isTrue();
+  assertThat(adapter.getMap()).isEqualTo(Collections.singletonMap(key,value));
+}

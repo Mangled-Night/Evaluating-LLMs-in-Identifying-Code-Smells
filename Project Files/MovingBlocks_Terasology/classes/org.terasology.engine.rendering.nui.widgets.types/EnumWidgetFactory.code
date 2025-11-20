@@ -1,0 +1,17 @@
+public class EnumWidgetFactory implements TypeWidgetFactory {
+  @In private TranslationSystem translationSystem;
+  @Override public <T>Optional<TypeWidgetBuilder<T>> create(  TypeInfo<T> type,  TypeWidgetLibrary library){
+    Class<T> rawType=type.getRawType();
+    if (!rawType.isEnum()) {
+      return Optional.empty();
+    }
+    return Optional.of(binding -> createDropdown(binding,rawType));
+  }
+  private <T>UIDropdownScrollable<T> createDropdown(  Binding<T> binding,  Class<T> rawType){
+    UIDropdownScrollable<T> dropdown=new UIDropdownScrollable<>();
+    dropdown.setOptionRenderer(new ToStringTextRenderer<>(translationSystem));
+    dropdown.setOptions(Arrays.asList(rawType.getEnumConstants()));
+    dropdown.bindSelection(binding);
+    return dropdown;
+  }
+}

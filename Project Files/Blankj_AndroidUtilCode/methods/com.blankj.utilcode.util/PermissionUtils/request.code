@@ -1,0 +1,37 @@
+/** 
+ * Start request.
+ */
+public void request(){
+  if (mPermissionsParam == null || mPermissionsParam.length <= 0) {
+    Log.w("PermissionUtils","No permissions to request.");
+    return;
+  }
+  mPermissions=new LinkedHashSet<>();
+  mPermissionsRequest=new ArrayList<>();
+  mPermissionsGranted=new ArrayList<>();
+  mPermissionsDenied=new ArrayList<>();
+  mPermissionsDeniedForever=new ArrayList<>();
+  Pair<List<String>,List<String>> requestAndDeniedPermissions=getRequestAndDeniedPermissions(mPermissionsParam);
+  mPermissions.addAll(requestAndDeniedPermissions.first);
+  mPermissionsDenied.addAll(requestAndDeniedPermissions.second);
+  if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+    mPermissionsGranted.addAll(mPermissions);
+    requestCallback();
+  }
+ else {
+    for (    String permission : mPermissions) {
+      if (isGranted(permission)) {
+        mPermissionsGranted.add(permission);
+      }
+ else {
+        mPermissionsRequest.add(permission);
+      }
+    }
+    if (mPermissionsRequest.isEmpty()) {
+      requestCallback();
+    }
+ else {
+      startPermissionActivity();
+    }
+  }
+}

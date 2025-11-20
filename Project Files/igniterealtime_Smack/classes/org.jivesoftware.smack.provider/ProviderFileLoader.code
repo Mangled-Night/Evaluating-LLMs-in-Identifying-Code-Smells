@@ -1,0 +1,97 @@
+/** 
+ * Loads the  {@link IqProvider} and {@link ExtensionElementProvider} information from a standard provider file in preparationfor loading into the  {@link ProviderManager}.
+ * @author Robin Collier
+ */
+public class ProviderFileLoader implements ProviderLoader {
+  private static final Logger LOGGER=Logger.getLogger(ProviderFileLoader.class.getName());
+  private final Collection<IQProviderInfo> iqProviders=new LinkedList<IQProviderInfo>();
+  private final Collection<ExtensionProviderInfo> extProviders=new LinkedList<ExtensionProviderInfo>();
+  private final Collection<StreamFeatureProviderInfo> sfProviders=new LinkedList<StreamFeatureProviderInfo>();
+  private List<Exception> exceptions=new LinkedList<Exception>();
+  public ProviderFileLoader(  InputStream providerStream){
+    this(providerStream,ProviderFileLoader.class.getClassLoader());
+  }
+  @SuppressWarnings("unchecked") public ProviderFileLoader(  InputStream providerStream,  ClassLoader classLoader){
+    try (InputStream is=providerStream){
+      XmlPullParser parser=PacketParserUtils.getParserFor(is);
+      XmlPullParser.Event eventType=parser.getEventType();
+      do {
+        if (eventType == XmlPullParser.Event.START_ELEMENT) {
+          final String typeName=parser.getName();
+          try {
+            if (!"smackProviders".equals(typeName)) {
+              parser.next();
+              parser.next();
+              String elementName=parser.nextText();
+              parser.next();
+              parser.next();
+              String namespace=parser.nextText();
+              parser.next();
+              parser.next();
+              String className=parser.nextText();
+              try {
+                final Class<?> provider=classLoader.loadClass(className);
+switch (typeName) {
+case "iqProvider":
+                  if (IqProvider.class.isAssignableFrom(provider)) {
+                    IqProvider<IQ> iqProvider=(IqProvider<IQ>)provider.getConstructor().newInstance();
+                    iqProviders.add(new IQProviderInfo(elementName,namespace,iqProvider));
+                  }
+ else {
+                    exceptions.add(new IllegalArgumentException(className + " is not a IqProvider"));
+                  }
+                break;
+case "extensionProvider":
+              if (ExtensionElementProvider.class.isAssignableFrom(provider)) {
+                ExtensionElementProvider<ExtensionElement> extensionElementProvider=(ExtensionElementProvider<ExtensionElement>)provider.getConstructor().newInstance();
+                extProviders.add(new ExtensionProviderInfo(elementName,namespace,extensionElementProvider));
+              }
+ else {
+                exceptions.add(new IllegalArgumentException(className + " is not a PacketExtensionProvider"));
+              }
+            break;
+case "streamFeatureProvider":
+          ExtensionElementProvider<ExtensionElement> streamFeatureProvider=(ExtensionElementProvider<ExtensionElement>)provider.getConstructor().newInstance();
+        sfProviders.add(new StreamFeatureProviderInfo(elementName,namespace,streamFeatureProvider));
+      break;
+default :
+    LOGGER.warning("Unknown provider type: " + typeName);
+}
+}
+ catch (ClassNotFoundException cnfe) {
+LOGGER.log(Level.SEVERE,"Could not find provider class",cnfe);
+exceptions.add(cnfe);
+}
+catch (InstantiationException ie) {
+LOGGER.log(Level.SEVERE,"Could not instanciate " + className,ie);
+exceptions.add(ie);
+}
+}
+}
+ catch (IllegalArgumentException illExc) {
+LOGGER.log(Level.SEVERE,"Invalid provider type found [" + typeName + "] when expecting iqProvider or extensionProvider",illExc);
+exceptions.add(illExc);
+}
+}
+eventType=parser.next();
+}
+ while (eventType != XmlPullParser.Event.END_DOCUMENT);
+}
+ catch (Exception e) {
+LOGGER.log(Level.SEVERE,"Unknown error occurred while parsing provider file",e);
+exceptions.add(e);
+}
+}
+@Override public Collection<IQProviderInfo> getIQProviderInfo(){
+return iqProviders;
+}
+@Override public Collection<ExtensionProviderInfo> getExtensionProviderInfo(){
+return extProviders;
+}
+@Override public Collection<StreamFeatureProviderInfo> getStreamFeatureProviderInfo(){
+return sfProviders;
+}
+public List<Exception> getLoadingExceptions(){
+return Collections.unmodifiableList(exceptions);
+}
+}

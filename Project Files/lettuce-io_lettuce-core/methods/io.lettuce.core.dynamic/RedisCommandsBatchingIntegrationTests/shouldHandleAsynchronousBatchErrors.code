@@ -1,0 +1,20 @@
+@Test void shouldHandleAsynchronousBatchErrors() throws Exception {
+  RedisCommandFactory factory=new RedisCommandFactory(redis.getStatefulConnection());
+  Batching api=factory.getCommands(Batching.class);
+  api.setAsync("k1",value);
+  api.setAsync("k2",value);
+  api.llen("k2");
+  api.setAsync("k4",value);
+  assertThat(redis.get("k1")).isNull();
+  RedisFuture<Long> llen=api.llenAsync("k4");
+  llen.await(1,TimeUnit.SECONDS);
+  assertThat(redis.get("k1")).isEqualTo(value);
+  assertThat(redis.get("k4")).isEqualTo(value);
+  try {
+    Futures.await(1,TimeUnit.SECONDS,llen);
+    fail("Missing RedisCommandExecutionException");
+  }
+ catch (  Exception e) {
+    assertThat(e).isInstanceOf(RedisCommandExecutionException.class);
+  }
+}

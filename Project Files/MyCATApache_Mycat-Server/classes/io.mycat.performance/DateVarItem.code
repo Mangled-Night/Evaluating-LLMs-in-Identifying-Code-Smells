@@ -1,0 +1,85 @@
+class DateVarItem extends StringItem {
+  String format;
+  int[] yearRang={1970,2999};
+  int[] monRang={1,12};
+  int[] dayRang={1,31};
+  int[] hourRang={0,23};
+  int[] minuteRang={0,59};
+  int[] secondRang={0,59};
+  int[] sssRang={0,999};
+  public DateVarItem(){
+  }
+  public void initString(  String content){
+    int fmtEndPos=content.indexOf('-');
+    if (fmtEndPos == -1) {
+      fmtEndPos=content.indexOf(')');
+    }
+    format=content.substring(5,fmtEndPos);
+    int yearP=content.indexOf("]y",fmtEndPos);
+    if (yearP > 0) {
+      yearRang=getRangeofPattern(content,yearP);
+    }
+    int monthP=content.indexOf("]M",fmtEndPos);
+    if (monthP > 0) {
+      monRang=getRangeofPattern(content,monthP);
+    }
+    int dayP=content.indexOf("]d",fmtEndPos);
+    if (dayP > 0) {
+      dayRang=getRangeofPattern(content,dayP);
+    }
+    int hourP=content.indexOf("]H",fmtEndPos);
+    if (hourP > 0) {
+      hourRang=getRangeofPattern(content,hourP);
+    }
+    int minuteP=content.indexOf("]m",fmtEndPos);
+    if (minuteP > 0) {
+      minuteRang=getRangeofPattern(content,minuteP);
+    }
+    int secondP=content.indexOf("]s",fmtEndPos);
+    if (secondP > 0) {
+      secondRang=getRangeofPattern(content,secondP);
+    }
+    int millisS=content.indexOf("]S",fmtEndPos);
+    if (millisS > 0) {
+      sssRang=getRangeofPattern(content,millisS);
+    }
+  }
+  private static final int[] getRangeofPattern(  String theString,  int endPos){
+    String subString=theString.substring(0,endPos);
+    int start=subString.lastIndexOf('[');
+    String range=subString.substring(start + 1,endPos);
+    String[] items=range.split("-");
+    int[] values=new int[2];
+    values[0]=Integer.valueOf(items[0]);
+    values[1]=Integer.valueOf(items[1]);
+    return values;
+  }
+  public String getValue(){
+    int yearSpan=yearRang[1] - yearRang[0] + 1;
+    int year=Math.abs(rand.nextInt()) % yearSpan + yearRang[0];
+    int monthSpan=monRang[1] - monRang[0] + 1;
+    int month=Math.abs(rand.nextInt()) % monthSpan + monRang[0];
+    int daySpan=dayRang[1] - dayRang[0] + 1;
+    int day=Math.abs(rand.nextInt()) % daySpan + dayRang[0];
+    int hourSpan=hourRang[1] - hourRang[0] + 1;
+    int hour=Math.abs(rand.nextInt()) % hourSpan + hourRang[0];
+    int minuteSpan=minuteRang[1] - minuteRang[0] + 1;
+    int minute=Math.abs(rand.nextInt()) % minuteSpan + minuteRang[0];
+    int secondSpan=secondRang[1] - secondRang[0] + 1;
+    int second=Math.abs(rand.nextInt()) % secondSpan + secondRang[0];
+    int sssSpan=sssRang[1] - sssRang[0] + 1;
+    int sss=Math.abs(rand.nextInt()) % sssSpan + sssRang[0];
+    java.util.Calendar cl=Calendar.getInstance();
+    cl.set(Calendar.YEAR,year);
+    cl.set(Calendar.MONTH,month);
+    cl.set(Calendar.DATE,day);
+    cl.set(Calendar.HOUR_OF_DAY,hour);
+    cl.set(Calendar.MINUTE,minute);
+    cl.set(Calendar.SECOND,second);
+    cl.set(Calendar.MILLISECOND,sss);
+    return new java.text.SimpleDateFormat(format).format(cl.getTime());
+  }
+  @Override public String toString(){
+    return "DateVarItem [format=" + format + ", yearRang="+ Arrays.toString(yearRang)+ ", monRang="+ Arrays.toString(monRang)+ ", dayRang="+ Arrays.toString(dayRang)+ "]";
+  }
+}

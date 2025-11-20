@@ -1,0 +1,21 @@
+public void initialize(){
+  ICETransportManager icetm0=new ICETransportManager(xmppConnection,"10.47.47.53",3478);
+  List<JingleMediaManager> mediaManagers=new ArrayList<JingleMediaManager>();
+  mediaManagers.add(new SpeexMediaManager(icetm0));
+  mediaManagers.add(new ScreenShareMediaManager(icetm0));
+  jm=new JingleManager(xmppConnection,mediaManagers);
+  jm.addCreationListener(icetm0);
+  jm.addJingleSessionRequestListener(new JingleSessionRequestListener(){
+    public void sessionRequested(    JingleSessionRequest request){
+      try {
+        incoming=request.accept();
+        incoming.startIncoming();
+      }
+ catch (      XMPPException e) {
+        LOGGER.log(Level.WARNING,"exception",e);
+      }
+    }
+  }
+);
+  createGUI();
+}

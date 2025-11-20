@@ -1,0 +1,11 @@
+protected ConnectionWatchdog createConnectionWatchdog(){
+  if (connectionWatchdog != null) {
+    return connectionWatchdog;
+  }
+  LettuceAssert.assertState(bootstrap != null,"Bootstrap must be set for autoReconnect=true");
+  LettuceAssert.assertState(socketAddressSupplier != null,"SocketAddressSupplier must be set for autoReconnect=true");
+  ConnectionWatchdog watchdog=new ConnectionWatchdog(clientResources.reconnectDelay(),clientOptions,bootstrap,clientResources.timer(),clientResources.eventExecutorGroup(),socketAddressSupplier,reconnectionListener,connection,clientResources.eventBus(),endpoint);
+  endpoint.registerConnectionWatchdog(watchdog);
+  connectionWatchdog=watchdog;
+  return watchdog;
+}

@@ -1,0 +1,15 @@
+@Test @SuppressWarnings({"unchecked"}) void zrevrangebyscoreWithScoresStreaming(){
+  redis.zadd(key,1.0,"a",2.0,"b",3.0,"c",4.0,"d");
+  ScoredValueStreamingAdapter<String> streamingAdapter=new ScoredValueStreamingAdapter<>();
+  assertThat(redis.zrevrangebyscoreWithScores(streamingAdapter,key,3.0,2.0)).isEqualTo(2);
+  assertThat(redis.zrevrangebyscoreWithScores(streamingAdapter,key,"(4.0","(1.0")).isEqualTo(2);
+  assertThat(redis.zrevrangebyscoreWithScores(streamingAdapter,key,POSITIVE_INFINITY,NEGATIVE_INFINITY)).isEqualTo(4);
+  assertThat(redis.zrevrangebyscoreWithScores(streamingAdapter,key,"+inf","-inf")).isEqualTo(4);
+  assertThat(redis.zrevrangebyscoreWithScores(streamingAdapter,key,4.0,0.0,1,3)).isEqualTo(3);
+  assertThat(redis.zrevrangebyscoreWithScores(streamingAdapter,key,"+inf","-inf",2,2)).isEqualTo(2);
+  assertThat(redis.zrevrangebyscoreWithScores(streamingAdapter,key,Range.create(2.0,3.0)).longValue()).isEqualTo(2);
+  assertThat(redis.zrevrangebyscoreWithScores(streamingAdapter,key,Range.from(Boundary.excluding(1.0),Boundary.excluding(4.0))).longValue()).isEqualTo(2);
+  assertThat(redis.zrevrangebyscoreWithScores(streamingAdapter,key,Range.unbounded()).longValue()).isEqualTo(4);
+  assertThat(redis.zrevrangebyscoreWithScores(streamingAdapter,key,Range.create(0.0,4.0),Limit.create(1,3)).longValue()).isEqualTo(3);
+  assertThat(redis.zrevrangebyscoreWithScores(streamingAdapter,key,Range.unbounded(),Limit.create(2,2)).longValue()).isEqualTo(2);
+}

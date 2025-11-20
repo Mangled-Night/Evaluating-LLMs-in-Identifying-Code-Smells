@@ -1,0 +1,36 @@
+/** 
+ * Transforms a block entity with the change of block type. This is driven from the delta between the old and new block type prefabs, but takes into account changes made to the block entity. Components contained in `blockEntity` that <ul> <li>are not "common block components" (e.g. `NetworkComponent`)</li> <li>don't have `reatinUnalteredOnBlockChange` metadata</li> <li>are not listed in the block prefab</li> <li>are not listed in the set of components to be retained</li> </ul> will be removed.
+ * @param blockEntity      The entity to update
+ * @param oldType          The previous type of the block
+ * @param type             The new type of the block
+ * @param retainComponents List of components to be retained
+ */
+private void updateBlockEntityComponents(EntityRef blockEntity,Block oldType,Block type,Set<Class<? extends Component>> retainComponents){
+  BlockComponent blockComponent=blockEntity.getComponent(BlockComponent.class);
+  Optional<Prefab> oldPrefab=oldType.getPrefab();
+  EntityBuilder oldEntityBuilder=entityManager.newBuilder(oldPrefab.orElse(null));
+  oldEntityBuilder.addComponent(new BlockComponent(oldType,blockComponent.getPosition()));
+  BeforeEntityCreated oldEntityEvent=new BeforeEntityCreated(oldPrefab.orElse(null),oldEntityBuilder.iterateComponents());
+  blockEntity.send(oldEntityEvent);
+  for (  Component comp : oldEntityEvent.getResultComponents()) {
+    oldEntityBuilder.addComponent(comp);
+  }
+  Optional<Prefab> newPrefab=type.getPrefab();
+  EntityBuilder newEntityBuilder=entityManager.newBuilder(newPrefab.orElse(null));
+  newEntityBuilder.addComponent(new BlockComponent(type,blockComponent.getPosition()));
+  BeforeEntityCreated newEntityEvent=new BeforeEntityCreated(newPrefab.orElse(null),newEntityBuilder.iterateComponents());
+  blockEntity.send(newEntityEvent);
+  for (  Component comp : newEntityEvent.getResultComponents()) {
+    newEntityBuilder.addComponent(comp);
+  }
+  for (  Component component : blockEntity.iterateComponents()) {
+    if (!COMMON_BLOCK_COMPONENTS.contains(component.getClass()) && !entityManager.getComponentLibrary().getMetadata(component.getClass()).isRetainUnalteredOnBlockChange() && !newEntityBuilder.hasComponent(component.getClass())&& !retainComponents.contains(component.getClass())) {
+      blockEntity.removeComponent(component.getClass());
+    }
+  }
+  BlockComponent newBlockComponent=new BlockComponent(type,blockComponent.getPosition());
+  blockEntity.saveComponent(newBlockComponent);
+  for (  Component comp : newEntityBuilder.iterateComponents()) {
+    copyIntoPrefab(blockEntity,comp,retainComponents);
+  }
+}

@@ -1,0 +1,34 @@
+public static class Factory implements StanzaIdSourceFactory {
+  private static final int REQUIRED_MIN_LENGTH=10;
+  private final int length;
+  private final boolean verySecure;
+  public static final Factory VERY_SECURE=new Factory(10,true);
+  public static final Factory MEDIUM_SECURE=new Factory(10,false);
+  public Factory(  int length,  boolean verySecure){
+    if (length < REQUIRED_MIN_LENGTH) {
+      throw new IllegalArgumentException("Insufficient length " + length + ", must be at least "+ REQUIRED_MIN_LENGTH);
+    }
+    this.length=length;
+    this.verySecure=verySecure;
+  }
+  @Override public StanzaIdSource constructStanzaIdSource(){
+    StanzaIdSource stanzaIdSource;
+    if (verySecure) {
+      stanzaIdSource=() -> StringUtils.randomString(length);
+    }
+ else {
+      stanzaIdSource=() -> StringUtils.insecureRandomString(length);
+    }
+    return stanzaIdSource;
+  }
+}
+public static class Factory implements StanzaIdSourceFactory {
+  @Override public StandardStanzaIdSource constructStanzaIdSource(){
+    return new StandardStanzaIdSource();
+  }
+}
+public static class Factory implements StanzaIdSourceFactory {
+  @Override public UuidStanzaIdSource constructStanzaIdSource(){
+    return INSTANCE;
+  }
+}

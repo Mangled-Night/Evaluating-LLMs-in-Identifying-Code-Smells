@@ -1,0 +1,35 @@
+@Override public STUN parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  boolean done=false;
+  XmlPullParser.Event eventType;
+  String elementName;
+  if (!parser.getNamespace().equals(NAMESPACE))   throw new IOException("Not a STUN packet");
+  STUN iq=new STUN();
+  while (!done) {
+    eventType=parser.next();
+    elementName=parser.getName();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      if (elementName.equals("server")) {
+        String host=null;
+        String port=null;
+        for (int i=0; i < parser.getAttributeCount(); i++) {
+          if (parser.getAttributeName(i).equals("host"))           host=parser.getAttributeValue(i);
+ else           if (parser.getAttributeName(i).equals("udp"))           port=parser.getAttributeValue(i);
+        }
+        if (host != null && port != null)         iq.servers.add(new StunServerAddress(host,port));
+      }
+ else       if (elementName.equals("publicip")) {
+        String host=null;
+        for (int i=0; i < parser.getAttributeCount(); i++) {
+          if (parser.getAttributeName(i).equals("ip"))           host=parser.getAttributeValue(i);
+        }
+        if (host != null && !host.equals(""))         iq.setPublicIp(host);
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getName().equals(ELEMENT_NAME)) {
+        done=true;
+      }
+    }
+  }
+  return iq;
+}

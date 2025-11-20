@@ -1,0 +1,17 @@
+/** 
+ * Tests a manual reconnection after a login. Closes the connection and then reconnects.
+ */
+public void testCloseAndManualReconnection() throws Exception {
+  XMPPTCPConnection connection=getConnection(0);
+  String username=connection.getConfiguration().getUsername();
+  String password=connection.getConfiguration().getPassword();
+  XMPPTCPConnectionTestListener listener=new XMPPConnectionTestListener();
+  connection.addConnectionListener(listener);
+  connection.disconnect();
+  assertEquals("ConnectionListener.connectionClosed() was not notified",true,listener.connectionClosed);
+  Thread.sleep(MIN_RECONNECT_WAIT * 1000);
+  assertEquals("The connection was stablished but it was not allowed to",false,listener.reconnected);
+  connection.connect();
+  connection.login(username,password);
+  executeSomeServerInteraction(connection);
+}

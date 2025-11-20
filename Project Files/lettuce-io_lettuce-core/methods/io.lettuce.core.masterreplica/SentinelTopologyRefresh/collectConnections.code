@@ -1,0 +1,30 @@
+private SentinelTopologyRefreshConnections collectConnections(List<ConnectionFuture<StatefulRedisPubSubConnection<String,String>>> connectionFutures){
+  SentinelTopologyRefreshConnections collector=new SentinelTopologyRefreshConnections(connectionFutures.size());
+  for (  ConnectionFuture<StatefulRedisPubSubConnection<String,String>> connectionFuture : connectionFutures) {
+    String source=connectionFuture.getRemoteAddress() != null ? connectionFuture.getRemoteAddress().toString() : null;
+    connectionFuture.thenCompose(connection -> {
+      connection.addListener(new RedisPubSubAdapter<String,String>(){
+        @Override public void message(        String pattern,        String channel,        String message){
+          messageHandler.handle(source,channel,message);
+        }
+      }
+);
+      return connection.async().psubscribe("*").thenApply(v -> connection).whenComplete((c,t) -> {
+        if (t != null) {
+          connection.closeAsync();
+        }
+      }
+);
+    }
+).whenComplete((connection,throwable) -> {
+      if (throwable != null) {
+        collector.accept(throwable);
+      }
+ else {
+        collector.accept(connection);
+      }
+    }
+);
+  }
+  return collector;
+}

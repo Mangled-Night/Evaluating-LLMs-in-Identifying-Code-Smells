@@ -1,0 +1,12 @@
+@Test void xreadSingleStream(){
+  redis.xadd("stream-1",Collections.singletonMap("key1","value1"));
+  redis.xadd("stream-1",Collections.singletonMap("key2","value2"));
+  List<StreamMessage<String,String>> messages=redis.xread(XReadArgs.Builder.count(2),StreamOffset.from("stream-1","0-0"));
+  assertThat(messages).hasSize(2);
+  StreamMessage<String,String> firstMessage=messages.get(0);
+  assertThat(firstMessage.getStream()).isEqualTo("stream-1");
+  assertThat(firstMessage.getBody()).hasSize(1).containsEntry("key1","value1");
+  StreamMessage<String,String> nextMessage=messages.get(1);
+  assertThat(nextMessage.getStream()).isEqualTo("stream-1");
+  assertThat(nextMessage.getBody()).hasSize(1).containsEntry("key2","value2");
+}

@@ -1,0 +1,25 @@
+private BufferedImage generateAtlas(int mipMapLevel,List<BlockTile> tileImages,Color clearColor){
+  int size=atlasSize / (1 << mipMapLevel);
+  int textureSize=tileSize / (1 << mipMapLevel);
+  int tilesPerDim=atlasSize / tileSize;
+  BufferedImage result=new BufferedImage(size,size,BufferedImage.TYPE_INT_ARGB);
+  Graphics g=result.getGraphics();
+  g.setColor(clearColor);
+  g.fillRect(0,0,size,size);
+  int totalIndex=0;
+  for (int tileIndex=0; tileIndex < tileImages.size(); tileIndex++) {
+    BlockTile tile=tileImages.get(tileIndex);
+    if (tile == null) {
+      totalIndex++;
+    }
+ else {
+      for (int frameIndex=0; frameIndex < tile.getLength(); frameIndex++) {
+        int posX=totalIndex % tilesPerDim;
+        int posY=totalIndex / tilesPerDim;
+        g.drawImage(tile.getImage(frameIndex).getScaledInstance(textureSize,textureSize,Image.SCALE_SMOOTH),posX * textureSize,posY * textureSize,null);
+        totalIndex++;
+      }
+    }
+  }
+  return result;
+}

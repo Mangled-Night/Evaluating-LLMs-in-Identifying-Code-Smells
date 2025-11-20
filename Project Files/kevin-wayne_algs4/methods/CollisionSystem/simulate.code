@@ -1,0 +1,25 @@
+/** 
+ * Simulates the system of particles for the specified amount of time.
+ * @param limit the amount of time
+ */
+public void simulate(double limit){
+  pq=new MinPQ<Event>();
+  for (int i=0; i < particles.length; i++) {
+    predict(particles[i],limit);
+  }
+  pq.insert(new Event(0,null,null));
+  while (!pq.isEmpty()) {
+    Event e=pq.delMin();
+    if (!e.isValid())     continue;
+    Particle a=e.a;
+    Particle b=e.b;
+    for (int i=0; i < particles.length; i++)     particles[i].move(e.time - t);
+    t=e.time;
+    if (a != null && b != null)     a.bounceOff(b);
+ else     if (a != null && b == null)     a.bounceOffVerticalWall();
+ else     if (a == null && b != null)     b.bounceOffHorizontalWall();
+ else     if (a == null && b == null)     redraw(limit);
+    predict(a,limit);
+    predict(b,limit);
+  }
+}

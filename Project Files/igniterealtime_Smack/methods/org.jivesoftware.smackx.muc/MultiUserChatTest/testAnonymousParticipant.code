@@ -1,0 +1,23 @@
+public void testAnonymousParticipant(){
+  try {
+    ConnectionConfiguration connectionConfiguration=new ConnectionConfiguration(getHost(),getPort(),getXMPPServiceDomain());
+    XMPPTCPConnection anonConnection=new XMPPConnection(connectionConfiguration);
+    anonConnection.connect();
+    anonConnection.loginAnonymously();
+    MultiUserChat muc2=new MultiUserChat(anonConnection,room);
+    muc2.join("testbot2");
+    Thread.sleep(400);
+    Presence presence=muc.getOccupantPresence(room + "/testbot2");
+    assertNotNull("Presence of user2 in room is missing",presence);
+    assertTrue("Presence mode of user2 is wrong",presence.getMode() == null || presence.getMode() == Presence.Mode.available);
+    muc2.leave();
+    anonConnection.disconnect();
+    Thread.sleep(250);
+    presence=muc.getOccupantPresence(room + "/testbot2");
+    assertNull("Presence of participant testbotII still exists",presence);
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

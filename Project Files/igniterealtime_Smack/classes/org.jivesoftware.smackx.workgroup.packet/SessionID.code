@@ -1,0 +1,38 @@
+public class SessionID implements ExtensionElement {
+  /** 
+ * Element name of the stanza extension.
+ */
+  public static final String ELEMENT_NAME="session";
+  /** 
+ * Namespace of the stanza extension.
+ */
+  public static final String NAMESPACE="http://jivesoftware.com/protocol/workgroup";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT_NAME);
+  private final String sessionID;
+  public SessionID(  String sessionID){
+    this.sessionID=sessionID;
+  }
+  public String getSessionID(){
+    return this.sessionID;
+  }
+  @Override public String getElementName(){
+    return ELEMENT_NAME;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  @Override public String toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    StringBuilder buf=new StringBuilder();
+    buf.append('<').append(ELEMENT_NAME).append(" xmlns=\"").append(NAMESPACE).append("\" ");
+    buf.append("id=\"").append(this.getSessionID());
+    buf.append("\"/>");
+    return buf.toString();
+  }
+public static class Provider extends ExtensionElementProvider<SessionID> {
+    @Override public SessionID parse(    XmlPullParser parser,    int initialDepth,    XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+      String sessionID=parser.getAttributeValue("","id");
+      parser.next();
+      return new SessionID(sessionID);
+    }
+  }
+}

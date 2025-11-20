@@ -1,0 +1,45 @@
+private void checkDistriTransaxAndExecute(RouteResultset rrs,int type,boolean autocommit) throws Exception {
+switch (MycatServer.getInstance().getConfig().getSystem().getHandleDistributedTransactions()) {
+case 1:
+    source.writeErrMessage(ErrorCode.ER_NOT_ALLOWED_COMMAND,"Distributed transaction is disabled!");
+  if (!autocommit) {
+    source.setTxInterrupt("Distributed transaction is disabled!");
+  }
+break;
+case 2:
+LOGGER.warn("Distributed transaction detected! RRS:" + rrs);
+if (type == 1) {
+singleNodeHandler.execute();
+}
+ else {
+multiNodeHandler.execute();
+}
+break;
+default :
+if (type == 1) {
+singleNodeHandler.execute();
+}
+ else {
+multiNodeHandler.execute();
+}
+}
+}
+private void checkDistriTransaxAndExecute(){
+  if (!isALLGlobal()) {
+switch (MycatServer.getInstance().getConfig().getSystem().getHandleDistributedTransactions()) {
+case 1:
+      source.writeErrMessage(ErrorCode.ER_NOT_ALLOWED_COMMAND,"Distributed transaction is disabled!Please rollback!");
+    source.setTxInterrupt("Distributed transaction is disabled!");
+  break;
+case 2:
+multiNodeCoordinator.executeBatchNodeCmd(SQLCmdConstant.COMMIT_CMD);
+LOGGER.warn("Distributed transaction detected! Targets:" + target);
+break;
+default :
+multiNodeCoordinator.executeBatchNodeCmd(SQLCmdConstant.COMMIT_CMD);
+}
+}
+ else {
+multiNodeCoordinator.executeBatchNodeCmd(SQLCmdConstant.COMMIT_CMD);
+}
+}

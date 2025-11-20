@@ -1,0 +1,16 @@
+public static Chunk decode(EntityData.ChunkStore message,BlockManager blockManager,ExtraBlockDataManager extraDataManager){
+  Preconditions.checkNotNull(message,"The parameter 'message' must not be null");
+  if (!message.hasX() || !message.hasY() || !message.hasZ()) {
+    throw new IllegalArgumentException("Ill-formed protobuf message. Missing chunk position.");
+  }
+  Vector3i pos=new Vector3i(message.getX(),message.getY(),message.getZ());
+  if (!message.hasBlockData()) {
+    throw new IllegalArgumentException("Ill-formed protobuf message. Missing block data.");
+  }
+  final TeraArray blockData=runLengthDecode(message.getBlockData());
+  final TeraArray[] extraData=extraDataManager.makeDataArrays(Chunks.SIZE_X,Chunks.SIZE_Y,Chunks.SIZE_Z);
+  for (int i=0; i < extraData.length; i++) {
+    runLengthDecode(message.getExtraData(i),extraData[i]);
+  }
+  return new ChunkImpl(pos,blockData,extraData,blockManager);
+}

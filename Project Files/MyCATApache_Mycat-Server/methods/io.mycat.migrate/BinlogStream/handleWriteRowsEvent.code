@@ -1,0 +1,44 @@
+private void handleWriteRowsEvent(Event event){
+  WriteRowsEventData eventData=event.getData();
+  TableMapEventData tableMapEvent=tablesById.get(eventData.getTableId());
+  if (isShouldBeFilter(tableMapEvent.getDatabase(),tableMapEvent.getTable()))   return;
+  Map<Integer,Map<String,Object>> xxx=tablesColumnMap.get(tableMapEvent.getDatabase() + "." + tableMapEvent.getTable());
+  BitSet inculudeColumn=eventData.getIncludedColumns();
+  StringBuilder sb=new StringBuilder("insert into  ");
+  sb.append(tableMapEvent.getTable());
+  sb.append("(");
+  int size=inculudeColumn.length();
+  List<Serializable[]> rows=eventData.getRows();
+  int slot=-1;
+  for (int i=0; i < size; i++) {
+    int column=inculudeColumn.nextSetBit(i);
+    Map<String,Object> coumnMap=xxx.get(column + 1);
+    sb.append(coumnMap.get("COLUMN_NAME"));
+    if (i != size - 1) {
+      sb.append(",");
+    }
+  }
+  sb.append(")  values  ");
+  for (int i=0; i < rows.size(); i++) {
+    Serializable[] value=rows.get(i);
+    sb.append(" (");
+    for (int y=0; y < size; y++) {
+      int column=inculudeColumn.nextSetBit(y);
+      Map<String,Object> coumnMap=xxx.get(column + 1);
+      String dataType=(String)coumnMap.get("DATA_TYPE");
+      String columnName=(String)coumnMap.get("COLUMN_NAME");
+      if ("_slot".equalsIgnoreCase(columnName)) {
+        slot=value[y] instanceof BigInteger ? ((BigInteger)value[y]).intValue() : ((Integer)value[y]);
+      }
+      sb.append(convertBinlogValue(value[y],dataType));
+      if (y != size - 1) {
+        sb.append(",");
+      }
+    }
+    sb.append(")");
+    if (i != rows.size() - 1) {
+      sb.append(",");
+    }
+  }
+  checkIfExeSql(tableMapEvent,sb,slot);
+}

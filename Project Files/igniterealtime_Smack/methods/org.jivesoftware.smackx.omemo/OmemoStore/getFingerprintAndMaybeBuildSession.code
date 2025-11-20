@@ -1,0 +1,24 @@
+/** 
+ * Return the fingerprint of the given devices announced identityKey. If we have no local copy of the identityKey of the contact, build a fresh session in order to get the key.
+ * @param managerGuard authenticated OmemoManager
+ * @param contactsDevice OmemoDevice we want to get the fingerprint from
+ * @return fingerprint of the contacts OMEMO device
+ * @throws CannotEstablishOmemoSessionException If we have no local copy of the identityKey of the contactand are unable to build a fresh session
+ * @throws CorruptedOmemoKeyException           If the identityKey we have of the contact is corrupted
+ * @throws SmackException.NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws SmackException.NoResponseException if there was no response from the remote entity.
+ * @throws IOException if an I/O error occurred.
+ */
+public OmemoFingerprint getFingerprintAndMaybeBuildSession(OmemoManager.LoggedInOmemoManager managerGuard,OmemoDevice contactsDevice) throws CannotEstablishOmemoSessionException, CorruptedOmemoKeyException, SmackException.NotConnectedException, InterruptedException, SmackException.NoResponseException, IOException {
+  OmemoManager omemoManager=managerGuard.get();
+  T_IdKey identityKey=loadOmemoIdentityKey(omemoManager.getOwnDevice(),contactsDevice);
+  if (identityKey == null) {
+    OmemoService.getInstance().buildFreshSessionWithDevice(omemoManager.getConnection(),omemoManager.getOwnDevice(),contactsDevice);
+  }
+  identityKey=loadOmemoIdentityKey(omemoManager.getOwnDevice(),contactsDevice);
+  if (identityKey == null) {
+    return null;
+  }
+  return keyUtil().getFingerprintOfIdentityKey(identityKey);
+}

@@ -1,0 +1,51 @@
+/** 
+ * Complete and send a packet. Complete all the null fields in a Jingle reponse, using the session information we have.
+ * @param jout the Jingle stanza we want to complete and send
+ * @return the Jingle stanza.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public Jingle sendFormattedJingle(Jingle jout) throws NotConnectedException, InterruptedException {
+  return sendFormattedJingle(null,jout);
+}
+/** 
+ * Complete and send a packet. Complete all the null fields in a Jingle reponse, using the session information we have or some info from the incoming packet.
+ * @param iq The Jingle stanza we are responding to
+ * @param jout the Jingle stanza we want to complete and send
+ * @return the Jingle stanza.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public Jingle sendFormattedJingle(IQ iq,Jingle jout) throws NotConnectedException, InterruptedException {
+  if (jout != null) {
+    if (jout.getInitiator() == null) {
+      jout.setInitiator(getInitiator());
+    }
+    if (jout.getResponder() == null) {
+      jout.setResponder(getResponder());
+    }
+    if (jout.getSid() == null) {
+      jout.setSid(getSid());
+    }
+    Jid me=getConnection().getUser();
+    Jid other=getResponder().equals(me) ? getInitiator() : getResponder();
+    if (jout.getTo() == null) {
+      if (iq != null) {
+        jout.setTo(iq.getFrom());
+      }
+ else {
+        jout.setTo(other);
+      }
+    }
+    if (jout.getFrom() == null) {
+      if (iq != null) {
+        jout.setFrom(iq.getTo());
+      }
+ else {
+        jout.setFrom(me);
+      }
+    }
+    if ((getConnection() != null) && getConnection().isConnected())     getConnection().sendStanza(jout);
+  }
+  return jout;
+}

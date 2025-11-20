@@ -1,0 +1,30 @@
+public void initialize(){
+  Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+  Stopwatch totalInitTime=Stopwatch.createStarted();
+  if (!initialisedAlready) {
+    try {
+      logger.info("Initializing Terasology...");
+      logEnvironmentInfo();
+      GameThread.setToCurrentThread();
+      preInitSubsystems();
+      initManagers();
+      initSubsystems();
+      changeStatus(TerasologyEngineStatus.INITIALIZING_ASSET_MANAGEMENT);
+      initAssets();
+      EnvironmentSwitchHandler environmentSwitcher=new EnvironmentSwitchHandler();
+      rootContext.put(EnvironmentSwitchHandler.class,environmentSwitcher);
+      environmentSwitcher.handleSwitchToGameEnvironment(rootContext);
+      postInitSubsystems();
+      verifyInitialisation();
+      CoreRegistry.setContext(null);
+      initialisedAlready=true;
+    }
+ catch (    RuntimeException e) {
+      logger.error("Failed to initialise Terasology",e);
+      cleanup();
+      throw e;
+    }
+  }
+  double seconds=0.001 * totalInitTime.elapsed(TimeUnit.MILLISECONDS);
+  logger.info("Initialization completed in {}sec.",String.format("%.2f",seconds));
+}

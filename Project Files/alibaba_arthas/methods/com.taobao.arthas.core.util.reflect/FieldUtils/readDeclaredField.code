@@ -1,0 +1,27 @@
+/** 
+ * Reads the named  {@code public} {@link Field}. Only the class of the specified object will be considered.
+ * @param target the object to reflect, must not be  {@code null}
+ * @param fieldName the field name to obtain
+ * @return the value of the field
+ * @throws IllegalArgumentException if  {@code target} is {@code null}, or the field name is blank or empty or could not be found
+ * @throws IllegalAccessException if the named field is not  {@code public}
+ */
+public static Object readDeclaredField(final Object target,final String fieldName) throws IllegalAccessException {
+  return readDeclaredField(target,fieldName,false);
+}
+/** 
+ * Gets a  {@link Field} value by name. Only the class of the specified object will be considered.
+ * @param target the object to reflect, must not be  {@code null}
+ * @param fieldName the field name to obtain
+ * @param forceAccess whether to break scope restrictions using the {@link java.lang.reflect.AccessibleObject#setAccessible(boolean)} method. {@code false} will onlymatch public fields.
+ * @return the Field object
+ * @throws IllegalArgumentException if  {@code target} is {@code null}, or the field name is blank or empty or could not be found
+ * @throws IllegalAccessException if the field is not made accessible
+ */
+public static Object readDeclaredField(final Object target,final String fieldName,final boolean forceAccess) throws IllegalAccessException {
+  isTrue(target != null,"target object must not be null");
+  final Class<?> cls=target.getClass();
+  final Field field=getDeclaredField(cls,fieldName,forceAccess);
+  isTrue(field != null,"Cannot locate declared field %s.%s",cls,fieldName);
+  return readField(field,target,false);
+}

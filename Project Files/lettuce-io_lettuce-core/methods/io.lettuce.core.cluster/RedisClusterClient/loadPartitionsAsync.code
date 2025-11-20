@@ -1,0 +1,47 @@
+/** 
+ * Retrieve partitions. Nodes within  {@link Partitions} are ordered by latency. Lower latency nodes come first.
+ * @return future that emits {@link Partitions} upon a successful topology lookup.
+ * @since 6.0
+ */
+protected CompletableFuture<Partitions> loadPartitionsAsync(){
+  Iterable<RedisURI> topologyRefreshSource=getTopologyRefreshSource();
+  CompletableFuture<Partitions> future=new CompletableFuture<>();
+  fetchPartitions(topologyRefreshSource).whenComplete((nodes,throwable) -> {
+    if (throwable == null) {
+      future.complete(nodes);
+      return;
+    }
+    if (useDynamicRefreshSources() && topologyRefreshSource != initialUris) {
+      fetchPartitions(initialUris).whenComplete((nextNodes,nextThrowable) -> {
+        if (nextThrowable != null) {
+          Throwable exception=Exceptions.unwrap(nextThrowable);
+          exception.addSuppressed(Exceptions.unwrap(throwable));
+          future.completeExceptionally(exception);
+        }
+ else {
+          future.complete(nextNodes);
+        }
+      }
+);
+    }
+ else {
+      future.completeExceptionally(Exceptions.unwrap(throwable));
+    }
+  }
+);
+  Predicate<RedisClusterNode> nodeFilter=getClusterClientOptions().getNodeFilter();
+  if (nodeFilter != ClusterClientOptions.DEFAULT_NODE_FILTER) {
+    return future.thenApply(partitions -> {
+      List<RedisClusterNode> toRemove=new ArrayList<>();
+      for (      RedisClusterNode partition : partitions) {
+        if (!nodeFilter.test(partition)) {
+          toRemove.add(partition);
+        }
+      }
+      partitions.removeAll(toRemove);
+      return partitions;
+    }
+);
+  }
+  return future;
+}

@@ -1,0 +1,18 @@
+public void testAutomaticReconnectionWithCompression() throws Exception {
+  ConnectionConfiguration config=new ConnectionConfiguration(getHost(),getPort());
+  config.setCompressionEnabled(true);
+  config.setSASLAuthenticationEnabled(true);
+  XMPPTCPConnection connection=new XMPPConnection(config);
+  connection.connect();
+  connection.login(getUsername(0),getPassword(0),"MyOtherResource");
+  assertTrue("Failed to use compression",connection.isUsingCompression());
+  executeSomeServerInteraction(connection);
+  CountDownLatch latch=new CountDownLatch(1);
+  XMPPTCPConnectionTestListener listener=new XMPPConnectionTestListener(latch);
+  connection.addConnectionListener(listener);
+  connection.notifyConnectionError(new Exception("Simulated Error"));
+  latch.await(MIN_RECONNECT_WAIT,TimeUnit.SECONDS);
+  assertEquals("The ConnectionListener.connectionEstablished() notification was not fired",true,listener.reconnected);
+  assertTrue("The ReconnectionManager algorithm has reconnected without waiting at least 5 seconds",listener.attemptsNotifications > 0);
+  executeSomeServerInteraction(connection);
+}

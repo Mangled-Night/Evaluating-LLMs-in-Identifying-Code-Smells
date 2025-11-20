@@ -1,0 +1,88 @@
+/** 
+ * This class embodies a decrypted and/or verified  {@link OpenPgpElement}. <br> The content can be one of the following three  {@link OpenPgpContentElement}s: <br><br> {@link SignElement}: The content is expected to be signed with the senders key, but unencrypted.<br> {@link CryptElement}: The content is expected to be encrypted, but not signed.<br> {@link SigncryptElement}: The content is expected to be signed with the senders key and encrypted.<br> <br> To determine, of which nature the content of the message is, use  {@link #getState()}. You should utilize this information to cast the return value of  {@link #getOpenPgpContentElement()} correctly.<br> Use  {@link #getMetadata()} in order to get information about the messages encryption status, its signatures etc.
+ */
+public class OpenPgpMessage {
+  public enum State {  /** 
+ * Represents a  {@link SigncryptElement}.
+ */
+  signcrypt,   /** 
+ * Represents a  {@link SignElement}.
+ */
+  sign,   /** 
+ * Represents a  {@link CryptElement}.
+ */
+  crypt}
+  private final String element;
+  private final State state;
+  private final OpenPgpMetadata metadata;
+  private OpenPgpContentElement openPgpContentElement;
+  /** 
+ * Constructor.
+ * @param content XML representation of the decrypted {@link OpenPgpContentElement}.
+ * @param state {@link State} of the {@link OpenPgpContentElement}.
+ * @param metadata Metadata about the encryption.
+ */
+  public OpenPgpMessage(  String content,  State state,  OpenPgpMetadata metadata){
+    this.metadata=Objects.requireNonNull(metadata);
+    this.state=Objects.requireNonNull(state);
+    this.element=Objects.requireNonNull(content);
+  }
+  /** 
+ * Constructor.
+ * @param bytes bytes of the XML representation of the decrypted {@link OpenPgpContentElement}.
+ * @param state {@link State} of the {@link OpenPgpContentElement}.
+ * @param metadata metadata about the encryption.
+ */
+  public OpenPgpMessage(  byte[] bytes,  State state,  OpenPgpMetadata metadata){
+    this(new String(Objects.requireNonNull(bytes),Charset.forName("UTF-8")),state,metadata);
+  }
+  /** 
+ * Return the decrypted  {@link OpenPgpContentElement} of this message.To determine, whether the element is a  {@link SignElement},  {@link CryptElement} or {@link SigncryptElement}, please consult  {@link #getState()}.
+ * @return {@link OpenPgpContentElement}
+ * @throws XmlPullParserException if the parser encounters an error.
+ * @throws IOException if the parser encounters an error.
+ */
+  public OpenPgpContentElement getOpenPgpContentElement() throws XmlPullParserException, IOException {
+    ensureOpenPgpContentElementSet();
+    return openPgpContentElement;
+  }
+  private void ensureOpenPgpContentElementSet() throws XmlPullParserException, IOException {
+    if (openPgpContentElement != null)     return;
+    openPgpContentElement=OpenPgpContentElementProvider.parseOpenPgpContentElement(element);
+    if (openPgpContentElement == null) {
+      return;
+    }
+    if (openPgpContentElement instanceof SigncryptElement) {
+      if (state != State.signcrypt) {
+        throw new IllegalStateException("OpenPgpContentElement was signed and encrypted, but is not a SigncryptElement.");
+      }
+    }
+ else     if (openPgpContentElement instanceof SignElement) {
+      if (state != State.sign) {
+        throw new IllegalStateException("OpenPgpContentElement was signed and unencrypted, but is not a SignElement.");
+      }
+    }
+ else     if (openPgpContentElement instanceof CryptElement) {
+      if (state != State.crypt) {
+        throw new IllegalStateException("OpenPgpContentElement was unsigned and encrypted, but is not a CryptElement.");
+      }
+    }
+  }
+  /** 
+ * Return the state of the message. This value determines, whether the message was a  {@link SignElement}, {@link CryptElement} or {@link SigncryptElement}.
+ * @return state of the content element.
+ * @throws IOException if the parser encounters an error.
+ * @throws XmlPullParserException if the parser encounters and error.
+ */
+  public State getState() throws IOException, XmlPullParserException {
+    ensureOpenPgpContentElementSet();
+    return state;
+  }
+  /** 
+ * Return metadata about the encrypted message.
+ * @return metadata TODO javadoc me please
+ */
+  public OpenPgpMetadata getMetadata(){
+    return metadata;
+  }
+}

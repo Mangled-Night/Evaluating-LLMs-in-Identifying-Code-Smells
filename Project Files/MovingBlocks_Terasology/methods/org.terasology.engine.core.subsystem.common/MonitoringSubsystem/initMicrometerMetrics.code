@@ -1,0 +1,19 @@
+/** 
+ * Initialize Micrometer metrics and publishers.
+ * @see org.terasology.engine.core.GameScheduler GameScheduler for global Reactor metrics
+ * @param time provides statistics<p> Note  {@link org.terasology.engine.core.EngineTime EngineTime}does not serve the same role as a  {@link Clock micrometer Clock}. (Not yet. Maybe it should?)
+ */
+private void initMicrometerMetrics(Time time){
+  MeterRegistry meterRegistry=Metrics.globalRegistry;
+  Gauge.builder("terasology.fps",time::getFps).description("framerate").baseUnit("Hz").register(meterRegistry);
+  MeterRegistry jmxMeterRegistry=new JmxMeterRegistry(new JmxConfig(){
+    @Override public String get(    String key){
+      return null;
+    }
+    @Override public Duration step(){
+      return JMX_INTERVAL;
+    }
+  }
+,Clock.SYSTEM);
+  Metrics.addRegistry(jmxMeterRegistry);
+}

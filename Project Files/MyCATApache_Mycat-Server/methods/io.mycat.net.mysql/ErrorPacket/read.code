@@ -1,0 +1,24 @@
+public void read(BinaryPacket bin){
+  packetLength=bin.packetLength;
+  packetId=bin.packetId;
+  MySQLMessage mm=new MySQLMessage(bin.data);
+  fieldCount=mm.read();
+  errno=mm.readUB2();
+  if (mm.hasRemaining() && (mm.read(mm.position()) == SQLSTATE_MARKER)) {
+    mm.read();
+    sqlState=mm.readBytes(5);
+  }
+  message=mm.readBytes();
+}
+public void read(byte[] data){
+  MySQLMessage mm=new MySQLMessage(data);
+  packetLength=mm.readUB3();
+  packetId=mm.read();
+  fieldCount=mm.read();
+  errno=mm.readUB2();
+  if (mm.hasRemaining() && (mm.read(mm.position()) == SQLSTATE_MARKER)) {
+    mm.read();
+    sqlState=mm.readBytes(5);
+  }
+  message=mm.readBytes();
+}

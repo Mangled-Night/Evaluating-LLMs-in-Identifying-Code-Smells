@@ -1,0 +1,22 @@
+@Override public CompletableFuture<Void> closeAsync(){
+  if (debugEnabled) {
+    logger.debug("{} closeAsync()",logPrefix());
+  }
+  if (isClosed()) {
+    return closeFuture;
+  }
+  if (STATUS.compareAndSet(this,ST_OPEN,ST_CLOSED)) {
+    if (connectionWatchdog != null) {
+      connectionWatchdog.prepareClose();
+    }
+    cancelBufferedCommands("Close");
+    Channel channel=getOpenChannel();
+    if (channel != null) {
+      Futures.adapt(channel.close(),closeFuture);
+    }
+ else {
+      closeFuture.complete(null);
+    }
+  }
+  return closeFuture;
+}

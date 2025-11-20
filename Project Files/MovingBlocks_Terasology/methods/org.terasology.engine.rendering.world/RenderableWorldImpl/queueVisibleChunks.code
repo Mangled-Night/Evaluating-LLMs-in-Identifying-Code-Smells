@@ -1,0 +1,63 @@
+/** 
+ * Updates the currently visible chunks (in sight of the player).
+ */
+@Override public int queueVisibleChunks(boolean isFirstRenderingStageForCurrentFrame){
+  PerformanceMonitor.startActivity("Queueing Visible Chunks");
+  statDirtyChunks=0;
+  statVisibleChunks=0;
+  statIgnoredPhases=0;
+  int chunkCounter=0;
+  renderQueues.clear();
+  ChunkMesh mesh;
+  boolean isDynamicShadows=renderingConfig.isDynamicShadows();
+  int billboardLimit=(int)renderingConfig.getBillboardLimit();
+  List<RenderableChunk> allChunks=new ArrayList<>(chunkWorker.chunks());
+  allChunks.addAll(chunkMeshRenderer.getRenderableChunks());
+  if (lodChunkProvider != null) {
+    lodChunkProvider.addAllChunks(allChunks);
+  }
+  for (  RenderableChunk chunk : allChunks) {
+    if (isChunkValidForRender(chunk)) {
+      mesh=chunk.getMesh();
+      if (isDynamicShadows && isFirstRenderingStageForCurrentFrame && chunkCounter < maxChunksForShadows && isChunkVisibleFromMainLight(chunk)) {
+        if (triangleCount(mesh,ChunkMesh.RenderPhase.OPAQUE) > 0) {
+          renderQueues.chunksOpaqueShadow.add(chunk);
+        }
+ else {
+          statIgnoredPhases++;
+        }
+      }
+      if (isChunkVisible(chunk)) {
+        if (triangleCount(mesh,ChunkMesh.RenderPhase.OPAQUE) > 0) {
+          renderQueues.chunksOpaque.add(chunk);
+        }
+ else {
+          statIgnoredPhases++;
+        }
+        if (triangleCount(mesh,ChunkMesh.RenderPhase.REFRACTIVE) > 0) {
+          renderQueues.chunksAlphaBlend.add(chunk);
+        }
+ else {
+          statIgnoredPhases++;
+        }
+        if (triangleCount(mesh,ChunkMesh.RenderPhase.ALPHA_REJECT) > 0 && (billboardLimit == 0 || chunkCounter < billboardLimit)) {
+          renderQueues.chunksAlphaReject.add(chunk);
+        }
+ else {
+          statIgnoredPhases++;
+        }
+        statVisibleChunks++;
+        chunk.setAnimated(statVisibleChunks < MAX_ANIMATED_CHUNKS);
+      }
+      if (isChunkVisibleReflection(chunk)) {
+        renderQueues.chunksOpaqueReflection.add(chunk);
+      }
+    }
+    chunkCounter++;
+  }
+  if (isFirstRenderingStageForCurrentFrame) {
+    statDirtyChunks=chunkWorker.update();
+  }
+  PerformanceMonitor.endActivity();
+  return chunkWorker.numberChunkMeshProcessing();
+}

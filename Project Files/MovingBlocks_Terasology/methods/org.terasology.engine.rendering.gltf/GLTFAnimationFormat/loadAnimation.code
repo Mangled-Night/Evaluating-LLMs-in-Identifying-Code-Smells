@@ -1,0 +1,47 @@
+private MeshAnimationData loadAnimation(GLTF gltf,GLTFAnimation animation,List<byte[]> loadedBuffers,TIntIntMap boneIndexMapping,List<String> boneNames,TIntList boneParents,List<Bone> bones) throws IOException {
+  List<ChannelReader> channelReaders=new ArrayList<>();
+  for (  GLTFChannel channel : animation.getChannels()) {
+    GLTFAnimationSampler sampler=animation.getSamplers().get(channel.getSampler());
+    TFloatList times=getFloats(gltf,loadedBuffers,sampler.getInput());
+    int bone=boneIndexMapping.get(channel.getTarget().getNode());
+switch (channel.getTarget().getPath()) {
+case TRANSLATION:
+{
+        List<Vector3f> data=getVector3fs(gltf,loadedBuffers,sampler.getOutput());
+        channelReaders.add(new BufferChannelReader<>(times,data,sampler.getInterpolation()::interpolate,x -> x.getPosition(bone)));
+        break;
+      }
+case ROTATION:
+{
+      List<Quaternionf> data=getQuat4fs(gltf,loadedBuffers,sampler.getOutput());
+      channelReaders.add(new BufferChannelReader<>(times,data,sampler.getInterpolation()::interpolate,x -> x.getRotation(bone)));
+      break;
+    }
+case SCALE:
+{
+    List<Vector3f> data=getVector3fs(gltf,loadedBuffers,sampler.getOutput());
+    channelReaders.add(new BufferChannelReader<>(times,data,sampler.getInterpolation()::interpolate,x -> x.getBoneScale(bone)));
+    break;
+  }
+default :
+break;
+}
+}
+int frameCount=(int)(channelReaders.stream().map(ChannelReader::endTime).reduce(Float::max).orElse(0f) / TIME_PER_FRAME) + 1;
+List<MeshAnimationFrame> frames=new ArrayList<>(frameCount);
+for (int i=0; i < frameCount; i++) {
+float time=i * TIME_PER_FRAME;
+List<Vector3f> boneLocations=new ArrayList<>();
+List<Quaternionf> boneRotations=new ArrayList<>();
+List<Vector3f> boneScales=new ArrayList<>();
+for (Bone bone : bones) {
+boneLocations.add(new Vector3f(bone.getLocalPosition()));
+boneRotations.add(new Quaternionf(bone.getLocalRotation()));
+boneScales.add(new Vector3f(bone.getLocalScale()));
+}
+MeshAnimationFrame frame=new MeshAnimationFrame(boneLocations,boneRotations,boneScales);
+channelReaders.forEach(x -> x.updateFrame(time,frame));
+frames.add(frame);
+}
+return new MeshAnimationData(boneNames,boneParents,frames,TIME_PER_FRAME,new AABBf(0,0,0));
+}

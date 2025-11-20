@@ -1,0 +1,16 @@
+@SmackIntegrationTest public void mamDecryptionTest() throws XMPPException.XMPPErrorException, SmackException.NotLoggedInException, SmackException.NotConnectedException, InterruptedException, SmackException.NoResponseException, CryptoFailedException, UndecidedOmemoIdentityException, IOException {
+  MamManager bobsMamManager=MamManager.getInstanceFor(bob.getConnection());
+  bobsMamManager.enableMamForAllMessages();
+  bobsMamManager.setDefaultBehavior(MamPrefsIQ.DefaultBehavior.always);
+  bob.stopStanzaAndPEPListeners();
+  String body="This message will be stored in MAM!";
+  OmemoMessage.Sent encrypted=alice.encrypt(bob.getOwnJid(),body);
+  XMPPConnection alicesConnection=alice.getConnection();
+  MessageBuilder messageBuilder=alicesConnection.getStanzaFactory().buildMessageStanza();
+  alicesConnection.sendStanza(encrypted.buildMessage(messageBuilder,bob.getOwnJid()));
+  MamManager.MamQuery query=bobsMamManager.queryArchive(MamManager.MamQueryArgs.builder().limitResultsToJid(alice.getOwnJid()).build());
+  assertEquals(1,query.getMessageCount());
+  List<MessageOrOmemoMessage> decryptedMamQuery=bob.decryptMamQueryResult(query);
+  assertEquals(1,decryptedMamQuery.size());
+  assertEquals(body,decryptedMamQuery.get(decryptedMamQuery.size() - 1).getOmemoMessage().getBody());
+}

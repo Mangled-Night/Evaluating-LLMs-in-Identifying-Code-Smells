@@ -1,0 +1,18 @@
+/** 
+ * Tests that the server and Smack are able to handle nicknames that include < > characters.
+ */
+public void testNotCommonNickname() throws Exception {
+  Roster roster=getConnection(0).getRoster();
+  roster.createEntry(getBareJID(1),"Thiago <12001200>",null);
+  Thread.sleep(500);
+  assertEquals("Created entry was never received",1,roster.getEntryCount());
+  ConnectionConfiguration connectionConfiguration=new ConnectionConfiguration(getHost(),getPort(),getXMPPServiceDomain());
+  XMPPTCPConnection conn2=new XMPPConnection(connectionConfiguration);
+  conn2.connect();
+  conn2.login(getUsername(0),getPassword(0),"Home");
+  Roster roster2=conn2.getRoster();
+  assertEquals("Created entry was never received",1,roster2.getEntryCount());
+  RosterEntry entry=roster2.getEntry(getBareJID(1));
+  assertNotNull("New entry was not returned from the server",entry);
+  assertEquals("Roster item name is incorrect","Thiago <12001200>",entry.getName());
+}

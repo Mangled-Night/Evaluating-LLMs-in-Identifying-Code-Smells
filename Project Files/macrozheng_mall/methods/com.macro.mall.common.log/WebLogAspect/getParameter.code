@@ -1,0 +1,34 @@
+/** 
+ * 根据方法和传入的参数获取请求参数
+ */
+private Object getParameter(Method method,Object[] args){
+  List<Object> argList=new ArrayList<>();
+  Parameter[] parameters=method.getParameters();
+  for (int i=0; i < parameters.length; i++) {
+    RequestBody requestBody=parameters[i].getAnnotation(RequestBody.class);
+    if (requestBody != null) {
+      argList.add(args[i]);
+    }
+    RequestParam requestParam=parameters[i].getAnnotation(RequestParam.class);
+    if (requestParam != null) {
+      Map<String,Object> map=new HashMap<>();
+      String key=parameters[i].getName();
+      if (!StrUtil.isEmpty(requestParam.value())) {
+        key=requestParam.value();
+      }
+      if (args[i] != null) {
+        map.put(key,args[i]);
+        argList.add(map);
+      }
+    }
+  }
+  if (argList.size() == 0) {
+    return null;
+  }
+ else   if (argList.size() == 1) {
+    return argList.get(0);
+  }
+ else {
+    return argList;
+  }
+}

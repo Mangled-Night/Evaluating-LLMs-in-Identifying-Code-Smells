@@ -1,0 +1,17 @@
+/** 
+ * Test creating a error response based on an IQ request.
+ * @throws XmppStringprepException if the provided string is invalid.
+ */
+@Test public void testGeneratingValidErrorResponse() throws XmppStringprepException {
+  final StanzaError error=StanzaError.getBuilder(StanzaError.Condition.bad_request).build();
+  final IQ request=new TestIQ(ELEMENT,NAMESPACE);
+  request.setType(IQ.Type.set);
+  request.setFrom(JidCreate.from("sender@test/Smack"));
+  request.setTo(JidCreate.from("receiver@test/Smack"));
+  final IQ result=IQ.createErrorResponse(request,error);
+  assertEquals(IQ.Type.error,result.getType());
+  assertNotNull(result.getStanzaId());
+  assertEquals(request.getStanzaId(),result.getStanzaId());
+  assertEquals(request.getFrom(),result.getTo());
+  assertEquals(error.toXML().toString(),result.getError().toXML().toString());
+}

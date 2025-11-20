@@ -1,0 +1,26 @@
+/** 
+ * 分类详情
+ * @param id   分类类目ID。如果分类类目ID是空，则选择第一个分类类目。 需要注意，这里分类类目是一级类目
+ * @return 分类详情
+ */
+@GetMapping("index") public Object index(Integer id){
+  List<LitemallCategory> l1CatList=categoryService.queryL1();
+  LitemallCategory currentCategory=null;
+  if (id != null) {
+    currentCategory=categoryService.findById(id);
+  }
+ else {
+    if (l1CatList.size() > 0) {
+      currentCategory=l1CatList.get(0);
+    }
+  }
+  List<LitemallCategory> currentSubCategory=null;
+  if (null != currentCategory) {
+    currentSubCategory=categoryService.queryByPid(currentCategory.getId());
+  }
+  Map<String,Object> data=new HashMap<String,Object>();
+  data.put("categoryList",l1CatList);
+  data.put("currentCategory",currentCategory);
+  data.put("currentSubCategory",currentSubCategory);
+  return ResponseUtil.ok(data);
+}

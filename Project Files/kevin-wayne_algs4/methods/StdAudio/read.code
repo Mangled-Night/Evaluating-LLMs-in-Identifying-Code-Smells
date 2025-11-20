@@ -1,0 +1,32 @@
+/** 
+ * Reads audio samples from a file (in WAVE, AU, AIFF, or MIDI format) and returns them as a double array with values between –1.0 and +1.0. The sound format must use 16-bit audio data with a sampling rate of 44,100. The sound format can be either monoaural or stereo, and the bytes can be stored in either little endian or big endian order.
+ * @param filename the name of the audio file
+ * @return the array of samples
+ */
+public static double[] read(String filename){
+  int READ_BUFFER_SIZE=4096;
+  AudioInputStream fromAudioInputStream=getAudioInputStreamFromFile(filename);
+  AudioFormat fromAudioFormat=fromAudioInputStream.getFormat();
+  AudioFormat toAudioFormat=new AudioFormat((float)SAMPLE_RATE,BITS_PER_SAMPLE,MONO,SIGNED,LITTLE_ENDIAN);
+  if (!AudioSystem.isConversionSupported(toAudioFormat,fromAudioFormat)) {
+    throw new IllegalArgumentException("system cannot convert from " + fromAudioFormat + " to "+ toAudioFormat);
+  }
+  AudioInputStream toAudioInputStream=AudioSystem.getAudioInputStream(toAudioFormat,fromAudioInputStream);
+  try {
+    QueueOfDoubles queue=new QueueOfDoubles();
+    byte[] bytes=new byte[READ_BUFFER_SIZE];
+    int count;
+    while ((count=toAudioInputStream.read(bytes,0,READ_BUFFER_SIZE)) != -1) {
+      for (int i=0; i < count / 2; i++) {
+        double sample=((short)(((bytes[2 * i + 1] & 0xFF) << 8) | (bytes[2 * i] & 0xFF))) / ((double)MAX_16_BIT);
+        queue.enqueue(sample);
+      }
+    }
+    toAudioInputStream.close();
+    fromAudioInputStream.close();
+    return queue.toArray();
+  }
+ catch (  IOException ioe) {
+    throw new IllegalArgumentException("could not read '" + filename + "'",ioe);
+  }
+}

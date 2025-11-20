@@ -1,0 +1,39 @@
+/** 
+ * A test case for the FromContainsFilter class.
+ */
+public class FromContainsFilterTest extends TestCase {
+  public void testNullArgs(){
+    try {
+      new FromContainsFilter(null);
+      fail("Parameter can not be null");
+    }
+ catch (    IllegalArgumentException e) {
+      assertTrue(true);
+    }
+  }
+  public void testAccept(){
+    MockFromPacket packet=new MockFromPacket("foo@bar.com");
+    FromContainsFilter fromContainsFilter=new FromContainsFilter("");
+    assertTrue(fromContainsFilter.accept(packet));
+    fromContainsFilter=new FromContainsFilter("foo");
+    assertTrue(fromContainsFilter.accept(packet));
+    fromContainsFilter=new FromContainsFilter("foo@bar.com");
+    assertTrue(fromContainsFilter.accept(packet));
+    fromContainsFilter=new FromContainsFilter("bar@foo.com");
+    assertFalse(fromContainsFilter.accept(packet));
+    fromContainsFilter=new FromContainsFilter("blah-stuff,net");
+    assertFalse(fromContainsFilter.accept(packet));
+  }
+  /** 
+ * Wraps the MockPacket class to always give an expected From field.
+ */
+private class MockFromPacket extends MockPacket {
+    private String from;
+    public MockFromPacket(    String from){
+      this.from=from;
+    }
+    public String getFrom(){
+      return from;
+    }
+  }
+}

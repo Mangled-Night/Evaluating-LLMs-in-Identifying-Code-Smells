@@ -1,0 +1,37 @@
+private void registerInner(final Object bus){
+  if (bus == null)   return;
+  Class aClass=bus.getClass();
+  String className=aClass.getName();
+synchronized (mClassName_BusesMap) {
+    Set<Object> buses=mClassName_BusesMap.get(className);
+    if (buses == null) {
+      buses=new CopyOnWriteArraySet<>();
+      mClassName_BusesMap.put(className,buses);
+    }
+    buses.add(bus);
+  }
+  List<String> tags=mClassName_TagsMap.get(className);
+  if (tags == null) {
+synchronized (mClassName_TagsMap) {
+      tags=mClassName_TagsMap.get(className);
+      if (tags == null) {
+        tags=new ArrayList<>();
+        for (        Map.Entry<String,List<BusInfo>> entry : mTag_BusInfoListMap.entrySet()) {
+          for (          BusInfo busInfo : entry.getValue()) {
+            try {
+              if (Class.forName(busInfo.className).isAssignableFrom(aClass)) {
+                tags.add(entry.getKey());
+                busInfo.classNames.add(className);
+              }
+            }
+ catch (            ClassNotFoundException e) {
+              e.printStackTrace();
+            }
+          }
+        }
+        mClassName_TagsMap.put(className,tags);
+      }
+    }
+  }
+  processSticky(bus);
+}

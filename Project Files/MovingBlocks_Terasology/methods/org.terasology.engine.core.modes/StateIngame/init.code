@@ -1,0 +1,30 @@
+@Override public void init(GameEngine engine){
+  nuiManager=context.get(NUIManager.class);
+  worldRenderer=context.get(WorldRenderer.class);
+  eventSystem=context.get(EventSystem.class);
+  componentSystemManager=context.get(ComponentSystemManager.class);
+  entityManager=context.get(EngineEntityManager.class);
+  cameraTargetSystem=context.get(CameraTargetSystem.class);
+  if (nuiManager != null) {
+    inputSystem=context.get(InputSystem.class);
+    eventSystem.registerEventHandler(nuiManager);
+  }
+  networkSystem=context.get(NetworkSystem.class);
+  storageManager=context.get(StorageManager.class);
+  storageServiceWorker=context.get(StorageServiceWorker.class);
+  console=context.get(Console.class);
+  if (nuiManager != null) {
+    nuiManager.getHUD().bindVisible(new ReadOnlyBinding<Boolean>(){
+      @Override public Boolean get(){
+        return !context.get(Config.class).getRendering().getDebug().isHudHidden();
+      }
+    }
+);
+  }
+  if (networkSystem.getMode() == NetworkMode.CLIENT) {
+    String motd=networkSystem.getServer().getInfo().getMOTD();
+    if (nuiManager != null && motd != null && motd.length() != 0) {
+      nuiManager.pushScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage("Server MOTD",motd);
+    }
+  }
+}

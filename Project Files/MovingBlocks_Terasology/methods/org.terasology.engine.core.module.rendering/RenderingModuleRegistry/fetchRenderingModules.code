@@ -1,0 +1,25 @@
+/** 
+ * Fetches all loaded  {@link ModuleRendering} classes from the given {@link ModuleEnvironment}and instantiatest them with current context.
+ * @param moduleEnvironment
+ * @param context
+ * @return list of {@link ModuleRendering} instances
+ */
+private Set<ModuleRendering> fetchRenderingModules(ModuleEnvironment moduleEnvironment,Context context){
+  Set<ModuleRendering> moduleSet=new HashSet<>();
+  for (  Class<? extends ModuleRendering> renderingClass : moduleEnvironment.getSubtypesOf(ModuleRendering.class)) {
+    ModuleRendering moduleRenderingInstance=getModuleRenderingByClass(renderingClass);
+    if (moduleRenderingInstance == null) {
+      try {
+        Constructor<?> constructor=renderingClass.getConstructor(Context.class);
+        moduleRenderingInstance=(ModuleRendering)constructor.newInstance(context);
+      }
+ catch (      InstantiationException|IllegalAccessException|NoSuchMethodException|InvocationTargetException e) {
+        e.printStackTrace();
+      }
+    }
+    if (moduleRenderingInstance != null) {
+      moduleSet.add(moduleRenderingInstance);
+    }
+  }
+  return moduleSet;
+}

@@ -1,0 +1,14 @@
+private void tryAddRasterizer(List<WorldRasterizer> orderedRasterizers,WorldRasterizer rasterizer,ListMultimap<Class<? extends WorldFacet>,FacetProvider> providerChains,boolean scalable){
+  if (scalable && !(rasterizer instanceof ScalableWorldRasterizer)) {
+    return;
+  }
+  Requires requires=rasterizer.getClass().getAnnotation(Requires.class);
+  if (requires != null) {
+    for (    Facet facet : requires.value()) {
+      if (!providerChains.containsKey(facet.value())) {
+        return;
+      }
+    }
+  }
+  orderedRasterizers.add(rasterizer);
+}

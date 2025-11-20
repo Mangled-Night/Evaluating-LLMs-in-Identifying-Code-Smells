@@ -1,0 +1,40 @@
+/** 
+ * Creates a new  {@link ExponentialDelay} with default boundaries and factor (1, 2, 4, 8, 16, 32...). The delay begins with1 and is capped at 30  {@link TimeUnit#SECONDS} after reaching the 16th attempt.
+ * @return a created {@link ExponentialDelay}.
+ */
+public static Delay exponential(){
+  return exponential(DEFAULT_LOWER_BOUND,DEFAULT_UPPER_BOUND,DEFAULT_POWER_OF,DEFAULT_TIMEUNIT);
+}
+/** 
+ * Creates a new  {@link ExponentialDelay} on with custom boundaries and factor (eg. with upper 9000, lower 0, powerOf 10: 1,10, 100, 1000, 9000, 9000, 9000, ...).
+ * @param lower the lower boundary, must be non-negative
+ * @param upper the upper boundary, must be greater than the lower boundary
+ * @param powersOf the base for exponential growth (eg. powers of 2, powers of 10, etc...), must be non-negative and greaterthan 1
+ * @param targetTimeUnit the unit of the delay.
+ * @return a created {@link ExponentialDelay}.
+ * @since 5.0
+ */
+public static Delay exponential(Duration lower,Duration upper,int powersOf,TimeUnit targetTimeUnit){
+  LettuceAssert.notNull(lower,"Lower boundary must not be null");
+  LettuceAssert.isTrue(lower.toNanos() >= 0,"Lower boundary must be greater or equal to 0");
+  LettuceAssert.notNull(upper,"Upper boundary must not be null");
+  LettuceAssert.isTrue(upper.toNanos() > lower.toNanos(),"Upper boundary must be greater than the lower boundary");
+  LettuceAssert.isTrue(powersOf > 1,"PowersOf must be greater than 1");
+  LettuceAssert.notNull(targetTimeUnit,"Target TimeUnit must not be null");
+  return new ExponentialDelay(lower,upper,powersOf,targetTimeUnit);
+}
+/** 
+ * Creates a new  {@link ExponentialDelay} on with custom boundaries and factor (eg. with upper 9000, lower 0, powerOf 10: 1,10, 100, 1000, 9000, 9000, 9000, ...).
+ * @param lower the lower boundary, must be non-negative
+ * @param upper the upper boundary, must be greater than the lower boundary
+ * @param unit the unit of the delay.
+ * @param powersOf the base for exponential growth (eg. powers of 2, powers of 10, etc...), must be non-negative and greaterthan 1
+ * @return a created {@link ExponentialDelay}.
+ */
+public static Delay exponential(long lower,long upper,TimeUnit unit,int powersOf){
+  LettuceAssert.isTrue(lower >= 0,"Lower boundary must be greater or equal to 0");
+  LettuceAssert.isTrue(upper > lower,"Upper boundary must be greater than the lower boundary");
+  LettuceAssert.isTrue(powersOf > 1,"PowersOf must be greater than 1");
+  LettuceAssert.notNull(unit,"TimeUnit must not be null");
+  return exponential(Duration.ofNanos(unit.toNanos(lower)),Duration.ofNanos(unit.toNanos(upper)),powersOf,unit);
+}

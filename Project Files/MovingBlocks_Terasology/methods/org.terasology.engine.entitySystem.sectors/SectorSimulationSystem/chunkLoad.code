@@ -1,0 +1,16 @@
+/** 
+ * Handles the OnChunkLoaded event for sector entities. Forwards the event to the appropriate sector-scope entities, if they are watching that chunk, and sends a {@link SectorEntityLoad} event if this is the first watched chunk to be loaded for that entity.
+ * @param event the event sent when any chunk is loaded
+ * @param worldEntity ignored
+ */
+@ReceiveEvent(components=WorldComponent.class) public void chunkLoad(OnChunkLoaded event,EntityRef worldEntity){
+  for (  EntityRef entity : entityManager.getEntitiesWith(SectorSimulationComponent.class)) {
+    if (SectorUtil.getWatchedChunks(entity).contains(event.getChunkPos())) {
+      entity.send(new OnChunkLoaded(event.getChunkPos()));
+      if (SectorUtil.onlyWatchedChunk(entity,event.getChunkPos(),chunkProvider)) {
+        entity.send(new SectorEntityLoad());
+      }
+      sendLoadedSectorUpdateEvent(entity,simulationDelta(entity));
+    }
+  }
+}

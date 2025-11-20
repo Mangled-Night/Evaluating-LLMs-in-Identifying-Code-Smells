@@ -1,0 +1,29 @@
+public void testInvitation(){
+  final String[] answer=new String[2];
+  try {
+    MultiUserChat muc2=new MultiUserChat(getConnection(1),room);
+    muc2.join("testbot2");
+    MultiUserChat.addInvitationListener(getConnection(2),new InvitationListener(){
+      public void invitationReceived(      XMPPConnection conn,      String room,      String inviter,      String reason,      String password,      Message message){
+        answer[0]=reason;
+        MultiUserChat.decline(conn,room,inviter,"I'm busy right now");
+      }
+    }
+);
+    muc2.addInvitationRejectionListener(new InvitationRejectionListener(){
+      public void invitationDeclined(      String invitee,      String reason){
+        answer[1]=reason;
+      }
+    }
+);
+    muc2.invite(getFullJID(2),"Meet me in this excellent room");
+    Thread.sleep(350);
+    assertEquals("Invitation was not received","Meet me in this excellent room",answer[0]);
+    assertEquals("Rejection was not received","I'm busy right now",answer[1]);
+    muc2.leave();
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

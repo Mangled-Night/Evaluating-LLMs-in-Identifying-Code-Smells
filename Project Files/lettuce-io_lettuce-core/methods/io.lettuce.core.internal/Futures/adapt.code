@@ -1,0 +1,26 @@
+/** 
+ * Adapt Netty's  {@link io.netty.util.concurrent.Future} emitting a value result into a {@link CompletableFuture}.
+ * @param source source {@link io.netty.util.concurrent.Future} emitting signals.
+ * @param target target {@link CompletableFuture}.
+ * @since 6.0
+ */
+public static <V>void adapt(io.netty.util.concurrent.Future<V> source,CompletableFuture<V> target){
+  source.addListener(f -> {
+    if (f.isSuccess()) {
+      target.complete(null);
+    }
+ else {
+      target.completeExceptionally(f.cause());
+    }
+  }
+);
+  if (source.isSuccess()) {
+    target.complete(null);
+  }
+ else   if (source.isCancelled()) {
+    target.cancel(false);
+  }
+ else   if (source.isDone() && !source.isSuccess()) {
+    target.completeExceptionally(source.cause());
+  }
+}

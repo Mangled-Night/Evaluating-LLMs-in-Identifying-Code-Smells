@@ -1,0 +1,42 @@
+/** 
+ * Only use this method when tomcat monitor version <= 1.0.1 This will send http request to pandora qos port 12201, and display the response. Note that pandora qos response is not fully HTTP compatible under version 2.1.0, so we filtered some of the content and only display useful content.
+ * @param path the path relative to http://localhost:12201e.g. /pandora/ls For commands that requires arguments, use the following format e.g. /pandora/find?arg0=RPCProtocolService Note that the parameter name is never used in pandora qos, so the name(e.g. arg0) is irrelevant.
+ * @return the qos response in string format
+ */
+public static Response requestViaSocket(String path){
+  BufferedReader br=null;
+  try {
+    Socket s=new Socket(QOS_HOST,QOS_PORT);
+    PrintWriter pw=new PrintWriter(s.getOutputStream());
+    pw.println("GET " + path + " HTTP/1.1");
+    pw.println("Host: " + QOS_HOST + ":"+ QOS_PORT);
+    pw.println("");
+    pw.flush();
+    br=new BufferedReader(new InputStreamReader(s.getInputStream()));
+    StringBuilder sb=new StringBuilder();
+    String line=null;
+    boolean start=false;
+    while ((line=br.readLine()) != null) {
+      if (start) {
+        sb.append(line).append("\n");
+      }
+      if (line.equals(QOS_RESPONSE_START_LINE)) {
+        start=true;
+      }
+    }
+    String result=sb.toString().trim();
+    return new Response(result);
+  }
+ catch (  Exception e) {
+    return new Response(e.getMessage(),false);
+  }
+ finally {
+    if (br != null) {
+      try {
+        br.close();
+      }
+ catch (      IOException e) {
+      }
+    }
+  }
+}

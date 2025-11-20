@@ -1,0 +1,24 @@
+public void appendTo(ChunkMesh chunk,ChunkView chunkView,int offsetX,int offsetY,int offsetZ,ChunkMesh.RenderType renderType,Colorc colorOffset,ChunkVertexFlag flags){
+  ChunkMesh.VertexElements elements=chunk.getVertexElements(renderType);
+  for (  Vector2f texCoord : texCoords) {
+    elements.uv0.put(texCoord);
+  }
+  int nextIndex=elements.vertexCount;
+  elements.buffer.reserveElements(nextIndex + vertices.length);
+  Vector3f pos=new Vector3f();
+  for (int vIdx=0; vIdx < vertices.length; ++vIdx) {
+    elements.color.put(colorOffset);
+    elements.position.put(pos.set(vertices[vIdx]).add(offsetX,offsetY,offsetZ));
+    elements.normals.put(normals[vIdx]);
+    elements.flags.put((byte)(flags.getValue()));
+    elements.frames.put((byte)(texFrames - 1));
+    float[] lightingData=calcLightingValuesForVertexPos(chunkView,vertices[vIdx].add(offsetX,offsetY,offsetZ,new Vector3f()),normals[vIdx]);
+    elements.sunlight.put(lightingData[0]);
+    elements.blockLight.put(lightingData[1]);
+    elements.ambientOcclusion.put(lightingData[2]);
+  }
+  elements.vertexCount+=vertices.length;
+  for (  int index : indices) {
+    elements.indices.put(index + nextIndex);
+  }
+}

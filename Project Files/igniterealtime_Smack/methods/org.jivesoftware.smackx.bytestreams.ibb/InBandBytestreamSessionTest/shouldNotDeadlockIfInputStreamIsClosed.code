@@ -1,0 +1,39 @@
+/** 
+ * If the input stream is closed concurrently there should be no deadlock.
+ * @throws Exception should not happen
+ */
+@Test public void shouldNotDeadlockIfInputStreamIsClosed() throws Exception {
+  IQ resultIQ=IBBPacketUtils.createResultIQ(initiatorJID,targetJID);
+  protocol.addResponse(resultIQ);
+  InBandBytestreamSession session=new InBandBytestreamSession(connection,initBytestream,initiatorJID);
+  final InputStream inputStream=session.getInputStream();
+  StanzaListener listener=Whitebox.getInternalState(inputStream,"dataPacketListener",StanzaListener.class);
+  String base64Data=Base64.encode("Data");
+  DataPacketExtension dpe=new DataPacketExtension(sessionID,0,base64Data);
+  Data data=new Data(dpe);
+  listener.processStanza(data);
+  Thread closer=new Thread(new Runnable(){
+    @Override public void run(){
+      try {
+        Thread.sleep(200);
+        inputStream.close();
+      }
+ catch (      Exception e) {
+        fail(e.getMessage());
+      }
+    }
+  }
+);
+  closer.start();
+  try {
+    byte[] bytes=new byte[20];
+    while (inputStream.read(bytes) != -1) {
+    }
+    inputStream.read();
+    fail("should throw an exception");
+  }
+ catch (  IOException e) {
+    assertTrue(e.getMessage().contains("closed"));
+  }
+  protocol.verifyAll();
+}

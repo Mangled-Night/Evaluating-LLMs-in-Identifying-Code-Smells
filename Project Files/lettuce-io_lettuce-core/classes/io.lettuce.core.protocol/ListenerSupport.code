@@ -1,0 +1,23 @@
+static class ListenerSupport {
+  Collection<? extends RedisCommand<?,?,?>> sentCommands;
+  RedisCommand<?,?,?> sentCommand;
+  DefaultEndpoint endpoint;
+  void dequeue(){
+    if (sentCommand != null) {
+      QUEUE_SIZE.decrementAndGet(endpoint);
+    }
+ else {
+      QUEUE_SIZE.addAndGet(endpoint,-sentCommands.size());
+    }
+  }
+  protected void complete(  Throwable t){
+    if (sentCommand != null) {
+      sentCommand.completeExceptionally(t);
+    }
+ else {
+      for (      RedisCommand<?,?,?> sentCommand : sentCommands) {
+        sentCommand.completeExceptionally(t);
+      }
+    }
+  }
+}

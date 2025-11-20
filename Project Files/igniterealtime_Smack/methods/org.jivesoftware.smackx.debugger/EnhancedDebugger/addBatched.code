@@ -1,0 +1,33 @@
+private static void addBatched(String string,PriorityBlockingQueue<String> buffer,JTextArea jTextArea){
+  buffer.add(string);
+  SwingUtilities.invokeLater(() -> {
+    List<String> linesToAdd=new ArrayList<>();
+    String data;
+    Instant start=Instant.now();
+    try {
+      while (linesToAdd.size() < 50 && Duration.between(start,Instant.now()).compareTo(Duration.ofMillis(100)) < 0 && (data=buffer.poll(10,TimeUnit.MILLISECONDS)) != null) {
+        linesToAdd.add(data);
+      }
+    }
+ catch (    InterruptedException e) {
+      LOGGER.log(Level.FINER,"Interrupted wait-for-poll in addBatched(). Process all data now.",e);
+    }
+    if (linesToAdd.isEmpty()) {
+      return;
+    }
+    if (EnhancedDebuggerWindow.PERSISTED_DEBUGGER && !EnhancedDebuggerWindow.getInstance().isVisible()) {
+      return;
+    }
+    int linesToDelete=jTextArea.getLineCount() + linesToAdd.size() - EnhancedDebuggerWindow.MAX_TABLE_ROWS;
+    if (linesToDelete > 0) {
+      try {
+        jTextArea.replaceRange("",0,jTextArea.getLineEndOffset(linesToDelete - 1));
+      }
+ catch (      BadLocationException e) {
+        LOGGER.log(Level.SEVERE,"Error with line offset, MAX_TABLE_ROWS is set too low: " + EnhancedDebuggerWindow.MAX_TABLE_ROWS,e);
+      }
+    }
+    jTextArea.append(String.join(NEWLINE,linesToAdd));
+  }
+);
+}

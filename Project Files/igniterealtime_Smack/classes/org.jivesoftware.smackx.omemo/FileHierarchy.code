@@ -1,0 +1,97 @@
+/** 
+ * This class represents the directory structure of the FileBasedOmemoStore. The directory looks as follows: OMEMO_Store/ 'romeo@montague.lit'/                           //Our bareJid ... 'juliet@capulet.lit'/                           //Our other bareJid '13371234'/                                 //deviceId identityKeyPair                         //Our identityKeyPair lastSignedPreKeyRenewal                 //Date of when the signedPreKey was last renewed. preKeys/                                //Our preKeys '1' '2' ... signedPreKeys/                          //Our signedPreKeys '1' '2' ... contacts/ 'romeo@capulet.lit'/                //Juliets contact Romeo activeDevice                    //List of Romeos active devices inactiveDevices                 //List of his inactive devices 'deviceId'/                     //Romeos deviceId identityKey                 //Romeos identityKey session                     //Our session with romeo trust                       //Records about the trust in romeos device (lastReceivedMessageDate)   //Only, for our own other devices: //date of the last received message
+ */
+public static class FileHierarchy {
+  static final String STORE="OMEMO_Store";
+  static final String CONTACTS="contacts";
+  static final String IDENTITY_KEY="identityKey";
+  static final String IDENTITY_KEY_PAIR="identityKeyPair";
+  static final String PRE_KEYS="preKeys";
+  static final String LAST_MESSAGE_RECEVIED_DATE="lastMessageReceivedDate";
+  static final String LAST_DEVICEID_PUBLICATION_DATE="lastDeviceIdPublicationDate";
+  static final String SIGNED_PRE_KEYS="signedPreKeys";
+  static final String LAST_SIGNED_PRE_KEY_RENEWAL="lastSignedPreKeyRenewal";
+  static final String SESSION="session";
+  static final String DEVICE_LIST_ACTIVE="activeDevices";
+  static final String DEVICE_LIST_INAVTIVE="inactiveDevices";
+  static final String MESSAGE_COUNTER="messageCounter";
+  File basePath;
+  FileHierarchy(  File basePath){
+    this.basePath=basePath;
+    basePath.mkdirs();
+  }
+  File getStoreDirectory(){
+    return createDirectory(basePath,STORE);
+  }
+  File getUserDirectory(  OmemoDevice userDevice){
+    return getUserDirectory(userDevice.getJid());
+  }
+  File getUserDirectory(  BareJid bareJid){
+    return createDirectory(getStoreDirectory(),bareJidEncoder.encode(bareJid));
+  }
+  File getUserDeviceDirectory(  OmemoDevice userDevice){
+    return createDirectory(getUserDirectory(userDevice.getJid()),Integer.toString(userDevice.getDeviceId()));
+  }
+  File getContactsDir(  OmemoDevice userDevice){
+    return createDirectory(getUserDeviceDirectory(userDevice),CONTACTS);
+  }
+  File getContactsDir(  OmemoDevice userDevice,  BareJid contact){
+    return createDirectory(getContactsDir(userDevice),bareJidEncoder.encode(contact));
+  }
+  File getContactsDir(  OmemoDevice userDevice,  OmemoDevice contactsDevice){
+    return createDirectory(getContactsDir(userDevice,contactsDevice.getJid()),Integer.toString(contactsDevice.getDeviceId()));
+  }
+  File getIdentityKeyPairPath(  OmemoDevice userDevice){
+    return new File(getUserDeviceDirectory(userDevice),IDENTITY_KEY_PAIR);
+  }
+  File getPreKeysDirectory(  OmemoDevice userDevice){
+    return createDirectory(getUserDeviceDirectory(userDevice),PRE_KEYS);
+  }
+  File getPreKeyPath(  OmemoDevice userDevice,  int preKeyId){
+    return new File(getPreKeysDirectory(userDevice),Integer.toString(preKeyId));
+  }
+  File getLastMessageReceivedDatePath(  OmemoDevice userDevice,  OmemoDevice device){
+    return new File(getContactsDir(userDevice,device),LAST_MESSAGE_RECEVIED_DATE);
+  }
+  File getLastDeviceIdPublicationDatePath(  OmemoDevice userDevice,  OmemoDevice device){
+    return new File(getContactsDir(userDevice,device),LAST_DEVICEID_PUBLICATION_DATE);
+  }
+  File getSignedPreKeysDirectory(  OmemoDevice userDevice){
+    return createDirectory(getUserDeviceDirectory(userDevice),SIGNED_PRE_KEYS);
+  }
+  File getLastSignedPreKeyRenewal(  OmemoDevice userDevice){
+    return new File(getUserDeviceDirectory(userDevice),LAST_SIGNED_PRE_KEY_RENEWAL);
+  }
+  File getContactsIdentityKeyPath(  OmemoDevice userDevice,  OmemoDevice contactsDevice){
+    return new File(getContactsDir(userDevice,contactsDevice),IDENTITY_KEY);
+  }
+  File getContactsSessionPath(  OmemoDevice userDevice,  OmemoDevice contactsDevice){
+    return new File(getContactsDir(userDevice,contactsDevice),SESSION);
+  }
+  File getContactsActiveDevicesPath(  OmemoDevice userDevice,  BareJid contact){
+    return new File(getContactsDir(userDevice,contact),DEVICE_LIST_ACTIVE);
+  }
+  File getContactsInactiveDevicesPath(  OmemoDevice userDevice,  BareJid contact){
+    return new File(getContactsDir(userDevice,contact),DEVICE_LIST_INAVTIVE);
+  }
+  File getDevicesMessageCounterPath(  OmemoDevice userDevice,  OmemoDevice otherDevice){
+    return new File(getContactsDir(userDevice,otherDevice),MESSAGE_COUNTER);
+  }
+  private static File createFile(  File f) throws IOException {
+    File p=f.getParentFile();
+    createDirectory(p);
+    f.createNewFile();
+    return f;
+  }
+  private static File createDirectory(  File dir,  String subdir){
+    File f=new File(dir,subdir);
+    return createDirectory(f);
+  }
+  private static File createDirectory(  File f){
+    if (f.exists() && f.isDirectory()) {
+      return f;
+    }
+    f.mkdirs();
+    return f;
+  }
+}

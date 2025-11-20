@@ -1,0 +1,16 @@
+/** 
+ * Tries to determine if the default truststore type is of type jks and sets the javax.net.ssl.trustStoreType system property to 'JKS' if so. This is meant as workaround in situations where the default truststore type is (still) 'jks' but we run on a newer JRE/JDK which uses PKCS#12 as type. See for example <a href="https://bugs.gentoo.org/712290">Gentoo bug #712290</a>.
+ */
+public static void setDefaultTrustStoreTypeToJksIfRequired(){
+  DefaultTrustStoreType defaultTrustStoreType;
+  try {
+    defaultTrustStoreType=getDefaultTruststoreType();
+  }
+ catch (  IOException e) {
+    LOGGER.log(Level.WARNING,"Could not set keystore type to jks if required",e);
+    return;
+  }
+  if (defaultTrustStoreType == DefaultTrustStoreType.jks) {
+    System.setProperty("javax.net.ssl.trustStoreType","JKS");
+  }
+}

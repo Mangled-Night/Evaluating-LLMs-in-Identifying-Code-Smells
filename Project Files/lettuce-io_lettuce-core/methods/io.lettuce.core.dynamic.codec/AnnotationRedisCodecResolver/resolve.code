@@ -1,0 +1,19 @@
+@Override public RedisCodec<?,?> resolve(CommandMethod commandMethod){
+  LettuceAssert.notNull(commandMethod,"CommandMethod must not be null");
+  Set<Class<?>> keyTypes=findTypes(commandMethod,Key.class);
+  Set<Class<?>> valueTypes=findTypes(commandMethod,Value.class);
+  if (keyTypes.isEmpty() && valueTypes.isEmpty()) {
+    Voted<RedisCodec<?,?>> voted=voteForTypeMajority(commandMethod);
+    if (voted != null) {
+      return voted.subject;
+    }
+    return codecs.get(0);
+  }
+  if ((keyTypes.size() == 1 && hasAtMostOne(valueTypes)) || (valueTypes.size() == 1 && hasAtMostOne(keyTypes))) {
+    RedisCodec<?,?> resolvedCodec=resolveCodec(keyTypes,valueTypes);
+    if (resolvedCodec != null) {
+      return resolvedCodec;
+    }
+  }
+  throw new IllegalStateException(String.format("Cannot resolve Codec for method %s",commandMethod.getMethod()));
+}

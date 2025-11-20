@@ -1,0 +1,32 @@
+private void handleUpdateSkuStockList(Long id,PmsProductParam productParam){
+  List<PmsSkuStock> currSkuList=productParam.getSkuStockList();
+  if (CollUtil.isEmpty(currSkuList)) {
+    PmsSkuStockExample skuStockExample=new PmsSkuStockExample();
+    skuStockExample.createCriteria().andProductIdEqualTo(id);
+    skuStockMapper.deleteByExample(skuStockExample);
+    return;
+  }
+  PmsSkuStockExample skuStockExample=new PmsSkuStockExample();
+  skuStockExample.createCriteria().andProductIdEqualTo(id);
+  List<PmsSkuStock> oriStuList=skuStockMapper.selectByExample(skuStockExample);
+  List<PmsSkuStock> insertSkuList=currSkuList.stream().filter(item -> item.getId() == null).collect(Collectors.toList());
+  List<PmsSkuStock> updateSkuList=currSkuList.stream().filter(item -> item.getId() != null).collect(Collectors.toList());
+  List<Long> updateSkuIds=updateSkuList.stream().map(PmsSkuStock::getId).collect(Collectors.toList());
+  List<PmsSkuStock> removeSkuList=oriStuList.stream().filter(item -> !updateSkuIds.contains(item.getId())).collect(Collectors.toList());
+  handleSkuStockCode(insertSkuList,id);
+  handleSkuStockCode(updateSkuList,id);
+  if (CollUtil.isNotEmpty(insertSkuList)) {
+    relateAndInsertList(skuStockDao,insertSkuList,id);
+  }
+  if (CollUtil.isNotEmpty(removeSkuList)) {
+    List<Long> removeSkuIds=removeSkuList.stream().map(PmsSkuStock::getId).collect(Collectors.toList());
+    PmsSkuStockExample removeExample=new PmsSkuStockExample();
+    removeExample.createCriteria().andIdIn(removeSkuIds);
+    skuStockMapper.deleteByExample(removeExample);
+  }
+  if (CollUtil.isNotEmpty(updateSkuList)) {
+    for (    PmsSkuStock pmsSkuStock : updateSkuList) {
+      skuStockMapper.updateByPrimaryKeySelective(pmsSkuStock);
+    }
+  }
+}

@@ -1,0 +1,11 @@
+@Test void shouldGuardAgainstMultipleCancelCalls(){
+  CommandWrapper<String,String,String> commandWrapper=new CommandWrapper<>(sut);
+  AtomicInteger counter=new AtomicInteger();
+  commandWrapper.onComplete(s -> commandWrapper.cancel());
+  commandWrapper.onComplete((s,throwable) -> {
+    counter.incrementAndGet();
+  }
+);
+  commandWrapper.cancel();
+  assertThat(counter).hasValue(1);
+}

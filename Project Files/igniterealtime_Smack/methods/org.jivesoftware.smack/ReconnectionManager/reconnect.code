@@ -1,0 +1,12 @@
+/** 
+ * Starts a reconnection mechanism if it was configured to do that. The algorithm is been executed when the first connection error is detected.
+ */
+private synchronized void reconnect(){
+  XMPPConnection connection=this.weakRefConnection.get();
+  if (connection == null) {
+    LOGGER.fine("Connection is null, will not reconnect");
+    return;
+  }
+  if (reconnectionThread != null && reconnectionThread.isAlive())   return;
+  reconnectionThread=Async.go(reconnectionRunnable,"Smack Reconnection Manager (" + connection.getConnectionCounter() + ')');
+}

@@ -1,0 +1,28 @@
+private final class UnorderedListParagraphRenderable implements ParagraphRenderable {
+  private ParagraphData paragraphData;
+  private UnorderedListParagraphRenderable(  ParagraphData paragraphData){
+    this.paragraphData=paragraphData;
+  }
+  @Override public int getContentsMinWidth(  ParagraphRenderStyle defaultStyle){
+    FallbackParagraphRenderStyle fallbackStyle=new FallbackParagraphRenderStyle(defaultStyle,paragraphData.getParagraphRenderStyle());
+    Font font=fallbackStyle.getFont(false);
+    int maxIndent=getMaxIndent(font);
+    return maxIndent + paragraphData.getParagraphContents().getContentsMinWidth(defaultStyle);
+  }
+  @Override public int getPreferredContentsHeight(  ParagraphRenderStyle defaultStyle,  int yStart,  ContainerRenderSpace containerRenderSpace,  int sideIndents){
+    FallbackParagraphRenderStyle fallbackStyle=new FallbackParagraphRenderStyle(defaultStyle,paragraphData.getParagraphRenderStyle());
+    Font font=fallbackStyle.getFont(false);
+    int maxIndent=getMaxIndent(font);
+    return paragraphData.getParagraphContents().getPreferredContentsHeight(defaultStyle,yStart,containerRenderSpace,sideIndents + maxIndent);
+  }
+  @Override public void renderContents(  Canvas canvas,  Vector2i startPos,  ContainerRenderSpace containerRenderSpace,  int leftIndent,  int rightIndent,  ParagraphRenderStyle defaultStyle,  HorizontalAlign horizontalAlign,  HyperlinkRegister hyperlinkRegister){
+    FallbackParagraphRenderStyle fallbackStyle=new FallbackParagraphRenderStyle(defaultStyle,paragraphData.getParagraphRenderStyle());
+    Font font=fallbackStyle.getFont(false);
+    int advance=containerRenderSpace.getAdvanceForVerticalPosition(startPos.y);
+    String text="o";
+    Rectanglei bounds=RectUtility.createFromMinAndSize(startPos.x + leftIndent + advance,startPos.y,font.getWidth(text),font.getLineHeight());
+    canvas.drawTextRaw(text,font,fallbackStyle.getColor(false),bounds);
+    int maxIndent=getMaxIndent(font);
+    paragraphData.getParagraphContents().renderContents(canvas,startPos,containerRenderSpace,leftIndent + maxIndent,rightIndent,defaultStyle,horizontalAlign,hyperlinkRegister);
+  }
+}

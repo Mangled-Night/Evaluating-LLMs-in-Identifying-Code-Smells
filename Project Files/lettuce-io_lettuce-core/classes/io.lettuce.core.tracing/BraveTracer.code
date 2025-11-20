@@ -1,0 +1,32 @@
+/** 
+ * Brave-specific implementation of  {@link Tracer}.
+ */
+static class BraveTracer extends Tracer {
+  private final brave.Tracing tracing;
+  private final BraveTracingOptions tracingOptions;
+  private final boolean includeCommandArgsInSpanTags;
+  BraveTracer(  brave.Tracing tracing,  BraveTracingOptions tracingOptions,  boolean includeCommandArgsInSpanTags){
+    this.tracing=tracing;
+    this.tracingOptions=tracingOptions;
+    this.includeCommandArgsInSpanTags=includeCommandArgsInSpanTags;
+  }
+  @Override public Span nextSpan(){
+    return postProcessSpan(tracing.tracer().nextSpan());
+  }
+  @Override public Span nextSpan(  TraceContext traceContext){
+    if (!(traceContext instanceof BraveTraceContext)) {
+      return nextSpan();
+    }
+    BraveTraceContext braveTraceContext=BraveTraceContext.class.cast(traceContext);
+    if (braveTraceContext.traceContext == null) {
+      return nextSpan();
+    }
+    return postProcessSpan(tracing.tracer().nextSpan(TraceContextOrSamplingFlags.create(braveTraceContext.traceContext)));
+  }
+  private Span postProcessSpan(  brave.Span span){
+    if (span == null || span.isNoop()) {
+      return NoOpTracing.NoOpSpan.INSTANCE;
+    }
+    return new BraveSpan(span.kind(brave.Span.Kind.CLIENT),this.tracingOptions,includeCommandArgsInSpanTags);
+  }
+}

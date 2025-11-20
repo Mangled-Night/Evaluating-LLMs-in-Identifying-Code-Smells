@@ -1,0 +1,40 @@
+/** 
+ * Assigns a  {@link WorldConfigurator} for every world if it doesn't exist. Usingthe WorldConfigurator it gets the properties associated with that world.
+ */
+private void configureProperties(){
+  PropertyLayout propLayout=find("properties",PropertyLayout.class);
+  propLayout.setOrdering(PropertyOrdering.byLabel());
+  propLayout.clear();
+  WorldConfigurator worldConfig;
+  if (world.getWorldConfigurator() != null) {
+    worldConfig=world.getWorldConfigurator();
+  }
+ else {
+    worldConfig=worldGenerator.getConfigurator();
+    world.setWorldConfigurator(worldConfig);
+  }
+  oldWorldConfig=worldConfig;
+  Map<String,Component> params=worldConfig.getProperties();
+  for (  String key : params.keySet()) {
+    Class<? extends Component> clazz=params.get(key).getClass();
+    Component comp=config.getModuleConfig(worldGenerator.getUri(),key,clazz);
+    if (comp != null) {
+      worldConfig.setProperty(key,comp);
+    }
+  }
+  ComponentLibrary compLib=context.get(ComponentLibrary.class);
+  for (  String label : params.keySet()) {
+    PropertyProvider provider=new PropertyProvider(context.get(ReflectFactory.class),context.get(OneOfProviderFactory.class)){
+      @Override protected <T>Binding<T> createTextBinding(      Object target,      FieldMetadata<Object,T> fieldMetadata){
+        return new WorldSetupScreen.WorldConfigBinding<>(worldConfig,label,compLib,fieldMetadata);
+      }
+      @Override protected Binding<Float> createFloatBinding(      Object target,      FieldMetadata<Object,?> fieldMetadata){
+        return new WorldSetupScreen.WorldConfigNumberBinding(worldConfig,label,compLib,fieldMetadata);
+      }
+    }
+;
+    Component target=params.get(label);
+    List<Property<?,?>> properties=provider.createProperties(target);
+    propLayout.addProperties(label,properties);
+  }
+}

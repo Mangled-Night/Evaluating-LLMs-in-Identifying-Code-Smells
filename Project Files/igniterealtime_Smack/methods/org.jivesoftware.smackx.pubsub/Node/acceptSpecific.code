@@ -1,0 +1,18 @@
+@Override public boolean acceptSpecific(Message message){
+  EventElement event=EventElement.from(message);
+  if (event == null)   return false;
+  NodeExtension embedEvent=event.getEvent();
+  if (embedEvent == null)   return false;
+  if (embedEvent.getElementName().equals(firstElement)) {
+    if (!embedEvent.getNode().equals(getId()))     return false;
+    if (secondElement == null)     return true;
+    if (embedEvent instanceof EmbeddedPacketExtension) {
+      List<XmlElement> secondLevelList=((EmbeddedPacketExtension)embedEvent).getExtensions();
+      if (allowEmpty && secondLevelList.isEmpty()) {
+        return true;
+      }
+      if (secondLevelList.size() > 0 && secondLevelList.get(0).getElementName().equals(secondElement))       return true;
+    }
+  }
+  return false;
+}

@@ -1,0 +1,32 @@
+public static QName getQNameFor(Class<? extends XmlElement> fullyQualifiedElement){
+  QName qname=CLASS_TO_QNAME_CACHE.get(fullyQualifiedElement);
+  if (qname != null) {
+    return qname;
+  }
+  try {
+    Object qnameObject=fullyQualifiedElement.getField("QNAME").get(null);
+    if (QName.class.isAssignableFrom(qnameObject.getClass())) {
+      qname=(QName)qnameObject;
+      CLASS_TO_QNAME_CACHE.put(fullyQualifiedElement,qname);
+      return qname;
+    }
+    LOGGER.warning("The QNAME field of " + fullyQualifiedElement + " is not of type QNAME.");
+  }
+ catch (  NoSuchFieldException e) {
+    LOGGER.finer("The " + fullyQualifiedElement + " has no static QNAME field. Consider adding one.");
+  }
+catch (  IllegalArgumentException|IllegalAccessException|SecurityException e) {
+    throw new IllegalArgumentException(e);
+  }
+  String element, namespace;
+  try {
+    element=(String)fullyQualifiedElement.getField("ELEMENT").get(null);
+    namespace=(String)fullyQualifiedElement.getField("NAMESPACE").get(null);
+  }
+ catch (  IllegalArgumentException|IllegalAccessException|NoSuchFieldException|SecurityException e) {
+    throw new IllegalArgumentException("The " + fullyQualifiedElement + " has no ELEMENT, NAMESPACE or QNAME member. Consider adding QNAME",e);
+  }
+  qname=new QName(namespace,element);
+  CLASS_TO_QNAME_CACHE.put(fullyQualifiedElement,qname);
+  return qname;
+}

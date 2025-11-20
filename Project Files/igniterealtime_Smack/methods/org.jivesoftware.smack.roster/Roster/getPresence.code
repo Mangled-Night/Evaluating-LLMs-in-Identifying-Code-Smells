@@ -1,0 +1,50 @@
+/** 
+ * Returns the presence info for a particular user. If the user is offline, or if no presence data is available (such as when you are not subscribed to the user's presence updates), unavailable presence will be returned. If the user has several presences (one for each resource), then the presence with highest priority will be returned. If multiple presences have the same priority, the one with the "most available" presence mode will be returned. In order, that's  {@link org.jivesoftware.smack.packet.Presence.Mode#chat free to chat}, {@link org.jivesoftware.smack.packet.Presence.Mode#available available}, {@link org.jivesoftware.smack.packet.Presence.Mode#away away}, {@link org.jivesoftware.smack.packet.Presence.Mode#xa extended away}, and {@link org.jivesoftware.smack.packet.Presence.Mode#dnd do not disturb}. <p> Note that presence information is received asynchronously. So, just after logging in to the server, presence values for users in the roster may be unavailable even if they are actually online. In other words, the value returned by this method should only be treated as a snapshot in time, and may not accurately reflect other user's presence instant by instant. If you need to track presence over time, such as when showing a visual representation of the roster, consider using a {@link RosterListener}. </p>
+ * @param jid the XMPP address of the user (eg "jsmith@example.com"). Theaddress must be a bare JID e.g. "domain/resource" or "user@domain".
+ * @return the user's current presence, or unavailable presence if the user is offlineor if no presence information is available..
+ */
+public Presence getPresence(BareJid jid){
+  Map<Resourcepart,Presence> userPresences=getPresencesInternal(jid);
+  if (userPresences == null) {
+    Presence presence=synthesizeUnvailablePresence(jid);
+    return presence;
+  }
+ else {
+    Presence presence=null;
+    Presence unavailable=null;
+    for (    Presence p : userPresences.values()) {
+      if (!p.isAvailable()) {
+        unavailable=p;
+        continue;
+      }
+      if (presence == null || p.getPriority() > presence.getPriority()) {
+        presence=p;
+      }
+ else       if (p.getPriority() == presence.getPriority()) {
+        Presence.Mode pMode=p.getMode();
+        if (pMode == null) {
+          pMode=Presence.Mode.available;
+        }
+        Presence.Mode presenceMode=presence.getMode();
+        if (presenceMode == null) {
+          presenceMode=Presence.Mode.available;
+        }
+        if (pMode.compareTo(presenceMode) < 0) {
+          presence=p;
+        }
+      }
+    }
+    if (presence == null) {
+      if (unavailable != null) {
+        return unavailable;
+      }
+ else {
+        presence=synthesizeUnvailablePresence(jid);
+        return presence;
+      }
+    }
+ else {
+      return presence;
+    }
+  }
+}

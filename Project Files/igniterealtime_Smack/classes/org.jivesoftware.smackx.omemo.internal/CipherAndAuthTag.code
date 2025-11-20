@@ -1,0 +1,39 @@
+/** 
+ * Encapsulate Cipher and AuthTag.
+ * @author Paul Schaub
+ */
+public class CipherAndAuthTag {
+  private final byte[] key, iv, authTag;
+  private final boolean wasPreKey;
+  public CipherAndAuthTag(  byte[] key,  byte[] iv,  byte[] authTag,  boolean wasPreKey){
+    this.authTag=authTag;
+    this.key=key;
+    this.iv=iv;
+    this.wasPreKey=wasPreKey;
+  }
+  public String decrypt(  byte[] ciphertext) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException {
+    byte[] plaintext=OmemoAesCipher.decryptAesGcmNoPadding(ciphertext,key,iv);
+    return new String(plaintext,StandardCharsets.UTF_8);
+  }
+  public byte[] getAuthTag(){
+    if (authTag != null) {
+      return authTag.clone();
+    }
+    return null;
+  }
+  public byte[] getKey(){
+    if (key != null) {
+      return key.clone();
+    }
+    return null;
+  }
+  public byte[] getIv(){
+    if (iv != null) {
+      return iv.clone();
+    }
+    return null;
+  }
+  public boolean wasPreKeyEncrypted(){
+    return wasPreKey;
+  }
+}

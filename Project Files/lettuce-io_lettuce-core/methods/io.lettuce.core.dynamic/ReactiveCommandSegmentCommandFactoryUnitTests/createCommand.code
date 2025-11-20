@@ -1,0 +1,8 @@
+RedisCommand<?,?,?> createCommand(String methodName,Class<?> interfaceClass,Class<?>... parameterTypes){
+  Method method=ReflectionUtils.findMethod(interfaceClass,methodName,parameterTypes);
+  CommandMethod commandMethod=DeclaredCommandMethod.create(method);
+  AnnotationCommandSegmentFactory segmentFactory=new AnnotationCommandSegmentFactory();
+  CommandSegments commandSegments=segmentFactory.createCommandSegments(commandMethod);
+  ReactiveCommandSegmentCommandFactory factory=new ReactiveCommandSegmentCommandFactory(commandSegments,commandMethod,new StringCodec(),outputFactoryResolver);
+  return factory.createCommand(new Object[]{"foo"});
+}

@@ -1,0 +1,20 @@
+@Test void testParseWithReplica(){
+  List<?> list=Arrays.asList(LettuceLists.newList("100","200",LettuceLists.newList("1","2","nodeId1"),LettuceLists.newList("1",2,"nodeId2")));
+  List<ClusterSlotRange> result=ClusterSlotsParser.parse(list);
+  assertThat(result).hasSize(1);
+  ClusterSlotRange clusterSlotRange=result.get(0);
+  RedisClusterNode upstreamNode=clusterSlotRange.getUpstream();
+  assertThat(upstreamNode).isNotNull();
+  assertThat(upstreamNode.getNodeId()).isEqualTo("nodeId1");
+  assertThat(upstreamNode.getUri().getHost()).isEqualTo("1");
+  assertThat(upstreamNode.getUri().getPort()).isEqualTo(2);
+  assertThat(upstreamNode.is(RedisClusterNode.NodeFlag.MASTER)).isTrue();
+  assertThat(upstreamNode.getSlots()).contains(100,101,199,200);
+  assertThat(upstreamNode.getSlots()).doesNotContain(99,201);
+  assertThat(upstreamNode.getSlots()).hasSize(101);
+  assertThat(clusterSlotRange.getSlaveNodes()).hasSize(1);
+  RedisClusterNode replica=clusterSlotRange.getReplicaNodes().get(0);
+  assertThat(replica.getNodeId()).isEqualTo("nodeId2");
+  assertThat(replica.getSlaveOf()).isEqualTo("nodeId1");
+  assertThat(replica.is(RedisClusterNode.NodeFlag.SLAVE)).isTrue();
+}

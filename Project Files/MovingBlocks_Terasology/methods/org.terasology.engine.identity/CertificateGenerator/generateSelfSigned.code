@@ -1,0 +1,25 @@
+/** 
+ * Generates a self-signed certificate. These are used to identify servers.
+ * @return A matched pair of public and private certificates.
+ */
+public CertificatePair generateSelfSigned(){
+  keyPairGenerator.initialize(KEY_SIZE);
+  KeyPair kp=keyPairGenerator.genKeyPair();
+  try {
+    RSAPublicKeySpec pub=keyFactory.getKeySpec(kp.getPublic(),RSAPublicKeySpec.class);
+    RSAPrivateKeySpec priv=keyFactory.getKeySpec(kp.getPrivate(),RSAPrivateKeySpec.class);
+    String uuid=UUID.randomUUID().toString();
+    signer.initSign(kp.getPrivate(),new SecureRandom());
+    signer.update(uuid.getBytes(Charsets.UTF_8));
+    signer.update(pub.getModulus().toByteArray());
+    signer.update(pub.getPublicExponent().toByteArray());
+    byte[] rawSig=signer.sign();
+    BigInteger signature=new BigInteger(rawSig);
+    PublicIdentityCertificate publicCert=new PublicIdentityCertificate(uuid,pub.getModulus(),pub.getPublicExponent(),signature);
+    PrivateIdentityCertificate privateCert=new PrivateIdentityCertificate(priv.getModulus(),priv.getPrivateExponent());
+    return new CertificatePair(publicCert,privateCert);
+  }
+ catch (  InvalidKeySpecException|SignatureException|InvalidKeyException e) {
+    throw new RuntimeException("Unexpected exception generating certificate",e);
+  }
+}

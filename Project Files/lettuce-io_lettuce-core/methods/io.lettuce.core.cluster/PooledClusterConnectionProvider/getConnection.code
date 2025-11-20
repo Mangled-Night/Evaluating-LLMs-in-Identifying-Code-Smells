@@ -1,0 +1,35 @@
+@Override public StatefulRedisConnection<K,V> getConnection(ConnectionIntent connectionIntent,int slot){
+  try {
+    return getConnectionAsync(connectionIntent,slot).get();
+  }
+ catch (  Exception e) {
+    throw Exceptions.bubble(e);
+  }
+}
+@Override public StatefulRedisConnection<K,V> getConnection(ConnectionIntent connectionIntent,String nodeId){
+  if (debugEnabled) {
+    logger.debug("getConnection(" + connectionIntent + ", "+ nodeId+ ")");
+  }
+  return getConnection(new ConnectionKey(connectionIntent,nodeId));
+}
+@Override @SuppressWarnings({"unchecked","hiding","rawtypes"}) public StatefulRedisConnection<K,V> getConnection(ConnectionIntent connectionIntent,String host,int port){
+  try {
+    beforeGetConnection(connectionIntent,host,port);
+    return getConnection(new ConnectionKey(connectionIntent,host,port));
+  }
+ catch (  RedisException e) {
+    throw e;
+  }
+catch (  RuntimeException e) {
+    throw new RedisException(e);
+  }
+}
+private StatefulRedisConnection<K,V> getConnection(ConnectionKey key){
+  ConnectionFuture<StatefulRedisConnection<K,V>> future=getConnectionAsync(key);
+  try {
+    return future.join();
+  }
+ catch (  CompletionException e) {
+    throw RedisConnectionException.create(future.getRemoteAddress(),e.getCause());
+  }
+}

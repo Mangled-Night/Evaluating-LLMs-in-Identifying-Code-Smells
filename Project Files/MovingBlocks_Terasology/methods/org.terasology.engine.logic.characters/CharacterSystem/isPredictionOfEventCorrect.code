@@ -1,0 +1,84 @@
+private boolean isPredictionOfEventCorrect(EntityRef character,ActivationRequest event){
+  CharacterComponent characterComponent=character.getComponent(CharacterComponent.class);
+  EntityRef camera=GazeAuthoritySystem.getGazeEntityForCharacter(character);
+  LocationComponent location=camera.getComponent(LocationComponent.class);
+  Vector3f direction=location.getWorldDirection(new Vector3f());
+  if (!(event.getDirection().equals(direction,0.0001f))) {
+    logger.error("Direction at client {} was different than direction at server {}",event.getDirection(),direction);
+  }
+  direction=event.getDirection();
+  Vector3f originPos=location.getWorldPosition(new Vector3f());
+  if (!(event.getOrigin().equals(originPos,0.0001f))) {
+    String msg="Player {} seems to have cheated: It stated that it performed an action from {} but the predicted position is {}";
+    logger.info(msg,getPlayerNameFromCharacter(character),event.getOrigin(),originPos);
+    return false;
+  }
+  if (event.isOwnedEntityUsage()) {
+    if (!event.getUsedOwnedEntity().exists()) {
+      String msg="Denied activation attempt by {} since the used entity does not exist on the authority";
+      logger.info(msg,getPlayerNameFromCharacter(character));
+      return false;
+    }
+    if (!networkSystem.getOwnerEntity(event.getUsedOwnedEntity()).equals(networkSystem.getOwnerEntity(character))) {
+      String msg="Denied activation attempt by {} since it does not own the entity at the authority";
+      logger.info(msg,getPlayerNameFromCharacter(character));
+      return false;
+    }
+  }
+ else {
+    if (event.getUsedOwnedEntity().exists()) {
+      String msg="Denied activation attempt by {} since it is not properly marked as owned entity usage";
+      logger.info(msg,getPlayerNameFromCharacter(character));
+      return false;
+    }
+  }
+  if (event.isEventWithTarget()) {
+    if (!event.getTarget().exists()) {
+      String msg="Denied activation attempt by {} since the target does not exist on the authority";
+      logger.info(msg,getPlayerNameFromCharacter(character));
+      return false;
+    }
+    float interactionRange;
+    if (event.isOwnedEntityUsage() && event.getUsedOwnedEntity().hasComponent(RangeComponent.class)) {
+      interactionRange=Math.max(event.getUsedOwnedEntity().getComponent(RangeComponent.class).range,characterComponent.interactionRange);
+    }
+ else {
+      interactionRange=characterComponent.interactionRange;
+    }
+    HitResult result=physics.rayTrace(originPos,direction,interactionRange,Sets.newHashSet(character),DEFAULTPHYSICSFILTER);
+    if (!result.isHit()) {
+      String msg="Denied activation attempt by {} since at the authority there was nothing to activate at that place";
+      logger.info(msg,getPlayerNameFromCharacter(character));
+      return false;
+    }
+    EntityRef hitEntity=result.getEntity();
+    if (!hitEntity.equals(event.getTarget())) {
+      String msg="Denied activation attempt by {} since at the authority another entity would have been activated";
+      logger.info(msg,getPlayerNameFromCharacter(character));
+      return false;
+    }
+    if (!(event.getHitPosition().equals(result.getHitPoint(),0.0001f))) {
+      String msg="Denied activation attempt by {} since at the authority the object got hit at a differnt position";
+      logger.info(msg,getPlayerNameFromCharacter(character));
+      return false;
+    }
+  }
+ else {
+    if (event.getTarget().exists()) {
+      String msg="Denied activation attempt by {} since the event was not properly labeled as having a target";
+      logger.info(msg,getPlayerNameFromCharacter(character));
+      return false;
+    }
+    if (event.getHitPosition() != null) {
+      String msg="Denied activation attempt by {} since the event was not properly labeled as having a hit position";
+      logger.info(msg,getPlayerNameFromCharacter(character));
+      return false;
+    }
+    if (event.getHitNormal() != null) {
+      String msg="Denied activation attempt by {} since the event was not properly labeled as having a hit delta";
+      logger.info(msg,getPlayerNameFromCharacter(character));
+      return false;
+    }
+  }
+  return true;
+}

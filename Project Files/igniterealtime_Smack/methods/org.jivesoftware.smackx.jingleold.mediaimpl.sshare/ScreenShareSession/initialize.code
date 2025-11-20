@@ -1,0 +1,39 @@
+/** 
+ * Initialize the screen share channels.
+ */
+@Override public void initialize(){
+  JingleSession session=getJingleSession();
+  if (session != null && session.getInitiator().equals(session.getConnection().getUser())) {
+    try {
+      InetAddress remote=InetAddress.getByName(getRemote().getIp());
+      transmitter=new ImageTransmitter(new DatagramSocket(getLocal().getPort()),remote,getRemote().getPort(),new Rectangle(0,0,width,height));
+    }
+ catch (    Exception e) {
+      LOGGER.log(Level.WARNING,"exception",e);
+    }
+  }
+ else {
+    JFrame window=new JFrame();
+    JPanel jp=new JPanel();
+    window.add(jp);
+    window.setLocation(0,0);
+    window.setSize(600,600);
+    window.addWindowListener(new WindowAdapter(){
+      @Override public void windowClosed(      WindowEvent e){
+        receiver.stop();
+      }
+    }
+);
+    try {
+      receiver=new ImageReceiver(InetAddress.getByName("0.0.0.0"),getRemote().getPort(),getLocal().getPort(),width,height);
+      LOGGER.fine("Receiving on:" + receiver.getLocalPort());
+    }
+ catch (    UnknownHostException e) {
+      LOGGER.log(Level.WARNING,"exception",e);
+    }
+    jp.add(receiver);
+    receiver.setVisible(true);
+    window.setAlwaysOnTop(true);
+    window.setVisible(true);
+  }
+}

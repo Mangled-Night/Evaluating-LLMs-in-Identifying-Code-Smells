@@ -1,0 +1,25 @@
+/** 
+ * 将商品图片，商品名字画到模版图中
+ * @param qrCodeImg  二维码图片
+ * @param goodPicUrl 商品图片地址
+ * @param goodName   商品名称
+ * @return
+ * @throws IOException
+ */
+private byte[] drawPicture(InputStream qrCodeImg,String goodPicUrl,String goodName) throws IOException {
+  ClassPathResource redResource=new ClassPathResource("back.png");
+  BufferedImage red=ImageIO.read(redResource.getInputStream());
+  URL goodPic=new URL(goodPicUrl);
+  BufferedImage goodImage=ImageIO.read(goodPic);
+  BufferedImage qrCodeImage=ImageIO.read(qrCodeImg);
+  BufferedImage baseImage=new BufferedImage(red.getWidth(),red.getHeight(),BufferedImage.TYPE_4BYTE_ABGR_PRE);
+  drawImgInImg(baseImage,red,0,0,red.getWidth(),red.getHeight());
+  drawImgInImg(baseImage,goodImage,71,69,660,660);
+  drawImgInImg(baseImage,qrCodeImage,448,767,300,300);
+  drawTextInImg(baseImage,goodName,65,867);
+  BufferedImage result=new BufferedImage(baseImage.getWidth(),baseImage.getHeight(),BufferedImage.TYPE_3BYTE_BGR);
+  result.getGraphics().drawImage(baseImage,0,0,null);
+  ByteArrayOutputStream bs=new ByteArrayOutputStream();
+  ImageIO.write(result,"jpg",bs);
+  return bs.toByteArray();
+}

@@ -1,0 +1,23 @@
+public void testSendPerPay_NoPayload() throws Exception {
+  LeafNode node=getPubnode(true,true);
+  try {
+    node.send(new Item());
+    fail("Exception should be thrown when there is no payload");
+  }
+ catch (  XMPPException e) {
+    XMPPError err=e.getStanzaError();
+    assertTrue(err.getType().equals(XMPPError.Type.MODIFY));
+    assertTrue(err.getCondition().equals(Condition.bad_request.toString()));
+    assertNotNull(err.getExtension("payload-required",PubSubNamespace.ERROR.getXmlns()));
+  }
+  try {
+    node.send(new Item("test" + System.currentTimeMillis()));
+    fail("Exception should be thrown when there is no payload");
+  }
+ catch (  XMPPException e) {
+    XMPPError err=e.getStanzaError();
+    assertTrue(err.getType().equals(XMPPError.Type.MODIFY));
+    assertTrue(err.getCondition().equals(Condition.bad_request.toString()));
+    assertNotNull(err.getExtension("payload-required",PubSubNamespace.ERROR.getXmlns()));
+  }
+}

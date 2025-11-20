@@ -1,0 +1,37 @@
+/** 
+ * @author lmax.Disruptor
+ * @version 3.3.5
+ * @date 2016/8/1
+ */
+public class BlockingWaitStrategy implements WaitStrategy {
+  private final Lock lock=new ReentrantLock();
+  private final Condition processorNotifyCondition=lock.newCondition();
+  @Override public long waitFor(  long sequence,  Sequence cursorSequence,  Sequence dependentSequence,  SequenceBarrier barrier) throws AlertException, InterruptedException {
+    long availableSequence;
+    if (cursorSequence.get() < sequence) {
+      lock.lock();
+      try {
+        while (cursorSequence.get() < sequence) {
+          barrier.checkAlert();
+          processorNotifyCondition.await();
+        }
+      }
+  finally {
+        lock.unlock();
+      }
+    }
+    while ((availableSequence=dependentSequence.get()) < sequence) {
+      barrier.checkAlert();
+    }
+    return availableSequence;
+  }
+  @Override public void signalAllWhenBlocking(){
+    lock.lock();
+    try {
+      processorNotifyCondition.signalAll();
+    }
+  finally {
+      lock.unlock();
+    }
+  }
+}

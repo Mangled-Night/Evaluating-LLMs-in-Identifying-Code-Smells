@@ -1,0 +1,79 @@
+/** 
+ * 测试mycat对不同版本的mysql jdbc的兼容性  <p> 关联issue: @see https://github.com/MyCATApache/Mycat-Server/issues/1203 <p> <b>Note:</b> </br> 1. 请将这个类放到新建的project独立运行, mycat pom.xml里面使用的mysql驱动会影响测试结果 </br> 2. 确保project新建lib子目录并且在lib子目录里面放置了各类版本的mysql jdbc驱动 3. 程序会动态加载不同版本的jdbc驱动, 请不要将任何mysql jdbc驱动加入classpath, 否则也可能影响测试结果
+ * @author CrazyPig
+ * @since 2016-11-13
+ */
+public class MycatMulitJdbcVersionTest {
+  private static final String JDBC_URL="jdbc:mysql://localhost:8066/TESTDB";
+  private static final String USER="root";
+  private static final String PASSWORD="123456";
+  private static final Map<String,String> jdbcVersionMap=new HashMap<String,String>();
+  private static final Map<String,Driver> tmpDriverMap=new HashMap<String,Driver>();
+  private static void dynamicLoadJdbc(  String mysqlJdbcFile) throws Exception {
+    URL u=new URL("jar:file:lib/" + mysqlJdbcFile + "!/");
+    String classname=jdbcVersionMap.get(mysqlJdbcFile);
+    URLClassLoader ucl=new URLClassLoader(new URL[]{u});
+    Driver d=(Driver)Class.forName(classname,true,ucl).newInstance();
+    DriverShim driver=new DriverShim(d);
+    DriverManager.registerDriver(driver);
+    tmpDriverMap.put(mysqlJdbcFile,driver);
+  }
+  private static void dynamicUnLoadJdbc(  String mysqlJdbcFile) throws SQLException {
+    DriverManager.deregisterDriver(tmpDriverMap.get(mysqlJdbcFile));
+  }
+  private static void testOneVersion(  String mysqlJdbcFile){
+    System.out.println("start test mysql jdbc version : " + mysqlJdbcFile);
+    try {
+      dynamicLoadJdbc(mysqlJdbcFile);
+    }
+ catch (    Exception e1) {
+      e1.printStackTrace();
+    }
+    Connection conn=null;
+    try {
+      conn=DriverManager.getConnection(JDBC_URL,USER,PASSWORD);
+      Statement stmt=conn.createStatement();
+      ResultSet rs=stmt.executeQuery("select user()");
+      System.out.println("select user() output : ");
+      while (rs.next()) {
+        System.out.println(rs.getObject(1));
+      }
+      rs=stmt.executeQuery("show tables");
+      System.out.println("show tables output : ");
+      while (rs.next()) {
+        System.out.println(rs.getObject(1));
+      }
+    }
+ catch (    SQLException e) {
+      e.printStackTrace();
+    }
+ finally {
+      if (conn != null) {
+        try {
+          conn.close();
+        }
+ catch (        SQLException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+    try {
+      dynamicUnLoadJdbc(mysqlJdbcFile);
+    }
+ catch (    SQLException e) {
+      e.printStackTrace();
+    }
+    System.out.println("end !!!");
+    System.out.println();
+  }
+  public static void main(  String[] args){
+    jdbcVersionMap.put("mysql-connector-java-6.0.3.jar","com.mysql.cj.jdbc.Driver");
+    jdbcVersionMap.put("mysql-connector-java-5.1.6.jar","com.mysql.jdbc.Driver");
+    jdbcVersionMap.put("mysql-connector-java-5.1.31.jar","com.mysql.jdbc.Driver");
+    jdbcVersionMap.put("mysql-connector-java-5.1.35.jar","com.mysql.jdbc.Driver");
+    jdbcVersionMap.put("mysql-connector-java-5.1.39.jar","com.mysql.jdbc.Driver");
+    for (    String mysqlJdbcFile : jdbcVersionMap.keySet()) {
+      testOneVersion(mysqlJdbcFile);
+    }
+  }
+}

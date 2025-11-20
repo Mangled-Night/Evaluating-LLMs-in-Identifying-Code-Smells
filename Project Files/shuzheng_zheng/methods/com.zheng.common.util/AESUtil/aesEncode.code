@@ -1,0 +1,39 @@
+/** 
+ * 加密 1.构造密钥生成器 2.根据ecnodeRules规则初始化密钥生成器 3.产生密钥 4.创建和初始化密码器 5.内容加密 6.返回字符串
+ */
+public static String aesEncode(String content){
+  try {
+    KeyGenerator keyGenerator=KeyGenerator.getInstance("AES");
+    SecureRandom random=SecureRandom.getInstance("SHA1PRNG");
+    random.setSeed(ENCODE_RULES.getBytes());
+    keyGenerator.init(128,random);
+    SecretKey originalKey=keyGenerator.generateKey();
+    byte[] raw=originalKey.getEncoded();
+    SecretKey key=new SecretKeySpec(raw,"AES");
+    Cipher cipher=Cipher.getInstance("AES");
+    cipher.init(Cipher.ENCRYPT_MODE,key);
+    byte[] byteEncode=content.getBytes("utf-8");
+    byte[] byteAES=cipher.doFinal(byteEncode);
+    String aesEncode=new String(new BASE64Encoder().encode(byteAES));
+    return aesEncode;
+  }
+ catch (  NoSuchAlgorithmException e) {
+    e.printStackTrace();
+  }
+catch (  NoSuchPaddingException e) {
+    e.printStackTrace();
+  }
+catch (  InvalidKeyException e) {
+    e.printStackTrace();
+  }
+catch (  IllegalBlockSizeException e) {
+    e.printStackTrace();
+  }
+catch (  BadPaddingException e) {
+    e.printStackTrace();
+  }
+catch (  UnsupportedEncodingException e) {
+    e.printStackTrace();
+  }
+  return null;
+}

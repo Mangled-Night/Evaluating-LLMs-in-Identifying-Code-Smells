@@ -1,0 +1,28 @@
+/** 
+ * Sets the  {@link UIButtonWebBrowser#url} value and sets{@link UIButtonWebBrowser#confirmed} to true if the given URL or Hostname isalready trusted, otherwise confirmed is false.
+ * @throws MalformedURLException
+ */
+public UIButtonWebBrowser setUrl(String url){
+  boolean trustedHostName=false;
+  boolean trustedUrl=false;
+  if (webBrowserConfig != null) {
+    try {
+      String hostname=new URL(url).getHost();
+      trustedHostName=webBrowserConfig.isHostNameTrusted(hostname);
+    }
+ catch (    MalformedURLException e) {
+      logger.error(url + " is malformed",e);
+    }
+    if (!trustedHostName) {
+      trustedUrl=webBrowserConfig.isUrlTrusted(url);
+    }
+  }
+  if (trustedHostName || trustedUrl) {
+    confirmed.set(true);
+  }
+ else {
+    confirmed.set(false);
+  }
+  this.url=url;
+  return this;
+}

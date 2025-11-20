@@ -1,0 +1,28 @@
+/** 
+ * 进行缓存更新通知
+ * @param key 缓存模块的key
+ * @return true 当前缓存模块数据更新成功，false，当前缓存数据更新失败
+ */
+public boolean notifly(String key){
+  boolean result=false;
+  if (null != key && !"".equals(key)) {
+    if (ZkNofiflyCfg.ZK_NOTIFLY_LOAD_ALL.getKey().equals(key)) {
+      this.notiflyAll();
+    }
+ else {
+      String watchListen=watchToListenMap.get(key);
+      if (null != watchListen) {
+        NotiflyService cacheService=listenCache.get(watchListen);
+        if (null != cacheService) {
+          try {
+            result=cacheService.notiflyProcess();
+          }
+ catch (          Exception e) {
+            lOG.error("ZookeeperProcessListen notifly key :" + key + " error:Exception info:",e);
+          }
+        }
+      }
+    }
+  }
+  return result;
+}

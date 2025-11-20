@@ -1,0 +1,43 @@
+@Transactional public Object create(GoodsAllinone goodsAllinone){
+  Object error=validate(goodsAllinone);
+  if (error != null) {
+    return error;
+  }
+  LitemallGoods goods=goodsAllinone.getGoods();
+  LitemallGoodsAttribute[] attributes=goodsAllinone.getAttributes();
+  LitemallGoodsSpecification[] specifications=goodsAllinone.getSpecifications();
+  LitemallGoodsProduct[] products=goodsAllinone.getProducts();
+  String name=goods.getName();
+  if (goodsService.checkExistByName(name)) {
+    return ResponseUtil.fail(GOODS_NAME_EXIST,"商品名已经存在");
+  }
+  BigDecimal retailPrice=new BigDecimal(Integer.MAX_VALUE);
+  for (  LitemallGoodsProduct product : products) {
+    BigDecimal productPrice=product.getPrice();
+    if (retailPrice.compareTo(productPrice) == 1) {
+      retailPrice=productPrice;
+    }
+  }
+  goods.setRetailPrice(retailPrice);
+  goodsService.add(goods);
+  String url=qCodeService.createGoodShareImage(goods.getId().toString(),goods.getPicUrl(),goods.getName());
+  if (!StringUtils.isEmpty(url)) {
+    goods.setShareUrl(url);
+    if (goodsService.updateById(goods) == 0) {
+      throw new RuntimeException("更新数据失败");
+    }
+  }
+  for (  LitemallGoodsSpecification specification : specifications) {
+    specification.setGoodsId(goods.getId());
+    specificationService.add(specification);
+  }
+  for (  LitemallGoodsAttribute attribute : attributes) {
+    attribute.setGoodsId(goods.getId());
+    attributeService.add(attribute);
+  }
+  for (  LitemallGoodsProduct product : products) {
+    product.setGoodsId(goods.getId());
+    productService.add(product);
+  }
+  return ResponseUtil.ok();
+}

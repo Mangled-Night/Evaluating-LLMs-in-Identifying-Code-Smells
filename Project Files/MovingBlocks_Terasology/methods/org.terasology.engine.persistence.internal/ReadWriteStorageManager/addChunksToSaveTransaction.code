@@ -1,0 +1,18 @@
+private void addChunksToSaveTransaction(SaveTransactionBuilder saveTransactionBuilder,ChunkProvider chunkProvider){
+  unloadedAndSavingChunkMap.clear();
+  Iterator<Map.Entry<Vector3ic,CompressedChunkBuilder>> unsavedEntryIterator=unloadedAndUnsavedChunkMap.entrySet().iterator();
+  while (unsavedEntryIterator.hasNext()) {
+    Map.Entry<Vector3ic,CompressedChunkBuilder> entry=unsavedEntryIterator.next();
+    unloadedAndSavingChunkMap.put(entry.getKey(),entry.getValue());
+    unsavedEntryIterator.remove();
+  }
+  chunkProvider.getAllChunks().stream().filter(Chunk::isReady).forEach(chunk -> {
+    unloadedAndSavingChunkMap.remove(chunk.getPosition());
+    ChunkImpl chunkImpl=(ChunkImpl)chunk;
+    saveTransactionBuilder.addLoadedChunk(chunk.getPosition(),chunkImpl);
+  }
+);
+  for (  Map.Entry<Vector3ic,CompressedChunkBuilder> entry : unloadedAndSavingChunkMap.entrySet()) {
+    saveTransactionBuilder.addUnloadedChunk(entry.getKey(),entry.getValue());
+  }
+}

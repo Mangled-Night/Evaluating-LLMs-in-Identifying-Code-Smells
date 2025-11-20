@@ -1,0 +1,14 @@
+@Override public void asynRead(){
+  ByteBuffer theBuffer=con.readBuffer;
+  if (theBuffer == null) {
+    theBuffer=con.processor.getBufferPool().allocate(con.processor.getBufferPool().getChunkSize());
+    con.readBuffer=theBuffer;
+    channel.read(theBuffer,this,aioReadHandler);
+  }
+ else   if (theBuffer.hasRemaining()) {
+    channel.read(theBuffer,this,aioReadHandler);
+  }
+ else {
+    throw new java.lang.IllegalArgumentException("full buffer to read ");
+  }
+}

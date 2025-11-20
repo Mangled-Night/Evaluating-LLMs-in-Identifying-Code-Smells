@@ -1,0 +1,33 @@
+@Override public void send(EntityRef entity,Event event){
+  if (Thread.currentThread() != mainThread) {
+    pendingEvents.offer(new PendingEvent(entity,event));
+  }
+ else {
+    Set<EventHandlerInfo> selectedHandlersSet=selectEventHandlers(event.getClass(),entity);
+    List<EventHandlerInfo> selectedHandlers=Lists.newArrayList(selectedHandlersSet);
+    selectedHandlers.sort(priorityComparator);
+    if (event instanceof ConsumableEvent) {
+      sendConsumableEvent(entity,event,selectedHandlers);
+    }
+ else {
+      sendStandardEvent(entity,event,selectedHandlers);
+    }
+  }
+}
+@Override public void send(EntityRef entity,Event event,Component component){
+  if (Thread.currentThread() != mainThread) {
+    pendingEvents.offer(new PendingEvent(entity,event,component));
+  }
+ else {
+    SetMultimap<Class<? extends Component>,EventHandlerInfo> handlers=componentSpecificHandlers.get(event.getClass());
+    if (handlers != null) {
+      List<EventHandlerInfo> eventHandlers=Lists.newArrayList(handlers.get(component.getClass()));
+      eventHandlers.sort(priorityComparator);
+      for (      EventHandlerInfo eventHandler : eventHandlers) {
+        if (eventHandler.isValidFor(entity)) {
+          eventHandler.invoke(entity,event);
+        }
+      }
+    }
+  }
+}

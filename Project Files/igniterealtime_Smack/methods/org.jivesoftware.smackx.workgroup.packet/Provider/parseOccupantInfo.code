@@ -1,0 +1,24 @@
+private static OccupantInfo parseOccupantInfo(XmlPullParser parser) throws XmlPullParserException, IOException, ParseException {
+  boolean done=false;
+  String jid=null;
+  String nickname=null;
+  Date joined=null;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT && "jid".equals(parser.getName())) {
+      jid=parser.nextText();
+    }
+ else     if (eventType == XmlPullParser.Event.START_ELEMENT && "nickname".equals(parser.getName())) {
+      nickname=parser.nextText();
+    }
+ else     if (eventType == XmlPullParser.Event.START_ELEMENT && "joined".equals(parser.getName())) {
+synchronized (UTC_FORMAT) {
+        joined=UTC_FORMAT.parse(parser.nextText());
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT && "occupant".equals(parser.getName())) {
+      done=true;
+    }
+  }
+  return new OccupantInfo(jid,nickname,joined);
+}

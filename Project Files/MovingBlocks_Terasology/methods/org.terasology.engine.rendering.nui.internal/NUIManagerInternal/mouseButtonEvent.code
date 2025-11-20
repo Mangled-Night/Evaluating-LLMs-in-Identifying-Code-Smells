@@ -1,0 +1,25 @@
+@Priority(EventPriority.PRIORITY_HIGH) @ReceiveEvent(components=ClientComponent.class) public void mouseButtonEvent(MouseButtonEvent event,EntityRef entity){
+  if (!mouse.isVisible()) {
+    return;
+  }
+  Vector2i mousePosition=event.getMousePosition();
+  if (focus != null) {
+    focus.onMouseButtonEvent(new NUIMouseButtonEvent(event.getButton(),event.getState(),mousePosition));
+    if (event.isConsumed()) {
+      return;
+    }
+  }
+  if (event.isDown()) {
+    if (canvas.processMouseClick(event.getButton(),mousePosition)) {
+      event.consume();
+    }
+  }
+ else {
+    if (canvas.processMouseRelease(event.getButton(),mousePosition)) {
+      event.consume();
+    }
+  }
+  if (isReleasingMouse()) {
+    event.consume();
+  }
+}

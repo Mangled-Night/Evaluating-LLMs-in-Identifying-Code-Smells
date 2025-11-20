@@ -1,0 +1,10 @@
+@Test void testMasterSlaveSentinelConnectionCount(){
+  ChannelGroup channels=(ChannelGroup)ReflectionTestUtils.getField(redisClient,"channels");
+  int count=channels.size();
+  StatefulRedisMasterSlaveConnection<String,String> connection=MasterSlave.connect(redisClient,StringCodec.UTF8,SentinelTestSettings.SENTINEL_URI);
+  connection.sync().ping();
+  connection.setReadFrom(ReadFrom.REPLICA);
+  slaveCall(connection);
+  assertThat(channels.size()).isEqualTo(count + 2 + 1);
+  connection.close();
+}

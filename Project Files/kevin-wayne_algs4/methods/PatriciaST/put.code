@@ -1,0 +1,43 @@
+/** 
+ * Places a key-value pair into the symbol table. If the table already contains the specified key, then its associated value becomes updated. If the value provided is  {@code null}, then the key becomes removed from the symbol table.
+ * @param key the key
+ * @param val the value
+ * @throws IllegalArgumentException if {@code key} is {@code null}
+ * @throws IllegalArgumentException if {@code key} is the empty string.
+ */
+public void put(String key,Value val){
+  if (key == null)   throw new IllegalArgumentException("called put(null)");
+  if (key.length() == 0)   throw new IllegalArgumentException("invalid key");
+  if (val == null)   delete(key);
+  Node p;
+  Node x=head;
+  do {
+    p=x;
+    if (safeBitTest(key,x.b))     x=x.right;
+ else     x=x.left;
+  }
+ while (p.b < x.b);
+  if (!x.key.equals(key)) {
+    int b=firstDifferingBit(x.key,key);
+    x=head;
+    do {
+      p=x;
+      if (safeBitTest(key,x.b))       x=x.right;
+ else       x=x.left;
+    }
+ while (p.b < x.b && x.b < b);
+    Node t=new Node(key,val,b);
+    if (safeBitTest(key,b)) {
+      t.left=x;
+      t.right=t;
+    }
+ else {
+      t.left=t;
+      t.right=x;
+    }
+    if (safeBitTest(key,p.b))     p.right=t;
+ else     p.left=t;
+    count++;
+  }
+ else   x.val=val;
+}

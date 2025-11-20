@@ -1,0 +1,35 @@
+@Override public Map<Vector3ic,Block> setBlocks(Map<? extends Vector3ic,Block> blocks){
+  Set<BlockChange> changedBlocks=new HashSet<>();
+  Map<Vector3ic,Block> result=new HashMap<>(blocks.size());
+  Vector3i chunkPos=new Vector3i();
+  Vector3i relativePos=new Vector3i();
+  for (  Map.Entry<? extends Vector3ic,Block> entry : blocks.entrySet()) {
+    Vector3ic worldPos=entry.getKey();
+    Chunks.toChunkPos(worldPos,chunkPos);
+    Chunk chunk=chunkProvider.getChunk(chunkPos);
+    if (chunk != null) {
+      Block type=entry.getValue();
+      Chunks.toRelative(worldPos,relativePos);
+      Block oldBlockType=chunk.setBlock(relativePos,type);
+      if (oldBlockType != type) {
+        BlockChange oldChange=blockChanges.get(worldPos);
+        if (oldChange == null) {
+          blockChanges.put(new Vector3i(worldPos),new BlockChange(worldPos,oldBlockType,type));
+        }
+ else {
+          oldChange.setTo(type);
+        }
+        setDirtyChunksNear(worldPos);
+        changedBlocks.add(new BlockChange(worldPos,oldBlockType,type));
+      }
+      result.put(worldPos,oldBlockType);
+    }
+ else {
+      result.put(worldPos,null);
+    }
+  }
+  for (  BlockChange change : changedBlocks) {
+    notifyBlockChanged(change.getPosition(),change.getTo(),change.getFrom());
+  }
+  return result;
+}

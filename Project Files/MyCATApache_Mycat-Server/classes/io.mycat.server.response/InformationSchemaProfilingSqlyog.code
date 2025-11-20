@@ -1,0 +1,31 @@
+public class InformationSchemaProfilingSqlyog {
+  private static final int FIELD_COUNT=2;
+  /** 
+ * response method.
+ * @param c
+ */
+  public static void response(  ServerConnection c){
+    ResultSetHeaderPacket header=PacketUtil.getHeader(FIELD_COUNT);
+    FieldPacket[] fields=new FieldPacket[FIELD_COUNT];
+    EOFPacket eof=new EOFPacket();
+    int i=0;
+    byte packetId=0;
+    header.packetId=++packetId;
+    fields[i]=PacketUtil.getField("State",Fields.FIELD_TYPE_VAR_STRING);
+    fields[i].packetId=++packetId;
+    fields[i + 1]=PacketUtil.getField("duration (summed) in sec",Fields.FIELD_TYPE_DECIMAL);
+    fields[i + 1].packetId=++packetId;
+    eof.packetId=++packetId;
+    ByteBuffer buffer=c.allocate();
+    buffer=header.write(buffer,c,true);
+    for (    FieldPacket field : fields) {
+      buffer=field.write(buffer,c,true);
+    }
+    buffer=eof.write(buffer,c,true);
+    packetId=eof.packetId;
+    EOFPacket lastEof=new EOFPacket();
+    lastEof.packetId=++packetId;
+    buffer=lastEof.write(buffer,c,true);
+    c.write(buffer);
+  }
+}

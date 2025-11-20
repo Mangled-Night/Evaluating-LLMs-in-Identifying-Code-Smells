@@ -1,0 +1,19 @@
+@Override public void sendLongData(byte[] data){
+  LongDataPacket packet=new LongDataPacket();
+  packet.read(data);
+  long pstmtId=packet.getPstmtId();
+  LOGGER.info("preparestatement  long data id:{}",pstmtId);
+  PreparedStatement pstmt=pstmtForId.get(pstmtId);
+  if (pstmt != null) {
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("send long data to prepare sql : " + pstmtForId.get(pstmtId));
+    }
+    long paramId=packet.getParamId();
+    try {
+      pstmt.appendLongData(paramId,packet.getLongData());
+    }
+ catch (    IOException e) {
+      source.writeErrMessage(ErrorCode.ERR_FOUND_EXCEPTION,e.getMessage());
+    }
+  }
+}

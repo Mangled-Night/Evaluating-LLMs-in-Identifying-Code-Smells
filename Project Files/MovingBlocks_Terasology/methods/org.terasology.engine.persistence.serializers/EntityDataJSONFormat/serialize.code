@@ -1,0 +1,114 @@
+@Override public JsonElement serialize(EntityData.GlobalStore src,Type typeOfSrc,JsonSerializationContext context){
+  JsonObject result=new JsonObject();
+  for (  Map.Entry<Descriptors.FieldDescriptor,Object> field : src.getAllFields().entrySet()) {
+    result.add(field.getKey().getName(),context.serialize(field.getValue()));
+  }
+  return result;
+}
+@Override public JsonElement serialize(EntityData.Component src,Type typeOfSrc,JsonSerializationContext context){
+  JsonObject result=new JsonObject();
+  for (  EntityData.NameValue field : src.getFieldList()) {
+    result.add(field.getName(),context.serialize(field.getValue()));
+  }
+  return result;
+}
+@Override public JsonElement serialize(EntityData.Entity src,Type typeOfSrc,JsonSerializationContext context){
+  JsonObject result=new JsonObject();
+  if (src.hasId()) {
+    result.addProperty("id",src.getId());
+  }
+  if (src.hasParentPrefab() && !src.getParentPrefab().isEmpty()) {
+    result.addProperty("parentPrefab",src.getParentPrefab());
+  }
+  if (src.hasAlwaysRelevant()) {
+    result.addProperty("alwaysRelevant",src.getAlwaysRelevant());
+  }
+  if (src.hasOwner()) {
+    result.addProperty("owner",src.getOwner());
+  }
+  for (  EntityData.Component component : src.getComponentList()) {
+    result.add(component.getType(),context.serialize(component));
+  }
+  if (src.getRemovedComponentCount() > 0) {
+    JsonArray removedComponentArray=new JsonArray();
+    for (    String removedComponent : src.getRemovedComponentList()) {
+      removedComponentArray.add(new JsonPrimitive(removedComponent));
+    }
+    result.add("removedComponent",removedComponentArray);
+  }
+  return result;
+}
+@Override public JsonElement serialize(EntityData.Prefab src,Type typeOfSrc,JsonSerializationContext context){
+  JsonObject result=new JsonObject();
+  if (src.hasName()) {
+    result.addProperty("name",src.getName());
+  }
+  if (src.hasParentName()) {
+    result.addProperty("parent",src.getParentName());
+  }
+  if (src.hasPersisted()) {
+    result.addProperty("persisted",src.getPersisted());
+  }
+  if (src.hasAlwaysRelevant()) {
+    result.addProperty("alwaysRelevant",src.getAlwaysRelevant());
+  }
+  if (src.getRemovedComponentCount() > 0) {
+    result.add("removedComponents",context.serialize(src.getRemovedComponentList()));
+  }
+  for (  EntityData.Component component : src.getComponentList()) {
+    result.add(component.getType(),context.serialize(component));
+  }
+  return result;
+}
+@Override public JsonElement serialize(EntityData.Value src,Type typeOfSrc,JsonSerializationContext context){
+  if (src.getBooleanCount() > 1) {
+    return context.serialize(src.getBooleanList());
+  }
+ else   if (src.getBooleanCount() == 1) {
+    return context.serialize(src.getBoolean(0));
+  }
+ else   if (src.getDoubleCount() > 1) {
+    return context.serialize(src.getDoubleList());
+  }
+ else   if (src.getDoubleCount() == 1) {
+    return context.serialize(src.getDouble(0));
+  }
+ else   if (src.getFloatCount() > 1) {
+    return context.serialize(src.getFloatList());
+  }
+ else   if (src.getFloatCount() == 1) {
+    return context.serialize(src.getFloat(0));
+  }
+ else   if (src.getIntegerCount() > 1) {
+    return context.serialize(src.getIntegerList());
+  }
+ else   if (src.getIntegerCount() == 1) {
+    return context.serialize(src.getInteger(0));
+  }
+ else   if (src.getLongCount() > 1) {
+    return context.serialize(src.getLongList());
+  }
+ else   if (src.getLongCount() == 1) {
+    return context.serialize(src.getLong(0));
+  }
+ else   if (src.getStringCount() > 1) {
+    return context.serialize(src.getStringList());
+  }
+ else   if (src.getStringCount() == 1) {
+    return context.serialize(src.getString(0));
+  }
+ else   if (src.getValueCount() > 0) {
+    return context.serialize(src.getValueList());
+  }
+ else   if (src.hasBytes()) {
+    return context.serialize(src.getBytes().toByteArray());
+  }
+ else   if (src.getNameValueCount() > 0) {
+    JsonObject obj=new JsonObject();
+    for (    EntityData.NameValue nameValue : src.getNameValueList()) {
+      obj.add(nameValue.getName(),context.serialize(nameValue.getValue()));
+    }
+    return obj;
+  }
+  return JsonNull.INSTANCE;
+}

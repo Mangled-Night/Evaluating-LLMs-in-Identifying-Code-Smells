@@ -1,0 +1,23 @@
+void recycle(Collection<? extends AbstractXMPPConnection> connections){
+  for (  AbstractXMPPConnection connection : connections) {
+    recycle(connection);
+  }
+}
+void recycle(AbstractXMPPConnection connection){
+  Class<? extends AbstractXMPPConnection> connectionClass=connection.getClass();
+  if (!connectionDescriptors.containsKey(connectionClass)) {
+    throw new IllegalStateException("Attempt to recycle unknown connection of class '" + connectionClass + "'");
+  }
+  if (connection.isAuthenticated()) {
+    XmppConnectionDescriptor<?,?,?> connectionDescriptor=connections.get(connection);
+    if (connectionDescriptor == null) {
+      throw new IllegalStateException("Attempt to recycle unknown connection: " + connection);
+    }
+synchronized (connectionPool) {
+      connectionPool.put(connectionDescriptor,connection);
+    }
+  }
+ else {
+    connection.disconnect();
+  }
+}

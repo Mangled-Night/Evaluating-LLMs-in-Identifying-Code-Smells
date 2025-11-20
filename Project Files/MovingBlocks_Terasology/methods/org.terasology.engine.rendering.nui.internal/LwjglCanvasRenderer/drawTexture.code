@@ -1,0 +1,57 @@
+@Override public void drawTexture(UITextureRegion texture,Colorc color,ScaleMode mode,Rectanglei absoluteRegionRectangle,float ux,float uy,float uw,float uh,float alpha){
+  if (!((TextureRegion)texture).getTexture().isLoaded()) {
+    return;
+  }
+  Rectanglei absoluteRegion=new Rectanglei(absoluteRegionRectangle);
+  if (!currentTextureCropRegion.equals(requestedCropRegion) && !(currentTextureCropRegion.containsRectangle(absoluteRegion) && requestedCropRegion.containsRectangle(absoluteRegion))) {
+    textureMat.setFloat4(CROPPING_BOUNDARIES_PARAM,requestedCropRegion.minX,requestedCropRegion.maxX,requestedCropRegion.minY,requestedCropRegion.maxY);
+    currentTextureCropRegion=requestedCropRegion;
+  }
+  Vector2f scale=mode.scaleForRegion(absoluteRegionRectangle,texture.getWidth(),texture.getHeight());
+  Rectanglef textureArea=new Rectanglef(texture.getRegion());
+  Mesh mesh=billboard;
+switch (mode) {
+case TILED:
+{
+      Vector2i textureSize=texture.size();
+      TextureCacheKey key=new TextureCacheKey(textureSize,new Vector2i(absoluteRegion.getSizeX(),absoluteRegion.getSizeY()));
+      usedTextures.add(key);
+      mesh=cachedTextures.get(key);
+      if (mesh == null || mesh.isDisposed()) {
+        MeshBuilder builder=new MeshBuilder();
+        addTiles(builder,absoluteRegion,FULL_REGION,textureSize,FULL_REGION);
+        mesh=builder.build();
+        cachedTextures.put(key,mesh);
+      }
+      textureMat.setFloat2("scale",scale);
+      textureMat.setFloat2("offset",absoluteRegion.minX,absoluteRegion.minY);
+      textureMat.setFloat2("texOffset",textureArea.minX + ux * textureArea.getSizeX(),textureArea.minY + uy * textureArea.getSizeY());
+      textureMat.setFloat2("texSize",uw * textureArea.getSizeX(),uh * textureArea.getSizeY());
+      break;
+    }
+case SCALE_FILL:
+{
+    textureMat.setFloat2("offset",absoluteRegion.minX,absoluteRegion.minY);
+    textureMat.setFloat2("scale",absoluteRegion.getSizeX(),absoluteRegion.getSizeY());
+    float texBorderX=(scale.x - absoluteRegion.getSizeX()) / scale.x * uw;
+    float texBorderY=(scale.y - absoluteRegion.getSizeY()) / scale.y * uh;
+    textureMat.setFloat2("texOffset",textureArea.minX + (ux + 0.5f * texBorderX) * textureArea.getSizeX(),textureArea.minY + (uy + 0.5f * texBorderY) * textureArea.getSizeY());
+    textureMat.setFloat2("texSize",(uw - texBorderX) * textureArea.getSizeX(),(uh - texBorderY) * textureArea.getSizeY());
+    break;
+  }
+default :
+{
+  textureMat.setFloat2("scale",scale);
+  textureMat.setFloat2("offset",absoluteRegion.minX + 0.5f * (absoluteRegion.getSizeX() - scale.x),absoluteRegion.minY + 0.5f * (absoluteRegion.getSizeY() - scale.y));
+  textureMat.setFloat2("texOffset",textureArea.minX + ux * textureArea.getSizeX(),textureArea.minY + uy * textureArea.getSizeY());
+  textureMat.setFloat2("texSize",uw * textureArea.getSizeX(),uh * textureArea.getSizeY());
+  break;
+}
+}
+textureMat.setTexture("tex",((TextureRegion)texture).getTexture());
+textureMat.setFloat4("color",color.rf(),color.gf(),color.bf(),color.af() * alpha);
+textureMat.setMatrix4("projectionMatrix",projMatrix);
+textureMat.setMatrix4("modelViewMatrix",modelMatrixStack);
+textureMat.bindTextures();
+mesh.render();
+}

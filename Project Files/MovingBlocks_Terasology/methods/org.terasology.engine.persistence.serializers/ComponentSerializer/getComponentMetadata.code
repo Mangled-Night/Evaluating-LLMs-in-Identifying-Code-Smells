@@ -1,0 +1,46 @@
+/** 
+ * Determines the component class that the serialized component is for.
+ * @param componentData
+ * @return The component class the given componentData describes, or null if it is unknown.
+ */
+public ComponentMetadata<? extends Component> getComponentMetadata(EntityData.Component componentData){
+  return getComponentMetadata(componentData,null);
+}
+/** 
+ * Determines the component class that the serialized component is for.
+ * @param componentData
+ * @param context       the module this component is being loaded from
+ * @return The component class the given componentData describes, or null if it is unknown.
+ */
+public ComponentMetadata<? extends Component> getComponentMetadata(EntityData.Component componentData,Module context){
+  if (componentData.hasTypeIndex()) {
+    ComponentMetadata<? extends Component> metadata=null;
+    if (!idTable.isEmpty()) {
+      Class<? extends Component> componentClass=idTable.inverse().get(componentData.getTypeIndex());
+      if (componentClass != null) {
+        metadata=componentLibrary.getMetadata(componentClass);
+      }
+    }
+    if (metadata == null) {
+      logger.warn("Unable to deserialize unknown component with id: {}",componentData.getTypeIndex());
+      return null;
+    }
+    return metadata;
+  }
+ else   if (componentData.hasType()) {
+    ComponentMetadata<? extends Component> metadata;
+    if (context != null) {
+      metadata=componentLibrary.resolve(componentData.getType(),context);
+    }
+ else {
+      metadata=componentLibrary.resolve(componentData.getType());
+    }
+    if (metadata == null) {
+      logger.warn("Unable to deserialize unknown component type: {}",componentData.getType());
+      return null;
+    }
+    return metadata;
+  }
+  logger.warn("Unable to deserialize component, no type provided.");
+  return null;
+}

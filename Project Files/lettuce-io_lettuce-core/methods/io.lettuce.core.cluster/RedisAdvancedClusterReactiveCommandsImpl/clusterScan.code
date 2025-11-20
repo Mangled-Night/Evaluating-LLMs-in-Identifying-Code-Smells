@@ -1,0 +1,13 @@
+@SuppressWarnings("unchecked") private <T extends ScanCursor>Mono<T> clusterScan(ScanCursor cursor,BiFunction<RedisKeyReactiveCommands<K,V>,ScanCursor,Mono<T>> scanFunction,ClusterScanSupport.ScanCursorMapper<Mono<T>> resultMapper){
+  return clusterScan(getStatefulConnection(),getConnectionProvider(),cursor,scanFunction,(ClusterScanSupport.ScanCursorMapper)resultMapper);
+}
+/** 
+ * Perform a SCAN in the cluster.
+ */
+static <T extends ScanCursor,K,V>Mono<T> clusterScan(StatefulRedisClusterConnection<K,V> connection,AsyncClusterConnectionProvider connectionProvider,ScanCursor cursor,BiFunction<RedisKeyReactiveCommands<K,V>,ScanCursor,Mono<T>> scanFunction,ClusterScanSupport.ScanCursorMapper<Mono<T>> mapper){
+  List<String> nodeIds=ClusterScanSupport.getNodeIds(connection,cursor);
+  String currentNodeId=ClusterScanSupport.getCurrentNodeId(cursor,nodeIds);
+  ScanCursor continuationCursor=ClusterScanSupport.getContinuationCursor(cursor);
+  Mono<T> scanCursor=getMono(connectionProvider.<K,V>getConnectionAsync(ConnectionIntent.WRITE,currentNodeId)).flatMap(conn -> scanFunction.apply(conn.reactive(),continuationCursor));
+  return mapper.map(nodeIds,currentNodeId,scanCursor);
+}

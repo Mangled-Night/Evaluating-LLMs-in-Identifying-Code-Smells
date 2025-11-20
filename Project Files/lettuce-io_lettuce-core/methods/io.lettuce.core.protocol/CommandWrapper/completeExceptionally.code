@@ -1,0 +1,10 @@
+@Override public boolean completeExceptionally(Throwable throwable){
+  Object[] consumers=ONCOMPLETE.get(this);
+  boolean result=false;
+  if (consumers != COMPLETE && ONCOMPLETE.compareAndSet(this,consumers,COMPLETE)) {
+    result=command.completeExceptionally(throwable);
+    doOnError(throwable);
+    notifyBiConsumer(consumers,throwable);
+  }
+  return result;
+}

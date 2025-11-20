@@ -1,0 +1,37 @@
+/** 
+ * The standard block family consisting of a single symmetrical block that doesn't have unique rotations.
+ */
+@RegisterBlockFamily("symmetric") public class SymmetricFamily extends AbstractBlockFamily {
+  private Block block;
+  public SymmetricFamily(  BlockFamilyDefinition definition,  BlockShape shape,  BlockBuilderHelper blockBuilder){
+    super(definition,shape,blockBuilder);
+    BlockUri uri;
+    if (CUBE_SHAPE_URN.equals(shape.getUrn())) {
+      uri=new BlockUri(definition.getUrn());
+    }
+ else {
+      uri=new BlockUri(definition.getUrn(),shape.getUrn());
+    }
+    block=blockBuilder.constructSimpleBlock(definition,shape,uri,this);
+    setBlockUri(uri);
+  }
+  public SymmetricFamily(  BlockFamilyDefinition definition,  BlockBuilderHelper blockBuilder){
+    super(definition,blockBuilder);
+    block=blockBuilder.constructSimpleBlock(definition,new BlockUri(definition.getUrn()),this);
+  }
+  @Override public Block getBlockForPlacement(  BlockPlacementData data){
+    return block;
+  }
+  @Override public Block getArchetypeBlock(){
+    return block;
+  }
+  @Override public Block getBlockFor(  BlockUri blockUri){
+    if (getURI().equals(blockUri.getFamilyUri()) && blockUri.getIdentifier().isEmpty()) {
+      return block;
+    }
+    return null;
+  }
+  @Override public Iterable<Block> getBlocks(){
+    return Collections.singletonList(block);
+  }
+}

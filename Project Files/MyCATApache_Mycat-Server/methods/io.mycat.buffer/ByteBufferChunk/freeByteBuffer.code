@@ -1,0 +1,20 @@
+public synchronized void freeByteBuffer(ByteBuffer byteBuffer){
+  long address=((DirectBuffer)byteBuffer).address();
+  int relativeAddress=(int)(address - bufAddress);
+  int length=byteBuffer.capacity();
+  int depth=maxOrder - 1 - log2(length / pageSize);
+  int count=0;
+  int i;
+  for (i=0; i < depthMap.length; i++) {
+    if (depthMap[i] == depth) {
+      if (count == relativeAddress) {
+        break;
+      }
+      count+=length;
+    }
+    if (depthMap[i] > depth) {
+      break;
+    }
+  }
+  free(i);
+}

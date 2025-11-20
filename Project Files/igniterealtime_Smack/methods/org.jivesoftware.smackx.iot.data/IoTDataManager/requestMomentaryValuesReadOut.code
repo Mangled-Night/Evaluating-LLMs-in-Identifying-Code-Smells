@@ -1,0 +1,35 @@
+/** 
+ * Try to read out a things momentary values.
+ * @param jid the full JID of the thing to read data from.
+ * @return a list with the read out data.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public List<IoTFieldsExtension> requestMomentaryValuesReadOut(EntityFullJid jid) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  final XMPPConnection connection=connection();
+  final int seqNr=nextSeqNr.incrementAndGet();
+  IoTDataRequest iotDataRequest=new IoTDataRequest(seqNr,true);
+  iotDataRequest.setTo(jid);
+  StanzaFilter doneFilter=new IoTFieldsExtensionFilter(seqNr,true);
+  StanzaFilter dataFilter=new IoTFieldsExtensionFilter(seqNr,false);
+  StanzaCollector doneCollector=connection.createStanzaCollector(doneFilter);
+  StanzaCollector.Configuration dataCollectorConfiguration=StanzaCollector.newConfiguration().setStanzaFilter(dataFilter).setCollectorToReset(doneCollector);
+  StanzaCollector dataCollector=connection.createStanzaCollector(dataCollectorConfiguration);
+  try {
+    connection.sendIqRequestAndWaitForResponse(iotDataRequest);
+    doneCollector.nextResult();
+  }
+  finally {
+    dataCollector.cancel();
+  }
+  int collectedCount=dataCollector.getCollectedCount();
+  List<IoTFieldsExtension> res=new ArrayList<>(collectedCount);
+  for (int i=0; i < collectedCount; i++) {
+    Message message=dataCollector.pollResult();
+    IoTFieldsExtension iotFieldsExtension=IoTFieldsExtension.from(message);
+    res.add(iotFieldsExtension);
+  }
+  return res;
+}

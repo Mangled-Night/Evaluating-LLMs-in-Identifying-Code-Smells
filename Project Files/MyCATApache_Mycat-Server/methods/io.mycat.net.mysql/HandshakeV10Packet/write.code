@@ -1,0 +1,38 @@
+public void write(FrontendConnection c){
+  ByteBuffer buffer=c.allocate();
+  BufferUtil.writeUB3(buffer,calcPacketSize());
+  buffer.put(packetId);
+  buffer.put(protocolVersion);
+  BufferUtil.writeWithNull(buffer,serverVersion);
+  BufferUtil.writeUB4(buffer,threadId);
+  buffer.put(seed);
+  buffer.put((byte)0);
+  BufferUtil.writeUB2(buffer,serverCapabilities);
+  buffer.put(serverCharsetIndex);
+  BufferUtil.writeUB2(buffer,serverStatus);
+  BufferUtil.writeUB2(buffer,(serverCapabilities >> 16));
+  if ((serverCapabilities & Capabilities.CLIENT_PLUGIN_AUTH) != 0) {
+    if (restOfScrambleBuff.length <= 13) {
+      buffer.put((byte)(seed.length + 13));
+    }
+ else {
+      buffer.put((byte)(seed.length + restOfScrambleBuff.length));
+    }
+  }
+ else {
+    buffer.put((byte)0);
+  }
+  buffer.put(FILLER_10);
+  if ((serverCapabilities & Capabilities.CLIENT_SECURE_CONNECTION) != 0) {
+    buffer.put(restOfScrambleBuff);
+    if (restOfScrambleBuff.length < 13) {
+      for (int i=13 - restOfScrambleBuff.length; i > 0; i--) {
+        buffer.put((byte)0);
+      }
+    }
+  }
+  if ((serverCapabilities & Capabilities.CLIENT_PLUGIN_AUTH) != 0) {
+    BufferUtil.writeWithNull(buffer,authPluginName);
+  }
+  c.write(buffer);
+}

@@ -1,0 +1,44 @@
+/** 
+ * Return the bytes of file's MD5 encryption.
+ * @param filePath The path of file.
+ * @return the bytes of file's MD5 encryption
+ */
+public static byte[] encryptMD5File(final String filePath){
+  File file=UtilsBridge.isSpace(filePath) ? null : new File(filePath);
+  return encryptMD5File(file);
+}
+/** 
+ * Return the bytes of file's MD5 encryption.
+ * @param file The file.
+ * @return the bytes of file's MD5 encryption
+ */
+public static byte[] encryptMD5File(final File file){
+  if (file == null)   return null;
+  FileInputStream fis=null;
+  DigestInputStream digestInputStream;
+  try {
+    fis=new FileInputStream(file);
+    MessageDigest md=MessageDigest.getInstance("MD5");
+    digestInputStream=new DigestInputStream(fis,md);
+    byte[] buffer=new byte[256 * 1024];
+    while (true) {
+      if (!(digestInputStream.read(buffer) > 0))       break;
+    }
+    md=digestInputStream.getMessageDigest();
+    return md.digest();
+  }
+ catch (  NoSuchAlgorithmException|IOException e) {
+    e.printStackTrace();
+    return null;
+  }
+ finally {
+    try {
+      if (fis != null) {
+        fis.close();
+      }
+    }
+ catch (    IOException e) {
+      e.printStackTrace();
+    }
+  }
+}

@@ -1,0 +1,10 @@
+private CompletableFuture<StatefulRedisConnection<K,V>>[] getReadFromConnections(List<RedisNodeDescription> selection){
+  CompletableFuture<StatefulRedisConnection<K,V>>[] readerCandidates=new CompletableFuture[selection.size()];
+  for (int i=0; i < selection.size(); i++) {
+    RedisNodeDescription redisClusterNode=selection.get(i);
+    RedisURI uri=redisClusterNode.getUri();
+    ConnectionKey key=new ConnectionKey(redisClusterNode.getRole().isUpstream() ? ConnectionIntent.WRITE : ConnectionIntent.READ,uri.getHost(),uri.getPort());
+    readerCandidates[i]=getConnectionAsync(key).toCompletableFuture();
+  }
+  return readerCandidates;
+}

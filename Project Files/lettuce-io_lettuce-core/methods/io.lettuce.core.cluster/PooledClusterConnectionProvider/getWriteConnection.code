@@ -1,0 +1,26 @@
+private CompletableFuture<StatefulRedisConnection<K,V>> getWriteConnection(int slot){
+  CompletableFuture<StatefulRedisConnection<K,V>> writer;
+synchronized (stateLock) {
+    writer=writers[slot];
+  }
+  if (writer == null) {
+    RedisClusterNode master=partitions.getMasterBySlot(slot);
+    if (master == null) {
+      clusterEventListener.onUncoveredSlot(slot);
+      return Futures.failed(new PartitionSelectorException("Cannot determine a partition for slot " + slot + ".",partitions.clone()));
+    }
+    RedisURI uri=master.getUri();
+    ConnectionKey key=new ConnectionKey(ConnectionIntent.WRITE,uri.getHost(),uri.getPort());
+    ConnectionFuture<StatefulRedisConnection<K,V>> future=getConnectionAsync(key);
+    return future.thenApply(connection -> {
+synchronized (stateLock) {
+        if (writers[slot] == null) {
+          writers[slot]=CompletableFuture.completedFuture(connection);
+        }
+      }
+      return connection;
+    }
+).toCompletableFuture();
+  }
+  return writer;
+}

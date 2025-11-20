@@ -1,0 +1,52 @@
+private static PackageBufINf upLoadConfigFile(ManagerConnection c,ByteBuffer buffer,byte packetId,String fileName,String content){
+  LOGGER.info("Upload Daas Config file " + fileName + " ,content:"+ content);
+  String tempFileName=System.currentTimeMillis() + "_" + fileName;
+  File tempFile=new File(SystemConfig.getHomePath(),"conf" + File.separator + tempFileName);
+  BufferedOutputStream buff=null;
+  boolean suc=false;
+  try {
+    byte[] fileData=content.getBytes("UTF-8");
+    if (fileName.endsWith(".xml")) {
+      checkXMLFile(fileName,fileData);
+    }
+    buff=new BufferedOutputStream(new FileOutputStream(tempFile));
+    buff.write(fileData);
+    buff.flush();
+  }
+ catch (  Exception e) {
+    LOGGER.warn("write file err " + e);
+    return showInfo(c,buffer,packetId,"write file err " + e);
+  }
+ finally {
+    if (buff != null) {
+      try {
+        buff.close();
+        suc=true;
+      }
+ catch (      IOException e) {
+        LOGGER.warn("save config file err " + e);
+      }
+    }
+  }
+  if (suc) {
+    File oldFile=new File(SystemConfig.getHomePath(),"conf" + File.separator + fileName);
+    if (oldFile.exists()) {
+      File backUP=new File(SystemConfig.getHomePath(),"conf" + File.separator + fileName+ "_"+ System.currentTimeMillis()+ "_auto");
+      if (!oldFile.renameTo(backUP)) {
+        String msg="rename old file failed";
+        LOGGER.warn(msg + " for upload file " + oldFile.getAbsolutePath());
+        return showInfo(c,buffer,packetId,msg);
+      }
+    }
+    File dest=new File(SystemConfig.getHomePath(),"conf" + File.separator + fileName);
+    if (!tempFile.renameTo(dest)) {
+      String msg="rename file failed";
+      LOGGER.warn(msg + " for upload file " + tempFile.getAbsolutePath());
+      return showInfo(c,buffer,packetId,msg);
+    }
+    return showInfo(c,buffer,packetId,"SUCCESS SAVED FILE:" + fileName);
+  }
+ else {
+    return showInfo(c,buffer,packetId,"UPLOAD ERROR OCCURD:" + fileName);
+  }
+}

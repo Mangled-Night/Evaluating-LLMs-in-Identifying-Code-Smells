@@ -1,0 +1,48 @@
+/** 
+ * 重放指定记录
+ */
+private void processPlay(CommandProcess process){
+  TimeFragment tf=timeFragmentMap.get(index);
+  if (null == tf) {
+    process.end(1,format("Time fragment[%d] does not exist.",index));
+    return;
+  }
+  Advice advice=tf.getAdvice();
+  ArthasMethod method=advice.getMethod();
+  boolean accessible=advice.getMethod().isAccessible();
+  try {
+    if (!accessible) {
+      method.setAccessible(true);
+    }
+    for (int i=0; i < getReplayTimes(); i++) {
+      if (i > 0) {
+        Thread.sleep(getReplayInterval());
+        if (!process.isRunning()) {
+          return;
+        }
+      }
+      long beginTime=System.nanoTime();
+      TimeFragmentVO replayResult=createTimeFragmentVO(index,tf,expand);
+      replayResult.setTimestamp(new Date()).setCost(0).setReturn(false).setReturnObj(null).setThrow(false).setThrowExp(null);
+      try {
+        Object returnObj=method.invoke(advice.getTarget(),advice.getParams());
+        double cost=(System.nanoTime() - beginTime) / 1000000.0;
+        replayResult.setCost(cost).setReturn(true).setReturnObj(new ObjectVO(returnObj,expand));
+      }
+ catch (      Throwable t) {
+        double cost=(System.nanoTime() - beginTime) / 1000000.0;
+        replayResult.setCost(cost).setThrow(true).setThrowExp(new ObjectVO(t,expand));
+      }
+      TimeTunnelModel timeTunnelModel=new TimeTunnelModel().setReplayResult(replayResult).setReplayNo(i + 1).setExpand(expand).setSizeLimit(sizeLimit);
+      process.appendResult(timeTunnelModel);
+    }
+    process.end();
+  }
+ catch (  Throwable t) {
+    logger.warn("tt replay failed.",t);
+    process.end(-1,"tt replay failed");
+  }
+ finally {
+    method.setAccessible(accessible);
+  }
+}

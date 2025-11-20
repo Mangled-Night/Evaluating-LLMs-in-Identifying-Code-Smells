@@ -1,0 +1,19 @@
+@Test void shouldParseNodesCorrectly(){
+  Partitions result=ClusterPartitionParser.parse(nodes);
+  assertThat(result.getPartitions()).hasSize(4);
+  RedisClusterNode p1=result.getPartitions().get(0);
+  assertThat(p1.getNodeId()).isEqualTo("c37ab8396be428403d4e55c0d317348be27ed973");
+  assertThat(p1.getUri().getHost()).isEqualTo("127.0.0.1");
+  assertThat(p1.getUri().getPort()).isEqualTo(7381);
+  assertThat(p1.getSlaveOf()).isNull();
+  assertThat(p1.getFlags()).isEqualTo(Collections.singleton(RedisClusterNode.NodeFlag.MASTER));
+  assertThat(p1.getPingSentTimestamp()).isEqualTo(111);
+  assertThat(p1.getPongReceivedTimestamp()).isEqualTo(1401258245007L);
+  assertThat(p1.getConfigEpoch()).isEqualTo(222);
+  assertThat(p1.isConnected()).isTrue();
+  assertThat(p1.getSlots()).contains(7000,12000,12002,12003,16383);
+  RedisClusterNode p3=result.getPartitions().get(2);
+  assertThat(p3.getSlaveOf()).isEqualTo("4213a8dabb94f92eb6a860f4d0729e6a25d43e0c");
+  assertThat(p3.toString()).contains(RedisClusterNode.class.getSimpleName());
+  assertThat(result.toString()).contains(Partitions.class.getSimpleName());
+}

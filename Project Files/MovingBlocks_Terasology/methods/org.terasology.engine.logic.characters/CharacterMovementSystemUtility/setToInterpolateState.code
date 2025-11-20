@@ -1,0 +1,30 @@
+public void setToInterpolateState(EntityRef entity,CharacterStateEvent a,CharacterStateEvent b,long time){
+  float t=(float)(time - a.getTime()) / (b.getTime() - a.getTime());
+  Vector3f newPos=a.getPosition().lerp(b.getPosition(),t,new Vector3f());
+  Quaternionf newRot=a.getRotation().nlerp(b.getRotation(),t,new Quaternionf());
+  entity.updateComponent(LocationComponent.class,location -> {
+    location.setWorldPosition(newPos);
+    location.setWorldRotation(newRot);
+    return location;
+  }
+);
+  entity.updateComponent(CharacterMovementComponent.class,movementComponent -> {
+    movementComponent.mode=a.getMode();
+    movementComponent.setVelocity(a.getVelocity());
+    movementComponent.grounded=a.isGrounded();
+    if (b.getFootstepDelta() < a.getFootstepDelta()) {
+      movementComponent.footstepDelta=t * (1 + b.getFootstepDelta() - a.getFootstepDelta()) + a.getFootstepDelta();
+      if (movementComponent.footstepDelta > 1) {
+        movementComponent.footstepDelta-=1;
+      }
+    }
+ else {
+      movementComponent.footstepDelta=t * (b.getFootstepDelta() - a.getFootstepDelta()) + a.getFootstepDelta();
+    }
+    return movementComponent;
+  }
+);
+  if (entity.hasAllComponents(Lists.newArrayList(CharacterMovementComponent.class,LocationComponent.class))) {
+    setPhysicsLocation(entity,newPos);
+  }
+}

@@ -1,0 +1,29 @@
+private BehaviorNode getCompositeNode(JsonElement json,JsonDeserializationContext context){
+  String type;
+  JsonObject obj=json.getAsJsonObject();
+  Map.Entry<String,JsonElement> entry=obj.entrySet().iterator().next();
+  type=entry.getKey();
+  JsonElement jsonElement=entry.getValue();
+  BehaviorNode node=createNode(type);
+  if (actions.containsKey(type)) {
+    Action action=context.deserialize(jsonElement,actions.get(type));
+    addAction((ActionNode)node,action);
+  }
+ else   if (decorators.containsKey(type)) {
+    Action action=context.deserialize(jsonElement,decorators.get(type));
+    addAction((ActionNode)node,action);
+    JsonElement childJson=jsonElement.getAsJsonObject().get("child");
+    BehaviorNode child=context.deserialize(childJson,BehaviorNode.class);
+    node.insertChild(0,child);
+  }
+ else   if (jsonElement.isJsonArray()) {
+    List<BehaviorNode> children=context.deserialize(jsonElement,new TypeToken<List<BehaviorNode>>(){
+    }
+.getType());
+    for (int i=0; i < children.size(); i++) {
+      BehaviorNode child=children.get(i);
+      node.insertChild(i,child);
+    }
+  }
+  return node;
+}

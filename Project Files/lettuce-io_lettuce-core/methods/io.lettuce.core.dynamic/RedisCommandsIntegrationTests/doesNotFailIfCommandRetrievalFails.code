@@ -1,0 +1,8 @@
+@Test void doesNotFailIfCommandRetrievalFails(){
+  StatefulRedisConnection connectionMock=Mockito.mock(StatefulRedisConnection.class);
+  RedisCommands commandsMock=Mockito.mock(RedisCommands.class);
+  when(connectionMock.sync()).thenReturn(commandsMock);
+  doThrow(new RedisCommandExecutionException("ERR unknown command 'COMMAND'")).when(commandsMock).command();
+  RedisCommandFactory factory=new RedisCommandFactory(connectionMock);
+  assertThat(factory).hasFieldOrPropertyWithValue("verifyCommandMethods",false);
+}

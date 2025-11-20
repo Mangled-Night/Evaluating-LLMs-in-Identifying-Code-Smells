@@ -1,0 +1,23 @@
+@Override public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+  Runnable timeoutGuard=() -> {
+    timedOut=true;
+    if (handshakeFuture.isDone()) {
+      return;
+    }
+    fail(ctx,new RedisCommandTimeoutException("Connection initialization timed out after " + ExceptionFactory.formatTimeout(initializeTimeout)));
+  }
+;
+  Timeout timeoutHandle=clientResources.timer().newTimeout(t -> {
+    if (clientResources.eventExecutorGroup().isShuttingDown()) {
+      timeoutGuard.run();
+      return;
+    }
+    clientResources.eventExecutorGroup().submit(timeoutGuard);
+  }
+,initializeTimeout.toNanos(),TimeUnit.NANOSECONDS);
+  handshakeFuture.thenAccept(ignore -> {
+    timeoutHandle.cancel();
+  }
+);
+  super.channelRegistered(ctx);
+}

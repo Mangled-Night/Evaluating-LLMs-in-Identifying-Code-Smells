@@ -1,0 +1,23 @@
+public Object getInstanceofClass(String className) throws Exception {
+  DynaClass dynaClass=loadedDynaClassMap.get(className);
+  boolean needReload=(dynaClass == null || (dynaClass.needReloadClass(classCheckMilis) && checkChanged(dynaClass)));
+  Class<?> newClass=null;
+  if (needReload) {
+    newClass=myClassLoader.loadClass(className);
+    dynaClass=loadedDynaClassMap.get(className);
+  }
+ else {
+    newClass=dynaClass.realClass;
+  }
+  if (dynaClass != null) {
+    Object val=dynaClass.classObj;
+    if (val == null) {
+      val=dynaClass.realClass.newInstance();
+      dynaClass.classObj=val;
+    }
+    return val;
+  }
+ else {
+    return newClass.newInstance();
+  }
+}

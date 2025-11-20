@@ -1,0 +1,27 @@
+/** 
+ * Decrypt a possible OMEMO encrypted messages in a  {@link MamManager.MamQuery}. The returned list contains wrappers that either hold an  {@link OmemoMessage} in case the message was decryptedproperly, otherwise it contains the message itself.
+ * @param managerGuard authenticated OmemoManager.
+ * @param mamQuery Mam archive query
+ * @return list of {@link MessageOrOmemoMessage MessageOrOmemoMessages}.
+ * @throws IOException if an I/O error occurred.
+ */
+List<MessageOrOmemoMessage> decryptMamQueryResult(OmemoManager.LoggedInOmemoManager managerGuard,MamManager.MamQuery mamQuery) throws IOException {
+  List<MessageOrOmemoMessage> result=new ArrayList<>();
+  for (  Message message : mamQuery.getMessages()) {
+    if (OmemoManager.stanzaContainsOmemoElement(message)) {
+      OmemoElement element=(OmemoElement)message.getExtensionElement(OmemoElement.NAME_ENCRYPTED,OmemoConstants.OMEMO_NAMESPACE_V_AXOLOTL);
+      try {
+        OmemoMessage.Received omemoMessage=decryptMessage(managerGuard,message.getFrom().asBareJid(),element);
+        result.add(new MessageOrOmemoMessage(omemoMessage));
+      }
+ catch (      NoRawSessionException|CorruptedOmemoKeyException|CryptoFailedException e) {
+        LOGGER.log(Level.WARNING,"decryptMamQueryResult failed to decrypt message from " + message.getFrom() + " due to corrupted session/key: "+ e.getMessage());
+        result.add(new MessageOrOmemoMessage(message));
+      }
+    }
+ else {
+      result.add(new MessageOrOmemoMessage(message));
+    }
+  }
+  return result;
+}

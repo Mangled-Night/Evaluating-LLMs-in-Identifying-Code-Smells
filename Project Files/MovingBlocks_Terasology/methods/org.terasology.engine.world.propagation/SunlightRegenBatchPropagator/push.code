@@ -1,0 +1,31 @@
+private void push(Vector3ic pos,byte value){
+  byte regenValue=value;
+  Block block=regenWorld.getBlockAt(pos);
+  Vector3i position=new Vector3i(pos);
+  while (regenRules.canSpreadOutOf(block,Side.BOTTOM)) {
+    regenValue=regenRules.propagateValue(regenValue,Side.BOTTOM,block,1);
+    position.y-=1;
+    byte adjValue=regenWorld.getValueAt(position);
+    if (adjValue < regenValue && adjValue != PropagatorWorldView.UNAVAILABLE) {
+      block=regenWorld.getBlockAt(position);
+      if (regenRules.canSpreadInto(block,Side.TOP)) {
+        regenWorld.setValueAt(position,regenValue);
+        reduceQueues[adjValue].remove(position);
+        byte sunlightValue=(byte)(regenValue - Chunks.SUNLIGHT_REGEN_THRESHOLD);
+        if (sunlightValue > 0) {
+          byte prevValue=sunlightWorld.getValueAt(position);
+          if (prevValue < sunlightValue) {
+            sunlightWorld.setValueAt(position,sunlightValue);
+            sunlightPropagator.propagateFrom(new Vector3i(position),sunlightValue);
+          }
+        }
+      }
+ else {
+        break;
+      }
+    }
+ else {
+      break;
+    }
+  }
+}

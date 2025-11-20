@@ -1,0 +1,23 @@
+/** 
+ * @author beiwei30 on 23/11/2016.
+ */
+class CompletionHandler implements Consumer<Completion> {
+  private static final Logger logger=LoggerFactory.getLogger(CompletionHandler.class);
+  private final Handler<com.taobao.arthas.core.shell.cli.Completion> completionHandler;
+  private final Session session;
+  public CompletionHandler(  Handler<com.taobao.arthas.core.shell.cli.Completion> completionHandler,  Session session){
+    this.completionHandler=completionHandler;
+    this.session=session;
+  }
+  @Override public void accept(  final Completion completion){
+    try {
+      final String line=io.termd.core.util.Helper.fromCodePoints(completion.line());
+      final List<CliToken> tokens=Collections.unmodifiableList(CliTokens.tokenize(line));
+      com.taobao.arthas.core.shell.cli.Completion comp=new CompletionAdaptor(line,tokens,completion,session);
+      completionHandler.handle(comp);
+    }
+ catch (    Throwable t) {
+      logger.error("completion error",t);
+    }
+  }
+}

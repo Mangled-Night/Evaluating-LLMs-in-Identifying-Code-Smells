@@ -1,0 +1,38 @@
+/** 
+ * 1. Create an unfiled entry 2. Change its name 3. Check that the name has been modified 4. Reload the whole roster 5. Check that the name has been modified
+ */
+public void testChangeNameToUnfiledEntry(){
+  try {
+    Roster roster=getConnection(0).getRoster();
+    CountDownLatch latch=new CountDownLatch(1);
+    setupCountdown(latch,roster);
+    roster.createEntry(getBareJID(1),null,null);
+    waitForCountdown(latch,roster,1);
+    final CountDownLatch updateLatch=new CountDownLatch(2);
+    RosterListener latchCounter=new RosterListener(){
+      @Override public void entriesAdded(      Collection<String> addresses){
+      }
+      @Override public void entriesUpdated(      Collection<String> addresses){
+        updateLatch.countDown();
+      }
+      @Override public void entriesDeleted(      Collection<String> addresses){
+      }
+      @Override public void presenceChanged(      Presence presence){
+      }
+    }
+;
+    roster.addRosterListener(latchCounter);
+    for (    RosterEntry entry : roster.getEntries()) {
+      entry.setName("gato11");
+      assertEquals("gato11",entry.getName());
+    }
+    roster.reload();
+    updateLatch.await(5,TimeUnit.SECONDS);
+    for (    RosterEntry entry : roster.getEntries()) {
+      assertEquals("gato11",entry.getName());
+    }
+  }
+ catch (  Exception e) {
+    fail(e.getMessage());
+  }
+}

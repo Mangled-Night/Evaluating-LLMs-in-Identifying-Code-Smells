@@ -1,0 +1,63 @@
+private static RedisClusterNode parseNode(List<Object> kvlist,BitSet slots){
+  KeyValueMap nodeMap=toMap(kvlist);
+  RedisClusterNode node=new RedisClusterNode();
+  node.setNodeId(nodeMap.get("id"));
+  RedisURI uri;
+  int port=((Long)nodeMap.get("port")).intValue();
+  if (LettuceStrings.isNotEmpty(nodeMap.get("hostname"))) {
+    uri=RedisURI.create(nodeMap.get("hostname"),port);
+  }
+ else {
+    uri=RedisURI.create(nodeMap.get("endpoint"),port);
+  }
+  node.setUri(uri);
+  Set<RedisClusterNode.NodeFlag> flags=new HashSet<>();
+  flags.add(FLAG_MAPPING.get(nodeMap.<String>get("role")));
+  flags.add(FLAG_MAPPING.get(nodeMap.<String>get("health")));
+  if (flags.contains(RedisClusterNode.NodeFlag.SLAVE)) {
+    flags.add(RedisClusterNode.NodeFlag.REPLICA);
+  }
+ else   if (flags.contains(RedisClusterNode.NodeFlag.REPLICA)) {
+    flags.add(RedisClusterNode.NodeFlag.SLAVE);
+  }
+  if (flags.contains(RedisClusterNode.NodeFlag.MASTER)) {
+    flags.add(RedisClusterNode.NodeFlag.UPSTREAM);
+  }
+ else   if (flags.contains(RedisClusterNode.NodeFlag.UPSTREAM)) {
+    flags.add(RedisClusterNode.NodeFlag.MASTER);
+  }
+  node.setFlags(flags);
+  node.setReplOffset(nodeMap.get("replication-offset"));
+  node.setSlots(slots);
+  return node;
+}
+private static RedisClusterNode parseNode(String nodeInformation){
+  Iterator<String> iterator=Arrays.asList(nodeInformation.split(" ")).iterator();
+  String nodeId=iterator.next();
+  boolean connected=false;
+  RedisURI uri=null;
+  String hostAndPortPart=iterator.next();
+  if (hostAndPortPart.contains("@")) {
+    hostAndPortPart=hostAndPortPart.substring(0,hostAndPortPart.indexOf('@'));
+  }
+  HostAndPort hostAndPort=HostAndPort.parseCompat(hostAndPortPart);
+  if (LettuceStrings.isNotEmpty(hostAndPort.getHostText())) {
+    uri=RedisURI.Builder.redis(hostAndPort.getHostText(),hostAndPort.getPort()).build();
+  }
+  String flags=iterator.next();
+  List<String> flagStrings=LettuceLists.newList(flags.split("\\,"));
+  Set<RedisClusterNode.NodeFlag> nodeFlags=readFlags(flagStrings);
+  String replicaOfString=iterator.next();
+  String replicaOf="-".equals(replicaOfString) ? null : replicaOfString;
+  long pingSentTs=getLongFromIterator(iterator,0);
+  long pongReceivedTs=getLongFromIterator(iterator,0);
+  long configEpoch=getLongFromIterator(iterator,0);
+  String connectedFlags=iterator.next();
+  if (CONNECTED.equals(connectedFlags)) {
+    connected=true;
+  }
+  List<String> slotStrings=LettuceLists.newList(iterator);
+  BitSet slots=readSlots(slotStrings);
+  RedisClusterNode partition=new RedisClusterNode(uri,nodeId,connected,replicaOf,pingSentTs,pongReceivedTs,configEpoch,slots,nodeFlags);
+  return partition;
+}

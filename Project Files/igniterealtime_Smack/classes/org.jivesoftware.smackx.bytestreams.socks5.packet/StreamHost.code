@@ -1,0 +1,77 @@
+/** 
+ * Stanza extension that represents a potential SOCKS5 proxy for the file transfer. Stream hosts are forwarded to the target of the file transfer who then chooses and connects to one.
+ * @author Alexander Wenckus
+ */
+public static class StreamHost extends BytestreamExtensionElement {
+  public static final String ELEMENT="streamhost";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  private final Jid jid;
+  private final InternetAddress address;
+  private final int port;
+  public StreamHost(  Jid jid,  String address){
+    this(jid,address,0);
+  }
+  /** 
+ * Default constructor.
+ * @param jid The JID of the stream host.
+ * @param address The internet address of the stream host.
+ * @param port port of the stream host.
+ */
+  public StreamHost(  final Jid jid,  final String address,  int port){
+    this(jid,InternetAddress.from(address),port);
+  }
+  public StreamHost(  Jid jid,  InetAddress address,  int port){
+    this(jid,InternetAddress.from(address),port);
+  }
+  /** 
+ * Stream Host constructor.
+ * @param jid The JID of the stream host.
+ * @param address The internet address of the stream host.
+ * @param port port of the stream host.
+ */
+  public StreamHost(  Jid jid,  InternetAddress address,  int port){
+    this.jid=Objects.requireNonNull(jid,"StreamHost JID must not be null");
+    this.address=Objects.requireNonNull(address);
+    this.port=port;
+  }
+  /** 
+ * Returns the JID of the stream host.
+ * @return Returns the JID of the stream host.
+ */
+  public Jid getJID(){
+    return jid;
+  }
+  /** 
+ * Returns the internet address of the stream host.
+ * @return Returns the internet address of the stream host.
+ */
+  public InternetAddress getAddress(){
+    return address;
+  }
+  /** 
+ * Returns the port on which the potential stream host would accept the connection.
+ * @return Returns the port on which the potential stream host would accept the connection.
+ */
+  public int getPort(){
+    return port;
+  }
+  @Override public String getElementName(){
+    return QNAME.getLocalPart();
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this,enclosingNamespace);
+    xml.attribute("jid",getJID());
+    xml.attribute("host",address);
+    if (getPort() != 0) {
+      xml.attribute("port",Integer.toString(getPort()));
+    }
+ else {
+      xml.attribute("zeroconf","_jabber.bytestreams");
+    }
+    xml.closeEmptyElement();
+    return xml;
+  }
+  @Override public String toString(){
+    return "SOCKS5 Stream Host: " + jid + "["+ address+ ":"+ port+ "]";
+  }
+}

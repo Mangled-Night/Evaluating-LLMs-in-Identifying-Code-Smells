@@ -1,0 +1,20 @@
+public void testIgnoreSchema() throws Exception {
+  SchemaConfig schema=schemaMap.get("ignoreSchemaTest");
+  String sql="select * from offer where offer_id=1";
+  RouteResultset rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  Assert.assertEquals("cndb_dn",rrs.getNodes()[0].getName());
+  Assert.assertEquals(sql,rrs.getNodes()[0].getStatement());
+  sql="select * from ignoreSchemaTest.offer1 where ignoreSchemaTest.offer1.offer_id=1";
+  rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  Assert.assertEquals("select * from offer1 where offer1.offer_id=1",rrs.getNodes()[0].getStatement());
+  sql="select * from ignoreSchemaTest2.offer where ignoreSchemaTest2.offer.offer_id=1";
+  rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  Assert.assertEquals(sql,rrs.getNodes()[0].getStatement(),sql);
+  sql="select * from ignoreSchemaTest2.offer a,offer b  where ignoreSchemaTest2.offer.offer_id=1";
+  rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  Assert.assertEquals("select * from ignoreSchemaTest2.offer a,offer b  where ignoreSchemaTest2.offer.offer_id=1",rrs.getNodes()[0].getStatement());
+}

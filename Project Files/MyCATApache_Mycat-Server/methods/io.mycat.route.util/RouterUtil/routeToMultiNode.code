@@ -1,0 +1,27 @@
+public static RouteResultset routeToMultiNode(boolean cache,RouteResultset rrs,Collection<String> dataNodes,String stmt){
+  RouteResultsetNode[] nodes=new RouteResultsetNode[dataNodes.size()];
+  int i=0;
+  RouteResultsetNode node;
+  for (  String dataNode : dataNodes) {
+    node=new RouteResultsetNode(dataNode,rrs.getSqlType(),stmt);
+    node.setSource(rrs);
+    if (rrs.getDataNodeSlotMap().containsKey(dataNode)) {
+      node.setSlot(rrs.getDataNodeSlotMap().get(dataNode));
+    }
+    if (rrs.getCanRunInReadDB() != null) {
+      node.setCanRunInReadDB(rrs.getCanRunInReadDB());
+    }
+    if (rrs.getRunOnSlave() != null) {
+      nodes[0].setRunOnSlave(rrs.getRunOnSlave());
+    }
+    nodes[i++]=node;
+  }
+  rrs.setCacheAble(cache);
+  rrs.setNodes(nodes);
+  return rrs;
+}
+public static RouteResultset routeToMultiNode(boolean cache,RouteResultset rrs,Collection<String> dataNodes,String stmt,boolean isGlobalTable){
+  rrs=routeToMultiNode(cache,rrs,dataNodes,stmt);
+  rrs.setGlobalTable(isGlobalTable);
+  return rrs;
+}

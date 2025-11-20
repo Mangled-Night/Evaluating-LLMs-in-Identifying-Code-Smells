@@ -1,0 +1,41 @@
+/** 
+ * Calculate the slot from the given key.
+ * @param key the key
+ * @return slot
+ */
+public static int getSlot(String key){
+  return getSlot(key.getBytes());
+}
+/** 
+ * Calculate the slot from the given key.
+ * @param key the key
+ * @return slot
+ */
+public static int getSlot(byte[] key){
+  return getSlot(ByteBuffer.wrap(key));
+}
+/** 
+ * Calculate the slot from the given key.
+ * @param key the key
+ * @return slot
+ */
+public static int getSlot(ByteBuffer key){
+  int limit=key.limit();
+  int position=key.position();
+  int start=indexOf(key,SUBKEY_START);
+  if (start != -1) {
+    int end=indexOf(key,start + 1,SUBKEY_END);
+    if (end != -1 && end != start + 1) {
+      key.position(start + 1).limit(end);
+    }
+  }
+  try {
+    if (key.hasArray()) {
+      return CRC16.crc16(key.array(),key.position(),key.limit() - key.position()) % SLOT_COUNT;
+    }
+    return CRC16.crc16(key) % SLOT_COUNT;
+  }
+  finally {
+    key.position(position).limit(limit);
+  }
+}

@@ -1,0 +1,12 @@
+@Test void shouldBatchWithBatchControlQueue(){
+  RedisCommand<Object,Object,Object> c1=createCommand();
+  RedisCommand<Object,Object,Object> c2=createCommand();
+  RedisCommand<Object,Object,Object> c3=createCommand();
+  RedisCommand<Object,Object,Object> c4=createCommand();
+  SimpleBatcher batcher=new SimpleBatcher(connection,2);
+  batcher.batch(c1,CommandBatching.queue());
+  batcher.batch(c2,CommandBatching.queue());
+  verifyNoInteractions(connection);
+  batcher.batch(c3,null);
+  verify(connection).dispatch(Arrays.asList(c1,c2));
+}

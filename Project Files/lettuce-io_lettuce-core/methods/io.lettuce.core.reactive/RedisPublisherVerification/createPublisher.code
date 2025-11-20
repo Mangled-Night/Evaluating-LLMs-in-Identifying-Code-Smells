@@ -1,0 +1,17 @@
+@Override public Publisher<String> createPublisher(long elements){
+  RedisCommands<String,String> sync=connection.sync();
+  if (elements == Long.MAX_VALUE) {
+    return null;
+  }
+  String id=UUID.randomUUID().toString();
+  String key="PublisherVerification-" + id;
+  for (int i=0; i < elements; i++) {
+    sync.lpush(key,"element-" + i);
+  }
+  Supplier<Command<String,String,List<String>>> supplier=() -> {
+    CommandArgs<String,String> args=new CommandArgs<>(StringCodec.UTF8).addKey(key).add(0).add(-1);
+    return new Command<>(LRANGE,new ValueListOutput<>(StringCodec.UTF8),args);
+  }
+;
+  return new TestRedisPublisher(supplier,connection,true);
+}

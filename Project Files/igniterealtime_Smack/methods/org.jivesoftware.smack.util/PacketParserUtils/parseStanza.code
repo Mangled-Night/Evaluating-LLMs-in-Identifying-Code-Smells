@@ -1,0 +1,26 @@
+@SuppressWarnings("unchecked") public static <S extends Stanza>S parseStanza(String stanza) throws XmlPullParserException, SmackParsingException, IOException {
+  return (S)parseStanza(getParserFor(stanza),XmlEnvironment.EMPTY);
+}
+/** 
+ * Tries to parse and return either a Message, IQ or Presence stanza. connection is optional and is used to return feature-not-implemented errors for unknown IQ stanzas.
+ * @param parser TODO javadoc me please
+ * @param outerXmlEnvironment the outer XML environment (optional).
+ * @return a stanza which is either a Message, IQ or Presence.
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ * @throws SmackParsingException if the Smack parser (provider) encountered invalid input.
+ * @throws IOException if an I/O error occurred.
+ */
+public static Stanza parseStanza(XmlPullParser parser,XmlEnvironment outerXmlEnvironment) throws XmlPullParserException, SmackParsingException, IOException {
+  ParserUtils.assertAtStartTag(parser);
+  final String name=parser.getName();
+switch (name) {
+case Message.ELEMENT:
+    return parseMessage(parser,outerXmlEnvironment);
+case IQ.IQ_ELEMENT:
+  return parseIQ(parser,outerXmlEnvironment);
+case Presence.ELEMENT:
+return parsePresence(parser,outerXmlEnvironment);
+default :
+throw new IllegalArgumentException("Can only parse message, iq or presence, not " + name);
+}
+}

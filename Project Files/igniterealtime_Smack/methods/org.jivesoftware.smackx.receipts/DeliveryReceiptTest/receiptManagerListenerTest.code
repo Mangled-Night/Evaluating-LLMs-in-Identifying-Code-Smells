@@ -1,0 +1,10 @@
+@Test public void receiptManagerListenerTest() throws Exception {
+  DummyConnection c=new DummyConnection();
+  c.connect();
+  DeliveryReceiptManager drm=DeliveryReceiptManager.getInstanceFor(c);
+  TestReceiptReceivedListener rrl=new TestReceiptReceivedListener();
+  drm.addReceiptReceivedListener(rrl);
+  Message m=StanzaBuilder.buildMessage("reply-id").from("julia@capulet.com").to("romeo@montague.com").ofType(Message.Type.normal).addExtension(new DeliveryReceipt("original-test-id")).build();
+  c.processStanza(m);
+  rrl.waitUntilInvocationOrTimeout();
+}

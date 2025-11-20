@@ -1,0 +1,25 @@
+/** 
+ * Creates an entity for the client connection, checking if name and color options can be used.
+ * @param preferredName Passes players preferred name to check availability, giving a best alternative if it is used already.
+ * @param color Creates or changes the player's color component to match argument
+ * @param entityManager
+ */
+protected void createEntity(String preferredName,Color color,EntityManager entityManager){
+  clientEntity=entityManager.create("engine:client");
+  EntityRef clientInfo=findClientEntityRef(entityManager);
+  if (!clientInfo.exists()) {
+    clientInfo=createClientInfoEntity(entityManager);
+  }
+  ClientInfoComponent clientInfoComp=clientInfo.getComponent(ClientInfoComponent.class);
+  clientInfoComp.client=clientEntity;
+  clientInfo.saveComponent(clientInfoComp);
+  ClientComponent clientComponent=clientEntity.getComponent(ClientComponent.class);
+  clientComponent.clientInfo=clientInfo;
+  clientEntity.saveComponent(clientComponent);
+  addOrSetColorComponent(clientInfo,color);
+  DisplayNameComponent displayNameComponent=clientInfo.getComponent(DisplayNameComponent.class);
+  if (displayNameComponent == null || !displayNameComponent.name.equals(preferredName)) {
+    String bestAvailableName=findUniquePlayerName(preferredName,entityManager,clientInfo);
+    addOrSetDisplayNameComponent(clientInfo,bestAvailableName);
+  }
+}

@@ -1,0 +1,28 @@
+private void processNewIdentityRequest(NetData.NewIdentityRequest newIdentityRequest,ChannelHandlerContext ctx){
+  logger.info("Received new identity request");
+  try {
+    byte[] preMasterSecret=config.getSecurity().getServerPrivateCertificate().decrypt(newIdentityRequest.getPreMasterSecret().toByteArray());
+    byte[] masterSecret=HandshakeCommon.generateMasterSecret(preMasterSecret,newIdentityRequest.getRandom().toByteArray(),serverRandom);
+    CertificatePair clientCertificates=new CertificateGenerator().generate(config.getSecurity().getServerPrivateCertificate());
+    NetData.CertificateSet certificateData=NetData.CertificateSet.newBuilder().setPublicCertificate(NetMessageUtil.convert(clientCertificates.getPublicCert())).setPrivateExponent(ByteString.copyFrom(clientCertificates.getPrivateCert().getExponent().toByteArray())).build();
+    byte[] encryptedCert=null;
+    try {
+      SecretKeySpec key=HandshakeCommon.generateSymmetricKey(masterSecret,newIdentityRequest.getRandom().toByteArray(),serverRandom);
+      Cipher cipher=Cipher.getInstance(IdentityConstants.SYMMETRIC_ENCRYPTION_ALGORITHM);
+      cipher.init(Cipher.ENCRYPT_MODE,key);
+      encryptedCert=cipher.doFinal(certificateData.toByteArray());
+    }
+ catch (    NoSuchAlgorithmException|NoSuchPaddingException|InvalidKeyException|BadPaddingException|IllegalBlockSizeException e) {
+      logger.error("Unexpected error encrypting certificate for sending, ending connection attempt",e);
+      ctx.channel().close();
+      return;
+    }
+    ctx.channel().writeAndFlush(NetData.NetMessage.newBuilder().setProvisionIdentity(NetData.ProvisionIdentity.newBuilder().setEncryptedCertificates(ByteString.copyFrom(encryptedCert))).build());
+    ctx.pipeline().remove(this);
+    serverConnectionHandler.channelAuthenticated(clientCertificates.getPublicCert());
+  }
+ catch (  BadEncryptedDataException e) {
+    logger.error("Received invalid encrypted pre-master secret, ending connection attempt");
+    ctx.channel().close();
+  }
+}

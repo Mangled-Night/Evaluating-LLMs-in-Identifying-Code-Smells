@@ -1,0 +1,19 @@
+@Test public void testScramSha1Mechanism() throws NotConnectedException, SmackException, InterruptedException {
+  final DummyConnection con=new DummyConnection();
+  SCRAMSHA1Mechanism mech=new SCRAMSHA1Mechanism(){
+    @Override public String getRandomAscii(){
+      this.connection=con;
+      return "fyko+d2lbbFgONRv9qkxdawL";
+    }
+  }
+;
+  mech.authenticate(USERNAME,"unusedFoo",JidTestUtil.DOMAIN_BARE_JID_1,PASSWORD,null,null);
+  AuthMechanism authMechanism=con.getSentPacket();
+  assertEquals(SCRAMSHA1Mechanism.NAME,authMechanism.getMechanism());
+  assertEquals(CLIENT_FIRST_MESSAGE,saslLayerString(authMechanism.getAuthenticationText()));
+  mech.challengeReceived(Base64.encode(SERVER_FIRST_MESSAGE),false);
+  Response response=con.getSentPacket();
+  assertEquals(CLIENT_FINAL_MESSAGE,saslLayerString(response.getAuthenticationText()));
+  mech.challengeReceived(Base64.encode(SERVER_FINAL_MESSAGE),true);
+  mech.checkIfSuccessfulOrThrow();
+}

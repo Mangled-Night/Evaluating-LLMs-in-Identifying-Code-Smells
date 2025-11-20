@@ -1,0 +1,33 @@
+/** 
+ * Initialize a  {@link Wait.WaitBuilder} to wait until the {@code actualSupplier} provides an object that is not equal to{@code expectation}
+ * @param expectation
+ * @param actualSupplier
+ * @param < T >
+ * @return
+ */
+public static <T>WaitBuilder<T> untilNotEquals(T expectation,Supplier<T> actualSupplier){
+  WaitBuilder<T> wb=new WaitBuilder<>();
+  wb.supplier=actualSupplier;
+  wb.check=o -> {
+    if (o == expectation) {
+      return false;
+    }
+    if ((o == null && expectation != null) || (o != null && expectation == null)) {
+      return true;
+    }
+    if (o instanceof Number && expectation instanceof Number) {
+      Number actualNumber=(Number)o;
+      Number expectedNumber=(Number)expectation;
+      if (actualNumber.doubleValue() == expectedNumber.doubleValue()) {
+        return false;
+      }
+      if (actualNumber.longValue() == expectedNumber.longValue()) {
+        return false;
+      }
+    }
+    return !o.equals(expectation);
+  }
+;
+  wb.messageFunction=o -> "Objects are equal: " + expectation + " and "+ o;
+  return wb;
+}

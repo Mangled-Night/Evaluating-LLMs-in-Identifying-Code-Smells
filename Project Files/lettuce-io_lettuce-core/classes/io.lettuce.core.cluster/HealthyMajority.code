@@ -1,0 +1,24 @@
+/** 
+ * Votes for  {@link Partitions} that contains the most active (in total) nodes.
+ */
+static final class HealthyMajority extends PartitionsConsensus {
+  @Override Partitions getPartitions(  Partitions current,  Map<RedisURI,Partitions> topologyViews){
+    if (topologyViews.isEmpty()) {
+      return current;
+    }
+    List<VotedPartitions> votedList=new ArrayList<>();
+    for (    Partitions partitions : topologyViews.values()) {
+      int votes=0;
+      for (      RedisClusterNode node : partitions) {
+        if (node.is(RedisClusterNode.NodeFlag.FAIL) || node.is(RedisClusterNode.NodeFlag.EVENTUAL_FAIL) || node.is(RedisClusterNode.NodeFlag.NOADDR)) {
+          continue;
+        }
+        votes++;
+      }
+      votedList.add(new VotedPartitions(votes,partitions));
+    }
+    Collections.shuffle(votedList);
+    Collections.sort(votedList,(o1,o2) -> Integer.compare(o2.votes,o1.votes));
+    return votedList.get(0).partitions;
+  }
+}

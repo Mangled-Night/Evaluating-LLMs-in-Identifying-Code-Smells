@@ -1,0 +1,44 @@
+public RedisClusterNode(){
+}
+public RedisClusterNode(RedisURI uri,String nodeId,boolean connected,String slaveOf,long pingSentTimestamp,long pongReceivedTimestamp,long configEpoch,List<Integer> slots,Set<NodeFlag> flags){
+  this.uri=uri;
+  this.nodeId=nodeId;
+  this.connected=connected;
+  this.slaveOf=slaveOf;
+  this.pingSentTimestamp=pingSentTimestamp;
+  this.pongReceivedTimestamp=pongReceivedTimestamp;
+  this.configEpoch=configEpoch;
+  this.replOffset=-1;
+  setSlotBits(slots);
+  setFlags(flags);
+}
+RedisClusterNode(RedisURI uri,String nodeId,boolean connected,String slaveOf,long pingSentTimestamp,long pongReceivedTimestamp,long configEpoch,BitSet slots,Set<NodeFlag> flags){
+  this.uri=uri;
+  this.nodeId=nodeId;
+  this.connected=connected;
+  this.slaveOf=slaveOf;
+  this.pingSentTimestamp=pingSentTimestamp;
+  this.pongReceivedTimestamp=pongReceivedTimestamp;
+  this.configEpoch=configEpoch;
+  this.replOffset=-1;
+  this.slots=new BitSet(slots.length());
+  this.slots.or(slots);
+  setFlags(flags);
+}
+public RedisClusterNode(RedisClusterNode redisClusterNode){
+  LettuceAssert.notNull(redisClusterNode,"RedisClusterNode must not be null");
+  this.uri=redisClusterNode.uri;
+  this.nodeId=redisClusterNode.nodeId;
+  this.connected=redisClusterNode.connected;
+  this.slaveOf=redisClusterNode.slaveOf;
+  this.pingSentTimestamp=redisClusterNode.pingSentTimestamp;
+  this.pongReceivedTimestamp=redisClusterNode.pongReceivedTimestamp;
+  this.configEpoch=redisClusterNode.configEpoch;
+  this.replOffset=redisClusterNode.replOffset;
+  this.aliases.addAll(redisClusterNode.aliases);
+  if (redisClusterNode.slots != null && !redisClusterNode.slots.isEmpty()) {
+    this.slots=new BitSet(SlotHash.SLOT_COUNT);
+    this.slots.or(redisClusterNode.slots);
+  }
+  setFlags(redisClusterNode.flags);
+}

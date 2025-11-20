@@ -1,0 +1,54 @@
+/** 
+ * Return type of network. <p>Must hold  {@code <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />}</p>
+ * @return type of network<ul> <li> {@link NetworkUtils.NetworkType#NETWORK_ETHERNET} </li><li> {@link NetworkUtils.NetworkType#NETWORK_WIFI    } </li><li> {@link NetworkUtils.NetworkType#NETWORK_4G      } </li><li> {@link NetworkUtils.NetworkType#NETWORK_3G      } </li><li> {@link NetworkUtils.NetworkType#NETWORK_2G      } </li><li> {@link NetworkUtils.NetworkType#NETWORK_UNKNOWN } </li><li> {@link NetworkUtils.NetworkType#NETWORK_NO      } </li></ul>
+ */
+@RequiresPermission(ACCESS_NETWORK_STATE) public static NetworkType getNetworkType(){
+  if (isEthernet()) {
+    return NetworkType.NETWORK_ETHERNET;
+  }
+  NetworkInfo info=getActiveNetworkInfo();
+  if (info != null && info.isAvailable()) {
+    if (info.getType() == ConnectivityManager.TYPE_WIFI) {
+      return NetworkType.NETWORK_WIFI;
+    }
+ else     if (info.getType() == ConnectivityManager.TYPE_MOBILE) {
+switch (info.getSubtype()) {
+case TelephonyManager.NETWORK_TYPE_GSM:
+case TelephonyManager.NETWORK_TYPE_GPRS:
+case TelephonyManager.NETWORK_TYPE_CDMA:
+case TelephonyManager.NETWORK_TYPE_EDGE:
+case TelephonyManager.NETWORK_TYPE_1xRTT:
+case TelephonyManager.NETWORK_TYPE_IDEN:
+        return NetworkType.NETWORK_2G;
+case TelephonyManager.NETWORK_TYPE_TD_SCDMA:
+case TelephonyManager.NETWORK_TYPE_EVDO_A:
+case TelephonyManager.NETWORK_TYPE_UMTS:
+case TelephonyManager.NETWORK_TYPE_EVDO_0:
+case TelephonyManager.NETWORK_TYPE_HSDPA:
+case TelephonyManager.NETWORK_TYPE_HSUPA:
+case TelephonyManager.NETWORK_TYPE_HSPA:
+case TelephonyManager.NETWORK_TYPE_EVDO_B:
+case TelephonyManager.NETWORK_TYPE_EHRPD:
+case TelephonyManager.NETWORK_TYPE_HSPAP:
+      return NetworkType.NETWORK_3G;
+case TelephonyManager.NETWORK_TYPE_IWLAN:
+case TelephonyManager.NETWORK_TYPE_LTE:
+    return NetworkType.NETWORK_4G;
+case TelephonyManager.NETWORK_TYPE_NR:
+  return NetworkType.NETWORK_5G;
+default :
+String subtypeName=info.getSubtypeName();
+if (subtypeName.equalsIgnoreCase("TD-SCDMA") || subtypeName.equalsIgnoreCase("WCDMA") || subtypeName.equalsIgnoreCase("CDMA2000")) {
+return NetworkType.NETWORK_3G;
+}
+ else {
+return NetworkType.NETWORK_UNKNOWN;
+}
+}
+}
+ else {
+return NetworkType.NETWORK_UNKNOWN;
+}
+}
+return NetworkType.NETWORK_NO;
+}

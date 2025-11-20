@@ -1,0 +1,18 @@
+/** 
+ * Notification message saying that SASL authentication has failed. The server may have closed the connection depending on the number of possible retries.
+ * @param saslFailure the SASL failure as reported by the server
+ * @see <a href="https://tools.ietf.org/html/rfc6120#section-6.5">RFC6120 6.5</a>
+ */
+void authenticationFailed(SASLFailure saslFailure){
+  SASLErrorException saslErrorException;
+synchronized (this) {
+    saslErrorException=new SASLErrorException(currentMechanism.getName(),saslFailure);
+  }
+  authenticationFailed(saslErrorException);
+}
+void authenticationFailed(Exception exception){
+synchronized (this) {
+    currentMechanism.setException(exception);
+    notify();
+  }
+}

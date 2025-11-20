@@ -1,0 +1,14 @@
+@Test void regularClientFailsOnFirstCommandWithDelay(){
+  try (StatefulRedisConnection<String,String> connect=client.connect()){
+    Wait.untilEquals(false,connect::isOpen).waitOrTimeout();
+    connect.sync().ping();
+  }
+ catch (  RedisException e) {
+    if (e.getCause() instanceof IOException) {
+      assertThat(e).hasCauseInstanceOf(IOException.class);
+    }
+ else {
+      assertThat(e.getCause()).hasMessageContaining("DENIED");
+    }
+  }
+}

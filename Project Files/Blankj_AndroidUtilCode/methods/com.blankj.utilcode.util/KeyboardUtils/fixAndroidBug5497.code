@@ -1,0 +1,29 @@
+/** 
+ * Fix the bug of 5497 in Android. <p>Don't set adjustResize</p>
+ * @param activity The activity.
+ */
+public static void fixAndroidBug5497(@NonNull final Activity activity){
+  fixAndroidBug5497(activity.getWindow());
+}
+/** 
+ * Fix the bug of 5497 in Android. <p>It will clean the adjustResize</p>
+ * @param window The window.
+ */
+public static void fixAndroidBug5497(@NonNull final Window window){
+  int softInputMode=window.getAttributes().softInputMode;
+  window.setSoftInputMode(softInputMode & ~WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+  final FrameLayout contentView=window.findViewById(android.R.id.content);
+  final View contentViewChild=contentView.getChildAt(0);
+  final int paddingBottom=contentViewChild.getPaddingBottom();
+  final int[] contentViewInvisibleHeightPre5497={getContentViewInvisibleHeight(window)};
+  contentView.getViewTreeObserver().addOnGlobalLayoutListener(new OnGlobalLayoutListener(){
+    @Override public void onGlobalLayout(){
+      int height=getContentViewInvisibleHeight(window);
+      if (contentViewInvisibleHeightPre5497[0] != height) {
+        contentViewChild.setPadding(contentViewChild.getPaddingLeft(),contentViewChild.getPaddingTop(),contentViewChild.getPaddingRight(),paddingBottom + getDecorViewInvisibleHeight(window));
+        contentViewInvisibleHeightPre5497[0]=height;
+      }
+    }
+  }
+);
+}

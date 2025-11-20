@@ -1,0 +1,20 @@
+public static ServerSocket getSocketOnLoopback() throws IOException {
+  final InetAddress loopbackAddress=InetAddress.getLoopbackAddress();
+  final int portMin=1024;
+  final int portMax=(1 << 16) - 1;
+  final int backlog=1;
+  ServerSocket serverSocket=null;
+  for (int port=portMin; port <= portMax; port++) {
+    try {
+      serverSocket=new ServerSocket(port,backlog,loopbackAddress);
+      break;
+    }
+ catch (    BindException e) {
+      LOGGER.log(Level.FINEST,"Could not bind port " + port + ", trying next",e);
+    }
+  }
+  if (serverSocket == null) {
+    throw new IOException("Could not bind any port between " + portMin + " and "+ portMax+ " on loopback address"+ loopbackAddress);
+  }
+  return serverSocket;
+}

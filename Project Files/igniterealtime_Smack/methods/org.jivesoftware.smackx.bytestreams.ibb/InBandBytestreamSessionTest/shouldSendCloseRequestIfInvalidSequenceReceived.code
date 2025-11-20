@@ -1,0 +1,16 @@
+/** 
+ * If a data stanza is received out of order the session should be closed. See XEP-0047 Section 2.2.
+ * @throws Exception should not happen
+ */
+@Test public void shouldSendCloseRequestIfInvalidSequenceReceived() throws Exception {
+  InBandBytestreamSession session=new InBandBytestreamSession(connection,initBytestream,initiatorJID);
+  InputStream inputStream=session.getInputStream();
+  StanzaListener listener=Whitebox.getInternalState(inputStream,"dataPacketListener",StanzaListener.class);
+  String base64Data=Base64.encode("Data");
+  DataPacketExtension dpe=new DataPacketExtension(sessionID,123,base64Data);
+  Data data=new Data(dpe);
+  listener.processStanza(data);
+  IOException ioException=assertThrows(IOException.class,() -> inputStream.read());
+  String ioExceptionMessage=ioException.getMessage();
+  assertTrue(ioExceptionMessage.equals("Stream is closed"));
+}

@@ -1,0 +1,17 @@
+@Override public void connectionAcquired(BackendConnection conn){
+  if (LOGGER.isDebugEnabled()) {
+    LOGGER.debug("con query sql:" + sql + " to con:"+ conn);
+  }
+  conn.setResponseHandler(this);
+  try {
+    if (((MySQLConnection)conn).isNeedSyncSchema()) {
+      conn.query(SYNC_CHANNEL_STATUS_SQL);
+    }
+ else {
+      this.sendPrepareRequestCommand(conn);
+    }
+  }
+ catch (  Exception e) {
+    doFinished(true,e.getMessage());
+  }
+}

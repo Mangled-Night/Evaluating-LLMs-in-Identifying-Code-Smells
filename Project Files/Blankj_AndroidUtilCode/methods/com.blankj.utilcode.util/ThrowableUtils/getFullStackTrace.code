@@ -1,0 +1,29 @@
+public static String getFullStackTrace(Throwable throwable){
+  final List<Throwable> throwableList=new ArrayList<>();
+  while (throwable != null && !throwableList.contains(throwable)) {
+    throwableList.add(throwable);
+    throwable=throwable.getCause();
+  }
+  final int size=throwableList.size();
+  final List<String> frames=new ArrayList<>();
+  List<String> nextTrace=getStackFrameList(throwableList.get(size - 1));
+  for (int i=size; --i >= 0; ) {
+    final List<String> trace=nextTrace;
+    if (i != 0) {
+      nextTrace=getStackFrameList(throwableList.get(i - 1));
+      removeCommonFrames(trace,nextTrace);
+    }
+    if (i == size - 1) {
+      frames.add(throwableList.get(i).toString());
+    }
+ else {
+      frames.add(" Caused by: " + throwableList.get(i).toString());
+    }
+    frames.addAll(trace);
+  }
+  StringBuilder sb=new StringBuilder();
+  for (  final String element : frames) {
+    sb.append(element).append(LINE_SEP);
+  }
+  return sb.toString();
+}

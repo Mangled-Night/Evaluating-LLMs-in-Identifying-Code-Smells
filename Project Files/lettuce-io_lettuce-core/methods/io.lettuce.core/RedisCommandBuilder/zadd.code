@@ -1,0 +1,34 @@
+Command<K,V,Long> zadd(K key,ZAddArgs zAddArgs,double score,V member){
+  notNullKey(key);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key);
+  if (zAddArgs != null) {
+    zAddArgs.build(args);
+  }
+  args.add(score).addValue(member);
+  return createCommand(ZADD,new IntegerOutput<>(codec),args);
+}
+@SuppressWarnings("unchecked") Command<K,V,Long> zadd(K key,ZAddArgs zAddArgs,Object... scoresAndValues){
+  notNullKey(key);
+  LettuceAssert.notNull(scoresAndValues,"ScoresAndValues " + MUST_NOT_BE_NULL);
+  LettuceAssert.notEmpty(scoresAndValues,"ScoresAndValues " + MUST_NOT_BE_EMPTY);
+  LettuceAssert.noNullElements(scoresAndValues,"ScoresAndValues " + MUST_NOT_CONTAIN_NULL_ELEMENTS);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key);
+  if (zAddArgs != null) {
+    zAddArgs.build(args);
+  }
+  if (allElementsInstanceOf(scoresAndValues,ScoredValue.class)) {
+    for (    Object o : scoresAndValues) {
+      ScoredValue<V> scoredValue=(ScoredValue<V>)o;
+      args.add(scoredValue.getScore());
+      args.addValue(scoredValue.getValue());
+    }
+  }
+ else {
+    LettuceAssert.isTrue(scoresAndValues.length % 2 == 0,"ScoresAndValues.length must be a multiple of 2 and contain a " + "sequence of score1, value1, score2, value2, scoreN, valueN");
+    for (int i=0; i < scoresAndValues.length; i+=2) {
+      args.add((Double)scoresAndValues[i]);
+      args.addValue((V)scoresAndValues[i + 1]);
+    }
+  }
+  return createCommand(ZADD,new IntegerOutput<>(codec),args);
+}

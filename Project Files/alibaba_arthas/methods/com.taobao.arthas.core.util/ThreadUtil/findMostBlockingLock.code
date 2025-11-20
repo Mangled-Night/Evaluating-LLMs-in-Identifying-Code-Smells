@@ -1,0 +1,48 @@
+/** 
+ * Find the thread and lock that is blocking the most other threads. Time complexity of this algorithm: O(number of thread) Space complexity of this algorithm: O(number of locks)
+ * @return the BlockingLockInfo object, or an empty object if not found.
+ */
+public static BlockingLockInfo findMostBlockingLock(){
+  ThreadInfo[] infos=threadMXBean.dumpAllThreads(threadMXBean.isObjectMonitorUsageSupported(),threadMXBean.isSynchronizerUsageSupported());
+  Map<Integer,Integer> blockCountPerLock=new HashMap<Integer,Integer>();
+  Map<Integer,ThreadInfo> ownerThreadPerLock=new HashMap<Integer,ThreadInfo>();
+  for (  ThreadInfo info : infos) {
+    if (info == null) {
+      continue;
+    }
+    LockInfo lockInfo=info.getLockInfo();
+    if (lockInfo != null) {
+      if (blockCountPerLock.get(lockInfo.getIdentityHashCode()) == null) {
+        blockCountPerLock.put(lockInfo.getIdentityHashCode(),0);
+      }
+      int blockedCount=blockCountPerLock.get(lockInfo.getIdentityHashCode());
+      blockCountPerLock.put(lockInfo.getIdentityHashCode(),blockedCount + 1);
+    }
+    for (    MonitorInfo monitorInfo : info.getLockedMonitors()) {
+      if (ownerThreadPerLock.get(monitorInfo.getIdentityHashCode()) == null) {
+        ownerThreadPerLock.put(monitorInfo.getIdentityHashCode(),info);
+      }
+    }
+    for (    LockInfo lockedSync : info.getLockedSynchronizers()) {
+      if (ownerThreadPerLock.get(lockedSync.getIdentityHashCode()) == null) {
+        ownerThreadPerLock.put(lockedSync.getIdentityHashCode(),info);
+      }
+    }
+  }
+  int mostBlockingLock=0;
+  int maxBlockingCount=0;
+  for (  Map.Entry<Integer,Integer> entry : blockCountPerLock.entrySet()) {
+    if (entry.getValue() > maxBlockingCount && ownerThreadPerLock.get(entry.getKey()) != null) {
+      maxBlockingCount=entry.getValue();
+      mostBlockingLock=entry.getKey();
+    }
+  }
+  if (mostBlockingLock == 0) {
+    return EMPTY_INFO;
+  }
+  BlockingLockInfo blockingLockInfo=new BlockingLockInfo();
+  blockingLockInfo.setThreadInfo(ownerThreadPerLock.get(mostBlockingLock));
+  blockingLockInfo.setLockIdentityHashCode(mostBlockingLock);
+  blockingLockInfo.setBlockingThreadCount(blockCountPerLock.get(mostBlockingLock));
+  return blockingLockInfo;
+}

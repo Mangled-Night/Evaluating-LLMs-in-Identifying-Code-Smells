@@ -1,0 +1,18 @@
+@Command(shortDescription="Rename a user",runOnServer=true,requiredPermission=PermissionManager.USER_MANAGEMENT_PERMISSION) public String renameUser(@CommandParam(value="userName",suggester=UsernameSuggester.class) String userName,@CommandParam(value="newUserName") String newUserName){
+  Iterable<EntityRef> clientInfoEntities=entityManager.getEntitiesWith(ClientInfoComponent.class);
+  for (  EntityRef clientInfo : clientInfoEntities) {
+    DisplayNameComponent nameComp=clientInfo.getComponent(DisplayNameComponent.class);
+    if (newUserName.equalsIgnoreCase(nameComp.name)) {
+      throw new IllegalArgumentException("New user name is already in use");
+    }
+  }
+  for (  EntityRef clientInfo : clientInfoEntities) {
+    DisplayNameComponent nameComp=clientInfo.getComponent(DisplayNameComponent.class);
+    if (userName.equalsIgnoreCase(nameComp.name)) {
+      nameComp.name=newUserName;
+      clientInfo.saveComponent(nameComp);
+      return "User " + userName + " has been renamed to "+ newUserName;
+    }
+  }
+  throw new IllegalArgumentException("No such user '" + userName + "'");
+}

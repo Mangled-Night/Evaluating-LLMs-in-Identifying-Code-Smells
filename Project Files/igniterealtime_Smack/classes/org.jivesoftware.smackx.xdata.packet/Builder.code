@@ -1,0 +1,166 @@
+public static final class Builder {
+  private Type type;
+  private String title;
+  private List<String> instructions;
+  private ReportedData reportedData;
+  private List<Item> items;
+  private List<FormField> fields=new ArrayList<>();
+  private Map<String,FormField> fieldsMap=new HashMap<>();
+  private List<Element> extensionElements;
+  private Builder(){
+    this(Type.submit);
+  }
+  private Builder(  Type type){
+    this.type=type;
+  }
+  private Builder(  DataForm dataForm){
+    type=dataForm.getType();
+    title=dataForm.getTitle();
+    instructions=dataForm.getInstructions();
+    reportedData=dataForm.getReportedData();
+    items=CollectionUtil.newListWith(dataForm.getItems());
+    fields=CollectionUtil.newListWith(dataForm.getFields());
+    fieldsMap=new HashMap<>(dataForm.fieldsMap);
+    extensionElements=CollectionUtil.newListWith(dataForm.getExtensionElements());
+  }
+  private void orderFields(){
+    Iterator<FormField> it=fields.iterator();
+    if (!it.hasNext()) {
+      return;
+    }
+    FormField hiddenFormTypeField=it.next().asHiddenFormTypeFieldIfPossible();
+    if (hiddenFormTypeField != null) {
+      return;
+    }
+    while (it.hasNext()) {
+      hiddenFormTypeField=it.next().asHiddenFormTypeFieldIfPossible();
+      if (hiddenFormTypeField != null) {
+        it.remove();
+        fields.add(0,hiddenFormTypeField);
+        break;
+      }
+    }
+  }
+  /** 
+ * Deprecated do not use.
+ * @param type the type.
+ * @return a reference to this builder.
+ * @deprecated use {@link DataForm#builder(Type)} instead.
+ */
+  @Deprecated public Builder setType(  Type type){
+    this.type=Objects.requireNonNull(type);
+    return this;
+  }
+  /** 
+ * Sets the description of the data. It is similar to the title on a web page or an X window. You can put a &lt;title/&gt; on either a form to fill out, or a set of data results.
+ * @param title description of the data.
+ * @return a reference to this builder.
+ */
+  public Builder setTitle(  String title){
+    this.title=title;
+    return this;
+  }
+  /** 
+ * Adds a new field as part of the form.
+ * @param field the field to add to the form.
+ * @return a reference to this builder.
+ */
+  public Builder addField(  FormField field){
+    String fieldName=field.getFieldName();
+    if (fieldName != null) {
+      if (fieldsMap.containsKey(fieldName)) {
+        throw new IllegalArgumentException("A field with the name " + fieldName + " already exists");
+      }
+      fieldsMap.put(fieldName,field);
+    }
+    fields.add(field);
+    return this;
+  }
+  /** 
+ * Add the given fields to this form.
+ * @param fieldsToAdd TODO javadoc me please
+ * @return a reference to this builder.
+ */
+  public Builder addFields(  Collection<? extends FormField> fieldsToAdd){
+    for (    FormField field : fieldsToAdd) {
+      String fieldName=field.getFieldName();
+      if (fieldsMap.containsKey(fieldName)) {
+        throw new IllegalArgumentException("A field with the name " + fieldName + " already exists");
+      }
+    }
+    for (    FormField field : fieldsToAdd) {
+      String fieldName=field.getFieldName();
+      if (fieldName != null) {
+        fieldsMap.put(fieldName,field);
+      }
+      fields.add(field);
+    }
+    return this;
+  }
+  public Builder removeField(  String fieldName){
+    FormField field=fieldsMap.remove(fieldName);
+    if (field != null) {
+      fields.remove(field);
+    }
+    return this;
+  }
+  public Builder setFormType(  String formType){
+    FormField formField=FormField.buildHiddenFormType(formType);
+    return addField(formField);
+  }
+  public Builder setInstructions(  String instructions){
+    return setInstructions(StringUtils.splitLinesPortable(instructions));
+  }
+  /** 
+ * Sets the list of instructions that explain how to fill out the form and what the form is about. The dataform could include multiple instructions since each instruction could not contain newlines characters.
+ * @param instructions list of instructions that explain how to fill out the form.
+ * @return a reference to this builder.
+ */
+  public Builder setInstructions(  List<String> instructions){
+    this.instructions=instructions;
+    return this;
+  }
+  /** 
+ * Adds a new instruction to the list of instructions that explain how to fill out the form and what the form is about. The dataform could include multiple instructions since each instruction could not contain newlines characters.
+ * @param instruction the new instruction that explain how to fill out the form.
+ * @return a reference to this builder.
+ */
+  public Builder addInstruction(  String instruction){
+    if (instructions == null) {
+      instructions=new ArrayList<>();
+    }
+    instructions.add(instruction);
+    return this;
+  }
+  /** 
+ * Adds a new item returned from a search.
+ * @param item the item returned from a search.
+ * @return a reference to this builder.
+ */
+  public Builder addItem(  Item item){
+    if (items == null) {
+      items=new ArrayList<>();
+    }
+    items.add(item);
+    return this;
+  }
+  /** 
+ * Sets the fields that will be returned from a search.
+ * @param reportedData the fields that will be returned from a search.
+ * @return a reference to this builder.
+ */
+  public Builder setReportedData(  ReportedData reportedData){
+    this.reportedData=reportedData;
+    return this;
+  }
+  public Builder addExtensionElement(  Element element){
+    if (extensionElements == null) {
+      extensionElements=new ArrayList<>();
+    }
+    extensionElements.add(element);
+    return this;
+  }
+  public DataForm build(){
+    return new DataForm(this);
+  }
+}

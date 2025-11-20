@@ -1,0 +1,35 @@
+public static void handle(String stmt,ManagerConnection c){
+  ByteBuffer buffer=c.allocate();
+  buffer=header.write(buffer,c,true);
+  for (  FieldPacket field : fields) {
+    buffer=field.write(buffer,c,true);
+  }
+  buffer=eof.write(buffer,c,true);
+  byte packetId=eof.packetId;
+  PackageBufINf bufInf=null;
+  Map<String,String> condPairMap=getCondPair(stmt);
+  if (condPairMap.isEmpty()) {
+    bufInf=showLogSum(c,buffer,packetId);
+  }
+ else {
+    String logFile=condPairMap.get("file");
+    if (logFile == null) {
+      logFile=DEFAULT_LOGFILE;
+    }
+    String limitStr=condPairMap.get("limit");
+    limitStr=(limitStr != null) ? limitStr : "0," + 100000;
+    String[] limtArry=limitStr.split("\\s|,");
+    int start=Integer.parseInt(limtArry[0]);
+    int page=Integer.parseInt(limtArry[1]);
+    int end=Integer.valueOf(start + page);
+    String key=condPairMap.get("key");
+    String regex=condPairMap.get("regex");
+    bufInf=showLogRange(c,buffer,packetId,key,regex,start,end,logFile);
+  }
+  packetId=bufInf.packetId;
+  buffer=bufInf.buffer;
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

@@ -1,0 +1,57 @@
+Java11WebSocket(WebSocketRemoteConnectionEndpoint endpoint,ModularXmppClientToServerConnectionInternal connectionInternal){
+  super(endpoint,connectionInternal);
+  final WebSocket.Listener listener=new WebSocket.Listener(){
+    @Override public void onOpen(    WebSocket webSocket){
+      LOGGER.finer(webSocket + " opened");
+      webSocket.request(1);
+    }
+    LazyStringBuilder received=new LazyStringBuilder();
+    @Override public CompletionStage<?> onText(    WebSocket webSocket,    CharSequence data,    boolean last){
+      received.append(data);
+      webSocket.request(1);
+      if (last) {
+        String wholeMessage=received.toString();
+        received=new LazyStringBuilder();
+        onIncomingWebSocketElement(wholeMessage);
+      }
+      return null;
+    }
+    @Override public void onError(    WebSocket webSocket,    Throwable error){
+      onWebSocketFailure(error);
+    }
+    @Override public CompletionStage<?> onClose(    WebSocket webSocket,    int statusCode,    String reason){
+      LOGGER.finer(webSocket + " closed with status code " + statusCode+ ". Provided reason: "+ reason);
+      return null;
+    }
+    @Override public CompletionStage<?> onPing(    WebSocket webSocket,    ByteBuffer message){
+      logPingPong(PingPong.ping,webSocket,message);
+      webSocket.request(1);
+      return null;
+    }
+    @Override public CompletionStage<?> onPong(    WebSocket webSocket,    ByteBuffer message){
+      logPingPong(PingPong.pong,webSocket,message);
+      webSocket.request(1);
+      return null;
+    }
+    private void logPingPong(    PingPong pingPong,    WebSocket webSocket,    ByteBuffer message){
+      final Level pingPongLogLevel=Level.FINER;
+      if (!LOGGER.isLoggable(pingPongLogLevel)) {
+        return;
+      }
+      LOGGER.log(pingPongLogLevel,"Received " + pingPong + " over "+ webSocket+ ". Message: "+ message);
+    }
+  }
+;
+  final URI uri=endpoint.getUri();
+  CompletionStage<WebSocket> webSocketFuture=HTTP_CLIENT.newWebSocketBuilder().subprotocols(SEC_WEBSOCKET_PROTOCOL_HEADER_FILED_VALUE_XMPP).buildAsync(uri,listener);
+  webSocketFuture.whenComplete((webSocket,throwable) -> {
+    if (throwable == null) {
+      this.webSocket=webSocket;
+      future.setResult(this);
+    }
+ else {
+      onWebSocketFailure(throwable);
+    }
+  }
+);
+}

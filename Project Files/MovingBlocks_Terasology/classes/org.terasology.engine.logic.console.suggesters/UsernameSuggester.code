@@ -1,0 +1,17 @@
+/** 
+ * Suggests user names of all users even if they aren't online.
+ */
+public final class UsernameSuggester implements CommandParameterSuggester<String> {
+  private final EntityManager entityManager;
+  public UsernameSuggester(  EntityManager entityManager){
+    this.entityManager=entityManager;
+  }
+  @Override public Set<String> suggest(  EntityRef sender,  Object... resolvedParameters){
+    Set<String> clientNames=Sets.newHashSet();
+    for (    EntityRef clientInfo : entityManager.getEntitiesWith(ClientInfoComponent.class)) {
+      DisplayNameComponent displayNameComponent=clientInfo.getComponent(DisplayNameComponent.class);
+      clientNames.add(displayNameComponent.name);
+    }
+    return clientNames;
+  }
+}

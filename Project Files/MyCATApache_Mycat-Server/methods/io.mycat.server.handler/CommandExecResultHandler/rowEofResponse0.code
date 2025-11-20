@@ -1,0 +1,17 @@
+private void rowEofResponse0(byte[] eof,BackendConnection conn){
+  logger.debug("CommandExecResultHandler.rowEofResponse eof: {}",SimpleLogHandler.bytesToHex(eof));
+  ServerConnection source=getSession().getSource();
+  conn.recordSql(source.getHost(),source.getSchema(),getRouteResultsetNode().getStatement());
+  if (!getRouteResultset().isCallStatement() || (getRouteResultset().isCallStatement() && getRouteResultset().getProcedure().isResultSimpleValue())) {
+    getSession().releaseConnectionIfSafe(conn,logger.isDebugEnabled(),false);
+    endRunning();
+  }
+  int resultSize=source.getWriteQueue().size() * MycatServer.getInstance().getConfig().getSystem().getBufferPoolPageSize();
+  resultSize=resultSize + getBuffer().position();
+  if (!errorRepsponsed.get() && !getSession().closed() && source.canResponse()) {
+    source.write(getBuffer());
+  }
+  source.setExecuteSql(null);
+  QueryResult queryResult=new QueryResult(getSession().getSource().getSchema(),getSession().getSource().getUser(),getRouteResultset().getSqlType(),getRouteResultset().getStatement(),affectedRows,netInBytes,netOutBytes,startTime,System.currentTimeMillis(),resultSize,source.getHost());
+  QueryResultDispatcher.dispatchQuery(queryResult);
+}

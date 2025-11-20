@@ -1,0 +1,54 @@
+/** 
+ * Install the app silently. <p>Without root permission must hold {@code android:sharedUserId="android.uid.shell"} and{@code <uses-permission android:name="android.permission.INSTALL_PACKAGES" />}</p>
+ * @param filePath The path of file.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean installAppSilent(final String filePath){
+  return installAppSilent(getFileByPath(filePath),null);
+}
+/** 
+ * Install the app silently. <p>Without root permission must hold {@code android:sharedUserId="android.uid.shell"} and{@code <uses-permission android:name="android.permission.INSTALL_PACKAGES" />}</p>
+ * @param file The file.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean installAppSilent(final File file){
+  return installAppSilent(file,null);
+}
+/** 
+ * Install the app silently. <p>Without root permission must hold {@code android:sharedUserId="android.uid.shell"} and{@code <uses-permission android:name="android.permission.INSTALL_PACKAGES" />}</p>
+ * @param filePath The path of file.
+ * @param params   The params of installation(e.g.,<code>-r</code>, <code>-s</code>).
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean installAppSilent(final String filePath,final String params){
+  return installAppSilent(getFileByPath(filePath),params);
+}
+/** 
+ * Install the app silently. <p>Without root permission must hold {@code android:sharedUserId="android.uid.shell"} and{@code <uses-permission android:name="android.permission.INSTALL_PACKAGES" />}</p>
+ * @param file   The file.
+ * @param params The params of installation(e.g.,<code>-r</code>, <code>-s</code>).
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean installAppSilent(final File file,final String params){
+  return installAppSilent(file,params,isDeviceRooted());
+}
+/** 
+ * Install the app silently. <p>Without root permission must hold {@code android:sharedUserId="android.uid.shell"} and{@code <uses-permission android:name="android.permission.INSTALL_PACKAGES" />}</p>
+ * @param file     The file.
+ * @param params   The params of installation(e.g.,<code>-r</code>, <code>-s</code>).
+ * @param isRooted True to use root, false otherwise.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean installAppSilent(final File file,final String params,final boolean isRooted){
+  if (!isFileExists(file))   return false;
+  String filePath='"' + file.getAbsolutePath() + '"';
+  String command="LD_LIBRARY_PATH=/vendor/lib*:/system/lib* pm install " + (params == null ? "" : params + " ") + filePath;
+  ShellUtils.CommandResult commandResult=ShellUtils.execCmd(command,isRooted);
+  if (commandResult.successMsg != null && commandResult.successMsg.toLowerCase().contains("success")) {
+    return true;
+  }
+ else {
+    Log.e("AppUtils","installAppSilent successMsg: " + commandResult.successMsg + ", errorMsg: "+ commandResult.errorMsg);
+    return false;
+  }
+}

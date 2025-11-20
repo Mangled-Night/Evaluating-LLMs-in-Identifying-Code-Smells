@@ -1,0 +1,59 @@
+public class ListElement extends MarkupElement.NonEmptyChildElement {
+  public static final String ELEMENT="list";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  private final List<ListEntryElement> entries;
+  /** 
+ * Create a new List element.
+ * @param start start index of the list
+ * @param end end index of the list
+ * @param entries list entries
+ */
+  public ListElement(  int start,  int end,  List<ListEntryElement> entries){
+    super(start,end);
+    this.entries=Collections.unmodifiableList(entries);
+  }
+  /** 
+ * Return a list of all list entries.
+ * @return entries TODO javadoc me please
+ */
+  public List<ListEntryElement> getEntries(){
+    return entries;
+  }
+  @Override public String getElementName(){
+    return QNAME.getLocalPart();
+  }
+  @Override public void appendInnerXml(  XmlStringBuilder xml){
+    xml.append(getEntries());
+  }
+public static class ListEntryElement implements ExtensionElement {
+    public static final String ELEMENT="li";
+    public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+    private final int start;
+    /** 
+ * Create a new ListEntry element.
+ * @param start start index
+ */
+    public ListEntryElement(    int start){
+      this.start=start;
+    }
+    /** 
+ * Return the start index of this entry.
+ * @return start index
+ */
+    public int getStart(){
+      return start;
+    }
+    @Override public String getElementName(){
+      return QNAME.getLocalPart();
+    }
+    @Override public String getNamespace(){
+      return QNAME.getNamespaceURI();
+    }
+    @Override public XmlStringBuilder toXML(    org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+      XmlStringBuilder xml=new XmlStringBuilder(this,enclosingNamespace);
+      xml.attribute(MarkupElement.MarkupChildElement.ATTR_START,getStart());
+      xml.closeEmptyElement();
+      return xml;
+    }
+  }
+}

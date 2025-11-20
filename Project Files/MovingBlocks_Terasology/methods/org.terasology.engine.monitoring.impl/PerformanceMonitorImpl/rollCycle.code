@@ -1,0 +1,17 @@
+@Override public void rollCycle(){
+  executionData.add(currentExecutionData);
+  allocationData.add(currentAllocationData);
+  spikeData.forEachEntry(decayLargestExecutionTime);
+  currentExecutionData.forEachEntry(updateExecutionTimeTotalAndSpikeData);
+  currentAllocationData.forEachEntry(updateAllocatedMemoryTotal);
+  while (executionData.size() > RETAINED_CYCLES) {
+    executionData.get(0).forEachEntry(removeExpiredExecutionTimeValueFromTotal);
+    executionData.remove(0);
+  }
+  while (allocationData.size() > RETAINED_CYCLES) {
+    allocationData.get(0).forEachEntry(removeExpiredAllocatedMemoryValueFromTotal);
+    allocationData.remove(0);
+  }
+  currentExecutionData=new TObjectLongHashMap<>();
+  currentAllocationData=new TObjectLongHashMap<>();
+}

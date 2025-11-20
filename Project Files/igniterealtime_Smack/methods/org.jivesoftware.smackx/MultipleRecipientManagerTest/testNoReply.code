@@ -1,0 +1,40 @@
+/** 
+ * Ensures that replying is not allowed when disabled.
+ */
+public void testNoReply() throws XMPPException {
+  StanzaCollector collector1=getConnection(1).createStanzaCollector(new MessageTypeFilter(Message.Type.normal));
+  StanzaCollector collector2=getConnection(2).createStanzaCollector(new MessageTypeFilter(Message.Type.normal));
+  StanzaCollector collector3=getConnection(3).createStanzaCollector(new MessageTypeFilter(Message.Type.normal));
+  Message message=new Message();
+  message.setBody("Hola");
+  List<String> to=Arrays.asList(new String[]{getBareJID(1)});
+  List<String> cc=Arrays.asList(new String[]{getBareJID(2)});
+  List<String> bcc=Arrays.asList(new String[]{getBareJID(3)});
+  MultipleRecipientManager.send(getConnection(0),message,to,cc,bcc,null,null,true);
+  Message message1=(Message)collector1.nextResult(SmackConfiguration.getPacketReplyTimeout());
+  assertNotNull("XMPPConnection 1 never received the message",message1);
+  MultipleRecipientInfo info=MultipleRecipientManager.getMultipleRecipientInfo(message1);
+  assertNotNull("Message 1 does not contain MultipleRecipientInfo",info);
+  assertTrue("Message 1 should be not 'replyable'",info.shouldNotReply());
+  assertEquals("Incorrect number of TO addresses",1,info.getTOAddresses().size());
+  assertEquals("Incorrect number of CC addresses",1,info.getCCAddresses().size());
+  Message reply1=new Message();
+  reply1.setBody("This is my reply");
+  try {
+    MultipleRecipientManager.reply(getConnection(1),message1,reply1);
+    fail("It was possible to send a reply to a not replyable message");
+  }
+ catch (  XMPPException e) {
+  }
+  message1=(Message)collector2.nextResult(SmackConfiguration.getPacketReplyTimeout());
+  assertNotNull("XMPPConnection2 didn't receive the 1 message",message1);
+  message1=(Message)collector2.nextResult(SmackConfiguration.getPacketReplyTimeout());
+  assertNull("XMPPConnection2 received 2 messages",message1);
+  message1=(Message)collector3.nextResult(SmackConfiguration.getPacketReplyTimeout());
+  assertNotNull("XMPPConnection3 didn't receive the 1 message",message1);
+  message1=(Message)collector3.nextResult(SmackConfiguration.getPacketReplyTimeout());
+  assertNull("XMPPConnection2 received 2 messages",message1);
+  collector1.cancel();
+  collector2.cancel();
+  collector3.cancel();
+}

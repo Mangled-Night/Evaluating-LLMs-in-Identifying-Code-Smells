@@ -1,0 +1,50 @@
+@Override public <S extends Stanza>SmackFuture<S,Exception> sendAsync(S stanza,final StanzaFilter replyFilter){
+  return sendAsync(stanza,replyFilter,getReplyTimeout());
+}
+@SuppressWarnings("FutureReturnValueIgnored") @Override public <S extends Stanza>SmackFuture<S,Exception> sendAsync(S stanza,final StanzaFilter replyFilter,long timeout){
+  Objects.requireNonNull(stanza,"stanza must not be null");
+  Objects.requireNonNull(replyFilter,"replyFilter must not be null");
+  final InternalSmackFuture<S,Exception> future=new InternalSmackFuture<>();
+  final StanzaListener stanzaListener=new StanzaListener(){
+    @Override public void processStanza(    Stanza stanza) throws NotConnectedException, InterruptedException {
+      boolean removed=removeAsyncStanzaListener(this);
+      if (!removed) {
+        return;
+      }
+      try {
+        XMPPErrorException.ifHasErrorThenThrow(stanza);
+        @SuppressWarnings("unchecked") S s=(S)stanza;
+        future.setResult(s);
+      }
+ catch (      XMPPErrorException exception) {
+        future.setException(exception);
+      }
+    }
+  }
+;
+  schedule(new Runnable(){
+    @Override public void run(){
+      boolean removed=removeAsyncStanzaListener(stanzaListener);
+      if (!removed) {
+        return;
+      }
+      Exception exception;
+      if (!isConnected()) {
+        exception=new NotConnectedException(AbstractXMPPConnection.this,replyFilter);
+      }
+ else {
+        exception=NoResponseException.newWith(AbstractXMPPConnection.this,replyFilter);
+      }
+      future.setException(exception);
+    }
+  }
+,timeout,TimeUnit.MILLISECONDS);
+  addAsyncStanzaListener(stanzaListener,replyFilter);
+  try {
+    sendStanzaNonBlocking(stanza);
+  }
+ catch (  NotConnectedException|OutgoingQueueFullException exception) {
+    future.setException(exception);
+  }
+  return future;
+}

@@ -1,0 +1,51 @@
+public static class SocketFuture extends InternalSmackFuture<Socket,IOException> {
+  private final Socket socket;
+  private final Object wasInterruptedLock=new Object();
+  private boolean wasInterrupted;
+  public SocketFuture(  SocketFactory socketFactory) throws IOException {
+    socket=socketFactory.createSocket();
+  }
+  @Override protected void futureWait(  long timeout) throws InterruptedException {
+    try {
+      super.futureWait(timeout);
+    }
+ catch (    InterruptedException interruptedException) {
+synchronized (wasInterruptedLock) {
+        wasInterrupted=true;
+        if (!socket.isClosed()) {
+          closeSocket();
+        }
+      }
+      throw interruptedException;
+    }
+  }
+  public void connectAsync(  final SocketAddress socketAddress,  final int timeout){
+    AbstractXMPPConnection.asyncGo(new Runnable(){
+      @Override public void run(){
+        try {
+          socket.connect(socketAddress,timeout);
+        }
+ catch (        IOException e) {
+          setException(e);
+          return;
+        }
+synchronized (wasInterruptedLock) {
+          if (wasInterrupted) {
+            closeSocket();
+            return;
+          }
+        }
+        setResult(socket);
+      }
+    }
+);
+  }
+  private void closeSocket(){
+    try {
+      socket.close();
+    }
+ catch (    IOException ioException) {
+      LOGGER.log(Level.WARNING,"Could not close socket",ioException);
+    }
+  }
+}

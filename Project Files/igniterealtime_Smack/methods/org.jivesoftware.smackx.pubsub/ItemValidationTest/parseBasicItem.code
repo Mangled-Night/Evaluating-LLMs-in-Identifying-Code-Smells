@@ -1,0 +1,14 @@
+@Test public void parseBasicItem() throws Exception {
+  XmlPullParser parser=PacketParserUtils.getParserFor("<message from='pubsub.myserver.com' to='francisco@denmark.lit' id='foo'>" + "<event xmlns='http://jabber.org/protocol/pubsub#event'>" + "<items node='testNode'>"+ "<item id='testid1' />"+ "</items>"+ "</event>"+ "</message>");
+  Stanza message=PacketParserUtils.parseMessage(parser);
+  XmlElement eventExt=message.getExtension(PubSubNamespace.event.getXmlns());
+  assertTrue(eventExt instanceof EventElement);
+  EventElement event=(EventElement)eventExt;
+  assertEquals(EventElementType.items,event.getEventType());
+  assertEquals(1,event.getExtensions().size());
+  assertTrue(event.getExtensions().get(0) instanceof ItemsExtension);
+  assertEquals(1,((ItemsExtension)event.getExtensions().get(0)).items.size());
+  NamedElement itemExt=((ItemsExtension)event.getExtensions().get(0)).items.get(0);
+  assertTrue(itemExt instanceof Item);
+  assertEquals("testid1",((Item)itemExt).getId());
+}

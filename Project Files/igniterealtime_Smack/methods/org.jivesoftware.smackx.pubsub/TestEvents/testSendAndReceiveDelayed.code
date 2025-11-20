@@ -1,0 +1,18 @@
+public void testSendAndReceiveDelayed() throws Exception {
+  String nodeId="TestNode" + System.currentTimeMillis();
+  PubSubManager creatorMgr=new PubSubManager(getConnection(0),getService());
+  LeafNode creatorNode=getPubnode(creatorMgr,nodeId,true,false);
+  String itemId=String.valueOf("DelayId-" + System.currentTimeMillis());
+  String payloadString="<book xmlns='pubsub:test:book'><author>Sir Arthur Conan Doyle</author></book>";
+  creatorNode.send(new PayloadItem<SimplePayload>(itemId,new SimplePayload("book","pubsub:test:book",payloadString)));
+  Thread.sleep(1000);
+  BlockingQueue<ItemEventCoordinator<PayloadItem<SimplePayload>>> queue=new ArrayBlockingQueue<ItemEventCoordinator<PayloadItem<SimplePayload>>>(3);
+  PubSubManager subMgr=new PubSubManager(getConnection(1),getService());
+  LeafNode subNode=(LeafNode)subMgr.getNode(nodeId);
+  ItemEventCoordinator<PayloadItem<SimplePayload>> sub1Handler=new ItemEventCoordinator<PayloadItem<SimplePayload>>(queue,"sub1");
+  subNode.addItemEventListener(sub1Handler);
+  Subscription sub1=subNode.subscribe(getConnection(1).getUser());
+  ItemEventCoordinator<PayloadItem<SimplePayload>> coord=queue.poll(5,TimeUnit.SECONDS);
+  assertTrue(coord.events.isDelayed());
+  assertNotNull(coord.events.getPublishedDate());
+}

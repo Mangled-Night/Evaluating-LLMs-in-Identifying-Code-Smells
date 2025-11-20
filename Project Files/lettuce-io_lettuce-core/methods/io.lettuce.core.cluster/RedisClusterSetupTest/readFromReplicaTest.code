@@ -1,0 +1,13 @@
+@Test public void readFromReplicaTest(){
+  ClusterSetup.setup2Masters(clusterHelper);
+  RedisAdvancedClusterAsyncCommands<String,String> clusterConnection=clusterClient.connect().async();
+  clusterConnection.getStatefulConnection().setReadFrom(ReadFrom.REPLICA);
+  TestFutures.awaitOrTimeout(clusterConnection.set(key,value));
+  try {
+    clusterConnection.get(key);
+  }
+ catch (  RedisException e) {
+    assertThat(e).hasMessageContaining("Cannot determine a partition to read for slot");
+  }
+  clusterConnection.getStatefulConnection().close();
+}

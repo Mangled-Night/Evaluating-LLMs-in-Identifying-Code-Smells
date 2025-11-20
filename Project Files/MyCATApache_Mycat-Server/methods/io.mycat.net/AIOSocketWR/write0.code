@@ -1,0 +1,40 @@
+/** 
+ * return true ,means no more data
+ * @return
+ */
+private boolean write0(){
+  if (!writing.compareAndSet(false,true)) {
+    return false;
+  }
+  ByteBuffer theBuffer=con.writeBuffer;
+  if (theBuffer == null || !theBuffer.hasRemaining()) {
+    if (theBuffer != null) {
+      con.recycle(theBuffer);
+      con.writeBuffer=null;
+    }
+    ByteBuffer buffer=con.writeQueue.poll();
+    if (buffer != null) {
+      if (buffer.limit() == 0) {
+        con.recycle(buffer);
+        con.writeBuffer=null;
+        con.close("quit cmd");
+        writing.set(false);
+        return true;
+      }
+ else {
+        con.writeBuffer=buffer;
+        asynWrite(buffer);
+        return false;
+      }
+    }
+ else {
+      writing.set(false);
+      return true;
+    }
+  }
+ else {
+    theBuffer.compact();
+    asynWrite(theBuffer);
+    return false;
+  }
+}

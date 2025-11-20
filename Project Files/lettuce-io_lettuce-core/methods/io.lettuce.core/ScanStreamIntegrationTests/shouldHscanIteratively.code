@@ -1,0 +1,8 @@
+@Test void shouldHscanIteratively(){
+  for (int i=0; i < 1000; i++) {
+    redis.hset(key,"field-" + i,"value-" + i);
+  }
+  RedisReactiveCommands<String,String> reactive=redis.getStatefulConnection().reactive();
+  StepVerifier.create(ScanStream.hscan(reactive,key,ScanArgs.Builder.limit(200)).take(250)).expectNextCount(250).verifyComplete();
+  StepVerifier.create(ScanStream.hscan(reactive,key)).expectNextCount(1000).verifyComplete();
+}

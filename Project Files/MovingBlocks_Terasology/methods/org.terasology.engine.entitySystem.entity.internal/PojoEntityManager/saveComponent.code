@@ -1,0 +1,27 @@
+/** 
+ * Saves a component to an entity
+ * @param entityId
+ * @param component
+ */
+@Override public void saveComponent(long entityId,Component component){
+  Optional<Component> oldComponent=getPool(entityId).map(pool -> pool.getComponentStore().put(entityId,component));
+  if (!oldComponent.isPresent()) {
+    logger.error("Saving a component ({}) that doesn't belong to this entity {}",component.getClass(),entityId);
+  }
+  if (eventSystem != null) {
+    EntityRef entityRef=getEntity(entityId);
+    if (!oldComponent.isPresent()) {
+      eventSystem.send(entityRef,OnAddedComponent.newInstance(),component);
+      eventSystem.send(entityRef,OnActivatedComponent.newInstance(),component);
+    }
+ else {
+      eventSystem.send(entityRef,OnChangedComponent.newInstance(),component);
+    }
+  }
+  if (!oldComponent.isPresent()) {
+    notifyComponentAdded(getEntity(entityId),component.getClass());
+  }
+ else {
+    notifyComponentChanged(getEntity(entityId),component.getClass());
+  }
+}

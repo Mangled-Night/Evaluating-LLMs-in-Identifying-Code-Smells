@@ -1,0 +1,17 @@
+/** 
+ * sql执行完成后回调函数
+ */
+public void onEventSqlCompleted(){
+  SqlEntry sqlEntry=null;
+synchronized (this.executeSqlQueue) {
+    this.executeSqlQueue.poll();
+    sqlEntry=this.executeSqlQueue.peek();
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("poll queue,executeSqlQueue size {}",this.executeSqlQueue.size());
+    }
+  }
+  if (sqlEntry != null) {
+    this.executeSqlId++;
+    session.execute(sqlEntry.rrs,sqlEntry.rrs.isSelectForUpdate() ? ServerParse.UPDATE : sqlEntry.type);
+  }
+}

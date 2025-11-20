@@ -1,0 +1,76 @@
+@Override public void run(){
+  Resourcepart fromResource=Resourcepart.EMPTY;
+  BareJid bareFrom=null;
+  FullJid fullFrom=null;
+  if (from != null) {
+    fromResource=from.getResourceOrNull();
+    if (fromResource == null) {
+      fromResource=Resourcepart.EMPTY;
+      bareFrom=from.asBareJid();
+    }
+ else {
+      fullFrom=from.asFullJidIfPossible();
+      assert fullFrom != null;
+    }
+  }
+  Map<Resourcepart,Presence> userPresences;
+switch (presence.getType()) {
+case available:
+    userPresences=getOrCreatePresencesInternal(key);
+  userPresences.remove(Resourcepart.EMPTY);
+userPresences.put(fromResource,presence);
+if (contains(key)) {
+fireRosterPresenceEvent(presence);
+}
+for (PresenceEventListener presenceEventListener : presenceEventListeners) {
+presenceEventListener.presenceAvailable(fullFrom,presence);
+}
+break;
+case unavailable:
+userPresences=getOrCreatePresencesInternal(key);
+if (from.hasNoResource()) {
+userPresences.put(Resourcepart.EMPTY,presence);
+}
+ else {
+userPresences.put(fromResource,presence);
+}
+if (contains(key)) {
+fireRosterPresenceEvent(presence);
+}
+if (fullFrom != null) {
+for (PresenceEventListener presenceEventListener : presenceEventListeners) {
+presenceEventListener.presenceUnavailable(fullFrom,presence);
+}
+}
+ else {
+LOGGER.fine("Unavailable presence from bare JID: " + presence);
+}
+break;
+case error:
+if (from == null || !from.isEntityBareJid()) {
+break;
+}
+userPresences=getOrCreatePresencesInternal(key);
+userPresences.clear();
+userPresences.put(Resourcepart.EMPTY,presence);
+if (contains(key)) {
+fireRosterPresenceEvent(presence);
+}
+for (PresenceEventListener presenceEventListener : presenceEventListeners) {
+presenceEventListener.presenceError(from,presence);
+}
+break;
+case subscribed:
+for (PresenceEventListener presenceEventListener : presenceEventListeners) {
+presenceEventListener.presenceSubscribed(bareFrom,presence);
+}
+break;
+case unsubscribed:
+for (PresenceEventListener presenceEventListener : presenceEventListeners) {
+presenceEventListener.presenceUnsubscribed(bareFrom,presence);
+}
+break;
+default :
+break;
+}
+}

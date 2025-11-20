@@ -1,0 +1,16 @@
+@SuppressWarnings("UndefinedEquals") @Test public void signcryptElementProviderTest() throws Exception {
+  String expected="<signcrypt xmlns='urn:xmpp:openpgp:0'>" + "<to jid='juliet@example.org'/>" + "<time stamp='2014-07-10T15:06:00.000+00:00'/>"+ "<payload>"+ "<body xmlns='jabber:client' xml:lang='en'>This is a secret message.</body>"+ "</payload>"+ "<rpad>f0rm1l4n4-mT8y33j!Y%fRSrcd^ZE4Q7VDt1L%WEgR!kv</rpad>"+ "</signcrypt>";
+  List<ExtensionElement> payload=new ArrayList<>();
+  payload.add(new Message.Body("en","This is a secret message."));
+  Set<Jid> jids=new HashSet<>();
+  jids.add(JidCreate.bareFrom("juliet@example.org"));
+  SigncryptElement element=new SigncryptElement(jids,"f0rm1l4n4-mT8y33j!Y%fRSrcd^ZE4Q7VDt1L%WEgR!kv",testDate,payload);
+  assertXmlSimilar(expected,element.toXML().toString());
+  XmlPullParser parser=TestUtils.getParser(expected);
+  SigncryptElement parsed=(SigncryptElement)OpenPgpContentElementProvider.parseOpenPgpContentElement(parser);
+  assertEquals(element.getTimestamp(),parsed.getTimestamp());
+  assertEquals(element.getTo(),parsed.getTo());
+  assertEquals(element.getExtensions(),parsed.getExtensions());
+  assertEquals(payload.get(0),element.getExtension(Message.Body.NAMESPACE));
+  assertEquals(payload.get(0),element.getExtension(Message.Body.ELEMENT,Message.Body.NAMESPACE));
+}

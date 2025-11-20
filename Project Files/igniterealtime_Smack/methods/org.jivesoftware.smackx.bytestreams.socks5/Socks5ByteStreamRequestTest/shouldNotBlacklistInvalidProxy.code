@@ -1,0 +1,27 @@
+/** 
+ * Target should not not blacklist any SOCKS5 proxies regardless of failing connections.
+ * @throws Exception should not happen
+ */
+@Test public void shouldNotBlacklistInvalidProxy() throws Exception {
+  final Protocol protocol=new Protocol();
+  final XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,targetJID);
+  Bytestream bytestreamInitialization=Socks5PacketUtils.createBytestreamInitiation(initiatorJID,targetJID,sessionID);
+  bytestreamInitialization.addStreamHost(JidCreate.from("invalid." + proxyJID),"127.0.0.2",7778);
+  Socks5BytestreamManager byteStreamManager=Socks5BytestreamManager.getBytestreamManager(connection);
+  for (int i=0; i < 10; i++) {
+    assertThrows(Socks5Exception.CouldNotConnectToAnyProvidedSocks5Host.class,() -> {
+      Socks5BytestreamRequest byteStreamRequest=new Socks5BytestreamRequest(byteStreamManager,bytestreamInitialization);
+      byteStreamRequest.setTotalConnectTimeout(600);
+      byteStreamRequest.setMinimumConnectTimeout(300);
+      byteStreamRequest.setConnectFailureThreshold(0);
+      byteStreamRequest.accept();
+    }
+);
+    assertEquals(1,protocol.getRequests().size());
+    Stanza targetResponse=protocol.getRequests().remove(0);
+    assertTrue(IQ.class.isInstance(targetResponse));
+    assertEquals(initiatorJID,targetResponse.getTo());
+    assertEquals(IQ.Type.error,((IQ)targetResponse).getType());
+    assertEquals(StanzaError.Condition.item_not_found,targetResponse.getError().getCondition());
+  }
+}

@@ -1,0 +1,132 @@
+/** 
+ * Show the toast for a short period of time.
+ * @param text The text.
+ */
+public final void show(@Nullable final CharSequence text){
+  show(text,getDuration(),this);
+}
+/** 
+ * Show the toast for a short period of time.
+ * @param resId The resource id for text.
+ */
+public final void show(@StringRes final int resId){
+  show(UtilsBridge.getString(resId),getDuration(),this);
+}
+/** 
+ * Show the toast for a short period of time.
+ * @param resId The resource id for text.
+ * @param args  The args.
+ */
+public final void show(@StringRes final int resId,final Object... args){
+  show(UtilsBridge.getString(resId,args),getDuration(),this);
+}
+/** 
+ * Show the toast for a short period of time.
+ * @param format The format.
+ * @param args   The args.
+ */
+public final void show(@Nullable final String format,final Object... args){
+  show(UtilsBridge.format(format,args),getDuration(),this);
+}
+/** 
+ * Show custom toast.
+ */
+public final void show(@NonNull final View view){
+  show(view,getDuration(),this);
+}
+private static void show(@Nullable final CharSequence text,final int duration,final ToastUtils utils){
+  show(null,getToastFriendlyText(text),duration,utils);
+}
+private static void show(@NonNull final View view,final int duration,final ToastUtils utils){
+  show(view,null,duration,utils);
+}
+private static void show(@Nullable final View view,@Nullable final CharSequence text,final int duration,@NonNull final ToastUtils utils){
+  UtilsBridge.runOnUiThread(new Runnable(){
+    @Override public void run(){
+      cancel();
+      IToast iToast=newToast(utils);
+      ToastUtils.sWeakToast=new WeakReference<>(iToast);
+      if (view != null) {
+        iToast.setToastView(view);
+      }
+ else {
+        iToast.setToastView(text);
+      }
+      iToast.show(duration);
+    }
+  }
+);
+}
+@Override public void show(int duration){
+  if (mToast == null)   return;
+  mToast.setDuration(duration);
+  mToast.show();
+}
+@Override public void show(final int duration){
+  if (mToast == null)   return;
+  mParams.height=WindowManager.LayoutParams.WRAP_CONTENT;
+  mParams.width=WindowManager.LayoutParams.WRAP_CONTENT;
+  mParams.format=PixelFormat.TRANSLUCENT;
+  mParams.windowAnimations=android.R.style.Animation_Toast;
+  mParams.setTitle("ToastWithoutNotification");
+  mParams.flags=WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+  mParams.packageName=Utils.getApp().getPackageName();
+  mParams.gravity=mToast.getGravity();
+  if ((mParams.gravity & Gravity.HORIZONTAL_GRAVITY_MASK) == Gravity.FILL_HORIZONTAL) {
+    mParams.horizontalWeight=1.0f;
+  }
+  if ((mParams.gravity & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.FILL_VERTICAL) {
+    mParams.verticalWeight=1.0f;
+  }
+  mParams.x=mToast.getXOffset();
+  mParams.y=mToast.getYOffset();
+  mParams.horizontalMargin=mToast.getHorizontalMargin();
+  mParams.verticalMargin=mToast.getVerticalMargin();
+  try {
+    if (mWM != null) {
+      mWM.addView(mToastView,mParams);
+    }
+  }
+ catch (  Exception ignored) {
+  }
+  UtilsBridge.runOnUiThreadDelayed(new Runnable(){
+    @Override public void run(){
+      cancel();
+    }
+  }
+,duration == Toast.LENGTH_SHORT ? 2000 : 3500);
+}
+@Override public void show(int duration){
+  if (mToast == null)   return;
+  if (!UtilsBridge.isAppForeground()) {
+    iToast=showSystemToast(duration);
+    return;
+  }
+  boolean hasAliveActivity=false;
+  for (  final Activity activity : UtilsBridge.getActivityList()) {
+    if (!UtilsBridge.isActivityAlive(activity)) {
+      continue;
+    }
+    if (!hasAliveActivity) {
+      hasAliveActivity=true;
+      iToast=showWithActivityWindow(activity,duration);
+    }
+ else {
+      showWithActivityView(activity,sShowingIndex,true);
+    }
+  }
+  if (hasAliveActivity) {
+    registerLifecycleCallback();
+    UtilsBridge.runOnUiThreadDelayed(new Runnable(){
+      @Override public void run(){
+        cancel();
+      }
+    }
+,duration == Toast.LENGTH_SHORT ? 2000 : 3500);
+    ++sShowingIndex;
+  }
+ else {
+    iToast=showSystemToast(duration);
+  }
+}
+void show(int duration);

@@ -1,0 +1,38 @@
+@Override public List<Exception> initialize(){
+  InputStream is=null;
+  final ClassLoader classLoader=this.getClass().getClassLoader();
+  final List<Exception> exceptions=new LinkedList<Exception>();
+  final String providerUriString=getProvidersUri();
+  if (providerUriString != null) {
+    try {
+      final URI providerUri=URI.create(providerUriString);
+      is=FileUtils.getStreamForUri(providerUri,classLoader);
+      LOGGER.log(Level.FINE,"Loading providers for providerUri [" + providerUri + "]");
+      ProviderFileLoader pfl=new ProviderFileLoader(is,classLoader);
+      ProviderManager.addLoader(pfl);
+      exceptions.addAll(pfl.getLoadingExceptions());
+    }
+ catch (    Exception e) {
+      LOGGER.log(Level.SEVERE,"Error trying to load provider file " + providerUriString,e);
+      exceptions.add(e);
+    }
+ finally {
+      maybeClose(is);
+    }
+  }
+  final String configUriString=getConfigUri();
+  if (configUriString != null) {
+    try {
+      final URI configUri=URI.create(configUriString);
+      is=FileUtils.getStreamForUri(configUri,classLoader);
+      SmackInitialization.processConfigFile(is,exceptions,classLoader);
+    }
+ catch (    Exception e) {
+      exceptions.add(e);
+    }
+ finally {
+      maybeClose(is);
+    }
+  }
+  return exceptions;
+}

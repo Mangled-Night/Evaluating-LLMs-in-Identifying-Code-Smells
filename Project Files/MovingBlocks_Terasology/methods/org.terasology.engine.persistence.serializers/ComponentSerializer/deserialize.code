@@ -1,0 +1,23 @@
+/** 
+ * @param componentData
+ * @return The component described by the componentData, or null if it couldn't be deserialized
+ */
+public Component deserialize(EntityData.Component componentData){
+  return deserialize(componentData,null);
+}
+/** 
+ * @param componentData
+ * @param context       The module this component belongs to, or null if it is not being loaded from a module
+ * @return The component described by the componentData, or null if it couldn't be deserialized
+ */
+public Component deserialize(EntityData.Component componentData,Module context){
+  ComponentMetadata<? extends Component> componentMetadata=getComponentMetadata(componentData,context);
+  if (componentMetadata != null) {
+    Component component=componentMetadata.newInstance();
+    return deserializeOnto(component,componentData,componentMetadata,FieldSerializeCheck.NullCheck.<Component>newInstance());
+  }
+ else {
+    logger.warn("Unable to deserialize unknown component type: {}",componentData.getType());
+  }
+  return null;
+}

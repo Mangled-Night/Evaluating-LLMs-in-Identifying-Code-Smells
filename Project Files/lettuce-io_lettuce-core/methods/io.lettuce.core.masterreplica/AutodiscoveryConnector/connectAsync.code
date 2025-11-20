@@ -1,0 +1,20 @@
+@Override public CompletableFuture<StatefulRedisMasterReplicaConnection<K,V>> connectAsync(){
+  ConnectionFuture<StatefulRedisConnection<K,V>> initialConnection=redisClient.connectAsync(codec,redisURI);
+  Mono<StatefulRedisMasterReplicaConnection<K,V>> connect=Mono.fromCompletionStage(initialConnection).flatMap(nodeConnection -> {
+    initialConnections.put(redisURI,nodeConnection);
+    TopologyProvider topologyProvider=new ReplicaTopologyProvider(nodeConnection,redisURI);
+    return Mono.fromCompletionStage(topologyProvider.getNodesAsync()).flatMap(nodes -> getMasterConnectionAndUri(nodes,Tuples.of(redisURI,nodeConnection),codec));
+  }
+).flatMap(connectionAndUri -> {
+    return initializeConnection(codec,connectionAndUri);
+  }
+);
+  return connect.onErrorResume(t -> {
+    Mono<Void> close=Mono.empty();
+    for (    StatefulRedisConnection<?,?> connection : initialConnections.values()) {
+      close=close.then(Mono.fromFuture(connection.closeAsync()));
+    }
+    return close.then(Mono.error(t));
+  }
+).onErrorMap(ExecutionException.class,Throwable::getCause).toFuture();
+}

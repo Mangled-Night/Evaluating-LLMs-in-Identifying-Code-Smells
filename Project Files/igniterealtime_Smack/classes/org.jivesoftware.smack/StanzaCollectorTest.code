@@ -1,0 +1,135 @@
+public class StanzaCollectorTest {
+  @Test public void verifyRollover() throws InterruptedException {
+    StanzaCollector collector=createTestStanzaCollector(null,new OKEverything(),5);
+    for (int i=0; i < 6; i++) {
+      Stanza testPacket=new TestPacket(i);
+      collector.processStanza(testPacket);
+    }
+    assertEquals("1",collector.nextResultBlockForever().getStanzaId());
+    assertEquals("2",collector.nextResultBlockForever().getStanzaId());
+    assertEquals("3",collector.nextResultBlockForever().getStanzaId());
+    assertEquals("4",collector.nextResultBlockForever().getStanzaId());
+    assertEquals("5",collector.pollResult().getStanzaId());
+    assertNull(collector.pollResult());
+    for (int i=10; i < 15; i++) {
+      Stanza testPacket=new TestPacket(i);
+      collector.processStanza(testPacket);
+    }
+    assertEquals("10",collector.nextResultBlockForever().getStanzaId());
+    assertEquals("11",collector.nextResultBlockForever().getStanzaId());
+    assertEquals("12",collector.nextResultBlockForever().getStanzaId());
+    assertEquals("13",collector.nextResultBlockForever().getStanzaId());
+    assertEquals("14",collector.pollResult().getStanzaId());
+    assertNull(collector.pollResult());
+    assertNull(collector.nextResult(10));
+  }
+  /** 
+ * Although this doesn't guarantee anything due to the nature of threading, it can potentially catch problems.
+ * @throws InterruptedException if interrupted.
+ */
+  @SuppressWarnings("ThreadPriorityCheck") @Test public void verifyThreadSafety() throws InterruptedException {
+    final int insertCount=500;
+    final StanzaCollector collector=createTestStanzaCollector(null,new OKEverything(),insertCount);
+    final AtomicInteger consumer1Dequeued=new AtomicInteger();
+    final AtomicInteger consumer2Dequeued=new AtomicInteger();
+    final AtomicInteger consumer3Dequeued=new AtomicInteger();
+    Thread consumer1=new Thread(new Runnable(){
+      @Override public void run(){
+        int dequeueCount=0;
+        try {
+          while (true) {
+            Thread.yield();
+            Stanza packet=collector.nextResultBlockForever();
+            if (packet != null) {
+              dequeueCount++;
+            }
+          }
+        }
+ catch (        InterruptedException e) {
+        }
+ finally {
+          consumer1Dequeued.set(dequeueCount);
+        }
+      }
+    }
+);
+    consumer1.setName("consumer 1");
+    Thread consumer2=new Thread(new Runnable(){
+      @Override public void run(){
+        Stanza p;
+        int dequeueCount=0;
+        do {
+          Thread.yield();
+          try {
+            p=collector.nextResult(1000);
+          }
+ catch (          InterruptedException e) {
+            throw new RuntimeException(e);
+          }
+          if (p != null) {
+            dequeueCount++;
+          }
+        }
+ while (p != null);
+        consumer2Dequeued.set(dequeueCount);
+      }
+    }
+);
+    consumer2.setName("consumer 2");
+    Thread consumer3=new Thread(new Runnable(){
+      @Override public void run(){
+        Stanza p;
+        int dequeueCount=0;
+        do {
+          Thread.yield();
+          p=collector.pollResult();
+          if (p != null) {
+            dequeueCount++;
+          }
+        }
+ while (p != null);
+        consumer3Dequeued.set(dequeueCount);
+      }
+    }
+);
+    consumer3.setName("consumer 3");
+    for (int i=0; i < insertCount; i++) {
+      collector.processStanza(new TestPacket(i));
+    }
+    consumer1.start();
+    consumer2.start();
+    consumer3.start();
+    consumer3.join();
+    consumer2.join();
+    consumer1.interrupt();
+    consumer1.join();
+    assertNull(collector.pollResult());
+    int consumer1DequeuedLocal=consumer1Dequeued.get();
+    int consumer2DequeuedLocal=consumer2Dequeued.get();
+    int consumer3DequeuedLocal=consumer3Dequeued.get();
+    final int totalDequeued=consumer1DequeuedLocal + consumer2DequeuedLocal + consumer3DequeuedLocal;
+    assertEquals("Inserted " + insertCount + " but only "+ totalDequeued+ " c1: "+ consumer1DequeuedLocal+ " c2: "+ consumer2DequeuedLocal+ " c3: "+ consumer3DequeuedLocal,insertCount,totalDequeued);
+  }
+static class OKEverything implements StanzaFilter {
+    @Override public boolean accept(    Stanza packet){
+      return true;
+    }
+  }
+  private static StanzaCollector createTestStanzaCollector(  XMPPConnection connection,  StanzaFilter packetFilter,  int size){
+    return new StanzaCollector(connection,StanzaCollector.newConfiguration().setStanzaFilter(packetFilter).setSize(size));
+  }
+static class TestPacket extends Stanza {
+    TestPacket(    int i){
+      setStanzaId(String.valueOf(i));
+    }
+    @Override public String toXML(    org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+      return "<packetId>" + getStanzaId() + "</packetId>";
+    }
+    @Override public String toString(){
+      return toXML().toString();
+    }
+    @Override public String getElementName(){
+      return "packetId";
+    }
+  }
+}

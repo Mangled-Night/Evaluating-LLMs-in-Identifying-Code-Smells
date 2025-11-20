@@ -1,0 +1,28 @@
+/** 
+ * 测试"schema.table"
+ * @throws Exception
+ */
+public void testSchemaTable() throws Exception {
+  SchemaConfig schema=schemaMap.get("schema_table_test");
+  RouteResultset rrs=null;
+  String sql="select * from schema_table_test.offer   where id = 1;";
+  rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(1,rrs.getNodes().length);
+  Assert.assertTrue(rrs.getNodes()[0].getName().equals("dn1"));
+  sql="select * from noExistSchema.offer a where a.id = 1;";
+  rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(1,rrs.getNodes().length);
+  Assert.assertTrue(rrs.getNodes()[0].getName().equals("dn2"));
+  sql="select * from noExistSchema.offer  where id = 1;";
+  rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  Assert.assertEquals(1,rrs.getNodes().length);
+  Assert.assertTrue(rrs.getNodes()[0].getName().equals("dn2"));
+  schema=schemaMap.get("TESTDB");
+  sql="select * from schema_table_test.offer   where id = 1;";
+  try {
+    rrs=routeStrategy.route(new SystemConfig(),schema,1,sql,null,null,cachePool);
+  }
+ catch (  Exception e) {
+    Assert.assertTrue(e.getMessage().contains("can't find table define in schema SCHEMA_TABLE_TEST.OFFER alias：schema_table_test.offer, schema:TESTDB"));
+  }
+}

@@ -1,0 +1,31 @@
+@Override public void init(){
+  try {
+    if (naturalDayOpen.equals(sNaturalDay)) {
+      bNaturalDay=true;
+      oldsPartionDay=sPartionDay;
+      sPartionDay="1";
+    }
+    if (sBeginDate != null && !sBeginDate.equals("")) {
+      partionTime=Integer.parseInt(sPartionDay) * oneDay;
+      beginDate=new SimpleDateFormat(dateFormat).parse(sBeginDate).getTime();
+    }
+    if (sEndDate != null && !sEndDate.equals("") && beginDate > 0) {
+      endDate=new SimpleDateFormat(dateFormat).parse(sEndDate).getTime();
+      nCount=(int)((endDate - beginDate) / partionTime) + 1;
+      if (bNaturalDay && nCount < naturalLimitDay) {
+        bNaturalDay=false;
+        partionTime=Integer.parseInt(oldsPartionDay) * oneDay;
+        nCount=(int)((endDate - beginDate) / partionTime) + 1;
+      }
+    }
+    formatter=new ThreadLocal<SimpleDateFormat>(){
+      @Override protected SimpleDateFormat initialValue(){
+        return new SimpleDateFormat(dateFormat);
+      }
+    }
+;
+  }
+ catch (  ParseException e) {
+    throw new java.lang.IllegalArgumentException(e);
+  }
+}

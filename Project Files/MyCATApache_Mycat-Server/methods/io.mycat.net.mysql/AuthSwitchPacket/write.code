@@ -1,0 +1,15 @@
+@Override public ByteBuffer write(ByteBuffer buffer,FrontendConnection c,boolean writeSocketIfFull){
+  int size=calcPacketSize();
+  buffer=c.checkWriteBuffer(buffer,c.getPacketHeaderSize() + size,writeSocketIfFull);
+  BufferUtil.writeUB3(buffer,size);
+  buffer.put(packetId);
+  buffer.put(STATUS);
+  BufferUtil.writeWithNull(buffer,authMethodName);
+  BufferUtil.writeWithNull(buffer,authMethodData);
+  return buffer;
+}
+public void write(FrontendConnection c){
+  ByteBuffer buffer=c.allocate();
+  buffer=this.write(buffer,c,true);
+  c.write(buffer);
+}

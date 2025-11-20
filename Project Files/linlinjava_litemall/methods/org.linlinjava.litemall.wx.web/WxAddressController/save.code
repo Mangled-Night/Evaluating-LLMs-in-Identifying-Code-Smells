@@ -1,0 +1,35 @@
+/** 
+ * 添加或更新收货地址
+ * @param userId  用户ID
+ * @param address 用户收货地址
+ * @return 添加或更新操作结果
+ */
+@PostMapping("save") public Object save(@LoginUser Integer userId,@RequestBody LitemallAddress address){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  Object error=validate(address);
+  if (error != null) {
+    return error;
+  }
+  if (address.getId() == null || address.getId().equals(0)) {
+    if (address.getIsDefault()) {
+      addressService.resetDefault(userId);
+    }
+    address.setId(null);
+    address.setUserId(userId);
+    addressService.add(address);
+  }
+ else {
+    LitemallAddress litemallAddress=addressService.query(userId,address.getId());
+    if (litemallAddress == null) {
+      return ResponseUtil.badArgumentValue();
+    }
+    if (address.getIsDefault()) {
+      addressService.resetDefault(userId);
+    }
+    address.setUserId(userId);
+    addressService.update(address);
+  }
+  return ResponseUtil.ok(address.getId());
+}

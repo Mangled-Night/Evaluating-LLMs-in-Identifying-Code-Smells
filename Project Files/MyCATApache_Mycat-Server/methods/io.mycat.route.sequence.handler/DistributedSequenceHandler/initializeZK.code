@@ -1,0 +1,40 @@
+public void initializeZK(String zkAddress){
+  this.client=CuratorFrameworkFactory.newClient(zkAddress,new ExponentialBackoffRetry(1000,3));
+  this.client.start();
+  try {
+    if (client.checkExists().forPath(PATH.concat(INSTANCE_PATH)) == null) {
+      client.create().creatingParentContainersIfNeeded().forPath(PATH.concat(INSTANCE_PATH));
+    }
+  }
+ catch (  Exception e) {
+  }
+  this.leaderSelector=new LeaderSelector(client,PATH.concat(LEADER_PATH),this);
+  this.leaderSelector.autoRequeue();
+  this.leaderSelector.start();
+  Runnable runnable=new Runnable(){
+    @Override public void run(){
+      try {
+        while (leaderSelector.getLeader() == null) {
+          Thread.currentThread().yield();
+        }
+        if (!leaderSelector.hasLeadership()) {
+          isLeader=false;
+          if (slavePath != null && client.checkExists().forPath(slavePath) != null) {
+            return;
+          }
+          slavePath=client.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL_SEQUENTIAL).forPath(PATH.concat("/instance/node"),"ready".getBytes());
+          while ("ready".equals(new String(client.getData().forPath(slavePath)))) {
+            Thread.currentThread().yield();
+          }
+          instanceId=Long.parseLong(new String(client.getData().forPath(slavePath)));
+          ready=true;
+        }
+      }
+ catch (      Exception e) {
+        LOGGER.warn("Caught exception while handling zk!",e);
+      }
+    }
+  }
+;
+  timerExecutor.scheduleAtFixedRate(runnable,1L,10L,TimeUnit.SECONDS);
+}

@@ -1,0 +1,37 @@
+/** 
+ * Generate a salt for use with the BCrypt.hashpw() method
+ * @param log_rounds the log2 of the number of rounds of hashing to apply - the workfactor therefore increases as 2**log_rounds. Minimum 4, maximum 31.
+ * @param random     an instance of SecureRandom to use
+ * @return an encoded salt value
+ */
+public static String gensalt(int log_rounds,SecureRandom random){
+  if (log_rounds < MIN_LOG_ROUNDS || log_rounds > MAX_LOG_ROUNDS) {
+    throw new IllegalArgumentException("Bad number of rounds");
+  }
+  StringBuilder rs=new StringBuilder();
+  byte rnd[]=new byte[BCRYPT_SALT_LEN];
+  random.nextBytes(rnd);
+  rs.append("$2a$");
+  if (log_rounds < 10) {
+    rs.append("0");
+  }
+  rs.append(log_rounds);
+  rs.append("$");
+  encode_base64(rnd,rnd.length,rs);
+  return rs.toString();
+}
+/** 
+ * Generate a salt for use with the BCrypt.hashpw() method
+ * @param log_rounds the log2 of the number of rounds of hashing to apply - the workfactor therefore increases as 2**log_rounds. Minimum 4, maximum 31.
+ * @return an encoded salt value
+ */
+public static String gensalt(int log_rounds){
+  return gensalt(log_rounds,new SecureRandom());
+}
+/** 
+ * Generate a salt for use with the BCrypt.hashpw() method, selecting a reasonable default for the number of hashing rounds to apply
+ * @return an encoded salt value
+ */
+public static String gensalt(){
+  return gensalt(GENSALT_DEFAULT_LOG2_ROUNDS);
+}

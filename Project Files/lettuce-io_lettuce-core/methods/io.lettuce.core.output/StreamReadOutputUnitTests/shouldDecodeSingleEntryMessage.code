@@ -1,0 +1,23 @@
+@Test void shouldDecodeSingleEntryMessage(){
+  sut.multi(2);
+  sut.set(ByteBuffer.wrap("stream-key".getBytes()));
+  sut.complete(1);
+  sut.multi(1);
+  sut.multi(2);
+  sut.set(ByteBuffer.wrap("1234-12".getBytes()));
+  sut.complete(3);
+  sut.multi(2);
+  sut.set(ByteBuffer.wrap("key".getBytes()));
+  sut.complete(4);
+  sut.set(ByteBuffer.wrap("value".getBytes()));
+  sut.complete(4);
+  sut.complete(3);
+  sut.complete(2);
+  sut.complete(1);
+  sut.complete(0);
+  assertThat(sut.get()).hasSize(1);
+  StreamMessage<String,String> streamMessage=sut.get().get(0);
+  assertThat(streamMessage.getId()).isEqualTo("1234-12");
+  assertThat(streamMessage.getStream()).isEqualTo("stream-key");
+  assertThat(streamMessage.getBody()).hasSize(1).containsEntry("key","value");
+}

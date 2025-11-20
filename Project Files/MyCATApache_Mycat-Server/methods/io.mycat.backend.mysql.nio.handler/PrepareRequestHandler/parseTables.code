@@ -1,0 +1,32 @@
+/** 
+ * 从sql 语句中解析出tableName
+ * @return
+ */
+private List<String> parseTables(String sql){
+  List<String> tables=new ArrayList<>();
+  try {
+    SQLStatementParser sqlStatementParser=SQLParserUtils.createSQLStatementParser(sql,JdbcUtils.MYSQL);
+    SQLStatement statement=sqlStatementParser.parseStatement();
+    if (statement instanceof MySqlUpdateStatement) {
+      String simpleName=((MySqlUpdateStatement)statement).getTableName().getSimpleName();
+      tables.add(StringUtil.removeBackquote(simpleName));
+    }
+ else     if (statement instanceof MySqlDeleteStatement) {
+      String simpleName=((MySqlDeleteStatement)statement).getTableName().getSimpleName();
+      tables.add(StringUtil.removeBackquote(simpleName));
+    }
+ else     if (statement instanceof MySqlInsertStatement) {
+      String simpleName=((MySqlInsertStatement)statement).getTableName().getSimpleName();
+      tables.add(StringUtil.removeBackquote(simpleName));
+    }
+ else {
+      MycatSchemaStatVisitor visitor=new MycatSchemaStatVisitor();
+      statement.accept(visitor);
+      tables.addAll(visitor.getAliasMap().values());
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.error("can not get column count",e);
+  }
+  return tables;
+}

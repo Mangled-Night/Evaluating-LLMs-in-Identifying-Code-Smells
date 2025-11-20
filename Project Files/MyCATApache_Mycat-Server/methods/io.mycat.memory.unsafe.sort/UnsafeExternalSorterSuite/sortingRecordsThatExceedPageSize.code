@@ -1,0 +1,36 @@
+@Test public void sortingRecordsThatExceedPageSize() throws Exception {
+  final UnsafeExternalSorter sorter=newSorter();
+  final int[] largeRecord=new int[(int)pageSizeBytes + 16];
+  Arrays.fill(largeRecord,456);
+  final int[] smallRecord=new int[100];
+  Arrays.fill(smallRecord,123);
+  insertRecord(sorter,largeRecord,456);
+  sorter.spill();
+  insertRecord(sorter,smallRecord,123);
+  sorter.spill();
+  insertRecord(sorter,smallRecord,123);
+  insertRecord(sorter,largeRecord,456);
+  UnsafeSorterIterator iter=sorter.getSortedIterator();
+  assertTrue(iter.hasNext());
+  iter.loadNext();
+  assertEquals(123,iter.getKeyPrefix());
+  assertEquals(smallRecord.length * 4,iter.getRecordLength());
+  assertEquals(123,Platform.getInt(iter.getBaseObject(),iter.getBaseOffset()));
+  assertTrue(iter.hasNext());
+  iter.loadNext();
+  assertEquals(123,iter.getKeyPrefix());
+  assertEquals(smallRecord.length * 4,iter.getRecordLength());
+  assertEquals(123,Platform.getInt(iter.getBaseObject(),iter.getBaseOffset()));
+  assertTrue(iter.hasNext());
+  iter.loadNext();
+  assertEquals(456,iter.getKeyPrefix());
+  assertEquals(largeRecord.length * 4,iter.getRecordLength());
+  assertEquals(456,Platform.getInt(iter.getBaseObject(),iter.getBaseOffset()));
+  assertTrue(iter.hasNext());
+  iter.loadNext();
+  assertEquals(456,iter.getKeyPrefix());
+  assertEquals(largeRecord.length * 4,iter.getRecordLength());
+  assertEquals(456,Platform.getInt(iter.getBaseObject(),iter.getBaseOffset()));
+  assertFalse(iter.hasNext());
+  assertSpillFilesWereCleanedUp();
+}

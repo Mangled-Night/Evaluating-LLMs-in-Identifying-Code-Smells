@@ -1,0 +1,18 @@
+private void writeToDisconnectedBuffer(Collection<? extends RedisCommand<?,?,?>> commands){
+  for (  RedisCommand<?,?,?> command : commands) {
+    writeToDisconnectedBuffer(command);
+  }
+}
+private void writeToDisconnectedBuffer(RedisCommand<?,?,?> command){
+  if (connectionError != null) {
+    if (debugEnabled) {
+      logger.debug("{} writeToDisconnectedBuffer() Completing command {} due to connection error",logPrefix(),command);
+    }
+    command.completeExceptionally(connectionError);
+    return;
+  }
+  if (debugEnabled) {
+    logger.debug("{} writeToDisconnectedBuffer() buffering (disconnected) command {}",logPrefix(),command);
+  }
+  disconnectedBuffer.add(command);
+}

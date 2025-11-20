@@ -1,0 +1,45 @@
+public class TestingStateHeadlessSetup extends StateHeadlessSetup {
+  static final Name MTE_MODULE_NAME=new Name("unittest");
+  static final String WORLD_TITLE="testworld";
+  static final String DEFAULT_SEED="seed";
+  private static final Logger logger=LoggerFactory.getLogger(TestingStateHeadlessSetup.class);
+  private final Collection<String> dependencies;
+  private final SimpleUri worldGeneratorUri;
+{
+    strictModuleRequirements=true;
+  }
+  public TestingStateHeadlessSetup(  Collection<String> dependencies,  String worldGeneratorUri,  NetworkMode networkMode){
+    super(networkMode);
+    this.dependencies=dependencies;
+    this.worldGeneratorUri=new SimpleUri(worldGeneratorUri);
+    checkArgument(this.worldGeneratorUri.isValid(),"Not a valid URI `%s`",worldGeneratorUri);
+  }
+  void configForTest(  Config config,  ModuleManager moduleManager){
+    Set<Name> dependencyNames=dependencies.stream().map(Name::new).collect(Collectors.toSet());
+    if (dependencyNames.isEmpty()) {
+      Path workingDirectory=Path.of(".").toAbsolutePath().normalize();
+      var defaultModule=moduleManager.getModuleAt(workingDirectory);
+      logger.info("No module dependencies given. Checked current directory `{}`, found `{}` to use as default.",workingDirectory,defaultModule.orElse(null));
+      defaultModule.ifPresent(m -> dependencyNames.add(m.getId()));
+    }
+    dependencyNames.add(MTE_MODULE_NAME);
+    ModuleConfig moduleSelection=config.getDefaultModSelection();
+    moduleSelection.clear();
+    dependencyNames.forEach(moduleSelection::addModule);
+    WorldGenerationConfig worldGenerationConfig=config.getWorldGeneration();
+    worldGenerationConfig.setDefaultGenerator(worldGeneratorUri);
+    worldGenerationConfig.setWorldTitle(WORLD_TITLE);
+    worldGenerationConfig.setDefaultSeed(DEFAULT_SEED);
+  }
+  @Override public GameManifest createGameManifest(){
+    GameManifest gameManifest=super.createGameManifest();
+    float timeOffset=0.25f + 0.025f;
+    gameManifest.getWorldInfo(TerasologyConstants.MAIN_WORLD).setTime((long)(WorldTime.DAY_LENGTH * timeOffset));
+    return gameManifest;
+  }
+  @Override public void init(  GameEngine engine){
+    var tEngine=(TerasologyEngine)engine;
+    configForTest(tEngine.getFromEngineContext(Config.class),tEngine.getFromEngineContext(ModuleManager.class));
+    super.init(engine);
+  }
+}

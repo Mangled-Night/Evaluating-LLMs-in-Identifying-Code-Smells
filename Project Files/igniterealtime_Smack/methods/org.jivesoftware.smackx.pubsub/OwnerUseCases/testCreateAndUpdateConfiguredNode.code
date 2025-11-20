@@ -1,0 +1,29 @@
+public void testCreateAndUpdateConfiguredNode() throws Exception {
+  String id="TestConfigNode2" + System.currentTimeMillis();
+  ConfigureForm form=new ConfigureForm(FormType.submit);
+  form.setAccessModel(AccessModel.open);
+  form.setDeliverPayloads(false);
+  form.setNotifyRetract(true);
+  form.setPersistentItems(true);
+  form.setPublishModel(PublishModel.open);
+  LeafNode myNode=(LeafNode)getManager().createNode(id,form);
+  ConfigureForm config=myNode.getNodeConfiguration();
+  assertEquals(AccessModel.open,config.getAccessModel());
+  assertFalse(config.isDeliverPayloads());
+  assertTrue(config.isNotifyRetract());
+  assertTrue(config.isPersistItems());
+  assertEquals(PublishModel.open,config.getPublishModel());
+  ConfigureForm submitForm=new ConfigureForm(config.createAnswerForm());
+  submitForm.setAccessModel(AccessModel.whitelist);
+  submitForm.setDeliverPayloads(true);
+  submitForm.setNotifyRetract(false);
+  submitForm.setPersistentItems(false);
+  submitForm.setPublishModel(PublishModel.publishers);
+  myNode.sendConfigurationForm(submitForm);
+  ConfigureForm newConfig=myNode.getNodeConfiguration();
+  assertEquals(AccessModel.whitelist,newConfig.getAccessModel());
+  assertTrue(newConfig.isDeliverPayloads());
+  assertFalse(newConfig.isNotifyRetract());
+  assertFalse(newConfig.isPersistItems());
+  assertEquals(PublishModel.publishers,newConfig.getPublishModel());
+}

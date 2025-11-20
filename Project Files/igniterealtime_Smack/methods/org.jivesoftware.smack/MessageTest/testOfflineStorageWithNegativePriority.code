@@ -1,0 +1,28 @@
+/** 
+ * User0 is connected from 1 resource with a negative priority presence. User1 sends a message to the bare JID of User0. Messages should be stored offline. User0 then changes the priority presence to a positive value. Check that offline messages were delivered to the user.
+ * @throws Exception if an error occurs.
+ */
+public void testOfflineStorageWithNegativePriority() throws Exception {
+  Presence presence=new Presence(Presence.Type.available);
+  presence.setMode(Presence.Mode.available);
+  presence.setPriority(-1);
+  getConnection(0).sendStanza(presence);
+  Thread.sleep(200);
+  StanzaCollector collector=getConnection(0).createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+  Chat chat=getConnection(1).getChatManager().createChat(getBareJID(0),null);
+  chat.sendMessage("Test 1");
+  chat.sendMessage("Test 2");
+  Message message=(Message)collector.nextResult(2000);
+  assertNull("Messages were not stored offline",message);
+  presence=new Presence(Presence.Type.available);
+  presence.setMode(Presence.Mode.available);
+  presence.setPriority(1);
+  getConnection(0).sendStanza(presence);
+  Thread.sleep(200);
+  message=(Message)collector.nextResult(2000);
+  assertNotNull("Offline messages were not delivered",message);
+  assertEquals("Test 1",message.getBody());
+  message=(Message)collector.nextResult(1000);
+  assertNotNull(message);
+  assertEquals("Test 2",message.getBody());
+}

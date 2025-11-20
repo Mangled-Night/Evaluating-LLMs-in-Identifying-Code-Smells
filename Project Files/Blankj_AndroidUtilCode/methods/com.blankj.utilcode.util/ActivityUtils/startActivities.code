@@ -1,0 +1,71 @@
+/** 
+ * Start activities.
+ * @param intents The descriptions of the activities to start.
+ */
+public static void startActivities(@NonNull final Intent[] intents){
+  startActivities(intents,getTopActivityOrApp(),null);
+}
+/** 
+ * Start activities.
+ * @param intents The descriptions of the activities to start.
+ * @param options Additional options for how the Activity should be started.
+ */
+public static void startActivities(@NonNull final Intent[] intents,@Nullable final Bundle options){
+  startActivities(intents,getTopActivityOrApp(),options);
+}
+/** 
+ * Start activities.
+ * @param intents   The descriptions of the activities to start.
+ * @param enterAnim A resource ID of the animation resource to use for theincoming activity.
+ * @param exitAnim  A resource ID of the animation resource to use for theoutgoing activity.
+ */
+public static void startActivities(@NonNull final Intent[] intents,@AnimRes final int enterAnim,@AnimRes final int exitAnim){
+  Context context=getTopActivityOrApp();
+  startActivities(intents,context,getOptionsBundle(context,enterAnim,exitAnim));
+  if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN && context instanceof Activity) {
+    ((Activity)context).overridePendingTransition(enterAnim,exitAnim);
+  }
+}
+/** 
+ * Start activities.
+ * @param activity The activity.
+ * @param intents  The descriptions of the activities to start.
+ */
+public static void startActivities(@NonNull final Activity activity,@NonNull final Intent[] intents){
+  startActivities(intents,activity,null);
+}
+/** 
+ * Start activities.
+ * @param activity The activity.
+ * @param intents  The descriptions of the activities to start.
+ * @param options  Additional options for how the Activity should be started.
+ */
+public static void startActivities(@NonNull final Activity activity,@NonNull final Intent[] intents,@Nullable final Bundle options){
+  startActivities(intents,activity,options);
+}
+/** 
+ * Start activities.
+ * @param activity  The activity.
+ * @param intents   The descriptions of the activities to start.
+ * @param enterAnim A resource ID of the animation resource to use for theincoming activity.
+ * @param exitAnim  A resource ID of the animation resource to use for theoutgoing activity.
+ */
+public static void startActivities(@NonNull final Activity activity,@NonNull final Intent[] intents,@AnimRes final int enterAnim,@AnimRes final int exitAnim){
+  startActivities(intents,activity,getOptionsBundle(activity,enterAnim,exitAnim));
+  if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
+    activity.overridePendingTransition(enterAnim,exitAnim);
+  }
+}
+private static void startActivities(final Intent[] intents,final Context context,@Nullable final Bundle options){
+  if (!(context instanceof Activity)) {
+    for (    Intent intent : intents) {
+      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    }
+  }
+  if (options != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+    context.startActivities(intents,options);
+  }
+ else {
+    context.startActivities(intents);
+  }
+}

@@ -1,0 +1,10 @@
+static State.Result handleSingle(RedisStateMachine rsm,State state,ByteBuf buffer,CommandOutput<?,?,?> output,Consumer<Exception> errorHandler){
+  ByteBuffer bytes;
+  if ((bytes=rsm.readLine(buffer)) == null) {
+    return State.Result.BREAK_LOOP;
+  }
+  if (!QUEUED.equals(bytes)) {
+    rsm.safeSetSingle(output,bytes,errorHandler);
+  }
+  return State.Result.NORMAL_END;
+}

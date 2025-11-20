@@ -1,0 +1,13 @@
+@Test public void areRespHeadersParsedCorrectly() throws Exception {
+  String string="<resp xmlns='urn:xmpp:http' version='1.1' statusCode='200' statusMessage='OK'>" + "<headers xmlns='http://jabber.org/protocol/shim'>" + "<header name='Date'>Fri, 03 May 2013 13:52:10 GMT-4</header>"+ "<header name='Allow'>OPTIONS, GET, HEAD, POST, PUT, DELETE, TRACE</header>"+ "<header name='Content-Length'>0</header>"+ "</headers>"+ "</resp>";
+  Map<String,String> expectedHeaders=new HashMap<String,String>();
+  expectedHeaders.put("Date","Fri, 03 May 2013 13:52:10 GMT-4");
+  expectedHeaders.put("Allow","OPTIONS, GET, HEAD, POST, PUT, DELETE, TRACE");
+  expectedHeaders.put("Content-Length","0");
+  HttpOverXmppRespProvider provider=new HttpOverXmppRespProvider();
+  XmlPullParser parser=PacketParserUtils.getParserFor(string);
+  IQ iq=provider.parse(parser,null);
+  assertTrue(iq instanceof HttpOverXmppResp);
+  HttpOverXmppResp body=(HttpOverXmppResp)iq;
+  checkHeaders(body.getHeaders(),expectedHeaders);
+}

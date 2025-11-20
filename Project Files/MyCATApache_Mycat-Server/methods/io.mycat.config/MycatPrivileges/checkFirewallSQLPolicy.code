@@ -1,0 +1,23 @@
+/** 
+ * @see https://github.com/alibaba/druid/wiki/%E9%85%8D%E7%BD%AE-wallfilter
+ */
+@Override public boolean checkFirewallSQLPolicy(String user,String sql){
+  boolean isPassed=true;
+  if (contextLocal.get() == null) {
+    FirewallConfig firewallConfig=MycatServer.getInstance().getConfig().getFirewall();
+    if (firewallConfig != null) {
+      if (firewallConfig.isCheck()) {
+        contextLocal.set(firewallConfig.getProvider());
+        check=true;
+      }
+    }
+  }
+  if (check) {
+    WallCheckResult result=contextLocal.get().check(sql);
+    if (!result.getViolations().isEmpty()) {
+      isPassed=false;
+      ALARM.warn("Firewall to intercept the '" + user + "' unsafe SQL , errMsg:"+ result.getViolations().get(0).getMessage()+ " \r\n "+ sql);
+    }
+  }
+  return isPassed;
+}

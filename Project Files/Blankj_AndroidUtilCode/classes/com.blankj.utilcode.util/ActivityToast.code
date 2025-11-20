@@ -1,0 +1,117 @@
+static final class ActivityToast extends AbsToast {
+  private static int sShowingIndex=0;
+  private Utils.ActivityLifecycleCallbacks mActivityLifecycleCallbacks;
+  private IToast iToast;
+  ActivityToast(  ToastUtils toastUtils){
+    super(toastUtils);
+  }
+  @Override public void show(  int duration){
+    if (mToast == null)     return;
+    if (!UtilsBridge.isAppForeground()) {
+      iToast=showSystemToast(duration);
+      return;
+    }
+    boolean hasAliveActivity=false;
+    for (    final Activity activity : UtilsBridge.getActivityList()) {
+      if (!UtilsBridge.isActivityAlive(activity)) {
+        continue;
+      }
+      if (!hasAliveActivity) {
+        hasAliveActivity=true;
+        iToast=showWithActivityWindow(activity,duration);
+      }
+ else {
+        showWithActivityView(activity,sShowingIndex,true);
+      }
+    }
+    if (hasAliveActivity) {
+      registerLifecycleCallback();
+      UtilsBridge.runOnUiThreadDelayed(new Runnable(){
+        @Override public void run(){
+          cancel();
+        }
+      }
+,duration == Toast.LENGTH_SHORT ? 2000 : 3500);
+      ++sShowingIndex;
+    }
+ else {
+      iToast=showSystemToast(duration);
+    }
+  }
+  @Override public void cancel(){
+    if (isShowing()) {
+      unregisterLifecycleCallback();
+      for (      Activity activity : UtilsBridge.getActivityList()) {
+        if (!UtilsBridge.isActivityAlive(activity)) {
+          continue;
+        }
+        final Window window=activity.getWindow();
+        if (window != null) {
+          ViewGroup decorView=(ViewGroup)window.getDecorView();
+          View toastView=decorView.findViewWithTag(TAG_TOAST + (sShowingIndex - 1));
+          if (toastView != null) {
+            try {
+              decorView.removeView(toastView);
+            }
+ catch (            Exception ignored) {
+            }
+          }
+        }
+      }
+    }
+    if (iToast != null) {
+      iToast.cancel();
+      iToast=null;
+    }
+    super.cancel();
+  }
+  private IToast showSystemToast(  int duration){
+    SystemToast systemToast=new SystemToast(mToastUtils);
+    systemToast.mToast=mToast;
+    systemToast.show(duration);
+    return systemToast;
+  }
+  private IToast showWithActivityWindow(  Activity activity,  int duration){
+    WindowManagerToast wmToast=new WindowManagerToast(mToastUtils,activity.getWindowManager(),WindowManager.LayoutParams.LAST_APPLICATION_WINDOW);
+    wmToast.mToastView=getToastViewSnapshot(-1);
+    wmToast.mToast=mToast;
+    wmToast.show(duration);
+    return wmToast;
+  }
+  private void showWithActivityView(  final Activity activity,  final int index,  boolean useAnim){
+    final Window window=activity.getWindow();
+    if (window != null) {
+      final ViewGroup decorView=(ViewGroup)window.getDecorView();
+      FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+      lp.gravity=mToast.getGravity();
+      lp.bottomMargin=mToast.getYOffset() + UtilsBridge.getNavBarHeight();
+      lp.topMargin=mToast.getYOffset() + UtilsBridge.getStatusBarHeight();
+      lp.leftMargin=mToast.getXOffset();
+      View toastViewSnapshot=getToastViewSnapshot(index);
+      if (useAnim) {
+        toastViewSnapshot.setAlpha(0);
+        toastViewSnapshot.animate().alpha(1).setDuration(200).start();
+      }
+      decorView.addView(toastViewSnapshot,lp);
+    }
+  }
+  private void registerLifecycleCallback(){
+    final int index=sShowingIndex;
+    mActivityLifecycleCallbacks=new Utils.ActivityLifecycleCallbacks(){
+      @Override public void onActivityCreated(      @NonNull Activity activity){
+        if (isShowing()) {
+          showWithActivityView(activity,index,false);
+        }
+      }
+    }
+;
+    UtilsBridge.addActivityLifecycleCallbacks(mActivityLifecycleCallbacks);
+  }
+  private void unregisterLifecycleCallback(){
+    UtilsBridge.removeActivityLifecycleCallbacks(mActivityLifecycleCallbacks);
+    mActivityLifecycleCallbacks=null;
+  }
+  private boolean isShowing(){
+    return mActivityLifecycleCallbacks != null;
+  }
+}

@@ -1,0 +1,39 @@
+private ResolvableType resolveVariable(TypeVariable<?> variable){
+  if (this.type instanceof TypeVariable) {
+    return resolveType().resolveVariable(variable);
+  }
+  if (this.type instanceof ParameterizedType) {
+    ParameterizedType parameterizedType=(ParameterizedType)this.type;
+    TypeVariable<?>[] variables=resolve().getTypeParameters();
+    for (int i=0; i < variables.length; i++) {
+      if (nullSafeEquals(variables[i].getName(),variable.getName())) {
+        Type actualType=parameterizedType.getActualTypeArguments()[i];
+        return forType(actualType,this.variableResolver);
+      }
+    }
+    if (parameterizedType.getOwnerType() != null) {
+      return forType(parameterizedType.getOwnerType(),this.variableResolver).resolveVariable(variable);
+    }
+  }
+  if (this.variableResolver != null) {
+    return this.variableResolver.resolveVariable(variable);
+  }
+  return null;
+}
+/** 
+ * Resolve the specified variable.
+ * @param variable the variable to resolve
+ * @return the resolved variable, or {@code null} if not found
+ */
+ResolvableType resolveVariable(TypeVariable<?> variable);
+@Override public ResolvableType resolveVariable(TypeVariable<?> variable){
+  return ResolvableType.this.resolveVariable(variable);
+}
+@Override public ResolvableType resolveVariable(TypeVariable<?> variable){
+  for (int i=0; i < this.variables.length; i++) {
+    if (TypeWrapper.unwrap(this.variables[i]).equals(TypeWrapper.unwrap(variable))) {
+      return this.generics[i];
+    }
+  }
+  return null;
+}

@@ -1,0 +1,33 @@
+public void execute() throws Exception {
+  startTime=System.currentTimeMillis();
+  ServerConnection sc=session.getSource();
+  this.isRunning=true;
+  if (rrs.isLoadData()) {
+    this.packetId=session.getSource().getLoadDataInfileHandler().getLastPackId();
+  }
+ else {
+    this.packetId=0;
+  }
+  final BackendConnection conn=session.getTarget(node);
+  LOGGER.debug("rrs.getRunOnSlave() " + rrs.getRunOnSlaveDebugInfo());
+  node.setRunOnSlave(rrs.getRunOnSlave());
+  LOGGER.debug("node.getRunOnSlave() " + node.getRunOnSlaveDebugInfo());
+  try {
+    if (session.tryExistsCon(conn,node)) {
+      _execute(conn);
+    }
+ else {
+      MycatConfig conf=MycatServer.getInstance().getConfig();
+      LOGGER.debug("node.getRunOnSlave() " + node.getRunOnSlave());
+      node.setRunOnSlave(rrs.getRunOnSlave());
+      LOGGER.debug("node.getRunOnSlave() " + node.getRunOnSlave());
+      PhysicalDBNode dn=conf.getDataNodes().get(node.getName());
+      dn.getConnection(dn.getDatabase(),sc.isAutocommit(),node,this,node);
+    }
+  }
+ catch (  Exception e) {
+    ServerConnection source=session.getSource();
+    LOGGER.warn(new StringBuilder().append(source).append(rrs).toString(),e);
+    connectionError(e,null);
+  }
+}

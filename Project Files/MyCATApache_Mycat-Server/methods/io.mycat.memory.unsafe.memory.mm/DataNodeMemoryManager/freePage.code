@@ -1,0 +1,15 @@
+/** 
+ * Free a block of memory allocated via  {@link DataNodeMemoryManager#allocatePage}.
+ */
+public void freePage(MemoryBlock page,MemoryConsumer consumer){
+  assert (page.pageNumber != -1) : "Called freePage() on memory that wasn't allocated with allocatePage()";
+  assert (allocatedPages.get(page.pageNumber));
+  pageTable[page.pageNumber]=null;
+synchronized (this) {
+    allocatedPages.clear(page.pageNumber);
+  }
+  logger.trace("Freed page number " + page.pageNumber + " ("+ page.size()+ " bytes)");
+  long pageSize=page.size();
+  memoryManager.tungstenMemoryAllocator().free(page);
+  releaseExecutionMemory(pageSize,tungstenMemoryMode,consumer);
+}

@@ -1,0 +1,46 @@
+/** 
+ * Signal for data demand.
+ * @param n number of requested elements.
+ */
+@Override public final void request(long n){
+  State state=state();
+  if (traceEnabled) {
+    LOG.trace("{} request: {}",state,n);
+  }
+  state.request(this,n);
+}
+@Override void request(RedisSubscription<?> subscription,long n){
+  if (Operators.request(RedisSubscription.DEMAND,subscription,n)) {
+    if (subscription.changeState(this,DEMAND)) {
+      try {
+        subscription.checkCommandDispatch();
+      }
+ catch (      Exception ex) {
+        subscription.onError(ex);
+      }
+      subscription.checkOnDataAvailable();
+    }
+    subscription.potentiallyReadMore();
+    subscription.state().onDataAvailable(subscription);
+  }
+ else {
+    onError(subscription,Exceptions.nullOrNegativeRequestException(n));
+  }
+}
+@Override void request(RedisSubscription<?> subscription,long n){
+  if (Operators.request(RedisSubscription.DEMAND,subscription,n)) {
+    onDataAvailable(subscription);
+    subscription.potentiallyReadMore();
+  }
+ else {
+    onError(subscription,Exceptions.nullOrNegativeRequestException(n));
+  }
+}
+@Override void request(RedisSubscription<?> subscription,long n){
+  DEMAND.request(subscription,n);
+}
+@Override void request(RedisSubscription<?> subscription,long n){
+}
+void request(RedisSubscription<?> subscription,long n){
+  throw new IllegalStateException(toString());
+}

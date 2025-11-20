@@ -1,0 +1,40 @@
+public final class OkHttpWebSocket extends AbstractWebSocket {
+  private static final OkHttpClient OK_HTTP_CLIENT=new OkHttpClient();
+  private final WebSocket okHttpWebSocket;
+  OkHttpWebSocket(  WebSocketRemoteConnectionEndpoint endpoint,  ModularXmppClientToServerConnectionInternal connectionInternal){
+    super(endpoint,connectionInternal);
+    final String url=endpoint.getRawString();
+    Request request=new Request.Builder().url(url).header(SEC_WEBSOCKET_PROTOCOL_HEADER_FILED_NAME,SEC_WEBSOCKET_PROTOCOL_HEADER_FILED_VALUE_XMPP).build();
+    okHttpWebSocket=OK_HTTP_CLIENT.newWebSocket(request,listener);
+  }
+  private final WebSocketListener listener=new WebSocketListener(){
+    @Override public void onOpen(    WebSocket webSocket,    Response response){
+      LOGGER.log(Level.FINER,"OkHttp invoked onOpen() for {0}. Response: {1}",new Object[]{webSocket,response});
+      future.setResult(OkHttpWebSocket.this);
+    }
+    @Override public void onMessage(    WebSocket webSocket,    String text){
+      onIncomingWebSocketElement(text);
+    }
+    @Override public void onFailure(    WebSocket webSocket,    Throwable throwable,    Response response){
+      LOGGER.log(Level.FINER,"OkHttp invoked onFailure() for " + webSocket + ". Response: "+ response,throwable);
+      onWebSocketFailure(throwable);
+    }
+    @Override public void onClosing(    WebSocket webSocket,    int code,    String reason){
+      LOGGER.log(Level.FINER,"OkHttp invoked onClosing() for " + webSocket + ". Code: "+ code+ ". Reason: "+ reason);
+    }
+    @Override public void onClosed(    WebSocket webSocket,    int code,    String reason){
+      LOGGER.log(Level.FINER,"OkHttp invoked onClosed() for " + webSocket + ". Code: "+ code+ ". Reason: "+ reason);
+    }
+  }
+;
+  @Override public void send(  String element){
+    okHttpWebSocket.send(element);
+  }
+  @Override public void disconnect(  int code,  String message){
+    LOGGER.log(Level.INFO,"WebSocket closing with code: " + code + " and message: "+ message);
+    okHttpWebSocket.close(code,message);
+  }
+  @Override public SSLSession getSSLSession(){
+    return null;
+  }
+}

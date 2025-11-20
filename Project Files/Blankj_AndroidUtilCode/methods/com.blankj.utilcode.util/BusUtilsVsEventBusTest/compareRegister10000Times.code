@@ -1,0 +1,30 @@
+/** 
+ * 注册 10000 个订阅者，共执行 10 次取平均值
+ */
+public void compareRegister10000Times(){
+  final List<BusUtilsVsEventBusTest> eventBusTests=new ArrayList<>();
+  final List<BusUtilsVsEventBusTest> busUtilsTests=new ArrayList<>();
+  compareWithEventBus("Register 10000 times.",10,10000,new CompareCallback(){
+    @Override public void runEventBus(){
+      BusUtilsVsEventBusTest test=new BusUtilsVsEventBusTest();
+      EventBus.getDefault().register(test);
+      eventBusTests.add(test);
+    }
+    @Override public void runBusUtils(){
+      BusUtilsVsEventBusTest test=new BusUtilsVsEventBusTest();
+      BusUtils.register(test);
+      busUtilsTests.add(test);
+    }
+    @Override public void restState(){
+      for (      BusUtilsVsEventBusTest test : eventBusTests) {
+        EventBus.getDefault().unregister(test);
+      }
+      eventBusTests.clear();
+      for (      BusUtilsVsEventBusTest test : busUtilsTests) {
+        BusUtils.unregister(test);
+      }
+      busUtilsTests.clear();
+    }
+  }
+);
+}

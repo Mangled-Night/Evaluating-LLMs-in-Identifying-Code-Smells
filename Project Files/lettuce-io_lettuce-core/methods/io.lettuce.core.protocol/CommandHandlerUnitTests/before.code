@@ -1,0 +1,21 @@
+@BeforeEach void before() throws Exception {
+  when(context.channel()).thenReturn(channel);
+  when(context.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
+  when(channel.pipeline()).thenReturn(pipeline);
+  when(channel.eventLoop()).thenReturn(eventLoop);
+  when(channel.remoteAddress()).thenReturn(new InetSocketAddress(Inet4Address.getLocalHost(),1234));
+  when(channel.localAddress()).thenReturn(new InetSocketAddress(Inet4Address.getLocalHost(),1234));
+  when(channel.config()).thenReturn(config);
+  when(eventLoop.submit(any(Runnable.class))).thenAnswer(invocation -> {
+    Runnable r=(Runnable)invocation.getArguments()[0];
+    r.run();
+    return null;
+  }
+);
+  when(latencyCollector.isEnabled()).thenReturn(true);
+  when(clientResources.commandLatencyRecorder()).thenReturn(latencyCollector);
+  when(clientResources.tracing()).thenReturn(Tracing.disabled());
+  when(endpoint.getPushListeners()).thenReturn(Collections.singleton(listener));
+  sut=new CommandHandler(ClientOptions.create(),clientResources,endpoint);
+  stack=(Queue)ReflectionTestUtils.getField(sut,"stack");
+}

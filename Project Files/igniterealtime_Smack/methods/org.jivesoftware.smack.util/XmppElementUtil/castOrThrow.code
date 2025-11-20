@@ -1,0 +1,16 @@
+public static <E extends ExtensionElement>E castOrThrow(XmlElement extensionElement,Class<E> extensionElementClass){
+  if (!extensionElementClass.isInstance(extensionElement)) {
+    final QName qname=getQNameFor(extensionElementClass);
+    final String detailMessage;
+    if (extensionElement instanceof StandardExtensionElement) {
+      detailMessage="because there is no according extension element provider registered with ProviderManager for " + qname + ". WARNING: This indicates a serious problem with your Smack setup, probably causing Smack not being able to properly initialize itself.";
+    }
+ else {
+      Object provider=ProviderManager.getExtensionProvider(qname);
+      detailMessage="because there is an inconsistency with the provider registered with ProviderManager: the active provider for " + qname + " '"+ provider.getClass()+ "' does not return instances of type "+ extensionElementClass+ ", but instead returns instances of type "+ extensionElement.getClass()+ ".";
+    }
+    String message="Extension element is not of expected class '" + extensionElementClass.getName() + "', "+ detailMessage;
+    throw new IllegalStateException(message);
+  }
+  return extensionElementClass.cast(extensionElement);
+}

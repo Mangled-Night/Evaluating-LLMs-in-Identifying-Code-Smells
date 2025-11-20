@@ -1,0 +1,11 @@
+@Test void shouldExecuteBatchingAynchronously(){
+  RedisCommandFactory factory=new RedisCommandFactory(redis.getStatefulConnection());
+  Batching api=factory.getCommands(Batching.class);
+  api.setAsync("k1",value);
+  api.setAsync("k2",value);
+  api.setAsync("k3",value);
+  api.setAsync("k4",value);
+  assertThat(redis.get("k1")).isNull();
+  assertThat(TestFutures.getOrTimeout(api.setAsync("k5",value))).isEqualTo("OK");
+  assertThat(redis.get("k1")).isEqualTo(value);
+}

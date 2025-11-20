@@ -1,0 +1,10 @@
+public static boolean await(Collection<? extends SmackFuture<?,?>> futures,long timeout) throws InterruptedException {
+  return await(futures,timeout,TimeUnit.MILLISECONDS);
+}
+public static boolean await(Collection<? extends SmackFuture<?,?>> futures,long timeout,TimeUnit unit) throws InterruptedException {
+  CountDownLatch latch=new CountDownLatch(futures.size());
+  for (  SmackFuture<?,?> future : futures) {
+    future.onCompletion(f -> latch.countDown());
+  }
+  return latch.await(timeout,unit);
+}

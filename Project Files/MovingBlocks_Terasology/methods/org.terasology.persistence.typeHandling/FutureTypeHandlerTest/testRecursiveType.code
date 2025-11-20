@@ -1,0 +1,16 @@
+@Test public void testRecursiveType(){
+  ResultCaptor<Optional<TypeHandler<RecursiveType<Integer>>>> resultCaptor=new ResultCaptor<>();
+  doAnswer(resultCaptor).when(typeHandlerLibrary).getTypeHandler(eq(new TypeInfo<RecursiveType<Integer>>(){
+  }
+.getType()));
+  TypeHandler<RecursiveType<Integer>> typeHandler=typeHandlerLibrary.getTypeHandler(new TypeInfo<RecursiveType<Integer>>(){
+  }
+).get();
+  verify(typeHandlerLibrary,times(1)).getTypeHandler(eq(new TypeInfo<RecursiveType<Integer>>(){
+  }
+.getType()));
+  TypeHandler possibleFuture=assertDoesNotThrow(() -> resultCaptor.getResult().get());
+  assertTrue(possibleFuture instanceof FutureTypeHandler);
+  FutureTypeHandler<RecursiveType<Integer>> future=(FutureTypeHandler<RecursiveType<Integer>>)possibleFuture;
+  assertEquals(typeHandler,future.typeHandler);
+}

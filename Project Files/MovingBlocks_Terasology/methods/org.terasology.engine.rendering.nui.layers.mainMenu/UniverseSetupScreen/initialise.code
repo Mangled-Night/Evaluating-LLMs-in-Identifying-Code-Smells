@@ -1,0 +1,122 @@
+@Override public void initialise(){
+  setAnimationSystem(MenuAnimationSystems.createDefaultSwipeAnimation());
+  final UIDropdownScrollable<WorldGeneratorInfo> worldGenerator=find("worldGenerators",UIDropdownScrollable.class);
+  if (worldGenerator != null) {
+    worldGenerator.bindOptions(new ReadOnlyBinding<List<WorldGeneratorInfo>>(){
+      @Override public List<WorldGeneratorInfo> get(){
+        final Set<Name> enabledModuleNames=new HashSet<>(getAllEnabledModuleNames());
+        final List<WorldGeneratorInfo> result=Lists.newArrayList();
+        for (        WorldGeneratorInfo option : worldGeneratorManager.getWorldGenerators()) {
+          if (enabledModuleNames.contains(option.getUri().getModuleName())) {
+            result.add(option);
+          }
+        }
+        return result;
+      }
+    }
+);
+    worldGenerator.setVisibleOptions(3);
+    worldGenerator.bindSelection(new Binding<WorldGeneratorInfo>(){
+      @Override public WorldGeneratorInfo get(){
+        WorldGeneratorInfo info=worldGeneratorManager.getWorldGeneratorInfo(config.getWorldGeneration().getDefaultGenerator());
+        if (info != null && getAllEnabledModuleNames().contains(info.getUri().getModuleName())) {
+          return info;
+        }
+        for (        WorldGeneratorInfo worldGenInfo : worldGeneratorManager.getWorldGenerators()) {
+          if (getAllEnabledModuleNames().contains(worldGenInfo.getUri().getModuleName())) {
+            set(worldGenInfo);
+            return worldGenInfo;
+          }
+        }
+        return null;
+      }
+      @Override public void set(      WorldGeneratorInfo value){
+        if (value != null) {
+          config.getWorldGeneration().setDefaultGenerator(value.getUri());
+        }
+      }
+    }
+);
+    worldGenerator.setOptionRenderer(new StringTextRenderer<WorldGeneratorInfo>(){
+      @Override public String getString(      WorldGeneratorInfo value){
+        if (value != null) {
+          return value.getDisplayName();
+        }
+        return "";
+      }
+    }
+);
+  }
+  final UIDropdownScrollable worldsDropdown=find("worlds",UIDropdownScrollable.class);
+  worldsDropdown.bindSelection(new Binding<String>(){
+    @Override public String get(){
+      return selectedWorld;
+    }
+    @Override public void set(    String value){
+      selectedWorld=value;
+      indexOfSelectedWorld=findIndex(worlds,selectedWorld);
+    }
+  }
+);
+  WidgetUtil.trySubscribe(this,"close",button -> triggerBackAnimation());
+  WidgetUtil.trySubscribe(this,"worldConfig",button -> {
+    final WorldSetupScreen worldSetupScreen=getManager().createScreen(WorldSetupScreen.ASSET_URI,WorldSetupScreen.class);
+    try {
+      if (!worlds.isEmpty() || !selectedWorld.isEmpty()) {
+        worldSetupScreen.setWorld(context,findWorldByName(),worldsDropdown);
+        triggerForwardAnimation(worldSetupScreen);
+      }
+ else {
+        getManager().pushScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage("Worlds List Empty!","No world found to configure.");
+      }
+    }
+ catch (    UnresolvedWorldGeneratorException e) {
+      logger.error("Can't configure the world! due to {}",e.getMessage());
+    }
+  }
+);
+  WidgetUtil.trySubscribe(this,"addGenerator",button -> {
+    if (worldGenerator.getSelection().getUri().toString().equals("CoreWorlds:heightMap")) {
+      getManager().pushScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage("HeightMap not supported","HeightMap is not supported for advanced setup right now, a game template will be introduced soon.");
+    }
+ else {
+      addNewWorld(worldGenerator.getSelection());
+      worldsDropdown.setOptions(worldNames());
+    }
+  }
+);
+  WidgetUtil.trySubscribe(this,"continue",button -> {
+    final WorldPreGenerationScreen worldPreGenerationScreen=getManager().createScreen(WorldPreGenerationScreen.ASSET_URI,WorldPreGenerationScreen.class);
+    if (!worlds.isEmpty()) {
+      final WaitPopup<Boolean> loadPopup=getManager().pushScreen(WaitPopup.ASSET_URI,WaitPopup.class);
+      loadPopup.setMessage("Loading","please wait ...");
+      loadPopup.onSuccess(result -> {
+        if (result != null && result) {
+          triggerForwardAnimation(worldPreGenerationScreen);
+        }
+ else {
+          getManager().pushScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage("Error","Can't load world pre generation screen! Please, try again!");
+        }
+      }
+);
+      loadPopup.startOperation(() -> {
+        try {
+          worldPreGenerationScreen.setEnvironment(context);
+        }
+ catch (        UnresolvedWorldGeneratorException e) {
+          return false;
+        }
+        return true;
+      }
+,true);
+    }
+ else {
+      getManager().pushScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage("Worlds List Empty!","Please select a world generator and add words to the dropdown!");
+    }
+  }
+);
+  WidgetUtil.trySubscribe(this,"mainMenu",button -> {
+    getManager().pushScreen("engine:mainMenuScreen");
+  }
+);
+}

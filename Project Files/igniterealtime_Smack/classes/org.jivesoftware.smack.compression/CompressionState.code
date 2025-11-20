@@ -1,0 +1,36 @@
+private static final class CompressionState extends State {
+  private XmppCompressionFactory selectedCompressionFactory;
+  private XmppInputOutputFilter usedXmppInputOutputCompressionFitler;
+  private CompressionState(  StateDescriptor stateDescriptor,  ModularXmppClientToServerConnectionInternal connectionInternal){
+    super(stateDescriptor,connectionInternal);
+  }
+  @Override public StateTransitionResult.TransitionImpossible isTransitionToPossible(  WalkStateGraphContext walkStateGraphContext){
+    final ConnectionConfiguration config=connectionInternal.connection.getConfiguration();
+    if (!config.isCompressionEnabled()) {
+      return new StateTransitionResult.TransitionImpossibleReason("Stream compression disabled by connection configuration");
+    }
+    Compress.Feature compressFeature=connectionInternal.connection.getFeature(Compress.Feature.class);
+    if (compressFeature == null) {
+      return new StateTransitionResult.TransitionImpossibleReason("Stream compression not supported or enabled by service");
+    }
+    selectedCompressionFactory=XmppCompressionManager.getBestFactory(compressFeature);
+    if (selectedCompressionFactory == null) {
+      return new StateTransitionResult.TransitionImpossibleReason("No matching compression factory for " + compressFeature.getMethods());
+    }
+    usedXmppInputOutputCompressionFitler=selectedCompressionFactory.fabricate(config);
+    return null;
+  }
+  @Override public StateTransitionResult.AttemptResult transitionInto(  WalkStateGraphContext walkStateGraphContext) throws InterruptedException, SmackException, XMPPException {
+    final String compressionMethod=selectedCompressionFactory.getCompressionMethod();
+    connectionInternal.sendAndWaitForResponse(new Compress(compressionMethod),Compressed.class,Failure.class);
+    connectionInternal.addXmppInputOutputFilter(usedXmppInputOutputCompressionFitler);
+    connectionInternal.newStreamOpenWaitForFeaturesSequence("server stream features after compression enabled");
+    connectionInternal.setCompressionEnabled(true);
+    return new CompressionTransitionSuccessResult(compressionMethod);
+  }
+  @Override public void resetState(){
+    selectedCompressionFactory=null;
+    usedXmppInputOutputCompressionFitler=null;
+    connectionInternal.setCompressionEnabled(false);
+  }
+}

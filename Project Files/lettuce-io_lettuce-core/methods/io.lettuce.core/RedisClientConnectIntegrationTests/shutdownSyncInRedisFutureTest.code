@@ -1,0 +1,10 @@
+@Test @Disabled("Non-deterministic behavior. Can cause a deadlock") void shutdownSyncInRedisFutureTest(){
+  RedisClient redisClient=RedisClient.create();
+  StatefulRedisConnection<String,String> connection=redisClient.connect(redis(host,port).build());
+  CompletableFuture<String> f=connection.async().get("key1").whenComplete((result,e) -> {
+    connection.close();
+    redisClient.shutdown(0,0,SECONDS);
+  }
+).toCompletableFuture();
+  assertThatThrownBy(() -> TestFutures.awaitOrTimeout(f)).isInstanceOf(TimeoutException.class);
+}

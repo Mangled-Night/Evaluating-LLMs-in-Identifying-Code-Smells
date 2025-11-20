@@ -1,0 +1,22 @@
+void enhanceClassLoader() throws IOException, UnmodifiableClassException {
+  if (configure.getEnhanceLoaders() == null) {
+    return;
+  }
+  Set<String> loaders=new HashSet<String>();
+  for (  String s : configure.getEnhanceLoaders().split(",")) {
+    loaders.add(s.trim());
+  }
+  byte[] classBytes=IOUtils.getBytes(ArthasBootstrap.class.getClassLoader().getResourceAsStream(ClassLoader_Instrument.class.getName().replace('.','/') + ".class"));
+  SimpleClassMatcher matcher=new SimpleClassMatcher(loaders);
+  InstrumentConfig instrumentConfig=new InstrumentConfig(AsmUtils.toClassNode(classBytes),matcher);
+  InstrumentParseResult instrumentParseResult=new InstrumentParseResult();
+  instrumentParseResult.addInstrumentConfig(instrumentConfig);
+  classLoaderInstrumentTransformer=new InstrumentTransformer(instrumentParseResult);
+  instrumentation.addTransformer(classLoaderInstrumentTransformer,true);
+  if (loaders.size() == 1 && loaders.contains(ClassLoader.class.getName())) {
+    instrumentation.retransformClasses(ClassLoader.class);
+  }
+ else {
+    InstrumentationUtils.trigerRetransformClasses(instrumentation,loaders);
+  }
+}

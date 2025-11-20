@@ -1,0 +1,34 @@
+public Command<K,V,PendingMessages> xpending(K key,K group){
+  notNullKey(key);
+  LettuceAssert.notNull(group,"Group " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key).addKey(group);
+  return createCommand(XPENDING,new PendingMessagesOutput<>(codec),args);
+}
+public Command<K,V,List<PendingMessage>> xpending(K key,K group,Range<String> range,Limit limit){
+  notNullKey(key);
+  LettuceAssert.notNull(group,"Group " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(range,"Range " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(limit,"Limit " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key).addKey(group);
+  args.add(getLowerValue(range)).add(getUpperValue(range));
+  args.add(limit.isLimited() ? limit.getCount() : Long.MAX_VALUE);
+  return createCommand(XPENDING,new PendingMessageListOutput<>(codec),args);
+}
+public Command<K,V,List<PendingMessage>> xpending(K key,Consumer<K> consumer,Range<String> range,Limit limit){
+  notNullKey(key);
+  LettuceAssert.notNull(consumer,"Consumer " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(range,"Range " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(limit,"Limit " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key).addKey(consumer.group);
+  args.add(getLowerValue(range)).add(getUpperValue(range));
+  args.add(limit.isLimited() ? limit.getCount() : Long.MAX_VALUE);
+  args.addKey(consumer.name);
+  return createCommand(XPENDING,new PendingMessageListOutput<>(codec),args);
+}
+public Command<K,V,List<PendingMessage>> xpending(K key,XPendingArgs<K> commandArgs){
+  notNullKey(key);
+  LettuceAssert.notNull(commandArgs,"XPendingArgs " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key);
+  commandArgs.build(args);
+  return createCommand(XPENDING,new PendingMessageListOutput<>(codec),args);
+}

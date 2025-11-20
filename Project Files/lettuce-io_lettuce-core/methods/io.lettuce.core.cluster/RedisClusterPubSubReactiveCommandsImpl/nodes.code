@@ -1,0 +1,8 @@
+@SuppressWarnings("unchecked") @Override public PubSubReactiveNodeSelection<K,V> nodes(Predicate<RedisClusterNode> predicate){
+  PubSubReactiveNodeSelection<K,V> selection=new StaticPubSubReactiveNodeSelection<K,V>(getStatefulConnection(),predicate);
+  NodeSelectionInvocationHandler h=new NodeSelectionInvocationHandler((AbstractNodeSelection<?,?,?,?>)selection,RedisPubSubReactiveCommands.class,REACTIVE);
+  return (PubSubReactiveNodeSelection<K,V>)Proxy.newProxyInstance(NodeSelectionSupport.class.getClassLoader(),new Class<?>[]{NodeSelectionPubSubReactiveCommands.class,PubSubReactiveNodeSelection.class},h);
+}
+protected List<RedisClusterNode> nodes(){
+  return redisClusterNodes;
+}

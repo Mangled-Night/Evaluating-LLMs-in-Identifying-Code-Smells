@@ -1,0 +1,30 @@
+@ApiOperation("文件上传") @RequestMapping(value="/upload",method=RequestMethod.POST) @ResponseBody public CommonResult upload(@RequestPart("file") MultipartFile file){
+  try {
+    MinioClient minioClient=MinioClient.builder().endpoint(ENDPOINT).credentials(ACCESS_KEY,SECRET_KEY).build();
+    boolean isExist=minioClient.bucketExists(BucketExistsArgs.builder().bucket(BUCKET_NAME).build());
+    if (isExist) {
+      LOGGER.info("存储桶已经存在！");
+    }
+ else {
+      minioClient.makeBucket(MakeBucketArgs.builder().bucket(BUCKET_NAME).build());
+      BucketPolicyConfigDto bucketPolicyConfigDto=createBucketPolicyConfigDto(BUCKET_NAME);
+      SetBucketPolicyArgs setBucketPolicyArgs=SetBucketPolicyArgs.builder().bucket(BUCKET_NAME).config(JSONUtil.toJsonStr(bucketPolicyConfigDto)).build();
+      minioClient.setBucketPolicy(setBucketPolicyArgs);
+    }
+    String filename=file.getOriginalFilename();
+    SimpleDateFormat sdf=new SimpleDateFormat("yyyyMMdd");
+    String objectName=sdf.format(new Date()) + "/" + filename;
+    PutObjectArgs putObjectArgs=PutObjectArgs.builder().bucket(BUCKET_NAME).object(objectName).contentType(file.getContentType()).stream(file.getInputStream(),file.getSize(),ObjectWriteArgs.MIN_MULTIPART_SIZE).build();
+    minioClient.putObject(putObjectArgs);
+    LOGGER.info("文件上传成功!");
+    MinioUploadDto minioUploadDto=new MinioUploadDto();
+    minioUploadDto.setName(filename);
+    minioUploadDto.setUrl(ENDPOINT + "/" + BUCKET_NAME+ "/"+ objectName);
+    return CommonResult.success(minioUploadDto);
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    LOGGER.info("上传发生错误: {}！",e.getMessage());
+  }
+  return CommonResult.failed();
+}

@@ -1,0 +1,19 @@
+/** 
+ * Reads a SOCKS5 message from the given InputStream. The message can either be a SOCKS5 request message or a SOCKS5 response message. <p> (see <a href="http://tools.ietf.org/html/rfc1928">RFC1928</a>)
+ * @param in the DataInputStream to read the message from
+ * @return the SOCKS5 message
+ * @throws IOException if a network error occurred
+ * @throws SmackMessageException if the SOCKS5 message contains an unsupported address type
+ */
+public static byte[] receiveSocks5Message(DataInputStream in) throws IOException, SmackMessageException {
+  byte[] header=new byte[5];
+  in.readFully(header,0,5);
+  if (header[3] != (byte)0x03) {
+    throw new SmackMessageException("Unsupported SOCKS5 address type: " + header[3] + " (expected: 0x03)");
+  }
+  int addressLength=header[4];
+  byte[] response=new byte[7 + addressLength];
+  System.arraycopy(header,0,response,0,header.length);
+  in.readFully(response,header.length,addressLength + 2);
+  return response;
+}

@@ -1,0 +1,28 @@
+private void writeBatch(ChannelHandlerContext ctx,Collection<RedisCommand<?,?,?>> batch,ChannelPromise promise){
+  Collection<RedisCommand<?,?,?>> deduplicated=new LinkedHashSet<>(batch.size(),1);
+  for (  RedisCommand<?,?,?> command : batch) {
+    if (isWriteable(command) && !deduplicated.add(command)) {
+      deduplicated.remove(command);
+      command.completeExceptionally(new RedisException("Attempting to write duplicate command that is already enqueued: " + command));
+    }
+  }
+  try {
+    validateWrite(deduplicated.size());
+  }
+ catch (  Exception e) {
+    for (    RedisCommand<?,?,?> redisCommand : deduplicated) {
+      redisCommand.completeExceptionally(e);
+    }
+    throw e;
+  }
+  for (  RedisCommand<?,?,?> command : deduplicated) {
+    attachTracing(ctx,command);
+    addToStack(command,promise);
+  }
+  if (!deduplicated.isEmpty()) {
+    ctx.write(deduplicated,promise);
+  }
+ else {
+    promise.trySuccess();
+  }
+}

@@ -1,0 +1,22 @@
+private PingManager(XMPPConnection connection){
+  super(connection);
+  ServiceDiscoveryManager sdm=ServiceDiscoveryManager.getInstanceFor(connection);
+  sdm.addFeature(Ping.NAMESPACE);
+  connection.registerIQRequestHandler(new AbstractIqRequestHandler(Ping.ELEMENT,Ping.NAMESPACE,IQ.Type.get,Mode.async){
+    @Override public IQ handleIQRequest(    IQ iqRequest){
+      Ping ping=(Ping)iqRequest;
+      return ping.getPong();
+    }
+  }
+);
+  connection.addConnectionListener(new AbstractConnectionClosedListener(){
+    @Override public void authenticated(    XMPPConnection connection,    boolean resumed){
+      maybeSchedulePingServerTask();
+    }
+    @Override public void connectionTerminated(){
+      maybeStopPingServerTask();
+    }
+  }
+);
+  maybeSchedulePingServerTask();
+}

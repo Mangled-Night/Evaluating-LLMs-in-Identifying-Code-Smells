@@ -1,0 +1,101 @@
+@SuppressWarnings("restriction") public class ByteBufferPage {
+  private final ByteBuffer buf;
+  private final int chunkSize;
+  private final int chunkCount;
+  private final BitSet chunkAllocateTrack;
+  private final AtomicBoolean allocLockStatus=new AtomicBoolean(false);
+  private final long startAddress;
+  private final ConcurrentHashMap<Long,Long> relationBufferThreadId;
+  public ByteBufferPage(  ByteBuffer buf,  int chunkSize){
+    super();
+    this.chunkSize=chunkSize;
+    chunkCount=buf.capacity() / chunkSize;
+    chunkAllocateTrack=new BitSet(chunkCount);
+    relationBufferThreadId=new ConcurrentHashMap<>(chunkCount);
+    this.buf=buf;
+    startAddress=((sun.nio.ch.DirectBuffer)buf).address();
+  }
+  public ByteBuffer allocatChunk(  int theChunkCount){
+    if (!allocLockStatus.compareAndSet(false,true)) {
+      return null;
+    }
+    int startChunk=-1;
+    int contiueCount=0;
+    try {
+      for (int i=0; i < chunkCount; i++) {
+        if (chunkAllocateTrack.get(i) == false) {
+          if (startChunk == -1) {
+            startChunk=i;
+            contiueCount=1;
+            if (theChunkCount == 1) {
+              break;
+            }
+          }
+ else {
+            if (++contiueCount == theChunkCount) {
+              break;
+            }
+          }
+        }
+ else {
+          startChunk=-1;
+          contiueCount=0;
+        }
+      }
+      if (contiueCount == theChunkCount) {
+        int offStart=startChunk * chunkSize;
+        int offEnd=offStart + theChunkCount * chunkSize;
+        buf.limit(offEnd);
+        buf.position(offStart);
+        ByteBuffer newBuf=buf.slice();
+        markChunksUsed(startChunk,theChunkCount);
+        relationBufferThreadId.put(((DirectBuffer)newBuf).address(),Thread.currentThread().getId());
+        return newBuf;
+      }
+ else {
+        return null;
+      }
+    }
+  finally {
+      allocLockStatus.set(false);
+    }
+  }
+  private void markChunksUsed(  int startChunk,  int theChunkCount){
+    for (int i=0; i < theChunkCount; i++) {
+      chunkAllocateTrack.set(startChunk + i);
+    }
+  }
+  private void markChunksUnused(  int startChunk,  int theChunkCount){
+    for (int i=0; i < theChunkCount; i++) {
+      chunkAllocateTrack.clear(startChunk + i);
+    }
+  }
+  /** 
+ * 回收buffer
+ * @param parent      当前要释放的buf的parent 
+ * @param recycleBuf  当前要释放的recycleBuf
+ * @param startChunk
+ * @param chunkCount
+ * @param relatedThreadId  用于返回当前要释放的recycleBuf关联的线程id
+ * @return
+ */
+  public boolean recycleBuffer(  ByteBuffer parent,  ByteBuffer recycleBuf,  int startChunk,  int chunkCount,  StringBuilder relatedThreadId){
+    if (parent == this.buf) {
+      while (!this.allocLockStatus.compareAndSet(false,true)) {
+        Thread.yield();
+      }
+      try {
+        markChunksUnused(startChunk,chunkCount);
+        Long threadId=relationBufferThreadId.remove(((DirectBuffer)recycleBuf).address());
+        if (threadId != null) {
+          relatedThreadId.append(threadId);
+        }
+      }
+  finally {
+        allocLockStatus.set(false);
+      }
+      return true;
+    }
+    return false;
+  }
+}

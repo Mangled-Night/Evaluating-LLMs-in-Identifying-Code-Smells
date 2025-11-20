@@ -1,0 +1,22 @@
+/** 
+ * Test that stream compression works fine. It is assumed that the server supports and has stream compression enabled.
+ */
+public void testSuccessCompression() throws XMPPException {
+  ConnectionConfiguration config=new ConnectionConfiguration(getHost(),getPort());
+  config.setCompressionEnabled(true);
+  config.setSASLAuthenticationEnabled(true);
+  XMPPTCPConnection connection=new XMPPConnection(config);
+  connection.connect();
+  connection.login("user0","user0");
+  assertTrue("XMPPConnection is not using stream compression",connection.isUsingCompression());
+  Version version=new Version();
+  version.setType(IQ.Type.get);
+  version.setTo(getXMPPServiceDomain());
+  StanzaCollector collector=connection.createStanzaCollector(new PacketIDFilter(version.getStanzaId()));
+  connection.sendStanza(version);
+  IQ result=(IQ)collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
+  collector.cancel();
+  assertNotNull("No reply was received from the server",result);
+  assertEquals("Incorrect IQ type from server",IQ.Type.result,result.getType());
+  connection.disconnect();
+}

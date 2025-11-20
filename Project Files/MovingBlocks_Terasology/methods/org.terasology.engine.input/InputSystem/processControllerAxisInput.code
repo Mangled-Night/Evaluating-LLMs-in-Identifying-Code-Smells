@@ -1,0 +1,16 @@
+/** 
+ * Processes input actions by controller axis, and updates bind axis accordingly.
+ * @param action The input action to be processed.
+ * @param input The specific input of the controller axis.
+ */
+private void processControllerAxisInput(ControllerAction action,Input input){
+  BindableRealAxis axis=bindsManager.getControllerAxisBinds().get(input);
+  if (axis != null) {
+    ControllerInfo info=inputDeviceConfig.getController(action.getController());
+    boolean isX=action.getInput().getId() == ControllerId.X_AXIS;
+    boolean isY=action.getInput().getId() == ControllerId.Y_AXIS;
+    boolean isZ=action.getInput().getId() == ControllerId.Z_AXIS;
+    float f=(isX && info.isInvertX() || isY && info.isInvertY() || isZ && info.isInvertZ()) ? -1 : 1;
+    axis.setTargetValue(action.getAxisValue() * f);
+  }
+}

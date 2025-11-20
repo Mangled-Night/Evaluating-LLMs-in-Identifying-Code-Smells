@@ -1,0 +1,11 @@
+@Override public CompletableFuture<Void> clearAsync(){
+  List<CompletableFuture<Void>> futures=new ArrayList<>(all.size());
+  T cached;
+  while ((cached=cache.poll()) != null) {
+    idleCount.decrementAndGet();
+    objectCount.decrementAndGet();
+    all.remove(cached);
+    futures.add(factory.destroy(cached));
+  }
+  return Futures.allOf(futures);
+}

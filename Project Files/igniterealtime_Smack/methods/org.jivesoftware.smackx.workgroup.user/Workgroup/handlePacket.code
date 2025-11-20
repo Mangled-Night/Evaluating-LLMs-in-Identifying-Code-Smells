@@ -1,0 +1,37 @@
+private void handlePacket(Stanza packet){
+  if (packet instanceof Message) {
+    Message msg=(Message)packet;
+    XmlElement pe=msg.getExtensionElement("depart-queue","http://jabber.org/protocol/workgroup");
+    XmlElement queueStatus=msg.getExtensionElement("queue-status","http://jabber.org/protocol/workgroup");
+    if (pe != null) {
+      fireQueueDepartedEvent();
+    }
+ else     if (queueStatus != null) {
+      QueueUpdate queueUpdate=(QueueUpdate)queueStatus;
+      if (queueUpdate.getPosition() != -1) {
+        fireQueuePositionEvent(queueUpdate.getPosition());
+      }
+      if (queueUpdate.getRemaingTime() != -1) {
+        fireQueueTimeEvent(queueUpdate.getRemaingTime());
+      }
+    }
+ else {
+      MUCUser mucUser=MUCUser.from(msg);
+      MUCUser.Invite invite=mucUser != null ? mucUser.getInvite() : null;
+      if (invite != null && workgroupJID.equals(invite.getFrom())) {
+        String sessionID=null;
+        Map<String,List<String>> metaData=null;
+        pe=msg.getExtensionElement(SessionID.ELEMENT_NAME,SessionID.NAMESPACE);
+        if (pe != null) {
+          sessionID=((SessionID)pe).getSessionID();
+        }
+        pe=msg.getExtensionElement(MetaData.ELEMENT_NAME,MetaData.NAMESPACE);
+        if (pe != null) {
+          metaData=((MetaData)pe).getMetaData();
+        }
+        WorkgroupInvitation inv=new WorkgroupInvitation(connection.getUser(),msg.getFrom(),workgroupJID,sessionID,msg.getBody(),msg.getFrom(),metaData);
+        fireInvitationEvent(inv);
+      }
+    }
+  }
+}

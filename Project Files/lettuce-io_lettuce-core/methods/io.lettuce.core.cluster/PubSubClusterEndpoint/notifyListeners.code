@@ -1,0 +1,24 @@
+@Override protected void notifyListeners(PubSubMessage<K,V> output){
+switch (output.type()) {
+case message:
+    multicast.message(clusterNode,output.channel(),output.body());
+  break;
+case pmessage:
+multicast.message(clusterNode,output.pattern(),output.channel(),output.body());
+break;
+case psubscribe:
+multicast.psubscribed(clusterNode,output.pattern(),output.count());
+break;
+case punsubscribe:
+multicast.punsubscribed(clusterNode,output.pattern(),output.count());
+break;
+case subscribe:
+multicast.subscribed(clusterNode,output.channel(),output.count());
+break;
+case unsubscribe:
+multicast.unsubscribed(clusterNode,output.channel(),output.count());
+break;
+default :
+throw new UnsupportedOperationException("Operation " + output.type() + " not supported");
+}
+}

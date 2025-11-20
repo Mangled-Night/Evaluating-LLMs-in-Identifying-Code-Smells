@@ -1,0 +1,38 @@
+public UnsafeKVExternalSorter(StructType keySchema,StructType valueSchema,DataNodeDiskManager blockManager,SerializerManager serializerManager,long pageSizeBytes) throws IOException {
+  this(keySchema,valueSchema,blockManager,serializerManager,pageSizeBytes,null);
+}
+public UnsafeKVExternalSorter(StructType keySchema,StructType valueSchema,DataNodeDiskManager blockManager,SerializerManager serializerManager,long pageSizeBytes,@Nullable BytesToBytesMap map) throws IOException {
+  this.keySchema=keySchema;
+  this.valueSchema=valueSchema;
+  prefixComputer=SortPrefixUtils.createPrefixGenerator(keySchema);
+  PrefixComparator prefixComparator=SortPrefixUtils.getPrefixComparator(keySchema);
+  BaseOrdering ordering=new BaseOrdering(){
+    @Override public int compare(    @Nullable UnsafeRow unsafeRow,    @Nullable UnsafeRow t1){
+      return 1;
+    }
+  }
+;
+  KVComparator recordComparator=new KVComparator(ordering,keySchema.length());
+  DataNodeMemoryManager dataNodeMemoryManager=null;
+  if (map == null) {
+    sorter=UnsafeExternalSorter.create(dataNodeMemoryManager,blockManager,serializerManager,recordComparator,prefixComparator,4096,pageSizeBytes,keySchema.length() == 1 && SortPrefixUtils.canSortFullyWithPrefix(keySchema.apply(0)),true);
+  }
+ else {
+    final UnsafeInMemorySorter inMemSorter=new UnsafeInMemorySorter(null,dataNodeMemoryManager,recordComparator,prefixComparator,map.getArray(),false,true);
+    BytesToBytesMap.MapIterator iter=map.iterator();
+    final int numKeyFields=keySchema.length();
+    UnsafeRow row=new UnsafeRow(numKeyFields);
+    while (iter.hasNext()) {
+      final BytesToBytesMap.Location loc=iter.next();
+      final Object baseObject=loc.getKeyBase();
+      final long baseOffset=loc.getKeyOffset();
+      MemoryBlock page=loc.getMemoryPage();
+      long address=dataNodeMemoryManager.encodePageNumberAndOffset(page,baseOffset - 8);
+      row.pointTo(baseObject,baseOffset,loc.getKeyLength());
+      final long prefix=prefixComputer.computePrefix(row);
+      inMemSorter.insertRecord(address,prefix);
+    }
+    sorter=UnsafeExternalSorter.createWithExistingInMemorySorter(dataNodeMemoryManager,blockManager,serializerManager,new KVComparator(ordering,keySchema.length()),prefixComparator,4096,pageSizeBytes,inMemSorter,true);
+    map.reset();
+  }
+}

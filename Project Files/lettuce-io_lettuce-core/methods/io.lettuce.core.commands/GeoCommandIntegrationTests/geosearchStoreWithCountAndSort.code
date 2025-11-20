@@ -1,0 +1,8 @@
+@Test @EnabledOnCommand("GEOSEARCHSTORE") void geosearchStoreWithCountAndSort(){
+  prepareGeo();
+  String resultKey="38o54";
+  Long result=redis.geosearchstore(resultKey,key,GeoSearch.fromMember("Bahn"),GeoSearch.byRadius(5,GeoArgs.Unit.km),new GeoArgs(),true);
+  assertThat(result).isEqualTo(2);
+  List<ScoredValue<String>> dist=redis.zrangeWithScores(resultKey,0,-1);
+  assertThat(dist).hasSize(2);
+}

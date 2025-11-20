@@ -1,0 +1,24 @@
+/** 
+ * Private constructor.
+ * @param connection connection
+ * @param deviceId deviceId
+ */
+private OmemoManager(XMPPConnection connection,Integer deviceId){
+  super(connection);
+  service=OmemoService.getInstance();
+  pepManager=PepManager.getInstanceFor(connection);
+  this.deviceId=deviceId;
+  if (connection.isAuthenticated()) {
+    initBareJidAndDeviceId(this);
+  }
+ else {
+    connection.addConnectionListener(new ConnectionListener(){
+      @Override public void authenticated(      XMPPConnection connection,      boolean resumed){
+        initBareJidAndDeviceId(OmemoManager.this);
+      }
+    }
+);
+  }
+  service.registerRatchetForManager(this);
+  resumeStanzaAndPEPListeners();
+}

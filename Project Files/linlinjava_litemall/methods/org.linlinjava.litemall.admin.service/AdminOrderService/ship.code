@@ -1,0 +1,30 @@
+/** 
+ * 发货 1. 检测当前订单是否能够发货 2. 设置订单发货状态
+ * @param body 订单信息，{ orderId：xxx, shipSn: xxx, shipChannel: xxx }
+ * @return 订单操作结果成功则 { errno: 0, errmsg: '成功' } 失败则 { errno: XXX, errmsg: XXX }
+ */
+public Object ship(String body){
+  Integer orderId=JacksonUtil.parseInteger(body,"orderId");
+  String shipSn=JacksonUtil.parseString(body,"shipSn");
+  String shipChannel=JacksonUtil.parseString(body,"shipChannel");
+  if (orderId == null || shipSn == null || shipChannel == null) {
+    return ResponseUtil.badArgument();
+  }
+  LitemallOrder order=orderService.findById(orderId);
+  if (order == null) {
+    return ResponseUtil.badArgument();
+  }
+  if (!order.getOrderStatus().equals(OrderUtil.STATUS_PAY)) {
+    return ResponseUtil.fail(ORDER_CONFIRM_NOT_ALLOWED,"订单不能确认收货");
+  }
+  order.setOrderStatus(OrderUtil.STATUS_SHIP);
+  order.setShipSn(shipSn);
+  order.setShipChannel(shipChannel);
+  order.setShipTime(LocalDateTime.now());
+  if (orderService.updateWithOptimisticLocker(order) == 0) {
+    return ResponseUtil.updatedDateExpired();
+  }
+  notifyService.notifySmsTemplate(order.getMobile(),NotifyType.SHIP,new String[]{shipChannel,shipSn});
+  logHelper.logOrderSucceed("发货","订单编号 " + order.getOrderSn());
+  return ResponseUtil.ok();
+}

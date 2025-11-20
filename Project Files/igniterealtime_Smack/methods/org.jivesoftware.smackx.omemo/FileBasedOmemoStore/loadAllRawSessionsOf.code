@@ -1,0 +1,27 @@
+@Override public HashMap<Integer,T_Sess> loadAllRawSessionsOf(OmemoDevice userDevice,BareJid contact) throws IOException {
+  File contactsDirectory=hierarchy.getContactsDir(userDevice,contact);
+  HashMap<Integer,T_Sess> sessions=new HashMap<>();
+  String[] devices=contactsDirectory.list();
+  for (  String deviceId : devices != null ? devices : new String[0]) {
+    int id;
+    try {
+      id=Integer.parseInt(deviceId);
+    }
+ catch (    NumberFormatException e) {
+      continue;
+    }
+    OmemoDevice device=new OmemoDevice(contact,id);
+    File session=hierarchy.getContactsSessionPath(userDevice,device);
+    byte[] bytes=readBytes(session);
+    if (bytes != null) {
+      try {
+        T_Sess s=keyUtil().rawSessionFromBytes(bytes);
+        sessions.put(id,s);
+      }
+ catch (      IOException e) {
+        LOGGER.log(Level.WARNING,"Could not deserialize raw session.",e);
+      }
+    }
+  }
+  return sessions;
+}

@@ -1,0 +1,12 @@
+@Test @EnabledOnCommand("EVAL_RO") void aclDryRun(){
+  assertThatThrownBy(() -> redis.aclDryRun("non-existing","GET","foo","bar")).isInstanceOf(RedisCommandExecutionException.class).hasMessageContaining("ERR User 'non-existing' not found");
+  assertThat(redis.aclDryRun("default","GET","foo")).isEqualTo("OK");
+  AclSetuserArgs args=AclSetuserArgs.Builder.on().addCommand(CommandType.GET).keyPattern("objects:*").addPassword("foobared");
+  assertThat(redis.aclSetuser("foo",args)).isEqualTo("OK");
+  assertThat(redis.aclDryRun("foo","GET","objects:foo")).isEqualTo("OK");
+  assertThat(redis.aclDryRun("foo","GET","baz")).contains("no permissions");
+  Command<String,String,String> getFoo=new Command<>(CommandType.GET,new StatusOutput<>(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).add("objects:foo"));
+  Command<String,String,String> getBaz=new Command<>(CommandType.GET,new StatusOutput<>(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).add("baz"));
+  assertThat(redis.aclDryRun("foo",getFoo)).isEqualTo("OK");
+  assertThat(redis.aclDryRun("foo",getBaz)).contains("no permissions");
+}

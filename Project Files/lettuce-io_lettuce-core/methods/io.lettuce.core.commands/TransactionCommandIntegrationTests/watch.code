@@ -1,0 +1,11 @@
+@Test void watch(){
+  assertThat(redis.watch(key)).isEqualTo("OK");
+  RedisCommands<String,String> redis2=client.connect().sync();
+  redis2.set(key,value + "X");
+  redis2.getStatefulConnection().close();
+  redis.multi();
+  redis.append(key,"foo");
+  TransactionResult transactionResult=redis.exec();
+  assertThat(transactionResult.wasDiscarded()).isTrue();
+  assertThat(transactionResult).isEmpty();
+}

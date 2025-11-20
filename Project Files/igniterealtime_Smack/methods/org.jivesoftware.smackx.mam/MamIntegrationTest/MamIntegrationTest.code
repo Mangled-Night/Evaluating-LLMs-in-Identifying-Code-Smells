@@ -1,0 +1,16 @@
+public MamIntegrationTest(SmackIntegrationTestEnvironment environment) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException, TestNotPossibleException, NotLoggedInException {
+  super(environment);
+  mamManagerConTwo=MamManager.getInstanceFor(conTwo);
+  if (!mamManagerConTwo.isSupported()) {
+    throw new TestNotPossibleException("Message Archive Management (XEP-0313) is not supported by the server.");
+  }
+  try {
+    mamManagerConTwo.enableMamForAllMessages();
+  }
+ catch (  XMPPErrorException e) {
+    if (e.getStanzaError().getCondition() != StanzaError.Condition.feature_not_implemented) {
+      throw e;
+    }
+    LOGGER.log(Level.INFO,conTwo.getXMPPServiceDomain() + " doesn't support XEP-0441: Message Archive Management Preferences",e);
+  }
+}

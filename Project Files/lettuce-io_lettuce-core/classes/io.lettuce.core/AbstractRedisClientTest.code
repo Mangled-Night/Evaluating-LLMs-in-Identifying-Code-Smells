@@ -1,0 +1,45 @@
+/** 
+ * @author Will Glozer
+ * @author Mark Paluch
+ */
+public abstract class AbstractRedisClientTest extends TestSupport {
+  protected static RedisClient client;
+  protected RedisCommands<String,String> redis;
+  @BeforeAll public static void setupClient(){
+    client=DefaultRedisClient.get();
+    client.setOptions(ClientOptions.create());
+  }
+  private static RedisClient newRedisClient(){
+    return RedisClient.create(TestClientResources.get(),RedisURI.Builder.redis(host,port).build());
+  }
+  protected RedisCommands<String,String> connect(){
+    RedisCommands<String,String> connect=client.connect().sync();
+    return connect;
+  }
+  @BeforeEach public void openConnection() throws Exception {
+    client.setOptions(ClientOptions.builder().build());
+    redis=connect();
+    boolean scriptRunning;
+    do {
+      scriptRunning=false;
+      try {
+        redis.flushall();
+        redis.flushdb();
+      }
+ catch (      RedisBusyException e) {
+        scriptRunning=true;
+        try {
+          redis.scriptKill();
+        }
+ catch (        RedisException e1) {
+        }
+      }
+    }
+ while (scriptRunning);
+  }
+  @AfterEach public void closeConnection() throws Exception {
+    if (redis != null) {
+      redis.getStatefulConnection().close();
+    }
+  }
+}

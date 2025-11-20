@@ -1,0 +1,37 @@
+/** 
+ * Round-Robin socket address supplier. Cluster nodes are iterated circular/infinitely.
+ * @author Mark Paluch
+ * @author Christian Lang
+ */
+class RoundRobinSocketAddressSupplier implements Supplier<SocketAddress> {
+  private static final InternalLogger logger=InternalLoggerFactory.getInstance(RoundRobinSocketAddressSupplier.class);
+  private final Supplier<Partitions> partitions;
+  private final Function<Collection<RedisClusterNode>,Collection<RedisClusterNode>> sortFunction;
+  private final ClientResources clientResources;
+  private final RoundRobin<RedisClusterNode> roundRobin;
+  @SuppressWarnings({"unchecked","rawtypes"}) public RoundRobinSocketAddressSupplier(  Supplier<Partitions> partitions,  Function<? extends Collection<RedisClusterNode>,Collection<RedisClusterNode>> sortFunction,  ClientResources clientResources){
+    LettuceAssert.notNull(partitions,"Partitions must not be null");
+    LettuceAssert.notNull(sortFunction,"Sort-Function must not be null");
+    this.partitions=partitions;
+    this.roundRobin=new RoundRobin<>((l,r) -> l.getUri() == r.getUri() || (l.getUri() != null && l.getUri().equals(r.getUri())));
+    this.sortFunction=(Function)sortFunction;
+    this.clientResources=clientResources;
+    resetRoundRobin(partitions.get());
+  }
+  @Override public SocketAddress get(){
+    Partitions partitions=this.partitions.get();
+    if (!roundRobin.isConsistent(partitions)) {
+      resetRoundRobin(partitions);
+    }
+    RedisClusterNode redisClusterNode=roundRobin.next();
+    return getSocketAddress(redisClusterNode);
+  }
+  protected void resetRoundRobin(  Partitions partitions){
+    roundRobin.rebuild(sortFunction.apply(partitions));
+  }
+  protected SocketAddress getSocketAddress(  RedisClusterNode redisClusterNode){
+    SocketAddress resolvedAddress=clientResources.socketAddressResolver().resolve(redisClusterNode.getUri());
+    logger.debug("Resolved SocketAddress {} using for Cluster node {}",resolvedAddress,redisClusterNode.getNodeId());
+    return resolvedAddress;
+  }
+}

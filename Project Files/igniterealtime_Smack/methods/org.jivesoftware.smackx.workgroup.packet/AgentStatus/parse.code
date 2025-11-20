@@ -1,0 +1,21 @@
+@Override public AgentStatus parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, ParseException {
+  AgentStatus agentStatus=new AgentStatus();
+  agentStatus.workgroupJID=ParserUtils.getBareJidAttribute(parser);
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      if ("chat".equals(parser.getName())) {
+        ChatInfo chatInfo=parseChatInfo(parser);
+        agentStatus.currentChats.add(chatInfo);
+      }
+ else       if ("max-chats".equals(parser.getName())) {
+        agentStatus.maxChats=Integer.parseInt(parser.nextText());
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT && ELEMENT_NAME.equals(parser.getName())) {
+      done=true;
+    }
+  }
+  return agentStatus;
+}

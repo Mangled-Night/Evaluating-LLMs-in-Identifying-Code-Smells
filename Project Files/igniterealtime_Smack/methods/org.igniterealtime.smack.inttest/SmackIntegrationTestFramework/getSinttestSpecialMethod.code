@@ -1,0 +1,15 @@
+@SuppressWarnings("unchecked") private static Method getSinttestSpecialMethod(Class<? extends AbstractSmackIntTest> testClass,Class<? extends Annotation> annotation){
+  Set<Method> specialClassMethods=getAllMethods(testClass,withAnnotation(annotation),withReturnType(Void.TYPE),withParametersCount(0),withModifier(Modifier.PUBLIC));
+  Set<Method> allSpecialClassMethods=getAllMethods(testClass,withAnnotation(annotation));
+  allSpecialClassMethods.removeAll(specialClassMethods);
+  if (!allSpecialClassMethods.isEmpty()) {
+    throw new IllegalArgumentException(annotation + " methods with wrong signature found");
+  }
+  if (specialClassMethods.size() == 1) {
+    return specialClassMethods.iterator().next();
+  }
+ else   if (specialClassMethods.size() > 1) {
+    throw new IllegalArgumentException("Only one @BeforeClass method allowed");
+  }
+  return null;
+}

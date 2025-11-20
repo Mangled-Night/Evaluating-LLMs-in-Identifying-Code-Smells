@@ -1,0 +1,13 @@
+@Override public int allocResource(Long roleId,List<Long> resourceIds){
+  UmsRoleResourceRelationExample example=new UmsRoleResourceRelationExample();
+  example.createCriteria().andRoleIdEqualTo(roleId);
+  roleResourceRelationMapper.deleteByExample(example);
+  for (  Long resourceId : resourceIds) {
+    UmsRoleResourceRelation relation=new UmsRoleResourceRelation();
+    relation.setRoleId(roleId);
+    relation.setResourceId(resourceId);
+    roleResourceRelationMapper.insert(relation);
+  }
+  adminCacheService.delResourceListByRole(roleId);
+  return resourceIds.size();
+}

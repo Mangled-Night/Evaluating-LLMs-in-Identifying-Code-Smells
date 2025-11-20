@@ -1,0 +1,79 @@
+/** 
+ * Reconnect to the remote address that the closed channel was connected to. This creates a new  {@link ChannelPipeline} withthe same handler instances contained in the old channel's pipeline.
+ * @param attempt attempt counter
+ * @throws Exception when reconnection fails.
+ */
+public void run(int attempt) throws Exception {
+  run(attempt,Duration.ZERO);
+}
+/** 
+ * Reconnect to the remote address that the closed channel was connected to. This creates a new  {@link ChannelPipeline} withthe same handler instances contained in the old channel's pipeline.
+ * @param attempt attempt counter.
+ * @param delay retry delay.
+ * @throws Exception when reconnection fails.
+ */
+private void run(int attempt,Duration delay) throws Exception {
+  reconnectSchedulerSync.set(false);
+  reconnectScheduleTimeout=null;
+  if (!isEventLoopGroupActive()) {
+    logger.debug("isEventLoopGroupActive() == false");
+    return;
+  }
+  if (!isListenOnChannelInactive()) {
+    logger.debug("Skip reconnect scheduling, listener disabled");
+    return;
+  }
+  if (isReconnectSuspended()) {
+    logger.debug("Skip reconnect scheduling, reconnect is suspended");
+    return;
+  }
+  boolean shouldLog=shouldLog();
+  InternalLogLevel infoLevel=InternalLogLevel.INFO;
+  InternalLogLevel warnLevel=InternalLogLevel.WARN;
+  if (shouldLog) {
+    lastReconnectionLogging=System.currentTimeMillis();
+  }
+ else {
+    warnLevel=InternalLogLevel.DEBUG;
+    infoLevel=InternalLogLevel.DEBUG;
+  }
+  InternalLogLevel warnLevelToUse=warnLevel;
+  try {
+    reconnectionListener.onReconnectAttempt(new ConnectionEvents.Reconnect(attempt));
+    eventBus.publish(new ReconnectAttemptEvent(redisUri,epid,LocalAddress.ANY,remoteAddress,attempt,delay));
+    logger.log(infoLevel,"Reconnecting, last destination was {}",remoteAddress);
+    Tuple2<CompletableFuture<Channel>,CompletableFuture<SocketAddress>> tuple=reconnectionHandler.reconnect();
+    CompletableFuture<Channel> future=tuple.getT1();
+    future.whenComplete((c,t) -> {
+      if (c != null && t == null) {
+        return;
+      }
+      CompletableFuture<SocketAddress> remoteAddressFuture=tuple.getT2();
+      SocketAddress remote=remoteAddress;
+      if (remoteAddressFuture.isDone() && !remoteAddressFuture.isCompletedExceptionally() && !remoteAddressFuture.isCancelled()) {
+        remote=remoteAddressFuture.join();
+      }
+      String message=String.format("Cannot reconnect to [%s]: %s",remote,t.getMessage() != null ? t.getMessage() : t.toString());
+      if (ReconnectionHandler.isExecutionException(t)) {
+        if (logger.isDebugEnabled()) {
+          logger.debug(message,t);
+        }
+ else {
+          logger.log(warnLevelToUse,message);
+        }
+      }
+ else {
+        logger.log(warnLevelToUse,message,t);
+      }
+      eventBus.publish(new ReconnectFailedEvent(redisUri,epid,LocalAddress.ANY,remote,t,attempt));
+      if (!isReconnectSuspended()) {
+        scheduleReconnect();
+      }
+    }
+);
+  }
+ catch (  Exception e) {
+    logger.log(warnLevel,"Cannot reconnect: {}",e.toString());
+    eventBus.publish(new ReconnectFailedEvent(redisUri,epid,LocalAddress.ANY,remoteAddress,e,attempt));
+  }
+}

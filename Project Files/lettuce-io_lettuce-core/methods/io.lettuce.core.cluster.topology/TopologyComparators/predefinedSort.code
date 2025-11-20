@@ -1,0 +1,18 @@
+/** 
+ * Sort partitions by a  {@code fixedOrder} and by {@link RedisURI}. Nodes are sorted as provided in  {@code fixedOrder}. {@link RedisURI RedisURIs}s not contained in  {@code fixedOrder} are ordered after the fixed sorting and sorted wihin theblock by comparing  {@link RedisURI}.
+ * @param clusterNodes the sorting input
+ * @param fixedOrder the fixed order part
+ * @return List containing {@link RedisClusterNode}s ordered by  {@code fixedOrder} and {@link RedisURI}
+ * @see #sortByUri(Iterable)
+ */
+public static List<RedisClusterNode> predefinedSort(Iterable<RedisClusterNode> clusterNodes,Iterable<RedisURI> fixedOrder){
+  LettuceAssert.notNull(clusterNodes,"Cluster nodes must not be null");
+  LettuceAssert.notNull(fixedOrder,"Fixed order must not be null");
+  List<RedisURI> fixedOrderList=LettuceLists.newList(fixedOrder);
+  List<RedisClusterNode> withOrderSpecification=LettuceLists.newList(clusterNodes).stream().filter(redisClusterNode -> fixedOrderList.contains(redisClusterNode.getUri())).collect(Collectors.toList());
+  List<RedisClusterNode> withoutSpecification=LettuceLists.newList(clusterNodes).stream().filter(redisClusterNode -> !fixedOrderList.contains(redisClusterNode.getUri())).collect(Collectors.toList());
+  withOrderSpecification.sort(new PredefinedRedisClusterNodeComparator(fixedOrderList));
+  withoutSpecification.sort((o1,o2) -> RedisURIComparator.INSTANCE.compare(o1.getUri(),o2.getUri()));
+  withOrderSpecification.addAll(withoutSpecification);
+  return withOrderSpecification;
+}

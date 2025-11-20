@@ -1,0 +1,74 @@
+/** 
+ * insert into tablexxx
+ * @param oriSql
+ * @return
+ */
+public static String getTableName(String oriSql){
+  String sql=null;
+  if (oriSql.startsWith(LoadData.loadDataHint)) {
+    sql=oriSql.substring(LoadData.loadDataHint.length());
+  }
+ else {
+    sql=oriSql;
+  }
+  int pos=0;
+  boolean insertFound=false;
+  boolean intoFound=false;
+  int tableStartIndx=-1;
+  int tableEndIndex=-1;
+  while (pos < sql.length()) {
+    char ch=sql.charAt(pos);
+    if (ch == '/' && pos + 4 < sql.length() && sql.charAt(pos + 1) == '*') {
+      if (sql.substring(pos + 2).indexOf("*/") != -1) {
+        pos+=sql.substring(pos + 2).indexOf("*/") + 4;
+        continue;
+      }
+ else {
+        throw new IllegalArgumentException("sql 注释 语法错误");
+      }
+    }
+ else     if (ch <= ' ' || ch == '(' || ch == '`') {
+      if (tableStartIndx > 0) {
+        tableEndIndex=pos;
+        break;
+      }
+ else {
+        pos++;
+        continue;
+      }
+    }
+ else     if (ch == 'i' || ch == 'I') {
+      if (intoFound) {
+        if (tableStartIndx == -1 && ch != '`') {
+          tableStartIndx=pos;
+        }
+        pos++;
+      }
+ else       if (insertFound) {
+        if (pos + 5 < sql.length() && (sql.charAt(pos + 1) == 'n' || sql.charAt(pos + 1) == 'N') && (sql.charAt(pos + 2) == 't' || sql.charAt(pos + 2) == 'T') && (sql.charAt(pos + 3) == 'o' || sql.charAt(pos + 3) == 'O') && (sql.charAt(pos + 4) <= ' ')) {
+          pos=pos + 5;
+          intoFound=true;
+        }
+ else {
+          pos++;
+        }
+      }
+ else {
+        if (pos + 7 < sql.length() && (sql.charAt(pos + 1) == 'n' || sql.charAt(pos + 1) == 'N') && (sql.charAt(pos + 2) == 's' || sql.charAt(pos + 2) == 'S') && (sql.charAt(pos + 3) == 'e' || sql.charAt(pos + 3) == 'E') && (sql.charAt(pos + 4) == 'r' || sql.charAt(pos + 4) == 'R') && (sql.charAt(pos + 5) == 't' || sql.charAt(pos + 5) == 'T') && (sql.charAt(pos + 6) <= ' ')) {
+          pos=pos + 7;
+          insertFound=true;
+        }
+ else {
+          pos++;
+        }
+      }
+    }
+ else {
+      if (tableStartIndx == -1) {
+        tableStartIndx=pos;
+      }
+      pos++;
+    }
+  }
+  return sql.substring(tableStartIndx,tableEndIndex);
+}

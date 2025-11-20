@@ -1,0 +1,98 @@
+/** 
+ * SimpleUserSearch is used to support the non-dataform type of XEP 55. This provides the mechanism for allowing always type ReportedData to be returned by any search result, regardless of the form of the data returned from the server.
+ * @author Derek DeMoro
+ */
+class SimpleUserSearch extends IQ {
+  public static final String ELEMENT=UserSearch.ELEMENT;
+  public static final String NAMESPACE=UserSearch.NAMESPACE;
+  private DataForm form;
+  private ReportedData data;
+  SimpleUserSearch(){
+    super(ELEMENT,NAMESPACE);
+  }
+  public void setForm(  DataForm form){
+    this.form=form;
+  }
+  public ReportedData getReportedData(){
+    return data;
+  }
+  @Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(  IQChildElementXmlStringBuilder buf){
+    buf.rightAngleBracket();
+    buf.append(getItemsToSearch());
+    return buf;
+  }
+  private String getItemsToSearch(){
+    StringBuilder buf=new StringBuilder();
+    if (form == null) {
+      form=DataForm.from(this);
+    }
+    if (form == null) {
+      return "";
+    }
+    for (    FormField field : form.getFields()) {
+      String name=field.getFieldName();
+      String value=getSingleValue(field);
+      if (value.trim().length() > 0) {
+        buf.append('<').append(name).append('>').append(value).append("</").append(name).append('>');
+      }
+    }
+    return buf.toString();
+  }
+  private static String getSingleValue(  FormField formField){
+    List<String> values=formField.getValuesAsString();
+    if (values.isEmpty()) {
+      return "";
+    }
+ else {
+      return values.get(0);
+    }
+  }
+  protected void parseItems(  XmlPullParser parser) throws XmlPullParserException, IOException {
+    ReportedData data=new ReportedData();
+    data.addColumn(new ReportedData.Column("JID","jid",FormField.Type.text_single));
+    boolean done=false;
+    List<ReportedData.Field> fields=new ArrayList<>();
+    while (!done) {
+      if (parser.getAttributeCount() > 0) {
+        String jid=parser.getAttributeValue("","jid");
+        List<String> valueList=new ArrayList<>();
+        valueList.add(jid);
+        ReportedData.Field field=new ReportedData.Field("jid",valueList);
+        fields.add(field);
+      }
+      XmlPullParser.Event eventType=parser.next();
+      if (eventType == XmlPullParser.Event.START_ELEMENT && parser.getName().equals("item")) {
+        fields=new ArrayList<>();
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT && parser.getName().equals("item")) {
+        ReportedData.Row row=new ReportedData.Row(fields);
+        data.addRow(row);
+      }
+ else       if (eventType == XmlPullParser.Event.START_ELEMENT) {
+        String name=parser.getName();
+        String value=parser.nextText();
+        List<String> valueList=new ArrayList<>();
+        valueList.add(value);
+        ReportedData.Field field=new ReportedData.Field(name,valueList);
+        fields.add(field);
+        boolean exists=false;
+        for (        ReportedData.Column column : data.getColumns()) {
+          if (column.getVariable().equals(name)) {
+            exists=true;
+            break;
+          }
+        }
+        if (!exists) {
+          ReportedData.Column column=new ReportedData.Column(name,name,FormField.Type.text_single);
+          data.addColumn(column);
+        }
+      }
+ else       if (eventType == XmlPullParser.Event.END_ELEMENT) {
+        if (parser.getName().equals("query")) {
+          done=true;
+        }
+      }
+    }
+    this.data=data;
+  }
+}

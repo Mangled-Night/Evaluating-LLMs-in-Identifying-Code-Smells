@@ -1,0 +1,25 @@
+@Test public void delayInformationTest() throws Exception {
+  DelayInformationProvider p=new DelayInformationProvider();
+  DelayInformation delayInfo;
+  XmlPullParser parser;
+  String control;
+  GregorianCalendar calendar=new GregorianCalendar(2002,9 - 1,10,23,8,25);
+  calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
+  Date date=calendar.getTime();
+  control=XMLBuilder.create("x").a("xmlns","jabber:x:delay").a("from","capulet.com").a("stamp","2002-09-10T23:08:25Z").t("Offline Storage").asString(outputProperties);
+  parser=PacketParserUtils.getParserFor(control);
+  delayInfo=p.parse(parser);
+  assertEquals("capulet.com",delayInfo.getFrom());
+  assertEquals(date,delayInfo.getStamp());
+  assertEquals("Offline Storage",delayInfo.getReason());
+  assertEquals(XmlPullParser.Event.END_ELEMENT,parser.getEventType());
+  assertEquals("x",parser.getName());
+  control=XMLBuilder.create("x").a("xmlns","jabber:x:delay").a("from","capulet.com").a("stamp","2002-09-10T23:08:25Z").asString(outputProperties);
+  parser=PacketParserUtils.getParserFor(control);
+  delayInfo=p.parse(parser);
+  assertEquals("capulet.com",delayInfo.getFrom());
+  assertEquals(date,delayInfo.getStamp());
+  assertNull(delayInfo.getReason());
+  assertEquals(XmlPullParser.Event.END_ELEMENT,parser.getEventType());
+  assertEquals("x",parser.getName());
+}

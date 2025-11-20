@@ -1,0 +1,53 @@
+private static <T>void execute(final ExecutorService pool,final Task<T> task){
+  execute(pool,task,0,0,null);
+}
+private static <T>void execute(final ExecutorService pool,final Task<T> task,long delay,final long period,final TimeUnit unit){
+synchronized (TASK_POOL_MAP) {
+    if (TASK_POOL_MAP.get(task) != null) {
+      Log.e("ThreadUtils","Task can only be executed once.");
+      return;
+    }
+    TASK_POOL_MAP.put(task,pool);
+  }
+  if (period == 0) {
+    if (delay == 0) {
+      pool.execute(task);
+    }
+ else {
+      TimerTask timerTask=new TimerTask(){
+        @Override public void run(){
+          pool.execute(task);
+        }
+      }
+;
+      TIMER.schedule(timerTask,unit.toMillis(delay));
+    }
+  }
+ else {
+    task.setSchedule(true);
+    TimerTask timerTask=new TimerTask(){
+      @Override public void run(){
+        pool.execute(task);
+      }
+    }
+;
+    TIMER.scheduleAtFixedRate(timerTask,unit.toMillis(delay),unit.toMillis(period));
+  }
+}
+@Override public void execute(@NonNull Runnable command){
+  if (this.isShutdown())   return;
+  mSubmittedCount.incrementAndGet();
+  try {
+    super.execute(command);
+  }
+ catch (  RejectedExecutionException ignore) {
+    Log.e("ThreadUtils","This will not happen!");
+    mWorkQueue.offer(command);
+  }
+catch (  Throwable t) {
+    mSubmittedCount.decrementAndGet();
+  }
+}
+@Override public void execute(@NonNull Runnable command){
+  runOnUiThread(command);
+}

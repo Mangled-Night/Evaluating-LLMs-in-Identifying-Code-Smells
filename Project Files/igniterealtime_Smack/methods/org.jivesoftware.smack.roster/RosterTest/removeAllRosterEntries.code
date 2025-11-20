@@ -1,0 +1,16 @@
+/** 
+ * Remove all roster entries by iterating trough  {@link Roster#getEntries()}and simulating receiving roster pushes from the server.
+ * @param connection the dummy connection of which the provided roster belongs to.
+ * @param roster the roster (or buddy list) which should be initialized.
+ */
+public static void removeAllRosterEntries(DummyConnection connection,Roster roster){
+  for (  RosterEntry entry : roster.getEntries()) {
+    final RosterPacket rosterPush=new RosterPacket();
+    rosterPush.setType(IQ.Type.set);
+    rosterPush.setTo(connection.getUser());
+    final RosterPacket.Item item=new RosterPacket.Item(entry.getJid(),entry.getName());
+    item.setItemType(ItemType.remove);
+    rosterPush.addRosterItem(item);
+    connection.processStanza(rosterPush);
+  }
+}

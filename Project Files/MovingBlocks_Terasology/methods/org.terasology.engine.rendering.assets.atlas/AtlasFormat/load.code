@@ -1,0 +1,31 @@
+@Override public AtlasData load(ResourceUrn urn,List<AssetDataFile> inputs) throws IOException {
+  try (Reader reader=new InputStreamReader(inputs.get(0).openStream(),Charsets.UTF_8)){
+    AtlasDefinition def=gson.fromJson(reader,AtlasDefinition.class);
+    Optional<? extends Texture> texture=assetManager.getAsset(def.getTexture(),Texture.class);
+    if (texture.isPresent()) {
+      Vector2i size=def.getTextureSize();
+      if (size == null) {
+        size=new Vector2i(texture.get().getWidth(),texture.get().getHeight());
+      }
+      Map<Name,SubtextureData> result=Maps.newHashMap();
+      if (def.getGrid() != null) {
+        process(def.getGrid(),texture.get(),size,result);
+      }
+      if (def.getGrids() != null) {
+        for (        GridDefinition grid : def.getGrids()) {
+          process(grid,texture.get(),size,result);
+        }
+      }
+      if (def.getSubimage() != null) {
+        process(def.getSubimage(),texture.get(),size,result);
+      }
+      if (def.getSubimages() != null) {
+        for (        FreeformDefinition freeform : def.getSubimages()) {
+          process(freeform,texture.get(),size,result);
+        }
+      }
+      return new AtlasData(result);
+    }
+    return null;
+  }
+ }

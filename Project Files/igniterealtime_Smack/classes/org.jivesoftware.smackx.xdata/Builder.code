@@ -1,0 +1,435 @@
+public abstract static class Builder<F extends AbstractMultiFormField,B extends FormField.Builder<F,B>> extends FormField.Builder<F,B> {
+  private List<Value> values;
+  protected Builder(  AbstractMultiFormField formField){
+    super(formField);
+    values=CollectionUtil.newListWith(formField.getRawValues());
+  }
+  protected Builder(  String fieldName,  FormField.Type type){
+    super(fieldName,type);
+  }
+  private void ensureValuesAreInitialized(){
+    if (values == null) {
+      values=new ArrayList<>();
+    }
+  }
+  @Override protected void resetInternal(){
+    values=null;
+  }
+  public abstract B addValue(  CharSequence value);
+  public B addValueVerbatim(  CharSequence value){
+    return addValueVerbatim(new Value(value));
+  }
+  public B addValueVerbatim(  Value value){
+    ensureValuesAreInitialized();
+    values.add(value);
+    return getThis();
+  }
+  public final B addValue(  Date date){
+    String dateString=XmppDateTime.formatXEP0082Date(date);
+    return addValueVerbatim(dateString);
+  }
+  public final B addValues(  Collection<? extends CharSequence> values){
+    ensureValuesAreInitialized();
+    for (    CharSequence value : values) {
+      addValueVerbatim(value);
+    }
+    return getThis();
+  }
+}
+public abstract static class Builder<F extends SingleValueFormField,B extends SingleValueFormField.Builder<F,B>> extends SingleValueFormField.Builder<F,B> {
+  private String value;
+  protected Builder(  AbstractSingleStringValueFormField abstractSingleFormField){
+    super(abstractSingleFormField);
+    value=abstractSingleFormField.getValue();
+  }
+  protected Builder(  String fieldName,  FormField.Type type){
+    super(fieldName,type);
+  }
+  @Override protected void resetInternal(){
+    value=null;
+  }
+  /** 
+ * Set the value.
+ * @param value the value to set.
+ * @return a reference to this builder.
+ * @deprecated use {@link #setValue(CharSequence)} instead.
+ */
+  @Deprecated public B addValue(  CharSequence value){
+    return setValue(value);
+  }
+  public B setValue(  Value value){
+    this.value=value.getValue().toString();
+    this.rawValue=value;
+    return getThis();
+  }
+  public B setValue(  CharSequence value){
+    this.value=value.toString();
+    rawValue=new Value(this.value);
+    return getThis();
+  }
+  public B setValue(  Enum<?> value){
+    return setValue(value.toString());
+  }
+  public B setValue(  int value){
+    return setValue(Integer.toString(value));
+  }
+  public B setValue(  URL value){
+    return setValue(value.toString());
+  }
+  public B setValue(  Date date){
+    String dateString=XmppDateTime.formatXEP0082Date(date);
+    return setValue(dateString);
+  }
+}
+public static final class Builder extends SingleValueFormField.Builder<BooleanFormField,BooleanFormField.Builder> {
+  private Boolean value;
+  private Builder(  BooleanFormField booleanFormField){
+    super(booleanFormField);
+    value=booleanFormField.value;
+  }
+  Builder(  String fieldName){
+    super(fieldName,FormField.Type.bool);
+  }
+  @Override protected void resetInternal(){
+    super.resetInternal();
+    value=null;
+  }
+  /** 
+ * Set the value.
+ * @param value the value to set.
+ * @return a reference to this builder.
+ * @deprecated use {@link #setValue(CharSequence)} instead.
+ */
+  @Deprecated public Builder addValue(  CharSequence value){
+    return setValue(new Value(value));
+  }
+  public Builder setValue(  CharSequence value){
+    return setValue(new Value(value));
+  }
+  public Builder setValue(  Value value){
+    this.value=ParserUtils.parseXmlBoolean(value.getValue().toString());
+    rawValue=value;
+    return getThis();
+  }
+  public Builder setValue(  boolean value){
+    rawValue=new Value(Boolean.toString(value));
+    this.value=value;
+    return this;
+  }
+  @Override public BooleanFormField build(){
+    return new BooleanFormField(this);
+  }
+  @Override public Builder getThis(){
+    return this;
+  }
+}
+public abstract static class Builder<F extends FormField,B extends Builder<?,?>> {
+  private final String fieldName;
+  private final Type type;
+  private String label;
+  private List<FormFieldChildElement> formFieldChildElements;
+  private boolean disallowType;
+  private boolean disallowFurtherFormFieldChildElements;
+  protected Builder(  String fieldName,  Type type){
+    if (StringUtils.isNullOrEmpty(fieldName) && type != Type.fixed) {
+      throw new IllegalArgumentException("Fields of type " + type + " must have a field name set");
+    }
+    this.fieldName=fieldName;
+    this.type=type;
+  }
+  protected Builder(  FormField formField){
+    fieldName=formField.fieldName;
+    label=formField.label;
+    type=formField.type;
+    formFieldChildElements=CollectionUtil.newListWith(formField.formFieldChildElements);
+  }
+  /** 
+ * Sets a description that provides extra clarification about the question. This information could be presented to the user either in tool-tip, help button, or as a section of text before the question. <p> If the question is of type FIXED then the description should remain empty. </p>
+ * @param description provides extra clarification about the question.
+ * @return a reference to this builder.
+ */
+  public B setDescription(  String description){
+    Description descriptionElement=new Description(description);
+    setOnlyElement(descriptionElement);
+    return getThis();
+  }
+  /** 
+ * Sets the label of the question which should give enough information to the user to fill out the form.
+ * @param label the label of the question.
+ * @return a reference to this builder.
+ */
+  public B setLabel(  String label){
+    this.label=Objects.requireNonNull(label,"label must not be null");
+    return getThis();
+  }
+  /** 
+ * Sets if the question must be answered in order to complete the questionnaire.
+ * @return a reference to this builder.
+ */
+  public B setRequired(){
+    return setRequired(true);
+  }
+  /** 
+ * Sets if the question must be answered in order to complete the questionnaire.
+ * @param required if the question must be answered in order to complete the questionnaire.
+ * @return a reference to this builder.
+ */
+  public B setRequired(  boolean required){
+    if (required) {
+      setOnlyElement(Required.INSTANCE);
+    }
+    return getThis();
+  }
+  public B addFormFieldChildElements(  Collection<? extends FormFieldChildElement> formFieldChildElements){
+    for (    FormFieldChildElement formFieldChildElement : formFieldChildElements) {
+      addFormFieldChildElement(formFieldChildElement);
+    }
+    return getThis();
+  }
+  @SuppressWarnings("ModifyCollectionInEnhancedForLoop") public B addFormFieldChildElement(  FormFieldChildElement newFormFieldChildElement){
+    if (disallowFurtherFormFieldChildElements) {
+      throw new IllegalArgumentException();
+    }
+    if (newFormFieldChildElement.requiresNoTypeSet() && type != null) {
+      throw new IllegalArgumentException("Elements of type " + newFormFieldChildElement.getClass() + " can only be added to form fields where no type is set");
+    }
+    ensureThatFormFieldChildElementsIsSet();
+    if (!formFieldChildElements.isEmpty() && newFormFieldChildElement.isExclusiveElement()) {
+      throw new IllegalArgumentException("Elements of type " + newFormFieldChildElement.getClass() + " must be the only child elements of a form field.");
+    }
+    disallowType=disallowType || newFormFieldChildElement.requiresNoTypeSet();
+    disallowFurtherFormFieldChildElements=newFormFieldChildElement.isExclusiveElement();
+    formFieldChildElements.add(newFormFieldChildElement);
+    for (    FormFieldChildElement formFieldChildElement : formFieldChildElements) {
+      try {
+        formFieldChildElement.checkConsistency(this);
+      }
+ catch (      IllegalArgumentException e) {
+        formFieldChildElements.remove(newFormFieldChildElement);
+        throw e;
+      }
+    }
+    return getThis();
+  }
+  protected abstract void resetInternal();
+  public B reset(){
+    resetInternal();
+    if (formFieldChildElements == null) {
+      return getThis();
+    }
+    Iterator<FormFieldChildElement> it=formFieldChildElements.iterator();
+    while (it.hasNext()) {
+      FormFieldChildElement formFieldChildElement=it.next();
+      if (formFieldChildElement instanceof Value) {
+        it.remove();
+      }
+    }
+    disallowType=disallowFurtherFormFieldChildElements=false;
+    return getThis();
+  }
+  public abstract F build();
+  public Type getType(){
+    return type;
+  }
+  private void ensureThatFormFieldChildElementsIsSet(){
+    if (formFieldChildElements == null) {
+      formFieldChildElements=new ArrayList<>(4);
+    }
+  }
+  private <E extends FormFieldChildElement>void setOnlyElement(  E element){
+    Class<?> elementClass=element.getClass();
+    ensureThatFormFieldChildElementsIsSet();
+    for (int i=0; i < formFieldChildElements.size(); i++) {
+      if (formFieldChildElements.get(i).getClass().equals(elementClass)) {
+        formFieldChildElements.set(i,element);
+        return;
+      }
+    }
+    addFormFieldChildElement(element);
+  }
+  public abstract B getThis();
+}
+public interface Builder<B extends FormField.Builder<?,?>> {
+  default B addOption(  String option){
+    return addOption(new FormField.Option(option));
+  }
+  /** 
+ * Adds an available options to the question that the user has in order to answer the question.
+ * @param option a new available option for the question.
+ * @return a reference to this builder.
+ */
+  B addOption(  FormField.Option option);
+}
+public static final class Builder extends FormField.Builder<JidMultiFormField,JidMultiFormField.Builder> {
+  private List<Jid> values;
+  private List<Value> rawValues;
+  private Builder(  JidMultiFormField jidMultiFormField){
+    super(jidMultiFormField);
+    values=CollectionUtil.newListWith(jidMultiFormField.getValues());
+  }
+  Builder(  String fieldName){
+    super(fieldName,FormField.Type.jid_multi);
+  }
+  private void ensureValuesAreInitialized(){
+    if (values == null) {
+      values=new ArrayList<>();
+      rawValues=new ArrayList<>();
+    }
+  }
+  @Override protected void resetInternal(){
+    values=null;
+    rawValues=null;
+  }
+  public Builder addValue(  Jid jid){
+    Value value=new Value(jid);
+    ensureValuesAreInitialized();
+    values.add(jid);
+    rawValues.add(value);
+    return getThis();
+  }
+  public Builder addValue(  Value value) throws XmppStringprepException {
+    Jid jid=JidCreate.from(value.getValue());
+    ensureValuesAreInitialized();
+    values.add(jid);
+    rawValues.add(value);
+    return this;
+  }
+  public Builder addValues(  Collection<? extends Jid> jids){
+    for (    Jid jid : jids) {
+      addValue(jid);
+    }
+    return this;
+  }
+  @Override public JidMultiFormField build(){
+    return new JidMultiFormField(this);
+  }
+  @Override public Builder getThis(){
+    return this;
+  }
+}
+public static final class Builder extends SingleValueFormField.Builder<JidSingleFormField,JidSingleFormField.Builder> {
+  private Jid value;
+  private Builder(  JidSingleFormField jidSingleFormField){
+    super(jidSingleFormField);
+    value=jidSingleFormField.getValue();
+  }
+  Builder(  String fieldName){
+    super(fieldName,FormField.Type.jid_single);
+  }
+  @Override protected void resetInternal(){
+    super.resetInternal();
+    value=null;
+  }
+  public Builder setValue(  Jid value){
+    return setValue(value,null);
+  }
+  public Builder setValue(  Jid value,  String rawValue){
+    this.value=value;
+    this.rawValue=new Value(value);
+    return getThis();
+  }
+  public Builder setValue(  Value value) throws XmppStringprepException {
+    this.value=JidCreate.from(value.getValue());
+    this.rawValue=value;
+    return this;
+  }
+  @Override public JidSingleFormField build(){
+    return new JidSingleFormField(this);
+  }
+  @Override public Builder getThis(){
+    return this;
+  }
+}
+public static final class Builder extends AbstractMultiFormField.Builder<ListMultiFormField,ListMultiFormField.Builder> implements FormFieldWithOptions.Builder<Builder> {
+  private List<Option> options;
+  private Builder(  ListMultiFormField textMultiFormField){
+    super(textMultiFormField);
+  }
+  Builder(  String fieldName){
+    super(fieldName,FormField.Type.list_multi);
+  }
+  @Override public Builder addValue(  CharSequence value){
+    return super.addValueVerbatim(value);
+  }
+  @Override public Builder addOption(  Option option){
+    if (options == null) {
+      options=new ArrayList<>();
+    }
+    options.add(option);
+    return this;
+  }
+  @Override public ListMultiFormField build(){
+    return new ListMultiFormField(this);
+  }
+  @Override public Builder getThis(){
+    return this;
+  }
+}
+public static final class Builder extends AbstractSingleStringValueFormField.Builder<ListSingleFormField,ListSingleFormField.Builder> implements FormFieldWithOptions.Builder<Builder> {
+  private List<Option> options;
+  private Builder(  ListSingleFormField textSingleFormField){
+    super(textSingleFormField);
+  }
+  Builder(  String fieldName){
+    super(fieldName,FormField.Type.list_single);
+  }
+  @Override public Builder addOption(  Option option){
+    if (options == null) {
+      options=new ArrayList<>();
+    }
+    options.add(option);
+    return this;
+  }
+  @Override public ListSingleFormField build(){
+    return new ListSingleFormField(this);
+  }
+  @Override public Builder getThis(){
+    return this;
+  }
+}
+public abstract static class Builder<F extends SingleValueFormField,B extends Builder<F,B>> extends FormField.Builder<F,B> {
+  protected Builder(  String fieldName,  Type type){
+    super(fieldName,type);
+  }
+  protected Builder(  SingleValueFormField formField){
+    super(formField);
+    rawValue=formField.getRawValue();
+  }
+  protected Value rawValue;
+  @Override protected void resetInternal(){
+    rawValue=null;
+  }
+}
+public static final class Builder extends AbstractMultiFormField.Builder<TextMultiFormField,TextMultiFormField.Builder> {
+  private Builder(  TextMultiFormField textMultiFormField){
+    super(textMultiFormField);
+  }
+  Builder(  String fieldName){
+    super(fieldName,FormField.Type.text_multi);
+  }
+  @Override public Builder addValue(  CharSequence valueCharSequence){
+    String value=valueCharSequence.toString();
+    List<String> lines=StringUtils.splitLinesPortable(value);
+    return addValues(lines);
+  }
+  @Override public TextMultiFormField build(){
+    return new TextMultiFormField(this);
+  }
+  @Override public Builder getThis(){
+    return this;
+  }
+}
+public static final class Builder extends AbstractSingleStringValueFormField.Builder<TextSingleFormField,TextSingleFormField.Builder> {
+  private Builder(  TextSingleFormField textSingleFormField){
+    super(textSingleFormField);
+  }
+  Builder(  String fieldName,  FormField.Type type){
+    super(fieldName,type);
+  }
+  @Override public TextSingleFormField build(){
+    return new TextSingleFormField(this);
+  }
+  @Override public Builder getThis(){
+    return this;
+  }
+}

@@ -1,0 +1,85 @@
+private boolean moveHorizontal(Vector3f horizMove,CharacterCollider collider,Vector3f position,float slopeFactor,float stepHeight){
+  float remainingFraction=1.0f;
+  float dist=horizMove.length();
+  if (dist < physics.getEpsilon()) {
+    return false;
+  }
+  boolean horizontalHit=false;
+  Vector3f normalizedDir=horizMove.normalize();
+  if (!normalizedDir.isFinite()) {
+    normalizedDir.set(0);
+  }
+  if (collider == null) {
+    normalizedDir.mul(dist);
+    position.add(normalizedDir);
+    return false;
+  }
+  Vector3f targetPos=new Vector3f(normalizedDir);
+  targetPos.mul(dist + HORIZONTAL_PENETRATION_LEEWAY);
+  targetPos.add(position);
+  int iteration=0;
+  Vector3f lastHitNormal=new Vector3f(0,1,0);
+  while (remainingFraction >= 0.01f && iteration++ < 10) {
+    SweepCallback callback=collider.sweep(position,targetPos,HORIZONTAL_PENETRATION,slopeFactor);
+    float actualDist=Math.max(0,(dist + HORIZONTAL_PENETRATION_LEEWAY) * callback.getClosestHitFraction() - HORIZONTAL_PENETRATION_LEEWAY);
+    if (actualDist != 0) {
+      remainingFraction-=actualDist / dist;
+    }
+    if (callback.hasHit()) {
+      if (actualDist > physics.getEpsilon()) {
+        Vector3f actualMove=new Vector3f(normalizedDir);
+        actualMove.mul(actualDist);
+        position.add(actualMove);
+      }
+      dist-=actualDist;
+      Vector3f newDir=new Vector3f(normalizedDir);
+      newDir.mul(dist);
+      float slope=callback.getHitNormalWorld().dot(new Vector3f(0,1,0));
+      if (slope < slopeFactor || 1 - slope < physics.getEpsilon()) {
+        boolean stepping=checkStep(collider,position,newDir,callback,slopeFactor,stepHeight);
+        if (!stepping) {
+          horizontalHit=true;
+          Vector3f newHorizDir=new Vector3f(newDir.x,0,newDir.z);
+          Vector3f horizNormal=new Vector3f(callback.getHitNormalWorld().x,0,callback.getHitNormalWorld().z);
+          if (horizNormal.lengthSquared() > physics.getEpsilon()) {
+            horizNormal.normalize();
+            if (lastHitNormal.dot(horizNormal) > physics.getEpsilon()) {
+              break;
+            }
+            lastHitNormal.set(horizNormal);
+            extractResidualMovement(horizNormal,newHorizDir);
+          }
+          newDir.set(newHorizDir);
+        }
+      }
+ else {
+        Vector3f newHorizDir=new Vector3f(newDir.x,0,newDir.z);
+        extractResidualMovement(callback.getHitNormalWorld(),newDir);
+        Vector3f modHorizDir=new Vector3f(newDir);
+        modHorizDir.y=0;
+        newDir.mul(newHorizDir.length() / modHorizDir.length());
+      }
+      float sqrDist=newDir.lengthSquared();
+      if (sqrDist > physics.getEpsilon()) {
+        newDir.normalize();
+        if (newDir.dot(normalizedDir) <= 0.0f) {
+          break;
+        }
+      }
+ else {
+        break;
+      }
+      dist=(float)Math.sqrt(sqrDist);
+      normalizedDir.set(newDir);
+      targetPos.set(normalizedDir);
+      targetPos.mul(dist + HORIZONTAL_PENETRATION_LEEWAY);
+      targetPos.add(position);
+    }
+ else {
+      normalizedDir.mul(dist);
+      position.add(normalizedDir);
+      break;
+    }
+  }
+  return horizontalHit;
+}

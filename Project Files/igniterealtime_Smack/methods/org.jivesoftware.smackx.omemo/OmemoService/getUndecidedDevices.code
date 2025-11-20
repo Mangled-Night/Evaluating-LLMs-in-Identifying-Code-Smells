@@ -1,0 +1,26 @@
+/** 
+ * Return a set of all devices from the provided set, which trust level is undecided. A device is also considered undecided, if its fingerprint cannot be loaded.
+ * @param userDevice our OmemoDevice
+ * @param callback OmemoTrustCallback to query the trust decisions from
+ * @param devices set of OmemoDevices
+ * @return set of OmemoDevices which contains all devices from the set devices, which are undecided
+ * @throws IOException if an I/O error occurred.
+ */
+private Set<OmemoDevice> getUndecidedDevices(OmemoDevice userDevice,OmemoTrustCallback callback,Set<OmemoDevice> devices) throws IOException {
+  Set<OmemoDevice> undecidedDevices=new HashSet<>();
+  for (  OmemoDevice device : devices) {
+    OmemoFingerprint fingerprint;
+    try {
+      fingerprint=getOmemoStoreBackend().getFingerprint(userDevice,device);
+    }
+ catch (    CorruptedOmemoKeyException|NoIdentityKeyException e) {
+      LOGGER.log(Level.WARNING,"Could not load fingerprint of " + device,e);
+      undecidedDevices.add(device);
+      continue;
+    }
+    if (callback.getTrust(device,fingerprint) == TrustState.undecided) {
+      undecidedDevices.add(device);
+    }
+  }
+  return undecidedDevices;
+}

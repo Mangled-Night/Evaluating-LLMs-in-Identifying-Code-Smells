@@ -1,0 +1,28 @@
+public void testRouteCache() throws Exception {
+  this.cachePool.putIfAbsent("TESTDB_EMPLOYEE","88","dn2");
+  SchemaConfig schema=schemaMap.get("TESTDB");
+  String sql="select * from employee where id=88";
+  RouteResultset rrs=routeStrategy.route(new SystemConfig(),schema,-1,sql,null,null,cachePool);
+  Assert.assertEquals(1,rrs.getNodes().length);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  Assert.assertEquals(null,rrs.getPrimaryKey());
+  Assert.assertEquals(-1,rrs.getLimitSize());
+  Assert.assertEquals("dn2",rrs.getNodes()[0].getName());
+  sql="select * from employee where id=89";
+  rrs=routeStrategy.route(new SystemConfig(),schema,-1,sql,null,null,cachePool);
+  Assert.assertEquals(2,rrs.getNodes().length);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  Assert.assertEquals("TESTDB_EMPLOYEE.ID",rrs.getPrimaryKey());
+  Assert.assertEquals(-1,rrs.getLimitSize());
+  sql="update employee  set name='aaa' where id=88";
+  rrs=routeStrategy.route(new SystemConfig(),schema,-1,sql,null,null,cachePool);
+  Assert.assertEquals(1,rrs.getNodes().length);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  Assert.assertEquals(null,rrs.getPrimaryKey());
+  Assert.assertEquals("dn2",rrs.getNodes()[0].getName());
+  sql="delete from  employee  where id=88";
+  rrs=routeStrategy.route(new SystemConfig(),schema,-1,sql,null,null,cachePool);
+  Assert.assertEquals(1,rrs.getNodes().length);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  Assert.assertEquals("dn2",rrs.getNodes()[0].getName());
+}

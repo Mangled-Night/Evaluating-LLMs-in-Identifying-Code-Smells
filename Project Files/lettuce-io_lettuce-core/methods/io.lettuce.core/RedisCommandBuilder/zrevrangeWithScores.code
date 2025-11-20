@@ -1,0 +1,13 @@
+Command<K,V,List<ScoredValue<V>>> zrevrangeWithScores(K key,long start,long stop){
+  notNullKey(key);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  args.addKey(key).add(start).add(stop).add(WITHSCORES);
+  return createCommand(ZREVRANGE,new ScoredValueListOutput<>(codec),args);
+}
+Command<K,V,Long> zrevrangeWithScores(ScoredValueStreamingChannel<V> channel,K key,long start,long stop){
+  notNullKey(key);
+  LettuceAssert.notNull(channel,"ValueStreamingChannel " + MUST_NOT_BE_NULL);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  args.addKey(key).add(start).add(stop).add(WITHSCORES);
+  return createCommand(ZREVRANGE,new ScoredValueStreamingOutput<>(codec,channel),args);
+}

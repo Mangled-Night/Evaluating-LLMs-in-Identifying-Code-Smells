@@ -1,0 +1,17 @@
+@Override public BatchTasks batch(RedisCommand<Object,Object,Object> command,CommandBatching batching){
+  queue.add(command);
+  if (batching == CommandBatching.queue()) {
+    return BatchTasks.EMPTY;
+  }
+  boolean forcedFlush=batching == CommandBatching.flush();
+  boolean defaultFlush=false;
+  if (!forcedFlush) {
+    if (queue.size() >= batchSize) {
+      defaultFlush=true;
+    }
+  }
+  if (defaultFlush || forcedFlush) {
+    return flush(forcedFlush);
+  }
+  return BatchTasks.EMPTY;
+}

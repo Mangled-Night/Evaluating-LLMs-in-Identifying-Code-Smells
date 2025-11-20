@@ -1,0 +1,26 @@
+@Test public void checkMamQueryIQProvider() throws Exception {
+  IQ iq1=PacketParserUtils.parseStanza(exampleMamQueryIQ1);
+  MamQueryIQ mamQueryIQ1=(MamQueryIQ)iq1;
+  assertEquals(mamQueryIQ1.getType(),IQ.Type.set);
+  assertEquals(mamQueryIQ1.getQueryId(),"test");
+  DataForm dataForm1=(DataForm)mamQueryIQ1.getExtension(DataForm.NAMESPACE);
+  assertEquals(dataForm1.getType(),DataForm.Type.submit);
+  List<FormField> fields1=dataForm1.getFields();
+  assertEquals(fields1.get(0).getType(),FormField.Type.hidden);
+  assertEquals(fields1.get(1).getType(),FormField.Type.text_single);
+  assertEquals(fields1.get(1).getValues().get(0).toString(),"Where arth thou, my Juliet?");
+  assertEquals(fields1.get(2).getValues().get(0).toString(),"{http://jabber.org/protocol/mood}mood/lonely");
+  IQ iq2=PacketParserUtils.parseStanza(exampleMamQueryIQ2);
+  MamQueryIQ mamQueryIQ2=(MamQueryIQ)iq2;
+  assertEquals(mamQueryIQ2.getType(),IQ.Type.result);
+  assertNull(mamQueryIQ2.getQueryId());
+  DataForm dataForm2=(DataForm)mamQueryIQ2.getExtension(DataForm.NAMESPACE);
+  assertEquals(dataForm2.getType(),DataForm.Type.form);
+  List<FormField> fields2=dataForm2.getFields();
+  assertEquals(fields2.get(0).getValues().get(0).toString(),"urn:xmpp:mam:2");
+  assertTrue(fields2.get(0).getValues().size() == 1);
+  assertEquals(fields2.get(1).getType(),FormField.Type.jid_single);
+  assertEquals(fields2.get(2).getType(),FormField.Type.text_single);
+  assertEquals(fields2.get(2).getValues(),new ArrayList<>());
+  assertEquals(fields2.get(4).getFieldName(),"urn:example:xmpp:free-text-search");
+}

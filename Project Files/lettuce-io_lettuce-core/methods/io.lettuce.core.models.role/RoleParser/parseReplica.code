@@ -1,0 +1,11 @@
+private static RedisInstance parseReplica(List<?> roleOutput){
+  Iterator<?> iterator=roleOutput.iterator();
+  iterator.next();
+  String ip=getStringFromIterator(iterator,"");
+  long port=getLongFromIterator(iterator,0);
+  String stateString=getStringFromIterator(iterator,null);
+  long replicationOffset=getLongFromIterator(iterator,0);
+  ReplicationPartner master=new ReplicationPartner(HostAndPort.of(ip,Math.toIntExact(port)),replicationOffset);
+  RedisReplicaInstance.State state=REPLICA_STATE_MAPPING.get(stateString);
+  return new RedisReplicaInstance(master,state);
+}

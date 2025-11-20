@@ -1,0 +1,37 @@
+/** 
+ * Interface defining a method to collect command latency metrics based upon command completion. Command latencies are collected per connection (identified by local/remote tuples of  {@link SocketAddress}es) and  {@link ProtocolKeyword command type}.
+ * @author Mark Paluch
+ * @since 6.0
+ */
+@FunctionalInterface public interface CommandLatencyRecorder {
+  /** 
+ * Returns a disabled no-op  {@link CommandLatencyRecorder}.
+ * @return a disabled {@link CommandLatencyRecorder}.
+ */
+  static CommandLatencyRecorder disabled(){
+    return new CommandLatencyRecorder(){
+      @Override public void recordCommandLatency(      SocketAddress local,      SocketAddress remote,      ProtocolKeyword commandType,      long firstResponseLatency,      long completionLatency){
+      }
+      @Override public boolean isEnabled(){
+        return false;
+      }
+    }
+;
+  }
+  /** 
+ * Record the command latency per  {@code connectionPoint} and {@code commandType}.
+ * @param local the local address
+ * @param remote the remote address
+ * @param commandType the command type
+ * @param firstResponseLatency latency value in {@link java.util.concurrent.TimeUnit#NANOSECONDS} from send to the firstresponse
+ * @param completionLatency latency value in {@link java.util.concurrent.TimeUnit#NANOSECONDS} from send to the commandcompletion
+ */
+  void recordCommandLatency(  SocketAddress local,  SocketAddress remote,  ProtocolKeyword commandType,  long firstResponseLatency,  long completionLatency);
+  /** 
+ * Returns  {@code true} if the metric collector is enabled.
+ * @return {@code true} if the metric collector is enabled
+ */
+  default boolean isEnabled(){
+    return true;
+  }
+}

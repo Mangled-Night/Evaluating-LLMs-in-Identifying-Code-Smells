@@ -1,0 +1,19 @@
+public boolean jobFinished(SQLJob sqlJob){
+  if (EngineCtx.LOGGER.isDebugEnabled()) {
+    EngineCtx.LOGGER.info("job finished " + sqlJob);
+  }
+  runningJobs.remove(sqlJob.getId());
+  SQLJob job=waitingJobs.poll();
+  if (job != null) {
+    runJob(job);
+    return false;
+  }
+ else {
+    if (noMoreJobInput) {
+      return runningJobs.isEmpty() && waitingJobs.isEmpty();
+    }
+ else {
+      return false;
+    }
+  }
+}

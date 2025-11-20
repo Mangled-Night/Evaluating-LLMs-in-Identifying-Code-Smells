@@ -1,0 +1,48 @@
+/** 
+ * 最后一个OK/ERROR包返回后的后续流程：  1）如果是隐式事务，需要自动提交 2）显示事务，返回OK/ERROR给客户端，需要后面继续执行rollback或commit; 3）非事务：返回OK/ERROR给客户端
+ * @param data
+ * @param isCommit  是否提交事务
+ * @param conn
+ */
+protected void processFinishWork(byte[] data,boolean isCommit,BackendConnection conn){
+  ServerConnection source=session.getSource();
+  source.getListener().fireEvent(SqlExecuteStage.END);
+  boolean isImplicitTransaction=false;
+  if (source.isAutocommit()) {
+    for (    Entry<RouteResultsetNode,BackendConnection> entry : session.getTargetMap().entrySet()) {
+      BackendConnection c=entry.getValue();
+      if (c.isModifiedSQLExecuted() && !c.isAutocommit()) {
+        isImplicitTransaction=true;
+        break;
+      }
+    }
+  }
+  if (isImplicitTransaction) {
+    if (nodeCount < 0) {
+      return;
+    }
+    if (isCommit) {
+      CommitNodeHandler commitHandler=new CommitNodeHandler(session,data);
+      commitHandler.commit();
+    }
+ else {
+      RollbackNodeHandler rollbackHandler=new RollbackNodeHandler(session,data);
+      rollbackHandler.rollback();
+    }
+  }
+ else {
+    boolean inTransaction=!source.isAutocommit();
+    if (!inTransaction) {
+      for (      BackendConnection errConn : errConnections) {
+        errConn.setResponseHandler(null);
+        session.closeConnection(errConn,"Connection happening error  can't been reused,close directly");
+      }
+    }
+    if (nodeCount == 0) {
+      if (inTransaction && !isCommit) {
+        source.setTxInterrupt("ROLLBACK");
+      }
+      source.write(data);
+    }
+  }
+}

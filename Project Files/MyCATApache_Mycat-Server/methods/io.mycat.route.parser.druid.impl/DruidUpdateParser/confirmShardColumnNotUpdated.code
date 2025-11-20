@@ -1,0 +1,29 @@
+private void confirmShardColumnNotUpdated(SQLUpdateStatement update,SchemaConfig schema,String tableName,String partitionColumn,String joinKey,RouteResultset rrs) throws SQLNonTransientException {
+  List<SQLUpdateSetItem> updateSetItem=update.getItems();
+  if (updateSetItem != null && updateSetItem.size() > 0) {
+    boolean hasParent=(schema.getTables().get(tableName).getParentTC() != null);
+    for (    SQLUpdateSetItem item : updateSetItem) {
+      String column=StringUtil.removeBackquote(item.getColumn().toString().toUpperCase());
+      if (column.contains(StringUtil.TABLE_COLUMN_SEPARATOR)) {
+        column=column.substring(column.indexOf(".") + 1).trim().toUpperCase();
+      }
+      if (partitionColumn != null && partitionColumn.equals(column)) {
+        boolean canUpdate;
+        canUpdate=((update.getWhere() != null) && shardColCanBeUpdated(update.getWhere(),partitionColumn,item.getValue(),false));
+        if (!canUpdate) {
+          String msg="Sharding column can't be updated " + tableName + "->"+ partitionColumn;
+          LOGGER.warn(msg);
+          throw new SQLNonTransientException(msg);
+        }
+      }
+      if (hasParent) {
+        if (column.equals(joinKey)) {
+          String msg="Parent relevant column can't be updated " + tableName + "->"+ joinKey;
+          LOGGER.warn(msg);
+          throw new SQLNonTransientException(msg);
+        }
+        rrs.setCacheAble(true);
+      }
+    }
+  }
+}

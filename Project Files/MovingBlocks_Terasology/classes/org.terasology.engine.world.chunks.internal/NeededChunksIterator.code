@@ -1,0 +1,29 @@
+private class NeededChunksIterator implements Iterator<Vector3i> {
+  Vector3i nextChunkPos;
+  Iterator<Vector3ic> allPositions;
+  NeededChunksIterator(){
+    allPositions=currentRegion.iterator();
+    calculateNext();
+  }
+  @Override public boolean hasNext(){
+    return nextChunkPos != null;
+  }
+  @Override public Vector3i next(){
+    Vector3i result=nextChunkPos;
+    calculateNext();
+    return result;
+  }
+  @Override public void remove(){
+    throw new UnsupportedOperationException();
+  }
+  private void calculateNext(){
+    nextChunkPos=null;
+    while (allPositions.hasNext()) {
+      Vector3ic regionPosition=allPositions.next();
+      if (!relevantChunks.contains(regionPosition)) {
+        nextChunkPos=new Vector3i(regionPosition);
+        return;
+      }
+    }
+  }
+}

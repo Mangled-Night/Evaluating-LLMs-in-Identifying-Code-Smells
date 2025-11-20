@@ -1,0 +1,42 @@
+private Long[] getSequenceByNaitve(FetchMySQLSequnceHandler mysqlSeqFetcher,int retryCount,boolean canSendFetch){
+  final int systemRetryCount=MycatServer.getInstance().getConfig().getSystem().getSequnceMySqlRetryCount();
+  if (retryCount <= systemRetryCount && canSendFetch) {
+    this.reset();
+    mysqlSeqFetcher.execute(this);
+  }
+ else   if (retryCount > systemRetryCount) {
+    fetching.compareAndSet(true,false);
+    return null;
+  }
+  long start=System.currentTimeMillis();
+  long mysqlWaitTime=MycatServer.getInstance().getConfig().getSystem().getSequnceMySqlWaitTime();
+  long end=start + mysqlWaitTime;
+  while (System.currentTimeMillis() < end) {
+    if (dbfinished) {
+      if (dbretVal == IncrSequenceMySQLHandler.errSeqResult) {
+        fetching.compareAndSet(true,false);
+        throw new RuntimeException("sequnce not found in db table ");
+      }
+      if (dbretVal == null) {
+        LOGGER.warn("can't fetch sequnce in db,sequnce :" + seqName + " detail:"+ mysqlSeqFetcher.getLastestError(seqName)+ "\n"+ ", and retry "+ (retryCount)+ " time");
+        sleep(10);
+        return getSequenceByNaitve(mysqlSeqFetcher,++retryCount,true);
+      }
+      String[] items=dbretVal.split(",");
+      Long curVal=Long.parseLong(items[0]);
+      int span=Integer.parseInt(items[1]);
+      if (0 == curVal) {
+        LOGGER.warn("can't fetch sequnce in db,sequnce :" + seqName + " detail:"+ " fetch return 0,0 , and retry "+ (retryCount)+ " time");
+        sleep(100);
+        return getSequenceByNaitve(mysqlSeqFetcher,++retryCount,true);
+      }
+      fetching.compareAndSet(true,false);
+      return new Long[]{curVal,curVal + span};
+    }
+ else {
+      sleep(10);
+    }
+  }
+  LOGGER.warn("wait sequnce in db sequnce  :" + seqName + " detail:"+ " wait timeout "+ " retry time:"+ retryCount);
+  return getSequenceByNaitve(mysqlSeqFetcher,++retryCount,false);
+}

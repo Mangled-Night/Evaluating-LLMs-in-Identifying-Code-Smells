@@ -1,0 +1,10 @@
+private static <K,V>byte[] valueRange(Range.Boundary<? extends V> boundary,byte[] unbounded,RedisCodec<K,V> codec){
+  if (boundary.getValue() == null) {
+    return unbounded;
+  }
+  ByteBuffer encodeValue=codec.encodeValue(boundary.getValue());
+  byte[] argument=new byte[encodeValue.remaining() + 1];
+  argument[0]=(byte)(boundary.isIncluding() ? '[' : '(');
+  encodeValue.get(argument,1,argument.length - 1);
+  return argument;
+}

@@ -1,0 +1,12 @@
+@Test public void hgetallStreaming(){
+  KeyValueStreamingAdapter<String,String> adapter=new KeyValueStreamingAdapter<>();
+  assertThat(redis.hgetall(key).isEmpty()).isTrue();
+  redis.hset(key,"one","1");
+  redis.hset(key,"two","2");
+  Long count=redis.hgetall(adapter,key);
+  Map<String,String> map=adapter.getMap();
+  assertThat(count.intValue()).isEqualTo(2);
+  assertThat(map).hasSize(2);
+  assertThat(map.get("one")).isEqualTo("1");
+  assertThat(map.get("two")).isEqualTo("2");
+}

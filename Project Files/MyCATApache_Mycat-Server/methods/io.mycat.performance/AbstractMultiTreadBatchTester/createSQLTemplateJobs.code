@@ -1,0 +1,13 @@
+private ArrayList<Runnable>[] createSQLTemplateJobs(long total,String sqlTemplate,int batchSize,boolean autocommit) throws Exception {
+  LinkedList<StringItem> sqlTemplateItems=RandomDataValueUtil.parselRandVarTemplateString(sqlTemplate);
+  @SuppressWarnings("unchecked") ArrayList<Runnable>[] allJobs=new ArrayList[1];
+  long totalBatch=total / threadCount;
+  allJobs[0]=new ArrayList<Runnable>((int)threadCount);
+  for (int i=0; i < threadCount; i++) {
+    allJobs[0].add(new UserTableInsertJob(getConPool(),totalBatch,batchSize,finshiedCount,failedCount,sqlTemplateItems,autocommit));
+  }
+  if (totalBatch * threadCount < total) {
+    allJobs[0].add(new UserTableInsertJob(getConPool(),total - totalBatch * threadCount,batchSize,finshiedCount,failedCount,sqlTemplateItems,autocommit));
+  }
+  return allJobs;
+}

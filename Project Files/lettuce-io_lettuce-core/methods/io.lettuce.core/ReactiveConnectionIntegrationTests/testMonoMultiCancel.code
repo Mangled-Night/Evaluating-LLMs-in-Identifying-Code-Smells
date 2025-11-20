@@ -1,0 +1,13 @@
+@Test @Inject void testMonoMultiCancel(@New StatefulRedisConnection<String,String> connection){
+  RedisReactiveCommands<String,String> reactive=connection.reactive();
+  List<Object> result=new ArrayList<>();
+  reactive.clientPause(1000).subscribe();
+  Delay.delay(Duration.ofMillis(50));
+  Mono<String> set=reactive.set(key,value);
+  set.subscribe(new CompletionSubscriber(result));
+  set.subscribe(new CompletionSubscriber(result));
+  set.subscribe(new CompletionSubscriber(result));
+  Delay.delay(Duration.ofMillis(50));
+  reactive.reset();
+  assertThat(result).isEmpty();
+}

@@ -1,0 +1,35 @@
+@Test public void cooperativeSpilling() throws InterruptedException {
+  final TestMemoryManager memoryManager=new TestMemoryManager(new MycatPropertyConf());
+  memoryManager.limit(100);
+  final DataNodeMemoryManager manager=new DataNodeMemoryManager(memoryManager,0);
+  TestMemoryConsumer c1=new TestMemoryConsumer(manager);
+  TestMemoryConsumer c2=new TestMemoryConsumer(manager);
+  c1.use(100);
+  Assert.assertEquals(100,c1.getUsed());
+  c2.use(100);
+  Assert.assertEquals(100,c2.getUsed());
+  Assert.assertEquals(0,c1.getUsed());
+  c1.use(100);
+  Assert.assertEquals(100,c1.getUsed());
+  Assert.assertEquals(0,c2.getUsed());
+  c1.use(50);
+  Assert.assertEquals(50,c1.getUsed());
+  Assert.assertEquals(0,c2.getUsed());
+  c2.use(50);
+  Assert.assertEquals(50,c1.getUsed());
+  Assert.assertEquals(50,c2.getUsed());
+  c1.use(100);
+  Assert.assertEquals(100,c1.getUsed());
+  Assert.assertEquals(0,c2.getUsed());
+  c1.free(20);
+  Assert.assertEquals(80,c1.getUsed());
+  c2.use(10);
+  Assert.assertEquals(80,c1.getUsed());
+  Assert.assertEquals(10,c2.getUsed());
+  c2.use(100);
+  Assert.assertEquals(100,c2.getUsed());
+  Assert.assertEquals(0,c1.getUsed());
+  c1.free(0);
+  c2.free(100);
+  Assert.assertEquals(0,manager.cleanUpAllAllocatedMemory());
+}

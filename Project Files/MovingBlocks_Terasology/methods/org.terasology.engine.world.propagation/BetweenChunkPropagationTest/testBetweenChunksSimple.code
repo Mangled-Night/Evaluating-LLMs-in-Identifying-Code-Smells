@@ -1,0 +1,18 @@
+@Test public void testBetweenChunksSimple(){
+  Chunk topChunk=new ChunkImpl(new Vector3i(0,1,0),blockManager,extraDataManager);
+  Chunk bottomChunk=new ChunkImpl(new Vector3i(0,0,0),blockManager,extraDataManager);
+  provider.addChunk(topChunk);
+  provider.addChunk(bottomChunk);
+  for (  Vector3ic pos : new BlockRegion(0,0,0).setSize(Chunks.SIZE_X,1,Chunks.SIZE_Z)) {
+    topChunk.setSunlight(pos,Chunks.MAX_SUNLIGHT);
+    topChunk.setSunlightRegen(pos,Chunks.MAX_SUNLIGHT_REGEN);
+  }
+  InternalLightProcessor.generateInternalLighting(bottomChunk);
+  propagator.propagateBetween(topChunk,bottomChunk,Side.BOTTOM,true);
+  propagator.process();
+  sunlightPropagator.process();
+  for (  Vector3ic pos : Chunks.CHUNK_REGION) {
+    assertEquals(Chunks.MAX_SUNLIGHT,bottomChunk.getSunlight(pos),() -> "Incorrect at position " + pos);
+    assertEquals(Chunks.MAX_SUNLIGHT_REGEN,bottomChunk.getSunlightRegen(pos),() -> "Incorrect at position " + pos);
+  }
+}

@@ -1,0 +1,47 @@
+/** 
+ * The TimerTask that does the sorting work.
+ */
+private class SortTask extends TimerTask {
+  private DistanceComparator comparator=new DistanceComparator();
+  private Camera originCamera;
+  /** 
+ * @param origin The entities of a NearestSortingCollection will besorted based on their distance to this entity.
+ */
+  SortTask(  Camera origin){
+    originCamera=origin;
+  }
+  @Override public void run(){
+    sortingThread=Thread.currentThread();
+    try {
+      sort();
+    }
+ catch (    Exception ex) {
+      logger.error("Uncaught exception in sorting thread",ex);
+    }
+  }
+  /** 
+ * Sorts the entities of this container. Can be executed concurrently with the other operations on this container.
+ */
+  private void sort(){
+    comparator.setOrigin(originCamera.getPosition());
+    if (!commands.isEmpty()) {
+      logger.warn("The commands list was not emptied properly!");
+      commands.clear();
+    }
+    List<EntityRef> newEnts=cloneAndSetSorting();
+    try {
+      Collections.sort(newEnts,comparator);
+    }
+ catch (    IllegalArgumentException ex) {
+      logger.warn("Entities destroyed during sorting process. Sorting is skipped this round.");
+      clearQueue();
+      return;
+    }
+catch (    ArrayIndexOutOfBoundsException e) {
+      logger.warn("Something went wrong during sorting process. Sorting is skipped this round.");
+      clearQueue();
+      return;
+    }
+    processQueueAndSetEntities(newEnts);
+  }
+}

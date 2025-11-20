@@ -1,0 +1,24 @@
+/** 
+ * 得到树形节点信息 方法描述
+ * @param path
+ * @param zkDirectory
+ * @throws Exception
+ * @创建日期 2016年9月15日
+ */
+public void getTreeDirectory(String path,String name,DiretoryInf zkDirectory) throws Exception {
+  boolean check=this.checkPathExists(path);
+  if (check) {
+    String currDate=this.getDataToString(path);
+    List<String> childPathList=this.getChildNames(path);
+    if (null != childPathList && !childPathList.isEmpty()) {
+      DiretoryInf directory=new ZkDirectoryImpl(name,currDate);
+      zkDirectory.add(directory);
+      for (      String childPath : childPathList) {
+        this.getTreeDirectory(path + ZookeeperPath.ZK_SEPARATOR.getKey() + childPath,childPath,directory);
+      }
+    }
+ else {
+      zkDirectory.add(new ZkDataImpl(name,currDate));
+    }
+  }
+}

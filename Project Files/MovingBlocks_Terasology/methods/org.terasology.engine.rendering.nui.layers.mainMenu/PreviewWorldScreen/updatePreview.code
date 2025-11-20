@@ -1,0 +1,21 @@
+private void updatePreview(){
+  final NUIManager manager=context.get(NUIManager.class);
+  final WaitPopup<TextureData> popup=manager.pushScreen(WaitPopup.ASSET_URI,WaitPopup.class);
+  popup.setMessage("Updating Preview","Please wait ...");
+  ProgressListener progressListener=progress -> popup.setMessage("Updating Preview",String.format("Please wait ... %d%%",(int)(progress * 100f)));
+  Callable<TextureData> operation=() -> {
+    if (seed != null) {
+      worldGenerator.setWorldSeed(seed.getText());
+    }
+    int zoom=TeraMath.floorToInt(zoomSlider.getValue());
+    TextureData data=texture.getData();
+    if (zoneSelector.isVisible()) {
+      previewGen=zoneSelector.getSelection().preview(worldGenerator);
+    }
+    previewGen.render(data,zoom,progressListener);
+    return data;
+  }
+;
+  popup.onSuccess(texture::reload);
+  popup.startOperation(operation,true);
+}

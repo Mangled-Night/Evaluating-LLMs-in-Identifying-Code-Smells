@@ -1,0 +1,10 @@
+@BeforeEach public void before(){
+  clusterHelper.flushdb();
+  ClusterSetup.setupMasterWithReplica(clusterHelper);
+  redis5=client.connect(RedisURI.Builder.redis(host,ClusterTestSettings.port5).build());
+  redis6=client.connect(RedisURI.Builder.redis(host,ClusterTestSettings.port6).build());
+  redissync5=redis5.sync();
+  redissync6=redis6.sync();
+  clusterClient.refreshPartitions();
+  Wait.untilTrue(clusterHelper::isStable).waitOrTimeout();
+}

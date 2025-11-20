@@ -1,0 +1,25 @@
+private void clearData(Map<File,DataNode> map,TableMigrateInfo table){
+  if (table.isError()) {
+    return;
+  }
+  ExecutorService executor=new ThreadPoolExecutor(margs.getThreadCount(),margs.getThreadCount(),0L,TimeUnit.MILLISECONDS,new LinkedBlockingQueue<Runnable>(),new ThreadPoolExecutor.CallerRunsPolicy());
+  Iterator<Entry<File,DataNode>> it=map.entrySet().iterator();
+  while (it.hasNext()) {
+    Entry<File,DataNode> et=it.next();
+    File f=et.getKey();
+    DataNode srcDn=et.getValue();
+    executor.execute(new DataClearRunner(table,srcDn,f));
+  }
+  executor.shutdown();
+  while (true) {
+    if (executor.isTerminated()) {
+      break;
+    }
+    try {
+      Thread.sleep(200);
+    }
+ catch (    InterruptedException e) {
+      LOGGER.error("error",e);
+    }
+  }
+}

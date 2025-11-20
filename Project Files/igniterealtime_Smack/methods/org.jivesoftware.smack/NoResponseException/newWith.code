@@ -1,0 +1,27 @@
+public static NoResponseException newWith(XMPPConnection connection,String waitingFor){
+  final StringBuilder sb=getWaitingFor(connection);
+  sb.append(" While waiting for ").append(waitingFor);
+  sb.append(" [").append(connection).append(']');
+  return new NoResponseException(sb.toString());
+}
+public static NoResponseException newWith(long timeout,StanzaCollector collector,boolean stanzaCollectorCancelled){
+  return newWith(timeout,collector.getStanzaFilter(),stanzaCollectorCancelled);
+}
+public static NoResponseException newWith(XMPPConnection connection,StanzaFilter filter){
+  return newWith(connection.getReplyTimeout(),filter,false);
+}
+public static NoResponseException newWith(long timeout,StanzaFilter filter,boolean stanzaCollectorCancelled){
+  final StringBuilder sb=getWaitingFor(timeout);
+  if (stanzaCollectorCancelled) {
+    sb.append(" StanzaCollector has been cancelled.");
+  }
+  sb.append(" Waited for response using: ");
+  if (filter != null) {
+    sb.append(filter.toString());
+  }
+ else {
+    sb.append("No filter used or filter was 'null'");
+  }
+  sb.append('.');
+  return new NoResponseException(sb.toString(),filter);
+}

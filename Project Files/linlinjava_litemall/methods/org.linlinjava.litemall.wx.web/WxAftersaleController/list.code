@@ -1,0 +1,25 @@
+/** 
+ * 售后列表
+ * @param userId   用户ID
+ * @param status   状态类型，如果是空则是全部
+ * @param page     分页页数
+ * @param limit    分页大小
+ * @param sort     排序字段
+ * @param order    排序方式
+ * @return 售后列表
+ */
+@GetMapping("list") public Object list(@LoginUser Integer userId,@RequestParam Short status,@RequestParam(defaultValue="1") Integer page,@RequestParam(defaultValue="10") Integer limit,@Sort @RequestParam(defaultValue="add_time") String sort,@Order @RequestParam(defaultValue="desc") String order){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  List<LitemallAftersale> aftersaleList=aftersaleService.queryList(userId,status,page,limit,sort,order);
+  List<Map<String,Object>> aftersaleVoList=new ArrayList<>(aftersaleList.size());
+  for (  LitemallAftersale aftersale : aftersaleList) {
+    List<LitemallOrderGoods> orderGoodsList=orderGoodsService.queryByOid(aftersale.getOrderId());
+    Map<String,Object> aftersaleVo=new HashMap<>();
+    aftersaleVo.put("aftersale",aftersale);
+    aftersaleVo.put("goodsList",orderGoodsList);
+    aftersaleVoList.add(aftersaleVo);
+  }
+  return ResponseUtil.okList(aftersaleVoList,aftersaleList);
+}

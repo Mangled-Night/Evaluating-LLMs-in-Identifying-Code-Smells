@@ -1,0 +1,18 @@
+/** 
+ * 执行lock tables语句方法
+ * @param sql
+ */
+public void lockTable(String sql){
+  if (!autocommit) {
+    writeErrMessage(ErrorCode.ER_YES,"can't lock table in transaction!");
+    return;
+  }
+  if (isLocked) {
+    writeErrMessage(ErrorCode.ER_YES,"can't lock multi-table");
+    return;
+  }
+  RouteResultset rrs=routeSQL(sql,ServerParse.LOCK);
+  if (rrs != null) {
+    session.lockTable(rrs);
+  }
+}

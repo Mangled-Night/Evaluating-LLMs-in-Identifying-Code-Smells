@@ -1,0 +1,14 @@
+@Test void selectiveBatching(){
+  RedisCommandFactory factory=new RedisCommandFactory(redis.getStatefulConnection());
+  SelectiveBatching api=factory.getCommands(SelectiveBatching.class);
+  api.set("k1",value);
+  assertThat(redis.get("k1")).isEqualTo(value);
+  api.set("k2",value,CommandBatching.queue());
+  api.set("k3",value,CommandBatching.queue());
+  assertThat(redis.get("k2")).isNull();
+  assertThat(redis.get("k3")).isNull();
+  api.set("k4",value,CommandBatching.flush());
+  assertThat(redis.get("k2")).isEqualTo(value);
+  assertThat(redis.get("k3")).isEqualTo(value);
+  assertThat(redis.get("k4")).isEqualTo(value);
+}

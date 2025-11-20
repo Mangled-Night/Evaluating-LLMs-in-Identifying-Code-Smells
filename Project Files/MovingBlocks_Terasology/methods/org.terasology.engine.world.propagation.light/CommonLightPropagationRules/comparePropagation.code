@@ -1,0 +1,29 @@
+/** 
+ * Light is more permissive if the block is changed to be translucent or has an open side, otherwise is less permissive or identical. <p> {@inheritDoc}
+ */
+@Override public PropagationComparison comparePropagation(Block newBlock,Block oldBlock,Side side){
+  if (newBlock.isTranslucent() && oldBlock.isTranslucent()) {
+    return PropagationComparison.IDENTICAL;
+  }
+ else   if (newBlock.isTranslucent()) {
+    if (oldBlock.isFullSide(side)) {
+      return PropagationComparison.MORE_PERMISSIVE;
+    }
+  }
+ else   if (oldBlock.isTranslucent()) {
+    if (newBlock.isFullSide(side)) {
+      return PropagationComparison.MORE_RESTRICTED;
+    }
+  }
+ else {
+    boolean newBlocked=newBlock.isFullSide(side);
+    boolean oldBlocked=oldBlock.isFullSide(side);
+    if (newBlocked && !oldBlocked) {
+      return PropagationComparison.MORE_RESTRICTED;
+    }
+    if (oldBlocked && !newBlocked) {
+      return PropagationComparison.MORE_PERMISSIVE;
+    }
+  }
+  return PropagationComparison.IDENTICAL;
+}

@@ -1,0 +1,20 @@
+/** 
+ * Modify the affiliations for this PubSub node as owner. The  {@link Affiliation}s given must be created with the {@link Affiliation#Affiliation(org.jxmpp.jid.BareJid,Affiliation.Type)} constructor.<p> Note that this is an <b>optional</b> PubSub feature ('pubsub#modify-affiliations'). </p>
+ * @param affiliations TODO javadoc me please
+ * @return <code>null</code> or a PubSub stanza with additional information on success.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @see <a href="http://www.xmpp.org/extensions/xep-0060.html#owner-affiliations-modify">XEP-60 § 8.9.2 Modify Affiliation</a>
+ * @since 4.2
+ */
+public PubSub modifyAffiliationAsOwner(List<Affiliation> affiliations) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  for (  Affiliation affiliation : affiliations) {
+    if (affiliation.getPubSubNamespace() != PubSubNamespace.owner) {
+      throw new IllegalArgumentException("Must use Affiliation(BareJid, Type) affiliations");
+    }
+  }
+  PubSub pubSub=createPubsubPacket(IQ.Type.set,new AffiliationsExtension(AffiliationNamespace.owner,affiliations,getId()));
+  return sendPubsubPacket(pubSub);
+}

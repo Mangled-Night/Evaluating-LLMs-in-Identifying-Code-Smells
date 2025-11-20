@@ -1,0 +1,35 @@
+/** 
+ * Block list IQ provider class.
+ * @author Fernando Ramirez
+ * @see <a href="http://xmpp.org/extensions/xep-0191.html">XEP-0191: Blocking
+ *      Command</a>
+ */
+public class BlockListIQProvider extends IqProvider<BlockListIQ> {
+  @Override public BlockListIQ parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    List<Jid> jids=null;
+    outerloop:     while (true) {
+      XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+        if (parser.getName().equals("item")) {
+          if (jids == null) {
+            jids=new ArrayList<>();
+          }
+          Jid jid=ParserUtils.getJidAttribute(parser);
+          jids.add(jid);
+        }
+      break;
+case END_ELEMENT:
+    if (parser.getDepth() == initialDepth) {
+      break outerloop;
+    }
+  break;
+default :
+break;
+}
+}
+BlockListIQ blockListIQ=new BlockListIQ(jids);
+blockListIQ.setType(IQ.Type.result);
+return blockListIQ;
+}
+}

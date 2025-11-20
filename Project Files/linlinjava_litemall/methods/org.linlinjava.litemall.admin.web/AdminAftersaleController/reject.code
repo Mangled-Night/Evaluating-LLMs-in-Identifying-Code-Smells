@@ -1,0 +1,16 @@
+@RequiresPermissions("admin:aftersale:reject") @RequiresPermissionsDesc(menu={"商城管理","售后管理"},button="审核拒绝") @PostMapping("/reject") public Object reject(@RequestBody LitemallAftersale aftersale){
+  Integer id=aftersale.getId();
+  LitemallAftersale aftersaleOne=aftersaleService.findById(id);
+  if (aftersaleOne == null) {
+    return ResponseUtil.badArgumentValue();
+  }
+  Short status=aftersaleOne.getStatus();
+  if (!status.equals(AftersaleConstant.STATUS_REQUEST)) {
+    return ResponseUtil.fail(AdminResponseCode.AFTERSALE_NOT_ALLOWED,"售后不能进行审核拒绝操作");
+  }
+  aftersaleOne.setStatus(AftersaleConstant.STATUS_REJECT);
+  aftersaleOne.setHandleTime(LocalDateTime.now());
+  aftersaleService.updateById(aftersaleOne);
+  orderService.updateAftersaleStatus(aftersaleOne.getOrderId(),AftersaleConstant.STATUS_REJECT);
+  return ResponseUtil.ok();
+}

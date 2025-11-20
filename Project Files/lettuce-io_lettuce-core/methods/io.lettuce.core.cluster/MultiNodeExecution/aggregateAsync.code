@@ -1,0 +1,18 @@
+/** 
+ * Aggregate (sum) results of the  {@link RedisFuture}s.
+ * @param executions mapping of a key to the future
+ * @return future producing an aggregation result
+ */
+public static RedisFuture<Long> aggregateAsync(Map<?,? extends CompletionStage<Long>> executions){
+  return new PipelinedRedisFuture<>(executions,objectPipelinedRedisFuture -> {
+    AtomicLong result=new AtomicLong();
+    for (    CompletionStage<Long> future : executions.values()) {
+      Long value=execute(() -> future.toCompletableFuture().get());
+      if (value != null) {
+        result.getAndAdd(value);
+      }
+    }
+    return result.get();
+  }
+);
+}

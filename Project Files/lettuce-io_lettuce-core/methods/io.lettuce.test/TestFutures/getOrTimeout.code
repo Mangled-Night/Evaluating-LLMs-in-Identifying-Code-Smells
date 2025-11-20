@@ -1,0 +1,40 @@
+/** 
+ * Retrieve the value from the  {@link Future} guarded by the global {@link #TIMEOUT}.
+ * @param future
+ * @param < T >
+ */
+public static <T>T getOrTimeout(Future<T> future){
+  if (!Futures.await(TIMEOUT,future)) {
+    throw new IllegalStateException("Future timeout");
+  }
+  try {
+    return future.get();
+  }
+ catch (  Exception e) {
+    throw new UndeclaredThrowableException(e);
+  }
+}
+/** 
+ * Retrieve the value from the  {@link CompletableFuture} guarded by the global {@link #TIMEOUT}.
+ * @param future
+ * @param < T >
+ */
+public static <T>T getOrTimeout(CompletableFuture<T> future){
+  return getOrTimeout((Future<T>)future);
+}
+/** 
+ * Retrieve the value from the  {@link CompletionStage} guarded by the global {@link #TIMEOUT}.
+ * @param completionStage
+ * @param < T >
+ */
+public static <T>T getOrTimeout(CompletionStage<T> completionStage){
+  return getOrTimeout(completionStage.toCompletableFuture());
+}
+/** 
+ * Retrieve the value from the  {@link RedisFuture} guarded by the global {@link #TIMEOUT}.
+ * @param future
+ * @param < T >
+ */
+public static <T>T getOrTimeout(RedisFuture<T> future){
+  return getOrTimeout(future.toCompletableFuture());
+}

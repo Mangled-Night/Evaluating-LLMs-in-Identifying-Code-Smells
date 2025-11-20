@@ -1,0 +1,43 @@
+/** 
+ * 两个list中的条件组合
+ * @param list1
+ * @param list2
+ * @return
+ */
+private List<List<Condition>> merge(List<List<Condition>> list1,List<List<Condition>> list2){
+  if (list1.size() == 0) {
+    return list2;
+  }
+ else   if (list2.size() == 0) {
+    return list1;
+  }
+  List<List<Condition>> retList=new ArrayList<List<Condition>>();
+  for (int i=0; i < list1.size(); i++) {
+    for (int j=0; j < list2.size(); j++) {
+      List<Condition> listTmp=mergeSqlConditionList(list1.get(i),list2.get(j));
+      boolean exists=false;
+      Iterator<List<Condition>> it=retList.iterator();
+      while (it.hasNext()) {
+        List<Condition> result=(List<Condition>)it.next();
+        if (result != null && listTmp != null && listTmp.size() > result.size()) {
+          if (sqlConditionListInOther(result,listTmp)) {
+            result.clear();
+            result.addAll(listTmp);
+            exists=true;
+            break;
+          }
+        }
+ else {
+          if (sqlConditionListInOther(listTmp,result)) {
+            exists=true;
+            break;
+          }
+        }
+      }
+      if (!exists) {
+        retList.add(listTmp);
+      }
+    }
+  }
+  return retList;
+}

@@ -1,0 +1,24 @@
+/** 
+ * Registers a listener for GeoLocation data. This implicitly publishes a CAPS update to include a notification filter for the geolocation node. This method blocks until the server has indicated that this update has been received.
+ * @param geoManager The GeoLocationManager instance for the connection that is expected to receive data.
+ * @param discoManager The ServiceDiscoveryManager instance for the connection that is expected to publish data.
+ * @param listener A listener instance for GeoLocation data that is to be registered.
+ * @throws Exception if the test fails
+ */
+public void registerListenerAndWait(GeoLocationManager geoManager,ServiceDiscoveryManager discoManager,PepEventListener<GeoLocation> listener) throws Exception {
+  final SimpleResultSyncPoint notificationFilterReceived=new SimpleResultSyncPoint();
+  final EntityCapabilitiesChangedListener notificationFilterReceivedListener=info -> {
+    if (info.containsFeature(GeoLocationManager.GEOLOCATION_NODE + "+notify")) {
+      notificationFilterReceived.signal();
+    }
+  }
+;
+  discoManager.addEntityCapabilitiesChangedListener(notificationFilterReceivedListener);
+  try {
+    geoManager.addGeoLocationListener(listener);
+    notificationFilterReceived.waitForResult(timeout);
+  }
+  finally {
+    discoManager.removeEntityCapabilitiesChangedListener(notificationFilterReceivedListener);
+  }
+}

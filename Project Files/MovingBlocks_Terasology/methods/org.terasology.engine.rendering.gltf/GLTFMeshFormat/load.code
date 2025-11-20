@@ -1,0 +1,47 @@
+@Override public MeshData load(ResourceUrn urn,List<AssetDataFile> inputs) throws IOException {
+  try (Reader in=new InputStreamReader(inputs.get(0).openStream())){
+    GLTF gltf=gson.fromJson(in,GLTF.class);
+    checkVersionSupported(urn,gltf);
+    checkMeshPresent(urn,gltf);
+    GLTFMesh gltfMesh=gltf.getMeshes().get(0);
+    checkPrimitivePresent(urn,gltfMesh);
+    GLTFPrimitive gltfPrimitive=gltfMesh.getPrimitives().get(0);
+    List<byte[]> loadedBuffers=loadBinaryBuffers(urn,gltf);
+    StandardMeshData meshData=new StandardMeshData();
+    for (    MeshAttributeSemantic semantic : MeshAttributeSemantic.values()) {
+      GLTFAccessor gltfAccessor=getAccessor(semantic,gltfPrimitive,gltf);
+      if (gltfAccessor != null && gltfAccessor.getBufferView() != null) {
+        GLTFBufferView bufferView=gltf.getBufferViews().get(gltfAccessor.getBufferView());
+switch (semantic) {
+case Position:
+          GLTFAttributeMapping.readVec3FBuffer(loadedBuffers.get(bufferView.getBuffer()),gltfAccessor,bufferView,meshData.position);
+        break;
+case Normal:
+      GLTFAttributeMapping.readVec3FBuffer(loadedBuffers.get(bufferView.getBuffer()),gltfAccessor,bufferView,meshData.normal);
+    break;
+case Texcoord_0:
+  GLTFAttributeMapping.readVec2FBuffer(loadedBuffers.get(bufferView.getBuffer()),gltfAccessor,bufferView,meshData.uv0);
+break;
+case Texcoord_1:
+GLTFAttributeMapping.readVec2FBuffer(loadedBuffers.get(bufferView.getBuffer()),gltfAccessor,bufferView,meshData.uv1);
+break;
+case Color_0:
+GLTFAttributeMapping.readColor4FBuffer(loadedBuffers.get(bufferView.getBuffer()),gltfAccessor,bufferView,meshData.color0);
+break;
+}
+}
+}
+GLTFAccessor indicesAccessor=getIndicesAccessor(gltfPrimitive,gltf,urn);
+if (indicesAccessor.getBufferView() == null) {
+throw new IOException("Missing buffer view for indices accessor in " + urn);
+}
+GLTFBufferView indicesBuffer=gltf.getBufferViews().get(indicesAccessor.getBufferView());
+checkIndicesBuffer(indicesBuffer);
+TIntArrayList indices=new TIntArrayList();
+readBuffer(loadedBuffers.get(indicesBuffer.getBuffer()),indicesAccessor,indicesBuffer,indices);
+for (int x=0; x < indices.size(); x++) {
+meshData.indices.put(indices.get(x));
+}
+return meshData;
+}
+ }

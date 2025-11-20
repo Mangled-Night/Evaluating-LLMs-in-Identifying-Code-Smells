@@ -1,0 +1,20 @@
+private void constructParametersNotNull(Context context){
+  List<Parameter> constructedParameters=constructParameters(context);
+  if (constructedParameters == null || constructedParameters.size() <= 0) {
+    commandParameters=ImmutableList.of();
+    executionMethodParameters=ImmutableList.of();
+    return;
+  }
+  ImmutableList.Builder<CommandParameter> commandParameterBuilder=ImmutableList.builder();
+  for (int i=0; i < constructedParameters.size(); i++) {
+    Parameter type=constructedParameters.get(i);
+    if (type == null) {
+      throw new CommandInitializationException("Invalid parameter definition #" + i + "; must not be null");
+    }
+ else     if (type instanceof CommandParameter) {
+      commandParameterBuilder.add((CommandParameter)type);
+    }
+  }
+  commandParameters=commandParameterBuilder.build();
+  executionMethodParameters=ImmutableList.copyOf(constructedParameters);
+}

@@ -1,0 +1,72 @@
+@SuppressLint("HardwareIds") @RequiresPermission(READ_PHONE_STATE) public static String getImeiOrMeid(boolean isImei){
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+    return "";
+  }
+  TelephonyManager tm=getTelephonyManager();
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+    if (isImei) {
+      return getMinOne(tm.getImei(0),tm.getImei(1));
+    }
+ else {
+      return getMinOne(tm.getMeid(0),tm.getMeid(1));
+    }
+  }
+ else   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+    String ids=getSystemPropertyByReflect(isImei ? "ril.gsm.imei" : "ril.cdma.meid");
+    if (!TextUtils.isEmpty(ids)) {
+      String[] idArr=ids.split(",");
+      if (idArr.length == 2) {
+        return getMinOne(idArr[0],idArr[1]);
+      }
+ else {
+        return idArr[0];
+      }
+    }
+    String id0=tm.getDeviceId();
+    String id1="";
+    try {
+      Method method=tm.getClass().getMethod("getDeviceId",int.class);
+      id1=(String)method.invoke(tm,isImei ? TelephonyManager.PHONE_TYPE_GSM : TelephonyManager.PHONE_TYPE_CDMA);
+    }
+ catch (    NoSuchMethodException e) {
+      e.printStackTrace();
+    }
+catch (    IllegalAccessException e) {
+      e.printStackTrace();
+    }
+catch (    InvocationTargetException e) {
+      e.printStackTrace();
+    }
+    if (isImei) {
+      if (id0 != null && id0.length() < 15) {
+        id0="";
+      }
+      if (id1 != null && id1.length() < 15) {
+        id1="";
+      }
+    }
+ else {
+      if (id0 != null && id0.length() == 14) {
+        id0="";
+      }
+      if (id1 != null && id1.length() == 14) {
+        id1="";
+      }
+    }
+    return getMinOne(id0,id1);
+  }
+ else {
+    String deviceId=tm.getDeviceId();
+    if (isImei) {
+      if (deviceId != null && deviceId.length() >= 15) {
+        return deviceId;
+      }
+    }
+ else {
+      if (deviceId != null && deviceId.length() == 14) {
+        return deviceId;
+      }
+    }
+  }
+  return "";
+}

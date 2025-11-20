@@ -1,0 +1,35 @@
+@Override public void init(GameEngine gameEngine){
+  context=gameEngine.createChildContext();
+  headless=context.get(DisplayDevice.class).isHeadless();
+  initEntityAndComponentManagers(headless);
+  createLocalPlayer(context);
+  if (!headless) {
+    new RegisterInputSystem(context).step();
+    nuiManager=context.get(NUIManager.class);
+    eventSystem.registerEventHandler(nuiManager);
+    NUIEditorSystem nuiEditorSystem=new NUIEditorSystem();
+    context.put(NUIEditorSystem.class,nuiEditorSystem);
+    componentSystemManager.register(nuiEditorSystem,"engine:NUIEditorSystem");
+    NUISkinEditorSystem nuiSkinEditorSystem=new NUISkinEditorSystem();
+    context.put(NUISkinEditorSystem.class,nuiSkinEditorSystem);
+    componentSystemManager.register(nuiSkinEditorSystem,"engine:NUISkinEditorSystem");
+    inputSystem=context.get(InputSystem.class);
+  }
+  componentSystemManager.initialise();
+  console=context.get(Console.class);
+  storageServiceWorker=context.get(StorageServiceWorker.class);
+  playBackgroundMusic();
+  if (!headless) {
+    context.get(NUIManager.class).pushScreen("engine:mainMenuScreen");
+  }
+  if (!messageOnLoad.isEmpty()) {
+    TranslationSystem translationSystem=context.get(TranslationSystem.class);
+    if (headless) {
+      throw new RuntimeException(String.format("Game could not be started, server attempted to return to main menu: [%s]. See logs before",translationSystem.translate(messageOnLoad)));
+    }
+ else {
+      MessagePopup popup=nuiManager.pushScreen(MessagePopup.ASSET_URI,MessagePopup.class);
+      popup.setMessage("Error",translationSystem.translate(messageOnLoad));
+    }
+  }
+}

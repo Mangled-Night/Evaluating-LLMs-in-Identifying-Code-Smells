@@ -1,0 +1,48 @@
+@Override @SuppressWarnings("unchecked") public <K,V,T>RedisCommand<K,V,T> write(RedisCommand<K,V,T> command){
+  LettuceAssert.notNull(command,"Command must not be null");
+  if (closed) {
+    throw new RedisException("Connection is closed");
+  }
+  if (isStartTransaction(command.getType())) {
+    inTransaction=true;
+  }
+  ConnectionIntent connectionIntent=inTransaction ? ConnectionIntent.WRITE : getIntent(command.getType());
+  CompletableFuture<StatefulRedisConnection<K,V>> future=(CompletableFuture)masterReplicaConnectionProvider.getConnectionAsync(connectionIntent);
+  if (isEndTransaction(command.getType())) {
+    inTransaction=false;
+  }
+  if (isSuccessfullyCompleted(future)) {
+    writeCommand(command,future.join(),null);
+  }
+ else {
+    future.whenComplete((c,t) -> writeCommand(command,c,t));
+  }
+  return command;
+}
+@Override @SuppressWarnings("unchecked") public <K,V>Collection<RedisCommand<K,V,?>> write(Collection<? extends RedisCommand<K,V,?>> commands){
+  LettuceAssert.notNull(commands,"Commands must not be null");
+  if (closed) {
+    throw new RedisException("Connection is closed");
+  }
+  for (  RedisCommand<K,V,?> command : commands) {
+    if (isStartTransaction(command.getType())) {
+      inTransaction=true;
+      break;
+    }
+  }
+  ConnectionIntent connectionIntent=inTransaction ? ConnectionIntent.WRITE : getIntent(commands);
+  CompletableFuture<StatefulRedisConnection<K,V>> future=(CompletableFuture)masterReplicaConnectionProvider.getConnectionAsync(connectionIntent);
+  for (  RedisCommand<K,V,?> command : commands) {
+    if (isEndTransaction(command.getType())) {
+      inTransaction=false;
+      break;
+    }
+  }
+  if (isSuccessfullyCompleted(future)) {
+    writeCommands(commands,future.join(),null);
+  }
+ else {
+    future.whenComplete((c,t) -> writeCommands(commands,c,t));
+  }
+  return (Collection)commands;
+}

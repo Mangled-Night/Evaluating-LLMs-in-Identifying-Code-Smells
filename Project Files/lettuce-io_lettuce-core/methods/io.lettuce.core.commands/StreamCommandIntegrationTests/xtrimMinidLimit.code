@@ -1,0 +1,11 @@
+@Test @EnabledOnCommand("XAUTOCLAIM") void xtrimMinidLimit(){
+  redis.xadd(key,XAddArgs.Builder.maxlen(3).id("3"),"foo","bar");
+  redis.xtrim(key,XTrimArgs.Builder.minId("4"));
+  assertThat(redis.xlen(key)).isZero();
+  List<String> ids=new ArrayList<>();
+  for (int i=0; i < 10; i++) {
+    ids.add(redis.xadd(key,Collections.singletonMap("key","value")));
+  }
+  redis.xtrim(key,XTrimArgs.Builder.maxlen(8));
+  assertThat(redis.xlen(key)).isEqualTo(8);
+}

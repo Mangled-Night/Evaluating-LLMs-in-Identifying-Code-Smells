@@ -1,0 +1,10 @@
+@Override public CompletableFuture<List<RedisNodeDescription>> getNodesAsync(){
+  logger.debug("Performing topology lookup");
+  RedisFuture<String> info=connection.async().info("replication");
+  try {
+    return Mono.fromCompletionStage(info).timeout(redisURI.getTimeout()).map(this::getNodesFromInfo).toFuture();
+  }
+ catch (  RuntimeException e) {
+    throw Exceptions.bubble(e);
+  }
+}

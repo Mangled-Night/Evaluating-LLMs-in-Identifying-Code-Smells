@@ -1,0 +1,35 @@
+@Override public void statementParse(SchemaConfig schema,RouteResultset rrs,SQLStatement stmt) throws SQLNonTransientException {
+  if (ctx.getTables() != null && getUpdateTableCount() > 1 && !schema.isNoSharding()) {
+    String msg="multi table related update not supported,tables:" + ctx.getTables();
+    LOGGER.warn(msg);
+    throw new SQLNonTransientException(msg);
+  }
+  MySqlUpdateStatement update=(MySqlUpdateStatement)stmt;
+  String tableName=StringUtil.removeBackquote(update.getTableName().getSimpleName().toUpperCase());
+  TableConfig tc=schema.getTables().get(tableName);
+  if (RouterUtil.isNoSharding(schema,tableName)) {
+    RouterUtil.routeForTableMeta(rrs,schema,tableName,rrs.getStatement());
+    rrs.setFinishedRoute(true);
+    return;
+  }
+  String partitionColumn=tc.getPartitionColumn();
+  String joinKey=tc.getJoinKey();
+  if (tc.isGlobalTable() || (partitionColumn == null && joinKey == null)) {
+    RouterUtil.routeToMultiNode(false,rrs,tc.getDataNodes(),rrs.getStatement(),tc.isGlobalTable());
+    rrs.setFinishedRoute(true);
+    return;
+  }
+  confirmShardColumnNotUpdated(update,schema,tableName,partitionColumn,joinKey,rrs);
+  if (schema.getTables().get(tableName).isGlobalTable() && ctx.getRouteCalculateUnit().getTablesAndConditions().size() > 1) {
+    throw new SQLNonTransientException("global table is not supported in multi table related update " + tableName);
+  }
+  TableConfig tableConfig=schema.getTables().get(tableName);
+  if (tableConfig != null && !tableConfig.primaryKeyIsPartionKey()) {
+    String cacheName=schema.getName() + "_" + tableName;
+    cacheName=cacheName.toUpperCase();
+    for (    CachePool value : MycatServer.getInstance().getCacheService().getAllCachePools().values()) {
+      value.clearCache(cacheName);
+      value.getCacheStatic().reset();
+    }
+  }
+}

@@ -1,0 +1,16 @@
+@SmackIntegrationTest public void pingAsync() throws InterruptedException, ExecutionException {
+  List<Future<Boolean>> pongFutures=Collections.synchronizedList(new ArrayList<Future<Boolean>>());
+  Runnable[] pinger=new Runnable[3];
+  pinger[0]=new Pinger(conOne,pongFutures,conTwo.getUser(),conThree.getUser());
+  pinger[1]=new Pinger(conTwo,pongFutures,conOne.getUser(),conThree.getUser());
+  pinger[2]=new Pinger(conThree,pongFutures,conOne.getUser(),conTwo.getUser());
+  ExecutorService executorService=Executors.newFixedThreadPool(pinger.length);
+  for (  Runnable runnable : pinger) {
+    executorService.execute(runnable);
+  }
+  executorService.shutdown();
+  executorService.awaitTermination(1,TimeUnit.MINUTES);
+  for (  Future<Boolean> pongFuture : pongFutures) {
+    assertTrue(pongFuture.get());
+  }
+}

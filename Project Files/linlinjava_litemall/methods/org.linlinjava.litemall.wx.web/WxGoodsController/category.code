@@ -1,0 +1,24 @@
+/** 
+ * 商品分类类目
+ * @param id 分类类目ID
+ * @return 商品分类类目
+ */
+@GetMapping("category") public Object category(@NotNull Integer id){
+  LitemallCategory cur=categoryService.findById(id);
+  LitemallCategory parent=null;
+  List<LitemallCategory> children=null;
+  if (cur.getPid() == 0) {
+    parent=cur;
+    children=categoryService.queryByPid(cur.getId());
+    cur=children.size() > 0 ? children.get(0) : cur;
+  }
+ else {
+    parent=categoryService.findById(cur.getPid());
+    children=categoryService.queryByPid(cur.getPid());
+  }
+  Map<String,Object> data=new HashMap<>();
+  data.put("currentCategory",cur);
+  data.put("parentCategory",parent);
+  data.put("brotherCategory",children);
+  return ResponseUtil.ok(data);
+}

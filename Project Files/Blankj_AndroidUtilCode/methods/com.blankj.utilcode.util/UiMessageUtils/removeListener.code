@@ -1,0 +1,36 @@
+/** 
+ * Remove listener for all messages.
+ * @param listener The listener to remove.
+ */
+public void removeListener(@NonNull final UiMessageCallback listener){
+synchronized (mListenersUniversal) {
+    if (DEBUG && !mListenersUniversal.contains(listener)) {
+      Log.w(TAG,"Trying to remove a listener that is not registered. " + listener.toString());
+    }
+    mListenersUniversal.remove(listener);
+  }
+}
+/** 
+ * Remove the specific listener for desired message ID.
+ * @param id       The id of the message to stop listening to.
+ * @param listener The listener which should be removed.
+ */
+public void removeListener(final int id,@NonNull final UiMessageCallback listener){
+synchronized (mListenersSpecific) {
+    final List<UiMessageCallback> callbacks=this.mListenersSpecific.get(id);
+    if (callbacks != null && !callbacks.isEmpty()) {
+      if (DEBUG) {
+        if (!callbacks.contains(listener)) {
+          Log.w(TAG,"Trying to remove specific listener that is not registered. ID " + id + ", "+ listener);
+          return;
+        }
+      }
+      callbacks.remove(listener);
+    }
+ else {
+      if (DEBUG) {
+        Log.w(TAG,"Trying to remove specific listener that is not registered. ID " + id + ", "+ listener);
+      }
+    }
+  }
+}

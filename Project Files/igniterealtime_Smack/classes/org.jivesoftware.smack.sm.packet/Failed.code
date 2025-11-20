@@ -1,0 +1,46 @@
+public static class Failed implements Nonza {
+  public static final String ELEMENT="failed";
+  private final StanzaError.Condition condition;
+  private final List<StanzaErrorTextElement> textElements;
+  public Failed(){
+    this(null,null);
+  }
+  public Failed(  StanzaError.Condition condition,  List<StanzaErrorTextElement> textElements){
+    this.condition=condition;
+    if (textElements == null) {
+      this.textElements=Collections.emptyList();
+    }
+ else {
+      this.textElements=Collections.unmodifiableList(textElements);
+    }
+  }
+  public StanzaError.Condition getStanzaErrorCondition(){
+    return condition;
+  }
+  public List<StanzaErrorTextElement> getTextElements(){
+    return textElements;
+  }
+  @Override public CharSequence toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this,enclosingNamespace);
+    if (condition == null && textElements.isEmpty()) {
+      xml.closeEmptyElement();
+    }
+ else {
+      if (condition != null) {
+        xml.rightAngleBracket();
+        xml.append(condition.toString());
+        xml.xmlnsAttribute(StanzaError.ERROR_CONDITION_AND_TEXT_NAMESPACE);
+        xml.closeEmptyElement();
+      }
+      xml.append(textElements);
+      xml.closeElement(ELEMENT);
+    }
+    return xml;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+}

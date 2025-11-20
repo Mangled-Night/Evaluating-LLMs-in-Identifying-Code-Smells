@@ -1,0 +1,20 @@
+@Test public void chatMatchedOnJIDWhenNoThreadJidMode(){
+  TestMessageListener msgListener=new TestMessageListener();
+  TestChatManagerListener listener=new TestChatManagerListener(msgListener);
+  cm.setMatchMode(ChatManager.MatchMode.SUPPLIED_JID);
+  cm.addChatListener(listener);
+  Stanza incomingChat=createChatMessage(null,true);
+  processServerMessage(incomingChat);
+  Chat newChat=listener.getNewChat();
+  assertNotNull(newChat);
+  cm.removeChatListener(listener);
+  incomingChat=createChatMessage(null,true);
+  processServerMessage(incomingChat);
+  assertEquals(2,msgListener.getNumMessages());
+  TestChatManagerListener listener2=new TestChatManagerListener();
+  cm.addChatListener(listener2);
+  incomingChat=createChatMessage(null,false);
+  processServerMessage(incomingChat);
+  assertEquals(2,msgListener.getNumMessages());
+  assertNotNull(listener2.getNewChat());
+}

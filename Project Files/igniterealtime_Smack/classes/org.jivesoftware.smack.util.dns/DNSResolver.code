@@ -1,0 +1,62 @@
+/** 
+ * Implementations of this interface define a class that is capable of resolving DNS addresses.
+ */
+public abstract class DNSResolver {
+  protected static final Logger LOGGER=Logger.getLogger(DNSResolver.class.getName());
+  private final boolean supportsDnssec;
+  protected DNSResolver(  boolean supportsDnssec){
+    this.supportsDnssec=supportsDnssec;
+  }
+  /** 
+ * Gets a list of service records for the specified service.
+ * @param name The symbolic name of the service.
+ * @param lookupFailures list of exceptions that occurred during lookup.
+ * @param dnssecMode security mode.
+ * @return The list of SRV records mapped to the service name.
+ */
+  public final Collection<SRV> lookupSrvRecords(  DnsName name,  List<RemoteConnectionEndpointLookupFailure> lookupFailures,  DnssecMode dnssecMode){
+    checkIfDnssecRequestedAndSupported(dnssecMode);
+    return lookupSrvRecords0(name,lookupFailures,dnssecMode);
+  }
+  protected abstract Collection<SRV> lookupSrvRecords0(  DnsName name,  List<RemoteConnectionEndpointLookupFailure> lookupFailures,  DnssecMode dnssecMode);
+  public final List<InetAddress> lookupHostAddress(  DnsName name,  List<RemoteConnectionEndpointLookupFailure> lookupFailures,  DnssecMode dnssecMode){
+    checkIfDnssecRequestedAndSupported(dnssecMode);
+    return lookupHostAddress0(name,lookupFailures,dnssecMode);
+  }
+  /** 
+ * Lookup the IP addresses of a given host name. Returns <code>null</code> if there was an error, in which the error reason will be added in form of a <code>HostAddress</code> to <code>failedAddresses</code>. Returns a empty list in case the DNS name exists but has no associated A or AAAA resource records. Otherwise, if the resolution was successful <em>and</em> there is at least one A or AAAA resource record, then a non-empty list will be returned. <p> Concrete DNS resolver implementations are free to overwrite this, but have to stick to the interface contract. </p>
+ * @param name the DNS name to lookup
+ * @param lookupFailures list of exceptions that occurred during lookup.
+ * @param dnssecMode the selected DNSSEC mode
+ * @return A list, either empty or non-empty, or <code>null</code>
+ */
+  protected List<InetAddress> lookupHostAddress0(  DnsName name,  List<RemoteConnectionEndpointLookupFailure> lookupFailures,  DnssecMode dnssecMode){
+    if (dnssecMode != DnssecMode.disabled) {
+      throw new UnsupportedOperationException("This resolver does not support DNSSEC");
+    }
+    InetAddress[] inetAddressArray;
+    try {
+      inetAddressArray=InetAddress.getAllByName(name.toString());
+    }
+ catch (    UnknownHostException e) {
+      lookupFailures.add(new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,e));
+      return null;
+    }
+    return Arrays.asList(inetAddressArray);
+  }
+  protected static boolean shouldContinue(  CharSequence name,  CharSequence hostname,  List<InetAddress> hostAddresses){
+    if (hostAddresses == null) {
+      return true;
+    }
+    if (hostAddresses.isEmpty()) {
+      LOGGER.log(Level.INFO,"The DNS name " + name + ", points to a hostname ("+ hostname+ ") which has neither A or AAAA resource records. This is an indication of a broken DNS setup.");
+      return true;
+    }
+    return false;
+  }
+  private void checkIfDnssecRequestedAndSupported(  DnssecMode dnssecMode){
+    if (dnssecMode != DnssecMode.disabled && !supportsDnssec) {
+      throw new UnsupportedOperationException("This resolver does not support DNSSEC");
+    }
+  }
+}

@@ -1,0 +1,66 @@
+public void start(){
+  byte[] buf=new byte[1024];
+  final DatagramPacket p=new DatagramPacket(buf,1024);
+  int keyframe=0;
+  while (on) {
+    if (transmit) {
+      BufferedImage capture=robot.createScreenCapture(area);
+      QuantizeFilter filter=new QuantizeFilter();
+      capture=filter.filter(capture,null);
+      long trace=System.currentTimeMillis();
+      if (++keyframe > KEYFRAME) {
+        keyframe=0;
+      }
+      LOGGER.fine("KEYFRAME:" + keyframe);
+      for (int i=0; i < maxI; i++) {
+        for (int j=0; j < maxJ; j++) {
+          final BufferedImage bufferedImage=capture.getSubimage(i * tileWidth,j * tileWidth,tileWidth,tileWidth);
+          int[] pixels=new int[tileWidth * tileWidth];
+          PixelGrabber pg=new PixelGrabber(bufferedImage,0,0,tileWidth,tileWidth,pixels,0,tileWidth);
+          try {
+            if (pg.grabPixels()) {
+              if (keyframe == KEYFRAME || !Arrays.equals(tiles[i][j],pixels)) {
+                ByteArrayOutputStream baos=encoder.encode(bufferedImage);
+                if (baos != null) {
+                  try {
+                    Thread.sleep(1);
+                    baos.write(i);
+                    baos.write(j);
+                    byte[] bytesOut=baos.toByteArray();
+                    if (bytesOut.length > 1000)                     LOGGER.severe("Bytes out > 1000. Equals " + bytesOut.length);
+                    p.setData(bytesOut);
+                    p.setAddress(remoteHost);
+                    p.setPort(remotePort);
+                    try {
+                      socket.send(p);
+                    }
+ catch (                    IOException e) {
+                      LOGGER.log(Level.WARNING,"exception",e);
+                    }
+                    tiles[i][j]=pixels;
+                  }
+ catch (                  Exception e) {
+                    LOGGER.log(Level.WARNING,"exception",e);
+                  }
+                }
+              }
+            }
+          }
+ catch (          InterruptedException e) {
+            LOGGER.log(Level.WARNING,"exception",e);
+          }
+        }
+      }
+      trace=System.currentTimeMillis() - trace;
+      LOGGER.fine("Loop Time:" + trace);
+      if (trace < 500) {
+        try {
+          Thread.sleep(500 - trace);
+        }
+ catch (        InterruptedException e) {
+          LOGGER.log(Level.WARNING,"exception",e);
+        }
+      }
+    }
+  }
+}

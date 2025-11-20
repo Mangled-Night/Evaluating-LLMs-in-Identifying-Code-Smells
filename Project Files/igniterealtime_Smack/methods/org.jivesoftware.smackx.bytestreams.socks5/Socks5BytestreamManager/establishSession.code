@@ -1,0 +1,84 @@
+/** 
+ * Establishes a SOCKS5 Bytestream with the given user and returns the Socket to send/receive data to/from the user. <p> Use this method to establish SOCKS5 Bytestreams to users accepting all incoming Socks5 bytestream requests since this method doesn't provide a way to tell the user something about the data to be sent. <p> To establish a SOCKS5 Bytestream after negotiation the kind of data to be sent (e.g. file transfer) use  {@link #establishSession(Jid,String)}.
+ * @param targetJID the JID of the user a SOCKS5 Bytestream should be established
+ * @return the Socket to send/receive data to/from the user
+ * @throws XMPPException if the user doesn't support or accept SOCKS5 Bytestreams, if no Socks5Proxy could be found, if the user couldn't connect to any of the SOCKS5 Proxies
+ * @throws IOException if the bytestream could not be established
+ * @throws InterruptedException if the current thread was interrupted while waiting
+ * @throws SmackException if there was no response from the server.
+ */
+@Override public Socks5BytestreamSession establishSession(Jid targetJID) throws XMPPException, IOException, InterruptedException, SmackException {
+  String sessionID=getNextSessionID();
+  return establishSession(targetJID,sessionID);
+}
+/** 
+ * Establishes a SOCKS5 Bytestream with the given user using the given session ID and returns the Socket to send/receive data to/from the user.
+ * @param targetJID the JID of the user a SOCKS5 Bytestream should be established
+ * @param sessionID the session ID for the SOCKS5 Bytestream request
+ * @return the Socket to send/receive data to/from the user
+ * @throws IOException if the bytestream could not be established
+ * @throws InterruptedException if the current thread was interrupted while waiting
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws SmackMessageException if there was an error.
+ * @throws FeatureNotSupportedException if a requested feature is not supported by the remote entity.
+ */
+@Override public Socks5BytestreamSession establishSession(Jid targetJID,String sessionID) throws IOException, InterruptedException, XMPPException, NoResponseException, NotConnectedException, SmackMessageException, FeatureNotSupportedException {
+  XMPPConnection connection=connection();
+  XMPPErrorException discoveryException=null;
+  if (!supportsSocks5(targetJID)) {
+    throw new FeatureNotSupportedException("SOCKS5 Bytestream",targetJID);
+  }
+  List<Jid> proxies=new ArrayList<>();
+  try {
+    proxies.addAll(determineProxies());
+  }
+ catch (  XMPPErrorException e) {
+    discoveryException=e;
+  }
+  List<StreamHost> streamHosts=determineStreamHostInfos(proxies);
+  if (streamHosts.isEmpty()) {
+    if (discoveryException != null) {
+      throw discoveryException;
+    }
+ else {
+      throw new SmackException.SmackMessageException("no SOCKS5 proxies available");
+    }
+  }
+  String digest=Socks5Utils.createDigest(sessionID,connection.getUser(),targetJID);
+  if (this.proxyPrioritizationEnabled && this.lastWorkingProxy != null) {
+    StreamHost selectedStreamHost=null;
+    for (    StreamHost streamHost : streamHosts) {
+      if (streamHost.getJID().equals(this.lastWorkingProxy)) {
+        selectedStreamHost=streamHost;
+        break;
+      }
+    }
+    if (selectedStreamHost != null) {
+      streamHosts.remove(selectedStreamHost);
+      streamHosts.add(0,selectedStreamHost);
+    }
+  }
+  Socks5Proxy socks5Proxy=Socks5Proxy.getSocks5Proxy();
+  try {
+    socks5Proxy.addTransfer(digest);
+    Bytestream initiation=createBytestreamInitiation(sessionID,targetJID,streamHosts);
+    Stanza response=connection.createStanzaCollectorAndSend(initiation).nextResultOrThrow(getTargetResponseTimeout());
+    StreamHostUsed streamHostUsed=((Bytestream)response).getUsedHost();
+    StreamHost usedStreamHost=initiation.getStreamHost(streamHostUsed.getJID());
+    if (usedStreamHost == null) {
+      throw new SmackException.SmackMessageException("Remote user responded with unknown host");
+    }
+    Socks5Client socks5Client=new Socks5ClientForInitiator(usedStreamHost,digest,connection,sessionID,targetJID);
+    Socket socket=socks5Client.getSocket(getProxyConnectionTimeout());
+    this.lastWorkingProxy=usedStreamHost.getJID();
+    return new Socks5BytestreamSession(socket,usedStreamHost.getJID().equals(connection.getUser()));
+  }
+ catch (  TimeoutException e) {
+    throw new IOException("Timeout while connecting to SOCKS5 proxy",e);
+  }
+ finally {
+    socks5Proxy.removeTransfer(digest);
+  }
+}

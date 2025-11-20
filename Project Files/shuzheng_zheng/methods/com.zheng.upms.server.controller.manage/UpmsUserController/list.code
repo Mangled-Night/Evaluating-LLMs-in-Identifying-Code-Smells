@@ -1,0 +1,16 @@
+@ApiOperation(value="用户列表") @RequiresPermissions("upms:user:read") @RequestMapping(value="/list",method=RequestMethod.GET) @ResponseBody public Object list(@RequestParam(required=false,defaultValue="0",value="offset") int offset,@RequestParam(required=false,defaultValue="10",value="limit") int limit,@RequestParam(required=false,defaultValue="",value="search") String search,@RequestParam(required=false,value="sort") String sort,@RequestParam(required=false,value="order") String order){
+  UpmsUserExample upmsUserExample=new UpmsUserExample();
+  if (!StringUtils.isBlank(sort) && !StringUtils.isBlank(order)) {
+    upmsUserExample.setOrderByClause(sort + " " + order);
+  }
+  if (StringUtils.isNotBlank(search)) {
+    upmsUserExample.or().andRealnameLike("%" + search + "%");
+    upmsUserExample.or().andUsernameLike("%" + search + "%");
+  }
+  List<UpmsUser> rows=upmsUserService.selectByExampleForOffsetPage(upmsUserExample,offset,limit);
+  long total=upmsUserService.countByExample(upmsUserExample);
+  Map<String,Object> result=new HashMap<>();
+  result.put("rows",rows);
+  result.put("total",total);
+  return result;
+}

@@ -1,0 +1,18 @@
+/** 
+ * {@inheritDoc}
+ */
+@Override protected void addWidget(JsonTree node){
+  getManager().pushScreen(WidgetSelectionScreen.ASSET_URI,WidgetSelectionScreen.class);
+  WidgetSelectionScreen widgetSelectionScreen=(WidgetSelectionScreen)getManager().getScreen(WidgetSelectionScreen.ASSET_URI);
+  widgetSelectionScreen.setNode(node);
+  widgetSelectionScreen.subscribeClose(() -> {
+    node.setExpanded(true);
+    JsonTree widget=node.getChildAt(node.getChildren().size() - 1);
+    widget.setExpanded(true);
+    getEditor().fireUpdateListeners();
+    getEditor().getModel().resetNodes();
+    getEditor().setSelectedIndex(getEditor().getModel().indexOf(widget.getChildWithKey("id")));
+    editNode(widget.getChildWithKey("id"));
+  }
+);
+}

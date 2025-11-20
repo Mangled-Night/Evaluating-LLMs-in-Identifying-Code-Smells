@@ -1,0 +1,28 @@
+/** 
+ * 农历转公历
+ * @param lunar 农历
+ * @return 公历
+ */
+public static Solar lunar2Solar(final Lunar lunar){
+  int days=LUNAR_MONTH_DAYS[lunar.lunarYear - LUNAR_MONTH_DAYS[0]];
+  int leap=getBitInt(days,4,13);
+  int offset=0;
+  int loopend=leap;
+  if (!lunar.isLeap) {
+    if (lunar.lunarMonth <= leap || leap == 0) {
+      loopend=lunar.lunarMonth - 1;
+    }
+ else {
+      loopend=lunar.lunarMonth;
+    }
+  }
+  for (int i=0; i < loopend; i++) {
+    offset+=getBitInt(days,1,12 - i) == 1 ? 30 : 29;
+  }
+  offset+=lunar.lunarDay;
+  int solar11=SOLAR_1_1[lunar.lunarYear - SOLAR_1_1[0]];
+  int y=getBitInt(solar11,12,9);
+  int m=getBitInt(solar11,4,5);
+  int d=getBitInt(solar11,5,0);
+  return solarFromInt(solarToInt(y,m,d) + offset - 1);
+}

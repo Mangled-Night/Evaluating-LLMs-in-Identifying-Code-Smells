@@ -1,0 +1,8 @@
+@Test void testDispatch(){
+  AsyncNodeSelection<String,String> all=commands.all();
+  AsyncExecutions<List<String>> dispatched=all.commands().dispatch(CommandType.PING,() -> new StringListOutput<>(StringCodec.UTF8));
+  List<List<String>> joined=dispatched.thenCollect(Collectors.toList()).toCompletableFuture().join();
+  for (  List<String> strings : joined) {
+    assertThat(strings).hasSize(1).contains("PONG");
+  }
+}

@@ -1,0 +1,17 @@
+private static class DisposalAction implements DisposableResource {
+  private final List<Consumer<Translation>> changeListeners=new CopyOnWriteArrayList<>();
+  private WeakReference<Translation> asset;
+  DisposalAction(){
+  }
+  public void setAsset(  Translation asset){
+    this.asset=new WeakReference<>(asset);
+  }
+  @Override public void close(){
+    Translation translation=asset.get();
+    if (translation != null) {
+      for (      Consumer<Translation> listener : changeListeners) {
+        listener.accept(translation);
+      }
+    }
+  }
+}

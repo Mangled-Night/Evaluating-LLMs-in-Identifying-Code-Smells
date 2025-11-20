@@ -1,0 +1,28 @@
+/** 
+ * Return the list of main activities.
+ * @return the list of main activities
+ */
+public static List<String> getMainActivities(){
+  return getMainActivities(Utils.getApp().getPackageName());
+}
+/** 
+ * Return the list of main activities.
+ * @param pkg The name of the package.
+ * @return the list of main activities
+ */
+public static List<String> getMainActivities(@NonNull final String pkg){
+  List<String> ret=new ArrayList<>();
+  Intent intent=new Intent(Intent.ACTION_MAIN,null);
+  intent.setPackage(pkg);
+  PackageManager pm=Utils.getApp().getPackageManager();
+  List<ResolveInfo> info=pm.queryIntentActivities(intent,0);
+  int size=info.size();
+  if (size == 0)   return ret;
+  for (int i=0; i < size; i++) {
+    ResolveInfo ri=info.get(i);
+    if (ri.activityInfo.processName.equals(pkg)) {
+      ret.add(ri.activityInfo.name);
+    }
+  }
+  return ret;
+}

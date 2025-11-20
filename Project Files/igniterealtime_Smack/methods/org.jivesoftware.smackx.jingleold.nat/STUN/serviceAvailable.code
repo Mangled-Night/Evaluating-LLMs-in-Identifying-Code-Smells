@@ -1,0 +1,24 @@
+/** 
+ * Check if the server support STUN Service.
+ * @param connection the connection
+ * @return true if the server support STUN
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public static boolean serviceAvailable(XMPPConnection connection) throws XMPPException, SmackException, InterruptedException {
+  if (!connection.isConnected()) {
+    return false;
+  }
+  LOGGER.fine("Service listing");
+  ServiceDiscoveryManager disco=ServiceDiscoveryManager.getInstanceFor(connection);
+  DiscoverItems items=disco.discoverItems(connection.getXMPPServiceDomain());
+  for (  DiscoverItems.Item item : items.getItems()) {
+    DiscoverInfo info=disco.discoverInfo(item.getEntityID());
+    for (    DiscoverInfo.Identity identity : info.getIdentities()) {
+      if (identity.getCategory().equals("proxy") && identity.getType().equals("stun"))       if (info.containsFeature(NAMESPACE))       return true;
+    }
+    LOGGER.fine(item.getName() + "-" + info.getType());
+  }
+  return false;
+}

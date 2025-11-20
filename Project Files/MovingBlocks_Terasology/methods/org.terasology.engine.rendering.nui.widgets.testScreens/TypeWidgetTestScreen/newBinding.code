@@ -1,0 +1,15 @@
+protected <T>void newBinding(Class<T> type){
+  newBinding(TypeInfo.of(type));
+}
+protected <T>void newBinding(TypeInfo<T> type){
+  Binding<T> binding=new InteriorMutationNotifyingBinding<>(new NotifyingBinding<T>(){
+    @Override protected void onSet(){
+      dumpBindings();
+    }
+  }
+,this::dumpBindings);
+  bindings.put(type,binding);
+  UIWidget bindingWidget=typeWidgetLibrary.getWidget(binding,type).get();
+  String bindingLabelText=typeInfoToString(type);
+  mainContainer.addWidget(WidgetUtil.labelize(bindingWidget,bindingLabelText,TypeWidgetFactory.LABEL_WIDGET_ID));
+}

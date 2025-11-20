@@ -1,0 +1,46 @@
+@Override public void run(){
+  try {
+    while (leaderSelector.getLeader() == null) {
+      Thread.currentThread().yield();
+    }
+    if (!leaderSelector.hasLeadership()) {
+      isLeader=false;
+      if (slavePath != null && client.checkExists().forPath(slavePath) != null) {
+        return;
+      }
+      slavePath=client.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL_SEQUENTIAL).forPath(PATH.concat("/instance/node"),"ready".getBytes());
+      while ("ready".equals(new String(client.getData().forPath(slavePath)))) {
+        Thread.currentThread().yield();
+      }
+      instanceId=Long.parseLong(new String(client.getData().forPath(slavePath)));
+      ready=true;
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.warn("Caught exception while handling zk!",e);
+  }
+}
+@Override public void run(){
+  try {
+    while (!client.isStarted()) {
+      Thread.currentThread().yield();
+    }
+    List<String> children=client.getChildren().forPath(PATH.concat(INSTANCE_PATH));
+    int mark2[]=new int[(int)maxinstanceId];
+    for (    String child : children) {
+      String data=new String(client.getData().forPath(PATH.concat("/instance/" + child)));
+      if ("ready".equals(data)) {
+        int i=nextFree();
+        client.setData().forPath(PATH.concat(INSTANCE_PATH.concat("/").concat(child)),("" + i).getBytes());
+        mark2[i]=1;
+      }
+ else {
+        mark2[Integer.parseInt(data)]=1;
+      }
+    }
+    mark=mark2;
+  }
+ catch (  Exception e) {
+    LOGGER.warn("Caught exception while handling zk!",e);
+  }
+}

@@ -1,0 +1,52 @@
+/** 
+ * A SASL failure stream element, also called "SASL Error".
+ * @see <a href="http://xmpp.org/rfcs/rfc6120.html#sasl-errors">RFC 6120 6.5 SASL Errors</a>
+ */
+class SASLFailure extends AbstractError implements SaslNonza {
+  public static final String ELEMENT="failure";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  private final SASLError saslError;
+  private final String saslErrorString;
+  public SASLFailure(  String saslError){
+    this(saslError,null);
+  }
+  public SASLFailure(  String saslError,  Map<String,String> descriptiveTexts){
+    super(descriptiveTexts);
+    SASLError error=SASLError.fromString(saslError);
+    if (error == null) {
+      this.saslError=SASLError.not_authorized;
+    }
+ else {
+      this.saslError=error;
+    }
+    this.saslErrorString=saslError;
+  }
+  /** 
+ * Get the SASL related error condition.
+ * @return the SASL related error condition.
+ */
+  public SASLError getSASLError(){
+    return saslError;
+  }
+  /** 
+ * Get the SASL error as String.
+ * @return the SASL error as String
+ */
+  public String getSASLErrorString(){
+    return saslErrorString;
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder();
+    xml.halfOpenElement(ELEMENT).xmlnsAttribute(NAMESPACE).rightAngleBracket();
+    xml.emptyElement(saslErrorString);
+    addDescriptiveTextsAndExtensions(xml);
+    xml.closeElement(ELEMENT);
+    return xml;
+  }
+  @Override public String toString(){
+    return toXML().toString();
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+}

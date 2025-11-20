@@ -1,0 +1,143 @@
+/** 
+ * Test for Socks5ClientForInitiator class.
+ * @author Henning Staib
+ */
+public class Socks5ClientForInitiatorTest {
+  private static final EntityFullJid initiatorJID=JidTestUtil.DUMMY_AT_EXAMPLE_ORG_SLASH_DUMMYRESOURCE;
+  private static final EntityFullJid targetJID=JidTestUtil.FULL_JID_1_RESOURCE_1;
+  private static final DomainBareJid proxyJID=JidTestUtil.MUC_EXAMPLE_ORG;
+  private static final String loopbackAddress=InetAddress.getLoopbackAddress().getHostAddress();
+  private static final int GET_SOCKET_TIMEOUT=90 * 1000;
+  private static final String sessionID="session_id";
+  /** 
+ * If the target is not connected to the local SOCKS5 proxy an exception should be thrown.
+ * @throws Exception should not happen
+ */
+  @Test public void shouldFailIfTargetIsNotConnectedToLocalSocks5Proxy() throws Exception {
+    Protocol protocol=new Protocol();
+    XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+    Socks5Proxy socks5Proxy=new Socks5Proxy();
+    socks5Proxy.start();
+    try {
+      StreamHost streamHost=new StreamHost(connection.getUser(),loopbackAddress,socks5Proxy.getPort());
+      String digest=Socks5Utils.createDigest(sessionID,initiatorJID,targetJID);
+      Socks5ClientForInitiator socks5Client=new Socks5ClientForInitiator(streamHost,digest,connection,sessionID,targetJID);
+      try {
+        socks5Client.getSocket(GET_SOCKET_TIMEOUT);
+        fail("exception should be thrown");
+      }
+ catch (      SmackException e) {
+        assertTrue(e.getMessage().contains("target is not connected to SOCKS5 proxy"));
+        protocol.verifyAll();
+      }
+    }
+  finally {
+      socks5Proxy.stop();
+    }
+  }
+  /** 
+ * Initiator and target should successfully connect to the local SOCKS5 proxy.
+ * @throws Exception should not happen
+ */
+  @Test public void shouldSuccessfullyConnectThroughLocalSocks5Proxy() throws Exception {
+    Protocol protocol=new Protocol();
+    XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+    Socks5Proxy socks5Proxy=new Socks5Proxy();
+    socks5Proxy.start();
+    try {
+      final byte[] data=new byte[]{1,2,3};
+      final String digest=Socks5Utils.createDigest(sessionID,initiatorJID,targetJID);
+      socks5Proxy.addTransfer(digest);
+      final StreamHost streamHost=new StreamHost(connection.getUser(),loopbackAddress,socks5Proxy.getPort());
+      Thread targetThread=new Thread(){
+        @Override public void run(){
+          try {
+            Socks5Client targetClient=new Socks5Client(streamHost,digest);
+            Socket socket=targetClient.getSocket(10000);
+            socket.getOutputStream().write(data);
+          }
+ catch (          Exception e) {
+            fail(e.getMessage());
+          }
+        }
+      }
+;
+      targetThread.start();
+      Thread.sleep(200);
+      Socks5ClientForInitiator socks5Client=new Socks5ClientForInitiator(streamHost,digest,connection,sessionID,targetJID);
+      Socket socket=socks5Client.getSocket(GET_SOCKET_TIMEOUT);
+      InputStream in=socket.getInputStream();
+      for (int i=0; i < data.length; i++) {
+        assertEquals(data[i],in.read());
+      }
+      targetThread.join();
+      protocol.verifyAll();
+      socks5Proxy.removeTransfer(digest);
+    }
+  finally {
+      socks5Proxy.stop();
+    }
+  }
+  /** 
+ * If the initiator can connect to a SOCKS5 proxy but activating the stream fails an exception should be thrown.
+ * @throws Exception should not happen
+ */
+  @Test public void shouldFailIfActivateSocks5ProxyFails() throws Exception {
+    Protocol protocol=new Protocol();
+    XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+    IQ error=new ErrorIQ(StanzaError.getBuilder(StanzaError.Condition.internal_server_error).build());
+    error.setFrom(proxyJID);
+    error.setTo(initiatorJID);
+    protocol.addResponse(error,Verification.correspondingSenderReceiver,Verification.requestTypeSET);
+    try (Socks5TestProxy socks5Proxy=new Socks5TestProxy()){
+      StreamHost streamHost=new StreamHost(proxyJID,loopbackAddress,socks5Proxy.getPort());
+      String digest=Socks5Utils.createDigest(sessionID,initiatorJID,targetJID);
+      Socks5ClientForInitiator socks5Client=new Socks5ClientForInitiator(streamHost,digest,connection,sessionID,targetJID);
+      try {
+        socks5Client.getSocket(GET_SOCKET_TIMEOUT);
+        fail("exception should be thrown");
+      }
+ catch (      XMPPErrorException e) {
+        assertTrue(StanzaError.Condition.internal_server_error.equals(e.getStanzaError().getCondition()));
+        protocol.verifyAll();
+      }
+    }
+   }
+  /** 
+ * Target and initiator should successfully connect to a "remote" SOCKS5 proxy and the initiator activates the bytestream.
+ * @throws Exception should not happen
+ */
+  @Test public void shouldSuccessfullyEstablishConnectionAndActivateSocks5Proxy() throws Exception {
+    Protocol protocol=new Protocol();
+    XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+    IQ activationResponse=new EmptyResultIQ();
+    activationResponse.setFrom(proxyJID);
+    activationResponse.setTo(initiatorJID);
+    protocol.addResponse(activationResponse,Verification.correspondingSenderReceiver,Verification.requestTypeSET,new Verification<Bytestream,IQ>(){
+      @Override public void verify(      Bytestream request,      IQ response){
+        assertNotNull(request.getToActivate());
+        assertEquals(targetJID,request.getToActivate().getTarget());
+      }
+    }
+);
+    Socket initiatorSocket=null, targetSocket=null;
+    try (Socks5TestProxy socks5Proxy=new Socks5TestProxy()){
+      StreamHost streamHost=new StreamHost(proxyJID,loopbackAddress,socks5Proxy.getPort());
+      String digest=Socks5Utils.createDigest(sessionID,initiatorJID,targetJID);
+      Socks5ClientForInitiator socks5Client=new Socks5ClientForInitiator(streamHost,digest,connection,sessionID,targetJID);
+      initiatorSocket=socks5Client.getSocket(10000);
+      InputStream in=initiatorSocket.getInputStream();
+      targetSocket=socks5Proxy.getSocket(digest);
+      OutputStream out=targetSocket.getOutputStream();
+      for (int i=0; i < 10; i++) {
+        out.write(i);
+        assertEquals(i,in.read());
+      }
+      protocol.verifyAll();
+    }
+  finally {
+      CloseableUtil.maybeClose(initiatorSocket);
+      CloseableUtil.maybeClose(targetSocket);
+    }
+  }
+}

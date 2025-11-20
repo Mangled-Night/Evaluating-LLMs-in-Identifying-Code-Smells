@@ -1,0 +1,75 @@
+/** 
+ * Write file from bytes by channel.
+ * @param filePath The path of file.
+ * @param bytes    The bytes.
+ * @param isForce  是否写入文件
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean writeFileFromBytesByChannel(final String filePath,final byte[] bytes,final boolean isForce){
+  return writeFileFromBytesByChannel(UtilsBridge.getFileByPath(filePath),bytes,false,isForce);
+}
+/** 
+ * Write file from bytes by channel.
+ * @param filePath The path of file.
+ * @param bytes    The bytes.
+ * @param append   True to append, false otherwise.
+ * @param isForce  True to force write file, false otherwise.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean writeFileFromBytesByChannel(final String filePath,final byte[] bytes,final boolean append,final boolean isForce){
+  return writeFileFromBytesByChannel(UtilsBridge.getFileByPath(filePath),bytes,append,isForce);
+}
+/** 
+ * Write file from bytes by channel.
+ * @param file    The file.
+ * @param bytes   The bytes.
+ * @param isForce True to force write file, false otherwise.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean writeFileFromBytesByChannel(final File file,final byte[] bytes,final boolean isForce){
+  return writeFileFromBytesByChannel(file,bytes,false,isForce);
+}
+/** 
+ * Write file from bytes by channel.
+ * @param file    The file.
+ * @param bytes   The bytes.
+ * @param append  True to append, false otherwise.
+ * @param isForce True to force write file, false otherwise.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean writeFileFromBytesByChannel(final File file,final byte[] bytes,final boolean append,final boolean isForce){
+  if (bytes == null) {
+    Log.e("FileIOUtils","bytes is null.");
+    return false;
+  }
+  if (!UtilsBridge.createOrExistsFile(file)) {
+    Log.e("FileIOUtils","create file <" + file + "> failed.");
+    return false;
+  }
+  FileChannel fc=null;
+  try {
+    fc=new FileOutputStream(file,append).getChannel();
+    if (fc == null) {
+      Log.e("FileIOUtils","fc is null.");
+      return false;
+    }
+    fc.position(fc.size());
+    fc.write(ByteBuffer.wrap(bytes));
+    if (isForce)     fc.force(true);
+    return true;
+  }
+ catch (  IOException e) {
+    e.printStackTrace();
+    return false;
+  }
+ finally {
+    try {
+      if (fc != null) {
+        fc.close();
+      }
+    }
+ catch (    IOException e) {
+      e.printStackTrace();
+    }
+  }
+}

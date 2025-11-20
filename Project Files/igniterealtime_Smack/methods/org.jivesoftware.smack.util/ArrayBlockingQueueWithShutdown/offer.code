@@ -1,0 +1,43 @@
+@Override public boolean offer(E e){
+  checkNotNull(e);
+  lock.lock();
+  try {
+    if (isFull() || isShutdown) {
+      return false;
+    }
+ else {
+      insert(e);
+      return true;
+    }
+  }
+  finally {
+    lock.unlock();
+  }
+}
+@Override public boolean offer(E e,long timeout,TimeUnit unit) throws InterruptedException {
+  checkNotNull(e);
+  long nanos=unit.toNanos(timeout);
+  lock.lockInterruptibly();
+  try {
+    while (true) {
+      if (isNotFull()) {
+        insert(e);
+        return true;
+      }
+      if (nanos <= 0) {
+        return false;
+      }
+      try {
+        nanos=notFull.awaitNanos(nanos);
+        checkNotShutdown();
+      }
+ catch (      InterruptedException ie) {
+        notFull.signal();
+        throw ie;
+      }
+    }
+  }
+  finally {
+    lock.unlock();
+  }
+}

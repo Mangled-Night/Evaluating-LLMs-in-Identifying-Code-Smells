@@ -1,0 +1,23 @@
+/** 
+ * The server is challenging the SASL mechanism for the stanza he just sent. Send a response to the server's challenge.
+ * @param challengeString a base64 encoded string representing the challenge.
+ * @param finalChallenge true if this is the last challenge send by the server within the success stanza
+ * @throws SmackSaslException if a SASL related error occurs.
+ * @throws InterruptedException if the connection is interrupted
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ */
+public final void challengeReceived(String challengeString,boolean finalChallenge) throws SmackSaslException, InterruptedException, NotConnectedException {
+  byte[] challenge=Base64.decode((challengeString != null && challengeString.equals("=")) ? "" : challengeString);
+  byte[] response=evaluateChallenge(challenge);
+  if (finalChallenge) {
+    return;
+  }
+  Response responseStanza;
+  if (response == null) {
+    responseStanza=new Response();
+  }
+ else {
+    responseStanza=new Response(Base64.encodeToString(response));
+  }
+  connection.sendNonza(responseStanza);
+}

@@ -1,0 +1,20 @@
+public <T>CompletableFuture<T> whenComplete(Function<? super Map<RedisURI,StatefulRedisConnection<String,String>>,? extends T> mappingFunction){
+  int expectedCount=connections.size();
+  AtomicInteger latch=new AtomicInteger();
+  CompletableFuture<T> continuation=new CompletableFuture<>();
+  for (  Map.Entry<RedisURI,CompletableFuture<StatefulRedisConnection<String,String>>> entry : connections.entrySet()) {
+    CompletableFuture<StatefulRedisConnection<String,String>> future=entry.getValue();
+    future.whenComplete((it,ex) -> {
+      if (latch.incrementAndGet() == expectedCount) {
+        try {
+          continuation.complete(mappingFunction.apply(collectConnections()));
+        }
+ catch (        RuntimeException e) {
+          continuation.completeExceptionally(e);
+        }
+      }
+    }
+);
+  }
+  return continuation;
+}

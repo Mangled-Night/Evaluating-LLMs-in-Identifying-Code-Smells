@@ -1,0 +1,12 @@
+/** 
+ * If no listeners are registered for incoming SOCKS5 Bytestream requests, all request should be rejected with an error.
+ * @throws Exception should not happen
+ */
+@Test public void shouldRespondWithError() throws Exception {
+  initiationListener.handleIQRequest(initBytestream);
+  ArgumentCaptor<IQ> argument=ArgumentCaptor.forClass(IQ.class);
+  verify(connection,timeout(TIMEOUT)).sendStanza(argument.capture());
+  assertEquals(initiatorJID,argument.getValue().getTo());
+  assertEquals(IQ.Type.error,argument.getValue().getType());
+  assertEquals(StanzaError.Condition.not_acceptable,argument.getValue().getError().getCondition());
+}

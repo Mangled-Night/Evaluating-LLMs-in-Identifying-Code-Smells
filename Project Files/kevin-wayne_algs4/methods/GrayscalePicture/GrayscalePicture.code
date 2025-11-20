@@ -1,0 +1,69 @@
+/** 
+ * Creates a  {@code width}-by- {@code height} picture, with {@code width} columnsand  {@code height} rows, where each pixel is black.
+ * @param width the width of the picture
+ * @param height the height of the picture
+ * @throws IllegalArgumentException if {@code width} is negative
+ * @throws IllegalArgumentException if {@code height} is negative
+ */
+public GrayscalePicture(int width,int height){
+  if (width < 0)   throw new IllegalArgumentException("width must be non-negative");
+  if (height < 0)   throw new IllegalArgumentException("height must be non-negative");
+  this.width=width;
+  this.height=height;
+  image=new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
+}
+/** 
+ * Creates a new grayscale picture that is a deep copy of the argument picture.
+ * @param picture the picture to copy
+ * @throws IllegalArgumentException if {@code picture} is {@code null}
+ */
+public GrayscalePicture(GrayscalePicture picture){
+  if (picture == null)   throw new IllegalArgumentException("constructor argument is null");
+  width=picture.width();
+  height=picture.height();
+  image=new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
+  filename=picture.filename;
+  isOriginUpperLeft=picture.isOriginUpperLeft;
+  for (int col=0; col < width(); col++)   for (int row=0; row < height(); row++)   image.setRGB(col,row,picture.image.getRGB(col,row));
+}
+/** 
+ * Creates a grayscale picture by reading an image from a file or URL.
+ * @param name the name of the file (.png, .gif, or .jpg) or URL.
+ * @throws IllegalArgumentException if cannot read image
+ * @throws IllegalArgumentException if {@code name} is {@code null}
+ */
+public GrayscalePicture(String name){
+  if (name == null)   throw new IllegalArgumentException("constructor argument is null");
+  this.filename=name;
+  try {
+    File file=new File(name);
+    if (file.isFile()) {
+      image=ImageIO.read(file);
+    }
+ else {
+      URL url=getClass().getResource(name);
+      if (url == null) {
+        url=getClass().getClassLoader().getResource(name);
+      }
+      if (url == null) {
+        url=new URL(name);
+      }
+      image=ImageIO.read(url);
+    }
+    if (image == null) {
+      throw new IllegalArgumentException("could not read image: " + name);
+    }
+    width=image.getWidth(null);
+    height=image.getHeight(null);
+    for (int col=0; col < width; col++) {
+      for (int row=0; row < height; row++) {
+        Color color=new Color(image.getRGB(col,row));
+        Color gray=toGray(color);
+        image.setRGB(col,row,gray.getRGB());
+      }
+    }
+  }
+ catch (  IOException ioe) {
+    throw new IllegalArgumentException("could not open image: " + name,ioe);
+  }
+}

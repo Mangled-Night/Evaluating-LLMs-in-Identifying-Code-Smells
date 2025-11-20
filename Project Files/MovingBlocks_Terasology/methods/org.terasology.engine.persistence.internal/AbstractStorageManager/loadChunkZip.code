@@ -1,0 +1,17 @@
+protected byte[] loadChunkZip(Vector3ic chunkPos){
+  byte[] chunkData=null;
+  Vector3i chunkZipPos=storagePathProvider.getChunkZipPosition(chunkPos);
+  Path chunkPath=storagePathProvider.getChunkZipPath(chunkZipPos);
+  if (Files.isRegularFile(chunkPath)) {
+    try (FileSystem chunkZip=FileSystems.newFileSystem(chunkPath,null)){
+      Path targetChunk=chunkZip.getPath(storagePathProvider.getChunkFilename(chunkPos));
+      if (Files.isRegularFile(targetChunk)) {
+        chunkData=Files.readAllBytes(targetChunk);
+      }
+    }
+ catch (    IOException e) {
+      logger.error("Failed to load chunk zip {}",chunkPath,e);
+    }
+  }
+  return chunkData;
+}

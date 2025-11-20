@@ -1,0 +1,55 @@
+public static Configuration newConfiguration(String[] testPackages) throws IOException, KeyManagementException, NoSuchAlgorithmException {
+  Properties properties=new Properties();
+  File propertiesFile=findPropertiesFile();
+  if (propertiesFile != null) {
+    try (FileInputStream in=new FileInputStream(propertiesFile)){
+      properties.load(in);
+    }
+   }
+  Properties systemProperties=System.getProperties();
+  for (  Map.Entry<Object,Object> entry : systemProperties.entrySet()) {
+    String key=(String)entry.getKey();
+    if (!key.startsWith(SINTTEST)) {
+      continue;
+    }
+    key=key.substring(SINTTEST.length());
+    String value=(String)entry.getValue();
+    properties.put(key,value);
+  }
+  Builder builder=builder();
+  builder.setService(properties.getProperty("service"));
+  builder.setServiceTlsPin(properties.getProperty("serviceTlsPin"));
+  builder.setSecurityMode(properties.getProperty("securityMode"));
+  builder.setReplyTimeout(properties.getProperty("replyTimeout","60000"));
+  String adminAccountUsername=properties.getProperty("adminAccountUsername");
+  String adminAccountPassword=properties.getProperty("adminAccountPassword");
+  if (StringUtils.isNotEmpty(adminAccountUsername,adminAccountPassword)) {
+    builder.setAdminAccountUsernameAndPassword(adminAccountUsername,adminAccountPassword);
+  }
+  String accountOneUsername=properties.getProperty("accountOneUsername");
+  String accountOnePassword=properties.getProperty("accountOnePassword");
+  String accountTwoUsername=properties.getProperty("accountTwoUsername");
+  String accountTwoPassword=properties.getProperty("accountTwoPassword");
+  String accountThreeUsername=properties.getProperty("accountThreeUsername");
+  String accountThreePassword=properties.getProperty("accountThreePassword");
+  if (accountOneUsername != null || accountOnePassword != null || accountTwoUsername != null || accountTwoPassword != null || accountThreeUsername != null || accountThreePassword != null) {
+    builder.setUsernamesAndPassword(accountOneUsername,accountOnePassword,accountTwoUsername,accountTwoPassword,accountThreeUsername,accountThreePassword);
+  }
+  String debugString=properties.getProperty("debug");
+  if (debugString != null) {
+    LOGGER.warning("Usage of depreacted 'debug' option detected, please use 'debugger' instead");
+    builder.setDebugger(debugString);
+  }
+  builder.setDebugger(properties.getProperty("debugger"));
+  builder.setEnabledTests(properties.getProperty("enabledTests"));
+  builder.setDisabledTests(properties.getProperty("disabledTests"));
+  builder.setDefaultConnection(properties.getProperty("defaultConnection"));
+  builder.setEnabledConnections(properties.getProperty("enabledConnections"));
+  builder.setDisabledConnections(properties.getProperty("disabledConnections"));
+  builder.addTestPackages(properties.getProperty("testPackages"));
+  builder.addTestPackages(testPackages);
+  builder.setVerbose(properties.getProperty("verbose"));
+  builder.setDnsResolver(properties.getProperty("dnsResolver"));
+  builder.setCompatibilityMode(properties.getProperty("compatibilityMode"));
+  return builder.build();
+}

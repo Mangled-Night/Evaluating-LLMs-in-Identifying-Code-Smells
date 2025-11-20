@@ -1,0 +1,39 @@
+@Override public void run(){
+  String data="";
+  long offset=0;
+  Connection con=null;
+  try {
+    long start=System.currentTimeMillis();
+    con=DataMigratorUtil.getMysqlConnection(srcDn);
+    if (tableInfo.isExpantion()) {
+      deleteDataDependFile(data,offset,con);
+    }
+ else {
+      List<DataNode> list=tableInfo.getRemovedDataNodes();
+      boolean isRemovedDn=false;
+      for (      DataNode dn : list) {
+        if (srcDn.equals(dn)) {
+          isRemovedDn=true;
+        }
+      }
+      if (isRemovedDn) {
+        String sql="truncate " + tableInfo.getTableName();
+        JdbcUtils.execute(con,sql,new ArrayList<>());
+      }
+ else {
+        deleteDataDependFile(data,offset,con);
+      }
+    }
+    long end=System.currentTimeMillis();
+    System.out.println(tableInfo.getSchemaAndTableName() + " clean dataNode " + srcDn.getName()+ " completed in "+ (end - start)+ "ms");
+  }
+ catch (  Exception e) {
+    String errMessage=srcDn.toString() + ":" + "clean data error!";
+    LOGGER.error(errMessage,e);
+    tableInfo.setError(true);
+    tableInfo.getErrMessage().append(errMessage + "\n");
+  }
+ finally {
+    JdbcUtils.close(con);
+  }
+}

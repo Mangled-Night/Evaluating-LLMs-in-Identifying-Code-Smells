@@ -1,0 +1,22 @@
+@BeforeAll static void beforeClass() throws Exception {
+  server=new MockTcpServer();
+  server.addHandler(() -> {
+    return new ChannelInboundHandlerAdapter(){
+      @Override public void channelActive(      ChannelHandlerContext ctx){
+        String message=getMessage();
+        ByteBuf buffer=ctx.alloc().buffer(message.length() + 3);
+        buffer.writeCharSequence("-",StandardCharsets.US_ASCII);
+        buffer.writeCharSequence(message,StandardCharsets.US_ASCII);
+        buffer.writeByte('\r').writeByte('\n');
+        ctx.writeAndFlush(buffer).addListener(future -> {
+          ctx.close();
+        }
+);
+      }
+    }
+;
+  }
+);
+  server.initialize(TestSettings.nonexistentPort());
+  client=RedisClient.create(TestClientResources.get(),RedisURI.create(TestSettings.host(),TestSettings.nonexistentPort()));
+}

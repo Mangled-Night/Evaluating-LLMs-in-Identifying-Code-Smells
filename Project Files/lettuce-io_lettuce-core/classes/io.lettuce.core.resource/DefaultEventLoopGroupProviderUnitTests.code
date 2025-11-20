@@ -1,0 +1,18 @@
+/** 
+ * @author Mark Paluch
+ */
+class DefaultEventLoopGroupProviderUnitTests {
+  @Test void shutdownTerminatedEventLoopGroup(){
+    DefaultEventLoopGroupProvider sut=new DefaultEventLoopGroupProvider(1);
+    NioEventLoopGroup eventLoopGroup=sut.allocate(NioEventLoopGroup.class);
+    Future<Boolean> shutdown=sut.release(eventLoopGroup,10,10,TimeUnit.MILLISECONDS);
+    TestFutures.awaitOrTimeout(shutdown);
+    Future<Boolean> shutdown2=sut.release(eventLoopGroup,10,10,TimeUnit.MILLISECONDS);
+    TestFutures.awaitOrTimeout(shutdown2);
+  }
+  @Test void getAfterShutdown(){
+    DefaultEventLoopGroupProvider sut=new DefaultEventLoopGroupProvider(1);
+    TestFutures.awaitOrTimeout(sut.shutdown(10,10,TimeUnit.MILLISECONDS));
+    assertThatThrownBy(() -> sut.allocate(NioEventLoopGroup.class)).isInstanceOf(IllegalStateException.class);
+  }
+}

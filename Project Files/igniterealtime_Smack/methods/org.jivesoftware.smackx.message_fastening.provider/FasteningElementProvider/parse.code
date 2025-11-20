@@ -1,0 +1,34 @@
+@Override public FasteningElement parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+  FasteningElement.Builder builder=FasteningElement.builder();
+  builder.setOriginId(parser.getAttributeValue("",FasteningElement.ATTR_ID));
+  if (ParserUtils.getBooleanAttribute(parser,FasteningElement.ATTR_CLEAR,false)) {
+    builder.setClear();
+  }
+  if (ParserUtils.getBooleanAttribute(parser,FasteningElement.ATTR_SHELL,false)) {
+    builder.setShell();
+  }
+  outerloop:   while (true) {
+    XmlPullParser.Event tag=parser.next();
+switch (tag) {
+case START_ELEMENT:
+      String name=parser.getName();
+    String namespace=parser.getNamespace();
+  if (MessageFasteningManager.NAMESPACE.equals(namespace) && ExternalElement.ELEMENT.equals(name)) {
+    ExternalElement external=new ExternalElement(parser.getAttributeValue("",ExternalElement.ATTR_NAME),parser.getAttributeValue("",ExternalElement.ATTR_ELEMENT_NAMESPACE));
+    builder.addExternalPayload(external);
+    continue;
+  }
+XmlElement wrappedPayload=PacketParserUtils.parseExtensionElement(name,namespace,parser,xmlEnvironment);
+builder.addWrappedPayload(wrappedPayload);
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return builder.build();
+}

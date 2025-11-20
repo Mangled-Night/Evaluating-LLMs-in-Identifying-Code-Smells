@@ -1,0 +1,19 @@
+@Command(value="afk",shortDescription="Say that you are AFK to others",requiredPermission=PermissionManager.NO_PERMISSION) public void onCommand(){
+  if (requireConnection()) {
+    console.addMessage("Failed! You need to be connected to use this command.");
+    return;
+  }
+  updateActive();
+  EntityRef entity=localPlayer.getClientEntity();
+  AfkComponent component=entity.getComponent(AfkComponent.class);
+  component.afk=!component.afk;
+  entity.addOrSaveComponent(component);
+  if (component.afk) {
+    console.addMessage("[AFK] You are AFK now!");
+  }
+ else {
+    console.addMessage("[AFK] You are no longer AFK!");
+  }
+  AfkRequest request=new AfkRequest(entity,component.afk);
+  entity.send(request);
+}

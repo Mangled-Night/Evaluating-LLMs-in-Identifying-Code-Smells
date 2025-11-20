@@ -1,0 +1,46 @@
+public static class PubkeyMetadataElement implements ExtensionElement {
+  public static final String ELEMENT="pubkey-metadata";
+  public static final String ATTR_V4_FINGERPRINT="v4-fingerprint";
+  public static final String ATTR_DATE="date";
+  private final OpenPgpV4Fingerprint v4_fingerprint;
+  private final Date date;
+  public PubkeyMetadataElement(  OpenPgpV4Fingerprint v4_fingerprint,  Date date){
+    this.v4_fingerprint=Objects.requireNonNull(v4_fingerprint);
+    this.date=Objects.requireNonNull(date);
+    if (v4_fingerprint.length() != 40) {
+      throw new IllegalArgumentException("OpenPGP v4 fingerprint must be 40 characters long.");
+    }
+  }
+  public OpenPgpV4Fingerprint getV4Fingerprint(){
+    return v4_fingerprint;
+  }
+  public Date getDate(){
+    return date;
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this).attribute(ATTR_V4_FINGERPRINT,getV4Fingerprint()).attribute(ATTR_DATE,date).closeEmptyElement();
+    return xml;
+  }
+  @Override public int hashCode(){
+    return getV4Fingerprint().hashCode() + 3 * getDate().hashCode();
+  }
+  @SuppressWarnings("UndefinedEquals") @Override public boolean equals(  Object o){
+    if (o == null) {
+      return false;
+    }
+    if (!(o instanceof PubkeyMetadataElement)) {
+      return false;
+    }
+    if (o == this) {
+      return true;
+    }
+    PubkeyMetadataElement otherPubkeyMetadataElement=(PubkeyMetadataElement)o;
+    return this.getV4Fingerprint().equals(otherPubkeyMetadataElement.getV4Fingerprint()) && this.getDate().equals(otherPubkeyMetadataElement.getDate());
+  }
+}

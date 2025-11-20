@@ -1,0 +1,18 @@
+@Override public IQ handleIoTIqRequest(IQ iqRequest){
+  IoTSetRequest iotSetRequest=(IoTSetRequest)iqRequest;
+  final Thing thing=things.get(NodeInfo.EMPTY);
+  if (thing == null) {
+    return null;
+  }
+  ThingControlRequest controlRequest=thing.getControlRequestHandler();
+  if (controlRequest == null) {
+    return null;
+  }
+  try {
+    controlRequest.processRequest(iotSetRequest.getFrom(),iotSetRequest.getSetData());
+  }
+ catch (  XMPPErrorException e) {
+    return IQ.createErrorResponse(iotSetRequest,e.getStanzaError());
+  }
+  return new IoTSetResponse(iotSetRequest);
+}

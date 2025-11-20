@@ -1,0 +1,36 @@
+/** 
+ * A Jingle Transport Manager implementation to be used for NAT Networks. This kind of transport needs that the connected XMPP Server provide a Bridge Service. (http://www.jivesoftware.com/protocol/rtpbridge) To relay the jmf outside the NAT.
+ * @author Thiago Camargo
+ */
+@SuppressWarnings("UnusedVariable") public class BridgedTransportManager extends JingleTransportManager implements JingleSessionListener, CreatedJingleSessionListener {
+  XMPPConnection xmppConnection;
+  public BridgedTransportManager(  XMPPConnection xmppConnection){
+    super();
+    this.xmppConnection=xmppConnection;
+  }
+  /** 
+ * Return the correspondent resolver
+ * @param session correspondent Jingle Session
+ * @return resolver TODO javadoc me please
+ */
+  @Override protected TransportResolver createResolver(  JingleSession session){
+    BridgedResolver bridgedResolver=new BridgedResolver(this.xmppConnection);
+    return bridgedResolver;
+  }
+  @Override public void sessionEstablished(  PayloadType pt,  TransportCandidate rc,  TransportCandidate lc,  JingleSession jingleSession) throws NotConnectedException, InterruptedException, NoResponseException, XMPPErrorException {
+    RTPBridge rtpBridge=RTPBridge.relaySession(lc.getConnection(),lc.getSessionId(),lc.getPassword(),rc,lc);
+  }
+  @Override public void sessionDeclined(  String reason,  JingleSession jingleSession){
+  }
+  @Override public void sessionRedirected(  String redirection,  JingleSession jingleSession){
+  }
+  @Override public void sessionClosed(  String reason,  JingleSession jingleSession){
+  }
+  @Override public void sessionClosedOnError(  XMPPException e,  JingleSession jingleSession){
+  }
+  @Override public void sessionMediaReceived(  JingleSession jingleSession,  String participant){
+  }
+  @Override public void sessionCreated(  JingleSession jingleSession){
+    jingleSession.addListener(this);
+  }
+}

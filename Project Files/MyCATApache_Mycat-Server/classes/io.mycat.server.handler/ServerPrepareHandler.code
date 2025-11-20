@@ -1,0 +1,198 @@
+/** 
+ * @author mycat, CrazyPig, zhuam
+ */
+public class ServerPrepareHandler implements FrontendPrepareHandler {
+  private static final Logger LOGGER=LoggerFactory.getLogger(ServerPrepareHandler.class);
+  private static Escaper varcharEscaper=null;
+static {
+    Builder escapeBuilder=Escapers.builder();
+    escapeBuilder.addEscape('\0',"\\0");
+    escapeBuilder.addEscape('\'',"\\'");
+    escapeBuilder.addEscape('\b',"\\b");
+    escapeBuilder.addEscape('\n',"\\n");
+    escapeBuilder.addEscape('\r',"\\r");
+    escapeBuilder.addEscape('\"',"\\\"");
+    escapeBuilder.addEscape('$',"\\$");
+    escapeBuilder.addEscape('\\',"\\\\");
+    varcharEscaper=escapeBuilder.build();
+  }
+  private ServerConnection source;
+  private static final AtomicInteger PSTMT_ID_GENERATOR=new AtomicInteger(0);
+  private static final Map<Long,PreparedStatement> pstmtForId=new ConcurrentHashMap<>();
+  private int maxPreparedStmtCount;
+  public ServerPrepareHandler(  ServerConnection source,  int maxPreparedStmtCount){
+    this.source=source;
+    this.maxPreparedStmtCount=maxPreparedStmtCount;
+  }
+  @Override public void prepare(  String sql){
+    LOGGER.debug("use server prepare, sql: " + sql);
+    PreparedStatement pstmt=null;
+    if (pstmt == null) {
+      int columnCount=0;
+      int paramCount=getParamCount(sql);
+      if (paramCount > maxPreparedStmtCount) {
+        source.writeErrMessage(ErrorCode.ER_PS_MANY_PARAM,"Prepared statement contains too many placeholders");
+        return;
+      }
+      pstmt=new PreparedStatement(PSTMT_ID_GENERATOR.incrementAndGet(),sql,paramCount);
+      pstmtForId.put(pstmt.getId(),pstmt);
+      LOGGER.info("preparestatement  parepare id:{}",pstmt.getId());
+    }
+    PreparedStmtResponse.response(pstmt,source);
+  }
+  @Override public void sendLongData(  byte[] data){
+    LongDataPacket packet=new LongDataPacket();
+    packet.read(data);
+    long pstmtId=packet.getPstmtId();
+    LOGGER.info("preparestatement  long data id:{}",pstmtId);
+    PreparedStatement pstmt=pstmtForId.get(pstmtId);
+    if (pstmt != null) {
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("send long data to prepare sql : " + pstmtForId.get(pstmtId));
+      }
+      long paramId=packet.getParamId();
+      try {
+        pstmt.appendLongData(paramId,packet.getLongData());
+      }
+ catch (      IOException e) {
+        source.writeErrMessage(ErrorCode.ERR_FOUND_EXCEPTION,e.getMessage());
+      }
+    }
+  }
+  @Override public void reset(  byte[] data){
+    ResetPacket packet=new ResetPacket();
+    packet.read(data);
+    long pstmtId=packet.getPstmtId();
+    LOGGER.info("preparestatement  long data id:{}",pstmtId);
+    PreparedStatement pstmt=pstmtForId.get(pstmtId);
+    if (pstmt != null) {
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("reset prepare sql : " + pstmtForId.get(pstmtId));
+      }
+      pstmt.resetLongData();
+      source.write(OkPacket.OK);
+    }
+ else {
+      source.writeErrMessage(ErrorCode.ERR_FOUND_EXCEPTION,"can not reset prepare statement : " + pstmtForId.get(pstmtId));
+    }
+  }
+  @Override public void execute(  byte[] data){
+    long pstmtId=ByteUtil.readUB4(data,5);
+    PreparedStatement pstmt=null;
+    LOGGER.info("preparestatement  execute id:{}",pstmtId);
+    if ((pstmt=pstmtForId.get(pstmtId)) == null) {
+      source.writeErrMessage(ErrorCode.ER_ERROR_WHEN_EXECUTING_COMMAND,"Unknown pstmtId when executing.");
+    }
+ else {
+      ExecutePacket packet=new ExecutePacket(pstmt);
+      try {
+        packet.read(data,source.getCharset());
+      }
+ catch (      UnsupportedEncodingException e) {
+        source.writeErrMessage(ErrorCode.ER_ERROR_WHEN_EXECUTING_COMMAND,e.getMessage());
+        return;
+      }
+      BindValue[] bindValues=packet.values;
+      String sql=prepareStmtBindValue(pstmt,bindValues);
+      source.getSession2().setPrepared(true);
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("execute prepare sql: " + sql);
+      }
+      pstmt.resetLongData();
+      source.query(sql);
+    }
+  }
+  @Override public void close(  byte[] data){
+    long pstmtId=ByteUtil.readUB4(data,5);
+    LOGGER.info("preparestatement  close id:{}",pstmtId);
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("close prepare stmt, stmtId = " + pstmtId);
+    }
+    PreparedStatement pstmt=pstmtForId.remove(pstmtId);
+  }
+  @Override public void clear(){
+    this.pstmtForId.clear();
+  }
+  private int getParamCount(  String sql){
+    char[] cArr=sql.toCharArray();
+    int count=0;
+    for (int i=0; i < cArr.length; i++) {
+      if (cArr[i] == '?') {
+        count++;
+      }
+    }
+    return count;
+  }
+  /** 
+ * 组装sql语句,替换动态参数为实际参数值
+ */
+  private String prepareStmtBindValue(  PreparedStatement pstmt,  BindValue[] bindValues){
+    String sql=pstmt.getStatement();
+    SQLStatement sqlStatement=SQLUtils.parseSingleMysqlStatement(sql);
+    boolean primitiveArg=!(sqlStatement instanceof SQLSelectStatement);
+    int[] paramTypes=pstmt.getParametersType();
+    sqlStatement.accept(new MySqlASTVisitorAdapter(){
+      @Override public boolean visit(      SQLVariantRefExpr x){
+        BindValue bindValue=bindValues[x.getIndex()];
+        Object o=null;
+        if (bindValue.isNull) {
+          SQLReplaceable parent=(SQLReplaceable)x.getParent();
+          parent.replace(x,new SQLNullExpr());
+          return false;
+        }
+ else {
+          if (primitiveArg && bindValue.value instanceof byte[]) {
+            SQLReplaceable parent=(SQLReplaceable)x.getParent();
+            parent.replace(x,new SQLHexExpr(HexFormatUtil.bytesToHexString((byte[])bindValue.value)));
+            return false;
+          }
+switch (paramTypes[x.getIndex()] & 0xff) {
+case Fields.FIELD_TYPE_TINY:
+            o=bindValue.byteBinding;
+          break;
+case Fields.FIELD_TYPE_SHORT:
+        o=bindValue.shortBinding;
+      break;
+case Fields.FIELD_TYPE_LONG:
+    o=bindValue.intBinding;
+  break;
+case Fields.FIELD_TYPE_LONGLONG:
+o=(bindValue.longBinding);
+break;
+case Fields.FIELD_TYPE_FLOAT:
+o=bindValue.floatBinding;
+break;
+case Fields.FIELD_TYPE_DOUBLE:
+o=bindValue.doubleBinding;
+break;
+case Fields.FIELD_TYPE_TIME:
+case Fields.FIELD_TYPE_DATE:
+case Fields.FIELD_TYPE_DATETIME:
+case Fields.FIELD_TYPE_TIMESTAMP:
+o=bindValue.value;
+break;
+default :
+if (bindValue.value instanceof byte[]) {
+SQLReplaceable parent=(SQLReplaceable)x.getParent();
+byte[] bytes=(byte[])bindValue.value;
+parent.replace(x,new SQLCharExpr(new String(bytes)));
+return false;
+}
+if (bindValue.value instanceof String) {
+SQLReplaceable parent=(SQLReplaceable)x.getParent();
+String value=(String)bindValue.value;
+parent.replace(x,new SQLCharExpr(value));
+return false;
+}
+throw new UnsupportedOperationException("unsupport " + bindValue.value);
+}
+SQLReplaceable parent=(SQLReplaceable)x.getParent();
+parent.replace(x,SQLExprUtils.fromJavaObject(o));
+return false;
+}
+}
+}
+);
+return sqlStatement.toString();
+}
+}

@@ -1,0 +1,44 @@
+/** 
+ * A few tests for different  {@link Noise} implementations.
+ */
+public class NoiseTest {
+  private Random rng;
+  public NoiseTest(){
+    this.rng=new FastRandom(0xBEEF);
+  }
+  public static List<Noise> data(){
+    return Lists.newArrayList(new WhiteNoise(0xCAFE),new DiscreteWhiteNoise(0xCAFE),new SimplexNoise(0xCAFE),new PerlinNoise(0xCAFE),new BrownianNoise(new WhiteNoise(0xCAFE),3));
+  }
+  @ParameterizedTest @MethodSource("data") public void testMinMax(  Noise noiseGen){
+    float min=Float.POSITIVE_INFINITY;
+    float max=Float.NEGATIVE_INFINITY;
+    for (int i=0; i < 5000000; i++) {
+      float posX=rng.nextFloat() * 100f;
+      float posY=rng.nextFloat() * 100f;
+      float posZ=rng.nextFloat() * 100f;
+      float noise=noiseGen.noise(posX,posY,posZ);
+      if (noise < min) {
+        min=noise;
+      }
+      if (noise > max) {
+        max=noise;
+      }
+    }
+    assertTrue(min >= -1);
+    assertTrue(max <= 1);
+    assertEquals(-1,min,0.05);
+    assertEquals(1,max,0.05);
+  }
+  @ParameterizedTest @MethodSource("data") public void testResolution(  Noise noiseGen){
+    for (int i=0; i < 1000000; i++) {
+      float posX=rng.nextFloat() * 100f;
+      float posY=rng.nextFloat() * 100f;
+      float posZ=rng.nextFloat() * 100f;
+      float noise=noiseGen.noise(posX,posY,posZ);
+      if (noise > 0 && noise < 0.00005) {
+        return;
+      }
+    }
+    fail();
+  }
+}

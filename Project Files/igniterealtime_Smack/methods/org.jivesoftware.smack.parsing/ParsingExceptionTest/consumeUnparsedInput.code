@@ -1,0 +1,13 @@
+@Test public void consumeUnparsedInput() throws Exception {
+  final String MESSAGE_EXCEPTION_ELEMENT="<" + ThrowException.ELEMENT + " xmlns='"+ ThrowException.NAMESPACE+ "'>"+ "<nothingInHere/>"+ "</"+ ThrowException.ELEMENT+ ">";
+  XmlPullParser parser=TestUtils.getMessageParser("<message from='user@server.example' to='francisco@denmark.lit' id='foo'>" + MESSAGE_EXCEPTION_ELEMENT + EXTENSION2+ "</message>");
+  int parserDepth=parser.getDepth();
+  CharSequence content=null;
+  try {
+    PacketParserUtils.parseMessage(parser);
+  }
+ catch (  Exception e) {
+    content=PacketParserUtils.parseContentDepth(parser,parserDepth,false);
+  }
+  assertThat(MESSAGE_EXCEPTION_ELEMENT + EXTENSION2 + "</message>",equalsCharSequence(content));
+}

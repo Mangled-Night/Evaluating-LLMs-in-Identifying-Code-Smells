@@ -1,0 +1,32 @@
+/** 
+ * Grows the size of the hash table and re-hash everything.
+ */
+@VisibleForTesting void growAndRehash(){
+  assert (longArray != null);
+  long resizeStartTime=-1;
+  if (enablePerfMetrics) {
+    resizeStartTime=System.nanoTime();
+  }
+  final LongArray oldLongArray=longArray;
+  final int oldCapacity=(int)oldLongArray.size() / 2;
+  allocate(Math.min(growthStrategy.nextCapacity(oldCapacity),MAX_CAPACITY));
+  for (int i=0; i < oldLongArray.size(); i+=2) {
+    final long keyPointer=oldLongArray.get(i);
+    if (keyPointer == 0) {
+      continue;
+    }
+    final int hashcode=(int)oldLongArray.get(i + 1);
+    int newPos=hashcode & mask;
+    int step=1;
+    while (longArray.get(newPos * 2) != 0) {
+      newPos=(newPos + step) & mask;
+      step++;
+    }
+    longArray.set(newPos * 2,keyPointer);
+    longArray.set(newPos * 2 + 1,hashcode);
+  }
+  freeLongArray(oldLongArray);
+  if (enablePerfMetrics) {
+    timeSpentResizingNs+=System.nanoTime() - resizeStartTime;
+  }
+}

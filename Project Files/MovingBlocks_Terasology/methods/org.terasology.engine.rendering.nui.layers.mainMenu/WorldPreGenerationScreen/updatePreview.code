@@ -1,0 +1,18 @@
+/** 
+ * Updates the preview according to any changes made to the configurator. Also pops up a message and keeps track of percentage world preview prepared.
+ */
+private void updatePreview(){
+  final NUIManager manager=context.get(NUIManager.class);
+  final WaitPopup<TextureData> popup=manager.pushScreen(WaitPopup.ASSET_URI,WaitPopup.class);
+  popup.setMessage("Updating Preview","Please wait ...");
+  ProgressListener progressListener=progress -> popup.setMessage("Updating Preview",String.format("Please wait ... %d%%",(int)(progress * 100f)));
+  Callable<TextureData> operation=() -> {
+    int zoom=TeraMath.floorToInt(zoomSlider.getValue());
+    TextureData data=texture.getData();
+    previewGen.render(data,zoom,progressListener);
+    return data;
+  }
+;
+  popup.onSuccess(texture::reload);
+  popup.startOperation(operation,true);
+}

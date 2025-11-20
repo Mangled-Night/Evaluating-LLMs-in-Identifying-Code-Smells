@@ -1,0 +1,27 @@
+/** 
+ * {@link TypeProvider} for {@link Type}s obtained by invoking a no-arg method.
+ */
+@SuppressWarnings("serial") static class MethodInvokeTypeProvider implements TypeProvider {
+  private final TypeProvider provider;
+  private final String methodName;
+  private final int index;
+  private transient Method method;
+  private transient volatile Object result;
+  public MethodInvokeTypeProvider(  TypeProvider provider,  Method method,  int index){
+    this.provider=provider;
+    this.methodName=method.getName();
+    this.index=index;
+    this.method=method;
+  }
+  @Override public Type getType(){
+    Object result=this.result;
+    if (result == null) {
+      result=ReflectionUtils.invokeMethod(this.method,this.provider.getType());
+      this.result=result;
+    }
+    return (result instanceof Type[] ? ((Type[])result)[this.index] : (Type)result);
+  }
+  @Override public Object getSource(){
+    return null;
+  }
+}

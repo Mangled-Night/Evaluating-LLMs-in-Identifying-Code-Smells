@@ -1,0 +1,15 @@
+@Test void shouldCancelCommandOnQueueSingleFailure() throws Exception {
+  Command<String,String,String> commandMock=mock(Command.class);
+  RuntimeException exception=new RuntimeException();
+  when(commandMock.getOutput()).thenThrow(exception);
+  ChannelPromise channelPromise=new DefaultChannelPromise(channel,ImmediateEventExecutor.INSTANCE);
+  try {
+    sut.write(context,commandMock,channelPromise);
+    fail("Missing RuntimeException");
+  }
+ catch (  RuntimeException e) {
+    assertThat(e).isSameAs(exception);
+  }
+  assertThat(stack).isEmpty();
+  verify(commandMock).completeExceptionally(exception);
+}

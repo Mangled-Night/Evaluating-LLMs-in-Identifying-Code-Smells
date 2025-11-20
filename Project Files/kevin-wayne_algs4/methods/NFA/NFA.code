@@ -1,0 +1,30 @@
+/** 
+ * Initializes the NFA from the specified regular expression.
+ * @param regexp the regular expression
+ */
+public NFA(String regexp){
+  this.regexp=regexp;
+  m=regexp.length();
+  Stack<Integer> ops=new Stack<Integer>();
+  graph=new Digraph(m + 1);
+  for (int i=0; i < m; i++) {
+    int lp=i;
+    if (regexp.charAt(i) == '(' || regexp.charAt(i) == '|')     ops.push(i);
+ else     if (regexp.charAt(i) == ')') {
+      int or=ops.pop();
+      if (regexp.charAt(or) == '|') {
+        lp=ops.pop();
+        graph.addEdge(lp,or + 1);
+        graph.addEdge(or,i);
+      }
+ else       if (regexp.charAt(or) == '(')       lp=or;
+ else       assert false;
+    }
+    if (i < m - 1 && regexp.charAt(i + 1) == '*') {
+      graph.addEdge(lp,i + 1);
+      graph.addEdge(i + 1,lp);
+    }
+    if (regexp.charAt(i) == '(' || regexp.charAt(i) == '*' || regexp.charAt(i) == ')')     graph.addEdge(i,i + 1);
+  }
+  if (ops.size() != 0)   throw new IllegalArgumentException("Invalid regular expression");
+}

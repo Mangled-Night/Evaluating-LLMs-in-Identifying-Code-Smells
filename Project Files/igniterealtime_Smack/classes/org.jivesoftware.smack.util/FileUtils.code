@@ -1,0 +1,175 @@
+public final class FileUtils {
+  private static final Logger LOGGER=Logger.getLogger(FileUtils.class.getName());
+  public static InputStream getInputStreamForClasspathFile(  String path){
+    return getInputStreamForClasspathFile(path,null);
+  }
+  public static InputStream getInputStreamForClasspathFile(  String path,  ClassLoader loader){
+    try {
+      return getStreamForClasspathFile(path,loader);
+    }
+ catch (    IOException e) {
+      LOGGER.log(Level.FINE,"Suppressed IOException in getInputStreamForClasspathFile",e);
+      return null;
+    }
+  }
+  public static InputStream getStreamForClasspathFile(  String path,  ClassLoader loader) throws IOException {
+    List<ClassLoader> classLoaders=getClassLoaders();
+    if (loader != null) {
+      classLoaders.add(0,loader);
+    }
+    for (    ClassLoader classLoader : classLoaders) {
+      InputStream is=classLoader.getResourceAsStream(path);
+      if (is != null) {
+        return is;
+      }
+    }
+    throw new IOException("Unable to get '" + path + "' from classpath. Tried ClassLoaders:"+ classLoaders);
+  }
+  public static InputStream getStreamForUri(  URI uri,  ClassLoader loader) throws IOException {
+    String protocol=uri.getScheme();
+    if (protocol.equals("classpath")) {
+      String path=uri.getSchemeSpecificPart();
+      return getStreamForClasspathFile(path,loader);
+    }
+    URL url=uri.toURL();
+    return url.openStream();
+  }
+  /** 
+ * Returns default classloaders.
+ * @return a List of ClassLoader instances.
+ */
+  public static List<ClassLoader> getClassLoaders(){
+    ClassLoader[] classLoaders=new ClassLoader[2];
+    classLoaders[0]=FileUtils.class.getClassLoader();
+    classLoaders[1]=Thread.currentThread().getContextClassLoader();
+    List<ClassLoader> loaders=new ArrayList<ClassLoader>(classLoaders.length);
+    for (    ClassLoader classLoader : classLoaders) {
+      if (classLoader != null) {
+        loaders.add(classLoader);
+      }
+    }
+    return loaders;
+  }
+  public static boolean addLines(  String uriString,  Set<String> set) throws MalformedURLException, IOException {
+    URI uri=URI.create(uriString);
+    InputStream is=getStreamForUri(uri,null);
+    InputStreamReader sr=new InputStreamReader(is,StandardCharsets.UTF_8);
+    BufferedReader br=new BufferedReader(sr);
+    try {
+      String line;
+      while ((line=br.readLine()) != null) {
+        set.add(line);
+      }
+    }
+  finally {
+      br.close();
+    }
+    return true;
+  }
+  /** 
+ * Reads the contents of a File.
+ * @param file TODO javadoc me please
+ * @return the content of file or null in case of an error
+ * @throws IOException if an I/O error occurred.
+ */
+  @SuppressWarnings("DefaultCharset") public static String readFileOrThrow(  File file) throws IOException {
+    try (Reader reader=new FileReader(file)){
+      char[] buf=new char[8192];
+      int len;
+      StringBuilder s=new StringBuilder();
+      while ((len=reader.read(buf)) >= 0) {
+        s.append(buf,0,len);
+      }
+      return s.toString();
+    }
+   }
+  public static String readFile(  File file){
+    try {
+      return readFileOrThrow(file);
+    }
+ catch (    FileNotFoundException e) {
+      LOGGER.log(Level.FINE,"readFile",e);
+    }
+catch (    IOException e) {
+      LOGGER.log(Level.WARNING,"readFile",e);
+    }
+    return null;
+  }
+  @SuppressWarnings("DefaultCharset") public static void writeFileOrThrow(  File file,  CharSequence content) throws IOException {
+    FileWriter writer=new FileWriter(file,false);
+    try {
+      writer.write(content.toString());
+    }
+  finally {
+      writer.close();
+    }
+  }
+  public static boolean writeFile(  File file,  CharSequence content){
+    try {
+      writeFileOrThrow(file,content);
+      return true;
+    }
+ catch (    IOException e) {
+      LOGGER.log(Level.WARNING,"writeFile",e);
+      return false;
+    }
+  }
+  public static FileOutputStream prepareFileOutputStream(  File file) throws IOException {
+    if (!file.exists()) {
+      File parent=file.getParentFile();
+      if (!parent.exists() && !parent.mkdirs()) {
+        throw new IOException("Cannot create directory " + parent.getAbsolutePath());
+      }
+      if (!file.createNewFile()) {
+        throw new IOException("Cannot create file " + file.getAbsolutePath());
+      }
+    }
+    if (file.isDirectory()) {
+      throw new AssertionError("File " + file.getAbsolutePath() + " is not a file!");
+    }
+    return new FileOutputStream(file);
+  }
+  public static FileInputStream prepareFileInputStream(  File file) throws IOException {
+    if (file.exists()) {
+      if (file.isFile()) {
+        return new FileInputStream(file);
+      }
+ else {
+        throw new IOException("File " + file.getAbsolutePath() + " is not a file!");
+      }
+    }
+ else {
+      throw new FileNotFoundException("File " + file.getAbsolutePath() + " not found.");
+    }
+  }
+  public static void maybeDeleteFileOrThrow(  File file) throws IOException {
+    if (!file.exists()) {
+      return;
+    }
+    boolean successfullyDeleted=file.delete();
+    if (!successfullyDeleted) {
+      throw new IOException("Could not delete file " + file);
+    }
+  }
+  public static void maybeCreateFileWithParentDirectories(  File file) throws IOException {
+    File parent=file.getParentFile();
+    if (!parent.exists() && !parent.mkdirs()) {
+      throw new IOException("Cannot create directory " + parent);
+    }
+    if (file.isFile()) {
+      return;
+    }
+    if (!file.exists()) {
+      if (file.createNewFile()) {
+        return;
+      }
+      throw new IOException("Cannot create file " + file);
+    }
+    if (file.isDirectory()) {
+      throw new IOException("File " + file + " exists, but is a directory.");
+    }
+ else {
+      throw new IOException("File " + file + " exists, but is neither a file nor a directory");
+    }
+  }
+}

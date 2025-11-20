@@ -1,0 +1,21 @@
+private static List<String> getStackFrameList(final Throwable throwable){
+  final StringWriter sw=new StringWriter();
+  final PrintWriter pw=new PrintWriter(sw,true);
+  throwable.printStackTrace(pw);
+  final String stackTrace=sw.toString();
+  final StringTokenizer frames=new StringTokenizer(stackTrace,LINE_SEP);
+  final List<String> list=new ArrayList<>();
+  boolean traceStarted=false;
+  while (frames.hasMoreTokens()) {
+    final String token=frames.nextToken();
+    final int at=token.indexOf("at");
+    if (at != -1 && token.substring(0,at).trim().isEmpty()) {
+      traceStarted=true;
+      list.add(token);
+    }
+ else     if (traceStarted) {
+      break;
+    }
+  }
+  return list;
+}

@@ -1,0 +1,20 @@
+@ReceiveEvent(components=CharacterComponent.class) public void onItemUse(OnItemUseEvent event,EntityRef entity,CharacterHeldItemComponent characterHeldItemComponent){
+  long currentTime=time.getGameTimeInMs();
+  if (characterHeldItemComponent.nextItemUseTime > currentTime) {
+    event.consume();
+    return;
+  }
+  EntityRef selectedItemEntity=characterHeldItemComponent.selectedItem;
+  characterHeldItemComponent.lastItemUsedTime=currentTime;
+  characterHeldItemComponent.nextItemUseTime=currentTime;
+  ItemComponent itemComponent=selectedItemEntity.getComponent(ItemComponent.class);
+  if (itemComponent != null) {
+    AffectItemUseCooldownTimeEvent affectItemUseCooldownTimeEvent=new AffectItemUseCooldownTimeEvent(itemComponent.cooldownTime);
+    entity.send(affectItemUseCooldownTimeEvent);
+    characterHeldItemComponent.nextItemUseTime+=(long)affectItemUseCooldownTimeEvent.getResultValue();
+  }
+ else {
+    characterHeldItemComponent.nextItemUseTime+=200;
+  }
+  entity.saveComponent(characterHeldItemComponent);
+}

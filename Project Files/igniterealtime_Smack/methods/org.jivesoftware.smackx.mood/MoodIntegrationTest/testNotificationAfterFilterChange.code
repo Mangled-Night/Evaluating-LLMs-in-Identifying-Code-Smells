@@ -1,0 +1,29 @@
+/** 
+ * Verifies that a notification for a previously sent publication is received as soon as notification filtering has been adjusted to allow for the notification to be delivered.
+ * @throws Exception if the test fails
+ */
+@SmackIntegrationTest public void testNotificationAfterFilterChange() throws Exception {
+  Mood data=Mood.cautious;
+  IntegrationTestRosterUtil.ensureBothAccountsAreSubscribedToEachOther(conOne,conTwo,timeout);
+  final SimpleResultSyncPoint moodReceived=new SimpleResultSyncPoint();
+  final PepEventListener<MoodElement> moodListener=(jid,moodElement,id,message) -> {
+    if (moodElement.getMood().equals(data)) {
+      moodReceived.signal();
+    }
+  }
+;
+  try {
+    publishAndWait(mm1,ServiceDiscoveryManager.getInstanceFor(conOne),data);
+    registerListenerAndWait(mm2,ServiceDiscoveryManager.getInstanceFor(conTwo),moodListener);
+    try {
+      Object result=moodReceived.waitForResult(timeout);
+      Assertions.assertNotNull(result,"Expected to receive a PEP notification, but did not.");
+    }
+ catch (    TimeoutException e) {
+      Assertions.fail("Expected to receive a PEP notification, but did not.");
+    }
+  }
+  finally {
+    unregisterListener(mm2,moodListener);
+  }
+}

@@ -1,0 +1,21 @@
+@Test void shouldApplyAuthentication(){
+  RedisURI source=new RedisURI();
+  source.setUsername("foo");
+  source.setPassword("bar");
+  RedisURI target=new RedisURI();
+  target.applyAuthentication(source);
+  assertThat(target.getUsername()).isEqualTo("foo");
+  assertThat(target.getPassword()).isEqualTo("bar".toCharArray());
+  source.setUsername(null);
+  target.applyAuthentication(source);
+  assertThat(target.getUsername()).isNull();
+  assertThat(target.getPassword()).isEqualTo("bar".toCharArray());
+  RedisCredentialsProvider provider=() -> Mono.just(RedisCredentials.just("suppliedUsername","suppliedPassword".toCharArray()));
+  RedisURI sourceCp=new RedisURI();
+  sourceCp.setCredentialsProvider(provider);
+  RedisURI targetCp=new RedisURI();
+  targetCp.applyAuthentication(sourceCp);
+  assertThat(targetCp.getUsername()).isNull();
+  assertThat(targetCp.getPassword()).isNull();
+  assertThat(sourceCp.getCredentialsProvider()).isEqualTo(targetCp.getCredentialsProvider());
+}

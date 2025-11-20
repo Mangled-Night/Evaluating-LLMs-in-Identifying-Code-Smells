@@ -1,0 +1,17 @@
+@Test void shutdownShutsDownResourcesAfterChannels() throws Exception {
+  when(clientResources.eventExecutorGroup()).thenReturn(ImmediateEventExecutor.INSTANCE);
+  CompletableFuture<Void> completableFuture=new CompletableFuture<>();
+  when(asyncCloseable.closeAsync()).thenReturn(completableFuture);
+  RedisClient redisClient=RedisClient.create(clientResources,"redis://foo");
+  Field field=AbstractRedisClient.class.getDeclaredField("sharedResources");
+  field.setAccessible(true);
+  field.set(redisClient,false);
+  Set<AsyncCloseable> closeableResources=(Set)ReflectionTestUtils.getField(redisClient,"closeableResources");
+  closeableResources.add(asyncCloseable);
+  CompletableFuture<Void> future=redisClient.shutdownAsync();
+  verify(asyncCloseable).closeAsync();
+  verify(clientResources,never()).shutdown(anyLong(),anyLong(),any());
+  completableFuture.complete(null);
+  verify(clientResources).shutdown(anyLong(),anyLong(),any());
+  assertThat(future).isDone();
+}

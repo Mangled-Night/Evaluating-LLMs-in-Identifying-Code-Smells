@@ -1,0 +1,9 @@
+@Test void appliesCommandTimeoutToReactiveCommands(){
+  client.setOptions(ClientOptions.builder().timeoutOptions(TimeoutOptions.enabled()).build());
+  try (StatefulRedisConnection<String,String> connection=client.connect()){
+    connection.setTimeout(Duration.ofMillis(100));
+    connection.async().clientPause(300);
+    Mono<String> mono=connection.reactive().ping();
+    StepVerifier.create(mono).expectError(RedisCommandTimeoutException.class).verify();
+  }
+ }

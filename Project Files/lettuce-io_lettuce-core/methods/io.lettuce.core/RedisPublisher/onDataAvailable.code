@@ -1,0 +1,25 @@
+/** 
+ * Called via a listener interface to indicate that reading is possible.
+ */
+final void onDataAvailable(){
+  State state=state();
+  if (traceEnabled) {
+    LOG.trace("{} onDataAvailable()",state);
+  }
+  state.onDataAvailable(this);
+}
+@Override void onDataAvailable(RedisSubscription<?> subscription){
+  try {
+    do {
+      if (!read(subscription)) {
+        return;
+      }
+    }
+ while (subscription.hasDemand());
+  }
+ catch (  Exception e) {
+    subscription.onError(e);
+  }
+}
+void onDataAvailable(RedisSubscription<?> subscription){
+}

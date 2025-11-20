@@ -1,0 +1,48 @@
+/** 
+ * The In-Band Bytestream file transfer method, or IBB for short, transfers the file over the same XML Stream used by XMPP. It is the fall-back mechanism in case the SOCKS5 bytestream method of transferring files is not available.
+ * @author Alexander Wenckus
+ * @author Henning Staib
+ * @see <a href="http://xmpp.org/extensions/xep-0047.html">XEP-0047: In-Band
+ *      Bytestreams (IBB)</a>
+ */
+public class IBBTransferNegotiator extends StreamNegotiator {
+  private final InBandBytestreamManager manager;
+  /** 
+ * The default constructor for the In-Band Bytestream Negotiator.
+ * @param connection The connection which this negotiator works on.
+ */
+  protected IBBTransferNegotiator(  XMPPConnection connection){
+    super(connection);
+    this.manager=InBandBytestreamManager.getByteStreamManager(connection);
+  }
+  @Override public OutputStream createOutgoingStream(  String streamID,  Jid initiator,  Jid target) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    InBandBytestreamSession session=this.manager.establishSession(target,streamID);
+    session.setCloseBothStreamsEnabled(true);
+    return session.getOutputStream();
+  }
+  @Override public InputStream createIncomingStream(  StreamInitiation initiation) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    this.manager.ignoreBytestreamRequestOnce(initiation.getSessionID());
+    Stanza streamInitiation=initiateIncomingStream(connection(),initiation);
+    return negotiateIncomingStream(streamInitiation);
+  }
+  @Override public void newStreamInitiation(  Jid from,  String streamID){
+    this.manager.ignoreBytestreamRequestOnce(streamID);
+  }
+  @Override public String getNamespace(){
+    return DataPacketExtension.NAMESPACE;
+  }
+  @Override InputStream negotiateIncomingStream(  Stanza streamInitiation) throws NotConnectedException, InterruptedException {
+    InBandBytestreamRequest request=new ByteStreamRequest(this.manager,(Open)streamInitiation);
+    InBandBytestreamSession session=request.accept();
+    session.setCloseBothStreamsEnabled(true);
+    return session.getInputStream();
+  }
+  /** 
+ * Derive from InBandBytestreamRequest to access protected constructor.
+ */
+private static final class ByteStreamRequest extends InBandBytestreamRequest {
+    private ByteStreamRequest(    InBandBytestreamManager manager,    Open byteStreamRequest){
+      super(manager,byteStreamRequest);
+    }
+  }
+}

@@ -1,0 +1,14 @@
+@Override public FileVisitResult preVisitDirectory(Path path,BasicFileAttributes attrs){
+  if (path.equals(rootPath)) {
+    return FileVisitResult.CONTINUE;
+  }
+  String relPath=rootPath.relativize(path).getName(0).toString();
+  try {
+    Date folderDate=TIMESTAMP_FORMAT.parse(relPath);
+    long ageInSecs=folderDate.toInstant().until(Instant.now(),ChronoUnit.SECONDS);
+    return ageInSecs > maxAgeInSecs ? FileVisitResult.CONTINUE : FileVisitResult.SKIP_SUBTREE;
+  }
+ catch (  ParseException e) {
+    return FileVisitResult.SKIP_SUBTREE;
+  }
+}

@@ -1,0 +1,26 @@
+Command<K,V,Set<V>> georadiusbymember(CommandType commandType,K key,V member,double distance,String unit){
+  notNullKey(key);
+  LettuceAssert.notNull(unit,"Unit " + MUST_NOT_BE_NULL);
+  LettuceAssert.notEmpty(unit,"Unit " + MUST_NOT_BE_EMPTY);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key).addValue(member).add(distance).add(unit);
+  return createCommand(commandType,new ValueSetOutput<>(codec),args);
+}
+Command<K,V,List<GeoWithin<V>>> georadiusbymember(CommandType commandType,K key,V member,double distance,String unit,GeoArgs geoArgs){
+  notNullKey(key);
+  LettuceAssert.notNull(geoArgs,"GeoArgs " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(unit,"Unit " + MUST_NOT_BE_NULL);
+  LettuceAssert.notEmpty(unit,"Unit " + MUST_NOT_BE_EMPTY);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key).addValue(member).add(distance).add(unit);
+  geoArgs.build(args);
+  return createCommand(commandType,new GeoWithinListOutput<>(codec,geoArgs.isWithDistance(),geoArgs.isWithHash(),geoArgs.isWithCoordinates()),args);
+}
+Command<K,V,Long> georadiusbymember(K key,V member,double distance,String unit,GeoRadiusStoreArgs<K> geoRadiusStoreArgs){
+  notNullKey(key);
+  LettuceAssert.notNull(geoRadiusStoreArgs,"GeoRadiusStoreArgs " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(unit,"Unit " + MUST_NOT_BE_NULL);
+  LettuceAssert.notEmpty(unit,"Unit " + MUST_NOT_BE_EMPTY);
+  LettuceAssert.isTrue(geoRadiusStoreArgs.getStoreKey() != null || geoRadiusStoreArgs.getStoreDistKey() != null,"At least STORE key or STOREDIST key is required");
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(key).addValue(member).add(distance).add(unit);
+  geoRadiusStoreArgs.build(args);
+  return createCommand(GEORADIUSBYMEMBER,new IntegerOutput<>(codec),args);
+}

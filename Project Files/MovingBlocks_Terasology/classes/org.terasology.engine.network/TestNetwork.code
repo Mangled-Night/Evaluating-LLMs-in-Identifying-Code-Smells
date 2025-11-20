@@ -1,0 +1,43 @@
+@Tag("TteTest") public class TestNetwork extends TerasologyTestingEnvironment {
+  private List<NetworkSystem> netSystems=Lists.newArrayList();
+  @BeforeEach public void setup() throws Exception {
+    super.setup();
+    CertificateGenerator generator=new CertificateGenerator();
+    CertificatePair serverIdentiy=generator.generateSelfSigned();
+    context.get(Config.class).getSecurity().setServerCredentials(serverIdentiy.getPublicCert(),serverIdentiy.getPrivateCert());
+  }
+  @AfterEach public void cleanUp(){
+    netSystems.forEach(NetworkSystem::shutdown);
+  }
+  @Test public void testNetwork() throws Exception {
+    EngineEntityManager entityManager=getEntityManager();
+    EngineTime time=mock(EngineTime.class);
+    NetworkSystem server=new NetworkSystemImpl(time,context);
+    server.setContext(context);
+    netSystems.add(server);
+    server.connectToEntitySystem(entityManager,context.get(EventLibrary.class),null);
+    server.host(7777,true);
+    Thread.sleep(500);
+    NetworkSystem client=new NetworkSystemImpl(time,context);
+    client.setContext(context);
+    netSystems.add(client);
+    client.join("localhost",7777);
+    Thread.sleep(500);
+    server.shutdown();
+    client.shutdown();
+  }
+  @Test public void testEntityNetworkIdChangedOnServerStart() throws HostingFailedException {
+    EngineEntityManager entityManager=getEntityManager();
+    NetworkComponent netComp=new NetworkComponent();
+    netComp.setNetworkId(122);
+    EntityRef entity=entityManager.create(netComp);
+    EngineTime time=mock(EngineTime.class);
+    NetworkSystem server=new NetworkSystemImpl(time,context);
+    server.setContext(context);
+    netSystems.add(server);
+    server.connectToEntitySystem(entityManager,context.get(EventLibrary.class),null);
+    server.host(7777,true);
+    assertFalse(122 == entity.getComponent(NetworkComponent.class).getNetworkId());
+    server.shutdown();
+  }
+}

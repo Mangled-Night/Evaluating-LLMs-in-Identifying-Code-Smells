@@ -1,0 +1,24 @@
+/** 
+ * Consume a response without having a command on the stack.
+ * @param buffer
+ * @return {@code true} if the buffer decode was successful. {@code false} if the buffer was not decoded.
+ */
+private boolean consumeResponse(ByteBuf buffer){
+  PristineFallbackCommand command=this.fallbackCommand;
+  if (command == null || !command.isDone()) {
+    if (debugEnabled) {
+      logger.debug("{} Consuming response using FallbackCommand",logPrefix());
+    }
+    if (command == null) {
+      command=new PristineFallbackCommand();
+      this.fallbackCommand=command;
+    }
+    if (!decode(buffer,command.getOutput())) {
+      return false;
+    }
+    if (isProtectedMode(command)) {
+      onProtectedMode(command.getOutput().getError());
+    }
+  }
+  return true;
+}

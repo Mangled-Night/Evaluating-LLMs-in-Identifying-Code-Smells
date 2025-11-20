@@ -1,0 +1,15 @@
+@SuppressWarnings("unchecked") private Mono<StatefulRedisMasterReplicaConnection<K,V>> initializeConnection(RedisCodec<K,V> codec,Tuple2<RedisURI,StatefulRedisConnection<K,V>> connectionAndUri){
+  ReplicaTopologyProvider topologyProvider=new ReplicaTopologyProvider(connectionAndUri.getT2(),connectionAndUri.getT1());
+  MasterReplicaTopologyRefresh refresh=new MasterReplicaTopologyRefresh(redisClient,topologyProvider);
+  MasterReplicaConnectionProvider<K,V> connectionProvider=new MasterReplicaConnectionProvider<>(redisClient,codec,redisURI,(Map)initialConnections);
+  Mono<List<RedisNodeDescription>> refreshFuture=refresh.getNodes(redisURI);
+  return refreshFuture.map(nodes -> {
+    EventRecorder.getInstance().record(new MasterReplicaTopologyChangedEvent(redisURI,nodes));
+    connectionProvider.setKnownNodes(nodes);
+    MasterReplicaChannelWriter channelWriter=new MasterReplicaChannelWriter(connectionProvider,redisClient.getResources());
+    StatefulRedisMasterReplicaConnectionImpl<K,V> connection=new StatefulRedisMasterReplicaConnectionImpl<>(channelWriter,codec,redisURI.getTimeout());
+    connection.setOptions(redisClient.getOptions());
+    return connection;
+  }
+);
+}

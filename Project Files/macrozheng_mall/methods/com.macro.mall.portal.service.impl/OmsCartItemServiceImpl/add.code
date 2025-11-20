@@ -1,0 +1,18 @@
+@Override public int add(OmsCartItem cartItem){
+  int count;
+  UmsMember currentMember=memberService.getCurrentMember();
+  cartItem.setMemberId(currentMember.getId());
+  cartItem.setMemberNickname(currentMember.getNickname());
+  cartItem.setDeleteStatus(0);
+  OmsCartItem existCartItem=getCartItem(cartItem);
+  if (existCartItem == null) {
+    cartItem.setCreateDate(new Date());
+    count=cartItemMapper.insert(cartItem);
+  }
+ else {
+    cartItem.setModifyDate(new Date());
+    existCartItem.setQuantity(existCartItem.getQuantity() + cartItem.getQuantity());
+    count=cartItemMapper.updateByPrimaryKey(existCartItem);
+  }
+  return count;
+}

@@ -1,0 +1,19 @@
+protected void setLimitIFChange(SQLStatement stmt,RouteResultset rrs,SchemaConfig schema,SQLBinaryOpExpr one,int firstrownum,int lastrownum){
+  rrs.setLimitStart(firstrownum);
+  rrs.setLimitSize(lastrownum - firstrownum);
+  LayerCachePool tableId2DataNodeCache=(LayerCachePool)MycatServer.getInstance().getCacheService().getCachePool("TableID2DataNodeCache");
+  try {
+    tryRoute(schema,rrs,tableId2DataNodeCache);
+  }
+ catch (  SQLNonTransientException e) {
+    throw new RuntimeException(e);
+  }
+  if (isNeedChangeLimit(rrs)) {
+    one.setRight(new SQLIntegerExpr(0));
+    String curentDbType="db2".equalsIgnoreCase(this.getCurentDbType()) ? "oracle" : getCurentDbType();
+    String sql=SQLUtils.toSQLString(stmt,curentDbType);
+    ;
+    rrs.changeNodeSqlAfterAddLimit(schema,getCurentDbType(),sql,0,lastrownum,false);
+    getCtx().setSql(sql);
+  }
+}

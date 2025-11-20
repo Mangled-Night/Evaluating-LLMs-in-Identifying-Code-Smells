@@ -1,0 +1,24 @@
+/** 
+ * IQ stanza to request joining the workgroup queue.
+ */
+private final class JoinQueuePacket extends IQ {
+  private final Jid userID;
+  private final DataForm form;
+  private JoinQueuePacket(  EntityBareJid workgroup,  DataForm answerForm,  Jid userID){
+    super("join-queue","http://jabber.org/protocol/workgroup");
+    this.userID=userID;
+    setTo(workgroup);
+    setType(IQ.Type.set);
+    form=answerForm;
+    addExtension(form);
+  }
+  @Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(  IQChildElementXmlStringBuilder buf){
+    buf.rightAngleBracket();
+    buf.append("<queue-notifications/>");
+    if (connection.isAnonymous()) {
+      buf.append(new UserID(userID).toXML());
+    }
+    buf.append(form.toXML());
+    return buf;
+  }
+}

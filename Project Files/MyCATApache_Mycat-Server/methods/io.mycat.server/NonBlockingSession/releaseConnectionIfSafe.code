@@ -1,0 +1,13 @@
+public void releaseConnectionIfSafe(BackendConnection conn,boolean debug,boolean needRollback){
+  RouteResultsetNode node=(RouteResultsetNode)conn.getAttachment();
+  if (node != null) {
+    if (MycatServer.getInstance().getConfig().getSystem().isStrictTxIsolation()) {
+      if ((!this.source.isAutocommit() && !conn.isFromSlaveDB()) || this.source.isLocked()) {
+        return;
+      }
+    }
+    if ((this.source.isAutocommit() || conn.isFromSlaveDB() || !conn.isModifiedSQLExecuted()) && !this.source.isLocked()) {
+      releaseConnection((RouteResultsetNode)conn.getAttachment(),LOGGER.isDebugEnabled(),needRollback);
+    }
+  }
+}

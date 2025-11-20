@@ -1,0 +1,41 @@
+public static <T extends FlowRenderable<T>>Iterable<LaidFlowLine<T>> getLines(Collection<T> flowRenderables,TextRenderStyle defaultRenderStyle,int yStart,ContainerRenderSpace containerRenderSpace){
+  int minWidth=determineMinWidth(flowRenderables,defaultRenderStyle);
+  int x=0;
+  int y=yStart;
+  int availableWidth=Math.max(minWidth,containerRenderSpace.getWidthForVerticalPosition(y));
+  List<LaidFlowLine<T>> result=new LinkedList<>();
+  int maxHeightInLine=0;
+  Deque<T> renderablesQueue=new LinkedList<>(flowRenderables);
+  List<T> renderablesInLine=new LinkedList<>();
+  while (!renderablesQueue.isEmpty()) {
+    FlowRenderable<T> flowRenderable=renderablesQueue.removeFirst();
+    FlowRenderable.SplitResult<T> splitResult=flowRenderable.splitAt(defaultRenderStyle,availableWidth - x);
+    if (splitResult.before == null) {
+      result.add(new DefaultLaidFlowLine<>(x,maxHeightInLine,renderablesInLine));
+      renderablesInLine=new LinkedList<>();
+      x=0;
+      y+=maxHeightInLine;
+      availableWidth=Math.max(minWidth,containerRenderSpace.getWidthForVerticalPosition(y));
+      maxHeightInLine=0;
+      renderablesQueue.addFirst(splitResult.rest);
+    }
+ else {
+      int renderableWidth=splitResult.before.getWidth(defaultRenderStyle);
+      int renderableHeight=splitResult.before.getHeight(defaultRenderStyle);
+      x+=renderableWidth;
+      maxHeightInLine=Math.max(maxHeightInLine,renderableHeight);
+      renderablesInLine.add(splitResult.before);
+      if (splitResult.rest != null) {
+        result.add(new DefaultLaidFlowLine<>(x,maxHeightInLine,renderablesInLine));
+        renderablesInLine=new LinkedList<>();
+        x=0;
+        y+=maxHeightInLine;
+        availableWidth=Math.max(minWidth,containerRenderSpace.getWidthForVerticalPosition(y));
+        maxHeightInLine=0;
+        renderablesQueue.addFirst(splitResult.rest);
+      }
+    }
+  }
+  result.add(new DefaultLaidFlowLine<>(x,maxHeightInLine,renderablesInLine));
+  return result;
+}

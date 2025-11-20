@@ -1,0 +1,39 @@
+/** 
+ * Open a new pub/sub connection to a Redis server that treats keys and values as UTF-8 strings.
+ * @return A new stateful pub/sub connection
+ */
+public StatefulRedisPubSubConnection<String,String> connectPubSub(){
+  return getConnection(connectPubSubAsync(newStringStringCodec(),this.redisURI,getDefaultTimeout()));
+}
+/** 
+ * Open a new pub/sub connection to a Redis server using the supplied  {@link RedisURI} that treats keys and values as UTF-8strings.
+ * @param redisURI the Redis server to connect to, must not be {@code null}
+ * @return A new stateful pub/sub connection
+ */
+public StatefulRedisPubSubConnection<String,String> connectPubSub(RedisURI redisURI){
+  assertNotNull(redisURI);
+  return getConnection(connectPubSubAsync(newStringStringCodec(),redisURI,redisURI.getTimeout()));
+}
+/** 
+ * Open a new pub/sub connection to the Redis server using the supplied  {@link RedisURI} and use the supplied{@link RedisCodec codec} to encode/decode keys and values.
+ * @param codec Use this codec to encode/decode keys and values, must not be {@code null}
+ * @param < K > Key type
+ * @param < V > Value type
+ * @return A new stateful pub/sub connection
+ */
+public <K,V>StatefulRedisPubSubConnection<K,V> connectPubSub(RedisCodec<K,V> codec){
+  checkForRedisURI();
+  return getConnection(connectPubSubAsync(codec,this.redisURI,getDefaultTimeout()));
+}
+/** 
+ * Open a new pub/sub connection to the Redis server using the supplied  {@link RedisURI} and use the supplied{@link RedisCodec codec} to encode/decode keys and values.
+ * @param codec Use this codec to encode/decode keys and values, must not be {@code null}
+ * @param redisURI the Redis server to connect to, must not be {@code null}
+ * @param < K > Key type
+ * @param < V > Value type
+ * @return A new connection
+ */
+public <K,V>StatefulRedisPubSubConnection<K,V> connectPubSub(RedisCodec<K,V> codec,RedisURI redisURI){
+  assertNotNull(redisURI);
+  return getConnection(connectPubSubAsync(codec,redisURI,redisURI.getTimeout()));
+}

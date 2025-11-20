@@ -1,0 +1,28 @@
+/** 
+ * Check that the server responds a 503 error code when the client sends an IQ stanza with an invalid namespace.
+ */
+public void testInvalidNamespace(){
+  IQ iq=new IQ(){
+    public String getChildElementXML(){
+      StringBuilder buf=new StringBuilder();
+      buf.append("<query xmlns=\"jabber:iq:anything\">");
+      buf.append("</query>");
+      return buf.toString();
+    }
+  }
+;
+  PacketFilter filter=new AndFilter(new PacketIDFilter(iq.getStanzaId()),new StanzaTypeFilter(IQ.class));
+  StanzaCollector collector=getConnection(0).createStanzaCollector(filter);
+  getConnection(0).sendStanza(iq);
+  IQ result=(IQ)collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
+  collector.cancel();
+  if (result == null) {
+    fail("No response from server");
+  }
+ else   if (result.getType() != IQ.Type.error) {
+    fail("The server didn't reply with an error packet");
+  }
+ else {
+    assertEquals("Server answered an incorrect error code",503,result.getError().getCode());
+  }
+}

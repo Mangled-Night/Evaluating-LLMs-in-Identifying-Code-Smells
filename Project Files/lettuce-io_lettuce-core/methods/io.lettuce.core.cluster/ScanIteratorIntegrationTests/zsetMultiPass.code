@@ -1,0 +1,11 @@
+@Test void zsetMultiPass(){
+  List<ScoredValue<String>> expected=new ArrayList<>();
+  for (int i=0; i < KeysAndValues.COUNT; i++) {
+    ScoredValue<String> scoredValue=ScoredValue.just(i,KeysAndValues.KEYS.get(i));
+    expected.add(scoredValue);
+    redis.zadd(key,scoredValue);
+  }
+  ScanIterator<ScoredValue<String>> scan=ScanIterator.zscan(redis,key);
+  List<ScoredValue<String>> values=scan.stream().collect(Collectors.toList());
+  assertThat(values).containsAll(values);
+}

@@ -1,0 +1,115 @@
+@Override public void run(){
+  statusField.setValue("Attempt to reconnect in " + seconds + " seconds");
+}
+@Override public void run(){
+  statusField.setValue("Reconnection failed");
+}
+@Override public void run(){
+  statusField.setValue("Closed");
+  EnhancedDebuggerWindow.connectionClosed(EnhancedDebugger.this);
+}
+@Override public void run(){
+  statusField.setValue("Closed due to an exception");
+  EnhancedDebuggerWindow.connectionClosedOnError(EnhancedDebugger.this,e);
+}
+@Override public void run(){
+  userField.setText(user.toString());
+  EnhancedDebuggerWindow.userHasLogged(debugger,user.toString());
+  connection.addConnectionListener(connListener);
+}
+@Override public void run(){
+  String messageType;
+  Jid from;
+  String stanzaId;
+  if (packet instanceof Stanza) {
+    Stanza stanza=(Stanza)packet;
+    from=stanza.getFrom();
+    stanzaId=stanza.getStanzaId();
+  }
+ else {
+    from=null;
+    stanzaId="(Nonza)";
+  }
+  String type="";
+  Icon packetTypeIcon;
+  receivedPackets++;
+  if (packet instanceof IQ) {
+    packetTypeIcon=iqPacketIcon;
+    messageType="IQ Received (class=" + packet.getClass().getName() + ")";
+    type=((IQ)packet).getType().toString();
+    receivedIQPackets++;
+  }
+ else   if (packet instanceof Message) {
+    packetTypeIcon=messagePacketIcon;
+    messageType="Message Received";
+    type=((Message)packet).getType().toString();
+    receivedMessagePackets++;
+  }
+ else   if (packet instanceof Presence) {
+    packetTypeIcon=presencePacketIcon;
+    messageType="Presence Received";
+    type=((Presence)packet).getType().toString();
+    receivedPresencePackets++;
+  }
+ else {
+    packetTypeIcon=unknownPacketTypeIcon;
+    messageType=packet.getClass().getName() + " Received";
+    receivedOtherPackets++;
+  }
+  if (EnhancedDebuggerWindow.MAX_TABLE_ROWS > 0 && messagesTable.getRowCount() >= EnhancedDebuggerWindow.MAX_TABLE_ROWS) {
+    messagesTable.removeRow(0);
+  }
+  messagesTable.addRow(new Object[]{XmlUtil.prettyFormatXml(packet.toXML().toString()),dateFormatter.format(new Date()),packetReceivedIcon,packetTypeIcon,messageType,stanzaId,type,"",from});
+  updateStatistics();
+}
+@Override public void run(){
+  String messageType;
+  Jid to;
+  String stanzaId;
+  if (packet instanceof Stanza) {
+    Stanza stanza=(Stanza)packet;
+    to=stanza.getTo();
+    stanzaId=stanza.getStanzaId();
+  }
+ else {
+    to=null;
+    stanzaId="(Nonza)";
+  }
+  String type="";
+  Icon packetTypeIcon;
+  sentPackets++;
+  if (packet instanceof IQ) {
+    packetTypeIcon=iqPacketIcon;
+    messageType="IQ Sent (class=" + packet.getClass().getName() + ")";
+    type=((IQ)packet).getType().toString();
+    sentIQPackets++;
+  }
+ else   if (packet instanceof Message) {
+    packetTypeIcon=messagePacketIcon;
+    messageType="Message Sent";
+    type=((Message)packet).getType().toString();
+    sentMessagePackets++;
+  }
+ else   if (packet instanceof Presence) {
+    packetTypeIcon=presencePacketIcon;
+    messageType="Presence Sent";
+    type=((Presence)packet).getType().toString();
+    sentPresencePackets++;
+  }
+ else {
+    packetTypeIcon=unknownPacketTypeIcon;
+    messageType=packet.getClass().getName() + " Sent";
+    sentOtherPackets++;
+  }
+  if (EnhancedDebuggerWindow.MAX_TABLE_ROWS > 0 && messagesTable.getRowCount() >= EnhancedDebuggerWindow.MAX_TABLE_ROWS) {
+    messagesTable.removeRow(0);
+  }
+  messagesTable.addRow(new Object[]{XmlUtil.prettyFormatXml(packet.toXML().toString()),dateFormatter.format(new Date()),packetSentIcon,packetTypeIcon,messageType,stanzaId,type,to,""});
+  updateStatistics();
+}
+@Override public void run(){
+  addReadPacketToTable(dateFormatter,streamElement);
+}
+@Override public void run(){
+  addSentPacketToTable(dateFormatter,streamElement);
+}

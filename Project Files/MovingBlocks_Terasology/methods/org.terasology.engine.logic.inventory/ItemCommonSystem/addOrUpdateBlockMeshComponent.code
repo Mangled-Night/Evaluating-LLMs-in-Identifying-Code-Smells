@@ -1,0 +1,25 @@
+public static void addOrUpdateBlockMeshComponent(BlockItemComponent blockItemComponent,MutableComponentContainer entity){
+  if (blockItemComponent != null) {
+    MeshComponent meshComponent=null;
+    if (entity.hasComponent(MeshComponent.class)) {
+      meshComponent=entity.getComponent(MeshComponent.class);
+    }
+ else {
+      meshComponent=new MeshComponent();
+    }
+    BlockFamily blockFamily=blockItemComponent.blockFamily;
+    if (blockFamily == null) {
+      return;
+    }
+    meshComponent.mesh=blockFamily.getArchetypeBlock().getMeshGenerator().getStandaloneMesh();
+    meshComponent.material=Assets.getMaterial("engine:terrain").get();
+    meshComponent.translucent=blockFamily.getArchetypeBlock().isTranslucent();
+    float luminance=blockFamily.getArchetypeBlock().getLuminance() / 15f;
+    meshComponent.selfLuminance=luminance;
+    if (luminance > 0 && !entity.hasComponent(LightComponent.class)) {
+      LightComponent lightComponent=entity.addComponent(new LightComponent());
+      lightComponent.lightAttenuationRange*=luminance;
+    }
+    entity.addOrSaveComponent(meshComponent);
+  }
+}

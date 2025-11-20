@@ -1,0 +1,50 @@
+private static class StatusSync {
+  private final Boolean autocommit;
+  private final Integer charsetIndex;
+  private final String schema;
+  private final AtomicInteger synCmdCount;
+  private final Integer txtIsolation;
+  private final boolean xaStarted;
+  private Boolean txReadonly;
+  public StatusSync(  boolean xaStarted,  String schema,  Integer charsetIndex,  Integer txtIsolation,  Boolean autocommit,  int synCount,  Boolean txReadonly){
+    super();
+    this.xaStarted=xaStarted;
+    this.schema=schema;
+    this.charsetIndex=charsetIndex;
+    this.txtIsolation=txtIsolation;
+    this.autocommit=autocommit;
+    this.synCmdCount=new AtomicInteger(synCount);
+    this.txReadonly=txReadonly;
+  }
+  public boolean synAndExecuted(  PostgreSQLBackendConnection conn){
+    int remains=synCmdCount.decrementAndGet();
+    if (remains == 0) {
+      this.updateConnectionInfo(conn);
+      conn.metaDataSyned=true;
+      return false;
+    }
+ else     if (remains < 0) {
+      return true;
+    }
+    return false;
+  }
+  private void updateConnectionInfo(  PostgreSQLBackendConnection conn){
+    conn.xaStatus=(xaStarted) ? 1 : 0;
+    if (schema != null) {
+      conn.schema=schema;
+      conn.oldSchema=conn.schema;
+    }
+    if (charsetIndex != null) {
+      conn.setCharset(CharsetUtil.getCharset(charsetIndex));
+    }
+    if (txtIsolation != null) {
+      conn.txIsolation=txtIsolation;
+    }
+    if (autocommit != null) {
+      conn.autocommit=autocommit;
+    }
+    if (txReadonly != null) {
+      conn.txReadonly=txReadonly;
+    }
+  }
+}

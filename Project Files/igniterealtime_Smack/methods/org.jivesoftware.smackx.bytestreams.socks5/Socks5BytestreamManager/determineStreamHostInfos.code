@@ -1,0 +1,24 @@
+/** 
+ * Returns a list of stream hosts containing the IP address an the port for the given list of SOCKS5 proxy JIDs. The order of the returned list is the same as the given list of JIDs excluding all SOCKS5 proxies who's network settings could not be determined. If a local SOCKS5 proxy is running it will be the first item in the list returned.
+ * @param proxies a list of SOCKS5 proxy JIDs
+ * @return a list of stream hosts containing the IP address an the port
+ */
+private List<StreamHost> determineStreamHostInfos(List<Jid> proxies){
+  XMPPConnection connection=connection();
+  List<StreamHost> streamHosts=new ArrayList<>();
+  if (annouceLocalStreamHost) {
+    List<StreamHost> localProxies=getLocalStreamHost();
+    streamHosts.addAll(localProxies);
+  }
+  for (  Jid proxy : proxies) {
+    Bytestream streamHostRequest=createStreamHostRequest(proxy);
+    try {
+      Bytestream response=connection.sendIqRequestAndWaitForResponse(streamHostRequest);
+      streamHosts.addAll(response.getStreamHosts());
+    }
+ catch (    Exception e) {
+      this.proxyBlacklist.add(proxy);
+    }
+  }
+  return streamHosts;
+}

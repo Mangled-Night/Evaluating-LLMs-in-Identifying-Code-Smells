@@ -1,0 +1,18 @@
+/** 
+ * Return a  {@link Serializable} {@link Type} backed by a {@link TypeProvider} .
+ */
+static Type forTypeProvider(final TypeProvider provider){
+  LettuceAssert.notNull(provider,"Provider must not be null");
+  if (provider.getType() instanceof Serializable || provider.getType() == null) {
+    return provider.getType();
+  }
+  for (  Class<?> type : SUPPORTED_SERIALIZABLE_TYPES) {
+    if (type.isAssignableFrom(provider.getType().getClass())) {
+      ClassLoader classLoader=provider.getClass().getClassLoader();
+      Class<?>[] interfaces=new Class<?>[]{type,SerializableTypeProxy.class,Serializable.class};
+      InvocationHandler handler=new TypeProxyInvocationHandler(provider);
+      return (Type)Proxy.newProxyInstance(classLoader,interfaces,handler);
+    }
+  }
+  throw new IllegalArgumentException("Unsupported Type class: " + provider.getType().getClass().getName());
+}

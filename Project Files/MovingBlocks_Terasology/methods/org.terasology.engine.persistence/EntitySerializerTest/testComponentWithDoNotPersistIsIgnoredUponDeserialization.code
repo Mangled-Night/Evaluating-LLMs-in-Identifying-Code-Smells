@@ -1,0 +1,14 @@
+@Test public void testComponentWithDoNotPersistIsIgnoredUponDeserialization(){
+  componentLibrary.register(new ResourceUrn("test","nonpersisted"),NonpersistedComponent.class);
+  EntityRef entity=entityManager.create();
+  entity.addComponent(new NonpersistedComponent());
+  entitySerializer.setComponentSerializeCheck(metadata -> true);
+  EntityData.Entity entityData=entitySerializer.serialize(entity);
+  long nextId=entityManager.getNextId();
+  entityManager.clear();
+  entityManager.setNextId(nextId);
+  entitySerializer.setComponentSerializeCheck(new PersistenceComponentSerializeCheck());
+  EntityRef loadedEntity=entitySerializer.deserialize(entityData);
+  assertTrue(loadedEntity.exists());
+  assertFalse(loadedEntity.hasComponent(NonpersistedComponent.class));
+}

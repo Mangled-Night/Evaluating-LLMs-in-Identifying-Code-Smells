@@ -1,0 +1,38 @@
+/** 
+ * Clean up all the entries in the roster
+ */
+private void cleanUpRoster(){
+  for (int i=0; i < getMaxConnections(); i++) {
+    Roster roster=getConnection(i).getRoster();
+    for (    RosterEntry entry : roster.getEntries()) {
+      try {
+        roster.removeEntry(entry);
+        Thread.sleep(100);
+      }
+ catch (      XMPPException e) {
+        e.printStackTrace();
+        fail(e.getMessage());
+      }
+catch (      InterruptedException e) {
+      }
+    }
+    try {
+      Thread.sleep(700);
+    }
+ catch (    InterruptedException e) {
+      fail(e.getMessage());
+    }
+  }
+  long initial=System.currentTimeMillis();
+  while (System.currentTimeMillis() - initial < 6000 && (getConnection(0).getRoster().getEntryCount() != 0 || getConnection(1).getRoster().getEntryCount() != 0)) {
+    try {
+      Thread.sleep(100);
+    }
+ catch (    InterruptedException e) {
+    }
+  }
+  assertEquals("Wrong number of entries in connection 0",0,getConnection(0).getRoster().getEntryCount());
+  assertEquals("Wrong number of groups in connection 0",0,getConnection(0).getRoster().getGroupCount());
+  assertEquals("Wrong number of entries in connection 1",0,getConnection(1).getRoster().getEntryCount());
+  assertEquals("Wrong number of groups in connection 1",0,getConnection(1).getRoster().getGroupCount());
+}

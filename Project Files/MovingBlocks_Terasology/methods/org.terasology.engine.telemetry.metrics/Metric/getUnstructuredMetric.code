@@ -1,0 +1,20 @@
+/** 
+ * Generates a snowplow unstructured event that the snowplow tracker can track.
+ * @return an snowplow unstructured event.
+ */
+public abstract Optional<Unstructured> getUnstructuredMetric();
+/** 
+ * Generates a snowplow unstructured event. This method helps to implement abstract getUnstructuredMetric method. You can find example in  {@link org.terasology.engine.telemetry.metrics.ModulesMetric}and  {@link org.terasology.engine.telemetry.metrics.SystemContextMetric}
+ * @param schema the snowplow event register schema.
+ * @param mapSentToServer the map that contains the data sent to the server.
+ * @return Null option if the mapSentToServer doesn't contain data.
+ */
+public Optional<Unstructured> getUnstructuredMetric(String schema,Map<String,Object> mapSentToServer){
+  Optional<Unstructured> optional=Optional.empty();
+  if (!isEmpty()) {
+    SelfDescribingJson modulesData=new SelfDescribingJson(schema,mapSentToServer);
+    Unstructured unstructured=Unstructured.builder().eventData(modulesData).build();
+    optional=Optional.of(unstructured);
+  }
+  return optional;
+}

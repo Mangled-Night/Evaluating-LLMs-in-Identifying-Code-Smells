@@ -1,0 +1,39 @@
+@Override public final void onClick(View v){
+  if (mIsGlobal) {
+    if (mEnabled) {
+      mEnabled=false;
+      v.postDelayed(ENABLE_AGAIN,mDuration);
+      onDebouncingClick(v);
+    }
+  }
+ else {
+    if (isValid(v,mDuration)) {
+      onDebouncingClick(v);
+    }
+  }
+}
+@Override public void onClick(View v){
+  if (mTriggerClickCount <= 1) {
+    onTriggerClick(v);
+    return;
+  }
+  long curTime=System.currentTimeMillis();
+  if (curTime - mLastClickTime < mClickInterval) {
+    mClickCount++;
+    if (mClickCount == mTriggerClickCount) {
+      onTriggerClick(v);
+    }
+ else     if (mClickCount < mTriggerClickCount) {
+      onBeforeTriggerClick(v,mClickCount);
+    }
+ else {
+      mClickCount=1;
+      onBeforeTriggerClick(v,mClickCount);
+    }
+  }
+ else {
+    mClickCount=1;
+    onBeforeTriggerClick(v,mClickCount);
+  }
+  mLastClickTime=curTime;
+}

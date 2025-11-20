@@ -1,0 +1,69 @@
+/** 
+ * MAM Preferences IQ Provider class.
+ * @see <a href="http://xmpp.org/extensions/xep-0313.html">XEP-0313: Message
+ *      Archive Management</a>
+ * @author Fernando Ramirez
+ */
+public class MamPrefsIQProvider extends IqProvider<MamPrefsIQ> {
+  public static final MamPrefsIQProvider INSTANCE=new MamPrefsIQProvider();
+  @Override public MamPrefsIQ parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    MamElementFactory elementFactory=MamElementFactory.forParser(parser);
+    String defaultBehaviorString=parser.getAttributeValue("","default");
+    DefaultBehavior defaultBehavior=null;
+    if (defaultBehaviorString != null) {
+      defaultBehavior=DefaultBehavior.valueOf(defaultBehaviorString);
+    }
+    List<Jid> alwaysJids=null;
+    List<Jid> neverJids=null;
+    outerloop:     while (true) {
+      final XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+        final String name=parser.getName();
+switch (name) {
+case "always":
+        alwaysJids=iterateJids(parser);
+      break;
+case "never":
+    neverJids=iterateJids(parser);
+  break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return elementFactory.newPrefsIQ(alwaysJids,neverJids,defaultBehavior);
+}
+private static List<Jid> iterateJids(XmlPullParser parser) throws XmlPullParserException, IOException {
+List<Jid> jids=new ArrayList<>();
+int initialDepth=parser.getDepth();
+outerloop: while (true) {
+final XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+final String name=parser.getName();
+switch (name) {
+case "jid":
+parser.next();
+jids.add(JidCreate.from(parser.getText()));
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return jids;
+}
+}

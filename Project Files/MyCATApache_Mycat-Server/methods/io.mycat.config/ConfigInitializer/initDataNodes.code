@@ -1,0 +1,13 @@
+private Map<String,PhysicalDBNode> initDataNodes(ConfigLoader configLoader){
+  Map<String,DataNodeConfig> nodeConfs=configLoader.getDataNodes();
+  Map<String,PhysicalDBNode> nodes=new HashMap<String,PhysicalDBNode>(nodeConfs.size());
+  for (  DataNodeConfig conf : nodeConfs.values()) {
+    PhysicalDBPool pool=this.dataHosts.get(conf.getDataHost());
+    if (pool == null) {
+      throw new ConfigException("dataHost not exists " + conf.getDataHost());
+    }
+    PhysicalDBNode dataNode=new PhysicalDBNode(conf.getName(),conf.getDatabase(),pool);
+    nodes.put(dataNode.getName(),dataNode);
+  }
+  return nodes;
+}

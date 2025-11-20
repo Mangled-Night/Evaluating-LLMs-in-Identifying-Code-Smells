@@ -1,0 +1,18 @@
+@Test public void testBlockedSunlightRegenPropagationResets(){
+  Chunk chunk=new ChunkImpl(0,0,0,blockManager,extraDataManager);
+  for (  Vector3ic pos : new BlockRegion(0,60,0).setSize(Chunks.SIZE_X,1,Chunks.SIZE_Z)) {
+    chunk.setBlock(pos,solidBlock);
+  }
+  InternalLightProcessor.generateInternalLighting(chunk);
+  for (  Vector3ic pos : new BlockRegion(0,61,0).setSize(Chunks.SIZE_X,3,Chunks.SIZE_Z)) {
+    byte expectedRegen=(byte)Math.min(Chunks.SIZE_Y - pos.y() - 1,Chunks.MAX_SUNLIGHT_REGEN);
+    assertEquals(expectedRegen,chunk.getSunlightRegen(pos));
+  }
+  for (  Vector3ic pos : new BlockRegion(0,60,0).setSize(Chunks.SIZE_X,1,Chunks.SIZE_Z)) {
+    assertEquals(0,chunk.getSunlightRegen(pos));
+  }
+  for (  Vector3ic pos : new BlockRegion(0,0,0).setSize(Chunks.SIZE_X,59,Chunks.SIZE_Z)) {
+    byte expectedRegen=(byte)Math.min(60 - pos.y() - 1,Chunks.MAX_SUNLIGHT_REGEN);
+    assertEquals(expectedRegen,chunk.getSunlightRegen(pos));
+  }
+}

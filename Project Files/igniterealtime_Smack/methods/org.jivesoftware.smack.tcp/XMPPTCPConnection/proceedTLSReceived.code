@@ -1,0 +1,42 @@
+/** 
+ * The server has indicated that TLS negotiation can start. We now need to secure the existing plain connection and perform a handshake. This method won't return until the connection has finished the handshake or an error occurred while securing the connection.
+ * @throws IOException if an I/O error occurred.
+ * @throws SecurityNotPossibleException if TLS is not possible.
+ * @throws CertificateException if there is an issue with the certificate.
+ */
+@SuppressWarnings("LiteralClassName") private void proceedTLSReceived() throws IOException, SecurityNotPossibleException, CertificateException {
+  SmackTlsContext smackTlsContext=getSmackTlsContext();
+  Socket plain=socket;
+  int port=plain.getPort();
+  String xmppServiceDomainString=config.getXMPPServiceDomain().toString();
+  SSLSocketFactory sslSocketFactory=smackTlsContext.sslContext.getSocketFactory();
+  socket=sslSocketFactory.createSocket(plain,xmppServiceDomainString,port,true);
+  final SSLSocket sslSocket=(SSLSocket)socket;
+  TLSUtils.setEnabledProtocolsAndCiphers(sslSocket,config.getEnabledSSLProtocols(),config.getEnabledSSLCiphers());
+  initReaderAndWriter();
+  sslSocket.startHandshake();
+  if (smackTlsContext.daneVerifier != null) {
+    smackTlsContext.daneVerifier.finish(sslSocket.getSession());
+  }
+  final HostnameVerifier verifier=getConfiguration().getHostnameVerifier();
+  if (verifier == null) {
+    throw new IllegalStateException("No HostnameVerifier set. Use connectionConfiguration.setHostnameVerifier() to configure.");
+  }
+  final String verifierHostname;
+{
+    DnsName xmppServiceDomainDnsName=getConfiguration().getXmppServiceDomainAsDnsNameIfPossible();
+    if (xmppServiceDomainDnsName != null) {
+      verifierHostname=xmppServiceDomainDnsName.ace;
+    }
+ else {
+      LOGGER.log(Level.WARNING,"XMPP service domain name '" + getXMPPServiceDomain() + "' can not be represented as DNS name. TLS X.509 certificate validiation may fail.");
+      verifierHostname=getXMPPServiceDomain().toString();
+    }
+  }
+  final boolean verificationSuccessful;
+  verificationSuccessful=verifier.verify(verifierHostname,sslSocket.getSession());
+  if (!verificationSuccessful) {
+    throw new CertificateException("Hostname verification of certificate failed. Certificate does not authenticate " + getXMPPServiceDomain());
+  }
+  secureSocket=sslSocket;
+}

@@ -1,0 +1,22 @@
+private void initZkDnindex(){
+  try {
+    File file=new File(SystemConfig.getHomePath(),"conf" + File.separator + "dnindex.properties");
+    dnindexLock.acquire(30,TimeUnit.SECONDS);
+    String path=ZKUtils.getZKBasePath() + "bindata/dnindex.properties";
+    CuratorFramework zk=ZKUtils.getConnection();
+    if (zk.checkExists().forPath(path) == null) {
+      zk.create().creatingParentsIfNeeded().forPath(path,Files.toByteArray(file));
+    }
+  }
+ catch (  Exception e) {
+    throw new RuntimeException(e);
+  }
+ finally {
+    try {
+      dnindexLock.release();
+    }
+ catch (    Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+}

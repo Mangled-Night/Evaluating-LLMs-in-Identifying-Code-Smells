@@ -1,0 +1,37 @@
+@Override public void run(){
+  incrSequenceZKHandler[a]=new IncrSequenceZKHandler();
+  Properties props=PropertiesUtil.loadProps("sequence_conf.properties");
+  try {
+    incrSequenceZKHandler[a].initializeZK(props,testingServer.getConnectString());
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+  }
+  Thread threads[]=new Thread[threadCount];
+  for (int j=0; j < threadCount; j++) {
+    threads[j]=new Thread(){
+      @Override public void run(){
+        for (int k=0; k < LOOP; k++) {
+          long key=incrSequenceZKHandler[a].nextId("GLOBAL");
+          results.add(key);
+        }
+      }
+    }
+;
+    threads[j].start();
+  }
+  for (int j=0; j < threadCount; j++) {
+    try {
+      threads[j].join();
+    }
+ catch (    InterruptedException e) {
+      e.printStackTrace();
+    }
+  }
+}
+@Override public void run(){
+  for (int k=0; k < LOOP; k++) {
+    long key=incrSequenceZKHandler[a].nextId("GLOBAL");
+    results.add(key);
+  }
+}

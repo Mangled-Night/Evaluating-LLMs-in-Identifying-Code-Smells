@@ -1,0 +1,60 @@
+@Override protected List<InetAddress> lookupHostAddress0(final DnsName name,List<RemoteConnectionEndpointLookupFailure> lookupFailures,DnssecMode dnssecMode){
+  final ResolverApi resolver=getResolver(dnssecMode);
+  final ResolverResult<A> aResult;
+  final ResolverResult<AAAA> aaaaResult;
+  try {
+    aResult=resolver.resolve(name,A.class);
+    aaaaResult=resolver.resolve(name,AAAA.class);
+  }
+ catch (  IOException e) {
+    RemoteConnectionEndpointLookupFailure failure=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,e);
+    lookupFailures.add(failure);
+    return null;
+  }
+  if (!aResult.wasSuccessful() && !aaaaResult.wasSuccessful()) {
+    RemoteConnectionEndpointLookupFailure failureA=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,getExceptionFrom(aResult));
+    lookupFailures.add(failureA);
+    RemoteConnectionEndpointLookupFailure failureAaaa=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,getExceptionFrom(aaaaResult));
+    lookupFailures.add(failureAaaa);
+    return null;
+  }
+  if (shouldAbortIfNotAuthentic(name,dnssecMode,aResult,lookupFailures) || shouldAbortIfNotAuthentic(name,dnssecMode,aaaaResult,lookupFailures)) {
+    return null;
+  }
+  Set<A> aResults;
+  if (aResult.wasSuccessful()) {
+    aResults=aResult.getAnswers();
+  }
+ else {
+    aResults=Collections.emptySet();
+  }
+  Set<AAAA> aaaaResults;
+  if (aaaaResult.wasSuccessful()) {
+    aaaaResults=aaaaResult.getAnswers();
+  }
+ else {
+    aaaaResults=Collections.emptySet();
+  }
+  List<InetAddress> inetAddresses=new ArrayList<>(aResults.size() + aaaaResults.size());
+  for (  A a : aResults) {
+    InetAddress inetAddress;
+    try {
+      inetAddress=InetAddress.getByAddress(a.getIp());
+    }
+ catch (    UnknownHostException e) {
+      continue;
+    }
+    inetAddresses.add(inetAddress);
+  }
+  for (  AAAA aaaa : aaaaResults) {
+    InetAddress inetAddress;
+    try {
+      inetAddress=InetAddress.getByAddress(name.ace,aaaa.getIp());
+    }
+ catch (    UnknownHostException e) {
+      continue;
+    }
+    inetAddresses.add(inetAddress);
+  }
+  return inetAddresses;
+}

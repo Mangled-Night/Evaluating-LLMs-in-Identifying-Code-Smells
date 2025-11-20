@@ -1,0 +1,32 @@
+public boolean onUtilsStop(View view,MotionEvent event){
+  int x=(int)event.getRawX();
+  int y=(int)event.getRawY();
+  int vx=0, vy=0;
+  if (velocityTracker != null) {
+    velocityTracker.computeCurrentVelocity(1000,maximumFlingVelocity);
+    vx=(int)velocityTracker.getXVelocity();
+    vy=(int)velocityTracker.getYVelocity();
+    velocityTracker.recycle();
+    if (Math.abs(vx) < minimumFlingVelocity) {
+      vx=0;
+    }
+    if (Math.abs(vy) < minimumFlingVelocity) {
+      vy=0;
+    }
+    velocityTracker=null;
+  }
+  view.setPressed(false);
+  boolean consumeStop=onStop(view,direction,x,y,x - downX,y - downY,vx,vy,event);
+  if (event.getAction() == MotionEvent.ACTION_UP) {
+    if (state == STATE_DOWN) {
+      if (event.getEventTime() - event.getDownTime() <= MIN_TAP_TIME) {
+        view.performClick();
+      }
+ else {
+        view.performLongClick();
+      }
+    }
+  }
+  resetTouch(-1,-1);
+  return consumeStop;
+}

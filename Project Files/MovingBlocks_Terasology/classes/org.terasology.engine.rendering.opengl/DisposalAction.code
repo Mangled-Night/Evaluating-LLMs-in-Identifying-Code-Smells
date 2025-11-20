@@ -1,0 +1,135 @@
+private static class DisposalAction implements DisposableResource {
+  private final ResourceUrn urn;
+  private final LwjglGraphicsProcessing graphicsProcessing;
+  private TIntIntMap shaderPrograms=new TIntIntHashMap();
+  DisposalAction(  ResourceUrn urn,  LwjglGraphicsProcessing graphicsProcessing){
+    this.urn=urn;
+    this.graphicsProcessing=graphicsProcessing;
+  }
+  @Override public void close(){
+    try {
+      GameThread.synch(() -> {
+        logger.debug("Disposing material {}.",urn);
+        final TIntIntMap deletedPrograms=new TIntIntHashMap(shaderPrograms);
+        graphicsProcessing.asynchToDisplayThread(() -> {
+          TIntIntIterator it=deletedPrograms.iterator();
+          while (it.hasNext()) {
+            it.advance();
+            GL20.glDeleteProgram(it.value());
+          }
+        }
+);
+        shaderPrograms.clear();
+      }
+);
+    }
+ catch (    InterruptedException e) {
+      logger.error("Failed to dispose {}",urn,e);
+    }
+  }
+}
+public static class DisposalAction implements DisposableResource {
+  private final ResourceUrn urn;
+  private final LwjglGraphicsProcessing graphicsProcessing;
+  private final TIntIntMap fragmentPrograms=new TIntIntHashMap();
+  private final TIntIntMap vertexPrograms=new TIntIntHashMap();
+  private final TIntIntMap geometryPrograms=new TIntIntHashMap();
+  public DisposalAction(  ResourceUrn urn,  LwjglGraphicsProcessing graphicsProcessing){
+    this.urn=urn;
+    this.graphicsProcessing=graphicsProcessing;
+  }
+  private void disposeData(){
+    disposePrograms(fragmentPrograms);
+    disposePrograms(vertexPrograms);
+    disposePrograms(geometryPrograms);
+  }
+  private void disposePrograms(  TIntIntMap programs){
+    final TIntIntMap disposedPrograms=new TIntIntHashMap(programs);
+    graphicsProcessing.asynchToDisplayThread(() -> {
+      TIntIntIterator it=disposedPrograms.iterator();
+      while (it.hasNext()) {
+        it.advance();
+        GL20.glDeleteShader(it.value());
+      }
+    }
+);
+    programs.clear();
+  }
+  @Override public void close(){
+    logger.debug("Disposing shader {}.",urn);
+    try {
+      GameThread.synch(this::disposeData);
+    }
+ catch (    InterruptedException e) {
+      logger.error("Failed to dispose {}",urn,e);
+    }
+  }
+}
+private static class DisposalAction implements DisposableResource {
+  private final ResourceUrn urn;
+  private int vao=0;
+  private int vbo=0;
+  private int ebo=0;
+  DisposalAction(  ResourceUrn urn){
+    this.urn=urn;
+  }
+  public void dispose(){
+    if (vao != 0) {
+      GL30.glDeleteVertexArrays(vao);
+    }
+    if (vbo != 0) {
+      GL30.glDeleteBuffers(vbo);
+    }
+    if (ebo != 0) {
+      GL30.glDeleteBuffers(ebo);
+    }
+    vao=0;
+    vbo=0;
+    ebo=0;
+  }
+  @Override public void close(){
+    try {
+      GameThread.synch(() -> {
+        dispose();
+      }
+);
+    }
+ catch (    InterruptedException e) {
+      logger.error("Failed to dispose {}",urn,e);
+    }
+  }
+}
+private static class DisposalAction implements DisposableResource {
+  private final ResourceUrn urn;
+  private int vao=0;
+  private int vbo=0;
+  private int ebo=0;
+  DisposalAction(  ResourceUrn urn){
+    this.urn=urn;
+  }
+  public void dispose(){
+    if (vao != 0) {
+      GL30.glDeleteVertexArrays(vao);
+    }
+    if (vbo != 0) {
+      GL30.glDeleteBuffers(vbo);
+    }
+    if (ebo != 0) {
+      GL30.glDeleteBuffers(ebo);
+    }
+    vao=0;
+    vbo=0;
+    ebo=0;
+  }
+  @Override public void close(){
+    try {
+      GameThread.synch(() -> {
+        dispose();
+      }
+);
+    }
+ catch (    InterruptedException e) {
+      logger.error("Failed to dispose {}",urn,e);
+    }
+  }
+}

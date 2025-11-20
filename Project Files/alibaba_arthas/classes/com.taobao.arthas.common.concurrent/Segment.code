@@ -1,0 +1,300 @@
+/** 
+ * Segments are specialized versions of hash tables.  This subclasses from ReentrantLock opportunistically, just to simplify some locking and avoid separate construction.
+ */
+static final class Segment<K,V> extends ReentrantLock {
+  private static final long serialVersionUID=-8328104880676891126L;
+  /** 
+ * The number of elements in this segment's region.
+ */
+  transient volatile int count;
+  /** 
+ * Number of updates that alter the size of the table. This is used during bulk-read methods to make sure they see a consistent snapshot: If modCounts change during a traversal of segments computing size or checking containsValue, then we might have an inconsistent view of state so (usually) must retry.
+ */
+  int modCount;
+  /** 
+ * The table is rehashed when its size exceeds this threshold. (The value of this field is always <tt>(capacity * loadFactor)</tt>.)
+ */
+  int threshold;
+  /** 
+ * The per-segment table.
+ */
+  transient volatile HashEntry<K,V>[] table;
+  /** 
+ * The load factor for the hash table.  Even though this value is same for all segments, it is replicated to avoid needing links to outer object.
+ */
+  final float loadFactor;
+  /** 
+ * The collected weak-key reference queue for this segment. This should be (re)initialized whenever table is assigned,
+ */
+  transient volatile ReferenceQueue<Object> refQueue;
+  Segment(  int initialCapacity,  float lf){
+    loadFactor=lf;
+    setTable(HashEntry.<K,V>newArray(initialCapacity));
+  }
+  @SuppressWarnings("unchecked") static <K,V>Segment<K,V>[] newArray(  int i){
+    return new Segment[i];
+  }
+  private static boolean keyEq(  Object src,  Object dest){
+    return src.equals(dest);
+  }
+  /** 
+ * Sets table to new HashEntry array. Call only while holding lock or in constructor.
+ */
+  void setTable(  HashEntry<K,V>[] newTable){
+    threshold=(int)(newTable.length * loadFactor);
+    table=newTable;
+    refQueue=new ReferenceQueue<Object>();
+  }
+  /** 
+ * Returns properly casted first entry of bin for given hash.
+ */
+  HashEntry<K,V> getFirst(  int hash){
+    HashEntry<K,V>[] tab=table;
+    return tab[hash & tab.length - 1];
+  }
+  HashEntry<K,V> newHashEntry(  K key,  int hash,  HashEntry<K,V> next,  V value){
+    return new HashEntry<K,V>(key,hash,next,value,refQueue);
+  }
+  /** 
+ * Reads value field of an entry under lock. Called if value field ever appears to be null. This is possible only if a compiler happens to reorder a HashEntry initialization with its table assignment, which is legal under memory model but is not known to ever occur.
+ */
+  V readValueUnderLock(  HashEntry<K,V> e){
+    lock();
+    try {
+      removeStale();
+      return e.value();
+    }
+  finally {
+      unlock();
+    }
+  }
+  V get(  Object key,  int hash){
+    if (count != 0) {
+      HashEntry<K,V> e=getFirst(hash);
+      while (e != null) {
+        if (e.hash == hash && keyEq(key,e.key())) {
+          Object opaque=e.valueRef;
+          if (opaque != null) {
+            return e.dereferenceValue(opaque);
+          }
+          return readValueUnderLock(e);
+        }
+        e=e.next;
+      }
+    }
+    return null;
+  }
+  boolean containsKey(  Object key,  int hash){
+    if (count != 0) {
+      HashEntry<K,V> e=getFirst(hash);
+      while (e != null) {
+        if (e.hash == hash && keyEq(key,e.key())) {
+          return true;
+        }
+        e=e.next;
+      }
+    }
+    return false;
+  }
+  boolean containsValue(  Object value){
+    if (count != 0) {
+      for (      HashEntry<K,V> e : table) {
+        for (; e != null; e=e.next) {
+          Object opaque=e.valueRef;
+          V v;
+          if (opaque == null) {
+            v=readValueUnderLock(e);
+          }
+ else {
+            v=e.dereferenceValue(opaque);
+          }
+          if (value.equals(v)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+  boolean replace(  K key,  int hash,  V oldValue,  V newValue){
+    lock();
+    try {
+      removeStale();
+      HashEntry<K,V> e=getFirst(hash);
+      while (e != null && (e.hash != hash || !keyEq(key,e.key()))) {
+        e=e.next;
+      }
+      boolean replaced=false;
+      if (e != null && oldValue.equals(e.value())) {
+        replaced=true;
+        e.setValue(newValue);
+      }
+      return replaced;
+    }
+  finally {
+      unlock();
+    }
+  }
+  V replace(  K key,  int hash,  V newValue){
+    lock();
+    try {
+      removeStale();
+      HashEntry<K,V> e=getFirst(hash);
+      while (e != null && (e.hash != hash || !keyEq(key,e.key()))) {
+        e=e.next;
+      }
+      V oldValue=null;
+      if (e != null) {
+        oldValue=e.value();
+        e.setValue(newValue);
+      }
+      return oldValue;
+    }
+  finally {
+      unlock();
+    }
+  }
+  V put(  K key,  int hash,  V value,  boolean onlyIfAbsent){
+    lock();
+    try {
+      removeStale();
+      int c=count;
+      if (c++ > threshold) {
+        int reduced=rehash();
+        if (reduced > 0) {
+          count=(c-=reduced) - 1;
+        }
+      }
+      HashEntry<K,V>[] tab=table;
+      int index=hash & tab.length - 1;
+      HashEntry<K,V> first=tab[index];
+      HashEntry<K,V> e=first;
+      while (e != null && (e.hash != hash || !keyEq(key,e.key()))) {
+        e=e.next;
+      }
+      V oldValue;
+      if (e != null) {
+        oldValue=e.value();
+        if (!onlyIfAbsent) {
+          e.setValue(value);
+        }
+      }
+ else {
+        oldValue=null;
+        ++modCount;
+        tab[index]=newHashEntry(key,hash,first,value);
+        count=c;
+      }
+      return oldValue;
+    }
+  finally {
+      unlock();
+    }
+  }
+  int rehash(){
+    HashEntry<K,V>[] oldTable=table;
+    int oldCapacity=oldTable.length;
+    if (oldCapacity >= MAXIMUM_CAPACITY) {
+      return 0;
+    }
+    HashEntry<K,V>[] newTable=HashEntry.newArray(oldCapacity << 1);
+    threshold=(int)(newTable.length * loadFactor);
+    int sizeMask=newTable.length - 1;
+    int reduce=0;
+    for (    HashEntry<K,V> e : oldTable) {
+      if (e != null) {
+        HashEntry<K,V> next=e.next;
+        int idx=e.hash & sizeMask;
+        if (next == null) {
+          newTable[idx]=e;
+        }
+ else {
+          HashEntry<K,V> lastRun=e;
+          int lastIdx=idx;
+          for (HashEntry<K,V> last=next; last != null; last=last.next) {
+            int k=last.hash & sizeMask;
+            if (k != lastIdx) {
+              lastIdx=k;
+              lastRun=last;
+            }
+          }
+          newTable[lastIdx]=lastRun;
+          for (HashEntry<K,V> p=e; p != lastRun; p=p.next) {
+            K key=p.key();
+            if (key == null) {
+              reduce++;
+              continue;
+            }
+            int k=p.hash & sizeMask;
+            HashEntry<K,V> n=newTable[k];
+            newTable[k]=newHashEntry(key,p.hash,n,p.value());
+          }
+        }
+      }
+    }
+    table=newTable;
+    return reduce;
+  }
+  /** 
+ * Remove; match on key only if value null, else match both.
+ */
+  V remove(  Object key,  int hash,  Object value,  boolean refRemove){
+    lock();
+    try {
+      if (!refRemove) {
+        removeStale();
+      }
+      int c=count - 1;
+      HashEntry<K,V>[] tab=table;
+      int index=hash & tab.length - 1;
+      HashEntry<K,V> first=tab[index];
+      HashEntry<K,V> e=first;
+      while (e != null && key != e.keyRef && (refRemove || hash != e.hash || !keyEq(key,e.key()))) {
+        e=e.next;
+      }
+      V oldValue=null;
+      if (e != null) {
+        V v=e.value();
+        if (value == null || value.equals(v)) {
+          oldValue=v;
+          ++modCount;
+          HashEntry<K,V> newFirst=e.next;
+          for (HashEntry<K,V> p=first; p != e; p=p.next) {
+            K pKey=p.key();
+            if (pKey == null) {
+              c--;
+              continue;
+            }
+            newFirst=newHashEntry(pKey,p.hash,newFirst,p.value());
+          }
+          tab[index]=newFirst;
+          count=c;
+        }
+      }
+      return oldValue;
+    }
+  finally {
+      unlock();
+    }
+  }
+  @SuppressWarnings("rawtypes") void removeStale(){
+    WeakKeyReference ref;
+    while ((ref=(WeakKeyReference)refQueue.poll()) != null) {
+      remove(ref.keyRef(),ref.keyHash(),null,true);
+    }
+  }
+  void clear(){
+    if (count != 0) {
+      lock();
+      try {
+        Arrays.fill(table,null);
+        ++modCount;
+        refQueue=new ReferenceQueue<Object>();
+        count=0;
+      }
+  finally {
+        unlock();
+      }
+    }
+  }
+}

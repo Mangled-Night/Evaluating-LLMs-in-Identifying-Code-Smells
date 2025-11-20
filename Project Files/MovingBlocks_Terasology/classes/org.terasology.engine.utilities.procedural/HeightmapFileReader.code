@@ -1,0 +1,49 @@
+/** 
+ * Reads a heightmap encoded in a textfile
+ */
+public final class HeightmapFileReader {
+  private HeightmapFileReader(){
+  }
+  public static void convertFileToTexture() throws IOException {
+    float[][] heightmap=readFile();
+    double scaleFactor=256 * 256 * 12.8;
+    BufferedImage image=new BufferedImage(512,512,BufferedImage.TYPE_INT_RGB);
+    DataBufferInt buffer=(DataBufferInt)image.getRaster().getDataBuffer();
+    for (int x=0; x < 512; x++) {
+      for (int z=0; z < 512; z++) {
+        double doubleVal=heightmap[x][z] * scaleFactor;
+        int val=DoubleMath.roundToInt(doubleVal,RoundingMode.HALF_UP);
+        buffer.setElem(z * 512 + x,val);
+      }
+    }
+    ImageIO.write(image,"png",new File("platec_heightmap.png"));
+  }
+  public static float[][] readFile() throws IOException {
+    String file="Heightmap.txt";
+    String delimiter="\n";
+    try (InputStream fis=new FileInputStream(file)){
+      return readValues(fis,delimiter);
+    }
+   }
+  public static float[][] readValues(  java.io.InputStream in,  String delimiter) throws java.io.IOException, java.lang.NumberFormatException {
+    String thisLine;
+    java.io.BufferedInputStream s=new java.io.BufferedInputStream(in);
+    java.io.BufferedReader myInput=new java.io.BufferedReader(new java.io.InputStreamReader(s,Charsets.UTF_8));
+    int index=0;
+    float min=0;
+    float max=0;
+    float[][] theMap=new float[512][512];
+    while ((thisLine=myInput.readLine()) != null) {
+      java.util.StringTokenizer st=new java.util.StringTokenizer(thisLine,delimiter);
+      float a=Float.valueOf(st.nextToken());
+      theMap[index / 512][index % 512]=a;
+      index++;
+      min=a < min ? a : min;
+      max=a > max ? a : max;
+      if (index / 512 > 511) {
+        break;
+      }
+    }
+    return (theMap);
+  }
+}

@@ -1,0 +1,105 @@
+public void rollback(){
+  final int initCount=session.getTargetCount();
+  lock.lock();
+  try {
+    reset(initCount);
+  }
+  finally {
+    lock.unlock();
+  }
+  if (session.closed()) {
+    decrementCountToZero();
+    return;
+  }
+  int start=0;
+  boolean hasClose=false;
+  for (  final RouteResultsetNode node : session.getTargetKeys()) {
+    if (node == null) {
+      LOGGER.error("null is contained in RoutResultsetNodes, source = " + session.getSource());
+      hasClose=true;
+      break;
+    }
+    final BackendConnection conn=session.getTarget(node);
+    if (conn != null) {
+      boolean isClosed=conn.isClosedOrQuit();
+      if (isClosed) {
+        hasClose=true;
+      }
+ else {
+        start++;
+      }
+    }
+  }
+  if (hasClose && session.getXaTXID() == null) {
+    LOGGER.warn("find close back conn close ,so close all back connection" + session.getSource());
+    session.setAutoCommitStatus();
+    this.setFail("receive rollback,but find backend con is closed or quit");
+    this.tryErrorFinished(true);
+    return;
+  }
+  lock.lock();
+  try {
+    reset(start);
+  }
+  finally {
+    lock.unlock();
+  }
+  boolean writeCheckPoint=false;
+  for (  final RouteResultsetNode node : session.getTargetKeys()) {
+    if (node == null) {
+      LOGGER.error("null is contained in RoutResultsetNodes, source = " + session.getSource());
+      continue;
+    }
+    final BackendConnection conn=session.getTarget(node);
+    if (conn != null) {
+      boolean isClosed=conn.isClosedOrQuit();
+      if (isClosed) {
+        this.setFail("receive rollback,but find backend con is closed or quit");
+        LOGGER.error(conn + "receive rollback,but fond backend con is closed or quit");
+        continue;
+      }
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("rollback job run for " + conn);
+      }
+      if (clearIfSessionClosed(session)) {
+        return;
+      }
+      conn.setResponseHandler(RollbackNodeHandler.this);
+      if (session.getXaTXID() != null && conn instanceof MySQLConnection) {
+        MySQLConnection mysqlCon=(MySQLConnection)conn;
+        String xaTxId=session.getXaTXID();
+        CoordinatorLogEntry coordinatorLogEntry=MultiNodeCoordinator.inMemoryRepository.get(xaTxId);
+        if (coordinatorLogEntry != null) {
+          writeCheckPoint=true;
+          for (int i=0; i < coordinatorLogEntry.participants.length; i++) {
+            if (coordinatorLogEntry.participants[i].resourceName.equals(conn.getSchema())) {
+              coordinatorLogEntry.participants[i].txState=TxState.TX_ROLLBACKED_STATE;
+            }
+          }
+          MultiNodeCoordinator.inMemoryRepository.put(xaTxId,coordinatorLogEntry);
+        }
+        xaTxId=session.getXaTXID() + ",'" + mysqlCon.getSchema()+ "'";
+        if (mysqlCon.getXaStatus() == TxState.TX_STARTED_STATE) {
+          String[] cmds=new String[]{"XA END " + xaTxId + ""," XA ROLLBACK " + xaTxId + ";"};
+          mysqlCon.execBatchCmd(cmds);
+        }
+ else         if (mysqlCon.getXaStatus() == TxState.TX_PREPARED_STATE) {
+          String[] cmds=new String[]{" XA ROLLBACK " + xaTxId + ";"};
+          mysqlCon.execBatchCmd(cmds);
+        }
+ else {
+          LOGGER.warn("{} xaStat is {} ,to rollback is error",mysqlCon,mysqlCon.getXaStatus());
+        }
+        mysqlCon.setXaStatus(TxState.TX_ROLLBACKED_STATE);
+      }
+ else {
+        if (!conn.isClosedOrQuit()) {
+          conn.rollback();
+        }
+      }
+    }
+  }
+  if (writeCheckPoint) {
+    MultiNodeCoordinator.fileRepository.writeCheckpoint(session.getXaTXID(),MultiNodeCoordinator.inMemoryRepository.getAllCoordinatorLogEntries());
+  }
+}

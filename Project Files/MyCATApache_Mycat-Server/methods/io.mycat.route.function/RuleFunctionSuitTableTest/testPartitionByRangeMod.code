@@ -1,0 +1,21 @@
+@Test public void testPartitionByRangeMod(){
+  PartitionByRangeMod partition=new PartitionByRangeMod();
+  partition.setMapFile("partition-range-mod.txt");
+  partition.init();
+  Assert.assertEquals(20,partition.getPartitionNum());
+  RuleConfig rule=new RuleConfig("id","partition-range-mod");
+  rule.setRuleAlgorithm(partition);
+  TableConfig tableConf=new TableConfig("test","id",true,false,-1,"dn$1-10",null,rule,true,null,false,null,null,null,false);
+  int suit1=partition.suitableFor(tableConf);
+  Assert.assertEquals(-1,suit1);
+  tableConf.getDataNodes().clear();
+  String[] dataNodes=SplitUtil.split("dn$1-20",',','$','-');
+  tableConf.getDataNodes().addAll(Arrays.asList(dataNodes));
+  int suit2=partition.suitableFor(tableConf);
+  Assert.assertEquals(0,suit2);
+  tableConf.getDataNodes().clear();
+  dataNodes=SplitUtil.split("dn$1-30",',','$','-');
+  tableConf.getDataNodes().addAll(Arrays.asList(dataNodes));
+  int suit3=partition.suitableFor(tableConf);
+  Assert.assertEquals(1,suit3);
+}

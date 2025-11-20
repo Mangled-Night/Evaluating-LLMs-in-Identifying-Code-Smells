@@ -1,0 +1,22 @@
+@Override protected T internalDeserialize(int sizeX,int sizeY,int sizeZ,ByteBuffer buffer){
+  final byte hasData=buffer.get();
+  final T array=createArray(sizeX,sizeY,sizeZ);
+  if (hasData == 0) {
+    array.fill=buffer.get();
+    return array;
+  }
+  int rowSize=array.rowSize();
+  array.inflated=new byte[sizeY][];
+  array.deflated=new byte[sizeY];
+  for (int y=0; y < sizeY; y++) {
+    final byte hasRow=buffer.get();
+    if (hasRow == 0) {
+      array.deflated[y]=buffer.get();
+    }
+ else {
+      array.inflated[y]=new byte[rowSize];
+      buffer.get(array.inflated[y],0,rowSize);
+    }
+  }
+  return array;
+}

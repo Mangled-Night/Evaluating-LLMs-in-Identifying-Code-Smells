@@ -1,0 +1,30 @@
+/** 
+ * User1 is connected from 2 resources. User1 adds User0 to his roster. Ensure that both resources of user1 get the available presence of User0. Remove User0 from User1's roster and check presences again.
+ */
+public void testMultipleResources() throws Exception {
+  ConnectionConfiguration connectionConfiguration=new ConnectionConfiguration(getHost(),getPort(),getXMPPServiceDomain());
+  XMPPTCPConnection conn4=new XMPPConnection(connectionConfiguration);
+  conn4.connect();
+  conn4.login(getUsername(1),getPassword(1),"Home");
+  Roster roster=conn4.getRoster();
+  roster.createEntry(getBareJID(0),"gato11",null);
+  long initial=System.currentTimeMillis();
+  while (System.currentTimeMillis() - initial < 2000 && (!roster.getPresence(getBareJID(0)).isAvailable() || !getConnection(1).getRoster().getPresence(getBareJID(0)).isAvailable())) {
+    Thread.sleep(100);
+  }
+  Presence presence=roster.getPresence(getBareJID(0));
+  assertTrue("Returned a null Presence for an existing user",presence.isAvailable());
+  presence=getConnection(1).getRoster().getPresence(getBareJID(0));
+  assertTrue("Returned a null Presence for an existing user",presence.isAvailable());
+  roster.removeEntry(roster.getEntry(getBareJID(0)));
+  initial=System.currentTimeMillis();
+  while (System.currentTimeMillis() - initial < 2000 && (roster.getPresence(getBareJID(0)).getType() != Presence.Type.unavailable || getConnection(1).getRoster().getPresence(getBareJID(0)).getType() != Presence.Type.unavailable)) {
+    Thread.sleep(100);
+  }
+  presence=roster.getPresence(getBareJID(0));
+  assertFalse("Available presence was returned for removed contact",presence.isAvailable());
+  assertEquals("Returned Presence for removed contact has incorrect type",Presence.Type.unavailable,presence.getType());
+  presence=getConnection(1).getRoster().getPresence(getBareJID(0));
+  assertFalse("Available presence was returned for removed contact",presence.isAvailable());
+  assertEquals("Returned Presence for removed contact has incorrect type",Presence.Type.unavailable,presence.getType());
+}

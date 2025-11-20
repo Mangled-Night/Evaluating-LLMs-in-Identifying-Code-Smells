@@ -1,0 +1,12 @@
+@Override public BindsConfig deserialize(JsonElement json,Type typeOfT,JsonDeserializationContext context) throws JsonParseException {
+  BindsConfig result=new BindsConfig();
+  JsonObject inputObj=json.getAsJsonObject();
+  for (  Map.Entry<String,JsonElement> entry : inputObj.entrySet()) {
+    SetMultimap<String,Input> map=context.deserialize(entry.getValue(),SetMultimap.class);
+    for (    String id : map.keySet()) {
+      SimpleUri uri=new SimpleUri(new Name(entry.getKey()),id);
+      result.uriBoundInputs.putAll(uri,map.get(id));
+    }
+  }
+  return result;
+}

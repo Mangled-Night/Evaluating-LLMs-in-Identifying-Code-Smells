@@ -1,0 +1,22 @@
+/** 
+ * @param solution the strategy to resolve the conflict returned by the latest call to {@link #getNextConflict()}. If there are no more conflicts and some of the solved conflicts must keep the local version, the uploads are performed asynchronously.
+ */
+public void solveNextConflict(IdentityConflictSolution solution){
+  IdentityBundle entry=conflictingRemoteIdentities.removeFirst();
+  PublicIdentityCertificate server=entry.getServer();
+  ClientIdentity remote=entry.getClient();
+  ClientIdentity local=securityConfig.getIdentity(server);
+switch (solution) {
+case KEEP_LOCAL:
+    conflictSolutionsToUpload.put(server,local);
+  break;
+case KEEP_REMOTE:
+securityConfig.addIdentity(server,remote);
+break;
+case IGNORE:
+}
+if (!hasConflictingIdentities()) {
+putIdentities(conflictSolutionsToUpload);
+resetConflicts();
+}
+}

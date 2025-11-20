@@ -1,0 +1,42 @@
+/** 
+ * Sets the certificate file to load trusted certificates. The file must provide X.509 certificates in PEM format. Certificates are reloaded on each connection attempt that allows to replace certificates during runtime.
+ * @param certCollection the X.509 certificate collection in PEM format.
+ * @return {@code this}
+ * @since 5.3
+ */
+public Builder trustManager(File certCollection){
+  LettuceAssert.notNull(certCollection,"Certificate collection must not be null");
+  LettuceAssert.isTrue(certCollection.exists(),() -> String.format("Certificate collection file %s does not exist",certCollection));
+  LettuceAssert.isTrue(certCollection.isFile(),() -> String.format("Certificate collection %s is not a file",certCollection));
+  return trustManager(Resource.from(certCollection));
+}
+/** 
+ * Sets the certificate resource to load trusted certificates. The file must provide X.509 certificates in PEM format. Certificates are reloaded on each connection attempt that allows to replace certificates during runtime.
+ * @param certCollection the X.509 certificate collection in PEM format.
+ * @return {@code this}
+ * @since 5.3
+ */
+public Builder trustManager(Resource certCollection){
+  LettuceAssert.notNull(certCollection,"Truststore must not be null");
+  this.trustmanager=(builder,keyStoreType) -> {
+    try (InputStream is=certCollection.get()){
+      builder.trustManager(is);
+    }
+   }
+;
+  return this;
+}
+/** 
+ * Sets the  {@link TrustManagerFactory}.
+ * @param trustManagerFactory the {@link TrustManagerFactory} to use.
+ * @return {@code this}
+ * @since 5.3
+ */
+public Builder trustManager(TrustManagerFactory trustManagerFactory){
+  LettuceAssert.notNull(trustManagerFactory,"TrustManagerFactory must not be null");
+  this.trustmanager=(builder,keyStoreType) -> {
+    builder.trustManager(trustManagerFactory);
+  }
+;
+  return this;
+}

@@ -1,0 +1,20 @@
+private void dumpCode(int type,Set<ShaderProgramFeature> features,String sourceCode){
+  String debugShaderType="UNKNOWN";
+  int featureHash=ShaderProgramFeature.getBitset(features);
+  if (type == GL20.GL_FRAGMENT_SHADER) {
+    debugShaderType="FRAGMENT";
+  }
+ else   if (type == GL20.GL_VERTEX_SHADER) {
+    debugShaderType="VERTEX";
+  }
+  final String strippedTitle=getUrn().toString().replace(":","-");
+  String fname=debugShaderType.toLowerCase() + "_" + strippedTitle+ "_"+ featureHash+ ".glsl";
+  Path path=PathManager.getInstance().getShaderLogPath().resolve(fname);
+  logger.info("Dumped Shader Path: {}",path);
+  try (BufferedWriter writer=Files.newBufferedWriter(path,TerasologyConstants.CHARSET)){
+    writer.write(sourceCode);
+  }
+ catch (  IOException e) {
+    logger.error("Failed to dump shader source.");
+  }
+}

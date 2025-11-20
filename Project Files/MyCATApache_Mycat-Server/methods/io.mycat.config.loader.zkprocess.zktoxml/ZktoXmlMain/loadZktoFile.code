@@ -1,0 +1,26 @@
+/** 
+ * 将zk数据放到到本地 方法描述
+ * @throws Exception 
+ * @创建日期 2016年9月21日
+ */
+public static void loadZktoFile() throws Exception {
+  String custerName=ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_CLUSTERID);
+  String basePath=ZookeeperPath.ZK_SEPARATOR.getKey() + ZookeeperPath.FLOW_ZK_PATH_BASE.getKey();
+  basePath=basePath + ZookeeperPath.ZK_SEPARATOR.getKey() + custerName;
+  ZKLISTENER.setBasePath(basePath);
+  CuratorFramework zkConn=buildConnection(ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_URL));
+  XmlProcessBase xmlProcess=new XmlProcessBase();
+  new SchemaszkToxmlLoader(ZKLISTENER,zkConn,xmlProcess);
+  new ServerzkToxmlLoader(ZKLISTENER,zkConn,xmlProcess);
+  ZKUtils.addChildPathCache(ZKUtils.getZKBasePath() + "rules",new RuleFunctionCacheListener());
+  new SequenceTopropertiesLoader(ZKLISTENER,zkConn,xmlProcess);
+  new EcacheszkToxmlLoader(ZKLISTENER,zkConn,xmlProcess);
+  ZKUtils.addChildPathCache(ZKUtils.getZKBasePath() + "bindata",new BinDataPathChildrenCacheListener());
+  ZKUtils.addChildPathCache(ZKUtils.getZKBasePath() + "ruledata",new RuleDataPathChildrenCacheListener());
+  xmlProcess.initJaxbClass();
+  ZKLISTENER.notifly(ZkNofiflyCfg.ZK_NOTIFLY_LOAD_ALL.getKey());
+  loadZkWatch(ZKLISTENER.getWatchPath(),zkConn,ZKLISTENER);
+  createTempNode(ZKUtils.getZKBasePath() + "line",ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_MYID),zkConn,ZkConfig.getInstance().getValue(ZkParamCfg.MYCAT_SERVER_TYPE));
+  runCommandWatch(zkConn,ZKUtils.getZKBasePath() + ZKHandler.ZK_NODE_PATH);
+  MigrateTaskWatch.start();
+}

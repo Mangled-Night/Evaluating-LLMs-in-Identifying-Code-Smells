@@ -1,0 +1,41 @@
+private void close(boolean isAnim){
+  swipeMenuOpened=null;
+  if (isAnim) {
+    ValueAnimator anim=ValueAnimator.ofInt(getScrollX(),0);
+    anim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener(){
+      @Override public void onAnimationUpdate(      ValueAnimator animation){
+        scrollTo((int)animation.getAnimatedValue(),0);
+      }
+    }
+);
+    anim.setInterpolator(CLOSE_INTERPOLATOR);
+    anim.setDuration(ANIM_TIMING).start();
+    for (    final MenuBean menu : mMenus) {
+      ValueAnimator menuAnim=ValueAnimator.ofInt(menu.getParams().leftMargin,menu.getCloseMargin());
+      menuAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener(){
+        @Override public void onAnimationUpdate(        ValueAnimator animation){
+          menu.getParams().leftMargin=(int)animation.getAnimatedValue();
+          menu.getView().requestLayout();
+        }
+      }
+);
+      menuAnim.setInterpolator(CLOSE_INTERPOLATOR);
+      menuAnim.setDuration(ANIM_TIMING).start();
+    }
+  }
+ else {
+    scrollTo(0,0);
+    for (    final MenuBean menu : mMenus) {
+      menu.getParams().leftMargin=menu.getCloseMargin();
+      menu.getView().requestLayout();
+    }
+  }
+}
+public void close(SwipeRightMenu exclude){
+  if (swipeMenuOpened != null) {
+    final SwipeRightMenu swipeMenu=swipeMenuOpened.get();
+    if (swipeMenu != exclude) {
+      swipeMenu.close(true);
+    }
+  }
+}

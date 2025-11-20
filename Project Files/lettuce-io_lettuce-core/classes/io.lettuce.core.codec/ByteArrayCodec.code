@@ -1,0 +1,47 @@
+/** 
+ * A  {@link RedisCodec} that uses plain byte arrays without further transformations.
+ * @author Mark Paluch
+ * @since 3.3
+ */
+public class ByteArrayCodec implements RedisCodec<byte[],byte[]>, ToByteBufEncoder<byte[],byte[]> {
+  public static final ByteArrayCodec INSTANCE=new ByteArrayCodec();
+  private static final byte[] EMPTY=new byte[0];
+  @Override public void encodeKey(  byte[] key,  ByteBuf target){
+    if (key != null) {
+      target.writeBytes(key);
+    }
+  }
+  @Override public void encodeValue(  byte[] value,  ByteBuf target){
+    encodeKey(value,target);
+  }
+  @Override public int estimateSize(  Object keyOrValue){
+    if (keyOrValue == null) {
+      return 0;
+    }
+    return ((byte[])keyOrValue).length;
+  }
+  @Override public byte[] decodeKey(  ByteBuffer bytes){
+    return getBytes(bytes);
+  }
+  @Override public byte[] decodeValue(  ByteBuffer bytes){
+    return getBytes(bytes);
+  }
+  @Override public ByteBuffer encodeKey(  byte[] key){
+    if (key == null) {
+      return ByteBuffer.wrap(EMPTY);
+    }
+    return ByteBuffer.wrap(key);
+  }
+  @Override public ByteBuffer encodeValue(  byte[] value){
+    return encodeKey(value);
+  }
+  private static byte[] getBytes(  ByteBuffer buffer){
+    int remaining=buffer.remaining();
+    if (remaining == 0) {
+      return EMPTY;
+    }
+    byte[] b=new byte[remaining];
+    buffer.get(b);
+    return b;
+  }
+}

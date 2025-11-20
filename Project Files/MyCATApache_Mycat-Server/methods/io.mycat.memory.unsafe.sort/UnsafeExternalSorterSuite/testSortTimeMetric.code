@@ -1,0 +1,14 @@
+@Test public void testSortTimeMetric() throws Exception {
+  final UnsafeExternalSorter sorter=newSorter();
+  long prevSortTime=sorter.getSortTimeNanos();
+  assertEquals(prevSortTime,0);
+  sorter.insertRecord(null,0,0,0);
+  sorter.spill();
+  assertThat(sorter.getSortTimeNanos(),greaterThan(prevSortTime));
+  prevSortTime=sorter.getSortTimeNanos();
+  sorter.spill();
+  assertEquals(sorter.getSortTimeNanos(),prevSortTime);
+  sorter.insertRecord(null,0,0,0);
+  UnsafeSorterIterator iter=sorter.getSortedIterator();
+  assertThat(sorter.getSortTimeNanos(),greaterThan(prevSortTime));
+}

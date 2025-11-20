@@ -1,0 +1,17 @@
+/** 
+ * Simple factory method to easily create new instances of  {@link ClassTypeInformation}.
+ * @param < S >
+ * @param type must not be {@code null}.
+ * @return
+ */
+public static <S>ClassTypeInformation<S> from(Class<S> type){
+  LettuceAssert.notNull(type,"Type must not be null!");
+  Reference<ClassTypeInformation<?>> cachedReference=CACHE.get(type);
+  TypeInformation<?> cachedTypeInfo=cachedReference == null ? null : cachedReference.get();
+  if (cachedTypeInfo != null) {
+    return (ClassTypeInformation<S>)cachedTypeInfo;
+  }
+  ClassTypeInformation<S> result=new ClassTypeInformation<S>(type);
+  CACHE.put(type,new WeakReference<ClassTypeInformation<?>>(result));
+  return result;
+}

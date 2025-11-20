@@ -1,0 +1,13 @@
+@Override public Span nextSpan(){
+  return postProcessSpan(tracing.tracer().nextSpan());
+}
+@Override public Span nextSpan(TraceContext traceContext){
+  if (!(traceContext instanceof BraveTraceContext)) {
+    return nextSpan();
+  }
+  BraveTraceContext braveTraceContext=BraveTraceContext.class.cast(traceContext);
+  if (braveTraceContext.traceContext == null) {
+    return nextSpan();
+  }
+  return postProcessSpan(tracing.tracer().nextSpan(TraceContextOrSamplingFlags.create(braveTraceContext.traceContext)));
+}

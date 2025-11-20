@@ -1,0 +1,33 @@
+@Override public boolean handleMessage(Message msg){
+  mMessage.setMessage(msg);
+  if (DEBUG) {
+    logMessageHandling(mMessage);
+  }
+synchronized (mListenersSpecific) {
+    final List<UiMessageCallback> idListeners=mListenersSpecific.get(msg.what);
+    if (idListeners != null) {
+      if (idListeners.size() == 0) {
+        mListenersSpecific.remove(msg.what);
+      }
+ else {
+        mDefensiveCopyList.addAll(idListeners);
+        for (        final UiMessageCallback callback : mDefensiveCopyList) {
+          callback.handleMessage(mMessage);
+        }
+        mDefensiveCopyList.clear();
+      }
+    }
+  }
+synchronized (mListenersUniversal) {
+    if (mListenersUniversal.size() > 0) {
+      mDefensiveCopyList.addAll(mListenersUniversal);
+      for (      final UiMessageCallback callback : mDefensiveCopyList) {
+        callback.handleMessage(mMessage);
+      }
+      mDefensiveCopyList.clear();
+    }
+  }
+  mMessage.setMessage(null);
+  return true;
+}
+void handleMessage(@NonNull UiMessage localMessage);

@@ -1,0 +1,15 @@
+/** 
+ * Checks if saved games are present.
+ */
+public static boolean isSavesFolderEmpty(){
+  Path savePath=PathManager.getInstance().getSavesPath();
+  if (savePath != null) {
+    try (Stream<Path> stream=Files.list(savePath).filter(savedGameFolderPath -> Files.isDirectory(savedGameFolderPath) && Files.isRegularFile(savedGameFolderPath.resolve(GameManifest.DEFAULT_FILE_NAME)))){
+      return stream.collect(Collectors.toList()).isEmpty();
+    }
+ catch (    IOException e) {
+      logger.warn("Can't read saves path {}",savePath,e);
+    }
+  }
+  return true;
+}

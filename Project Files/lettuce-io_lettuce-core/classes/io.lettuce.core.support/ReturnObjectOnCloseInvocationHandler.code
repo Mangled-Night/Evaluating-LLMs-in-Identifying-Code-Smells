@@ -1,0 +1,72 @@
+/** 
+ * Invocation handler that takes care of connection.close(). Connections are returned to the pool on a close()-call.
+ * @author Mark Paluch
+ * @param < T > Connection type.
+ * @since 4.3
+ */
+static class ReturnObjectOnCloseInvocationHandler<T> extends AbstractInvocationHandler implements Wrapper<T> {
+  private T connection;
+  private T proxiedConnection;
+  private Map<Method,Object> connectionProxies=new ConcurrentHashMap<>(5,1);
+  private final Origin<T> pool;
+  ReturnObjectOnCloseInvocationHandler(  T connection,  Origin<T> pool){
+    this.connection=connection;
+    this.pool=pool;
+  }
+  void setProxiedConnection(  T proxiedConnection){
+    this.proxiedConnection=proxiedConnection;
+  }
+  @Override protected Object handleInvocation(  Object proxy,  Method method,  Object[] args) throws Throwable {
+    if (method.getName().equals("getStatefulConnection")) {
+      return proxiedConnection;
+    }
+    if (method.getName().equals("getTargetConnection")) {
+      return connection;
+    }
+    if (connection == null) {
+      throw new RedisException("Connection is deallocated and cannot be used anymore.");
+    }
+    if (method.getName().equals("close")) {
+      pool.returnObject(proxiedConnection);
+      connection=null;
+      proxiedConnection=null;
+      connectionProxies.clear();
+      return null;
+    }
+    if (method.getName().equals("closeAsync")) {
+      CompletableFuture<Void> future=pool.returnObjectAsync(proxiedConnection);
+      connection=null;
+      proxiedConnection=null;
+      connectionProxies.clear();
+      return future;
+    }
+    try {
+      if (method.getName().equals("sync") || method.getName().equals("async") || method.getName().equals("reactive")) {
+        return connectionProxies.computeIfAbsent(method,m -> getInnerProxy(method,args));
+      }
+      return method.invoke(connection,args);
+    }
+ catch (    InvocationTargetException e) {
+      throw e.getTargetException();
+    }
+  }
+  @SuppressWarnings({"unchecked","rawtypes"}) private Object getInnerProxy(  Method method,  Object[] args){
+    try {
+      Object result=method.invoke(connection,args);
+      result=Proxy.newProxyInstance(getClass().getClassLoader(),result.getClass().getInterfaces(),new DelegateCloseToConnectionInvocationHandler((AsyncCloseable)proxiedConnection,result));
+      return result;
+    }
+ catch (    IllegalAccessException e) {
+      throw new RedisException(e);
+    }
+catch (    InvocationTargetException e) {
+      throw new RedisException(e.getTargetException());
+    }
+  }
+  public T getConnection(){
+    return connection;
+  }
+  @Override public T unwrap(){
+    return getConnection();
+  }
+}

@@ -1,0 +1,25 @@
+@Override public boolean next() throws IOException {
+  try {
+    if (underlying.hasNext()) {
+      underlying.loadNext();
+      Object baseObj=underlying.getBaseObject();
+      long recordOffset=underlying.getBaseOffset();
+      int recordLen=underlying.getRecordLength();
+      int keyLen=Platform.getInt(baseObj,recordOffset);
+      int valueLen=recordLen - keyLen - 4;
+      key.pointTo(baseObj,recordOffset + 4,keyLen);
+      value.pointTo(baseObj,recordOffset + 4 + keyLen,valueLen);
+      return true;
+    }
+ else {
+      key=null;
+      value=null;
+      cleanupResources();
+      return false;
+    }
+  }
+ catch (  IOException e) {
+    cleanupResources();
+    throw e;
+  }
+}

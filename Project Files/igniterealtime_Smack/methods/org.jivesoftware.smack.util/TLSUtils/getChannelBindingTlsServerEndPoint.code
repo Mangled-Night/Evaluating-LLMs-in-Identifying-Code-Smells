@@ -1,0 +1,28 @@
+/** 
+ * Get the channel binding data for the 'tls-server-end-point' channel binding type. This channel binding type is defined in RFC 5929 § 4.
+ * @param sslSession the SSL/TLS session from which the data should be retrieved.
+ * @return the channel binding data.
+ * @throws SSLPeerUnverifiedException if we TLS peer could not be verified.
+ * @throws CertificateEncodingException if there was an encoding error with the certificate.
+ * @throws NoSuchAlgorithmException if no such algorithm is available.
+ * @see <a href="https://tools.ietf.org/html/rfc5929#section-4">RFC 5929 § 4.</a>
+ */
+public static byte[] getChannelBindingTlsServerEndPoint(final SSLSession sslSession) throws SSLPeerUnverifiedException, CertificateEncodingException, NoSuchAlgorithmException {
+  final Certificate[] peerCertificates=sslSession.getPeerCertificates();
+  final Certificate certificate=peerCertificates[0];
+  final String certificateAlgorithm=certificate.getPublicKey().getAlgorithm();
+  String algorithm;
+switch (certificateAlgorithm) {
+case "MD5":
+case "SHA-1":
+    algorithm="SHA-256";
+  break;
+default :
+algorithm=certificateAlgorithm;
+break;
+}
+final MessageDigest messageDigest=MessageDigest.getInstance(algorithm);
+final byte[] certificateDerEncoded=certificate.getEncoded();
+messageDigest.update(certificateDerEncoded);
+return messageDigest.digest();
+}

@@ -1,0 +1,26 @@
+private String assembleShader(int type,Set<ShaderProgramFeature> features){
+  StringBuilder shader=createShaderBuilder();
+  for (  ShaderProgramFeature feature : features) {
+    shader.append("#define ").append(feature.name()).append("\n");
+  }
+  shader.append("\n");
+  shader.append(includedDefines);
+  shader.append(includedUniforms);
+  if (type == GL20.GL_FRAGMENT_SHADER) {
+    shader.insert(0,"#version " + shaderProgramBase.getFragmentProgramVersion() + "\n");
+    shader.append(includedFunctionsFragment);
+    shader.append("\n");
+    shader.append(shaderProgramBase.getFragmentProgram());
+  }
+ else   if (type == GL32.GL_GEOMETRY_SHADER) {
+    shader.insert(0,"#version " + shaderProgramBase.getGeometryProgramVersion() + "\n");
+    shader.append(shaderProgramBase.getGeometryProgram());
+  }
+ else {
+    shader.insert(0,"#version " + shaderProgramBase.getVertexProgramVersion() + "\n");
+    shader.append(includedFunctionsVertex);
+    shader.append("\n");
+    shader.append(shaderProgramBase.getVertexProgram());
+  }
+  return shader.toString();
+}

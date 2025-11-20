@@ -1,0 +1,35 @@
+@Test public void candidatesProviderTest() throws Exception {
+  String xml="<transport " + "xmlns='urn:xmpp:jingle:transports:s5b:1' " + "dstaddr='972b7bf47291ca609517f67f86b5081086052dad' "+ "mode='tcp' "+ "sid='vj3hs98y'>"+ "<candidate "+ "cid='hft54dqy' "+ "host='192.168.4.1' "+ "jid='romeo@montague.lit/orchard' "+ "port='5086' "+ "priority='8257636' "+ "type='direct'/>"+ "<candidate "+ "cid='hutr46fe' "+ "host='24.24.24.1' "+ "jid='romeo@montague.lit/orchard' "+ "port='5087' "+ "priority='8258636' "+ "type='direct'/>"+ "<candidate "+ "cid='xmdh4b7i' "+ "host='123.456.7.8' "+ "jid='streamer.shakespeare.lit' "+ "port='7625' "+ "priority='7878787' "+ "type='proxy'/>"+ "</transport>";
+  JingleS5BTransport transport=new JingleS5BTransportProvider().parse(TestUtils.getParser(xml));
+  assertEquals("972b7bf47291ca609517f67f86b5081086052dad",transport.getDestinationAddress());
+  assertEquals("vj3hs98y",transport.getStreamId());
+  assertEquals(Bytestream.Mode.tcp,transport.getMode());
+  assertEquals(3,transport.getCandidates().size());
+  assertTrue(transport.hasCandidate("hft54dqy"));
+  assertFalse(transport.hasCandidate("invalidId"));
+  JingleS5BTransportCandidate candidate1=(JingleS5BTransportCandidate)transport.getCandidates().get(0);
+  assertEquals(candidate1,transport.getCandidate("hft54dqy"));
+  assertNotNull(candidate1.getStreamHost());
+  assertEquals(JingleS5BTransportCandidate.Type.direct.getWeight(),candidate1.getType().getWeight());
+  assertEquals("hft54dqy",candidate1.getCandidateId());
+  assertEquals("192.168.4.1",candidate1.getHost().toString());
+  assertEquals(JidCreate.from("romeo@montague.lit/orchard"),candidate1.getJid());
+  assertEquals(5086,candidate1.getPort());
+  assertEquals(8257636,candidate1.getPriority());
+  assertEquals(JingleS5BTransportCandidate.Type.direct,candidate1.getType());
+  JingleS5BTransportCandidate candidate2=(JingleS5BTransportCandidate)transport.getCandidates().get(1);
+  assertEquals("hutr46fe",candidate2.getCandidateId());
+  assertEquals("24.24.24.1",candidate2.getHost().toString());
+  assertEquals(JidCreate.from("romeo@montague.lit/orchard"),candidate2.getJid());
+  assertEquals(5087,candidate2.getPort());
+  assertEquals(8258636,candidate2.getPriority());
+  assertEquals(JingleS5BTransportCandidate.Type.direct,candidate2.getType());
+  JingleS5BTransportCandidate candidate3=(JingleS5BTransportCandidate)transport.getCandidates().get(2);
+  assertEquals("xmdh4b7i",candidate3.getCandidateId());
+  assertEquals("123.456.7.8",candidate3.getHost().toString());
+  assertEquals(JidCreate.domainBareFrom("streamer.shakespeare.lit"),candidate3.getJid());
+  assertEquals(7625,candidate3.getPort());
+  assertEquals(7878787,candidate3.getPriority());
+  assertEquals(JingleS5BTransportCandidate.Type.proxy,candidate3.getType());
+  assertEquals(xml,transport.toXML().toString());
+}

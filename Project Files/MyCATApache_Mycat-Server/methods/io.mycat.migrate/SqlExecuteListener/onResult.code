@@ -1,0 +1,23 @@
+@Override public void onResult(SQLQueryResult<Map<String,String>> result){
+  try {
+    if (!result.isSuccess()) {
+      try {
+        task.setHaserror(true);
+        pushMsgToZK(task.getZkpath(),task.getFrom() + "-" + task.getTo(),2,"sql:" + sql + ";"+ result.getErrMsg());
+        close("sucess");
+        binlogStream.disconnect();
+      }
+ catch (      Exception e) {
+        LOGGER.error("error:",e);
+        close(e.getMessage());
+      }
+    }
+ else {
+      close("sucess");
+    }
+    task.setHasExecute(false);
+  }
+  finally {
+    semaphore.release();
+  }
+}

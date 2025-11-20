@@ -1,0 +1,51 @@
+@Override public StandardExtensionElement parse(final XmlPullParser parser,final int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  String name=parser.getName();
+  String namespace=parser.getNamespace();
+  StandardExtensionElement.Builder builder=StandardExtensionElement.builder(name,namespace);
+  final int namespaceCount=parser.getNamespaceCount();
+  final int attributeCount=parser.getAttributeCount();
+  final Map<String,String> attributes=new LinkedHashMap<>(namespaceCount + attributeCount);
+  for (int i=0; i < namespaceCount; i++) {
+    String nsprefix=parser.getNamespacePrefix(i);
+    if (nsprefix == null) {
+      continue;
+    }
+    assert StringUtils.isNotEmpty(nsprefix);
+    String nsuri=parser.getNamespaceUri(i);
+    attributes.put("xmlns:" + nsprefix,nsuri);
+  }
+  for (int i=0; i < attributeCount; i++) {
+    String attributePrefix=parser.getAttributePrefix(i);
+    String attributeName=parser.getAttributeName(i);
+    String attributeValue=parser.getAttributeValue(i);
+    String attributeKey;
+    if (StringUtils.isNullOrEmpty(attributePrefix)) {
+      attributeKey=attributeName;
+    }
+ else {
+      attributeKey=attributePrefix + ':' + attributeName;
+    }
+    attributes.put(attributeKey,attributeValue);
+  }
+  builder.addAttributes(attributes);
+  outerloop:   while (true) {
+    XmlPullParser.Event event=parser.next();
+switch (event) {
+case START_ELEMENT:
+      builder.addElement(parse(parser,parser.getDepth(),xmlEnvironment));
+    break;
+case TEXT_CHARACTERS:
+  builder.setText(parser.getText());
+break;
+case END_ELEMENT:
+if (initialDepth == parser.getDepth()) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+ParserUtils.assertAtEndTag(parser);
+return builder.build();
+}

@@ -1,0 +1,18 @@
+public void commonDefaultDropsHandling(CreateBlockDropsEvent event,EntityRef entity,Vector3ic location,Block block){
+  BlockDamageModifierComponent blockDamageModifierComponent=event.getDamageType().getComponent(BlockDamageModifierComponent.class);
+  float chanceOfBlockDrop=1;
+  if (blockDamageModifierComponent != null) {
+    chanceOfBlockDrop=1 - blockDamageModifierComponent.blockAnnihilationChance;
+  }
+  if (random.nextFloat() < chanceOfBlockDrop) {
+    EntityRef item=blockItemFactory.newInstance(block.getBlockFamily(),entity);
+    entity.send(new OnBlockToItem(item));
+    if (shouldDropToWorld(event,block,blockDamageModifierComponent,item)) {
+      float impulsePower=0;
+      if (blockDamageModifierComponent != null) {
+        impulsePower=blockDamageModifierComponent.impulsePower;
+      }
+      processDropping(item,location,impulsePower);
+    }
+  }
+}

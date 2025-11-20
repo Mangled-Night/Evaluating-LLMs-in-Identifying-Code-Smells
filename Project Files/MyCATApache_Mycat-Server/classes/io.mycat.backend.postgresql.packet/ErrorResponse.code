@@ -1,0 +1,38 @@
+public class ErrorResponse extends PostgreSQLPacket {
+  /** 
+ * 解析错误包
+ * @param buffer
+ * @param offset
+ * @return
+ * @throws UnsupportedEncodingException
+ * @throws IllegalAccessException
+ */
+  public static ErrorResponse parse(  ByteBuffer buffer,  int offset) throws IllegalArgumentException {
+    if ((char)buffer.get(offset) != PacketMarker.B_Error.getValue()) {
+      throw new IllegalArgumentException("this packet not is ErrorResponse");
+    }
+    ErrorResponse err=new ErrorResponse();
+    err.length=buffer.getInt(offset + 1);
+    err.mark=buffer.get(offset + 1 + 4);
+    if (err.mark != 0) {
+      byte[] str=new byte[err.length - (4 + 4)];
+      for (int i=0; i < str.length; i++) {
+        str[i]=buffer.get(offset + 1 + 4+ 4+ i);
+      }
+      err.errMsg=new String(str,UTF8);
+    }
+    return err;
+  }
+  private int length;
+  private byte mark;
+  private String errMsg;
+  public String getErrMsg(){
+    return errMsg;
+  }
+  @Override public int getLength(){
+    return length;
+  }
+  @Override public char getMarker(){
+    return PostgreSQLPacket.PacketMarker.B_Error.getValue();
+  }
+}

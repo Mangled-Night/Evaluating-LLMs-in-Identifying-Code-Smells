@@ -1,0 +1,13 @@
+/** 
+ * Returns the file path to a given asset if the module providing the asset is present as source. The path will for instance be used by the editor to edit the asset. Editing files within module jars is not possible. Hence, we return `null` in case the module is not present as source.
+ * @param source asset file object to get the file path to
+ * @return path to asset or null if module not present as source
+ */
+protected Path getPath(AssetDataFile source){
+  List<String> path=new ArrayList<>(source.getPath());
+  path.add(source.getFilename());
+  String[] pathArray=path.toArray(new String[path.size()]);
+  String first=pathArray[0];
+  String[] more=Arrays.copyOfRange(pathArray,1,pathArray.length);
+  return Paths.get("",moduleManager.getEnvironment().getResources().getFile(first,more).orElseThrow(() -> new RuntimeException("Cannot get path for " + source.getFilename())).getPath().stream().toArray(String[]::new));
+}

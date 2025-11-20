@@ -1,0 +1,15 @@
+@Override public <T>RedisCommand<K,V,T> dispatch(RedisCommand<K,V,T> command){
+  RedisCommand<K,V,T> toSend=preProcessCommand(command);
+  potentiallyEnableMulti(command);
+  return super.dispatch(toSend);
+}
+@Override public Collection<RedisCommand<K,V,?>> dispatch(Collection<? extends RedisCommand<K,V,?>> commands){
+  List<RedisCommand<K,V,?>> sentCommands=new ArrayList<>(commands.size());
+  commands.forEach(o -> {
+    RedisCommand<K,V,?> command=preProcessCommand(o);
+    sentCommands.add(command);
+    potentiallyEnableMulti(command);
+  }
+);
+  return super.dispatch(sentCommands);
+}

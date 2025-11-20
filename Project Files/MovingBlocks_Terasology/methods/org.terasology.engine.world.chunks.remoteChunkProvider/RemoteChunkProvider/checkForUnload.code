@@ -1,0 +1,11 @@
+private void checkForUnload(){
+  List<Vector3ic> positions=Lists.newArrayListWithCapacity(invalidateChunks.size());
+  invalidateChunks.drainTo(positions);
+  for (  Vector3ic pos : positions) {
+    Chunk removed=chunkCache.remove(pos);
+    if (removed != null && !removed.isReady()) {
+      worldEntity.send(new BeforeChunkUnload(pos));
+      removed.dispose();
+    }
+  }
+}

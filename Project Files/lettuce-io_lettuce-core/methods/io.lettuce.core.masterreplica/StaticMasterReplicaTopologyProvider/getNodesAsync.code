@@ -1,0 +1,12 @@
+@Override public CompletableFuture<List<RedisNodeDescription>> getNodesAsync(){
+  List<StatefulRedisConnection<String,String>> connections=new CopyOnWriteArrayList<>();
+  Flux<RedisURI> uris=Flux.fromIterable(redisURIs);
+  Mono<List<RedisNodeDescription>> nodes=uris.flatMap(uri -> getNodeDescription(connections,uri)).collectList().flatMap((nodeDescriptions) -> {
+    if (nodeDescriptions.isEmpty()) {
+      return Mono.error(new RedisConnectionException(String.format("Failed to connect to at least one node in %s",redisURIs)));
+    }
+    return Mono.just(nodeDescriptions);
+  }
+);
+  return nodes.toFuture();
+}

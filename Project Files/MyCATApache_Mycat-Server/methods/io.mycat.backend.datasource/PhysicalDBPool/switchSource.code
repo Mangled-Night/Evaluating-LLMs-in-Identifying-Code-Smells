@@ -1,0 +1,44 @@
+public boolean switchSource(int newIndex,boolean isAlarm,String reason){
+  LOGGER.warn("switchSource: active=" + activedIndex + " new="+ newIndex+ " alarm="+ isAlarm+ " reason="+ reason);
+  if (notSwitchSource(newIndex)) {
+    return false;
+  }
+  final ReentrantLock lock=this.switchLock;
+  lock.lock();
+  try {
+    int current=activedIndex;
+    if (current != newIndex) {
+      if (MycatServer.getInstance().isUseZkSwitch()) {
+        LOGGER.info(ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_MYID) + "正在开始进行转换节点 " + hostName+ " = "+ newIndex);
+        SwitchStatueToZK.startSwitch(hostName);
+      }
+      activedIndex=newIndex;
+      initSuccess=false;
+      this.init(activedIndex,reason);
+      this.getSources()[current].clearCons("switch datasource");
+      String msg=switchMessage(current,newIndex,false,reason);
+      LOGGER.warn(msg);
+      LogUtil.writeDataSourceLog(msg);
+      if (MycatServer.getInstance().isUseZkSwitch()) {
+        LOGGER.warn(switchMessage(current,newIndex,false,reason));
+        current=activedIndex;
+        if (!isInitSuccess() || current != newIndex) {
+          LOGGER.error(String.format("%s switch to index %d error ! now index is to switch %d but %d",hostName,newIndex,newIndex,current));
+          System.exit(-1);
+        }
+        SwitchStatueToZK.endSwitch(hostName);
+      }
+      return true;
+    }
+ else {
+      if (MycatServer.getInstance().isUseZkSwitch()) {
+        SwitchStatueToZK.startSwitch(hostName);
+        SwitchStatueToZK.endSwitch(hostName);
+      }
+    }
+  }
+  finally {
+    lock.unlock();
+  }
+  return false;
+}

@@ -1,0 +1,41 @@
+@Override public void initialise(){
+  setAnimationSystem(MenuAnimationSystems.createDefaultSwipeAnimation());
+  downloader=new ServerListDownloader(config.getNetwork().getMasterServer());
+  CardLayout cards=find("cards",CardLayout.class);
+  UIList<ServerInfo> customServerList=find("customServerList",UIList.class);
+  if (customServerList != null) {
+    customServerList.setList(config.getNetwork().getServerInfos());
+    configureServerList(customServerList);
+  }
+  UIList<ServerInfo> onlineServerList=find("onlineServerList",UIList.class);
+  if (onlineServerList != null) {
+    onlineServerList.setList(listedServers);
+    configureServerList(onlineServerList);
+  }
+  ActivateEventListener activateCustom=e -> {
+    cards.setDisplayedCard("customServerListScrollArea");
+    find("customButton",UIButton.class).setFamily("highlight");
+    find("onlineButton",UIButton.class).setFamily("default");
+    visibleList=customServerList;
+    refresh();
+  }
+;
+  WidgetUtil.trySubscribe(this,"customButton",activateCustom);
+  ActivateEventListener activateOnline=e -> {
+    cards.setDisplayedCard("onlineServerListScrollArea");
+    find("customButton",UIButton.class).setFamily("default");
+    find("onlineButton",UIButton.class).setFamily("highlight");
+    visibleList=onlineServerList;
+    refresh();
+  }
+;
+  WidgetUtil.trySubscribe(this,"onlineButton",activateOnline);
+  bindCustomButtons();
+  bindInfoLabels();
+  WidgetUtil.trySubscribe(this,"close",button -> {
+    config.save();
+    triggerBackAnimation();
+  }
+);
+  activateOnline.onActivated(null);
+}

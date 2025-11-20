@@ -1,0 +1,231 @@
+private void onChannelSelected(SelectableChannel selectedChannel,SelectionKey selectedSelectionKey){
+  assert selectionKey == null || selectionKey == selectedSelectionKey;
+  SocketChannel selectedSocketChannel=(SocketChannel)selectedChannel;
+  int newInterestedOps=SelectionKey.OP_READ;
+  boolean newPendingOutputFilterData=false;
+  if (!channelSelectedCallbackLock.tryLock()) {
+    rejectedChannelSelectedCallbacks.incrementAndGet();
+    return;
+  }
+  handledChannelSelectedCallbacks++;
+  long callbackBytesRead=0;
+  long callbackBytesWritten=0;
+  try {
+    boolean destinationAddressChanged=false;
+    boolean isLastPartOfElement=false;
+    TopLevelStreamElement currentlyOutgonigTopLevelStreamElement=null;
+    StringBuilder outgoingStreamForDebugger=null;
+    writeLoop:     while (true) {
+      final boolean moreDataAvailable=!isLastPartOfElement || !connectionInternal.outgoingElementsQueue.isEmpty();
+      if (filteredOutgoingBuffer != null || !networkOutgoingBuffers.isEmpty()) {
+        if (filteredOutgoingBuffer != null) {
+          networkOutgoingBuffers.add(filteredOutgoingBuffer);
+          networkOutgoingBuffersBytes+=filteredOutgoingBuffer.remaining();
+          filteredOutgoingBuffer=null;
+          if (moreDataAvailable && networkOutgoingBuffersBytes < 8096) {
+            continue;
+          }
+        }
+        ByteBuffer[] output=networkOutgoingBuffers.toArray(new ByteBuffer[networkOutgoingBuffers.size()]);
+        long bytesWritten;
+        try {
+          bytesWritten=selectedSocketChannel.write(output);
+        }
+ catch (        IOException e) {
+          handleReadWriteIoException(e);
+          break;
+        }
+        if (bytesWritten == 0) {
+          newInterestedOps|=SelectionKey.OP_WRITE;
+          break;
+        }
+        callbackBytesWritten+=bytesWritten;
+        networkOutgoingBuffersBytes-=bytesWritten;
+        List<? extends Buffer> prunedBuffers=pruneBufferList(networkOutgoingBuffers);
+        for (        Buffer prunedBuffer : prunedBuffers) {
+          List<TopLevelStreamElement> sendElements=bufferToElementMap.remove(prunedBuffer);
+          if (sendElements == null) {
+            continue;
+          }
+          for (          TopLevelStreamElement elementJustSend : sendElements) {
+            connectionInternal.fireFirstLevelElementSendListeners(elementJustSend);
+          }
+        }
+        if (callbackBytesWritten > CALLBACK_MAX_BYTES_WRITEN) {
+          newInterestedOps|=SelectionKey.OP_WRITE;
+          callbackPreemtBecauseBytesWritten++;
+          break;
+        }
+      }
+ else       if (outgoingBuffer != null || pendingOutputFilterData) {
+        pendingOutputFilterData=false;
+        if (outgoingBuffer != null) {
+          totalBytesWrittenBeforeFilter+=outgoingBuffer.remaining();
+          if (isLastPartOfElement) {
+            assert currentlyOutgonigTopLevelStreamElement != null;
+            currentlyOutgoingElements.add(currentlyOutgonigTopLevelStreamElement);
+          }
+        }
+        ByteBuffer outputFilterInputData=outgoingBuffer;
+        outgoingBuffer=null;
+        for (ListIterator<XmppInputOutputFilter> it=connectionInternal.getXmppInputOutputFilterBeginIterator(); it.hasNext(); ) {
+          XmppInputOutputFilter inputOutputFilter=it.next();
+          XmppInputOutputFilter.OutputResult outputResult;
+          try {
+            outputResult=inputOutputFilter.output(outputFilterInputData,isLastPartOfElement,destinationAddressChanged,moreDataAvailable);
+          }
+ catch (          IOException e) {
+            connectionInternal.notifyConnectionError(e);
+            break writeLoop;
+          }
+          newPendingOutputFilterData|=outputResult.pendingFilterData;
+          outputFilterInputData=outputResult.filteredOutputData;
+          if (outputFilterInputData != null) {
+            outputFilterInputData.flip();
+          }
+        }
+        if (outputFilterInputData != null && outputFilterInputData.hasRemaining()) {
+          filteredOutgoingBuffer=outputFilterInputData;
+        }
+ else {
+          filteredOutgoingBuffer=null;
+        }
+        if (filteredOutgoingBuffer == null && newPendingOutputFilterData) {
+          pendingWriteInterestAfterRead=true;
+        }
+        if (filteredOutgoingBuffer != null && isLastPartOfElement) {
+          bufferToElementMap.put(filteredOutgoingBuffer,new ArrayList<>(currentlyOutgoingElements));
+          currentlyOutgoingElements.clear();
+        }
+        if (destinationAddressChanged) {
+          destinationAddressChanged=false;
+        }
+      }
+ else       if (outgoingCharSequenceIterator != null) {
+        CharSequence nextCharSequence=outgoingCharSequenceIterator.next();
+        outgoingBuffer=UTF8.encode(nextCharSequence);
+        if (!outgoingCharSequenceIterator.hasNext()) {
+          outgoingCharSequenceIterator=null;
+          isLastPartOfElement=true;
+        }
+ else {
+          isLastPartOfElement=false;
+        }
+        final SmackDebugger debugger=connectionInternal.smackDebugger;
+        if (debugger != null) {
+          if (outgoingStreamForDebugger == null) {
+            outgoingStreamForDebugger=new StringBuilder();
+          }
+          outgoingStreamForDebugger.append(nextCharSequence);
+          if (isLastPartOfElement) {
+            try {
+              outputDebugSplitter.append(outgoingStreamForDebugger);
+            }
+ catch (            IOException e) {
+              throw new AssertionError(e);
+            }
+            debugger.onOutgoingElementCompleted();
+            outgoingStreamForDebugger=null;
+          }
+        }
+      }
+ else       if (!connectionInternal.outgoingElementsQueue.isEmpty()) {
+        currentlyOutgonigTopLevelStreamElement=connectionInternal.outgoingElementsQueue.poll();
+        if (currentlyOutgonigTopLevelStreamElement instanceof Stanza) {
+          Stanza currentlyOutgoingStanza=(Stanza)currentlyOutgonigTopLevelStreamElement;
+          Jid currentDestinationAddress=currentlyOutgoingStanza.getTo();
+          destinationAddressChanged=!JidUtil.equals(lastDestinationAddress,currentDestinationAddress);
+          lastDestinationAddress=currentDestinationAddress;
+        }
+        CharSequence nextCharSequence=currentlyOutgonigTopLevelStreamElement.toXML(StreamOpen.CLIENT_NAMESPACE);
+        if (nextCharSequence instanceof XmlStringBuilder) {
+          XmlStringBuilder xmlStringBuilder=(XmlStringBuilder)nextCharSequence;
+          XmlEnvironment outgoingStreamXmlEnvironment=connectionInternal.getOutgoingStreamXmlEnvironment();
+          outgoingCharSequenceIterator=xmlStringBuilder.toList(outgoingStreamXmlEnvironment).iterator();
+        }
+ else {
+          outgoingCharSequenceIterator=Collections.singletonList(nextCharSequence).iterator();
+        }
+        assert outgoingCharSequenceIterator != null;
+      }
+ else {
+        break;
+      }
+    }
+    pendingOutputFilterData=newPendingOutputFilterData;
+    if (!pendingWriteInterestAfterRead && pendingOutputFilterData) {
+      newInterestedOps|=SelectionKey.OP_WRITE;
+    }
+    readLoop:     while (true) {
+      if (callbackBytesRead > CALLBACK_MAX_BYTES_READ) {
+        callbackPreemtBecauseBytesRead++;
+        break;
+      }
+      int bytesRead;
+      incomingBuffer.clear();
+      try {
+        bytesRead=selectedSocketChannel.read(incomingBuffer);
+      }
+ catch (      IOException e) {
+        handleReadWriteIoException(e);
+        return;
+      }
+      if (bytesRead < 0) {
+        LOGGER.finer("NIO read() returned " + bytesRead + " for "+ this+ ". This probably means that the TCP connection was terminated.");
+        return;
+      }
+      if (!pendingInputFilterData) {
+        if (bytesRead == 0) {
+          break;
+        }
+      }
+ else {
+        pendingInputFilterData=false;
+      }
+      if (pendingWriteInterestAfterRead) {
+        pendingWriteInterestAfterRead=false;
+        newInterestedOps|=SelectionKey.OP_WRITE;
+      }
+      callbackBytesRead+=bytesRead;
+      ByteBuffer filteredIncomingBuffer=incomingBuffer;
+      for (ListIterator<XmppInputOutputFilter> it=connectionInternal.getXmppInputOutputFilterEndIterator(); it.hasPrevious(); ) {
+        filteredIncomingBuffer.flip();
+        ByteBuffer newFilteredIncomingBuffer;
+        try {
+          newFilteredIncomingBuffer=it.previous().input(filteredIncomingBuffer);
+        }
+ catch (        IOException e) {
+          connectionInternal.notifyConnectionError(e);
+          return;
+        }
+        if (newFilteredIncomingBuffer == null) {
+          break readLoop;
+        }
+        filteredIncomingBuffer=newFilteredIncomingBuffer;
+      }
+      final int bytesReadAfterFilter=filteredIncomingBuffer.flip().remaining();
+      totalBytesReadAfterFilter+=bytesReadAfterFilter;
+      try {
+        splitter.write(filteredIncomingBuffer);
+      }
+ catch (      IOException e) {
+        connectionInternal.notifyConnectionError(e);
+        return;
+      }
+    }
+  }
+  finally {
+    totalBytesWritten+=callbackBytesWritten;
+    totalBytesRead+=callbackBytesRead;
+    channelSelectedCallbackLock.unlock();
+  }
+  final SelectionKeyAttachment selectionKeyAttachment=this.selectionKeyAttachment;
+  if (selectionKeyAttachment != null) {
+    selectionKeyAttachment.resetReactorThreadRacing();
+  }
+  if (!connectionInternal.outgoingElementsQueue.isEmpty()) {
+    setWriteInterestAfterChannelSelectedCallback.incrementAndGet();
+    newInterestedOps|=SelectionKey.OP_WRITE;
+  }
+  connectionInternal.setInterestOps(selectionKey,newInterestedOps);
+}

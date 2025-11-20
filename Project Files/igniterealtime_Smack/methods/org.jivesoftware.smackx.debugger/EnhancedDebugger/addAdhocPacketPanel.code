@@ -1,0 +1,66 @@
+private void addAdhocPacketPanel(){
+  final JTextArea adhocMessages=new JTextArea();
+  adhocMessages.setEditable(true);
+  adhocMessages.setForeground(new Color(1,94,35));
+  tabbedPane.add("Ad-hoc message",new JScrollPane(adhocMessages));
+  tabbedPane.setToolTipTextAt(3,"Panel that allows you to send adhoc packets");
+  JPopupMenu menu=new JPopupMenu();
+  JMenuItem menuItem=new JMenuItem("Message");
+  menuItem.addActionListener(new ActionListener(){
+    @Override public void actionPerformed(    ActionEvent e){
+      adhocMessages.setText("<message to=\"\" id=\"" + StringUtils.randomString(5) + "-X\"><body></body></message>");
+    }
+  }
+);
+  menu.add(menuItem);
+  menuItem=new JMenuItem("IQ Get");
+  menuItem.addActionListener(new ActionListener(){
+    @Override public void actionPerformed(    ActionEvent e){
+      adhocMessages.setText("<iq type=\"get\" to=\"\" id=\"" + StringUtils.randomString(5) + "-X\"><query xmlns=\"\"></query></iq>");
+    }
+  }
+);
+  menu.add(menuItem);
+  menuItem=new JMenuItem("IQ Set");
+  menuItem.addActionListener(new ActionListener(){
+    @Override public void actionPerformed(    ActionEvent e){
+      adhocMessages.setText("<iq type=\"set\" to=\"\" id=\"" + StringUtils.randomString(5) + "-X\"><query xmlns=\"\"></query></iq>");
+    }
+  }
+);
+  menu.add(menuItem);
+  menuItem=new JMenuItem("Presence");
+  menuItem.addActionListener(new ActionListener(){
+    @Override public void actionPerformed(    ActionEvent e){
+      adhocMessages.setText("<presence to=\"\" id=\"" + StringUtils.randomString(5) + "-X\"/>");
+    }
+  }
+);
+  menu.add(menuItem);
+  menu.addSeparator();
+  menuItem=new JMenuItem("Send");
+  menuItem.addActionListener(new ActionListener(){
+    @Override public void actionPerformed(    ActionEvent e){
+      if (!"".equals(adhocMessages.getText())) {
+        AdHocPacket packetToSend=new AdHocPacket(adhocMessages.getText());
+        try {
+          connection.sendStanza(packetToSend);
+        }
+ catch (        InterruptedException|NotConnectedException e1) {
+          LOGGER.log(Level.WARNING,"exception",e);
+        }
+      }
+    }
+  }
+);
+  menu.add(menuItem);
+  menuItem=new JMenuItem("Clear");
+  menuItem.addActionListener(new ActionListener(){
+    @Override public void actionPerformed(    ActionEvent e){
+      adhocMessages.setText(null);
+    }
+  }
+);
+  menu.add(menuItem);
+  adhocMessages.addMouseListener(new PopupListener(menu));
+}

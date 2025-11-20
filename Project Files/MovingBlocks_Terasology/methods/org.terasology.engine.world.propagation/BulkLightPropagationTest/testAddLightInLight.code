@@ -1,0 +1,14 @@
+@Test public void testAddLightInLight(){
+  StubPropagatorWorldView worldView=new StubPropagatorWorldView(testingRegion,air);
+  worldView.setBlockAt(new Vector3i(2,0,0),mediumLight);
+  BatchPropagator propagator=new StandardBatchPropagator(lightRules,worldView);
+  propagator.process(new BlockChange(new Vector3i(2,0,0),air,mediumLight));
+  worldView.setBlockAt(new Vector3i(0,0,0),fullLight);
+  propagator.process(new BlockChange(ZERO_VECTOR,air,fullLight));
+  for (int i=0; i < fullLight.getLuminance() + 1; ++i) {
+    byte expectedLuminance=(byte)Math.max(0,fullLight.getLuminance() - i);
+    for (    Vector3ic pos : Diamond3iIterable.shell(new Vector3i(0,0,0),i).build()) {
+      assertEquals(expectedLuminance,worldView.getValueAt(pos));
+    }
+  }
+}

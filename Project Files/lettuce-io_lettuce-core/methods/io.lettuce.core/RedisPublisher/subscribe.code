@@ -1,0 +1,43 @@
+@Override public void subscribe(Subscriber<? super T> subscriber){
+  if (this.traceEnabled) {
+    LOG.trace("subscribe: {}@{}",subscriber.getClass().getName(),Objects.hashCode(subscriber));
+  }
+  RedisCommand<K,V,T> command=ref.get();
+  if (command != null) {
+    if (!ref.compareAndSet(command,null)) {
+      command=commandSupplier.get();
+    }
+  }
+ else {
+    command=commandSupplier.get();
+  }
+  RedisSubscription<T> redisSubscription=new RedisSubscription<>(connection,command,dissolve,executor);
+  redisSubscription.subscribe(subscriber);
+}
+/** 
+ * Subscription procedure called by a  {@link Publisher}
+ * @param subscriber the subscriber, must not be {@code null}.
+ */
+void subscribe(Subscriber<? super T> subscriber){
+  if (subscriber == null) {
+    throw new NullPointerException("Subscriber must not be null");
+  }
+  State state=state();
+  if (traceEnabled) {
+    LOG.trace("{} subscribe: {}@{}",state,subscriber.getClass().getName(),subscriber.hashCode());
+  }
+  state.subscribe(this,subscriber);
+}
+@SuppressWarnings("unchecked") @Override void subscribe(RedisSubscription<?> subscription,Subscriber<?> subscriber){
+  LettuceAssert.notNull(subscriber,"Subscriber must not be null");
+  if (subscription.changeState(this,NO_DEMAND)) {
+    subscription.subscriber=RedisSubscriber.create(subscriber,subscription.executor);
+    subscriber.onSubscribe(subscription);
+  }
+ else {
+    throw new IllegalStateException(toString());
+  }
+}
+void subscribe(RedisSubscription<?> subscription,Subscriber<?> subscriber){
+  throw new IllegalStateException(toString());
+}

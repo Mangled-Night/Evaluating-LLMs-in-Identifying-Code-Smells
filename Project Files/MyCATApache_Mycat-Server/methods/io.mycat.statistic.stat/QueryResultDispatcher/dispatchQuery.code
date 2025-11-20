@@ -1,0 +1,19 @@
+public static void dispatchQuery(final QueryResult queryResult){
+  int useSqlStat=MycatServer.getInstance().getConfig().getSystem().getUseSqlStat();
+  if (useSqlStat == 0) {
+    return;
+  }
+  MycatServer.getInstance().getBusinessExecutor().execute(new Runnable(){
+    public void run(){
+      for (      QueryResultListener listener : listeners) {
+        try {
+          listener.onQueryResult(queryResult);
+        }
+ catch (        Exception e) {
+          LOGGER.error("error:",e);
+        }
+      }
+    }
+  }
+);
+}

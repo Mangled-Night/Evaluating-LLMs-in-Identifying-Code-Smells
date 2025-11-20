@@ -1,0 +1,29 @@
+private void createOrUpdateNameTagFor(EntityRef entity,NameTagComponent nameTagComponent){
+  EntityRef nameTag=nameTagEntityToFloatingTextMap.get(entity);
+  Vector3f offset=new Vector3f(0,nameTagComponent.yOffset,0);
+  if (nameTag != null) {
+    FloatingTextComponent floatingText=nameTag.getComponent(FloatingTextComponent.class);
+    floatingText.text=nameTagComponent.text;
+    floatingText.textColor=nameTagComponent.textColor;
+    floatingText.scale=nameTagComponent.scale;
+    nameTag.saveComponent(floatingText);
+    LocationComponent nameTagLoc=nameTag.getComponent(LocationComponent.class);
+    nameTagLoc.setLocalPosition(offset);
+    nameTag.saveComponent(nameTagLoc);
+  }
+ else {
+    EntityBuilder nameTagBuilder=entityManager.newBuilder();
+    FloatingTextComponent floatingTextComponent=new FloatingTextComponent();
+    nameTagBuilder.addComponent(floatingTextComponent);
+    LocationComponent locationComponent=new LocationComponent();
+    nameTagBuilder.addComponent(locationComponent);
+    floatingTextComponent.text=nameTagComponent.text;
+    floatingTextComponent.textColor=nameTagComponent.textColor;
+    floatingTextComponent.scale=nameTagComponent.scale;
+    nameTagBuilder.setOwner(entity);
+    nameTagBuilder.setPersistent(false);
+    nameTag=nameTagBuilder.build();
+    nameTagEntityToFloatingTextMap.put(entity,nameTag);
+    Location.attachChild(entity,nameTag,offset,new Quaternionf());
+  }
+}

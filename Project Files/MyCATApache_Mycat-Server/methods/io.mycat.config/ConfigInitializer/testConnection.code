@@ -1,0 +1,38 @@
+public void testConnection(){
+  if (this.dataNodes != null && this.dataHosts != null) {
+    Map<String,Boolean> map=new HashMap<String,Boolean>();
+    for (    PhysicalDBNode dataNode : dataNodes.values()) {
+      String database=dataNode.getDatabase();
+      PhysicalDBPool pool=dataNode.getDbPool();
+      for (      PhysicalDatasource ds : pool.getAllDataSources()) {
+        String key=ds.getName() + "_" + database;
+        if (map.get(key) == null) {
+          map.put(key,false);
+          boolean isConnected=false;
+          try {
+            isConnected=ds.testConnection(database);
+            map.put(key,isConnected);
+          }
+ catch (          IOException e) {
+            LOGGER.warn("test conn error:",e);
+          }
+        }
+      }
+    }
+    boolean isConnectivity=true;
+    for (    Map.Entry<String,Boolean> entry : map.entrySet()) {
+      String key=entry.getKey();
+      Boolean value=entry.getValue();
+      if (!value && isConnectivity) {
+        LOGGER.warn("SelfCheck### test " + key + " database connection failed ");
+        isConnectivity=false;
+      }
+ else {
+        LOGGER.info("SelfCheck### test " + key + " database connection success ");
+      }
+    }
+    if (!isConnectivity) {
+      throw new ConfigException("SelfCheck### there are some datasource connection failed, pls check!");
+    }
+  }
+}

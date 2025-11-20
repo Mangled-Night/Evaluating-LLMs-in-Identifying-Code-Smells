@@ -1,0 +1,34 @@
+public void testAddLimitToSQL() throws Exception {
+  final SchemaConfig schema=schemaMap.get("TESTDB");
+  String sql=null;
+  RouteResultset rrs=null;
+  sql="select * from orders";
+  rrs=routeStrategy.route(new SystemConfig(),schema,ServerParse.SELECT,sql,null,null,cachePool);
+  Assert.assertEquals(true,rrs.isCacheAble());
+  Map<String,RouteResultsetNode> nodeMap=getNodeMap(rrs,2);
+  NodeNameAsserter nameAsserter=new NodeNameAsserter("dn2","dn1");
+  nameAsserter.assertRouteNodeNames(nodeMap.keySet());
+  Assert.assertEquals(schema.getDefaultMaxLimit(),rrs.getLimitSize());
+  MySqlStatementParser parser=new MySqlStatementParser("SELECT * FROM orders LIMIT 100");
+  SQLStatement statement=parser.parseStatement();
+  Assert.assertEquals(statement.toString(),rrs.getNodes()[0].getStatement());
+  sql="select * from goods";
+  rrs=routeStrategy.route(new SystemConfig(),schema,ServerParse.SELECT,sql,null,null,cachePool);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  Assert.assertEquals(1,rrs.getNodes().length);
+  Assert.assertEquals(schema.getDefaultMaxLimit(),rrs.getLimitSize());
+  parser=new MySqlStatementParser("SELECT * FROM goods LIMIT 100");
+  statement=parser.parseStatement();
+  Assert.assertEquals(statement.toString(),rrs.getNodes()[0].getStatement());
+  sql="select * from goods limit 2 ,3";
+  rrs=routeStrategy.route(new SystemConfig(),schema,ServerParse.SELECT,sql,null,null,cachePool);
+  Assert.assertEquals(false,rrs.isCacheAble());
+  Assert.assertEquals(1,rrs.getNodes().length);
+  Assert.assertEquals("select * from goods limit 2 ,3",rrs.getNodes()[0].getStatement());
+  sql="select * from notpartionTable limit 2 ,3";
+  rrs=routeStrategy.route(new SystemConfig(),schema,ServerParse.SELECT,sql,null,null,cachePool);
+  Assert.assertEquals(true,rrs.isCacheAble());
+  Assert.assertEquals(1,rrs.getNodes().length);
+  Assert.assertEquals(3,rrs.getLimitSize());
+  Assert.assertEquals("select * from notpartionTable limit 2 ,3",rrs.getNodes()[0].getStatement());
+}

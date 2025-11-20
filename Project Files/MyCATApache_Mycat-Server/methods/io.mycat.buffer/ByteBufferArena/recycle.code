@@ -1,0 +1,32 @@
+@Override public void recycle(ByteBuffer byteBuffer){
+  final long size=byteBuffer != null ? byteBuffer.capacity() : 0;
+  try {
+    int i;
+    for (i=0; i < 6; i++) {
+      if (q[i].free(byteBuffer)) {
+        break;
+      }
+    }
+    if (i > 5) {
+      LOGGER.warn("This ByteBuffer is not maintained in ByteBufferArena!");
+      return;
+    }
+    final Thread thread=Thread.currentThread();
+    final long threadId=thread.getId();
+    if (memoryUsage.containsKey(threadId)) {
+      memoryUsage.put(threadId,memoryUsage.get(thread.getId()) - size);
+    }
+    if (sharedOptsCount.containsKey(thread)) {
+      int currentCount=sharedOptsCount.get(thread);
+      currentCount--;
+      sharedOptsCount.put(thread,currentCount);
+    }
+ else {
+      sharedOptsCount.put(thread,0);
+    }
+    capacity.addAndGet(byteBuffer.capacity());
+    return;
+  }
+  finally {
+  }
+}

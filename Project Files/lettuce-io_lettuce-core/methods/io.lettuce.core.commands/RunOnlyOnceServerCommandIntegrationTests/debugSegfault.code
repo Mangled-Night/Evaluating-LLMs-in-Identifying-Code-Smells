@@ -1,0 +1,15 @@
+/** 
+ * Executed in order: 1 this test causes a stop of the redis. This means, you cannot repeat the test without restarting your redis.
+ */
+@Test @Disabled void debugSegfault(){
+  assumeTrue(CanConnect.to(host(),port(1)));
+  final RedisAsyncCommands<String,String> commands=client.connect(RedisURI.Builder.redis(host(),port(1)).build()).async();
+  try {
+    commands.debugSegfault();
+    Wait.untilTrue(() -> !commands.getStatefulConnection().isOpen()).waitOrTimeout();
+    assertThat(commands.getStatefulConnection().isOpen()).isFalse();
+  }
+  finally {
+    commands.getStatefulConnection().close();
+  }
+}

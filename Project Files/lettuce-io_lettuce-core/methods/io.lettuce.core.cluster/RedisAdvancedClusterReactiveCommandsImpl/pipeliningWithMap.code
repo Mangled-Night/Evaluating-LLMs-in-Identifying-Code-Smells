@@ -1,0 +1,13 @@
+private <T>Flux<T> pipeliningWithMap(Map<K,V> map,Function<Map<K,V>,Flux<T>> function,Function<Flux<T>,Flux<T>> resultFunction){
+  Map<Integer,List<K>> partitioned=SlotHash.partition(codec,map.keySet());
+  if (partitioned.size() < 2) {
+    return function.apply(map);
+  }
+  List<Flux<T>> publishers=partitioned.values().stream().map(ks -> {
+    Map<K,V> op=new HashMap<>();
+    ks.forEach(k -> op.put(k,map.get(k)));
+    return function.apply(op);
+  }
+).collect(Collectors.toList());
+  return resultFunction.apply(Flux.merge(publishers));
+}

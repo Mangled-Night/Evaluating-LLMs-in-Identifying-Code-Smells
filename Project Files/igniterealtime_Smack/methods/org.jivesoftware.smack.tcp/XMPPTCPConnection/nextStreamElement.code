@@ -1,0 +1,19 @@
+/** 
+ * Maybe return the next available element from the queue for writing. If the queue is shut down <b>or</b> a spurious interrupt occurs, <code>null</code> is returned. So it is important to check the 'done' condition in that case.
+ * @return the next element for writing or null.
+ */
+private Element nextStreamElement(){
+  if (queue.isEmpty()) {
+    shouldBundleAndDefer=true;
+  }
+  Element packet=null;
+  try {
+    packet=queue.take();
+  }
+ catch (  InterruptedException e) {
+    if (!queue.isShutdown()) {
+      LOGGER.log(Level.WARNING,"Writer thread was interrupted. Don't do that. Use disconnect() instead.",e);
+    }
+  }
+  return packet;
+}

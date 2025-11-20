@@ -1,0 +1,30 @@
+/** 
+ * Simulates a failure on reconnect by changing the port to a invalid server and triggering a reconnect. Expectation:  {@link io.lettuce.core.ConnectionEvents.Reconnect} events are sent.
+ * @throws Exception
+ */
+@Test void failOnReconnectShouldSendEvents() throws Exception {
+  client.setOptions(ClientOptions.builder().suspendReconnectOnProtocolFailure(false).build());
+  RandomResponseServer ts=getRandomResponseServer();
+  RedisURI redisUri=RedisURI.create(defaultRedisUri.toURI());
+  redisUri.setTimeout(Duration.ofSeconds(5));
+  try {
+    final BlockingQueue<ConnectionEvents.Reconnect> events=new LinkedBlockingDeque<>();
+    RedisAsyncCommands<String,String> connection=client.connect(redisUri).async();
+    ConnectionWatchdog connectionWatchdog=ConnectionTestUtil.getConnectionWatchdog(connection.getStatefulConnection());
+    ReconnectionListener reconnectionListener=events::offer;
+    Field field=ConnectionWatchdog.class.getDeclaredField("reconnectionListener");
+    field.setAccessible(true);
+    field.set(connectionWatchdog,reconnectionListener);
+    redisUri.setPort(TestSettings.nonexistentPort());
+    connection.quit();
+    Wait.untilTrue(() -> events.size() > 1).waitOrTimeout();
+    connection.getStatefulConnection().close();
+    ConnectionEvents.Reconnect event1=events.take();
+    assertThat(event1.getAttempt()).isEqualTo(1);
+    ConnectionEvents.Reconnect event2=events.take();
+    assertThat(event2.getAttempt()).isEqualTo(2);
+  }
+  finally {
+    ts.shutdown();
+  }
+}

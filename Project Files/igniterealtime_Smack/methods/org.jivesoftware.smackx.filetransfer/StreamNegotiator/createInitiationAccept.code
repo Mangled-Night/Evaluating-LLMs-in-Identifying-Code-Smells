@@ -1,0 +1,19 @@
+/** 
+ * Creates the initiation acceptance stanza to forward to the stream initiator.
+ * @param streamInitiationOffer The offer from the stream initiator to connect for a stream.
+ * @param namespace            The namespace that relates to the accepted means of transfer.
+ * @return The response to be forwarded to the initiator.
+ */
+protected static StreamInitiation createInitiationAccept(StreamInitiation streamInitiationOffer,String namespace){
+  StreamInitiation response=new StreamInitiation();
+  response.setTo(streamInitiationOffer.getFrom());
+  response.setFrom(streamInitiationOffer.getTo());
+  response.setType(IQ.Type.result);
+  response.setStanzaId(streamInitiationOffer.getStanzaId());
+  DataForm.Builder form=DataForm.builder();
+  ListSingleFormField.Builder field=FormField.listSingleBuilder(FileTransferNegotiator.STREAM_DATA_FIELD_NAME);
+  field.setValue(namespace);
+  form.addField(field.build());
+  response.setFeatureNegotiationForm(form.build());
+  return response;
+}

@@ -1,0 +1,34 @@
+/** 
+ * Delete all files that satisfy the filter in directory.
+ * @param dirPath The path of directory.
+ * @param filter  The filter.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean deleteFilesInDirWithFilter(final String dirPath,final FileFilter filter){
+  return deleteFilesInDirWithFilter(getFileByPath(dirPath),filter);
+}
+/** 
+ * Delete all files that satisfy the filter in directory.
+ * @param dir    The directory.
+ * @param filter The filter.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean deleteFilesInDirWithFilter(final File dir,final FileFilter filter){
+  if (dir == null || filter == null)   return false;
+  if (!dir.exists())   return true;
+  if (!dir.isDirectory())   return false;
+  File[] files=dir.listFiles();
+  if (files != null && files.length != 0) {
+    for (    File file : files) {
+      if (filter.accept(file)) {
+        if (file.isFile()) {
+          if (!file.delete())           return false;
+        }
+ else         if (file.isDirectory()) {
+          if (!deleteDir(file))           return false;
+        }
+      }
+    }
+  }
+  return true;
+}

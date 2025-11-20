@@ -1,0 +1,41 @@
+/** 
+ * Initialize the  {@link Bootstrap}.
+ * @since 6.1
+ */
+public void configureBootstrap(boolean domainSocket,Function<Class<? extends EventLoopGroup>,EventLoopGroup> eventLoopGroupProvider){
+  LettuceAssert.assertState(bootstrap != null,"Bootstrap must be set");
+  LettuceAssert.assertState(clientOptions != null,"ClientOptions must be set");
+  Class<? extends EventLoopGroup> eventLoopGroupClass=Transports.eventLoopGroupClass();
+  Class<? extends Channel> channelClass=Transports.socketChannelClass();
+  if (domainSocket) {
+    Transports.NativeTransports.assertDomainSocketAvailable();
+    eventLoopGroupClass=Transports.NativeTransports.eventLoopGroupClass();
+    channelClass=Transports.NativeTransports.domainSocketChannelClass();
+  }
+ else {
+    bootstrap.resolver(clientResources.addressResolverGroup());
+  }
+  SocketOptions options=clientOptions.getSocketOptions();
+  EventLoopGroup eventLoopGroup=eventLoopGroupProvider.apply(eventLoopGroupClass);
+  bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,Math.toIntExact(options.getConnectTimeout().toMillis()));
+  if (!domainSocket) {
+    bootstrap.option(ChannelOption.SO_KEEPALIVE,options.isKeepAlive());
+    bootstrap.option(ChannelOption.TCP_NODELAY,options.isTcpNoDelay());
+  }
+  bootstrap.channel(channelClass).group(eventLoopGroup);
+  if (options.isKeepAlive() && options.isExtendedKeepAlive()) {
+    SocketOptions.KeepAliveOptions keepAlive=options.getKeepAlive();
+    if (IOUringProvider.isAvailable()) {
+      IOUringProvider.applyKeepAlive(bootstrap,keepAlive.getCount(),keepAlive.getIdle(),keepAlive.getInterval());
+    }
+ else     if (io.lettuce.core.resource.EpollProvider.isAvailable()) {
+      EpollProvider.applyKeepAlive(bootstrap,keepAlive.getCount(),keepAlive.getIdle(),keepAlive.getInterval());
+    }
+ else     if (ExtendedNioSocketOptions.isAvailable() && !KqueueProvider.isAvailable()) {
+      ExtendedNioSocketOptions.applyKeepAlive(bootstrap,keepAlive.getCount(),keepAlive.getIdle(),keepAlive.getInterval());
+    }
+ else {
+      logger.warn("Cannot apply extended TCP keepalive options to channel type " + channelClass.getName());
+    }
+  }
+}

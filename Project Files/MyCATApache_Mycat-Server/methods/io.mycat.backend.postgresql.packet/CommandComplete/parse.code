@@ -1,0 +1,20 @@
+public static CommandComplete parse(ByteBuffer buffer,int offset){
+  if (buffer.get(offset) != PacketMarker.B_CommandComplete.getValue()) {
+    throw new IllegalArgumentException("this packetData not is CommandComplete");
+  }
+  CommandComplete packet=new CommandComplete();
+  packet.length=PIOUtils.redInteger4(buffer,offset + 1);
+  packet.commandResponse=new String(PIOUtils.redByteArray(buffer,offset + 1 + 4,packet.length - 4),UTF8).trim();
+  if (packet.commandResponse.startsWith("INSERT")) {
+    String vs[]=packet.commandResponse.replace("INSERT","").trim().split(" +");
+    packet.insertId=parseInt(vs[0]);
+    packet.affectedRows=parseInt(vs[1]);
+  }
+ else   if (packet.commandResponse.startsWith("UPDATE")) {
+    packet.affectedRows=parseInt(packet.commandResponse.replace("UPDATE","").trim());
+  }
+ else   if (packet.commandResponse.startsWith("DELETE")) {
+    packet.affectedRows=parseInt(packet.commandResponse.replace("DELETE","").trim());
+  }
+  return packet;
+}

@@ -1,0 +1,28 @@
+public void testManyResources() throws Exception {
+  XMPPTCPConnection[] conns=new XMPPConnection[5];
+  for (int i=0; i < conns.length; i++) {
+    ConnectionConfiguration connectionConfiguration=new ConnectionConfiguration(getHost(),getPort(),getXMPPServiceDomain());
+    connectionConfiguration.setSecurityMode(ConnectionConfiguration.SecurityMode.disabled);
+    conns[i]=new XMPPTCPConnection(connectionConfiguration);
+    conns[i].connect();
+    conns[i].login(getUsername(1),getPassword(1),"resource-" + i);
+    Thread.sleep(20);
+  }
+  MultiUserChat[] mucs=new MultiUserChat[5];
+  for (int i=0; i < mucs.length; i++) {
+    mucs[i]=new MultiUserChat(conns[i],room);
+    mucs[i].join("resource-" + i);
+  }
+  Thread.sleep(200);
+  for (int i=0; i < mucs.length; i++) {
+    mucs[i].sendMessage("I'm resource-" + i);
+  }
+  Thread.sleep(200);
+  for (  MultiUserChat muc1 : mucs) {
+    muc1.leave();
+  }
+  Thread.sleep(200);
+  for (int i=0; i < mucs.length; i++) {
+    conns[i].disconnect();
+  }
+}

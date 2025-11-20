@@ -1,0 +1,21 @@
+public boolean addPath(String nodePath){
+  LOGGER.debug("add vote information " + nodePath);
+  if (TimeUtil.currentTimeMillis() - changingFinishDate < minTimeToSwitched && statue.get() == NOT_SELECT) {
+    try {
+      client.delete().deletingChildrenIfNeeded().forPath(nodePath);
+    }
+ catch (    Exception e) {
+      e.printStackTrace();
+      LOGGER.error("remove vote information debug during not voting time",e);
+    }
+    return false;
+  }
+  if (statue.compareAndSet(NOT_SELECT,ENTER_SELECT)) {
+    future=service.schedule(this,maxTimeToWait,TimeUnit.MILLISECONDS);
+  }
+  if (statue.get() == ENTER_SELECT) {
+    boolean flag=voteSet.add(nodePath);
+    return flag;
+  }
+  return false;
+}

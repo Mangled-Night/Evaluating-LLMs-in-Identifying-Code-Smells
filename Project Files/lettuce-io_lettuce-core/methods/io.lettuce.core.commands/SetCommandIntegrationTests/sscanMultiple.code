@@ -1,0 +1,14 @@
+@Test void sscanMultiple(){
+  Set<String> expect=new HashSet<>();
+  Set<String> check=new HashSet<>();
+  setup100KeyValues(expect);
+  ValueScanCursor<String> cursor=redis.sscan(key,ScanArgs.Builder.limit(5));
+  assertThat(cursor.getCursor()).isNotNull().isNotEqualTo("0");
+  assertThat(cursor.isFinished()).isFalse();
+  check.addAll(cursor.getValues());
+  while (!cursor.isFinished()) {
+    cursor=redis.sscan(key,cursor);
+    check.addAll(cursor.getValues());
+  }
+  assertThat(new TreeSet<>(check)).isEqualTo(new TreeSet<>(expect));
+}

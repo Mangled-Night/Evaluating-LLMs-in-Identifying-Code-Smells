@@ -1,0 +1,8 @@
+@Test @SuppressWarnings({"unchecked"}) void zrangebyscoreWithScoresInfinity(){
+  redis.zadd(key,Double.POSITIVE_INFINITY,"a",Double.NEGATIVE_INFINITY,"b");
+  assertThat(redis.zrangebyscoreWithScores(key,"-inf","+inf")).hasSize(2);
+  ListStreamingAdapter<String> streamingAdapter=new ListStreamingAdapter<>();
+  Range<Double> range=Range.from(including(Double.NEGATIVE_INFINITY),including(Double.POSITIVE_INFINITY));
+  redis.zrangebyscoreWithScores(streamingAdapter,key,range);
+  assertThat(streamingAdapter.getList()).hasSize(2);
+}

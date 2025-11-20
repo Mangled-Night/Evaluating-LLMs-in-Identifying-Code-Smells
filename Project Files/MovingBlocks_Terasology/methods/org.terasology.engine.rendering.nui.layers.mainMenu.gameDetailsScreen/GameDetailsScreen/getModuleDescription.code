@@ -1,0 +1,34 @@
+private String getModuleDescription(final ModuleSelectionInfo moduleSelectionInfo){
+  final StringBuilder sb=new StringBuilder();
+  final ModuleMetadata moduleMetadata=moduleSelectionInfo.getMetadata();
+  if (moduleMetadata != null) {
+    sb.append(translationSystem.translate("${engine:menu#game-details-game-title} ")).append(moduleMetadata.getDisplayName()).append('\n').append('\n');
+    if (moduleSelectionInfo.isLatestVersion()) {
+      sb.append(translationSystem.translate("${engine:menu#game-details-invalid-module-version-warning}")).append('\n').append('\n');
+    }
+    if (moduleMetadata.getVersion() != null) {
+      sb.append(translationSystem.translate("${engine:menu#game-details-version}")).append(" ").append(moduleMetadata.getVersion().toString()).append('\n').append('\n');
+    }
+    String moduleDescription=moduleMetadata.getDescription().toString();
+    if (StringUtils.isBlank(moduleDescription)) {
+      moduleDescription=translationSystem.translate("${engine:menu#game-details-no-description}");
+    }
+    sb.append(translationSystem.translate("${engine:menu#game-details-description}")).append(moduleDescription).append('\n').append('\n');
+    StringBuilder dependenciesNames;
+    final List<DependencyInfo> dependencies=moduleMetadata.getDependencies();
+    if (dependencies != null && !dependencies.isEmpty()) {
+      dependenciesNames=new StringBuilder(translationSystem.translate("${engine:menu#module-dependencies-exist}") + ":" + '\n');
+      for (      DependencyInfo dependency : dependencies) {
+        dependenciesNames.append("   ").append(dependency.getId().toString()).append('\n');
+      }
+    }
+ else {
+      dependenciesNames=new StringBuilder(translationSystem.translate("${engine:menu#module-dependencies-empty}") + ".");
+    }
+    return sb.append(dependenciesNames).toString();
+  }
+  if (moduleSelectionInfo.isUnavailableVersion()) {
+    return sb.append(translationSystem.translate("${engine:menu#game-details-invalid-module-error}")).append("\n").append('\n').append(translationSystem.translate("${engine:menu#game-details-version}")).append(" ").append(moduleSelectionInfo.getUnavailableModuleVersion()).toString();
+  }
+  return translationSystem.translate("${engine:menu#game-details-invalid-module-error}");
+}

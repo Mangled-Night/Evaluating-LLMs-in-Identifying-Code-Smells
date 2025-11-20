@@ -1,0 +1,52 @@
+/** 
+ * Creates an instant node, if supported.
+ * @return The node that was created
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public LeafNode createNode() throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  PubSub reply=sendPubsubPacket(IQ.Type.set,new NodeExtension(PubSubElementType.CREATE),null);
+  QName qname=new QName(PubSubNamespace.basic.getXmlns(),"create");
+  NodeExtension elem=(NodeExtension)reply.getExtension(qname);
+  LeafNode newNode=new LeafNode(this,elem.getNode());
+  nodeMap.put(newNode.getId(),newNode);
+  return newNode;
+}
+/** 
+ * Creates a node with default configuration.
+ * @param nodeId The id of the node, which must be unique within thepubsub service
+ * @return The node that was created
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public LeafNode createNode(String nodeId) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  return (LeafNode)createNode(nodeId,null);
+}
+/** 
+ * Creates a node with specified configuration. Note: This is the only way to create a collection node.
+ * @param nodeId The name of the node, which must be unique within thepubsub service
+ * @param config The configuration for the node
+ * @return The node that was created
+ * @throws XMPPErrorException if there was an XMPP error returned.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public Node createNode(String nodeId,FillableConfigureForm config) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  PubSub request=PubSub.createPubsubPacket(pubSubService,IQ.Type.set,new NodeExtension(PubSubElementType.CREATE,nodeId));
+  boolean isLeafNode=true;
+  if (config != null) {
+    DataForm submitForm=config.getDataFormToSubmit();
+    request.addExtension(new FormNode(FormNodeType.CONFIGURE,submitForm));
+    NodeType nodeType=config.getNodeType();
+    isLeafNode=nodeType == null || nodeType == NodeType.leaf;
+  }
+  sendPubsubPacket(request);
+  Node newNode=isLeafNode ? new LeafNode(this,nodeId) : new CollectionNode(this,nodeId);
+  nodeMap.put(newNode.getId(),newNode);
+  return newNode;
+}

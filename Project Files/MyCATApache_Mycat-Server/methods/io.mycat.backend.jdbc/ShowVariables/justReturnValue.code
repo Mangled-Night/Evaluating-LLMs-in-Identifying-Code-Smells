@@ -1,0 +1,24 @@
+public static void justReturnValue(ServerConnection c,String value){
+  ByteBuffer buffer=c.allocate();
+  buffer=header.write(buffer,c,true);
+  for (  FieldPacket field : fields) {
+    buffer=field.write(buffer,c,true);
+  }
+  buffer=eof.write(buffer,c,true);
+  byte packetId=eof.packetId;
+  if (value != null) {
+    RowDataPacket row=new RowDataPacket(1);
+    row.add(StringUtil.encode(value,c.getCharset()));
+    row.packetId=++packetId;
+    buffer=row.write(buffer,c,true);
+  }
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}
+public static void justReturnValue(ServerConnection sc,String orgin,BackendConnection jdbcConnection){
+  justReturnValue(sc,orgin);
+  NonBlockingSession session=sc.getSession2();
+  session.releaseConnectionIfSafe(jdbcConnection,LOGGER.isDebugEnabled(),false);
+}

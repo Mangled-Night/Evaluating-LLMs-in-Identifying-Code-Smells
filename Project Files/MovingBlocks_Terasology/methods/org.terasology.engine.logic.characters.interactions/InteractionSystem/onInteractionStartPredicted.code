@@ -1,0 +1,13 @@
+@ReceiveEvent(components=InteractionScreenComponent.class) public void onInteractionStartPredicted(InteractionStartPredicted event,EntityRef container,InteractionScreenComponent interactionScreenComponent){
+  EntityRef investigator=event.getInstigator();
+  CharacterComponent characterComponent=investigator.getComponent(CharacterComponent.class);
+  if (characterComponent == null) {
+    logger.error("Interaction start predicted for entity without character component");
+    return;
+  }
+  ClientComponent controller=characterComponent.controller.getComponent(ClientComponent.class);
+  if (controller != null && controller.local) {
+    nuiManager.closeAllScreens();
+    nuiManager.pushScreen(interactionScreenComponent.screen);
+  }
+}

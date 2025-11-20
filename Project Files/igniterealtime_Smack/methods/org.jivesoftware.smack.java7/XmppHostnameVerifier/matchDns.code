@@ -1,0 +1,49 @@
+/** 
+ * Try to match a certificate with a DNS name. This method returns if the certificate matches or throws a  {@link CertificateException} if not.
+ * @param name the DNS name.
+ * @param cert the certificate.
+ * @throws CertificateException if the DNS name does not match the certificate.
+ */
+private static void matchDns(String name,X509Certificate cert) throws CertificateException {
+  Collection<List<?>> subjAltNames=cert.getSubjectAlternativeNames();
+  if (subjAltNames != null) {
+    List<String> nonMatchingDnsAltnames=new LinkedList<>();
+    for (    List<?> san : subjAltNames) {
+      if (((Integer)san.get(0)).intValue() != ALTNAME_DNS) {
+        continue;
+      }
+      String dnsName=(String)san.get(1);
+      if (matchesPerRfc2818(name,dnsName)) {
+        return;
+      }
+ else {
+        nonMatchingDnsAltnames.add(dnsName);
+      }
+    }
+    if (!nonMatchingDnsAltnames.isEmpty()) {
+      StringBuilder sb=new StringBuilder("No subject alternative DNS name matching " + name + " found. Tried: ");
+      for (      String nonMatchingDnsAltname : nonMatchingDnsAltnames) {
+        sb.append(nonMatchingDnsAltname).append(',');
+      }
+      throw new CertificateException(sb.toString());
+    }
+  }
+  LdapName dn=null;
+  try {
+    dn=new LdapName(cert.getSubjectX500Principal().getName());
+  }
+ catch (  InvalidNameException e) {
+    LOGGER.warning("Invalid DN: " + e.getMessage());
+  }
+  if (dn != null) {
+    for (    Rdn rdn : dn.getRdns()) {
+      if (rdn.getType().equalsIgnoreCase("CN")) {
+        if (matchesPerRfc2818(name,rdn.getValue().toString())) {
+          return;
+        }
+        break;
+      }
+    }
+  }
+  throw new CertificateException("No name matching " + name + " found");
+}

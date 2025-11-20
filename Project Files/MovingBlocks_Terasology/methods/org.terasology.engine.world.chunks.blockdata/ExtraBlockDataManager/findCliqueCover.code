@@ -1,0 +1,42 @@
+/** 
+ * Find the smallest-possible number of cliques that contain all of the vertices of the graph. Used to determine how to most efficiently assign aliases of requested extra-data fields.
+ */
+private static ArrayList<ArrayList<String>> findCliqueCover(Graph graph){
+  return findCliqueCover(graph,Integer.MAX_VALUE,"");
+}
+private static ArrayList<ArrayList<String>> findCliqueCover(Graph graph,int bestSize,String tabs){
+  verboseLog(tabs + "findCliqueCover up to " + bestSize+ ", "+ graph.toString());
+  for (int i=0; i < graph.size(); i++) {
+    if (i >= bestSize - 1) {
+      verboseLog(tabs + "giving up");
+      return null;
+    }
+    String v0=graph.getVert(i);
+    if (!graph.getEdges(v0).isEmpty()) {
+      verboseLog(tabs + "Selected vertex " + v0);
+      String v1=graph.getEdges(v0).iterator().next();
+      ArrayList<ArrayList<String>> bestCover0=findCliqueCover(graph.ntract(v0,v1),bestSize,tabs + "----");
+      int bestSize0=bestCover0 == null ? bestSize : bestCover0.size();
+      graph.removeEdge(v0,v1);
+      ArrayList<ArrayList<String>> bestCover1=findCliqueCover(graph,bestSize0,tabs + "    ");
+      graph.addEdge(v0,v1);
+      if (bestCover1 != null) {
+        return bestCover1;
+      }
+ else {
+        if (bestCover0 != null) {
+          bestCover0.get(i).add(v1);
+        }
+        return bestCover0;
+      }
+    }
+  }
+  verboseLog(tabs + "done, " + graph.size());
+  ArrayList<ArrayList<String>> bestCover=new ArrayList<>();
+  for (int i=0; i < graph.size(); i++) {
+    ArrayList<String> singleton=new ArrayList<>();
+    singleton.add(graph.getVert(i));
+    bestCover.add(singleton);
+  }
+  return bestCover;
+}

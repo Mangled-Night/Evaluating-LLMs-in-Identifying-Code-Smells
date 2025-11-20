@@ -1,0 +1,35 @@
+public static void register(){
+  if (UtilsBridge.isMainProcess()) {
+    if (UtilsBridge.isServiceRunning(ServerService.class.getName())) {
+      Log.i("MessengerUtils","Server service is running.");
+      return;
+    }
+    startServiceCompat(new Intent(Utils.getApp(),ServerService.class));
+    return;
+  }
+  if (sLocalClient == null) {
+    Client client=new Client(null);
+    if (client.bind()) {
+      sLocalClient=client;
+    }
+ else {
+      Log.e("MessengerUtils","Bind service failed.");
+    }
+  }
+ else {
+    Log.i("MessengerUtils","The client have been bind.");
+  }
+}
+public static void register(final String pkgName){
+  if (sClientMap.containsKey(pkgName)) {
+    Log.i("MessengerUtils","register: client registered: " + pkgName);
+    return;
+  }
+  Client client=new Client(pkgName);
+  if (client.bind()) {
+    sClientMap.put(pkgName,client);
+  }
+ else {
+    Log.e("MessengerUtils","register: client bind failed: " + pkgName);
+  }
+}

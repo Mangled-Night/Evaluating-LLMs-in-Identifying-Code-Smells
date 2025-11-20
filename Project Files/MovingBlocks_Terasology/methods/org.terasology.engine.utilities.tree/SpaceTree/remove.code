@@ -1,0 +1,39 @@
+/** 
+ * Removes a node and then returns the value of the removed node.
+ * @param position   The position of the node to be removed
+ * @return a T object which is the value of the node removed (null if root node was null)
+ */
+@Override public T remove(float[] position){
+  validatePosition(position);
+  if (rootNode == null) {
+    return null;
+  }
+ else {
+    if (rootNode.center != null) {
+      int subNodeIndex=getSubNodeIndex(position,rootNode.center);
+      if (subNodeIndex == -1) {
+        Node oldRootNode=rootNode;
+        rootNode=null;
+        for (        Node subNode : oldRootNode.subNodes) {
+          addAllFromNode(subNode,null);
+        }
+        return oldRootNode.centerValue;
+      }
+ else {
+        return removeFromSubNodeOfNode(position,rootNode,subNodeIndex);
+      }
+    }
+ else {
+      for (      NodeEntry<T> nodeEntry : rootNode.nodeBucket) {
+        if (distanceFunction.getDistance(nodeEntry.position,position) == 0) {
+          rootNode.nodeBucket.remove(nodeEntry);
+          if (rootNode.nodeBucket.size() == 0) {
+            rootNode=null;
+          }
+          return nodeEntry.value;
+        }
+      }
+      return null;
+    }
+  }
+}

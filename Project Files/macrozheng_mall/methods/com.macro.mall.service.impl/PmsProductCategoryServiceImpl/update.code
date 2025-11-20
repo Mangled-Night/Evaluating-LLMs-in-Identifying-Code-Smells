@@ -1,0 +1,23 @@
+@Override public int update(Long id,PmsProductCategoryParam pmsProductCategoryParam){
+  PmsProductCategory productCategory=new PmsProductCategory();
+  productCategory.setId(id);
+  BeanUtils.copyProperties(pmsProductCategoryParam,productCategory);
+  setCategoryLevel(productCategory);
+  PmsProduct product=new PmsProduct();
+  product.setProductCategoryName(productCategory.getName());
+  PmsProductExample example=new PmsProductExample();
+  example.createCriteria().andProductCategoryIdEqualTo(id);
+  productMapper.updateByExampleSelective(product,example);
+  if (!CollectionUtils.isEmpty(pmsProductCategoryParam.getProductAttributeIdList())) {
+    PmsProductCategoryAttributeRelationExample relationExample=new PmsProductCategoryAttributeRelationExample();
+    relationExample.createCriteria().andProductCategoryIdEqualTo(id);
+    productCategoryAttributeRelationMapper.deleteByExample(relationExample);
+    insertRelationList(id,pmsProductCategoryParam.getProductAttributeIdList());
+  }
+ else {
+    PmsProductCategoryAttributeRelationExample relationExample=new PmsProductCategoryAttributeRelationExample();
+    relationExample.createCriteria().andProductCategoryIdEqualTo(id);
+    productCategoryAttributeRelationMapper.deleteByExample(relationExample);
+  }
+  return productCategoryMapper.updateByPrimaryKeySelective(productCategory);
+}

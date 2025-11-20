@@ -1,0 +1,49 @@
+@Override public MUCLightInfoIQ parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  String version=null;
+  String roomName=null;
+  String subject=null;
+  HashMap<String,String> customConfigs=null;
+  HashMap<Jid,MUCLightAffiliation> occupants=new HashMap<>();
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      if (parser.getName().equals("version")) {
+        version=parser.nextText();
+      }
+      if (parser.getName().equals("configuration")) {
+        int depth=parser.getDepth();
+        outerloop2:         while (true) {
+          eventType=parser.next();
+          if (eventType == XmlPullParser.Event.START_ELEMENT) {
+            if (parser.getName().equals("roomname")) {
+              roomName=parser.nextText();
+            }
+ else             if (parser.getName().equals("subject")) {
+              subject=parser.nextText();
+            }
+ else {
+              if (customConfigs == null) {
+                customConfigs=new HashMap<>();
+              }
+              customConfigs.put(parser.getName(),parser.nextText());
+            }
+          }
+ else           if (eventType == XmlPullParser.Event.END_ELEMENT) {
+            if (parser.getDepth() == depth) {
+              break outerloop2;
+            }
+          }
+        }
+      }
+      if (parser.getName().equals("occupants")) {
+        occupants=iterateOccupants(parser);
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getDepth() == initialDepth) {
+        break outerloop;
+      }
+    }
+  }
+  return new MUCLightInfoIQ(version,new MUCLightRoomConfiguration(roomName,subject,customConfigs),occupants);
+}

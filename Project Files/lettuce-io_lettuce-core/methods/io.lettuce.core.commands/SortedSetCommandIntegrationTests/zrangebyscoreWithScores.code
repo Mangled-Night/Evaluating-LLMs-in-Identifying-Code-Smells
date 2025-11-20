@@ -1,0 +1,14 @@
+@Test @SuppressWarnings({"unchecked"}) void zrangebyscoreWithScores(){
+  redis.zadd(key,1.0,"a",2.0,"b",3.0,"c",4.0,"d");
+  assertThat(redis.zrangebyscoreWithScores(key,2.0,3.0)).isEqualTo(svlist(sv(2.0,"b"),sv(3.0,"c")));
+  assertThat(redis.zrangebyscoreWithScores(key,"(1.0","(4.0")).isEqualTo(svlist(sv(2.0,"b"),sv(3.0,"c")));
+  assertThat(redis.zrangebyscoreWithScores(key,NEGATIVE_INFINITY,POSITIVE_INFINITY)).isEqualTo(svlist(sv(1.0,"a"),sv(2.0,"b"),sv(3.0,"c"),sv(4.0,"d")));
+  assertThat(redis.zrangebyscoreWithScores(key,"-inf","+inf")).isEqualTo(svlist(sv(1.0,"a"),sv(2.0,"b"),sv(3.0,"c"),sv(4.0,"d")));
+  assertThat(redis.zrangebyscoreWithScores(key,0.0,4.0,1,3)).isEqualTo(svlist(sv(2.0,"b"),sv(3.0,"c"),sv(4.0,"d")));
+  assertThat(redis.zrangebyscoreWithScores(key,"-inf","+inf",2,2)).isEqualTo(svlist(sv(3.0,"c"),sv(4.0,"d")));
+  assertThat(redis.zrangebyscoreWithScores(key,Range.create(2.0,3.0))).isEqualTo(svlist(sv(2.0,"b"),sv(3.0,"c")));
+  assertThat(redis.zrangebyscoreWithScores(key,Range.from(Boundary.excluding(1.0),Boundary.excluding(4.0)))).isEqualTo(svlist(sv(2.0,"b"),sv(3.0,"c")));
+  assertThat(redis.zrangebyscoreWithScores(key,Range.unbounded())).isEqualTo(svlist(sv(1.0,"a"),sv(2.0,"b"),sv(3.0,"c"),sv(4.0,"d")));
+  assertThat(redis.zrangebyscoreWithScores(key,Range.create(0.0,4.0),Limit.create(1,3))).isEqualTo(svlist(sv(2.0,"b"),sv(3.0,"c"),sv(4.0,"d")));
+  assertThat(redis.zrangebyscoreWithScores(key,Range.unbounded(),Limit.create(2,2))).isEqualTo(svlist(sv(3.0,"c"),sv(4.0,"d")));
+}

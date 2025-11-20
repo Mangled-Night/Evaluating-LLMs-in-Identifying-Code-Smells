@@ -1,0 +1,23 @@
+public void stmtPrepare(byte[] data){
+  if (prepareHandler != null) {
+    MySQLMessage mm=new MySQLMessage(data);
+    mm.position(5);
+    String sql=null;
+    try {
+      sql=mm.readString(charset);
+    }
+ catch (    UnsupportedEncodingException e) {
+      writeErrMessage(ErrorCode.ER_UNKNOWN_CHARACTER_SET,"Unknown charset '" + charset + "'");
+      return;
+    }
+    if (sql == null || sql.length() == 0) {
+      writeErrMessage(ErrorCode.ER_NOT_ALLOWED_COMMAND,"Empty SQL");
+      return;
+    }
+    this.setExecuteSql(sql);
+    prepareHandler.prepare(sql);
+  }
+ else {
+    writeErrMessage(ErrorCode.ER_UNKNOWN_COM_ERROR,"Prepare unsupported!");
+  }
+}

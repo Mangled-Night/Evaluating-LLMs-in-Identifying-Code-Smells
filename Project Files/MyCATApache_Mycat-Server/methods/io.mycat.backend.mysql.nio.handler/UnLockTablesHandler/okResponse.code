@@ -1,0 +1,24 @@
+@Override public void okResponse(byte[] data,BackendConnection conn){
+  boolean executeResponse=conn.syncAndExcute();
+  if (executeResponse) {
+    boolean isEndPack=decrementCountBy(1);
+    session.releaseConnection(conn);
+    if (isEndPack) {
+      if (this.isFail() || session.closed()) {
+        tryErrorFinished(true);
+        return;
+      }
+      OkPacket ok=new OkPacket();
+      ok.read(data);
+      lock.lock();
+      try {
+        ok.packetId=++packetId;
+        ok.serverStatus=session.getSource().isAutocommit() ? 2 : 1;
+      }
+  finally {
+        lock.unlock();
+      }
+      ok.write(session.getSource());
+    }
+  }
+}

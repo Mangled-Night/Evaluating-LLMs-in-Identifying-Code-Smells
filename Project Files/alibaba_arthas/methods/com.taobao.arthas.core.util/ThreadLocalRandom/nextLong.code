@@ -1,0 +1,35 @@
+/** 
+ * Returns a pseudorandom, uniformly distributed value between 0 (inclusive) and the specified value (exclusive).
+ * @param n the bound on the random number to be returned. Must be positive.
+ * @return the next value
+ * @throws IllegalArgumentException if n is not positive
+ */
+public long nextLong(long n){
+  if (n <= 0) {
+    throw new IllegalArgumentException("n must be positive");
+  }
+  long offset=0;
+  while (n >= Integer.MAX_VALUE) {
+    int bits=next(2);
+    long half=n >>> 1;
+    long nextn=((bits & 2) == 0) ? half : n - half;
+    if ((bits & 1) == 0) {
+      offset+=n - nextn;
+    }
+    n=nextn;
+  }
+  return offset + nextInt((int)n);
+}
+/** 
+ * Returns a pseudorandom, uniformly distributed value between the given least value (inclusive) and bound (exclusive).
+ * @param least the least value returned
+ * @param bound the upper bound (exclusive)
+ * @return the next value
+ * @throws IllegalArgumentException if least greater than or equal to bound
+ */
+public long nextLong(long least,long bound){
+  if (least >= bound) {
+    throw new IllegalArgumentException();
+  }
+  return nextLong(bound - least) + least;
+}

@@ -1,0 +1,50 @@
+/** 
+ * Adds interface or class and their methods and constructors to api are also added.
+ * @param category where the apiClass belongs
+ * @param apiClass the class or interface to be added
+ * @param api that maps category to classes/interface/methods
+ */
+private static void addToApi(String category,Class<?> apiClass,Multimap<String,String> api){
+  String className=apiClass.getName();
+  String type;
+  if (apiClass.isInterface()) {
+    type=" (INTERFACE)";
+  }
+ else {
+    int modifier=apiClass.getModifiers();
+    if (Modifier.isAbstract(modifier)) {
+      type=" (ABSTRACT CLASS)";
+    }
+ else {
+      type=" (CLASS)";
+    }
+  }
+  api.put(category,className + type);
+  Constructor[] constructors=apiClass.getDeclaredConstructors();
+  for (  Constructor constructor : constructors) {
+    api.put(category," - " + constructor.getName() + " (CONSTRUCTOR)");
+    api.put(category," -- " + Arrays.toString(constructor.getParameterTypes()) + " (PARAMETERS)");
+  }
+  Method[] methods=apiClass.getDeclaredMethods();
+  for (  Method method : methods) {
+    if (!method.isDefault() && !method.isBridge() && !method.isSynthetic()) {
+      int modifier=method.getModifiers();
+      if (Modifier.isAbstract(modifier)) {
+        type=" (ABSTRACT METHOD)";
+      }
+ else {
+        type=" (METHOD)";
+      }
+      api.put(category," - " + method.getName() + type);
+      api.put(category," -- " + method.getReturnType() + " (RETURN)");
+      api.put(category," -- " + Arrays.toString(method.getParameterTypes()) + " (PARAMETERS)");
+      api.put(category," -- " + Arrays.toString(method.getExceptionTypes()) + " (EXCEPTIONS)");
+    }
+ else     if (method.isDefault() && apiClass.isInterface()) {
+      api.put(category," - " + method.getName() + " (DEFAULT METHOD)");
+      api.put(category," -- " + method.getReturnType() + " (RETURN)");
+      api.put(category," -- " + Arrays.toString(method.getParameterTypes()) + " (PARAMETERS)");
+      api.put(category," -- " + Arrays.toString(method.getExceptionTypes()) + " (EXCEPTIONS)");
+    }
+  }
+}

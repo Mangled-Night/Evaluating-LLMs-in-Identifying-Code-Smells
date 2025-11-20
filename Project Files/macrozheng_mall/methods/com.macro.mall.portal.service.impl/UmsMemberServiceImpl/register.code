@@ -1,0 +1,26 @@
+@Override public void register(String username,String password,String telephone,String authCode){
+  if (!verifyAuthCode(authCode,telephone)) {
+    Asserts.fail("验证码错误");
+  }
+  UmsMemberExample example=new UmsMemberExample();
+  example.createCriteria().andUsernameEqualTo(username);
+  example.or(example.createCriteria().andPhoneEqualTo(telephone));
+  List<UmsMember> umsMembers=memberMapper.selectByExample(example);
+  if (!CollectionUtils.isEmpty(umsMembers)) {
+    Asserts.fail("该用户已经存在");
+  }
+  UmsMember umsMember=new UmsMember();
+  umsMember.setUsername(username);
+  umsMember.setPhone(telephone);
+  umsMember.setPassword(passwordEncoder.encode(password));
+  umsMember.setCreateTime(new Date());
+  umsMember.setStatus(1);
+  UmsMemberLevelExample levelExample=new UmsMemberLevelExample();
+  levelExample.createCriteria().andDefaultStatusEqualTo(1);
+  List<UmsMemberLevel> memberLevelList=memberLevelMapper.selectByExample(levelExample);
+  if (!CollectionUtils.isEmpty(memberLevelList)) {
+    umsMember.setMemberLevelId(memberLevelList.get(0).getId());
+  }
+  memberMapper.insert(umsMember);
+  umsMember.setPassword(null);
+}

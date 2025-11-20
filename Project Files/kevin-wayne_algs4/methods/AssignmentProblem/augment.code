@@ -1,0 +1,26 @@
+private void augment(){
+  EdgeWeightedDigraph G=new EdgeWeightedDigraph(2 * n + 2);
+  int s=2 * n, t=2 * n + 1;
+  for (int i=0; i < n; i++) {
+    if (xy[i] == UNMATCHED)     G.addEdge(new DirectedEdge(s,i,0.0));
+  }
+  for (int j=0; j < n; j++) {
+    if (yx[j] == UNMATCHED)     G.addEdge(new DirectedEdge(n + j,t,py[j]));
+  }
+  for (int i=0; i < n; i++) {
+    for (int j=0; j < n; j++) {
+      if (xy[i] == j)       G.addEdge(new DirectedEdge(n + j,i,0.0));
+ else       G.addEdge(new DirectedEdge(i,n + j,reducedCost(i,j)));
+    }
+  }
+  DijkstraSP spt=new DijkstraSP(G,s);
+  for (  DirectedEdge e : spt.pathTo(t)) {
+    int i=e.from(), j=e.to() - n;
+    if (i < n) {
+      xy[i]=j;
+      yx[j]=i;
+    }
+  }
+  for (int i=0; i < n; i++)   px[i]+=spt.distTo(i);
+  for (int j=0; j < n; j++)   py[j]+=spt.distTo(n + j);
+}

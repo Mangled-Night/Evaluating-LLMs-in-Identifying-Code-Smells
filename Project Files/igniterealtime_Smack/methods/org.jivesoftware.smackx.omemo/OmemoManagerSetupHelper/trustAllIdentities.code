@@ -1,0 +1,12 @@
+public static void trustAllIdentities(OmemoManager alice,OmemoManager bob) throws InterruptedException, SmackException.NotConnectedException, SmackException.NotLoggedInException, SmackException.NoResponseException, CannotEstablishOmemoSessionException, CorruptedOmemoKeyException, XMPPException.XMPPErrorException, PubSubException.NotALeafNodeException, IOException {
+  Roster roster=Roster.getInstanceFor(alice.getConnection());
+  if (alice.getOwnJid() != bob.getOwnJid() && (!roster.iAmSubscribedTo(bob.getOwnJid()) || !roster.isSubscribedToMyPresence(bob.getOwnJid()))) {
+    throw new IllegalStateException("Before trusting identities of a user, we must be subscribed to one another.");
+  }
+  alice.requestDeviceListUpdateFor(bob.getOwnJid());
+  HashMap<OmemoDevice,OmemoFingerprint> fingerprints=alice.getActiveFingerprints(bob.getOwnJid());
+  for (  OmemoDevice device : fingerprints.keySet()) {
+    OmemoFingerprint fingerprint=fingerprints.get(device);
+    alice.trustOmemoIdentity(device,fingerprint);
+  }
+}

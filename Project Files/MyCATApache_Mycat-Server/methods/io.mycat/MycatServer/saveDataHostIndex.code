@@ -1,0 +1,36 @@
+/** 
+ * save cur datanode index to properties file
+ * @param
+ * @param curIndex
+ */
+public synchronized void saveDataHostIndex(String dataHost,int curIndex){
+  File file=new File(SystemConfig.getHomePath(),"conf" + File.separator + "dnindex.properties");
+  FileOutputStream fileOut=null;
+  try {
+    String oldIndex=dnIndexProperties.getProperty(dataHost);
+    String newIndex=String.valueOf(curIndex);
+    if (newIndex.equals(oldIndex)) {
+      return;
+    }
+    dnIndexProperties.setProperty(dataHost,newIndex);
+    LOGGER.info("save DataHost index  " + dataHost + " cur index "+ curIndex);
+    File parent=file.getParentFile();
+    if (parent != null && !parent.exists()) {
+      parent.mkdirs();
+    }
+    fileOut=new FileOutputStream(file);
+    dnIndexProperties.store(fileOut,"update");
+  }
+ catch (  Exception e) {
+    LOGGER.warn("saveDataNodeIndex err:",e);
+  }
+ finally {
+    if (fileOut != null) {
+      try {
+        fileOut.close();
+      }
+ catch (      IOException e) {
+      }
+    }
+  }
+}

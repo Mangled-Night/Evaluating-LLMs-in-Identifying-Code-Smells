@@ -1,0 +1,14 @@
+@Override public RedisFuture<String> mset(Map<K,V> map){
+  Map<Integer,List<K>> partitioned=SlotHash.partition(codec,map.keySet());
+  if (partitioned.size() < 2) {
+    return super.mset(map);
+  }
+  Map<Integer,RedisFuture<String>> executions=new HashMap<>();
+  for (  Map.Entry<Integer,List<K>> entry : partitioned.entrySet()) {
+    Map<K,V> op=new HashMap<>();
+    entry.getValue().forEach(k -> op.put(k,map.get(k)));
+    RedisFuture<String> mset=super.mset(op);
+    executions.put(entry.getKey(),mset);
+  }
+  return MultiNodeExecution.firstOfAsync(executions);
+}

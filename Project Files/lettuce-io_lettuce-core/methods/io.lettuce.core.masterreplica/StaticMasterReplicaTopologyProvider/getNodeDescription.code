@@ -1,0 +1,17 @@
+private Mono<RedisNodeDescription> getNodeDescription(List<StatefulRedisConnection<String,String>> connections,RedisURI uri){
+  return Mono.fromCompletionStage(redisClient.connectAsync(StringCodec.UTF8,uri)).onErrorResume(t -> {
+    logger.warn("Cannot connect to {}",uri,t);
+    return Mono.empty();
+  }
+).doOnNext(connections::add).flatMap(connection -> {
+    Mono<RedisNodeDescription> instance=getNodeDescription(uri,connection);
+    return instance.flatMap(it -> ResumeAfter.close(connection).thenEmit(it)).doFinally(s -> {
+      connections.remove(connection);
+    }
+);
+  }
+);
+}
+private static Mono<RedisNodeDescription> getNodeDescription(RedisURI uri,StatefulRedisConnection<String,String> connection){
+  return connection.reactive().role().collectList().map(RoleParser::parse).map(it -> new RedisMasterReplicaNode(uri.getHost(),uri.getPort(),uri,it.getRole()));
+}

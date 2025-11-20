@@ -1,0 +1,139 @@
+/** 
+ * IBBInputStream class is the base implementation of an In-Band Bytestream input stream. Subclasses of this input stream must provide a stanza listener along with a stanza filter to collect the In-Band Bytestream data packets.
+ */
+private abstract class IBBInputStream extends InputStream {
+  private final StanzaListener dataPacketListener;
+  protected final BlockingQueue<DataPacketExtension> dataQueue=new LinkedBlockingQueue<DataPacketExtension>();
+  private byte[] buffer;
+  private int bufferPointer=-1;
+  private UInt16 expectedSeq=UInt16.MIN_VALUE;
+  private boolean isClosed=false;
+  private boolean closeInvoked=false;
+  private int readTimeout=0;
+  /** 
+ * Constructor.
+ */
+  protected IBBInputStream(){
+    this.dataPacketListener=getDataPacketListener();
+    connection.addSyncStanzaListener(this.dataPacketListener,getDataPacketFilter());
+  }
+  /** 
+ * Returns the stanza listener that processes In-Band Bytestream data packets.
+ * @return the data stanza listener
+ */
+  protected abstract StanzaListener getDataPacketListener();
+  /** 
+ * Returns the stanza filter that accepts In-Band Bytestream data packets.
+ * @return the data stanza filter
+ */
+  protected abstract StanzaFilter getDataPacketFilter();
+  @Override public synchronized int read() throws IOException {
+    checkClosed();
+    if (bufferPointer == -1 || bufferPointer >= buffer.length) {
+      if (!loadBuffer()) {
+        return -1;
+      }
+    }
+    return buffer[bufferPointer++] & 0xff;
+  }
+  @Override public synchronized int read(  byte[] b,  int off,  int len) throws IOException {
+    if (b == null) {
+      throw new NullPointerException();
+    }
+ else     if ((off < 0) || (off > b.length) || (len < 0)|| ((off + len) > b.length)|| ((off + len) < 0)) {
+      throw new IndexOutOfBoundsException();
+    }
+ else     if (len == 0) {
+      return 0;
+    }
+    checkClosed();
+    if (bufferPointer == -1 || bufferPointer >= buffer.length) {
+      if (!loadBuffer()) {
+        return -1;
+      }
+    }
+    int bytesAvailable=buffer.length - bufferPointer;
+    if (len > bytesAvailable) {
+      len=bytesAvailable;
+    }
+    System.arraycopy(buffer,bufferPointer,b,off,len);
+    bufferPointer+=len;
+    return len;
+  }
+  @Override public synchronized int read(  byte[] b) throws IOException {
+    return read(b,0,b.length);
+  }
+  /** 
+ * This method blocks until a data stanza is received, the stream is closed or the current thread is interrupted.
+ * @return <code>true</code> if data was received, otherwise <code>false</code>
+ * @throws IOException if data packets are out of sequence
+ */
+  private synchronized boolean loadBuffer() throws IOException {
+    DataPacketExtension data=null;
+    try {
+      if (this.readTimeout == 0) {
+        while (data == null) {
+          if (isClosed && this.dataQueue.isEmpty()) {
+            return false;
+          }
+          data=this.dataQueue.poll(1000,TimeUnit.MILLISECONDS);
+        }
+      }
+ else {
+        data=this.dataQueue.poll(this.readTimeout,TimeUnit.MILLISECONDS);
+        if (data == null) {
+          throw new SocketTimeoutException();
+        }
+      }
+    }
+ catch (    InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+    final UInt16 dataSeq=data.getSeq();
+    if (!expectedSeq.equals(dataSeq)) {
+      InBandBytestreamSession.this.close();
+      String message=UNEXPECTED_IBB_SEQUENCE + " " + dataSeq+ " received, expected "+ expectedSeq;
+      throw new IOException(message);
+    }
+    expectedSeq=dataSeq.incrementedByOne();
+    buffer=data.getDecodedData();
+    bufferPointer=0;
+    return true;
+  }
+  /** 
+ * Checks if this stream is closed and throws an IOException if necessary
+ * @throws IOException if stream is closed and no data should be read anymore
+ */
+  private void checkClosed() throws IOException {
+    if (closeInvoked) {
+      this.dataQueue.clear();
+      throw new IOException("Stream is closed");
+    }
+  }
+  @Override public boolean markSupported(){
+    return false;
+  }
+  @Override public void close() throws IOException {
+    if (closeInvoked) {
+      return;
+    }
+    this.closeInvoked=true;
+    InBandBytestreamSession.this.closeByLocal(true);
+  }
+  /** 
+ * This method sets the close flag and removes the data stanza listener.
+ */
+  private void closeInternal(){
+    if (isClosed) {
+      return;
+    }
+    isClosed=true;
+  }
+  /** 
+ * Invoked if the session is closed.
+ */
+  private void cleanup(){
+    connection.removeSyncStanzaListener(this.dataPacketListener);
+  }
+}

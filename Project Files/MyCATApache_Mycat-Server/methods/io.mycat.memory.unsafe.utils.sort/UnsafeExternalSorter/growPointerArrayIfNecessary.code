@@ -1,0 +1,26 @@
+/** 
+ * Checks whether there is enough space to insert an additional record in to the sort pointer array and grows the array if additional space is required. If the required space cannot be obtained, then the in-memory data will be spilled to disk.
+ */
+private void growPointerArrayIfNecessary() throws IOException {
+  assert (inMemSorter != null);
+  if (!inMemSorter.hasSpaceForAnotherRecord()) {
+    long used=inMemSorter.getMemoryUsage();
+    LongArray array;
+    try {
+      array=allocateLongArray(used / 8 * 2);
+    }
+ catch (    OutOfMemoryError e) {
+      if (!inMemSorter.hasSpaceForAnotherRecord()) {
+        logger.error("Unable to grow the pointer array");
+        throw e;
+      }
+      return;
+    }
+    if (inMemSorter.hasSpaceForAnotherRecord()) {
+      freeLongArray(array);
+    }
+ else {
+      inMemSorter.expandPointerArray(array);
+    }
+  }
+}

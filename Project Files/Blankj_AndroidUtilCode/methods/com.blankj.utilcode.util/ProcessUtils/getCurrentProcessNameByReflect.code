@@ -1,0 +1,18 @@
+private static String getCurrentProcessNameByReflect(){
+  String processName="";
+  try {
+    Application app=Utils.getApp();
+    Field loadedApkField=app.getClass().getField("mLoadedApk");
+    loadedApkField.setAccessible(true);
+    Object loadedApk=loadedApkField.get(app);
+    Field activityThreadField=loadedApk.getClass().getDeclaredField("mActivityThread");
+    activityThreadField.setAccessible(true);
+    Object activityThread=activityThreadField.get(loadedApk);
+    Method getProcessName=activityThread.getClass().getDeclaredMethod("getProcessName");
+    processName=(String)getProcessName.invoke(activityThread);
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+  }
+  return processName;
+}

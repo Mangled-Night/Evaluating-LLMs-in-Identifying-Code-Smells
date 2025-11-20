@@ -1,0 +1,113 @@
+/** 
+ * Represents a affiliation between a user and a node, where the  {@link Type} definesthe type of affiliation. Affiliations are retrieved from the  {@link PubSubManager#getAffiliations()} method, whichgets affiliations for the calling user, based on the identity that is associated with the  {@link XMPPConnection}.
+ * @author Robin Collier
+ */
+public class Affiliation implements XmlElement {
+  public static final String ELEMENT="affiliation";
+  public enum AffiliationNamespace {  basic(PubSubElementType.AFFILIATIONS),   owner(PubSubElementType.AFFILIATIONS_OWNER);   public final PubSubElementType type;
+  AffiliationNamespace(  PubSubElementType type){
+    this.type=type;
+  }
+  public static AffiliationNamespace fromXmlns(  String xmlns){
+    for (    AffiliationNamespace affiliationsNamespace : AffiliationNamespace.values()) {
+      if (affiliationsNamespace.type.getNamespace().getXmlns().equals(xmlns)) {
+        return affiliationsNamespace;
+      }
+    }
+    throw new IllegalArgumentException("Invalid affiliations namespace: " + xmlns);
+  }
+}
+  private final BareJid jid;
+  private final String node;
+  private final Type affiliation;
+  private final AffiliationNamespace namespace;
+  public enum Type {  member,   none,   outcast,   owner,   publisher}
+  /** 
+ * Constructs an affiliation.
+ * @param node The node the user is affiliated with.
+ * @param affiliation the optional affiliation.
+ */
+  public Affiliation(  String node,  Type affiliation){
+    this(node,affiliation,affiliation == null ? AffiliationNamespace.basic : AffiliationNamespace.owner);
+  }
+  /** 
+ * Constructs an affiliation.
+ * @param node The node the user is affiliated with.
+ * @param affiliation the optional affiliation.
+ * @param namespace the affiliation's namespace.
+ */
+  public Affiliation(  String node,  Type affiliation,  AffiliationNamespace namespace){
+    this.node=StringUtils.requireNotNullNorEmpty(node,"node must not be null nor empty");
+    this.affiliation=affiliation;
+    this.jid=null;
+    this.namespace=Objects.requireNonNull(namespace);
+  }
+  /** 
+ * Construct a affiliation modification request.
+ * @param jid TODO javadoc me please
+ * @param affiliation TODO javadoc me please
+ */
+  public Affiliation(  BareJid jid,  Type affiliation){
+    this(jid,affiliation,AffiliationNamespace.owner);
+  }
+  public Affiliation(  BareJid jid,  Type affiliation,  AffiliationNamespace namespace){
+    this.jid=jid;
+    this.affiliation=affiliation;
+    this.node=null;
+    this.namespace=namespace;
+  }
+  /** 
+ * Get the node.
+ * @return the node.
+ * @deprecated use {@link #getNode} instead.
+ */
+  @Deprecated public String getNodeId(){
+    return getNode();
+  }
+  public String getNode(){
+    return node;
+  }
+  /** 
+ * Get the type.
+ * @return the type.
+ * @deprecated use {@link #getAffiliation()} instead.
+ */
+  @Deprecated public Type getType(){
+    return getAffiliation();
+  }
+  public Type getAffiliation(){
+    return affiliation;
+  }
+  public BareJid getJid(){
+    return jid;
+  }
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return getPubSubNamespace().getXmlns();
+  }
+  public PubSubNamespace getPubSubNamespace(){
+    return namespace.type.getNamespace();
+  }
+  /** 
+ * Check if this is an affiliation element to modify affiliations on a node.
+ * @return <code>true</code> if this is an affiliation element to modify affiliations on a node, <code>false</code> otherwise.
+ * @since 4.2
+ */
+  public boolean isAffiliationModification(){
+    if (jid != null && affiliation != null) {
+      assert node == null && namespace == AffiliationNamespace.owner;
+      return true;
+    }
+    return false;
+  }
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this);
+    xml.optAttribute("node",node);
+    xml.optAttribute("jid",jid);
+    xml.optAttribute("affiliation",affiliation);
+    xml.closeEmptyElement();
+    return xml;
+  }
+}

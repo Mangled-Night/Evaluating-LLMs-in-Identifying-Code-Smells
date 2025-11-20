@@ -1,0 +1,17 @@
+@Test void simpleStopProcessingSuccess(){
+  pipeline=new ChunkProcessingPipeline((p) -> null,(o1,o2) -> 0);
+  Vector3i position=new Vector3i(0,0,0);
+  Chunk chunk=createChunkAt(position);
+  pipeline.addStage(ChunkTaskProvider.create("dummy long executing task",(c) -> {
+    try {
+      Thread.sleep(1_000);
+    }
+ catch (    InterruptedException e) {
+    }
+    return c;
+  }
+));
+  Future<Chunk> chunkFuture=pipeline.invokeGeneratorTask(position,() -> chunk);
+  pipeline.stopProcessingAt(position);
+  Assertions.assertThrows(CancellationException.class,() -> chunkFuture.get(1,TimeUnit.SECONDS),"chunkFuture must be cancelled, when processing stopped");
+}

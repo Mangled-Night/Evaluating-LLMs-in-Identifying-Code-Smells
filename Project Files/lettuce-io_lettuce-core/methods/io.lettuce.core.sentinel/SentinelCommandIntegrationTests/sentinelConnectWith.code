@@ -1,0 +1,12 @@
+@Test void sentinelConnectWith(){
+  RedisURI uri=RedisURI.Builder.sentinel(TestSettings.host(),1234,SentinelTestSettings.MASTER_ID).withSentinel(TestSettings.host()).build();
+  RedisSentinelCommands<String,String> sentinelConnection=this.redisClient.connectSentinel(uri).sync();
+  assertThat(sentinelConnection.ping()).isEqualTo("PONG");
+  sentinelConnection.getStatefulConnection().close();
+  RedisCommands<String,String> connection2=this.redisClient.connect(uri).sync();
+  assertThat(connection2.ping()).isEqualTo("PONG");
+  connection2.quit();
+  Wait.untilTrue(() -> connection2.getStatefulConnection().isOpen()).waitOrTimeout();
+  assertThat(connection2.ping()).isEqualTo("PONG");
+  connection2.getStatefulConnection().close();
+}

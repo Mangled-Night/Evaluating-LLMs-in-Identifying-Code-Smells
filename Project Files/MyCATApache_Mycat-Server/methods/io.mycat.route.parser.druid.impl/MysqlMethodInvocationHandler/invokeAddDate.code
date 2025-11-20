@@ -1,0 +1,52 @@
+private SQLExpr invokeAddDate(SQLMethodInvokeExpr expr,boolean negative) throws SQLNonTransientException {
+  List<SQLExpr> parameters=expr.getParameters();
+  if (parameters.size() != 2) {
+    throwSyntaxError(expr);
+  }
+  SQLExpr p1=parameters.get(0);
+  SQLExpr p2=parameters.get(1);
+  if (p1 instanceof SQLMethodInvokeExpr) {
+    p1=doInvoke((SQLMethodInvokeExpr)p1);
+  }
+  if (p1 instanceof SQLCharExpr) {
+    String time=((SQLCharExpr)p1).getText();
+    Integer delta=null;
+    String unit=null;
+    if (p2 instanceof SQLIntegerExpr) {
+      delta=(Integer)((SQLIntegerExpr)p2).getNumber();
+      unit="DAY";
+    }
+ else {
+      throwSyntaxError(p2);
+    }
+    try {
+      Date date=DateUtils.parseDate(time,SUPPORT_PATTERNS);
+      Date result;
+      delta=negative ? -delta : delta;
+      if ("MONTH".equals(unit)) {
+        result=DateUtils.addMonths(date,delta);
+      }
+ else       if ("DAY".equals(unit)) {
+        result=DateUtils.addDays(date,delta);
+      }
+ else       if ("HOUR".equals(unit)) {
+        result=DateUtils.addHours(date,delta);
+      }
+ else       if ("MINUTE".equals(unit)) {
+        result=DateUtils.addMinutes(date,delta);
+      }
+ else       if ("SECOND".equals(unit)) {
+        result=DateUtils.addSeconds(date,delta);
+      }
+ else {
+        return null;
+      }
+      String ret=DateFormatUtils.format(result,"yyyy-MM-dd HH:mm:ss");
+      return new SQLIdentifierExpr(ret);
+    }
+ catch (    ParseException e) {
+      LOGGER.error("",e);
+    }
+  }
+  return null;
+}

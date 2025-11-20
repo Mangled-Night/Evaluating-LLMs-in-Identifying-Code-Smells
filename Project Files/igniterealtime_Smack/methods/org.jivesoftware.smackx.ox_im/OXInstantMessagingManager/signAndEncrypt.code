@@ -1,0 +1,19 @@
+/** 
+ * Wrap some  {@code payload} into a {@link SigncryptElement}, sign and encrypt it for  {@code contacts} and ourselves.
+ * @param contacts recipients of the message
+ * @param payload payload which will be encrypted and signed
+ * @return encrypted and signed {@link OpenPgpElement}, along with  {@link OpenPgpMetadata} about theencryption + signatures.
+ * @throws SmackException.NotLoggedInException in case we are not logged in
+ * @throws IOException IO is dangerous (we need to read keys)
+ * @throws PGPException in case encryption goes wrong
+ */
+public OpenPgpElementAndMetadata signAndEncrypt(Set<OpenPgpContact> contacts,List<ExtensionElement> payload) throws SmackException.NotLoggedInException, IOException, PGPException {
+  Set<Jid> jids=new HashSet<>();
+  for (  OpenPgpContact contact : contacts) {
+    jids.add(contact.getJid());
+  }
+  jids.add(openPgpManager.getOpenPgpSelf().getJid());
+  SigncryptElement signcryptElement=new SigncryptElement(jids,payload);
+  OpenPgpElementAndMetadata encrypted=openPgpManager.getOpenPgpProvider().signAndEncrypt(signcryptElement,openPgpManager.getOpenPgpSelf(),contacts);
+  return encrypted;
+}

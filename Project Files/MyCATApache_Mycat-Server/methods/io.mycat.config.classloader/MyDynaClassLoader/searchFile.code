@@ -1,0 +1,31 @@
+private DynaClass searchFile(String classpath,String fileName) throws Exception {
+  DynaClass dynCls=null;
+  String path=fileName.replace('.',File.separatorChar) + ".class";
+  System.out.println("class " + classpath + " file "+ path);
+  File f=new File(classpath,path);
+  if (f.isFile()) {
+    String theName=f.getPath();
+    System.out.println("found " + theName);
+    dynCls=new DynaClass(f.getPath());
+    dynCls.lastModified=f.lastModified();
+    return dynCls;
+  }
+ else {
+    path=fileName.replace('.',File.separatorChar) + ".jar";
+    System.out.println("jar " + classpath + " file "+ path);
+    f=new File(classpath,path);
+    if (f.isFile()) {
+      try {
+        dynCls=new DynaClass(f.getPath());
+        dynCls.lastModified=f.lastModified();
+        dynCls.realClass=JarLoader.loadJar(classpath + "/" + path,fileName);
+        dynCls.isJar=true;
+        return dynCls;
+      }
+ catch (      Exception err) {
+        return null;
+      }
+    }
+    return null;
+  }
+}

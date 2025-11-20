@@ -1,0 +1,22 @@
+/** 
+ * Load and configure the engine module. <p> The engine module is the parts of the engine which are available to be called directly from other modules. Unlike other modules, engine classes are on the classpath and not restricted by the ModuleClassLoader. <p> This function is static so it can be tested without needing a ModuleManager instance.
+ * @param moduleFactory used to create the module
+ * @param classesOnClasspathsToAddToEngine added to the module's reflections manifest
+ */
+static Module loadAndConfigureEngineModule(ModuleFactory moduleFactory,List<Class<?>> classesOnClasspathsToAddToEngine){
+  Module packageModule=moduleFactory.createPackageModule("org.terasology.engine");
+  Reflections packageReflections=packageModule.getModuleManifest();
+  ConfigurationBuilder config=reflectionsConfigurationFrom(packageReflections);
+  Collection<File> classPaths=new HashSet<>(packageModule.getClasspaths());
+  for (  Class<?> aClass : classesOnClasspathsToAddToEngine) {
+    URL url=ClasspathHelper.forClass(aClass);
+    config.addUrls(url);
+    classPaths.add(urlToFile(url));
+    logger.debug("Adding path to engine module for class: {} {}",url,aClass);
+  }
+  if (!config.getUrls().isEmpty()) {
+    Reflections reflectionsWithSubsystems=new Reflections(config);
+    packageReflections.merge(reflectionsWithSubsystems);
+  }
+  return new Module(packageModule.getMetadata(),packageModule.getResources(),classPaths,packageReflections,clazz -> packageModule.getClassPredicate().test(clazz) || config.getUrls().contains(ClasspathHelper.forClass(clazz)));
+}

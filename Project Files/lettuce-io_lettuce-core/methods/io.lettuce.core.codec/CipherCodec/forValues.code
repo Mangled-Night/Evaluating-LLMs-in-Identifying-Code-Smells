@@ -1,0 +1,15 @@
+/** 
+ * A  {@link RedisCodec} that compresses values from a delegating {@link RedisCodec}.
+ * @param delegate codec used for key-value encoding/decoding, must not be {@code null}.
+ * @param encrypt the {@link CipherSupplier} of encryption {@link Cipher} to use.
+ * @param decrypt the {@link CipherSupplier} of decryption {@link Cipher} to use.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @return Cipher codec.
+ */
+@SuppressWarnings({"rawtypes","unchecked"}) public static <K,V>RedisCodec<K,V> forValues(RedisCodec<K,V> delegate,CipherSupplier encrypt,CipherSupplier decrypt){
+  LettuceAssert.notNull(delegate,"RedisCodec must not be null");
+  LettuceAssert.notNull(encrypt,"Encryption Supplier must not be null");
+  LettuceAssert.notNull(decrypt,"Decryption Supplier must not be null");
+  return (RedisCodec)new CipherCodecWrapper((RedisCodec)delegate,encrypt,decrypt);
+}

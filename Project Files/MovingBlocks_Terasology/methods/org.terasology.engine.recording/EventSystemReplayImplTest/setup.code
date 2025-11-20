@@ -1,0 +1,32 @@
+@BeforeEach public void setup(){
+  ContextImpl context=new ContextImpl();
+  CoreRegistry.setContext(context);
+  Reflections reflections=new Reflections(getClass().getClassLoader());
+  TypeHandlerLibrary serializationLibrary=new TypeHandlerLibraryImpl(reflections);
+  EntitySystemLibrary entitySystemLibrary=new EntitySystemLibrary(context,serializationLibrary);
+  PojoEntityManager entityManager=new PojoEntityManager();
+  entityManager.setComponentLibrary(entitySystemLibrary.getComponentLibrary());
+  entityManager.setPrefabManager(new PojoPrefabManager(context));
+  NetworkSystem networkSystem=mock(NetworkSystem.class);
+  when(networkSystem.getMode()).thenReturn(NetworkMode.NONE);
+  recordAndReplayCurrentStatus=new RecordAndReplayCurrentStatus();
+  RecordedEventStore eventStore=new RecordedEventStore();
+  RecordAndReplayUtils recordAndReplayUtils=new RecordAndReplayUtils();
+  CharacterStateEventPositionMap characterStateEventPositionMap=new CharacterStateEventPositionMap();
+  DirectionAndOriginPosRecorderList directionAndOriginPosRecorderList=new DirectionAndOriginPosRecorderList();
+  ModuleManager moduleManager=mock(ModuleManager.class);
+  when(moduleManager.getEnvironment()).thenReturn(mock(ModuleEnvironment.class));
+  RecordAndReplaySerializer recordAndReplaySerializer=new RecordAndReplaySerializer(entityManager,eventStore,recordAndReplayUtils,characterStateEventPositionMap,directionAndOriginPosRecorderList,moduleManager,mock(TypeRegistry.class));
+  recordAndReplayCurrentStatus.setStatus(RecordAndReplayStatus.REPLAYING);
+  entity=entityManager.create();
+  Long id=entity.getId();
+  eventStore.add(new RecordedEvent(id,new AttackButton(),1,1));
+  eventStore.add(new RecordedEvent(id,new AttackButton(),2,2));
+  eventStore.add(new RecordedEvent(id,new AttackButton(),3,3));
+  List<Class<?>> selectedClassesToReplay=new ArrayList<>();
+  selectedClassesToReplay.add(InputEvent.class);
+  eventSystem=new EventSystemReplayImpl(entitySystemLibrary.getEventLibrary(),networkSystem,entityManager,eventStore,recordAndReplaySerializer,recordAndReplayUtils,selectedClassesToReplay,recordAndReplayCurrentStatus);
+  entityManager.setEventSystem(eventSystem);
+  handler=new TestEventHandler();
+  eventSystem.registerEventHandler(handler);
+}

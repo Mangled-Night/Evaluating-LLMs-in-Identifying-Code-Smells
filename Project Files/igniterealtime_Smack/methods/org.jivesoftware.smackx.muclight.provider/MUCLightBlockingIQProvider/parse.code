@@ -1,0 +1,23 @@
+@Override public MUCLightBlockingIQ parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  HashMap<Jid,Boolean> rooms=null;
+  HashMap<Jid,Boolean> users=null;
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      if (parser.getName().equals("room")) {
+        rooms=parseBlocking(parser,rooms);
+      }
+      if (parser.getName().equals("user")) {
+        users=parseBlocking(parser,users);
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getDepth() == initialDepth) {
+        break outerloop;
+      }
+    }
+  }
+  MUCLightBlockingIQ mucLightBlockingIQ=new MUCLightBlockingIQ(rooms,users);
+  mucLightBlockingIQ.setType(IQ.Type.result);
+  return mucLightBlockingIQ;
+}

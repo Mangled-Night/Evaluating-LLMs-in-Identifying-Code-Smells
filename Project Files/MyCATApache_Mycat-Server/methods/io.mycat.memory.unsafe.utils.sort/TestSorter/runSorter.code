@@ -1,0 +1,47 @@
+public void runSorter(MyCatMemory myCatMemory,MemoryManager memoryManager,MycatPropertyConf conf) throws NoSuchFieldException, IllegalAccessException, IOException {
+  DataNodeMemoryManager dataNodeMemoryManager=new DataNodeMemoryManager(memoryManager,Thread.currentThread().getId());
+  int fieldCount=3;
+  ColMeta colMeta=null;
+  Map<String,ColMeta> colMetaMap=new HashMap<String,ColMeta>(fieldCount);
+  colMeta=new ColMeta(0,ColMeta.COL_TYPE_STRING);
+  colMetaMap.put("id",colMeta);
+  colMeta=new ColMeta(1,ColMeta.COL_TYPE_STRING);
+  colMetaMap.put("name",colMeta);
+  colMeta=new ColMeta(2,ColMeta.COL_TYPE_STRING);
+  colMetaMap.put("age",colMeta);
+  OrderCol[] orderCols=new OrderCol[1];
+  OrderCol orderCol=new OrderCol(colMetaMap.get("id"),OrderCol.COL_ORDER_TYPE_ASC);
+  orderCols[0]=orderCol;
+  StructType schema=new StructType(colMetaMap,fieldCount);
+  schema.setOrderCols(orderCols);
+  UnsafeExternalRowSorter.PrefixComputer prefixComputer=new RowPrefixComputer(schema);
+  final PrefixComparator prefixComparator=PrefixComparators.LONG;
+  UnsafeExternalRowSorter sorter=new UnsafeExternalRowSorter(dataNodeMemoryManager,myCatMemory,schema,prefixComparator,prefixComputer,conf.getSizeAsBytes("mycat.buffer.pageSize","1m"),true,true);
+  UnsafeRow unsafeRow;
+  BufferHolder bufferHolder;
+  UnsafeRowWriter unsafeRowWriter;
+  String line="testUnsafeRow";
+  final Random rand=new Random(42);
+  for (int i=0; i < TEST_SIZE; i++) {
+    unsafeRow=new UnsafeRow(3);
+    bufferHolder=new BufferHolder(unsafeRow);
+    unsafeRowWriter=new UnsafeRowWriter(bufferHolder,3);
+    bufferHolder.reset();
+    String key=getRandomString(rand.nextInt(300) + 100);
+    unsafeRowWriter.write(0,key.getBytes());
+    unsafeRowWriter.write(1,line.getBytes());
+    unsafeRowWriter.write(2,("35" + 1).getBytes());
+    unsafeRow.setTotalSize(bufferHolder.totalSize());
+    sorter.insertRow(unsafeRow);
+  }
+  Iterator<UnsafeRow> iter=sorter.sort();
+  UnsafeRow row=null;
+  int indexprint=0;
+  while (iter.hasNext()) {
+    row=iter.next();
+    indexprint++;
+  }
+  sorter.cleanupResources();
+  countDownLatch.countDown();
+  System.out.println("Thread ID :" + Thread.currentThread().getId() + "Index : "+ indexprint);
+}

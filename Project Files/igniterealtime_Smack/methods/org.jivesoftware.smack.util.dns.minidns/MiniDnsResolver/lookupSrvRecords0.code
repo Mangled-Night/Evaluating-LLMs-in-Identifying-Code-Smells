@@ -1,0 +1,22 @@
+@Override protected Set<SRV> lookupSrvRecords0(final DnsName name,List<RemoteConnectionEndpointLookupFailure> lookupFailures,DnssecMode dnssecMode){
+  final ResolverApi resolver=getResolver(dnssecMode);
+  SrvResolverResult result;
+  try {
+    result=resolver.resolveSrv(name);
+  }
+ catch (  IOException e) {
+    RemoteConnectionEndpointLookupFailure failure=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,e);
+    lookupFailures.add(failure);
+    return null;
+  }
+  ResolutionUnsuccessfulException resolutionUnsuccessfulException=result.getResolutionUnsuccessfulException();
+  if (resolutionUnsuccessfulException != null) {
+    RemoteConnectionEndpointLookupFailure failure=new RemoteConnectionEndpointLookupFailure.DnsLookupFailure(name,resolutionUnsuccessfulException);
+    lookupFailures.add(failure);
+    return null;
+  }
+  if (shouldAbortIfNotAuthentic(name,dnssecMode,result,lookupFailures)) {
+    return null;
+  }
+  return result.getAnswers();
+}

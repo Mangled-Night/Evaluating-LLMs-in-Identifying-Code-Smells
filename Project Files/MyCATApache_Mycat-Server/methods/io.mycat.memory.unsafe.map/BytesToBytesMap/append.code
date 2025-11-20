@@ -1,0 +1,50 @@
+/** 
+ * Append a new value for the key. This method could be called multiple times for a given key. The return value indicates whether the put succeeded or whether it failed because additional memory could not be acquired. <p> It is only valid to call this method immediately after calling `lookup()` using the same key. </p> <p> The key and value must be word-aligned (that is, their sizes must multiples of 8). </p> <p> After calling this method, calls to `get[Key|Value]Address()` and `get[Key|Value]Length` will return information on the data stored by this `append` call. </p> <p> As an example usage, here's the proper way to store a new key: </p> <pre> Location loc = map.lookup(keyBase, keyOffset, keyLength); if (!loc.isDefined()) { if (!loc.append(keyBase, keyOffset, keyLength, ...)) { // handle failure to grow map (by spilling, for example) } } </pre> <p> Unspecified behavior if the key is not defined. </p>
+ * @return true if the put() was successful and false if the put() failed because memory couldnot be acquired.
+ */
+public boolean append(Object kbase,long koff,int klen,Object vbase,long voff,int vlen){
+  assert (klen % 8 == 0);
+  assert (vlen % 8 == 0);
+  assert (longArray != null);
+  if (numKeys == MAX_CAPACITY || !canGrowArray && numKeys > growthThreshold) {
+    return false;
+  }
+  final long recordLength=8 + klen + vlen+ 8;
+  if (currentPage == null || currentPage.size() - pageCursor < recordLength) {
+    if (!acquireNewPage(recordLength + 4L)) {
+      return false;
+    }
+  }
+  final Object base=currentPage.getBaseObject();
+  long offset=currentPage.getBaseOffset() + pageCursor;
+  final long recordOffset=offset;
+  Platform.putInt(base,offset,klen + vlen + 4);
+  Platform.putInt(base,offset + 4,klen);
+  offset+=8;
+  Platform.copyMemory(kbase,koff,base,offset,klen);
+  offset+=klen;
+  Platform.copyMemory(vbase,voff,base,offset,vlen);
+  offset+=vlen;
+  Platform.putLong(base,offset,isDefined ? longArray.get(pos * 2) : 0);
+  offset=currentPage.getBaseOffset();
+  Platform.putInt(base,offset,Platform.getInt(base,offset) + 1);
+  pageCursor+=recordLength;
+  final long storedKeyAddress=dataNodeMemoryManager.encodePageNumberAndOffset(currentPage,recordOffset);
+  longArray.set(pos * 2,storedKeyAddress);
+  updateAddressesAndSizes(storedKeyAddress);
+  numValues++;
+  if (!isDefined) {
+    numKeys++;
+    longArray.set(pos * 2 + 1,keyHashcode);
+    isDefined=true;
+    if (numKeys > growthThreshold && longArray.size() < MAX_CAPACITY) {
+      try {
+        growAndRehash();
+      }
+ catch (      OutOfMemoryError oom) {
+        canGrowArray=false;
+      }
+    }
+  }
+  return true;
+}

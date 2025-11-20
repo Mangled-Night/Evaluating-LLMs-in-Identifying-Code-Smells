@@ -1,0 +1,25 @@
+@Override public void presenceChanged(Presence presence){
+  final Jid from=presence.getFrom();
+  final EntityBareJid bareFrom=from.asEntityBareJidIfPossible();
+  if (bareFrom == null) {
+    return;
+  }
+  final Chat chat=chats.get(bareFrom);
+  if (chat == null) {
+    return;
+  }
+  if (chat.lockedResource == null) {
+    return;
+  }
+  final EntityFullJid fullFrom=from.asEntityFullJidIfPossible();
+  if (chat.lockedResource.equals(fullFrom)) {
+    return;
+  }
+  if (chat.lastPresenceOfLockedResource == null) {
+    chat.lastPresenceOfLockedResource=presence;
+    return;
+  }
+  if (chat.lastPresenceOfLockedResource.getMode() != presence.getMode() || chat.lastPresenceOfLockedResource.getType() != presence.getType()) {
+    chat.unlockResource();
+  }
+}

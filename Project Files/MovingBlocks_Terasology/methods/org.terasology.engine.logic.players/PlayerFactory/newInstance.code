@@ -1,0 +1,20 @@
+/** 
+ * Creates a new player character entity. The desired spawning location is derived from the  {@link LocationComponent} of the controller.
+ * @param controller the controlling client entity
+ * @return a new player character entity
+ */
+public EntityRef newInstance(EntityRef controller){
+  EntityBuilder builder=entityManager.newBuilder("engine:player");
+  LocationComponent location=controller.getComponent(LocationComponent.class);
+  Vector3f spawnPosition=findSpawnPositionFromLocationComponent(location);
+  location.setWorldPosition(spawnPosition);
+  controller.saveComponent(location);
+  logger.debug("Spawing player at: {}",spawnPosition);
+  builder.getComponent(LocationComponent.class).setWorldPosition(spawnPosition);
+  builder.setOwner(controller);
+  CharacterComponent playerComponent=builder.getComponent(CharacterComponent.class);
+  playerComponent.controller=controller;
+  EntityRef player=builder.build();
+  Location.attachChild(player,controller,new Vector3f(),new Quaternionf(0,0,0,1));
+  return player;
+}

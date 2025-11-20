@@ -1,0 +1,35 @@
+@Test void commandNotExecutedChannelClosesWhileFlush(){
+  assumeTrue(Version.identify().get("netty-transport").artifactVersion().startsWith("4.0.2"));
+  StatefulRedisConnection<String,String> connection=client.connect();
+  RedisCommands<String,String> sync=connection.sync();
+  RedisCommands<String,String> verificationConnection=client.connect().sync();
+  RedisChannelWriter channelWriter=ConnectionTestUtil.getChannelWriter(connection);
+  sync.set(key,"1");
+  assertThat(verificationConnection.get(key)).isEqualTo("1");
+  final CountDownLatch block=new CountDownLatch(1);
+  AsyncCommand<String,String,Object> command=new AsyncCommand<String,String,Object>(new Command<>(CommandType.INCR,new IntegerOutput(StringCodec.UTF8),new CommandArgs<>(StringCodec.UTF8).addKey(key))){
+    @Override public void encode(    ByteBuf buf){
+      try {
+        block.await();
+      }
+ catch (      InterruptedException e) {
+      }
+      super.encode(buf);
+    }
+  }
+;
+  channelWriter.write(command);
+  Channel channel=ConnectionTestUtil.getChannel(connection);
+  channel.unsafe().disconnect(channel.newPromise());
+  assertThat(channel.isOpen()).isFalse();
+  assertThat(command.isCancelled()).isFalse();
+  assertThat(command.isDone()).isFalse();
+  block.countDown();
+  assertThat(command.await(2,TimeUnit.SECONDS)).isTrue();
+  assertThat(command.isCancelled()).isFalse();
+  assertThat(command.isDone()).isTrue();
+  assertThat(verificationConnection.get(key)).isEqualTo("1");
+  assertThat(getStack(connection)).isEmpty();
+  assertThat(getCommandBuffer(connection)).isEmpty();
+  connection.close();
+}

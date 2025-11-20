@@ -1,0 +1,64 @@
+@Override public DataForm parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+  DataForm.Type dataFormType=DataForm.Type.fromString(parser.getAttributeValue("","type"));
+  DataForm.Builder dataForm=DataForm.builder(dataFormType);
+  String formType=null;
+  DataForm.ReportedData reportedData=null;
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String name=parser.getName();
+    String namespace=parser.getNamespace();
+  XmlEnvironment elementXmlEnvironment=XmlEnvironment.from(parser,xmlEnvironment);
+switch (name) {
+case "instructions":
+  dataForm.addInstruction(parser.nextText());
+break;
+case "title":
+dataForm.setTitle(parser.nextText());
+break;
+case "field":
+FormField formField=parseField(parser,elementXmlEnvironment,formType);
+TextSingleFormField hiddenFormTypeField=formField.asHiddenFormTypeFieldIfPossible();
+if (hiddenFormTypeField != null) {
+if (formType != null) {
+throw new SmackParsingException("Multiple hidden form type fields");
+}
+formType=hiddenFormTypeField.getValue();
+}
+dataForm.addField(formField);
+break;
+case "item":
+DataForm.Item item=parseItem(parser,elementXmlEnvironment,formType,reportedData);
+dataForm.addItem(item);
+break;
+case "reported":
+if (reportedData != null) {
+throw new SmackParsingException("Data form with multiple <reported/> elements");
+}
+reportedData=parseReported(parser,elementXmlEnvironment,formType);
+dataForm.setReportedData(reportedData);
+break;
+case RosterPacket.ELEMENT:
+if (namespace.equals(RosterPacket.NAMESPACE)) {
+dataForm.addExtensionElement(RosterPacketProvider.INSTANCE.parse(parser,null));
+}
+break;
+case DataLayout.ELEMENT:
+if (namespace.equals(DataLayout.NAMESPACE)) {
+dataForm.addExtensionElement(DataLayoutProvider.parse(parser));
+}
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return dataForm.build();
+}

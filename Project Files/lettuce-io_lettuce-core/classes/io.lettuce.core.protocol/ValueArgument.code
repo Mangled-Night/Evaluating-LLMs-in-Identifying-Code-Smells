@@ -1,0 +1,29 @@
+static class ValueArgument<K,V> extends SingularArgument {
+  final V val;
+  final RedisCodec<K,V> codec;
+  private ValueArgument(  V val,  RedisCodec<K,V> codec){
+    this.val=val;
+    this.codec=codec;
+  }
+  static <K,V>ValueArgument<K,V> of(  V val,  RedisCodec<K,V> codec){
+    return new ValueArgument<>(val,codec);
+  }
+  @SuppressWarnings("unchecked") @Override void encode(  ByteBuf target){
+    if (codec instanceof ToByteBufEncoder) {
+      ToByteBufEncoder<K,V> toByteBufEncoder=(ToByteBufEncoder<K,V>)codec;
+      ByteBuf temporaryBuffer=target.alloc().buffer(toByteBufEncoder.estimateSize(val) + 6);
+      try {
+        toByteBufEncoder.encodeValue(val,temporaryBuffer);
+        ByteBufferArgument.writeByteBuf(target,temporaryBuffer);
+      }
+  finally {
+        temporaryBuffer.release();
+      }
+      return;
+    }
+    ByteBufferArgument.writeByteBuffer(target,codec.encodeValue(val));
+  }
+  @Override public String toString(){
+    return String.format("value<%s>",new StringCodec().decodeValue(codec.encodeValue(val)));
+  }
+}

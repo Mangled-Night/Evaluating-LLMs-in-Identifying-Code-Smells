@@ -1,0 +1,28 @@
+public static void execute(ManagerConnection c){
+  ByteBuffer buffer=c.allocate();
+  buffer=header.write(buffer,c,true);
+  for (  FieldPacket field : fields) {
+    buffer=field.write(buffer,c,true);
+  }
+  buffer=eof.write(buffer,c,true);
+  byte packetId=eof.packetId;
+  String charset=c.getCharset();
+  for (  NIOProcessor p : MycatServer.getInstance().getProcessors()) {
+    for (    FrontendConnection fc : p.getFrontends().values()) {
+      if (!fc.isClosed()) {
+        if (fc.getExecuteSql() == null) {
+          continue;
+        }
+        if (fc instanceof ServerConnection) {
+          RowDataPacket row=getRow(fc,charset);
+          row.packetId=++packetId;
+          buffer=row.write(buffer,c,true);
+        }
+      }
+    }
+  }
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

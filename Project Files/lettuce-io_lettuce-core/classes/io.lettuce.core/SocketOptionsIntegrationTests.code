@@ -1,0 +1,27 @@
+/** 
+ * @author Mark Paluch
+ */
+@ExtendWith(LettuceExtension.class) class SocketOptionsIntegrationTests extends TestSupport {
+  private final RedisClient client;
+  @Inject SocketOptionsIntegrationTests(  RedisClient client){
+    this.client=client;
+  }
+  @Test void testConnectTimeout(){
+    SocketOptions socketOptions=SocketOptions.builder().connectTimeout(100,TimeUnit.MILLISECONDS).build();
+    client.setOptions(ClientOptions.builder().socketOptions(socketOptions).build());
+    try {
+      client.connect(RedisURI.create("2:4:5:5::1",60000));
+      fail("Missing RedisConnectionException");
+    }
+ catch (    RedisConnectionException e) {
+      if (e.getCause() instanceof ConnectTimeoutException) {
+        assertThat(e).hasRootCauseInstanceOf(ConnectTimeoutException.class);
+        assertThat(e.getCause()).hasMessageContaining("connection timed out");
+        return;
+      }
+      if (e.getCause() instanceof SocketException) {
+        return;
+      }
+    }
+  }
+}

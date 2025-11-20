@@ -1,0 +1,80 @@
+static abstract class AbsToast implements IToast {
+  protected Toast mToast;
+  protected ToastUtils mToastUtils;
+  protected View mToastView;
+  AbsToast(  ToastUtils toastUtils){
+    mToast=new Toast(Utils.getApp());
+    mToastUtils=toastUtils;
+    if (mToastUtils.mGravity != -1 || mToastUtils.mXOffset != -1 || mToastUtils.mYOffset != -1) {
+      mToast.setGravity(mToastUtils.mGravity,mToastUtils.mXOffset,mToastUtils.mYOffset);
+    }
+  }
+  @Override public void setToastView(  View view){
+    mToastView=view;
+    mToast.setView(mToastView);
+  }
+  @Override public void setToastView(  CharSequence text){
+    View utilsToastView=mToastUtils.tryApplyUtilsToastView(text);
+    if (utilsToastView != null) {
+      setToastView(utilsToastView);
+      processRtlIfNeed();
+      return;
+    }
+    mToastView=mToast.getView();
+    if (mToastView == null || mToastView.findViewById(android.R.id.message) == null) {
+      setToastView(UtilsBridge.layoutId2View(R.layout.utils_toast_view));
+    }
+    TextView messageTv=mToastView.findViewById(android.R.id.message);
+    messageTv.setText(text);
+    if (mToastUtils.mTextColor != COLOR_DEFAULT) {
+      messageTv.setTextColor(mToastUtils.mTextColor);
+    }
+    if (mToastUtils.mTextSize != -1) {
+      messageTv.setTextSize(mToastUtils.mTextSize);
+    }
+    setBg(messageTv);
+    processRtlIfNeed();
+  }
+  private void processRtlIfNeed(){
+    if (UtilsBridge.isLayoutRtl()) {
+      setToastView(getToastViewSnapshot(-1));
+    }
+  }
+  private void setBg(  final TextView msgTv){
+    if (mToastUtils.mBgResource != -1) {
+      mToastView.setBackgroundResource(mToastUtils.mBgResource);
+      msgTv.setBackgroundColor(Color.TRANSPARENT);
+    }
+ else     if (mToastUtils.mBgColor != COLOR_DEFAULT) {
+      Drawable toastBg=mToastView.getBackground();
+      Drawable msgBg=msgTv.getBackground();
+      if (toastBg != null && msgBg != null) {
+        toastBg.mutate().setColorFilter(new PorterDuffColorFilter(mToastUtils.mBgColor,PorterDuff.Mode.SRC_IN));
+        msgTv.setBackgroundColor(Color.TRANSPARENT);
+      }
+ else       if (toastBg != null) {
+        toastBg.mutate().setColorFilter(new PorterDuffColorFilter(mToastUtils.mBgColor,PorterDuff.Mode.SRC_IN));
+      }
+ else       if (msgBg != null) {
+        msgBg.mutate().setColorFilter(new PorterDuffColorFilter(mToastUtils.mBgColor,PorterDuff.Mode.SRC_IN));
+      }
+ else {
+        mToastView.setBackgroundColor(mToastUtils.mBgColor);
+      }
+    }
+  }
+  @Override @CallSuper public void cancel(){
+    if (mToast != null) {
+      mToast.cancel();
+    }
+    mToast=null;
+    mToastView=null;
+  }
+  View getToastViewSnapshot(  final int index){
+    Bitmap bitmap=UtilsBridge.view2Bitmap(mToastView);
+    ImageView toastIv=new ImageView(Utils.getApp());
+    toastIv.setTag(TAG_TOAST + index);
+    toastIv.setImageBitmap(bitmap);
+    return toastIv;
+  }
+}

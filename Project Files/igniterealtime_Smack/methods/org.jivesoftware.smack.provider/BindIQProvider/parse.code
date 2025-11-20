@@ -1,0 +1,30 @@
+@Override public Bind parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  String name;
+  Bind bind=null;
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      name=parser.getName();
+switch (name) {
+case "resource":
+      String resourceString=parser.nextText();
+    bind=Bind.newSet(Resourcepart.from(resourceString));
+  break;
+case "jid":
+EntityFullJid fullJid=JidCreate.entityFullFrom(parser.nextText());
+bind=Bind.newResult(fullJid);
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return bind;
+}

@@ -1,0 +1,26 @@
+private void checkIfAddedAndSubscribed(Collection<Jid> addresses){
+  for (  Jid jid : addresses) {
+    if (!jid.equals(conTwo.getUser().asBareJid())) {
+      continue;
+    }
+    BareJid bareJid=conTwo.getUser().asBareJid();
+    RosterEntry rosterEntry=rosterOne.getEntry(bareJid);
+    if (rosterEntry == null) {
+      addedAndSubscribed.signalFailure("No roster entry for " + bareJid);
+      return;
+    }
+    String name=rosterEntry.getName();
+    if (StringUtils.isNullOrEmpty(name)) {
+      addedAndSubscribed.signalFailure("Roster entry without name");
+      return;
+    }
+    if (!rosterEntry.getName().equals(conTwosRosterName)) {
+      addedAndSubscribed.signalFailure("Roster name does not match");
+      return;
+    }
+    if (!rosterEntry.getType().equals(ItemType.to)) {
+      return;
+    }
+    addedAndSubscribed.signal();
+  }
+}

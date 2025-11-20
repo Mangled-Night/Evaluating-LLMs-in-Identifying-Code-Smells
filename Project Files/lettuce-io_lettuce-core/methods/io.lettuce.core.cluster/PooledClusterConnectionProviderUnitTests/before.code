@@ -1,0 +1,10 @@
+@BeforeEach void before(){
+  nodeConnectionMock=(StatefulRedisConnection)channelHandlerMock;
+  sut=new PooledClusterConnectionProvider<>(clientMock,writerMock,StringCodec.UTF8,clusterEventListener);
+  List<Integer> slots1=IntStream.range(0,8192).boxed().collect(Collectors.toList());
+  List<Integer> slots2=IntStream.range(8192,SlotHash.SLOT_COUNT).boxed().collect(Collectors.toList());
+  partitions.add(new RedisClusterNode(RedisURI.create("localhost",1),"1",true,null,0,0,0,slots1,Collections.singleton(RedisClusterNode.NodeFlag.UPSTREAM)));
+  partitions.add(new RedisClusterNode(RedisURI.create("localhost",2),"2",true,"1",0,0,0,slots2,Collections.singleton(RedisClusterNode.NodeFlag.REPLICA)));
+  sut.setPartitions(partitions);
+  when(nodeConnectionMock.async()).thenReturn(asyncCommandsMock);
+}

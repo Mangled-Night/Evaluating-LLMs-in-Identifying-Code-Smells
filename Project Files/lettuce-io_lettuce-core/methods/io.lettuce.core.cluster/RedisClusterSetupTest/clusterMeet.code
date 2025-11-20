@@ -1,0 +1,10 @@
+@Test public void clusterMeet(){
+  clusterHelper.clusterReset();
+  Partitions partitionsBeforeMeet=ClusterPartitionParser.parse(redis1.clusterNodes());
+  assertThat(partitionsBeforeMeet.getPartitions()).hasSize(1);
+  String result=redis1.clusterMeet(host,ClusterTestSettings.port6);
+  assertThat(result).isEqualTo("OK");
+  Wait.untilEquals(2,() -> ClusterPartitionParser.parse(redis1.clusterNodes()).size()).waitOrTimeout();
+  Partitions partitionsAfterMeet=ClusterPartitionParser.parse(redis1.clusterNodes());
+  assertThat(partitionsAfterMeet.getPartitions()).hasSize(2);
+}

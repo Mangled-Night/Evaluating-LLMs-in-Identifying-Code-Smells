@@ -1,0 +1,50 @@
+static class MemoryEntry {
+  String name;
+  long used;
+  long total;
+  long max;
+  int unit;
+  String unitStr;
+  public MemoryEntry(  String name,  long used,  long total,  long max){
+    this.name=name;
+    this.used=used;
+    this.total=total;
+    this.max=max;
+    unitStr="K";
+    unit=1024;
+    if (used / 1024 / 1024 > 0) {
+      unitStr="M";
+      unit=1024 * 1024;
+    }
+  }
+  public MemoryEntry(  String name,  MemoryUsage usage){
+    this(name,usage.getUsed(),usage.getCommitted(),usage.getMax());
+  }
+  public MemoryEntry(  MemoryEntryVO memoryEntryVO){
+    this(memoryEntryVO.getName(),memoryEntryVO.getUsed(),memoryEntryVO.getTotal(),memoryEntryVO.getMax());
+  }
+  private String format(  long value){
+    String valueStr="-";
+    if (value == -1) {
+      return "-1";
+    }
+    if (value != Long.MIN_VALUE) {
+      valueStr=value / unit + unitStr;
+    }
+    return valueStr;
+  }
+  public void addTableRow(  TableElement table){
+    double usage=used / (double)(max == -1 || max == Long.MIN_VALUE ? total : max) * 100;
+    if (Double.isNaN(usage) || Double.isInfinite(usage)) {
+      usage=0;
+    }
+    table.row(name,format(used),format(total),format(max),String.format("%.2f%%",usage));
+  }
+  public void addTableRow(  TableElement table,  Style.Composite style){
+    double usage=used / (double)(max == -1 || max == Long.MIN_VALUE ? total : max) * 100;
+    if (Double.isNaN(usage) || Double.isInfinite(usage)) {
+      usage=0;
+    }
+    table.add(new RowElement().style(style).add(name,format(used),format(total),format(max),String.format("%.2f%%",usage)));
+  }
+}

@@ -1,0 +1,23 @@
+@SuppressWarnings("unchecked") public Sync(K key,F future){
+  this.key=key;
+  this.future=(F)future.whenComplete((connection,throwable) -> {
+    if (throwable != null) {
+      if (throwable instanceof CancellationException) {
+        PHASE.compareAndSet(this,PHASE_IN_PROGRESS,PHASE_CANCELED);
+      }
+      PHASE.compareAndSet(this,PHASE_IN_PROGRESS,PHASE_FAILED);
+    }
+    if (PHASE.compareAndSet(this,PHASE_IN_PROGRESS,PHASE_COMPLETE)) {
+      if (connection != null) {
+        Sync.this.connection=connection;
+      }
+    }
+  }
+);
+}
+@SuppressWarnings("unchecked") public Sync(K key,T value){
+  this.key=key;
+  this.connection=value;
+  this.future=(F)CompletableFuture.completedFuture(value);
+  PHASE.set(this,PHASE_COMPLETE);
+}

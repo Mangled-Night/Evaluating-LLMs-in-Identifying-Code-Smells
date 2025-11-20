@@ -1,0 +1,78 @@
+/** 
+ * Implementation of the  {@link OpenPgpMetadataStore}, which stores metadata information in a file structure. The information is stored in the following directory structure: <pre> {@code <basePath>/ <userjid@server.tld>/ announced.list       // list of the users announced key fingerprints and modification dates}</pre>
+ */
+public class FileBasedOpenPgpMetadataStore extends AbstractOpenPgpMetadataStore {
+  public static final String ANNOUNCED="announced.list";
+  private static final Logger LOGGER=Logger.getLogger(FileBasedOpenPgpMetadataStore.class.getName());
+  private final File basePath;
+  public FileBasedOpenPgpMetadataStore(  File basePath){
+    this.basePath=basePath;
+  }
+  @Override public Map<OpenPgpV4Fingerprint,Date> readAnnouncedFingerprintsOf(  BareJid contact) throws IOException {
+    return readFingerprintsAndDates(getAnnouncedFingerprintsPath(contact));
+  }
+  @Override public void writeAnnouncedFingerprintsOf(  BareJid contact,  Map<OpenPgpV4Fingerprint,Date> metadata) throws IOException {
+    File destination=getAnnouncedFingerprintsPath(contact);
+    writeFingerprintsAndDates(metadata,destination);
+  }
+  static Map<OpenPgpV4Fingerprint,Date> readFingerprintsAndDates(  File source) throws IOException {
+    if (!source.exists() || source.isDirectory()) {
+      return new HashMap<>();
+    }
+    BufferedReader reader=null;
+    try {
+      InputStream inputStream=FileUtils.prepareFileInputStream(source);
+      InputStreamReader isr=new InputStreamReader(inputStream,Util.UTF8);
+      reader=new BufferedReader(isr);
+      Map<OpenPgpV4Fingerprint,Date> fingerprintDateMap=new HashMap<>();
+      String line;
+      int lineNr=0;
+      while ((line=reader.readLine()) != null) {
+        lineNr++;
+        line=line.trim();
+        String[] split=line.split(" ");
+        if (split.length != 2) {
+          LOGGER.log(Level.FINE,"Skipping invalid line " + lineNr + " in file "+ source.getAbsolutePath());
+          continue;
+        }
+        try {
+          OpenPgpV4Fingerprint fingerprint=new OpenPgpV4Fingerprint(split[0]);
+          Date date=XmppDateTime.parseXEP0082Date(split[1]);
+          fingerprintDateMap.put(fingerprint,date);
+        }
+ catch (        IllegalArgumentException|ParseException e) {
+          LOGGER.log(Level.WARNING,"Error parsing fingerprint/date touple in line " + lineNr + " of file "+ source.getAbsolutePath(),e);
+        }
+      }
+      return fingerprintDateMap;
+    }
+  finally {
+      CloseableUtil.maybeClose(reader,LOGGER);
+    }
+  }
+  static void writeFingerprintsAndDates(  Map<OpenPgpV4Fingerprint,Date> data,  File destination) throws IOException {
+    if (data == null || data.isEmpty()) {
+      FileUtils.maybeDeleteFileOrThrow(destination);
+      return;
+    }
+    FileUtils.maybeCreateFileWithParentDirectories(destination);
+    BufferedWriter writer=null;
+    try {
+      OutputStream outputStream=FileUtils.prepareFileOutputStream(destination);
+      OutputStreamWriter osw=new OutputStreamWriter(outputStream,Util.UTF8);
+      writer=new BufferedWriter(osw);
+      for (      OpenPgpV4Fingerprint fingerprint : data.keySet()) {
+        Date date=data.get(fingerprint);
+        String line=fingerprint.toString() + " " + (date != null ? XmppDateTime.formatXEP0082Date(date) : XmppDateTime.formatXEP0082Date(new Date()));
+        writer.write(line);
+        writer.newLine();
+      }
+    }
+  finally {
+      CloseableUtil.maybeClose(writer,LOGGER);
+    }
+  }
+  private File getAnnouncedFingerprintsPath(  BareJid contact){
+    return new File(FileBasedOpenPgpStore.getContactsPath(basePath,contact),ANNOUNCED);
+  }
+}

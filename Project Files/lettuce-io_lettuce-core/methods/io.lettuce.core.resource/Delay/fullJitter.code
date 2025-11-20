@@ -1,0 +1,40 @@
+/** 
+ * Creates a new  {@link FullJitterDelay} with default boundaries.
+ * @return a created {@link FullJitterDelay}.
+ */
+public static Delay fullJitter(){
+  return fullJitter(DEFAULT_LOWER_BOUND,DEFAULT_UPPER_BOUND,1L,DEFAULT_TIMEUNIT);
+}
+/** 
+ * Creates a new  {@link FullJitterDelay}.
+ * @param lower the lower boundary, must be non-negative
+ * @param upper the upper boundary, must be greater than the lower boundary
+ * @param base the base, must be greater or equal to 1
+ * @param targetTimeUnit the unit of the delay.
+ * @return a created {@link FullJitterDelay}.
+ * @since 5.0
+ */
+public static Delay fullJitter(Duration lower,Duration upper,long base,TimeUnit targetTimeUnit){
+  LettuceAssert.notNull(lower,"Lower boundary must not be null");
+  LettuceAssert.isTrue(lower.toNanos() >= 0,"Lower boundary must be greater or equal to 0");
+  LettuceAssert.notNull(upper,"Upper boundary must not be null");
+  LettuceAssert.isTrue(upper.toNanos() > lower.toNanos(),"Upper boundary must be greater than the lower boundary");
+  LettuceAssert.isTrue(base >= 1,"Base must be greater or equal to 1");
+  LettuceAssert.notNull(targetTimeUnit,"Target TimeUnit must not be null");
+  return new FullJitterDelay(lower,upper,base,targetTimeUnit);
+}
+/** 
+ * Creates a new  {@link FullJitterDelay}.
+ * @param lower the lower boundary, must be non-negative
+ * @param upper the upper boundary, must be greater than the lower boundary
+ * @param base the base, must be greater or equal to 1
+ * @param unit the unit of the delay.
+ * @return a created {@link FullJitterDelay}.
+ */
+public static Delay fullJitter(long lower,long upper,long base,TimeUnit unit){
+  LettuceAssert.isTrue(lower >= 0,"Lower boundary must be greater or equal to 0");
+  LettuceAssert.isTrue(upper > lower,"Upper boundary must be greater than the lower boundary");
+  LettuceAssert.isTrue(base >= 1,"Base must be greater or equal to 1");
+  LettuceAssert.notNull(unit,"TimeUnit must not be null");
+  return fullJitter(Duration.ofNanos(unit.toNanos(lower)),Duration.ofNanos(unit.toNanos(upper)),base,unit);
+}

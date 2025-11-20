@@ -1,0 +1,31 @@
+public void doNextWriteCheck(){
+  if (!writing.compareAndSet(false,true)) {
+    return;
+  }
+  try {
+    if (!channel.isOpen()) {
+      AbstractConnection.LOGGER.debug("caught err: {}",con);
+    }
+    boolean noMoreData=write0();
+    writing.set(false);
+    if (noMoreData && con.writeQueue.isEmpty()) {
+      if ((processKey.isValid() && (processKey.interestOps() & SelectionKey.OP_WRITE) != 0)) {
+        disableWrite();
+      }
+    }
+ else {
+      if ((processKey.isValid() && (processKey.interestOps() & SelectionKey.OP_WRITE) == 0)) {
+        enableWrite(false);
+      }
+    }
+  }
+ catch (  IOException e) {
+    if (AbstractConnection.LOGGER.isWarnEnabled()) {
+      AbstractConnection.LOGGER.warn("caught err:",e);
+    }
+    con.close("err:" + e);
+  }
+ finally {
+    writing.set(false);
+  }
+}

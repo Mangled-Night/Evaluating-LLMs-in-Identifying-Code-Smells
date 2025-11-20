@@ -1,0 +1,32 @@
+private static RedisClusterNode getRedisClusterNode(Iterator<?> iterator,Map<String,RedisClusterNode> nodeCache){
+  Object element=iterator.next();
+  RedisClusterNode redisClusterNode=null;
+  if (element instanceof List) {
+    List<?> hostAndPortList=(List<?>)element;
+    if (hostAndPortList.size() < 2) {
+      return null;
+    }
+    Iterator<?> hostAndPortIterator=hostAndPortList.iterator();
+    String host=(String)hostAndPortIterator.next();
+    int port=Math.toIntExact(getLongFromIterator(hostAndPortIterator,0));
+    String nodeId;
+    if (hostAndPortIterator.hasNext()) {
+      nodeId=(String)hostAndPortIterator.next();
+      redisClusterNode=nodeCache.get(nodeId);
+      if (redisClusterNode == null) {
+        redisClusterNode=createNode(host,port);
+        nodeCache.put(nodeId,redisClusterNode);
+        redisClusterNode.setNodeId(nodeId);
+      }
+    }
+ else {
+      String key=host + ":" + port;
+      redisClusterNode=nodeCache.get(key);
+      if (redisClusterNode == null) {
+        redisClusterNode=createNode(host,port);
+        nodeCache.put(key,redisClusterNode);
+      }
+    }
+  }
+  return redisClusterNode;
+}

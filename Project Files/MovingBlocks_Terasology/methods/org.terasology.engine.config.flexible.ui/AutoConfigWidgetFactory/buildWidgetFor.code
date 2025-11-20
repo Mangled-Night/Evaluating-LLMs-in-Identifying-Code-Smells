@@ -1,0 +1,20 @@
+/** 
+ * Creates  {@link UIWidget} for {@link AutoConfig}
+ * @param config for creating widget
+ * @return UIWidget created for config
+ */
+public UIWidget buildWidgetFor(AutoConfig config){
+  PropertyLayout container=new PropertyLayout();
+  container.setRowConstraints("[min]");
+  Collection<Property<?,?>> widgetProperties=new ArrayList<>();
+  for (  Setting<?> setting : config.getSettings()) {
+    Optional<UIWidget> settingWidget=settingWidgetFactory.createWidgetFor(setting);
+    if (!settingWidget.isPresent()) {
+      logger.error("Couldn't find a widget for the Setting [{}]",setting.getHumanReadableName());
+      continue;
+    }
+    widgetProperties.add(new Property<>(translationSystem.translate(setting.getHumanReadableName()),null,settingWidget.get(),translationSystem.translate(setting.getDescription())));
+  }
+  container.addProperties(translationSystem.translate(config.getName()),widgetProperties);
+  return container;
+}

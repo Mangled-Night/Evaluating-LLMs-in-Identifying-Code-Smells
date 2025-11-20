@@ -1,0 +1,12 @@
+@Test @EnabledOnCommand("GEOSEARCH") void geosearchWithArgs(){
+  prepareGeo();
+  List<GeoWithin<String>> empty=redis.geosearch(key,GeoSearch.fromMember("Bahn"),GeoSearch.byRadius(1,GeoArgs.Unit.km),new GeoArgs().withHash().withCoordinates().withDistance().desc());
+  assertThat(empty).isNotEmpty();
+  List<GeoWithin<String>> withDistanceAndCoordinates=redis.geosearch(key,GeoSearch.fromMember("Bahn"),GeoSearch.byRadius(5,GeoArgs.Unit.km),new GeoArgs().withCoordinates().withDistance().desc());
+  assertThat(withDistanceAndCoordinates).hasSize(2);
+  GeoWithin<String> weinheim=withDistanceAndCoordinates.get(0);
+  assertThat(weinheim.getMember()).isEqualTo("Weinheim");
+  assertThat(weinheim.getGeohash()).isNull();
+  assertThat(weinheim.getDistance()).isNotNull();
+  assertThat(weinheim.getCoordinates()).isNotNull();
+}

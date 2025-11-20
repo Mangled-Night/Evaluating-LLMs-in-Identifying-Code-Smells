@@ -1,0 +1,56 @@
+/** 
+ * Ensures that sending and receiving of packets is ok.
+ */
+public void testSending() throws XMPPException {
+  StanzaCollector collector1=getConnection(1).createStanzaCollector(new MessageTypeFilter(Message.Type.normal));
+  StanzaCollector collector2=getConnection(2).createStanzaCollector(new MessageTypeFilter(Message.Type.normal));
+  StanzaCollector collector3=getConnection(3).createStanzaCollector(new MessageTypeFilter(Message.Type.normal));
+  Message message=new Message();
+  message.setBody("Hola");
+  List<String> to=Arrays.asList(new String[]{getBareJID(1)});
+  List<String> cc=Arrays.asList(new String[]{getBareJID(2)});
+  List<String> bcc=Arrays.asList(new String[]{getBareJID(3)});
+  MultipleRecipientManager.send(getConnection(0),message,to,cc,bcc);
+  Packet message1=collector1.nextResult(SmackConfiguration.getPacketReplyTimeout());
+  assertNotNull("XMPPConnection 1 never received the message",message1);
+  MultipleRecipientInfo info1=MultipleRecipientManager.getMultipleRecipientInfo(message1);
+  assertNotNull("Message 1 does not contain MultipleRecipientInfo",info1);
+  assertFalse("Message 1 should be 'replyable'",info1.shouldNotReply());
+  List<?> addresses1=info1.getTOAddresses();
+  assertEquals("Incorrect number of TO addresses",1,addresses1.size());
+  String address1=((MultipleAddresses.Address)addresses1.get(0)).getJid();
+  assertEquals("Incorrect TO address",getBareJID(1),address1);
+  addresses1=info1.getCCAddresses();
+  assertEquals("Incorrect number of CC addresses",1,addresses1.size());
+  address1=((MultipleAddresses.Address)addresses1.get(0)).getJid();
+  assertEquals("Incorrect CC address",getBareJID(2),address1);
+  Packet message2=collector2.nextResult(SmackConfiguration.getPacketReplyTimeout());
+  assertNotNull("XMPPConnection 2 never received the message",message2);
+  MultipleRecipientInfo info2=MultipleRecipientManager.getMultipleRecipientInfo(message2);
+  assertNotNull("Message 2 does not contain MultipleRecipientInfo",info2);
+  assertFalse("Message 2 should be 'replyable'",info2.shouldNotReply());
+  List<MultipleAddresses.Address> addresses2=info2.getTOAddresses();
+  assertEquals("Incorrect number of TO addresses",1,addresses2.size());
+  String address2=((MultipleAddresses.Address)addresses2.get(0)).getJid();
+  assertEquals("Incorrect TO address",getBareJID(1),address2);
+  addresses2=info2.getCCAddresses();
+  assertEquals("Incorrect number of CC addresses",1,addresses2.size());
+  address2=((MultipleAddresses.Address)addresses2.get(0)).getJid();
+  assertEquals("Incorrect CC address",getBareJID(2),address2);
+  Packet message3=collector3.nextResult(SmackConfiguration.getPacketReplyTimeout());
+  assertNotNull("XMPPConnection 3 never received the message",message3);
+  MultipleRecipientInfo info3=MultipleRecipientManager.getMultipleRecipientInfo(message3);
+  assertNotNull("Message 3 does not contain MultipleRecipientInfo",info3);
+  assertFalse("Message 3 should be 'replyable'",info3.shouldNotReply());
+  List<MultipleAddresses.Address> addresses3=info3.getTOAddresses();
+  assertEquals("Incorrect number of TO addresses",1,addresses3.size());
+  String address3=((MultipleAddresses.Address)addresses3.get(0)).getJid();
+  assertEquals("Incorrect TO address",getBareJID(1),address3);
+  addresses3=info3.getCCAddresses();
+  assertEquals("Incorrect number of CC addresses",1,addresses3.size());
+  address3=((MultipleAddresses.Address)addresses3.get(0)).getJid();
+  assertEquals("Incorrect CC address",getBareJID(2),address3);
+  collector1.cancel();
+  collector2.cancel();
+  collector3.cancel();
+}

@@ -1,0 +1,32 @@
+/** 
+ * Starts the local SOCKS5 proxy server. If it is already running, this method does nothing.
+ * @return the server socket.
+ */
+public synchronized ServerSocket start(){
+  if (isRunning()) {
+    return this.serverSocket;
+  }
+  try {
+    if (getLocalSocks5ProxyPort() < 0) {
+      int port=Math.abs(getLocalSocks5ProxyPort());
+      for (int i=0; i < 65535 - port; i++) {
+        try {
+          this.serverSocket=new ServerSocket(port + i);
+          break;
+        }
+ catch (        IOException e) {
+        }
+      }
+    }
+ else {
+      this.serverSocket=new ServerSocket(getLocalSocks5ProxyPort());
+    }
+    if (this.serverSocket != null) {
+      startServerThread();
+    }
+  }
+ catch (  IOException e) {
+    LOGGER.log(Level.SEVERE,"couldn't setup local SOCKS5 proxy on port " + getLocalSocks5ProxyPort(),e);
+  }
+  return this.serverSocket;
+}

@@ -1,0 +1,32 @@
+/** 
+ * Set the name of the host providing the XMPP service. This method takes DNS names and IP addresses.
+ * @param host the DNS name of the host providing the XMPP service.
+ * @return a reference to this builder.
+ */
+public B setHost(CharSequence host){
+  String fqdnOrIpString=host.toString();
+  if (InetAddressUtil.isIpAddress(fqdnOrIpString)) {
+    InetAddress hostInetAddress;
+    try {
+      hostInetAddress=InetAddress.getByName(fqdnOrIpString);
+    }
+ catch (    UnknownHostException e) {
+      throw new AssertionError(e);
+    }
+    setHostAddress(hostInetAddress);
+  }
+ else {
+    DnsName dnsName=DnsName.from(fqdnOrIpString);
+    setHost(dnsName);
+  }
+  return getThis();
+}
+/** 
+ * Set the name of the host providing the XMPP service. Note that this method does only allow DNS names and not IP addresses. Use  {@link #setHostAddress(InetAddress)} if you want to explicitly set the Internet address ofthe host providing the XMPP service.
+ * @param host the DNS name of the host providing the XMPP service.
+ * @return a reference to this builder.
+ */
+public B setHost(DnsName host){
+  this.host=host;
+  return getThis();
+}

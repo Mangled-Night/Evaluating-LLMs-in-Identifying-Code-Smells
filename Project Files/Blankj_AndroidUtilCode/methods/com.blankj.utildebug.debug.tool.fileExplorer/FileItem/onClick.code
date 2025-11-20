@@ -1,0 +1,48 @@
+@Override public void onClick(View v){
+  boolean delete=FileUtils.delete(mFile);
+  if (delete) {
+    getAdapter().removeItem(FileItem.this,true);
+    if (getAdapter().getItems().isEmpty()) {
+      getAdapter().addItem(new FileItem());
+      getAdapter().notifyDataSetChanged();
+      v.getRootView().findViewById(R.id.fileExplorerSearchEt).setVisibility(View.GONE);
+    }
+  }
+ else {
+    FloatToast.showLong(FloatToast.WARNING,"Delete failed!");
+  }
+}
+@Override public void onClick(final View v){
+  if (isSdcard) {
+    PermissionUtils.permission(PermissionConstants.STORAGE).callback(new PermissionUtils.SimpleCallback(){
+      @Override public void onGranted(){
+        FileExplorerFloatView floatView=(FileExplorerFloatView)v.getRootView();
+        FileContentView.show(floatView,FileItem.this);
+      }
+      @Override public void onDenied(){
+        FloatToast.showShort("Permission of storage denied!");
+      }
+    }
+).request();
+  }
+ else {
+    FileExplorerFloatView floatView=(FileExplorerFloatView)v.getRootView();
+    FileContentView.show(floatView,FileItem.this);
+  }
+}
+@Override public void onClick(View v){
+  FileExplorerFloatView floatView=(FileExplorerFloatView)v.getRootView();
+  ImageViewer.show(floatView,mFile);
+}
+@Override public void onClick(View v){
+  FileExplorerFloatView floatView=(FileExplorerFloatView)v.getRootView();
+  SpViewerContentView.show(floatView,mFile);
+}
+@Override public void onClick(View v){
+  Intent intent=new Intent(Intent.ACTION_VIEW);
+  intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+  intent.setData(UriUtils.file2Uri(mFile));
+  intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+  intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+  ActivityUtils.startActivity(intent);
+}

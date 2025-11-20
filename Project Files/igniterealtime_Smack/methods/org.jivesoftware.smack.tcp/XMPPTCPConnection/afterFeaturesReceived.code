@@ -1,0 +1,26 @@
+@Override protected void afterFeaturesReceived() throws NotConnectedException, InterruptedException, SecurityRequiredByServerException {
+  StartTls startTlsFeature=getFeature(StartTls.class);
+  if (startTlsFeature != null) {
+    if (startTlsFeature.required() && config.getSecurityMode() == SecurityMode.disabled) {
+      SecurityRequiredByServerException smackException=new SecurityRequiredByServerException();
+      currentSmackException=smackException;
+      notifyWaitingThreads();
+      throw smackException;
+    }
+    if (config.getSecurityMode() != ConnectionConfiguration.SecurityMode.disabled) {
+      sendNonza(new StartTls());
+    }
+ else {
+      tlsHandled=true;
+      notifyWaitingThreads();
+    }
+  }
+ else {
+    tlsHandled=true;
+    notifyWaitingThreads();
+  }
+  if (isSaslAuthenticated()) {
+    streamFeaturesAfterAuthenticationReceived=true;
+    notifyWaitingThreads();
+  }
+}

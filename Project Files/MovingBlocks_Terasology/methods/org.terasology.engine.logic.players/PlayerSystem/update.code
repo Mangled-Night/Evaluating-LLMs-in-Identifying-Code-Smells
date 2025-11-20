@@ -1,0 +1,26 @@
+@Override public void update(float delta){
+  Iterator<SpawningClientInfo> i=clientsPreparingToSpawn.iterator();
+  while (i.hasNext()) {
+    SpawningClientInfo spawning=i.next();
+    if (worldProvider.isBlockRelevant(spawning.position)) {
+      PlayerStore playerStore=spawning.playerStore;
+      if (playerStore == null) {
+        spawnPlayer(spawning.clientEntity);
+      }
+ else {
+        playerStore.restoreEntities();
+        EntityRef character=playerStore.getCharacter();
+        restoreCharacter(spawning.clientEntity,character);
+      }
+      i.remove();
+    }
+  }
+  i=clientsPreparingToRespawn.iterator();
+  while (i.hasNext()) {
+    SpawningClientInfo spawning=i.next();
+    if (worldProvider.isBlockRelevant(spawning.position)) {
+      respawnPlayer(spawning.clientEntity);
+      i.remove();
+    }
+  }
+}

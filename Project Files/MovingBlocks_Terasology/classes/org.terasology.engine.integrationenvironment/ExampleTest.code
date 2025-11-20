@@ -1,0 +1,31 @@
+@IntegrationEnvironment(networkMode=NetworkMode.LISTEN_SERVER) public class ExampleTest {
+  @In private WorldProvider worldProvider;
+  @In private BlockManager blockManager;
+  @In private EntityManager entityManager;
+  @In private Time time;
+  @In private ModuleTestingHelper helper;
+  @Test public void testClientConnection() throws IOException {
+    int currentClients=Lists.newArrayList(entityManager.getEntitiesWith(ClientComponent.class)).size();
+    Context clientContext1=helper.createClient();
+    Context clientContext2=helper.createClient();
+    int expectedClients=currentClients + 2;
+    helper.runUntil(() -> Lists.newArrayList(entityManager.getEntitiesWith(ClientComponent.class)).size() >= expectedClients);
+    Assertions.assertEquals(expectedClients,Lists.newArrayList(entityManager.getEntitiesWith(ClientComponent.class)).size());
+  }
+  @Test public void testRunWhileTimeout(){
+    long expectedTime=time.getGameTimeInMs() + 500;
+    boolean timedOut=helper.runWhile(500,() -> true);
+    Assertions.assertTrue(timedOut);
+    long currentTime=time.getGameTimeInMs();
+    Assertions.assertTrue(currentTime >= expectedTime);
+  }
+  @Test public void testSendEvent() throws IOException {
+    Context clientContext=helper.createClient();
+    clientContext.get(LocalPlayer.class).getClientEntity().send(new ResetCameraEvent());
+  }
+  @Test public void testWorldProvider(){
+    helper.forceAndWaitForGeneration(new Vector3i());
+    worldProvider.setBlock(new org.joml.Vector3i(),blockManager.getBlock("engine:air"));
+    Assertions.assertEquals("engine:air",worldProvider.getBlock(new org.joml.Vector3i()).getURI().toString());
+  }
+}

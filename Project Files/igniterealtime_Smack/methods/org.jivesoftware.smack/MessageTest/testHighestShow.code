@@ -1,0 +1,31 @@
+/** 
+ * User0 is connected from 2 resources. User0 is available in both resources but with different show values. User1 sends a message to the bare JID of User0. Check that the resource with highest show value will get the messages.
+ * @throws Exception if an error occurs.
+ */
+public void testHighestShow() throws Exception {
+  ConnectionConfiguration connectionConfiguration=new ConnectionConfiguration(getHost(),getPort(),getXMPPServiceDomain());
+  XMPPTCPConnection conn3=new XMPPConnection(connectionConfiguration);
+  conn3.connect();
+  conn3.login(getUsername(0),getPassword(0),"Home");
+  Presence presence=new Presence(Presence.Type.available);
+  presence.setMode(Presence.Mode.away);
+  conn3.sendStanza(presence);
+  presence=new Presence(Presence.Type.available);
+  presence.setMode(Presence.Mode.available);
+  getConnection(0).sendStanza(presence);
+  Thread.sleep(200);
+  StanzaCollector collector=getConnection(0).createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+  StanzaCollector coll3=conn3.createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+  Chat chat=getConnection(1).getChatManager().createChat(getBareJID(0),null);
+  chat.sendMessage("Test 1");
+  chat.sendMessage("Test 2");
+  Message message=(Message)coll3.nextResult(2000);
+  assertNull("Resource with lowest show value got the message",message);
+  message=(Message)collector.nextResult(2000);
+  assertNotNull(message);
+  assertEquals("Test 1",message.getBody());
+  message=(Message)collector.nextResult(1000);
+  assertNotNull(message);
+  assertEquals("Test 2",message.getBody());
+  conn3.disconnect();
+}

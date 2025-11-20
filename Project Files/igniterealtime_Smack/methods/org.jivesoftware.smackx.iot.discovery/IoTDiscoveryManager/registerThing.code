@@ -1,0 +1,20 @@
+public ThingState registerThing(Thing thing) throws NotConnectedException, InterruptedException, NoResponseException, XMPPErrorException, IoTClaimedException {
+  Jid registry=findRegistry();
+  return registerThing(registry,thing);
+}
+public ThingState registerThing(Jid registry,Thing thing) throws NotConnectedException, InterruptedException, NoResponseException, XMPPErrorException, IoTClaimedException {
+  final XMPPConnection connection=connection();
+  IoTRegister iotRegister=new IoTRegister(thing.getMetaTags(),thing.getNodeInfo(),thing.isSelfOwened());
+  iotRegister.setTo(registry);
+  IQ result=connection.sendIqRequestAndWaitForResponse(iotRegister);
+  if (result instanceof IoTClaimed) {
+    IoTClaimed iotClaimedResult=(IoTClaimed)result;
+    throw new IoTClaimedException(iotClaimedResult);
+  }
+  ThingState state=getStateFor(thing.getNodeInfo());
+  state.setRegistry(registry.asBareJid());
+  interactWithRegistry(registry);
+  IoTDataManager.getInstanceFor(connection).installThing(thing);
+  IoTControlManager.getInstanceFor(connection).installThing(thing);
+  return state;
+}

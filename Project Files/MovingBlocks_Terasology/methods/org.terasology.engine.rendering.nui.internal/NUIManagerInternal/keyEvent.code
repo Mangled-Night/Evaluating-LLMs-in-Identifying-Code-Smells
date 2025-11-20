@@ -1,0 +1,21 @@
+@Priority(EventPriority.PRIORITY_HIGH) @ReceiveEvent(components=ClientComponent.class) public void keyEvent(KeyEvent ev,EntityRef entity){
+  NUIKeyEvent nuiEvent=new NUIKeyEvent(mouse,keyboard,ev.getKey(),ev.getState());
+  if (focus != null) {
+    if (focus.onKeyEvent(nuiEvent)) {
+      ev.consume();
+    }
+  }
+  if (!ev.isConsumed()) {
+    for (    UIScreenLayer screen : screens) {
+      if (screen != focus) {
+        if (screen.onKeyEvent(nuiEvent)) {
+          ev.consume();
+          break;
+        }
+      }
+      if (screen.isModal()) {
+        break;
+      }
+    }
+  }
+}

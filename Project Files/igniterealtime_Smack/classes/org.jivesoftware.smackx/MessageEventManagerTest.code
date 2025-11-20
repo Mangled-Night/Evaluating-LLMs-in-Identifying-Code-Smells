@@ -1,0 +1,138 @@
+/** 
+ * Test the MessageEvent extension using the high level API.
+ * @author Gaston Dombiak
+ */
+public class MessageEventManagerTest extends SmackTestCase {
+  public MessageEventManagerTest(  String name){
+    super(name);
+  }
+  /** 
+ * High level API test. This is a simple test to use with an XMPP client and check if the client receives the message 1. User_1 will send a message to user_2 requesting to be notified when any of these events occurs: offline, composing, displayed or delivered
+ */
+  public void testSendMessageEventRequest(){
+    Chat chat1=getConnection(0).getChatManager().createChat(getBareJID(1),null);
+    Message msg=new Message();
+    msg.setSubject("Any subject you want");
+    msg.setBody("An interesting body comes here...");
+    MessageEventManager.addNotificationsRequests(msg,true,true,true,true);
+    try {
+      chat1.sendMessage(msg);
+    }
+ catch (    Exception e) {
+      fail("An error occurred sending the message");
+    }
+  }
+  /** 
+ * High level API test. This is a simple test to use with an XMPP client, check if the client receives the message and display in the console any notification 1. User_1 will send a message to user_2 requesting to be notified when any of these events occurs: offline, composing, displayed or delivered 2. User_2 will use an XMPP client (like Exodus) to display the message and compose a reply 3. User_1 will display any notification that receives
+ */
+  public void testSendMessageEventRequestAndDisplayNotifications(){
+    Chat chat1=getConnection(0).getChatManager().createChat(getBareJID(1),null);
+    MessageEventManager messageEventManager=new MessageEventManager(getConnection(0));
+    messageEventManager.addMessageEventNotificationListener(new MessageEventNotificationListener(){
+      public void deliveredNotification(      String from,      String packetID){
+        System.out.println("From: " + from + " PacketID: "+ packetID+ "(delivered)");
+      }
+      public void displayedNotification(      String from,      String packetID){
+        System.out.println("From: " + from + " PacketID: "+ packetID+ "(displayed)");
+      }
+      public void composingNotification(      String from,      String packetID){
+        System.out.println("From: " + from + " PacketID: "+ packetID+ "(composing)");
+      }
+      public void offlineNotification(      String from,      String packetID){
+        System.out.println("From: " + from + " PacketID: "+ packetID+ "(offline)");
+      }
+      public void cancelledNotification(      String from,      String packetID){
+        System.out.println("From: " + from + " PacketID: "+ packetID+ "(cancelled)");
+      }
+    }
+);
+    Message msg=new Message();
+    msg.setSubject("Any subject you want");
+    msg.setBody("An interesting body comes here...");
+    MessageEventManager.addNotificationsRequests(msg,true,true,true,true);
+    try {
+      chat1.sendMessage(msg);
+      Thread.sleep(200);
+    }
+ catch (    Exception e) {
+      fail("An error occurred sending the message");
+    }
+  }
+  /** 
+ * High level API test. 1. User_1 will send a message to user_2 requesting to be notified when any of these events occurs: offline, composing, displayed or delivered 2. User_2 will receive the message 3. User_2 will simulate that the message was displayed 4. User_2 will simulate that he/she is composing a reply 5. User_2 will simulate that he/she has cancelled the reply
+ */
+  public void testRequestsAndNotifications(){
+    final ArrayList<String> results=new ArrayList<String>();
+    ArrayList<String> resultsExpected=new ArrayList<String>();
+    resultsExpected.add("deliveredNotificationRequested");
+    resultsExpected.add("composingNotificationRequested");
+    resultsExpected.add("displayedNotificationRequested");
+    resultsExpected.add("offlineNotificationRequested");
+    resultsExpected.add("deliveredNotification");
+    resultsExpected.add("displayedNotification");
+    resultsExpected.add("composingNotification");
+    resultsExpected.add("cancelledNotification");
+    Chat chat1=getConnection(0).getChatManager().createChat(getBareJID(1),null);
+    MessageEventManager messageEventManager1=new MessageEventManager(getConnection(0));
+    messageEventManager1.addMessageEventNotificationListener(new MessageEventNotificationListener(){
+      public void deliveredNotification(      String from,      String packetID){
+        results.add("deliveredNotification");
+      }
+      public void displayedNotification(      String from,      String packetID){
+        results.add("displayedNotification");
+      }
+      public void composingNotification(      String from,      String packetID){
+        results.add("composingNotification");
+      }
+      public void offlineNotification(      String from,      String packetID){
+        results.add("offlineNotification");
+      }
+      public void cancelledNotification(      String from,      String packetID){
+        results.add("cancelledNotification");
+      }
+    }
+);
+    MessageEventManager messageEventManager2=new MessageEventManager(getConnection(1));
+    messageEventManager2.addMessageEventRequestListener(new DefaultMessageEventRequestListener(){
+      public void deliveredNotificationRequested(      String from,      String packetID,      MessageEventManager messageEventManager){
+        super.deliveredNotificationRequested(from,packetID,messageEventManager);
+        results.add("deliveredNotificationRequested");
+      }
+      public void displayedNotificationRequested(      String from,      String packetID,      MessageEventManager messageEventManager){
+        super.displayedNotificationRequested(from,packetID,messageEventManager);
+        results.add("displayedNotificationRequested");
+      }
+      public void composingNotificationRequested(      String from,      String packetID,      MessageEventManager messageEventManager){
+        super.composingNotificationRequested(from,packetID,messageEventManager);
+        results.add("composingNotificationRequested");
+      }
+      public void offlineNotificationRequested(      String from,      String packetID,      MessageEventManager messageEventManager){
+        super.offlineNotificationRequested(from,packetID,messageEventManager);
+        results.add("offlineNotificationRequested");
+      }
+    }
+);
+    Message msg=new Message();
+    msg.setSubject("Any subject you want");
+    msg.setBody("An interesting body comes here...");
+    MessageEventManager.addNotificationsRequests(msg,true,true,true,true);
+    try {
+      chat1.sendMessage(msg);
+      messageEventManager2.sendDisplayedNotification(getBareJID(0),msg.getStanzaId());
+      messageEventManager2.sendComposingNotification(getBareJID(0),msg.getStanzaId());
+      messageEventManager2.sendCancelledNotification(getBareJID(0),msg.getStanzaId());
+      long initial=System.currentTimeMillis();
+      while (System.currentTimeMillis() - initial < 2000 && (!results.containsAll(resultsExpected))) {
+        Thread.sleep(100);
+      }
+      assertTrue("Test failed due to bad results (1)" + resultsExpected,resultsExpected.containsAll(results));
+      assertTrue("Test failed due to bad results (2)" + results,results.containsAll(resultsExpected));
+    }
+ catch (    Exception e) {
+      fail("An error occurred sending the message");
+    }
+  }
+  protected int getMaxConnections(){
+    return 2;
+  }
+}

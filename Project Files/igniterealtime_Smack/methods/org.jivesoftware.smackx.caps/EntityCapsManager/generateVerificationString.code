@@ -1,0 +1,68 @@
+static CapsVersionAndHash generateVerificationString(DiscoverInfoView discoverInfo){
+  return generateVerificationString(discoverInfo,null);
+}
+/** 
+ * Generates a XEP-115 Verification String
+ * @see <a href="http://xmpp.org/extensions/xep-0115.html#ver">XEP-115
+     *      Verification String</a>
+ * @param discoverInfo TODO javadoc me please
+ * @param hash TODO javadoc me pleasethe used hash function, if null, default hash will be used
+ * @return The generated verification String or null if the hash is notsupported
+ */
+static CapsVersionAndHash generateVerificationString(DiscoverInfoView discoverInfo,String hash){
+  if (hash == null) {
+    hash=DEFAULT_HASH;
+  }
+  MessageDigest md=SUPPORTED_HASHES.get(hash.toUpperCase(Locale.US));
+  if (md == null)   return null;
+  hash=hash.toLowerCase(Locale.US);
+  StringBuilder sb=new StringBuilder();
+  SortedSet<DiscoverInfo.Identity> sortedIdentities=new TreeSet<>();
+  sortedIdentities.addAll(discoverInfo.getIdentities());
+  for (  DiscoverInfo.Identity identity : sortedIdentities) {
+    sb.append(identity.getCategory());
+    sb.append('/');
+    sb.append(identity.getType());
+    sb.append('/');
+    sb.append(identity.getLanguage() == null ? "" : identity.getLanguage());
+    sb.append('/');
+    sb.append(identity.getName() == null ? "" : identity.getName());
+    sb.append('<');
+  }
+  SortedSet<String> features=new TreeSet<>();
+  for (  Feature f : discoverInfo.getFeatures())   features.add(f.getVar());
+  for (  String f : features) {
+    sb.append(f);
+    sb.append('<');
+  }
+  List<DataForm> extendedInfos=discoverInfo.getExtensions(DataForm.class);
+  for (  DataForm extendedInfo : extendedInfos) {
+    if (!extendedInfo.hasHiddenFormTypeField()) {
+      continue;
+    }
+    SortedSet<FormField> fs=new TreeSet<>(new Comparator<FormField>(){
+      @Override public int compare(      FormField f1,      FormField f2){
+        return f1.getFieldName().compareTo(f2.getFieldName());
+      }
+    }
+);
+    for (    FormField f : extendedInfo.getFields()) {
+      if (!f.getFieldName().equals("FORM_TYPE")) {
+        fs.add(f);
+      }
+    }
+    formFieldValuesToCaps(Collections.singletonList(extendedInfo.getFormType()),sb);
+    for (    FormField f : fs) {
+      sb.append(f.getFieldName());
+      sb.append('<');
+      formFieldValuesToCaps(f.getRawValueCharSequences(),sb);
+    }
+  }
+  byte[] bytes=sb.toString().getBytes(StandardCharsets.UTF_8);
+  byte[] digest;
+synchronized (md) {
+    digest=md.digest(bytes);
+  }
+  String version=Base64.encodeToString(digest);
+  return new CapsVersionAndHash(version,hash);
+}

@@ -1,0 +1,27 @@
+public void reload(final String path){
+  if (!NIOProcessor.backends_old.isEmpty()) {
+    return;
+  }
+  final ReentrantLock lock=MycatServer.getInstance().getConfig().getLock();
+  lock.lock();
+  try {
+    ListenableFuture<Boolean> listenableFuture=MycatServer.getInstance().getListeningExecutorService().submit(new Callable<Boolean>(){
+      @Override public Boolean call() throws Exception {
+        return ReloadConfig.reload_all();
+      }
+    }
+);
+    Futures.addCallback(listenableFuture,new FutureCallback<Boolean>(){
+      @Override public void onSuccess(      Boolean result){
+        LOGGER.info("CommandPathListener path:" + path + " reload success");
+      }
+      @Override public void onFailure(      Throwable t){
+        LOGGER.error("CommandPathListener path:" + path + " reload error",t);
+      }
+    }
+,MycatServer.getInstance().getListeningExecutorService());
+  }
+  finally {
+    lock.unlock();
+  }
+}

@@ -1,0 +1,62 @@
+/** 
+ * @author Mark Paluch
+ * @author Yohei Ueki
+ */
+@SuppressWarnings("unchecked") @ExtendWith(LettuceExtension.class) class RedisClusterReadFromIntegrationTests extends TestSupport {
+  private final RedisClusterClient clusterClient;
+  private StatefulRedisClusterConnection<String,String> connection;
+  private RedisAdvancedClusterCommands<String,String> sync;
+  @Inject RedisClusterReadFromIntegrationTests(  RedisClusterClient clusterClient){
+    this.clusterClient=clusterClient;
+  }
+  @BeforeEach void before(){
+    connection=clusterClient.connect();
+    sync=connection.sync();
+  }
+  @AfterEach void after(){
+    connection.close();
+  }
+  @Test void defaultTest(){
+    assertThat(connection.getReadFrom()).isEqualTo(ReadFrom.UPSTREAM);
+  }
+  @Test void readWriteMaster(){
+    connection.setReadFrom(ReadFrom.UPSTREAM);
+    sync.set(key,value);
+    assertThat(sync.get(key)).isEqualTo(value);
+  }
+  @Test void readWriteMasterPreferred(){
+    connection.setReadFrom(ReadFrom.UPSTREAM_PREFERRED);
+    sync.set(key,value);
+    assertThat(sync.get(key)).isEqualTo(value);
+  }
+  @Test void readWriteReplica(){
+    connection.setReadFrom(ReadFrom.REPLICA);
+    sync.set(key,"value1");
+    connection.getConnection(ClusterTestSettings.host,ClusterTestSettings.port2).sync().waitForReplication(1,1000);
+    assertThat(sync.get(key)).isEqualTo("value1");
+  }
+  @Test void readWriteReplicaPreferred(){
+    connection.setReadFrom(ReadFrom.REPLICA_PREFERRED);
+    sync.set(key,"value1");
+    connection.getConnection(ClusterTestSettings.host,ClusterTestSettings.port2).sync().waitForReplication(1,1000);
+    assertThat(sync.get(key)).isEqualTo("value1");
+  }
+  @Test void readWriteNearest(){
+    connection.setReadFrom(ReadFrom.NEAREST);
+    sync.set(key,"value1");
+    connection.getConnection(ClusterTestSettings.host,ClusterTestSettings.port2).sync().waitForReplication(1,1000);
+    assertThat(sync.get(key)).isEqualTo("value1");
+  }
+  @Test void readWriteSubnet(){
+    connection.setReadFrom(ReadFrom.subnet("0.0.0.0/0","::/0"));
+    sync.set(key,"value1");
+    connection.getConnection(ClusterTestSettings.host,ClusterTestSettings.port2).sync().waitForReplication(1,1000);
+    assertThat(sync.get(key)).isEqualTo("value1");
+  }
+  @Test void readWriteRegex(){
+    connection.setReadFrom(ReadFrom.regex(Pattern.compile(".*")));
+    sync.set(key,"value1");
+    connection.getConnection(ClusterTestSettings.host,ClusterTestSettings.port2).sync().waitForReplication(1,1000);
+    assertThat(sync.get(key)).isEqualTo("value1");
+  }
+}

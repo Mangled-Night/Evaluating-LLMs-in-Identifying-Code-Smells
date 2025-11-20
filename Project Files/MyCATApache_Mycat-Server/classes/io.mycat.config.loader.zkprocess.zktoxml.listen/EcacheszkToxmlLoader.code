@@ -1,0 +1,100 @@
+/** 
+ * 进行从ecache.xml加载到zk中加载 源文件名：SchemasLoader.java 文件版本：1.0.0 创建作者：liujun 创建日期：2016年9月15日 修改作者：liujun 修改日期：2016年9月15日 文件描述：TODO 版权所有：Copyright 2016 zjhz, Inc. All Rights Reserved.
+ */
+public class EcacheszkToxmlLoader extends ZkMultLoader implements NotiflyService {
+  /** 
+ * 日志
+ * @字段说明 LOGGER
+ */
+  private static final Logger LOGGER=LoggerFactory.getLogger(EcacheszkToxmlLoader.class);
+  /** 
+ * 当前文件中的zkpath信息 
+ * @字段说明 currZkPath
+ */
+  private final String currZkPath;
+  /** 
+ * 缓存文件名称
+ * @字段说明 CACHESERVER_NAME
+ */
+  private static final String CACHESERVER_NAME="cacheservice.properties";
+  /** 
+ * 缓存的xml文件配制信息
+ * @字段说明 EHCACHE_NAME
+ */
+  private static final String EHCACHE_NAME="ehcache.xml";
+  /** 
+ * ehcache的xml的转换信息
+ * @字段说明 parseEhcacheXMl
+ */
+  private final ParseXmlServiceInf<Ehcache> parseEcacheXMl;
+  /** 
+ * 表的路由信息
+ * @字段说明 parseJsonService
+ */
+  private ParseJsonServiceInf<Ehcache> parseJsonEhcacheService=new EhcacheJsonParse();
+  /** 
+ * 监控类信息
+ * @字段说明 zookeeperListen
+ */
+  private ZookeeperProcessListen zookeeperListen;
+  public EcacheszkToxmlLoader(  ZookeeperProcessListen zookeeperListen,  CuratorFramework curator,  XmlProcessBase xmlParseBase){
+    this.setCurator(curator);
+    this.zookeeperListen=zookeeperListen;
+    String schemaPath=zookeeperListen.getBasePath();
+    schemaPath=schemaPath + ZookeeperPath.ZK_SEPARATOR.getKey() + ZookeeperPath.FLOW_ZK_PATH_CACHE.getKey();
+    currZkPath=schemaPath;
+    this.zookeeperListen.addListen(schemaPath,this);
+    parseEcacheXMl=new EhcacheParseXmlImpl(xmlParseBase);
+  }
+  @Override public boolean notiflyProcess() throws Exception {
+    DiretoryInf RulesDirectory=new ZkDirectoryImpl(currZkPath,null);
+    this.getTreeDirectory(currZkPath,ZookeeperPath.FLOW_ZK_PATH_CACHE.getKey(),RulesDirectory);
+    ZkDirectoryImpl zkDirectory=(ZkDirectoryImpl)RulesDirectory.getSubordinateInfo().get(0);
+    zktoEhcacheWrite(zkDirectory);
+    LOGGER.info("EcacheszkToxmlLoader notiflyProcess   zk ehcache write success ");
+    return true;
+  }
+  /** 
+ * 将zk上面的信息转换为javabean对象 方法描述
+ * @param zkDirectory
+ * @return
+ * @创建日期 2016年9月17日
+ */
+  private void zktoEhcacheWrite(  ZkDirectoryImpl zkDirectory){
+    DataInf ehcacheZkDirectory=this.getZkData(zkDirectory,EHCACHE_NAME);
+    Ehcache ehcache=parseJsonEhcacheService.parseJsonToBean(ehcacheZkDirectory.getDataValue());
+    String outputPath=EcacheszkToxmlLoader.class.getClassLoader().getResource(ZookeeperPath.ZK_LOCAL_WRITE_PATH.getKey()).getPath();
+    outputPath=new File(outputPath).getPath() + File.separator;
+    outputPath+=EHCACHE_NAME;
+    parseEcacheXMl.parseToXmlWrite(ehcache,outputPath,null);
+    String watchPath=zkDirectory.getName();
+    watchPath=watchPath + ZookeeperPath.ZK_SEPARATOR.getKey() + EHCACHE_NAME;
+    this.zookeeperListen.watchPath(currZkPath,watchPath);
+    DataInf cacheserZkDirectory=this.getZkData(zkDirectory,CACHESERVER_NAME);
+    if (null != cacheserZkDirectory) {
+      ZkDataImpl cacheData=(ZkDataImpl)cacheserZkDirectory;
+      this.writeCacheservice(cacheData.getName(),cacheData.getValue());
+      String watchServerPath=zkDirectory.getName();
+      watchServerPath=watchPath + ZookeeperPath.ZK_SEPARATOR.getKey() + CACHESERVER_NAME;
+      this.zookeeperListen.watchPath(currZkPath,watchServerPath);
+    }
+  }
+  /** 
+ * 读取 mapFile文件的信息 方法描述
+ * @param name 名称信息
+ * @return
+ * @创建日期 2016年9月18日
+ */
+  private void writeCacheservice(  String name,  String value){
+    String path=RuleszkToxmlLoader.class.getClassLoader().getResource(ZookeeperPath.ZK_LOCAL_WRITE_PATH.getKey()).getPath();
+    checkNotNull(path,"write ecache file curr Path :" + path + " is null! must is not null");
+    path=new File(path).getPath() + File.separator;
+    path+=name;
+    try {
+      Files.write(value.getBytes(),new File(path));
+    }
+ catch (    IOException e1) {
+      e1.printStackTrace();
+    }
+  }
+}

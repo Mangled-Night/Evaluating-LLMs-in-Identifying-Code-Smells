@@ -1,0 +1,33 @@
+/** 
+ * Ensure a test class with a per-class Jupiter lifecycle can share an engine between tests.
+ */
+@IntegrationEnvironment @TestInstance(TestInstance.Lifecycle.PER_CLASS) @TestMethodOrder(MethodOrderer.OrderAnnotation.class) public class MTEExtensionTestWithPerClassLifecycle {
+  @In public EntityManager entityManager;
+  private final ConcurrentMap<String,Integer> seenNames=new ConcurrentHashMap<>();
+  @BeforeAll public void createEntity(  TestInfo testInfo){
+    EntityRef entity=entityManager.create(new DummyComponent());
+    entity.send(new DummyEvent());
+    entity.updateComponent(DummyComponent.class,component -> {
+      component.name=testInfo.getDisplayName() + "#" + UUID.randomUUID();
+      return component;
+    }
+);
+  }
+  @Test @Order(1) public void firstTestFindsThings(){
+    List<EntityRef> entities=Lists.newArrayList(entityManager.getEntitiesWith(DummyComponent.class));
+    assertEquals(1,entities.size());
+    DummyComponent component=entities.get(0).getComponent(DummyComponent.class);
+    assertTrue(component.eventReceived);
+    assertNotNull(component.name);
+    assertFalse(seenNames.containsKey(component.name));
+    seenNames.put(component.name,1);
+  }
+  @Test @Order(2) public void thingsStillExistForSecondTest(){
+    List<EntityRef> entities=Lists.newArrayList(entityManager.getEntitiesWith(DummyComponent.class));
+    assertEquals(1,entities.size());
+    DummyComponent component=entities.get(0).getComponent(DummyComponent.class);
+    assertTrue(component.eventReceived);
+    assertNotNull(component.name);
+    assertTrue(seenNames.containsKey(component.name),() -> String.format("This is not the same entity as seen in the first test!%n" + "Current entity: %s%n" + "Previously seen: %s",component.name,seenNames.keySet()));
+  }
+}

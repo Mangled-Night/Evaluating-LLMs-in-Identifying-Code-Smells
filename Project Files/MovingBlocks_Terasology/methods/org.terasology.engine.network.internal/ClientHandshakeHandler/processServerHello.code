@@ -1,0 +1,33 @@
+/** 
+ * Client checks to see if it received the server hello message, if so it processes it into a random key and the certificate.
+ * @param helloMessage Message from server to client.
+ * @param ctx Channel Handler Context.
+ */
+private void processServerHello(NetData.HandshakeHello helloMessage,ChannelHandlerContext ctx){
+  if (serverHello == null) {
+    logger.info("Received Server Hello");
+    serverHello=helloMessage;
+    serverRandom=helloMessage.getRandom().toByteArray();
+    NetData.Certificate cert=helloMessage.getCertificate();
+    serverCertificate=NetMessageUtil.convert(cert);
+    if (!serverCertificate.verifySelfSigned()) {
+      logger.error("Received invalid server certificate: cancelling authentication");
+      joinStatus.setErrorMessage(AUTHENTICATION_FAILURE);
+      ctx.channel().close();
+      return;
+    }
+    clientRandom=new byte[IdentityConstants.SERVER_CLIENT_RANDOM_LENGTH];
+    identity=config.getSecurity().getIdentity(serverCertificate);
+    if (identity == null) {
+      requestIdentity(ctx);
+    }
+ else {
+      sendCertificate(helloMessage,ctx);
+    }
+  }
+ else {
+    logger.error("Received multiple hello messages from server: cancelling authentication");
+    joinStatus.setErrorMessage(AUTHENTICATION_FAILURE);
+    ctx.channel().close();
+  }
+}

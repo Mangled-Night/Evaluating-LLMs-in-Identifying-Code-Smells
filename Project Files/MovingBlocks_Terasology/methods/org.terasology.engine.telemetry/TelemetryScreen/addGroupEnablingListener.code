@@ -1,0 +1,26 @@
+/** 
+ * Add a listener to the checkbox in the telemetry category row. If this checkbox is checked, all the sub telemetry fields will be enabled/disabled.
+ */
+private void addGroupEnablingListener(){
+  fetchTelemetryCategoriesFromEngineOnlyEnvironment();
+  for (  Map.Entry<TelemetryCategory,Class> telemetryCategory : telemetryCategories.entrySet()) {
+    if (!telemetryCategory.getKey().isOneMapMetric()) {
+      UICheckbox uiCheckbox=this.find(telemetryCategory.getKey().id(),UICheckbox.class);
+      if (uiCheckbox == null) {
+        continue;
+      }
+      uiCheckbox.subscribe((checkbox) -> {
+        Map<String,Boolean> bindingMap=config.getTelemetryConfig().getMetricsUserPermissionConfig().getBindingMap();
+        if (bindingMap.containsKey(telemetryCategory.getKey().id())) {
+          boolean isGroupEnable=bindingMap.get(telemetryCategory.getKey().id());
+          Set<Field> fields=ReflectionUtils.getFields(telemetryCategory.getValue(),ReflectionUtils.withAnnotation(TelemetryField.class));
+          for (          Field field : fields) {
+            String fieldName=telemetryCategory.getKey().id() + ":" + field.getName();
+            bindingMap.put(fieldName,isGroupEnable);
+          }
+        }
+      }
+);
+    }
+  }
+}

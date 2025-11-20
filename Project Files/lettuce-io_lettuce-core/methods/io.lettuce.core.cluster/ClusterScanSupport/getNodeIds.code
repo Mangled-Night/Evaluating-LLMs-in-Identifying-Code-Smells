@@ -1,0 +1,51 @@
+static <K,V>List<String> getNodeIds(StatefulRedisClusterConnection<K,V> connection,ScanCursor cursor){
+  if (ScanCursor.INITIAL.equals(cursor)) {
+    List<String> nodeIds=getNodeIds(connection);
+    assertHasNodes(nodeIds);
+    return nodeIds;
+  }
+  assertClusterScanCursor(cursor);
+  ClusterScanCursor clusterScanCursor=(ClusterScanCursor)cursor;
+  return clusterScanCursor.getNodeIds();
+}
+/** 
+ * Retrieve a list of node Ids to use for the SCAN operation.
+ * @param connection
+ * @return
+ */
+private static List<String> getNodeIds(StatefulRedisClusterConnection<?,?> connection){
+  List<String> nodeIds=new ArrayList<>();
+  PartitionAccessor partitionAccessor=new PartitionAccessor(connection.getPartitions());
+  for (  RedisClusterNode redisClusterNode : partitionAccessor.getUpstream()) {
+    if (connection.getReadFrom() != null) {
+      List<RedisNodeDescription> readCandidates=(List)partitionAccessor.getReadCandidates(redisClusterNode);
+      List<RedisNodeDescription> selection=connection.getReadFrom().select(new ReadFrom.Nodes(){
+        @Override public List<RedisNodeDescription> getNodes(){
+          return readCandidates;
+        }
+        @Override public Iterator<RedisNodeDescription> iterator(){
+          return readCandidates.iterator();
+        }
+      }
+);
+      if (!selection.isEmpty()) {
+        int indexToUse=0;
+        if (!OrderingReadFromAccessor.isOrderSensitive(connection.getReadFrom())) {
+          indexToUse=ThreadLocalRandom.current().nextInt(selection.size());
+        }
+        RedisClusterNode selectedNode=(RedisClusterNode)selection.get(indexToUse);
+        nodeIds.add(selectedNode.getNodeId());
+        continue;
+      }
+    }
+    nodeIds.add(redisClusterNode.getNodeId());
+  }
+  return nodeIds;
+}
+List<String> getNodeIds();
+@Override public List<String> getNodeIds(){
+  return nodeIds;
+}
+@Override public List<String> getNodeIds(){
+  return nodeIds;
+}

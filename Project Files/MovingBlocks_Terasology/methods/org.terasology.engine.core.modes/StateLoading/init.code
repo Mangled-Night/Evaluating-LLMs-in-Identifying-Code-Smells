@@ -1,0 +1,34 @@
+@Override public void init(GameEngine engine){
+  this.context=engine.createChildContext();
+  headless=context.get(DisplayDevice.class).isHeadless();
+  CoreRegistry.setContext(context);
+  context.getValue(NetworkSystem.class).setContext(context);
+  systemConfig=context.get(SystemConfig.class);
+  if (!headless) {
+    this.nuiManager=new NUIManagerInternal((TerasologyCanvasRenderer)context.get(CanvasRenderer.class),context);
+    context.put(NUIManager.class,nuiManager);
+  }
+  EngineTime time=(EngineTime)context.get(Time.class);
+  time.setPaused(true);
+  time.setGameTime(gameManifest.getTime());
+  context.get(Game.class).load(gameManifest);
+switch (netMode) {
+case CLIENT:
+    initClient();
+  break;
+default :
+initHost();
+break;
+}
+progress=0;
+maxProgress=0;
+for (LoadProcess process : loadProcesses) {
+maxProgress+=process.getExpectedCost();
+}
+popStep();
+if (nuiManager != null) {
+loadingScreen=nuiManager.pushScreen("engine:loadingScreen",LoadingScreen.class);
+loadingScreen.updateStatus(current.getMessage(),current.getProgress());
+}
+chunkGenerationStarted=false;
+}

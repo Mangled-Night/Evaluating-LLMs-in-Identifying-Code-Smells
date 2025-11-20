@@ -1,0 +1,17 @@
+@Override public void processException(Exception exception){
+  future.processException(exception);
+}
+@Override public void processException(Exception exception){
+  long lastStanzaReceived=connection.getLastStanzaReceived();
+  if (lastStanzaReceived > 0) {
+    long now=System.currentTimeMillis();
+    int deltaInSeconds=(int)((now - lastStanzaReceived) / 1000);
+    if (deltaInSeconds < pingInterval) {
+      maybeSchedulePingServerTask(deltaInSeconds);
+      return;
+    }
+  }
+  for (  PingFailedListener l : pingFailedListeners) {
+    l.pingFailed();
+  }
+}

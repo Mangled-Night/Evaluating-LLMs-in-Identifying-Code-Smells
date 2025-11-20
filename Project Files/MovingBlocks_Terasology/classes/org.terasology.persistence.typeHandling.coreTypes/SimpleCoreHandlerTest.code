@@ -1,0 +1,22 @@
+class SimpleCoreHandlerTest {
+  private static Stream<Arguments> primitives(){
+    return Stream.of(Arguments.of(true,new BooleanTypeHandler(),new PersistedBoolean(true)),Arguments.of(1.0,new NumberTypeHandler(),new PersistedDouble(1)),Arguments.of(1,new IntTypeHandler(),new PersistedInteger(1)),Arguments.of(1L,new LongTypeHandler(),new PersistedLong(1)),Arguments.of(1.0F,new FloatTypeHandler(),new PersistedFloat(1)),Arguments.of(1.0,new DoubleTypeHandler(),new PersistedDouble(1)),Arguments.of("foo",new StringTypeHandler(),new PersistedString("foo")),Arguments.of('f',new CharacterTypeHandler(),new PersistedString("f")));
+  }
+  @ParameterizedTest(name="{1}") @DisplayName("Check simple core types serialization") @MethodSource("primitives") <T>void serialization(  T obj,  TypeHandler<T> typeHandler,  PersistedData expectedData) throws Exception {
+    PersistedData data=typeHandler.serialize(obj,new InMemoryPersistedDataSerializer());
+    Assertions.assertEquals(expectedData.getClass(),data.getClass());
+    Assertions.assertEquals(getData(expectedData),getData(data));
+  }
+  @ParameterizedTest(name="{1}") @DisplayName("Chech simple core types deserialization") @MethodSource("primitives") <T>void deserialization(  T expectedObj,  TypeHandler<T> typeHandler,  PersistedData data) throws Exception {
+    Optional<T> optionalObj=typeHandler.deserialize(data);
+    Assertions.assertTrue(optionalObj.isPresent());
+    T obj=optionalObj.get();
+    Assertions.assertEquals(expectedObj.getClass(),obj.getClass());
+    Assertions.assertEquals(expectedObj,obj);
+  }
+  private Object getData(  PersistedData persistedData) throws Exception {
+    Field dataField=persistedData.getClass().getDeclaredFields()[0];
+    dataField.setAccessible(true);
+    return dataField.get(persistedData);
+  }
+}

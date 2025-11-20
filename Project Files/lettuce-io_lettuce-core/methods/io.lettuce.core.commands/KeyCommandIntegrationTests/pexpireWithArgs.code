@@ -1,0 +1,9 @@
+@Test @EnabledOnCommand("EXPIRETIME") void pexpireWithArgs(){
+  redis.setex(key,10,value);
+  assertThat(redis.pexpire(key,1000,ExpireArgs.Builder.gt())).isFalse();
+  assertThat(redis.pexpire(key,1000,ExpireArgs.Builder.lt())).isTrue();
+  redis.set(key,value);
+  assertThat(redis.pexpire(key,1000,ExpireArgs.Builder.xx())).isFalse();
+  assertThat(redis.pexpire(key,20000,ExpireArgs.Builder.nx())).isTrue();
+  assertThat(redis.ttl(key)).isBetween(10L,20L);
+}

@@ -1,0 +1,63 @@
+private void startChangingResultListen(){
+  changingResultFutrue=service.scheduleAtFixedRate(new Runnable(){
+    @Override public void run(){
+      ChildData currentData=changingResultNode.getCurrentData();
+      if (null != currentData) {
+        try {
+          byte[] data=changingResultNode.getCurrentData().getData();
+          Properties properties=new Properties();
+          properties.load(new ByteArrayInputStream(data));
+          int count=0;
+          Collection<Participant> participants=mycatLeaderLatch.getParticipants();
+          for (          Participant participant : participants) {
+            String key=participant.getId() + "_endTime";
+            String value=properties.getProperty(key);
+            if (!StringUtil.isEmpty(value)) {
+              count++;
+            }
+ else {
+              LOGGER.debug(String.format("%s 还未结束切换",participant.getId()));
+            }
+          }
+          String changingFinishKey=dataHost + "_changing_finish_time";
+          String value=properties.getProperty(changingFinishKey);
+          if (!StringUtil.isEmpty(value)) {
+            changingFinishDate=Long.valueOf(value);
+          }
+          int onLineNode=participants.size();
+          if (count == onLineNode) {
+            LOGGER.debug("所有节点切换完成 ,当前时间" + TimeUtil.currentTimeMillis());
+            Map<String,String> propertyMap=new HashMap<>();
+            propertyMap.put(changingFinishKey,TimeUtil.currentTimeMillis() + "");
+            try {
+              changingStatueLock.acquire(30,TimeUnit.SECONDS);
+              ZKUtils.writeProperty(changingResultPath,propertyMap);
+              if (changingResultFutrue != null) {
+                changingResultFutrue.cancel(false);
+                changingResultFutrue=null;
+              }
+              List<ChildData> ChildDataList=manageVoteCache.getCurrentData();
+              for (              ChildData childData : ChildDataList) {
+                client.delete().deletingChildrenIfNeeded().forPath(childData.getPath());
+              }
+              if (voteSet.isEmpty()) {
+                statue.set(NOT_SELECT);
+              }
+            }
+  finally {
+              changingStatueLock.release();
+            }
+          }
+        }
+ catch (        Exception e) {
+          LOGGER.error(e.getMessage());
+          e.printStackTrace();
+        }
+      }
+ else {
+        LOGGER.debug("集群切换结果的状态文件夹 已经被删除！！！");
+      }
+    }
+  }
+,100,1000,TimeUnit.MILLISECONDS);
+}

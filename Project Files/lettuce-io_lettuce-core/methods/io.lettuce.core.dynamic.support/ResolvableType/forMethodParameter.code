@@ -1,0 +1,61 @@
+/** 
+ * Return a  {@link ResolvableType} for the specified {@link Method} parameter.
+ * @param method the source method (must not be {@code null})
+ * @param parameterIndex the parameter index
+ * @return a {@link ResolvableType} for the specified method parameter
+ * @see #forMethodParameter(Method,int,Class)
+ * @see #forMethodParameter(MethodParameter)
+ */
+public static ResolvableType forMethodParameter(Method method,int parameterIndex){
+  LettuceAssert.notNull(method,"Method must not be null");
+  return forMethodParameter(new MethodParameter(method,parameterIndex));
+}
+/** 
+ * Return a  {@link ResolvableType} for the specified {@link Method} parameter with a given implementation. Use this variantwhen the class that declares the method includes generic parameter variables that are satisfied by the implementation class.
+ * @param method the source method (must not be {@code null})
+ * @param parameterIndex the parameter index
+ * @param implementationClass the implementation class
+ * @return a {@link ResolvableType} for the specified method parameter
+ * @see #forMethodParameter(Method,int,Class)
+ * @see #forMethodParameter(MethodParameter)
+ */
+public static ResolvableType forMethodParameter(Method method,int parameterIndex,Class<?> implementationClass){
+  LettuceAssert.notNull(method,"Method must not be null");
+  MethodParameter methodParameter=new MethodParameter(method,parameterIndex);
+  methodParameter.setContainingClass(implementationClass);
+  return forMethodParameter(methodParameter);
+}
+/** 
+ * Return a  {@link ResolvableType} for the specified {@link MethodParameter}.
+ * @param methodParameter the source method parameter (must not be {@code null})
+ * @return a {@link ResolvableType} for the specified method parameter
+ * @see #forMethodParameter(Method,int)
+ */
+public static ResolvableType forMethodParameter(MethodParameter methodParameter){
+  return forMethodParameter(methodParameter,(Type)null);
+}
+/** 
+ * Return a  {@link ResolvableType} for the specified {@link MethodParameter} with a given implementation type. Use thisvariant when the class that declares the method includes generic parameter variables that are satisfied by the implementation type.
+ * @param methodParameter the source method parameter (must not be {@code null})
+ * @param implementationType the implementation type
+ * @return a {@link ResolvableType} for the specified method parameter
+ * @see #forMethodParameter(MethodParameter)
+ */
+public static ResolvableType forMethodParameter(MethodParameter methodParameter,ResolvableType implementationType){
+  LettuceAssert.notNull(methodParameter,"MethodParameter must not be null");
+  implementationType=(implementationType != null ? implementationType : forType(methodParameter.getContainingClass()));
+  ResolvableType owner=implementationType.as(methodParameter.getDeclaringClass());
+  return forType(null,new MethodParameterTypeProvider(methodParameter),owner.asVariableResolver()).getNested(methodParameter.getNestingLevel(),methodParameter.typeIndexesPerLevel);
+}
+/** 
+ * Return a  {@link ResolvableType} for the specified {@link MethodParameter}, overriding the target type to resolve with a specific given type.
+ * @param methodParameter the source method parameter (must not be {@code null})
+ * @param targetType the type to resolve (a part of the method parameter's type)
+ * @return a {@link ResolvableType} for the specified method parameter
+ * @see #forMethodParameter(Method,int)
+ */
+public static ResolvableType forMethodParameter(MethodParameter methodParameter,Type targetType){
+  LettuceAssert.notNull(methodParameter,"MethodParameter must not be null");
+  ResolvableType owner=forType(methodParameter.getContainingClass()).as(methodParameter.getDeclaringClass());
+  return forType(targetType,new MethodParameterTypeProvider(methodParameter),owner.asVariableResolver()).getNested(methodParameter.getNestingLevel(),methodParameter.typeIndexesPerLevel);
+}

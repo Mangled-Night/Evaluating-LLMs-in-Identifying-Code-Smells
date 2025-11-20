@@ -1,0 +1,47 @@
+private void processReadyChunk(final Chunk chunk){
+  Vector3ic chunkPos=chunk.getPosition();
+  if (chunkCache.get(chunkPos) != null) {
+    return;
+  }
+  chunkCache.put(new Vector3i(chunkPos),chunk);
+  chunk.markReady();
+  ChunkStore store=this.storageManager.loadChunkStore(chunkPos);
+  TShortObjectMap<TIntList> mappings=createBatchBlockEventMappings(chunk);
+  if (store != null) {
+    store.restoreEntities();
+    PerformanceMonitor.startActivity("Sending OnAddedBlocks");
+    mappings.forEachEntry((id,positions) -> {
+      if (positions.size() > 0) {
+        blockManager.getBlock(id).getEntity().send(new OnAddedBlocks(positions,registry));
+      }
+      return true;
+    }
+);
+    PerformanceMonitor.endActivity();
+    PerformanceMonitor.startActivity("Sending OnActivateBlocks");
+    mappings.forEachEntry((id,positions) -> {
+      if (positions.size() > 0) {
+        blockManager.getBlock(id).getEntity().send(new OnActivatedBlocks(positions,registry));
+      }
+      return true;
+    }
+);
+    PerformanceMonitor.endActivity();
+  }
+ else {
+    PerformanceMonitor.startActivity("Generating queued Entities");
+    generateQueuedEntities.remove(chunkPos).forEach(this::generateQueuedEntities);
+    PerformanceMonitor.endActivity();
+    PerformanceMonitor.startActivity("Sending OnActivateBlocks");
+    mappings.forEachEntry((id,positions) -> {
+      if (positions.size() > 0) {
+        blockManager.getBlock(id).getEntity().send(new OnActivatedBlocks(positions,registry));
+      }
+      return true;
+    }
+);
+    PerformanceMonitor.endActivity();
+    worldEntity.send(new OnChunkGenerated(chunkPos));
+  }
+  worldEntity.send(new OnChunkLoaded(chunkPos));
+}

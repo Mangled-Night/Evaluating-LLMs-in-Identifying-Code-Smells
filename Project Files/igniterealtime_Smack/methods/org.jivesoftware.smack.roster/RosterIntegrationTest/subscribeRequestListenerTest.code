@@ -1,0 +1,57 @@
+@SmackIntegrationTest public void subscribeRequestListenerTest() throws TimeoutException, Exception {
+  IntegrationTestRosterUtil.ensureBothAccountsAreNotInEachOthersRoster(conOne,conTwo);
+  final SubscribeListener subscribeListener=new SubscribeListener(){
+    @Override public SubscribeAnswer processSubscribe(    Jid from,    Presence subscribeRequest){
+      if (from.equals(conOne.getUser().asBareJid())) {
+        return SubscribeAnswer.Approve;
+      }
+      return SubscribeAnswer.Deny;
+    }
+  }
+;
+  rosterTwo.addSubscribeListener(subscribeListener);
+  final String conTwosRosterName="ConTwo " + testRunId;
+  final SimpleResultSyncPoint addedAndSubscribed=new SimpleResultSyncPoint();
+  rosterOne.addRosterListener(new AbstractRosterListener(){
+    @Override public void entriesAdded(    Collection<Jid> addresses){
+      checkIfAddedAndSubscribed(addresses);
+    }
+    @Override public void entriesUpdated(    Collection<Jid> addresses){
+      checkIfAddedAndSubscribed(addresses);
+    }
+    private void checkIfAddedAndSubscribed(    Collection<Jid> addresses){
+      for (      Jid jid : addresses) {
+        if (!jid.equals(conTwo.getUser().asBareJid())) {
+          continue;
+        }
+        BareJid bareJid=conTwo.getUser().asBareJid();
+        RosterEntry rosterEntry=rosterOne.getEntry(bareJid);
+        if (rosterEntry == null) {
+          addedAndSubscribed.signalFailure("No roster entry for " + bareJid);
+          return;
+        }
+        String name=rosterEntry.getName();
+        if (StringUtils.isNullOrEmpty(name)) {
+          addedAndSubscribed.signalFailure("Roster entry without name");
+          return;
+        }
+        if (!rosterEntry.getName().equals(conTwosRosterName)) {
+          addedAndSubscribed.signalFailure("Roster name does not match");
+          return;
+        }
+        if (!rosterEntry.getType().equals(ItemType.to)) {
+          return;
+        }
+        addedAndSubscribed.signal();
+      }
+    }
+  }
+);
+  try {
+    rosterOne.createItemAndRequestSubscription(conTwo.getUser().asBareJid(),conTwosRosterName,null);
+    assertTrue(addedAndSubscribed.waitForResult(2 * connection.getReplyTimeout()));
+  }
+  finally {
+    rosterTwo.removeSubscribeListener(subscribeListener);
+  }
+}

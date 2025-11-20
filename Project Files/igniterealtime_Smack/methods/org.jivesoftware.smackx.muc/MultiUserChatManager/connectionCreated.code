@@ -1,0 +1,17 @@
+@Override public void connectionCreated(final XMPPConnection connection){
+  ServiceDiscoveryManager.getInstanceFor(connection).addFeature(MUCInitialPresence.NAMESPACE);
+  final WeakReference<XMPPConnection> weakRefConnection=new WeakReference<XMPPConnection>(connection);
+  ServiceDiscoveryManager.getInstanceFor(connection).setNodeInformationProvider(DISCO_NODE,new AbstractNodeInformationProvider(){
+    @Override public List<DiscoverItems.Item> getNodeItems(){
+      XMPPConnection connection=weakRefConnection.get();
+      if (connection == null)       return Collections.emptyList();
+      Set<EntityBareJid> joinedRooms=MultiUserChatManager.getInstanceFor(connection).getJoinedRooms();
+      List<DiscoverItems.Item> answer=new ArrayList<DiscoverItems.Item>();
+      for (      EntityBareJid room : joinedRooms) {
+        answer.add(new DiscoverItems.Item(room));
+      }
+      return answer;
+    }
+  }
+);
+}

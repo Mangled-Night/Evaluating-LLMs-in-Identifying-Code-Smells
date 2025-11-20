@@ -1,0 +1,97 @@
+public Map<String,String> parse(String sql){
+  tables.clear();
+  stateStack.clear();
+  state=null;
+  tableFlag=false;
+  boolean sFlag=false;
+  boolean dFlag=false;
+  Scanner reader=new Scanner(sql);
+  reader.useDelimiter(" ");
+  String value;
+  while (reader.hasNext()) {
+    value=reader.next().toLowerCase();
+    if (sFlag) {
+      if (value.endsWith("'") && getCount(value,"'") == 1) {
+        sFlag=false;
+        continue;
+      }
+ else       if (value.indexOf("'") != -1) {
+        value=value.substring(value.indexOf("'") + 1);
+        sFlag=false;
+      }
+ else {
+        continue;
+      }
+    }
+    if (dFlag) {
+      if (value.endsWith("\"") && getCount(value,"\"") == 1) {
+        dFlag=false;
+        continue;
+      }
+ else       if (value.indexOf("\"") != -1) {
+        value=value.substring(value.indexOf("\"") + 1);
+        dFlag=false;
+      }
+ else {
+        continue;
+      }
+    }
+    if (state != null && state.state != 1 && getCount(value,"'") % 2 == 1) {
+      sFlag=true;
+      continue;
+    }
+    if (state != null && state.state != 1 && getCount(value,"\"") % 2 == 1) {
+      dFlag=true;
+      continue;
+    }
+    if (value.equals("select") || value.equals("(select")) {
+      state=new State();
+      state.state=0;
+      stateStack.push(state);
+      continue;
+    }
+    if (value.equals("from") || value.equals("into") || value.equals("join")) {
+      state.state=1;
+      tableFlag=true;
+      continue;
+    }
+    if (state.state == 1 && value.equals(",")) {
+      tableFlag=true;
+      continue;
+    }
+    if (state.state == 1 && tableFlag == true) {
+      getTableName(value);
+      continue;
+    }
+    if (state.state == 1 && tableFlag == false) {
+      if (!value.startsWith("),") && (value.equals(",") || value.endsWith(","))) {
+        tableFlag=true;
+        continue;
+      }
+ else       if (!value.startsWith("),") && value.indexOf(",") != -1) {
+        getTableName(value);
+        continue;
+      }
+    }
+    if (value.equals("where")) {
+      state.state=2;
+      continue;
+    }
+    if (value.endsWith("(select")) {
+      stateStack.push(state);
+      state=new State();
+      state.state=0;
+      continue;
+    }
+    if (value.equals(")") || value.startsWith("),")) {
+      stateStack.pop();
+      state=stateStack.peek();
+      tableFlag=value.endsWith(",") ? true : false;
+      if (state.state == 1) {
+        getTableName(value);
+      }
+      continue;
+    }
+  }
+  return tables;
+}

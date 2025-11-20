@@ -1,0 +1,20 @@
+private void initRenderingModules(){
+  renderingModuleRegistry=context.get(RenderingModuleRegistry.class);
+  if (renderingModuleRegistry.getOrderedRenderingModules().isEmpty()) {
+    List<ModuleRendering> renderingModules=renderingModuleRegistry.updateRenderingModulesOrder(context.get(ModuleManager.class).getEnvironment(),context);
+    if (renderingModules.isEmpty()) {
+      GameEngine gameEngine=context.get(GameEngine.class);
+      gameEngine.changeState(new StateMainMenu("No rendering module loaded, unable to render. Try enabling " + "CoreRendering."));
+    }
+  }
+ else {
+    renderingModuleRegistry.updateModulesContext(context);
+  }
+  for (  ModuleRendering moduleRenderingInstance : renderingModuleRegistry.getOrderedRenderingModules()) {
+    if (moduleRenderingInstance.isEnabled()) {
+      logger.info(String.format("\nInitialising rendering class %s from %s module.\n",moduleRenderingInstance.getClass().getSimpleName(),moduleRenderingInstance.getProvidingModule()));
+      moduleRenderingInstance.initialise();
+    }
+  }
+  requestTaskListRefresh();
+}

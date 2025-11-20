@@ -1,0 +1,15 @@
+@Test @EnabledOnCommand("XAUTOCLAIM") public void xaddMinidLimit(){
+  redis.xadd(key,XAddArgs.Builder.minId("2").id("3"),"foo","bar");
+  redis.xadd(key,XAddArgs.Builder.minId("2").id("4"),"foo","bar");
+  assertThat(redis.xlen(key)).isEqualTo(2);
+  redis.xadd(key,XAddArgs.Builder.minId("4").id("5"),"foo","bar");
+  assertThat(redis.xlen(key)).isEqualTo(2);
+  redis.del(key);
+  redis.configSet("stream-node-max-entries","1");
+  for (int i=0; i < 5; i++) {
+    redis.xadd(key,"foo","bar");
+  }
+  redis.xadd(key,XAddArgs.Builder.maxlen(2).approximateTrimming().limit(5l),"foo","bar");
+  assertThat(redis.xlen(key)).isEqualTo(2);
+  redis.configSet("stream-node-max-entries","100");
+}

@@ -1,0 +1,10 @@
+@Test void testReplicasWithReadOnly(){
+  int slot=SlotHash.getSlot(key);
+  Optional<RedisClusterNode> master=clusterClient.getPartitions().getPartitions().stream().filter(redisClusterNode -> redisClusterNode.hasSlot(slot)).findFirst();
+  NodeSelection<String,String> nodes=commands.slaves(redisClusterNode -> redisClusterNode.is(RedisClusterNode.NodeFlag.REPLICA) && redisClusterNode.getSlaveOf().equals(master.get().getNodeId()));
+  assertThat(nodes.size()).isEqualTo(1);
+  commands.set(key,value);
+  waitForReplication(key,ClusterTestSettings.port4);
+  Executions<String> keys=nodes.commands().get(key);
+  assertThat(keys).hasSize(1).contains(value);
+}

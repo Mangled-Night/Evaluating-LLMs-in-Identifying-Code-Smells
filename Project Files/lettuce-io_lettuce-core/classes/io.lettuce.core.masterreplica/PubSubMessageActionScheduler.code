@@ -1,0 +1,35 @@
+private static class PubSubMessageActionScheduler {
+  private final TimedSemaphore timedSemaphore=new TimedSemaphore();
+  private final EventExecutorGroup eventExecutors;
+  private final MessagePredicate filter;
+  PubSubMessageActionScheduler(  EventExecutorGroup eventExecutors,  MessagePredicate filter){
+    this.eventExecutors=eventExecutors;
+    this.filter=filter;
+  }
+  void processMessage(  String source,  String channel,  String message,  Supplier<Runnable> runnableSupplier){
+    if (!processingAllowed(channel,message)) {
+      return;
+    }
+    timedSemaphore.onEvent(timeout -> {
+      Runnable runnable=runnableSupplier.get();
+      if (timeout == null) {
+        EventRecorder.getInstance().record(new SentinelTopologyRefreshEvent(source,message,0));
+        eventExecutors.submit(runnable);
+      }
+ else {
+        EventRecorder.getInstance().record(new SentinelTopologyRefreshEvent(source,message,timeout.remaining()));
+        eventExecutors.schedule(runnable,timeout.remaining(),TimeUnit.MILLISECONDS);
+      }
+    }
+);
+  }
+  private boolean processingAllowed(  String channel,  String message){
+    if (eventExecutors.isShuttingDown()) {
+      return false;
+    }
+    if (!filter.test(channel,message)) {
+      return false;
+    }
+    return true;
+  }
+}

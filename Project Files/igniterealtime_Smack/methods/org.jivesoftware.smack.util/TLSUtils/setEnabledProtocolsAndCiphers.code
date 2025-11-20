@@ -1,0 +1,26 @@
+public static void setEnabledProtocolsAndCiphers(final SSLSocket sslSocket,String[] enabledProtocols,String[] enabledCiphers) throws SecurityNotPossibleException {
+  if (enabledProtocols != null) {
+    Set<String> enabledProtocolsSet=new HashSet<String>(Arrays.asList(enabledProtocols));
+    Set<String> supportedProtocolsSet=new HashSet<String>(Arrays.asList(sslSocket.getSupportedProtocols()));
+    Set<String> protocolsIntersection=new HashSet<String>(supportedProtocolsSet);
+    protocolsIntersection.retainAll(enabledProtocolsSet);
+    if (protocolsIntersection.isEmpty()) {
+      throw new SecurityNotPossibleException("Request to enable SSL/TLS protocols '" + StringUtils.collectionToString(enabledProtocolsSet) + "', but only '"+ StringUtils.collectionToString(supportedProtocolsSet)+ "' are supported.");
+    }
+    enabledProtocols=new String[protocolsIntersection.size()];
+    enabledProtocols=protocolsIntersection.toArray(enabledProtocols);
+    sslSocket.setEnabledProtocols(enabledProtocols);
+  }
+  if (enabledCiphers != null) {
+    Set<String> enabledCiphersSet=new HashSet<String>(Arrays.asList(enabledCiphers));
+    Set<String> supportedCiphersSet=new HashSet<String>(Arrays.asList(sslSocket.getEnabledCipherSuites()));
+    Set<String> ciphersIntersection=new HashSet<String>(supportedCiphersSet);
+    ciphersIntersection.retainAll(enabledCiphersSet);
+    if (ciphersIntersection.isEmpty()) {
+      throw new SecurityNotPossibleException("Request to enable SSL/TLS ciphers '" + StringUtils.collectionToString(enabledCiphersSet) + "', but only '"+ StringUtils.collectionToString(supportedCiphersSet)+ "' are supported.");
+    }
+    enabledCiphers=new String[ciphersIntersection.size()];
+    enabledCiphers=ciphersIntersection.toArray(enabledCiphers);
+    sslSocket.setEnabledCipherSuites(enabledCiphers);
+  }
+}

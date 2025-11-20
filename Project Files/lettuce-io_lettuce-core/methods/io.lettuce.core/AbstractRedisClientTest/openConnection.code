@@ -1,0 +1,21 @@
+@BeforeEach public void openConnection() throws Exception {
+  client.setOptions(ClientOptions.builder().build());
+  redis=connect();
+  boolean scriptRunning;
+  do {
+    scriptRunning=false;
+    try {
+      redis.flushall();
+      redis.flushdb();
+    }
+ catch (    RedisBusyException e) {
+      scriptRunning=true;
+      try {
+        redis.scriptKill();
+      }
+ catch (      RedisException e1) {
+      }
+    }
+  }
+ while (scriptRunning);
+}

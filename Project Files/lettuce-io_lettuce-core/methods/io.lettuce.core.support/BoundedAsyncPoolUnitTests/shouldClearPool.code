@@ -1,0 +1,17 @@
+@Test void shouldClearPool(){
+  BoundedAsyncPool<String> pool=new BoundedAsyncPool<>(STRING_OBJECT_FACTORY,BoundedPoolConfig.builder().maxTotal(4).build());
+  for (int i=0; i < 20; i++) {
+    String object1=TestFutures.getOrTimeout(pool.acquire());
+    String object2=TestFutures.getOrTimeout(pool.acquire());
+    String object3=TestFutures.getOrTimeout(pool.acquire());
+    String object4=TestFutures.getOrTimeout(pool.acquire());
+    assertThat(pool.acquire()).isCompletedExceptionally();
+    pool.release(object1);
+    pool.release(object2);
+    pool.release(object3);
+    pool.release(object4);
+    pool.clear();
+    assertThat(pool.getObjectCount()).isZero();
+    assertThat(pool.getIdle()).isZero();
+  }
+}

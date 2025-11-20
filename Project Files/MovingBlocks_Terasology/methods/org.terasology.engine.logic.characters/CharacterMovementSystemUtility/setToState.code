@@ -1,0 +1,28 @@
+/** 
+ * Sets the state of the given entity to the state represented by the CharacterStateEvent. The state of the entity is determined by its LocationComponent (location and orientation of physics body), CharacterMovementComponent (velocity and various movement state variables) and CharacterComponent for pitch and yaw (used for the camera).
+ * @param entity
+ * @param state
+ */
+public void setToState(EntityRef entity,CharacterStateEvent state){
+  LocationComponent location=entity.getComponent(LocationComponent.class);
+  CharacterMovementComponent movementComp=entity.getComponent(CharacterMovementComponent.class);
+  if (location == null || !location.getWorldPosition(new Vector3f()).isFinite() || movementComp == null) {
+    return;
+  }
+  location.setWorldPosition(state.getPosition());
+  location.setWorldRotation(state.getRotation());
+  entity.saveComponent(location);
+  movementComp.mode=state.getMode();
+  movementComp.setVelocity(state.getVelocity());
+  movementComp.grounded=state.isGrounded();
+  movementComp.footstepDelta=state.getFootstepDelta();
+  entity.saveComponent(movementComp);
+  setPhysicsLocation(entity,state.getPosition());
+  Quaternionf rotation=new Quaternionf().rotationX(TeraMath.DEG_TO_RAD * state.getPitch());
+  EntityRef gazeEntity=GazeAuthoritySystem.getGazeEntityForCharacter(entity);
+  if (!gazeEntity.equals(entity)) {
+    LocationComponent gazeLocation=gazeEntity.getComponent(LocationComponent.class);
+    gazeLocation.setLocalRotation(rotation);
+    gazeEntity.saveComponent(gazeLocation);
+  }
+}

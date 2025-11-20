@@ -1,0 +1,22 @@
+private void postStickyInner(final String tag,final Object arg){
+  List<BusInfo> busInfoList=mTag_BusInfoListMap.get(tag);
+  if (busInfoList == null) {
+    Log.e(TAG,"The bus of tag <" + tag + "> is not exists.");
+    return;
+  }
+  for (  BusInfo busInfo : busInfoList) {
+    if (!busInfo.sticky) {
+      invokeBus(arg,busInfo,false);
+      continue;
+    }
+synchronized (mClassName_Tag_Arg4StickyMap) {
+      Map<String,Object> tagArgMap=mClassName_Tag_Arg4StickyMap.get(busInfo.className);
+      if (tagArgMap == null) {
+        tagArgMap=new ConcurrentHashMap<>();
+        mClassName_Tag_Arg4StickyMap.put(busInfo.className,tagArgMap);
+      }
+      tagArgMap.put(tag,arg);
+    }
+    invokeBus(arg,busInfo,true);
+  }
+}

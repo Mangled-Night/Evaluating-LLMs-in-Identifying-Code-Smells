@@ -1,0 +1,16 @@
+@Override public void prepare(String sql){
+  LOGGER.debug("use server prepare, sql: " + sql);
+  PreparedStatement pstmt=null;
+  if (pstmt == null) {
+    int columnCount=0;
+    int paramCount=getParamCount(sql);
+    if (paramCount > maxPreparedStmtCount) {
+      source.writeErrMessage(ErrorCode.ER_PS_MANY_PARAM,"Prepared statement contains too many placeholders");
+      return;
+    }
+    pstmt=new PreparedStatement(PSTMT_ID_GENERATOR.incrementAndGet(),sql,paramCount);
+    pstmtForId.put(pstmt.getId(),pstmt);
+    LOGGER.info("preparestatement  parepare id:{}",pstmt.getId());
+  }
+  PreparedStmtResponse.response(pstmt,source);
+}

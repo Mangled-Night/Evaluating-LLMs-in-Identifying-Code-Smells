@@ -1,0 +1,12 @@
+private RedisNodeDescription getMasterFromInfo(String info){
+  Matcher masterHostMatcher=MASTER_HOST_PATTERN.matcher(info);
+  Matcher masterPortMatcher=MASTER_PORT_PATTERN.matcher(info);
+  boolean foundHost=masterHostMatcher.find();
+  boolean foundPort=masterPortMatcher.find();
+  if (!foundHost || !foundPort) {
+    throw new IllegalStateException("Cannot resolve master from info " + info);
+  }
+  String host=masterHostMatcher.group(1);
+  int port=Integer.parseInt(masterPortMatcher.group(1));
+  return new RedisMasterReplicaNode(host,port,redisURI,RedisInstance.Role.UPSTREAM);
+}

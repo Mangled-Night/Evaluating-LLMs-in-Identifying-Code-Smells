@@ -1,0 +1,63 @@
+public abstract class StateTransitionResult {
+  private final String message;
+  protected StateTransitionResult(  String message){
+    this.message=message;
+  }
+  @Override public String toString(){
+    return message;
+  }
+public abstract static class AttemptResult extends StateTransitionResult {
+    protected AttemptResult(    String message){
+      super(message);
+    }
+  }
+public static class Success extends AttemptResult {
+    public static final Success EMPTY_INSTANCE=new Success();
+    private Success(){
+      super("");
+    }
+    public Success(    String successMessage){
+      super(successMessage);
+    }
+  }
+public static class Failure extends AttemptResult {
+    public Failure(    String failureMessage){
+      super(failureMessage);
+    }
+  }
+public static final class FailureCausedByException<E extends Exception> extends Failure {
+    private final E exception;
+    public FailureCausedByException(    E exception){
+      super(exception.getMessage());
+      this.exception=exception;
+    }
+    public E getException(){
+      return exception;
+    }
+  }
+public static final class FailureCausedByTimeout extends Failure {
+    public FailureCausedByTimeout(    String failureMessage){
+      super(failureMessage);
+    }
+  }
+public abstract static class TransitionImpossible extends StateTransitionResult {
+    protected TransitionImpossible(    String message){
+      super(message);
+    }
+  }
+public static class TransitionImpossibleReason extends TransitionImpossible {
+    public TransitionImpossibleReason(    String reason){
+      super(reason);
+    }
+  }
+public static class TransitionImpossibleBecauseNotImplemented extends TransitionImpossibleReason {
+    public TransitionImpossibleBecauseNotImplemented(    StateDescriptor stateDescriptor){
+      super(stateDescriptor.getFullStateName(false) + " is not implemented (yet)");
+    }
+  }
+public static class TransitionImpossibleBecauseNoEndpointsDiscovered extends TransitionImpossibleReason {
+    public TransitionImpossibleBecauseNoEndpointsDiscovered(    XmppClientToServerTransport transport){
+      super("The transport " + transport + " did not discover any endpoints");
+    }
+  }
+}

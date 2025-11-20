@@ -1,0 +1,35 @@
+/** 
+ * Implements the abstract method of TelnetOptionHandler. This will send the client Height and Width to the server. <p>
+ * @return array to send to remote system
+ */
+@Override public int[] startSubnegotiationLocal(){
+  int nCompoundWindowSize=m_nWidth * 0x10000 + m_nHeight;
+  int nResponseSize=5;
+  int nIndex;
+  int nShift;
+  int nTurnedOnBits;
+  if ((m_nWidth % 0x100) == 0xFF) {
+    nResponseSize+=1;
+  }
+  if ((m_nWidth / 0x100) == 0xFF) {
+    nResponseSize+=1;
+  }
+  if ((m_nHeight % 0x100) == 0xFF) {
+    nResponseSize+=1;
+  }
+  if ((m_nHeight / 0x100) == 0xFF) {
+    nResponseSize+=1;
+  }
+  int response[]=new int[nResponseSize];
+  response[0]=WINDOW_SIZE;
+  for (nIndex=1, nShift=24; nIndex < nResponseSize; nIndex++, nShift-=8) {
+    nTurnedOnBits=0xFF;
+    nTurnedOnBits<<=nShift;
+    response[nIndex]=(nCompoundWindowSize & nTurnedOnBits) >>> nShift;
+    if (response[nIndex] == 0xff) {
+      nIndex++;
+      response[nIndex]=0xff;
+    }
+  }
+  return response;
+}

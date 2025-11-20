@@ -1,0 +1,17 @@
+/** 
+ * Terminate negotiations.
+ */
+@Override public void close(){
+  if (isClosed())   return;
+  setSessionState(JingleSessionStateEnded.getInstance());
+  for (  ContentNegotiator contentNegotiator : contentNegotiators) {
+    contentNegotiator.stopJingleMediaSession();
+    for (    TransportCandidate candidate : contentNegotiator.getTransportNegotiator().getOfferedCandidates())     candidate.removeCandidateEcho();
+    contentNegotiator.close();
+  }
+  removeAsyncPacketListener();
+  removeConnectionListener();
+  getConnection().removeConnectionListener(connectionListener);
+  LOGGER.fine("Negotiation Closed: " + getConnection().getUser() + " "+ sid);
+  super.close();
+}

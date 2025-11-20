@@ -1,0 +1,25 @@
+/** 
+ * Renew our singed preKey. This should be done once every 7-14 days. The old signed PreKey should be kept for around a month or so (look it up in the XEP).
+ * @param userDevice our OmemoDevice.
+ * @throws CorruptedOmemoKeyException when our identityKey is invalid.
+ * @throws IOException if an I/O error occurred.
+ * @throws IllegalStateException when our IdentityKeyPair is null.
+ */
+void changeSignedPreKey(OmemoDevice userDevice) throws CorruptedOmemoKeyException, IOException {
+  T_IdKeyPair idKeyPair=loadOmemoIdentityKeyPair(userDevice);
+  if (idKeyPair == null) {
+    throw new IllegalStateException("Our IdentityKeyPair is null.");
+  }
+  TreeMap<Integer,T_SigPreKey> signedPreKeys=loadOmemoSignedPreKeys(userDevice);
+  if (signedPreKeys.size() == 0) {
+    T_SigPreKey newKey=generateOmemoSignedPreKey(idKeyPair,1);
+    storeOmemoSignedPreKey(userDevice,1,newKey);
+  }
+ else {
+    int lastId=signedPreKeys.lastKey();
+    T_SigPreKey newKey=generateOmemoSignedPreKey(idKeyPair,lastId + 1);
+    storeOmemoSignedPreKey(userDevice,lastId + 1,newKey);
+  }
+  setDateOfLastSignedPreKeyRenewal(userDevice,new Date());
+  removeOldSignedPreKeys(userDevice);
+}

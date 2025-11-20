@@ -1,0 +1,31 @@
+public List<Node> getNodesInTopologicalOrder(){
+  List<Node> topologicalList=new ArrayList<>();
+  postConnectAll();
+  Map<Node,Integer> inDegreeMap=Maps.newHashMap();
+  List<Node> nodesToExamine=Lists.newArrayList();
+  int visitedNodes=0;
+  for (  Node node : graph.nodes()) {
+    int inDegree=graph.inDegree(node);
+    inDegreeMap.put(node,inDegree);
+    if (inDegree == 0) {
+      nodesToExamine.add(node);
+    }
+  }
+  while (!nodesToExamine.isEmpty()) {
+    Node currentNode=nodesToExamine.remove(0);
+    for (    Node adjacentNode : graph.successors(currentNode)) {
+      int updatedInDegree=inDegreeMap.get(adjacentNode) - 1;
+      inDegreeMap.put(adjacentNode,updatedInDegree);
+      if (updatedInDegree == 0) {
+        nodesToExamine.add(adjacentNode);
+      }
+    }
+    topologicalList.add(currentNode);
+    visitedNodes++;
+  }
+  if (visitedNodes != nodeMap.size()) {
+    throw new RuntimeException("Cycle detected in the DAG: topological sorting not possible!");
+  }
+  topologicalList.forEach((key) -> key.postInit(context));
+  return topologicalList;
+}

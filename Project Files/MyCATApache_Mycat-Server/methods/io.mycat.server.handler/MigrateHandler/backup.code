@@ -1,0 +1,17 @@
+public static String backup() throws Exception {
+  LocalDateTime now=LocalDateTime.now();
+  Path path=Paths.get(SystemConfig.getHomePath()).resolve("backup_" + now.getYear() + "_"+ now.getMonthOfYear()+ "_"+ now.getDayOfMonth()+ "_"+ now.getHourOfDay()+ "_"+ now.getMinuteOfHour());
+  if (!Files.exists(path)) {
+    Files.createDirectory(path);
+  }
+  List<String> strings=ZKUtils.getConnection().getChildren().forPath(ZKUtils.getZKBasePath() + "ruledata");
+  for (  String s : strings) {
+    byte[] bytes=ZKUtils.getConnection().getData().forPath(ZKUtils.getZKBasePath() + "ruledata/" + s);
+    Files.write(path.resolve(s),bytes);
+  }
+  byte[] bytes=ZKUtils.getConnection().getData().forPath(ZKUtils.getZKBasePath() + "schema/schema");
+  Files.write(path.resolve("schema.json"),bytes);
+  bytes=ZKUtils.getConnection().getData().forPath(ZKUtils.getZKBasePath() + "rules/function");
+  Files.write(path.resolve("function.json"),bytes);
+  return path.toAbsolutePath().toString();
+}

@@ -1,0 +1,43 @@
+@Override public void host(int port,boolean dedicatedServer) throws HostingFailedException {
+  if (mode == NetworkMode.NONE) {
+    try {
+      if (hibernationSettings.isPresent()) {
+        hibernationSettings.get().setHibernationAllowed(false);
+      }
+      mode=dedicatedServer ? NetworkMode.DEDICATED_SERVER : NetworkMode.LISTEN_SERVER;
+      for (      EntityRef entity : entityManager.getEntitiesWith(NetworkComponent.class)) {
+        registerNetworkEntity(entity);
+      }
+      generateSerializationTables();
+      bossGroup=new NioEventLoopGroup();
+      workerGroup=new NioEventLoopGroup();
+      ServerBootstrap b=new ServerBootstrap();
+      b.group(bossGroup,workerGroup).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG,100).localAddress(port).childOption(ChannelOption.TCP_NODELAY,true).childOption(ChannelOption.SO_KEEPALIVE,true).childHandler(createWithConstructorInjection(TerasologyServerPipelineFactory.class,context));
+      serverChannelFuture=b.bind();
+      logger.info("Started server on port {}",port);
+      if (config.getServerMOTD() != null) {
+        logger.info("Server MOTD is \"{}\"",config.getServerMOTD());
+      }
+ else {
+        logger.info("No server MOTD is defined");
+      }
+      if (serverChannelFuture.isSuccess()) {
+        logger.info("Server started");
+      }
+      serverChannelFuture.sync();
+      nextNetworkTick=time.getRealTimeInMs();
+    }
+ catch (    ChannelException e) {
+      if (e.getCause() instanceof BindException) {
+        throw new HostingFailedException("Port already in use (are you already hosting a game?)",e.getCause());
+      }
+ else {
+        throw new HostingFailedException("Failed to host game",e.getCause());
+      }
+    }
+catch (    InterruptedException e) {
+      shutdown();
+      throw new HostingFailedException("Server has been interrupted",e.getCause());
+    }
+  }
+}

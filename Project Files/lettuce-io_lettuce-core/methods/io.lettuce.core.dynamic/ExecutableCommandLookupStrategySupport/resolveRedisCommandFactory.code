@@ -1,0 +1,10 @@
+@Override public CommandFactory resolveRedisCommandFactory(CommandMethod commandMethod,RedisCommandsMetadata commandsMetadata){
+  RedisCodec<?,?> codec=codecResolver.resolve(commandMethod);
+  if (codec == null) {
+    throw new CommandCreationException(commandMethod,"Cannot resolve RedisCodec");
+  }
+  CodecAwareOutputFactoryResolver outputFactoryResolver=new CodecAwareOutputFactoryResolver(commandOutputFactoryResolver,codec);
+  CommandSegments commandSegments=commandSegmentFactory.createCommandSegments(commandMethod);
+  commandMethodVerifier.validate(commandSegments,commandMethod);
+  return new CommandSegmentCommandFactory(commandSegments,commandMethod,codec,outputFactoryResolver);
+}

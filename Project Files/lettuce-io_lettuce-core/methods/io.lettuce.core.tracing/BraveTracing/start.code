@@ -1,0 +1,29 @@
+@Override public BraveSpan start(RedisCommand<?,?,?> command){
+  span.name(command.getType().name());
+  if (includeCommandArgsInSpanTags && command.getArgs() != null) {
+    span.tag("redis.args",command.getArgs().toCommandString());
+  }
+  if (command instanceof CompleteableCommand) {
+    CompleteableCommand<?> completeableCommand=(CompleteableCommand<?>)command;
+    completeableCommand.onComplete((o,throwable) -> {
+      if (command.getOutput() != null) {
+        String error=command.getOutput().getError();
+        if (error != null) {
+          span.tag("error",error);
+        }
+ else         if (throwable != null) {
+          span.tag("exception",throwable.toString());
+          span.error(throwable);
+        }
+      }
+      span.finish();
+    }
+);
+  }
+ else {
+    throw new IllegalArgumentException("Command " + command + " must implement CompleteableCommand to attach Span completion to command completion");
+  }
+  span.start();
+  this.tracingOptions.customizeSpan(command,span);
+  return this;
+}

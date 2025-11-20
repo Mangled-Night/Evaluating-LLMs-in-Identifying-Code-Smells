@@ -1,0 +1,9 @@
+@Test void expireat(){
+  Date expiration=new Date(System.currentTimeMillis() + 10000);
+  assertThat(redis.expireat(key,expiration)).isFalse();
+  redis.set(key,value);
+  assertThat(redis.expireat(key,expiration)).isTrue();
+  assertThat(redis.ttl(key)).isGreaterThanOrEqualTo(8);
+  assertThat(redis.expireat(key,Instant.now().plusSeconds(15))).isTrue();
+  assertThat(redis.ttl(key)).isBetween(10L,20L);
+}

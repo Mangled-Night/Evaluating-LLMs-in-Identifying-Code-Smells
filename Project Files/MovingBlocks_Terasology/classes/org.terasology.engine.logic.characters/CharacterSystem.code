@@ -1,0 +1,318 @@
+@RegisterSystem public class CharacterSystem extends BaseComponentSystem implements UpdateSubscriberSystem {
+  public static final CollisionGroup[] DEFAULTPHYSICSFILTER={StandardCollisionGroup.DEFAULT,StandardCollisionGroup.WORLD,StandardCollisionGroup.CHARACTER};
+  private static final Logger logger=LoggerFactory.getLogger(CharacterSystem.class);
+  @In private Physics physics;
+  @In private PhysicsEngine physicsEngine;
+  @In private NetworkSystem networkSystem;
+  @In private EntityManager entityManager;
+  @In private Time time;
+  @In private DirectionAndOriginPosRecorderList directionAndOriginPosRecorderList;
+  @In private RecordAndReplayCurrentStatus recordAndReplayCurrentStatus;
+  @ReceiveEvent public void beforeDestroy(  BeforeDestroyEvent event,  EntityRef character,  CharacterComponent characterComponent,  AliveCharacterComponent aliveCharacterComponent){
+    if (character.hasComponent(PlayerCharacterComponent.class)) {
+      event.consume();
+      PlayerDeathEvent playerDeathEvent=new PlayerDeathEvent();
+      playerDeathEvent.damageTypeName=getDamageTypeName(event.getDamageType());
+      playerDeathEvent.instigatorName=getInstigatorName(event.getInstigator());
+      character.send(playerDeathEvent);
+    }
+    DeathEvent deathEvent=new DeathEvent();
+    deathEvent.damageTypeName=getDamageTypeName(event.getDamageType());
+    deathEvent.instigatorName=getInstigatorName(event.getInstigator());
+    characterComponent.controller.send(deathEvent);
+    character.removeComponent(AliveCharacterComponent.class);
+  }
+  /** 
+ * Extracts the name from an entity. If the entity is a character, then the display name from the  {@link ClientComponent#clientInfo} is used.Otherwise the entity itself is checked for a  {@link DisplayNameComponent}. In the last case, the prefab name of the entity is used, e.g. "engine:player" will be parsed to "Player".
+ * @param instigator The entity for which an instigator name is needed.
+ * @return The instigator name.
+ */
+  public String getInstigatorName(  EntityRef instigator){
+    if (instigator.hasComponent(CharacterComponent.class)) {
+      EntityRef instigatorClient=instigator.getComponent(CharacterComponent.class).controller;
+      EntityRef instigatorClientInfo=instigatorClient.getComponent(ClientComponent.class).clientInfo;
+      DisplayNameComponent displayNameComponent=instigatorClientInfo.getComponent(DisplayNameComponent.class);
+      return displayNameComponent.name;
+    }
+ else     if (instigator.getParentPrefab() != null) {
+      Prefab parentPrefab=instigator.getParentPrefab();
+      if (parentPrefab.hasComponent(DisplayNameComponent.class)) {
+        DisplayNameComponent displayNameComponent=parentPrefab.getComponent(DisplayNameComponent.class);
+        return displayNameComponent.name;
+      }
+ else {
+        String instigatorName=parentPrefab.getName();
+        instigatorName=instigatorName.replaceAll(".*:(.*)","$1");
+        instigatorName=Character.toUpperCase(instigatorName.charAt(0)) + instigatorName.substring(1);
+        return instigatorName;
+      }
+    }
+ else {
+      return null;
+    }
+  }
+  /** 
+ * Extracts the damage type name from a prefab. If the prefab has a  {@link DisplayNameComponent}, it will be used. Otherwise the damage type name is parsed, e.g. "engine:directDamage" will become "Direct Damage".
+ * @param damageType The damage type prefab.
+ * @return A readable name for the damage type.
+ */
+  public String getDamageTypeName(  Prefab damageType){
+    if (damageType.hasComponent(DisplayNameComponent.class)) {
+      DisplayNameComponent displayNameComponent=damageType.getComponent(DisplayNameComponent.class);
+      return displayNameComponent.name;
+    }
+ else {
+      logger.info(String.format("%s is missing a readable DisplayName",damageType.getName()));
+      String damageTypeName=damageType.getName();
+      damageTypeName=damageTypeName.replaceAll(".*:(.*)","$1");
+      damageTypeName=damageTypeName.replaceAll("([A-Z])"," $1");
+      damageTypeName=Character.toUpperCase(damageTypeName.charAt(0)) + damageTypeName.substring(1);
+      return damageTypeName;
+    }
+  }
+  @NetFilterEvent(netFilter=RegisterMode.CLIENT) @ReceiveEvent(components=CharacterComponent.class) public void onAttackRequest(  AttackButton event,  EntityRef entity,  CharacterHeldItemComponent characterHeldItemComponent){
+    if (!event.isDown()) {
+      return;
+    }
+    boolean attackRequestIsValid;
+    if (networkSystem.getMode().isAuthority()) {
+      attackRequestIsValid=true;
+    }
+ else {
+      OnItemUseEvent onItemUseEvent=new OnItemUseEvent();
+      entity.send(onItemUseEvent);
+      attackRequestIsValid=!onItemUseEvent.isConsumed();
+    }
+    if (attackRequestIsValid) {
+      EntityRef selectedItemEntity=characterHeldItemComponent.selectedItem;
+      entity.send(new AttackRequest(selectedItemEntity));
+      event.consume();
+    }
+  }
+  @NetFilterEvent(netFilter=RegisterMode.AUTHORITY) @ReceiveEvent(components=LocationComponent.class) public void onAttackRequest(  AttackRequest event,  EntityRef character,  CharacterComponent characterComponent){
+    if (event.getItem().exists()) {
+      if (!character.equals(event.getItem().getOwner())) {
+        return;
+      }
+    }
+    OnItemUseEvent onItemUseEvent=new OnItemUseEvent();
+    character.send(onItemUseEvent);
+    if (!onItemUseEvent.isConsumed()) {
+      EntityRef gazeEntity=GazeAuthoritySystem.getGazeEntityForCharacter(character);
+      LocationComponent gazeLocation=gazeEntity.getComponent(LocationComponent.class);
+      Vector3f direction=gazeLocation.getWorldDirection(new Vector3f());
+      Vector3f originPos=gazeLocation.getWorldPosition(new Vector3f());
+      if (recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.RECORDING) {
+        directionAndOriginPosRecorderList.getAttackEventDirectionAndOriginPosRecorder().add(direction,originPos);
+      }
+ else       if (recordAndReplayCurrentStatus.getStatus() == RecordAndReplayStatus.REPLAYING) {
+        Vector3f[] data=directionAndOriginPosRecorderList.getAttackEventDirectionAndOriginPosRecorder().poll();
+        direction=data[0];
+        originPos=data[1];
+      }
+      HitResult result=physics.rayTrace(originPos,direction,characterComponent.interactionRange,Sets.newHashSet(character),DEFAULTPHYSICSFILTER);
+      if (result.isHit()) {
+        result.getEntity().send(new AttackEvent(character,event.getItem()));
+      }
+    }
+  }
+  @ReceiveEvent(components=CharacterComponent.class) public void onItemUse(  OnItemUseEvent event,  EntityRef entity,  CharacterHeldItemComponent characterHeldItemComponent){
+    long currentTime=time.getGameTimeInMs();
+    if (characterHeldItemComponent.nextItemUseTime > currentTime) {
+      event.consume();
+      return;
+    }
+    EntityRef selectedItemEntity=characterHeldItemComponent.selectedItem;
+    characterHeldItemComponent.lastItemUsedTime=currentTime;
+    characterHeldItemComponent.nextItemUseTime=currentTime;
+    ItemComponent itemComponent=selectedItemEntity.getComponent(ItemComponent.class);
+    if (itemComponent != null) {
+      AffectItemUseCooldownTimeEvent affectItemUseCooldownTimeEvent=new AffectItemUseCooldownTimeEvent(itemComponent.cooldownTime);
+      entity.send(affectItemUseCooldownTimeEvent);
+      characterHeldItemComponent.nextItemUseTime+=(long)affectItemUseCooldownTimeEvent.getResultValue();
+    }
+ else {
+      characterHeldItemComponent.nextItemUseTime+=200;
+    }
+    entity.saveComponent(characterHeldItemComponent);
+  }
+  @NetFilterEvent(netFilter=RegisterMode.AUTHORITY) @Priority(EventPriority.PRIORITY_TRIVIAL) @ReceiveEvent public void onAttackBlock(  AttackEvent event,  EntityRef entityRef,  BlockComponent blockComponent){
+    entityRef.send(new DestroyEvent(event.getInstigator(),event.getDirectCause(),EngineDamageTypes.PHYSICAL.get()));
+  }
+  @NetFilterEvent(netFilter=RegisterMode.AUTHORITY) @Priority(EventPriority.PRIORITY_TRIVIAL) @ReceiveEvent public void onAttackBlock(  AttackEvent event,  EntityRef entityRef,  ActAsBlockComponent actAsBlockComponent){
+    entityRef.send(new DestroyEvent(event.getInstigator(),event.getDirectCause(),EngineDamageTypes.PHYSICAL.get()));
+  }
+  @NetFilterEvent(netFilter=RegisterMode.AUTHORITY) @ReceiveEvent(components={CharacterComponent.class,LocationComponent.class}) public void onActivationRequest(  ActivationRequest event,  EntityRef character){
+    if (isPredictionOfEventCorrect(character,event)) {
+      OnItemUseEvent onItemUseEvent=new OnItemUseEvent();
+      event.getInstigator().send(onItemUseEvent);
+      if (!onItemUseEvent.isConsumed()) {
+        if (event.getUsedOwnedEntity().exists()) {
+          event.getUsedOwnedEntity().send(new ActivateEvent(event));
+        }
+ else {
+          event.getTarget().send(new ActivateEvent(event));
+        }
+      }
+    }
+ else {
+      character.send(new ActivationRequestDenied(event.getActivationId()));
+    }
+  }
+  private String getPlayerNameFromCharacter(  EntityRef character){
+    CharacterComponent characterComponent=character.getComponent(CharacterComponent.class);
+    if (characterComponent == null) {
+      return "?";
+    }
+    EntityRef controller=characterComponent.controller;
+    ClientComponent clientComponent=controller.getComponent(ClientComponent.class);
+    EntityRef clientInfo=clientComponent.clientInfo;
+    DisplayNameComponent displayNameComponent=clientInfo.getComponent(DisplayNameComponent.class);
+    if (displayNameComponent == null) {
+      return "?";
+    }
+    return displayNameComponent.name;
+  }
+  private boolean isPredictionOfEventCorrect(  EntityRef character,  ActivationRequest event){
+    CharacterComponent characterComponent=character.getComponent(CharacterComponent.class);
+    EntityRef camera=GazeAuthoritySystem.getGazeEntityForCharacter(character);
+    LocationComponent location=camera.getComponent(LocationComponent.class);
+    Vector3f direction=location.getWorldDirection(new Vector3f());
+    if (!(event.getDirection().equals(direction,0.0001f))) {
+      logger.error("Direction at client {} was different than direction at server {}",event.getDirection(),direction);
+    }
+    direction=event.getDirection();
+    Vector3f originPos=location.getWorldPosition(new Vector3f());
+    if (!(event.getOrigin().equals(originPos,0.0001f))) {
+      String msg="Player {} seems to have cheated: It stated that it performed an action from {} but the predicted position is {}";
+      logger.info(msg,getPlayerNameFromCharacter(character),event.getOrigin(),originPos);
+      return false;
+    }
+    if (event.isOwnedEntityUsage()) {
+      if (!event.getUsedOwnedEntity().exists()) {
+        String msg="Denied activation attempt by {} since the used entity does not exist on the authority";
+        logger.info(msg,getPlayerNameFromCharacter(character));
+        return false;
+      }
+      if (!networkSystem.getOwnerEntity(event.getUsedOwnedEntity()).equals(networkSystem.getOwnerEntity(character))) {
+        String msg="Denied activation attempt by {} since it does not own the entity at the authority";
+        logger.info(msg,getPlayerNameFromCharacter(character));
+        return false;
+      }
+    }
+ else {
+      if (event.getUsedOwnedEntity().exists()) {
+        String msg="Denied activation attempt by {} since it is not properly marked as owned entity usage";
+        logger.info(msg,getPlayerNameFromCharacter(character));
+        return false;
+      }
+    }
+    if (event.isEventWithTarget()) {
+      if (!event.getTarget().exists()) {
+        String msg="Denied activation attempt by {} since the target does not exist on the authority";
+        logger.info(msg,getPlayerNameFromCharacter(character));
+        return false;
+      }
+      float interactionRange;
+      if (event.isOwnedEntityUsage() && event.getUsedOwnedEntity().hasComponent(RangeComponent.class)) {
+        interactionRange=Math.max(event.getUsedOwnedEntity().getComponent(RangeComponent.class).range,characterComponent.interactionRange);
+      }
+ else {
+        interactionRange=characterComponent.interactionRange;
+      }
+      HitResult result=physics.rayTrace(originPos,direction,interactionRange,Sets.newHashSet(character),DEFAULTPHYSICSFILTER);
+      if (!result.isHit()) {
+        String msg="Denied activation attempt by {} since at the authority there was nothing to activate at that place";
+        logger.info(msg,getPlayerNameFromCharacter(character));
+        return false;
+      }
+      EntityRef hitEntity=result.getEntity();
+      if (!hitEntity.equals(event.getTarget())) {
+        String msg="Denied activation attempt by {} since at the authority another entity would have been activated";
+        logger.info(msg,getPlayerNameFromCharacter(character));
+        return false;
+      }
+      if (!(event.getHitPosition().equals(result.getHitPoint(),0.0001f))) {
+        String msg="Denied activation attempt by {} since at the authority the object got hit at a differnt position";
+        logger.info(msg,getPlayerNameFromCharacter(character));
+        return false;
+      }
+    }
+ else {
+      if (event.getTarget().exists()) {
+        String msg="Denied activation attempt by {} since the event was not properly labeled as having a target";
+        logger.info(msg,getPlayerNameFromCharacter(character));
+        return false;
+      }
+      if (event.getHitPosition() != null) {
+        String msg="Denied activation attempt by {} since the event was not properly labeled as having a hit position";
+        logger.info(msg,getPlayerNameFromCharacter(character));
+        return false;
+      }
+      if (event.getHitNormal() != null) {
+        String msg="Denied activation attempt by {} since the event was not properly labeled as having a hit delta";
+        logger.info(msg,getPlayerNameFromCharacter(character));
+        return false;
+      }
+    }
+    return true;
+  }
+  @Override public void update(  float delta){
+    Iterable<EntityRef> characterEntities=entityManager.getEntitiesWith(CharacterComponent.class,LocationComponent.class);
+    for (    EntityRef characterEntity : characterEntities) {
+      CharacterComponent characterComponent=characterEntity.getComponent(CharacterComponent.class);
+      if (characterComponent == null) {
+        continue;
+      }
+      LocationComponent characterLocation=characterEntity.getComponent(LocationComponent.class);
+      if (characterLocation == null) {
+        continue;
+      }
+      EntityRef target=characterComponent.authorizedInteractionTarget;
+      if (target.isActive()) {
+        LocationComponent targetLocation=target.getComponent(LocationComponent.class);
+        if (targetLocation == null) {
+          continue;
+        }
+        float maxInteractionRange=characterComponent.interactionRange;
+        if (isDistanceToLarge(characterLocation,targetLocation,maxInteractionRange)) {
+          InteractionUtil.cancelInteractionAsServer(characterEntity);
+        }
+      }
+    }
+  }
+  private boolean isDistanceToLarge(  LocationComponent characterLocation,  LocationComponent targetLocation,  float maxInteractionRange){
+    float maxInteractionRangeSquared=maxInteractionRange * maxInteractionRange;
+    Vector3f positionDelta=characterLocation.getWorldPosition(new Vector3f());
+    positionDelta.sub(targetLocation.getWorldPosition(new Vector3f()));
+    float interactionRangeSquared=positionDelta.lengthSquared();
+    float epsilon=0.00001f;
+    return interactionRangeSquared > maxInteractionRangeSquared + epsilon;
+  }
+  @ReceiveEvent public void onScaleCharacter(  OnScaleEvent event,  EntityRef entity,  CharacterComponent character,  CharacterMovementComponent movement){
+    Prefab parent=entity.getParentPrefab();
+    CharacterMovementComponent defaultMovement=Optional.ofNullable(parent.getComponent(CharacterMovementComponent.class)).orElse(new CharacterMovementComponent());
+    final float factor=event.getFactor();
+    movement.height=factor * movement.height;
+    movement.jumpSpeed=getJumpSpeed(factor,defaultMovement.jumpSpeed);
+    movement.stepHeight=factor * movement.stepHeight;
+    movement.distanceBetweenFootsteps=factor * movement.distanceBetweenFootsteps;
+    movement.runFactor=getRunFactor(factor,defaultMovement.runFactor);
+    entity.saveComponent(movement);
+    CharacterComponent defaultCharacter=Optional.ofNullable(parent.getComponent(CharacterComponent.class)).orElse(new CharacterComponent());
+    character.interactionRange=getInteractionRange(factor,defaultCharacter.interactionRange);
+    entity.saveComponent(character);
+    physicsEngine.removeCharacterCollider(entity);
+    physicsEngine.getCharacterCollider(entity);
+    Optional.ofNullable(entity.getComponent(LocationComponent.class)).map(k -> k.getWorldPosition(new Vector3f())).map(location -> location.add(0,(event.getNewValue() - event.getOldValue()) / 2f,0)).ifPresent(location -> entity.send(new CharacterTeleportEvent(location)));
+  }
+  private float getJumpSpeed(  float ratio,  float defaultValue){
+    return (float)Math.pow(ratio,0.74f) * 0.4f * defaultValue + 0.6f * defaultValue;
+  }
+  private float getRunFactor(  float ratio,  float defaultValue){
+    return (float)Math.pow(ratio,0.68f) * defaultValue;
+  }
+  private float getInteractionRange(  float ratio,  float defaultValue){
+    return (float)Math.pow(ratio,0.62f) * defaultValue;
+  }
+}

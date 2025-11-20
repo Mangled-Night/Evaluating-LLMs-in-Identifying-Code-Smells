@@ -1,0 +1,62 @@
+/** 
+ * Integration tests for  {@link StatefulRedisSentinelConnection}.
+ * @author Mark Paluch
+ */
+@ExtendWith(LettuceExtension.class) public class SentinelServerCommandIntegrationTests extends TestSupport {
+  private final RedisClient redisClient;
+  private StatefulRedisSentinelConnection<String,String> connection;
+  private RedisSentinelCommands<String,String> sentinel;
+  @Inject public SentinelServerCommandIntegrationTests(  RedisClient redisClient){
+    this.redisClient=redisClient;
+  }
+  @BeforeEach void before(){
+    this.connection=this.redisClient.connectSentinel(SentinelTestSettings.SENTINEL_URI);
+    this.sentinel=getSyncConnection(this.connection);
+  }
+  protected RedisSentinelCommands<String,String> getSyncConnection(  StatefulRedisSentinelConnection<String,String> connection){
+    return connection.sync();
+  }
+  @AfterEach void after(){
+    this.connection.close();
+  }
+  @Test public void clientGetSetname(){
+    assertThat(sentinel.clientGetname()).isNull();
+    assertThat(sentinel.clientSetname("test")).isEqualTo("OK");
+    assertThat(sentinel.clientGetname()).isEqualTo("test");
+    assertThat(sentinel.clientSetname("")).isEqualTo("OK");
+    assertThat(sentinel.clientGetname()).isNull();
+  }
+  @Test public void clientPause(){
+    assertThat(sentinel.clientPause(10)).isEqualTo("OK");
+  }
+  @Test public void clientKill(){
+    Pattern p=Pattern.compile(".*[^l]addr=([^ ]+).*");
+    String clients=sentinel.clientList();
+    Matcher m=p.matcher(clients);
+    assertThat(m.lookingAt()).isTrue();
+    assertThat(sentinel.clientKill(m.group(1))).isEqualTo("OK");
+  }
+  @Test public void clientKillExtended(){
+    RedisURI redisURI=RedisURI.Builder.sentinel(TestSettings.host(),SentinelTestSettings.MASTER_ID).build();
+    RedisSentinelCommands<String,String> connection2=redisClient.connectSentinel(redisURI).sync();
+    connection2.clientSetname("killme");
+    Pattern p=Pattern.compile("^.*[^l]addr=([^ ]+).*name=killme.*$",Pattern.MULTILINE | Pattern.DOTALL);
+    String clients=sentinel.clientList();
+    Matcher m=p.matcher(clients);
+    assertThat(m.matches()).isTrue();
+    String addr=m.group(1);
+    assertThat(sentinel.clientKill(KillArgs.Builder.addr(addr).skipme())).isGreaterThan(0);
+    assertThat(sentinel.clientKill(KillArgs.Builder.id(4234))).isEqualTo(0);
+    assertThat(sentinel.clientKill(KillArgs.Builder.typeSlave().id(4234))).isEqualTo(0);
+    assertThat(sentinel.clientKill(KillArgs.Builder.typeNormal().id(4234))).isEqualTo(0);
+    assertThat(sentinel.clientKill(KillArgs.Builder.typePubsub().id(4234))).isEqualTo(0);
+    connection2.getStatefulConnection().close();
+  }
+  @Test public void clientList(){
+    assertThat(sentinel.clientList().contains("addr=")).isTrue();
+  }
+  @Test public void info(){
+    assertThat(sentinel.info().contains("redis_version")).isTrue();
+    assertThat(sentinel.info("server").contains("redis_version")).isTrue();
+  }
+}

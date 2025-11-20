@@ -1,0 +1,37 @@
+/** 
+ * Runs until this future is complete.
+ * @return the result of the future
+ */
+public <T>T runUntil(ListenableFuture<T> future){
+  boolean timedOut=runUntil(future::isDone);
+  if (timedOut) {
+    future.cancel(true);
+    throw new UncheckedTimeoutException("No result within default timeout.");
+  }
+  try {
+    return future.get(0,TimeUnit.SECONDS);
+  }
+ catch (  ExecutionException e) {
+    throw new UncheckedExecutionException(e);
+  }
+catch (  InterruptedException e) {
+    throw new RuntimeException("Interrupted while waiting for " + future,e);
+  }
+catch (  TimeoutException e) {
+    throw new UncheckedTimeoutException("Checked isDone before calling get, so this shouldn't happen.",e);
+  }
+}
+/** 
+ * Runs tick() on the engine until f evaluates to true or DEFAULT_GAME_TIME_TIMEOUT milliseconds have passed in game time
+ * @return true if execution timed out
+ */
+public boolean runUntil(Supplier<Boolean> f){
+  return runWhile(() -> !f.get());
+}
+/** 
+ * Runs tick() on the engine until f evaluates to true or gameTimeTimeoutMs has passed in game time
+ * @return true if execution timed out
+ */
+public boolean runUntil(long gameTimeTimeoutMs,Supplier<Boolean> f){
+  return runWhile(gameTimeTimeoutMs,() -> !f.get());
+}

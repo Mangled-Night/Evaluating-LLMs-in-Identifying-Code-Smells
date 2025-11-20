@@ -1,0 +1,19 @@
+/** 
+ * Invites a user or agent to an existing session support. The provided invitee's JID can be of a user, an agent, a queue or a workgroup. In the case of a queue or a workgroup the workgroup service will decide the best agent to receive the invitation.<p> This method will return either when the service returned an ACK of the request or if an error occurred while requesting the invitation. After sending the ACK the service will send the invitation to the target entity. When dealing with agents the common sequence of offer-response will be followed. However, when sending an invitation to a user a standard MUC invitation will be sent.<p> The agent or user that accepted the offer <b>MUST</b> join the room. Failing to do so will make the invitation to fail. The inviter will eventually receive a message error indicating that the invitee accepted the offer but failed to join the room. Different situations may lead to a failed invitation. Possible cases are: 1) all agents rejected the offer and there are no agents available, 2) the agent that accepted the offer failed to join the room or 2) the user that received the MUC invitation never replied or joined the room. In any of these cases (or other failing cases) the inviter will get an error message with the failed notification.
+ * @param type type of entity that will get the invitation.
+ * @param invitee JID of entity that will get the invitation.
+ * @param sessionID ID of the support session that the invitee is being invited.
+ * @param reason the reason of the invitation.
+ * @throws XMPPErrorException if the sender of the invitation is not an agent or the service failed to processthe request.
+ * @throws NoResponseException if there was no response from the remote entity.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void sendRoomInvitation(RoomInvitation.Type type,Jid invitee,String sessionID,String reason) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  final RoomInvitation invitation=new RoomInvitation(type,invitee,sessionID,reason);
+  IQ iq=new RoomInvitation.RoomInvitationIQ(invitation);
+  iq.setType(IQ.Type.set);
+  iq.setTo(workgroupJID);
+  iq.setFrom(connection.getUser());
+  connection.sendIqRequestAndWaitForResponse(iq);
+}

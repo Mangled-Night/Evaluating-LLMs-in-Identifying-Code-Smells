@@ -1,0 +1,12 @@
+@Test void testChunkIsRegeneratedIfDirty(){
+  var chunk1=newDirtyChunk(position0);
+  completedChunksStepVerifier().then(() -> {
+    worker.add(chunk1);
+    worker.update();
+  }
+).expectNext(chunk1).as("initial generation").then(() -> {
+    chunk1.setDirty(true);
+    worker.update();
+  }
+).expectNext(chunk1).as("regenerating after dirty").verifyTimeout(EXPECTED_DURATION);
+}

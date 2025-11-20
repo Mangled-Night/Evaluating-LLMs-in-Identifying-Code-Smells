@@ -1,0 +1,75 @@
+@Override public void update(float delta){
+  PerformanceMonitor.startActivity("Physics Renderer");
+  physics.update(time.getGameDelta());
+  PerformanceMonitor.endActivity();
+  Iterator<EntityRef> iter=physics.physicsEntitiesIterator();
+  while (iter.hasNext()) {
+    EntityRef entity=iter.next();
+    RigidBodyComponent comp=entity.getComponent(RigidBodyComponent.class);
+    RigidBody body=physics.getRigidBody(entity);
+    if (entity.hasComponent(TriggerComponent.class)) {
+      physics.updateTrigger(entity);
+    }
+    if (body.isActive()) {
+      body.getLinearVelocity(comp.velocity);
+      body.getAngularVelocity(comp.angularVelocity);
+      Vector3f vLocation=body.getLocation(new Vector3f());
+      Vector3f vDirection=new Vector3f(comp.velocity);
+      float fDistanceThisFrame=vDirection.length();
+      vDirection.normalize();
+      fDistanceThisFrame=fDistanceThisFrame * delta;
+      while (true) {
+        HitResult hitInfo=physics.rayTrace(vLocation,vDirection,fDistanceThisFrame + 0.5f,DEFAULT_COLLISION_GROUP);
+        if (hitInfo.isHit()) {
+          Block hitBlock=worldProvider.getBlock(hitInfo.getBlockPosition());
+          if (hitBlock != null) {
+            Vector3f vTravelledDistance=vLocation.sub(hitInfo.getHitPoint());
+            float fTravelledDistance=vTravelledDistance.length();
+            if (fTravelledDistance > fDistanceThisFrame) {
+              break;
+            }
+            if (hitBlock.isPenetrable()) {
+              if (!hitInfo.getEntity().hasComponent(BlockComponent.class)) {
+                entity.send(new EntityImpactEvent(hitInfo.getHitPoint(),hitInfo.getHitNormal(),comp.velocity,fDistanceThisFrame,hitInfo.getEntity()));
+                break;
+              }
+              fDistanceThisFrame=fDistanceThisFrame - fTravelledDistance;
+              vLocation=hitInfo.getHitPoint();
+            }
+ else {
+              entity.send(new BlockImpactEvent(hitInfo.getHitPoint(),hitInfo.getHitNormal(),comp.velocity,fDistanceThisFrame,hitInfo.getEntity()));
+              break;
+            }
+          }
+ else {
+            break;
+          }
+        }
+ else {
+          break;
+        }
+      }
+    }
+  }
+  if (networkSystem.getMode().isServer() && time.getGameTimeInMs() - TIME_BETWEEN_NETSYNCS > lastNetsync) {
+    sendSyncMessages();
+    lastNetsync=time.getGameTimeInMs();
+  }
+  List<CollisionPair> collisionPairs=physics.getCollisionPairs();
+  for (  CollisionPair pair : collisionPairs) {
+    if (pair.b.exists()) {
+      short bCollisionGroup=getCollisionGroupFlag(pair.b);
+      short aCollidesWith=getCollidesWithGroupFlag(pair.a);
+      if ((bCollisionGroup & aCollidesWith) != 0 || (pair.b.hasComponent(BlockComponent.class) && !pair.a.hasComponent(BlockComponent.class))) {
+        pair.a.send(new CollideEvent(pair.b,pair.pointA,pair.pointB,pair.distance,pair.normal));
+      }
+    }
+    if (pair.a.exists()) {
+      short aCollisionGroup=getCollisionGroupFlag(pair.a);
+      short bCollidesWith=getCollidesWithGroupFlag(pair.b);
+      if ((aCollisionGroup & bCollidesWith) != 0 || (pair.a.hasComponent(BlockComponent.class) && !pair.b.hasComponent(BlockComponent.class))) {
+        pair.b.send(new CollideEvent(pair.a,pair.pointB,pair.pointA,pair.distance,new Vector3f(pair.normal).mul(-1.0f)));
+      }
+    }
+  }
+}

@@ -1,0 +1,28 @@
+@Override public IQ handleIQRequest(final IQ iqRequest){
+  Open ibbRequest=(Open)iqRequest;
+  int blockSize=ibbRequest.getBlockSize();
+  int maximumBlockSize=manager.getMaximumBlockSize();
+  if (blockSize > maximumBlockSize) {
+    StanzaError error=StanzaError.getBuilder().setCondition(StanzaError.Condition.resource_constraint).setDescriptiveEnText("Requests block size of " + blockSize + " exceeds maximum block size of "+ maximumBlockSize).build();
+    return IQ.createErrorResponse(iqRequest,error);
+  }
+  StreamNegotiator.signal(ibbRequest.getFrom().toString() + '\t' + ibbRequest.getSessionID(),ibbRequest);
+  if (this.manager.getIgnoredBytestreamRequests().remove(ibbRequest.getSessionID())) {
+    return null;
+  }
+  InBandBytestreamRequest request=new InBandBytestreamRequest(this.manager,ibbRequest);
+  BytestreamListener userListener=this.manager.getUserListener(ibbRequest.getFrom());
+  if (userListener != null) {
+    userListener.incomingBytestreamRequest(request);
+  }
+ else   if (!this.manager.getAllRequestListeners().isEmpty()) {
+    for (    BytestreamListener listener : this.manager.getAllRequestListeners()) {
+      listener.incomingBytestreamRequest(request);
+    }
+  }
+ else {
+    StanzaError error=StanzaError.getBuilder().setCondition(StanzaError.Condition.not_acceptable).setDescriptiveEnText("No file-transfer listeners registered").build();
+    return IQ.createErrorResponse(iqRequest,error);
+  }
+  return null;
+}

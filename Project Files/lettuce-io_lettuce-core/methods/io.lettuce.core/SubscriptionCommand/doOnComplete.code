@@ -1,0 +1,23 @@
+@Override @SuppressWarnings({"unchecked","CastCanBeRemovedNarrowingVariableType"}) protected void doOnComplete(){
+  if (getOutput() != null) {
+    Object result=getOutput().get();
+    if (getOutput().hasError()) {
+      onError(ExceptionFactory.createExecutionException(getOutput().getError()));
+      return;
+    }
+    if (!(getOutput() instanceof StreamingOutput<?>) && result != null) {
+      if (dissolve && result instanceof Collection) {
+        Collection<T> collection=(Collection<T>)result;
+        for (        T t : collection) {
+          if (t != null) {
+            subscription.onNext(t);
+          }
+        }
+      }
+ else {
+        subscription.onNext((T)result);
+      }
+    }
+  }
+  subscription.onAllDataRead();
+}

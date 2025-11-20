@@ -1,0 +1,28 @@
+public void onResult(SQLQueryResult<Map<String,String>> result){
+  if (result.isSuccess()) {
+    LOGGER.debug("onResult success on xa commit {},{}",xaId,participantLogEntry.resourceName);
+    CoordinatorLogEntry coordinatorLogEntry=MultiNodeCoordinator.inMemoryRepository.get(xaId);
+    for (int i=0; i < coordinatorLogEntry.participants.length; i++) {
+      if (coordinatorLogEntry.participants[i].resourceName.equals(participantLogEntry.resourceName)) {
+        coordinatorLogEntry.participants[i].txState=TxState.TX_COMMITED_STATE;
+      }
+    }
+    MultiNodeCoordinator.inMemoryRepository.put(xaId,coordinatorLogEntry);
+    MultiNodeCoordinator.fileRepository.writeCheckpoint(xaId,MultiNodeCoordinator.inMemoryRepository.getAllCoordinatorLogEntries());
+  }
+ else {
+    String errorMsg=result.getErrMsg();
+    LOGGER.error(errorMsg);
+    if (errorMsg.indexOf("Unknown XID") > -1) {
+      CoordinatorLogEntry coordinatorLogEntry=MultiNodeCoordinator.inMemoryRepository.get(xaId);
+      for (int i=0; i < coordinatorLogEntry.participants.length; i++) {
+        if (coordinatorLogEntry.participants[i].resourceName.equals(participantLogEntry.resourceName)) {
+          coordinatorLogEntry.participants[i].txState=TxState.TX_COMMITED_STATE;
+        }
+      }
+      MultiNodeCoordinator.inMemoryRepository.put(xaId,coordinatorLogEntry);
+      MultiNodeCoordinator.fileRepository.writeCheckpoint(xaId,MultiNodeCoordinator.inMemoryRepository.getAllCoordinatorLogEntries());
+    }
+  }
+  LOGGER.debug("[CALLBACK][XA COMMIT] when Mycat start");
+}

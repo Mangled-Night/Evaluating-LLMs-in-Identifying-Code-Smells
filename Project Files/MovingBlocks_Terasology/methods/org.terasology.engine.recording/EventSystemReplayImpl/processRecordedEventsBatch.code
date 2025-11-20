@@ -1,0 +1,28 @@
+/** 
+ * Try to process recorded events for 'maxDuration' miliseconds. Events are only processed if the time is right.
+ * @param maxDuration the amount of time in which this method will try to process recorded events in one go.
+ */
+private void processRecordedEventsBatch(long maxDuration){
+  long beginTime=System.currentTimeMillis();
+  for (RecordedEvent re=recordedEvents.peek(); re != null; re=recordedEvents.peek()) {
+    long passedTime=System.currentTimeMillis() - this.replayEventsLoadTime;
+    while (passedTime < re.getTimestamp()) {
+      passedTime=System.currentTimeMillis() - this.replayEventsLoadTime;
+      if ((System.currentTimeMillis() - beginTime) >= maxDuration) {
+        return;
+      }
+    }
+    recordedEvents.poll();
+    EntityRef entity=getEntityRef(re);
+    if (re.getComponent() != null) {
+      originalSend(entity,re.getEvent(),re.getComponent());
+    }
+ else {
+      originalSend(entity,re.getEvent());
+    }
+    this.lastRecordedEventIndex=re.getIndex();
+    if ((System.currentTimeMillis() - beginTime) >= maxDuration) {
+      return;
+    }
+  }
+}

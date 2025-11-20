@@ -1,0 +1,11 @@
+@Test @Inject void pingBeforeConnect(StatefulRedisConnection<String,String> sharedConnection){
+  sharedConnection.sync().set(key,value);
+  RedisCommands<String,String> connection=client.connect().sync();
+  try {
+    String result=connection.get(key);
+    assertThat(result).isEqualTo(value);
+  }
+  finally {
+    connection.getStatefulConnection().close();
+  }
+}

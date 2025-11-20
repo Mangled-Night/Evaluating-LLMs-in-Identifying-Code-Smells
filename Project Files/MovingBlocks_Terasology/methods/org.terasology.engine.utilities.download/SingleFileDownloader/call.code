@@ -1,0 +1,17 @@
+@Override public Path call() throws IOException {
+  Path folder=target.getParent();
+  String prefix=target.getFileName().toString();
+  Path tempModuleLocation=Files.createTempFile(folder,prefix + "_",".tmp");
+  tempModuleLocation.toFile().deleteOnExit();
+  logger.debug("Downloading {} from {}",target,url);
+  long length=-1;
+  URLConnection conn=url.openConnection();
+  if (conn instanceof HttpURLConnection) {
+    length=((HttpURLConnection)conn).getContentLengthLong();
+  }
+  try (InputStream is=url.openStream();OutputStream os=Files.newOutputStream(tempModuleLocation)){
+    copy(is,os,length,listener);
+    Files.move(tempModuleLocation,target,StandardCopyOption.REPLACE_EXISTING);
+  }
+   return target;
+}

@@ -1,0 +1,56 @@
+/** 
+ * Ensure that the server is handling IQ packets correctly.
+ * @author Gaston Dombiak
+ */
+public class IQTest extends SmackTestCase {
+  public IQTest(  String arg0){
+    super(arg0);
+  }
+  /** 
+ * Check that the server responds a 503 error code when the client sends an IQ stanza with an invalid namespace.
+ */
+  public void testInvalidNamespace(){
+    IQ iq=new IQ(){
+      public String getChildElementXML(){
+        StringBuilder buf=new StringBuilder();
+        buf.append("<query xmlns=\"jabber:iq:anything\">");
+        buf.append("</query>");
+        return buf.toString();
+      }
+    }
+;
+    PacketFilter filter=new AndFilter(new PacketIDFilter(iq.getStanzaId()),new StanzaTypeFilter(IQ.class));
+    StanzaCollector collector=getConnection(0).createStanzaCollector(filter);
+    getConnection(0).sendStanza(iq);
+    IQ result=(IQ)collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
+    collector.cancel();
+    if (result == null) {
+      fail("No response from server");
+    }
+ else     if (result.getType() != IQ.Type.error) {
+      fail("The server didn't reply with an error packet");
+    }
+ else {
+      assertEquals("Server answered an incorrect error code",503,result.getError().getCode());
+    }
+  }
+  /** 
+ * Check that sending an IQ to a full JID that is offline returns an IQ ERROR instead of being route to some other resource of the same user.
+ */
+  public void testFullJIDToOfflineUser(){
+    Version versionRequest=new Version();
+    versionRequest.setType(IQ.Type.get);
+    versionRequest.setFrom(getFullJID(0));
+    versionRequest.setTo(getBareJID(0) + "/Something");
+    StanzaCollector collector=getConnection(0).createStanzaCollector(new PacketIDFilter(versionRequest.getStanzaId()));
+    getConnection(0).sendStanza(versionRequest);
+    IQ result=(IQ)collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
+    collector.cancel();
+    assertNotNull("No response from server",result);
+    assertEquals("The server didn't reply with an error packet",IQ.Type.error,result.getType());
+    assertEquals("Server answered an incorrect error code",503,result.getError().getCode());
+  }
+  protected int getMaxConnections(){
+    return 1;
+  }
+}

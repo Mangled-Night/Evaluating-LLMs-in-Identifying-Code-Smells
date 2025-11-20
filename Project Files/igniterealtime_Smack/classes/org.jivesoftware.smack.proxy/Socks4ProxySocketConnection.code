@@ -1,0 +1,45 @@
+/** 
+ * Socket factory for socks4 proxy.
+ * @author Atul Aggarwal
+ */
+public class Socks4ProxySocketConnection implements ProxySocketConnection {
+  private final ProxyInfo proxy;
+  Socks4ProxySocketConnection(  ProxyInfo proxy){
+    this.proxy=proxy;
+  }
+  @Override public void connect(  Socket socket,  String host,  int port,  int timeout) throws IOException {
+    String proxy_host=proxy.getProxyAddress();
+    int proxy_port=proxy.getProxyPort();
+    String user=proxy.getProxyUsername();
+    socket.connect(new InetSocketAddress(proxy_host,proxy_port),timeout);
+    InputStream in=socket.getInputStream();
+    DataInputStream dis=new DataInputStream(in);
+    OutputStream out=socket.getOutputStream();
+    ByteArrayOutputStream outBuf=new ByteArrayOutputStream();
+    byte[] inBuf;
+    outBuf.write(4);
+    outBuf.write(1);
+    outBuf.write(port >>> 8);
+    outBuf.write(port & 0xff);
+    InetAddress inetAddress=InetAddress.getByName(proxy_host);
+    byte[] byteAddress=inetAddress.getAddress();
+    outBuf.write(byteAddress);
+    if (user != null) {
+      byte[] userBytes=user.getBytes(StandardCharsets.UTF_8);
+      outBuf.write(userBytes);
+    }
+    outBuf.write(0);
+    OutputStreamUtil.writeResetAndFlush(outBuf,out);
+    inBuf=new byte[6];
+    dis.readFully(inBuf);
+    if (inBuf[0] != 0) {
+      throw new ProxyException(ProxyInfo.ProxyType.SOCKS4,"server returns VN " + inBuf[0]);
+    }
+    if (inBuf[1] != 90) {
+      String message="ProxySOCKS4: server returns CD " + inBuf[1];
+      throw new ProxyException(ProxyInfo.ProxyType.SOCKS4,message);
+    }
+    inBuf=new byte[2];
+    dis.readFully(inBuf);
+  }
+}

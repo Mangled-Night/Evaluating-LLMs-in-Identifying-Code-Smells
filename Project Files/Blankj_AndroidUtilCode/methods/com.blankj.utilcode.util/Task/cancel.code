@@ -1,0 +1,21 @@
+public void cancel(){
+  cancel(true);
+}
+public void cancel(boolean mayInterruptIfRunning){
+synchronized (state) {
+    if (state.get() > RUNNING)     return;
+    state.set(CANCELLED);
+  }
+  if (mayInterruptIfRunning) {
+    if (runner != null) {
+      runner.interrupt();
+    }
+  }
+  getDeliver().execute(new Runnable(){
+    @Override public void run(){
+      onCancel();
+      onDone();
+    }
+  }
+);
+}

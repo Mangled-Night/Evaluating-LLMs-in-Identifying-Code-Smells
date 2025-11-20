@@ -1,0 +1,33 @@
+/** 
+ * Add listener for specific type of message by its ID. Don't forget to call  {@link #removeListener(UiMessageCallback)} or{@link #removeListeners(int)}
+ * @param id       The ID of message that will be only notified to listener.
+ * @param listener The listener.
+ */
+public void addListener(int id,@NonNull final UiMessageCallback listener){
+synchronized (mListenersSpecific) {
+    List<UiMessageCallback> idListeners=mListenersSpecific.get(id);
+    if (idListeners == null) {
+      idListeners=new ArrayList<>();
+      mListenersSpecific.put(id,idListeners);
+    }
+    if (!idListeners.contains(listener)) {
+      idListeners.add(listener);
+    }
+  }
+}
+/** 
+ * Add listener for all messages.
+ * @param listener The listener.
+ */
+public void addListener(@NonNull final UiMessageCallback listener){
+synchronized (mListenersUniversal) {
+    if (!mListenersUniversal.contains(listener)) {
+      mListenersUniversal.add(listener);
+    }
+ else {
+      if (DEBUG) {
+        Log.w(TAG,"Listener is already added. " + listener.toString());
+      }
+    }
+  }
+}

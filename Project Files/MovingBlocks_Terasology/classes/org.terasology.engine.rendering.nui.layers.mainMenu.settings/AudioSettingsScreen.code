@@ -1,0 +1,43 @@
+public class AudioSettingsScreen extends CoreScreenLayer {
+  public static final ResourceUrn ASSET_URI=new ResourceUrn("engine:AudioMenuScreen");
+  @In private AudioConfig config;
+  @Override public void initialise(){
+    setAnimationSystem(MenuAnimationSystems.createDefaultSwipeAnimation());
+    UISlider sound=find("sound",UISlider.class);
+    if (sound != null) {
+      sound.setIncrement(0.05f);
+      sound.setPrecision(2);
+      sound.setMinimum(0);
+      sound.setRange(1.0f);
+      sound.bindValue(new Binding<Float>(){
+        @Override public Float get(){
+          return config.soundVolume.get();
+        }
+        @Override public void set(        Float value){
+          config.soundVolume.set(value);
+        }
+      }
+);
+    }
+    UISlider music=find("music",UISlider.class);
+    if (music != null) {
+      music.setIncrement(0.05f);
+      music.setPrecision(2);
+      music.setMinimum(0);
+      music.setRange(1.0f);
+      music.bindValue(new Binding<Float>(){
+        @Override public Float get(){
+          return config.musicVolume.get();
+        }
+        @Override public void set(        Float value){
+          config.musicVolume.set(value);
+        }
+      }
+);
+    }
+    WidgetUtil.trySubscribe(this,"close",button -> triggerBackAnimation());
+  }
+  @Override public boolean isLowerLayerVisible(){
+    return false;
+  }
+}

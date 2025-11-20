@@ -1,0 +1,25 @@
+@SuppressWarnings("UnusedVariable") public static <M extends Manager>void noResourceLeakTest(Function<DummyConnection,M> managerSupplier) throws XmppStringprepException, IllegalArgumentException, InterruptedException {
+  final int numConnections=10;
+  ReferenceQueue<DummyConnection> connectionsReferenceQueue=new ReferenceQueue<>();
+  ReferenceQueue<Manager> managerReferenceQueue=new ReferenceQueue<>();
+  @SuppressWarnings("ModifiedButNotUsed") Set<PhantomReference<DummyConnection>> connectionsPhantomReferences=new HashSet<>();
+  @SuppressWarnings("ModifiedButNotUsed") Set<PhantomReference<Manager>> managersPhantomReferences=new HashSet<>();
+  List<DummyConnection> connections=new ArrayList<>(numConnections);
+  for (int i=0; i < numConnections; i++) {
+    DummyConnection connection=new DummyConnection("foo" + i,"bar","baz");
+    PhantomReference<DummyConnection> connectionPhantomReference=new PhantomReference<>(connection,connectionsReferenceQueue);
+    connectionsPhantomReferences.add(connectionPhantomReference);
+    Manager manager=managerSupplier.apply(connection);
+    PhantomReference<Manager> managerPhantomReference=new PhantomReference<Manager>(manager,managerReferenceQueue);
+    managersPhantomReferences.add(managerPhantomReference);
+    connections.add(connection);
+  }
+  connections=null;
+  triggerGarbageCollection();
+  assertReferencesQueueSize(connectionsReferenceQueue,numConnections);
+  assertReferencesQueueIsEmpty(managerReferenceQueue);
+  DummyConnection connection=new DummyConnection("last","bar","baz");
+  @SuppressWarnings("unused") Manager manager=managerSupplier.apply(connection);
+  triggerGarbageCollection();
+  assertReferencesQueueSize(managerReferenceQueue,numConnections);
+}

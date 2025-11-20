@@ -1,0 +1,19 @@
+/** 
+ * Rotate the signedPreKey published in our OmemoBundle and republish it. This should be done every now and then (7-14 days). The old signedPreKey should be kept for some more time (a month or so) to enable decryption of messages that have been sent since the key was changed.
+ * @throws CorruptedOmemoKeyException When the IdentityKeyPair is damaged.
+ * @throws InterruptedException XMPP error
+ * @throws XMPPException.XMPPErrorException XMPP error
+ * @throws SmackException.NotConnectedException XMPP error
+ * @throws SmackException.NoResponseException XMPP error
+ * @throws SmackException.NotLoggedInException if the XMPP connection is not authenticated.
+ * @throws IOException if an I/O error occurred.
+ * @throws PubSubException.NotALeafNodeException if a PubSub leaf node operation was attempted on a non-leaf node.
+ */
+public synchronized void rotateSignedPreKey() throws CorruptedOmemoKeyException, SmackException.NotLoggedInException, XMPPException.XMPPErrorException, SmackException.NotConnectedException, InterruptedException, SmackException.NoResponseException, IOException, PubSubException.NotALeafNodeException {
+  if (!connection().isAuthenticated()) {
+    throw new SmackException.NotLoggedInException();
+  }
+  getOmemoService().getOmemoStoreBackend().changeSignedPreKey(getOwnDevice());
+  OmemoBundleElement bundle=getOmemoService().getOmemoStoreBackend().packOmemoBundle(getOwnDevice());
+  OmemoService.publishBundle(connection(),getOwnDevice(),bundle);
+}

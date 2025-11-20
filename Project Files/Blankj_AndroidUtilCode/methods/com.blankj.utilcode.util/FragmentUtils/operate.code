@@ -1,0 +1,68 @@
+private static void operate(final int type,@NonNull final FragmentManager fm,final FragmentTransaction ft,final Fragment src,final Fragment... dest){
+  if (src != null && src.isRemoving()) {
+    Log.e("FragmentUtils",src.getClass().getName() + " is isRemoving");
+    return;
+  }
+  String name;
+  Bundle args;
+switch (type) {
+case TYPE_ADD_FRAGMENT:
+    for (    Fragment fragment : dest) {
+      args=fragment.getArguments();
+      if (args == null)       return;
+      name=args.getString(ARGS_TAG,fragment.getClass().getName());
+      Fragment fragmentByTag=fm.findFragmentByTag(name);
+      if (fragmentByTag != null && fragmentByTag.isAdded()) {
+        ft.remove(fragmentByTag);
+      }
+      ft.add(args.getInt(ARGS_ID),fragment,name);
+      if (args.getBoolean(ARGS_IS_HIDE))       ft.hide(fragment);
+      if (args.getBoolean(ARGS_IS_ADD_STACK))       ft.addToBackStack(name);
+    }
+  break;
+case TYPE_HIDE_FRAGMENT:
+for (Fragment fragment : dest) {
+  ft.hide(fragment);
+}
+break;
+case TYPE_SHOW_FRAGMENT:
+for (Fragment fragment : dest) {
+ft.show(fragment);
+}
+break;
+case TYPE_SHOW_HIDE_FRAGMENT:
+ft.show(src);
+for (Fragment fragment : dest) {
+if (fragment != src) {
+ft.hide(fragment);
+}
+}
+break;
+case TYPE_REPLACE_FRAGMENT:
+args=dest[0].getArguments();
+if (args == null) return;
+name=args.getString(ARGS_TAG,dest[0].getClass().getName());
+ft.replace(args.getInt(ARGS_ID),dest[0],name);
+if (args.getBoolean(ARGS_IS_ADD_STACK)) ft.addToBackStack(name);
+break;
+case TYPE_REMOVE_FRAGMENT:
+for (Fragment fragment : dest) {
+if (fragment != src) {
+ft.remove(fragment);
+}
+}
+break;
+case TYPE_REMOVE_TO_FRAGMENT:
+for (int i=dest.length - 1; i >= 0; --i) {
+Fragment fragment=dest[i];
+if (fragment == dest[0]) {
+if (src != null) ft.remove(fragment);
+break;
+}
+ft.remove(fragment);
+}
+break;
+}
+ft.commitAllowingStateLoss();
+fm.executePendingTransactions();
+}

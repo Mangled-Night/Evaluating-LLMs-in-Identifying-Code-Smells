@@ -1,0 +1,15 @@
+@Override public RedisFuture<Long> exists(K... keys){
+  return exists(Arrays.asList(keys));
+}
+public RedisFuture<Long> exists(Iterable<K> keys){
+  Map<Integer,List<K>> partitioned=SlotHash.partition(codec,keys);
+  if (partitioned.size() < 2) {
+    return super.exists(keys);
+  }
+  Map<Integer,RedisFuture<Long>> executions=new HashMap<>();
+  for (  Map.Entry<Integer,List<K>> entry : partitioned.entrySet()) {
+    RedisFuture<Long> exists=super.exists(entry.getValue());
+    executions.put(entry.getKey(),exists);
+  }
+  return MultiNodeExecution.aggregateAsync(executions);
+}

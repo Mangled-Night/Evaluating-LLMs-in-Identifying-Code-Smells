@@ -1,0 +1,25 @@
+/** 
+ * Sorts the entities of this container. Can be executed concurrently with the other operations on this container.
+ */
+private void sort(){
+  comparator.setOrigin(originCamera.getPosition());
+  if (!commands.isEmpty()) {
+    logger.warn("The commands list was not emptied properly!");
+    commands.clear();
+  }
+  List<EntityRef> newEnts=cloneAndSetSorting();
+  try {
+    Collections.sort(newEnts,comparator);
+  }
+ catch (  IllegalArgumentException ex) {
+    logger.warn("Entities destroyed during sorting process. Sorting is skipped this round.");
+    clearQueue();
+    return;
+  }
+catch (  ArrayIndexOutOfBoundsException e) {
+    logger.warn("Something went wrong during sorting process. Sorting is skipped this round.");
+    clearQueue();
+    return;
+  }
+  processQueueAndSetEntities(newEnts);
+}

@@ -1,0 +1,67 @@
+@Override public void run(){
+  if (SCAN_RESULT_CONSUMERS.isEmpty()) {
+    SCAN_RESULT_CONSUMERS.add(consumer);
+    startScanWifi();
+    return;
+  }
+  consumer.accept(sPreWifiScanResults);
+  SCAN_RESULT_CONSUMERS.add(consumer);
+}
+@RequiresPermission(allOf={ACCESS_WIFI_STATE,CHANGE_WIFI_STATE,ACCESS_COARSE_LOCATION}) @Override public void run(){
+  startScanWifiIfEnabled();
+  WifiScanResults scanResults=getWifiScanResult();
+  if (isSameScanResults(sPreWifiScanResults.allResults,scanResults.allResults)) {
+    return;
+  }
+  sPreWifiScanResults=scanResults;
+  UtilsBridge.runOnUiThread(new Runnable(){
+    @Override public void run(){
+      for (      Utils.Consumer<WifiScanResults> consumer : SCAN_RESULT_CONSUMERS) {
+        consumer.accept(sPreWifiScanResults);
+      }
+    }
+  }
+);
+}
+@Override public void run(){
+  for (  Utils.Consumer<WifiScanResults> consumer : SCAN_RESULT_CONSUMERS) {
+    consumer.accept(sPreWifiScanResults);
+  }
+}
+@Override public void run(){
+  SCAN_RESULT_CONSUMERS.remove(consumer);
+  if (SCAN_RESULT_CONSUMERS.isEmpty()) {
+    stopScanWifi();
+  }
+}
+@Override @RequiresPermission(ACCESS_NETWORK_STATE) public void run(){
+  int preSize=mListeners.size();
+  mListeners.add(listener);
+  if (preSize == 0 && mListeners.size() == 1) {
+    mType=getNetworkType();
+    IntentFilter intentFilter=new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+    Utils.getApp().registerReceiver(NetworkChangedReceiver.getInstance(),intentFilter);
+  }
+}
+@Override public void run(){
+  int preSize=mListeners.size();
+  mListeners.remove(listener);
+  if (preSize == 1 && mListeners.size() == 0) {
+    Utils.getApp().unregisterReceiver(NetworkChangedReceiver.getInstance());
+  }
+}
+@Override @RequiresPermission(ACCESS_NETWORK_STATE) public void run(){
+  NetworkType networkType=NetworkUtils.getNetworkType();
+  if (mType == networkType)   return;
+  mType=networkType;
+  if (networkType == NetworkType.NETWORK_NO) {
+    for (    OnNetworkStatusChangedListener listener : mListeners) {
+      listener.onDisconnected();
+    }
+  }
+ else {
+    for (    OnNetworkStatusChangedListener listener : mListeners) {
+      listener.onConnected(networkType);
+    }
+  }
+}

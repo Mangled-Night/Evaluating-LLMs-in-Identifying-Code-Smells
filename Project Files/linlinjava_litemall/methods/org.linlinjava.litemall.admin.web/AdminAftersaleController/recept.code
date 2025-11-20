@@ -1,0 +1,16 @@
+@RequiresPermissions("admin:aftersale:recept") @RequiresPermissionsDesc(menu={"商城管理","售后管理"},button="审核通过") @PostMapping("/recept") public Object recept(@RequestBody LitemallAftersale aftersale){
+  Integer id=aftersale.getId();
+  LitemallAftersale aftersaleOne=aftersaleService.findById(id);
+  if (aftersaleOne == null) {
+    return ResponseUtil.fail(AdminResponseCode.AFTERSALE_NOT_ALLOWED,"售后不存在");
+  }
+  Short status=aftersaleOne.getStatus();
+  if (!status.equals(AftersaleConstant.STATUS_REQUEST)) {
+    return ResponseUtil.fail(AdminResponseCode.AFTERSALE_NOT_ALLOWED,"售后不能进行审核通过操作");
+  }
+  aftersaleOne.setStatus(AftersaleConstant.STATUS_RECEPT);
+  aftersaleOne.setHandleTime(LocalDateTime.now());
+  aftersaleService.updateById(aftersaleOne);
+  orderService.updateAftersaleStatus(aftersaleOne.getOrderId(),AftersaleConstant.STATUS_RECEPT);
+  return ResponseUtil.ok();
+}

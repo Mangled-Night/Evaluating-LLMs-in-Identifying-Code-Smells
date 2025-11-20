@@ -1,0 +1,44 @@
+private void filterHaving(){
+  if (havingCols.getColMeta() == null || result == null) {
+    return;
+  }
+  Iterator<RowDataPacket> it=result.iterator();
+  byte[] right=havingCols.getRight().getBytes(StandardCharsets.UTF_8);
+  int index=havingCols.getColMeta().getColIndex();
+  int colType=havingCols.getColMeta().getColType();
+  while (it.hasNext()) {
+    RowDataPacket rowDataPacket=it.next();
+switch (havingCols.getOperator()) {
+case "=":
+      if (eq(rowDataPacket.fieldValues.get(index),right,colType)) {
+        it.remove();
+      }
+    break;
+case ">":
+  if (gt(rowDataPacket.fieldValues.get(index),right,colType)) {
+    it.remove();
+  }
+break;
+case "<":
+if (lt(rowDataPacket.fieldValues.get(index),right,colType)) {
+it.remove();
+}
+break;
+case ">=":
+if (gt(rowDataPacket.fieldValues.get(index),right,colType) && eq(rowDataPacket.fieldValues.get(index),right,colType)) {
+it.remove();
+}
+break;
+case "<=":
+if (lt(rowDataPacket.fieldValues.get(index),right,colType) && eq(rowDataPacket.fieldValues.get(index),right,colType)) {
+it.remove();
+}
+break;
+case "!=":
+if (neq(rowDataPacket.fieldValues.get(index),right,colType)) {
+it.remove();
+}
+break;
+}
+}
+}

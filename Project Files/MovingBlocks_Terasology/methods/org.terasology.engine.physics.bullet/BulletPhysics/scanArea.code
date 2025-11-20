@@ -1,0 +1,19 @@
+@Override public List<EntityRef> scanArea(AABBf area,CollisionGroup... collisionFilter){
+  return scanArea(area,Arrays.asList(collisionFilter));
+}
+@Override public List<EntityRef> scanArea(AABBf area,Iterable<CollisionGroup> collisionFilter){
+  Vector3f extent=new Vector3f((area.maxX - area.minX) / 2.0f,(area.maxY - area.minY) / 2.0f,(area.maxZ - area.minZ) / 2.0f);
+  btBoxShape shape=new btBoxShape(extent);
+  btGhostObject scanObject=createCollider(new Vector3f(area.minX,area.minY,area.minZ).add(extent),shape,StandardCollisionGroup.SENSOR.getFlag(),combineGroups(collisionFilter),btCollisionObject.CollisionFlags.CF_NO_CONTACT_RESPONSE);
+  broadphase.calculateOverlappingPairs(dispatcher);
+  List<EntityRef> result=Lists.newArrayList();
+  for (int i=0; i < scanObject.getNumOverlappingObjects(); ++i) {
+    btCollisionObject other=scanObject.getOverlappingObject(i);
+    Object userObj=other.userData;
+    if (userObj instanceof EntityRef) {
+      result.add((EntityRef)userObj);
+    }
+  }
+  removeCollider(scanObject);
+  return result;
+}

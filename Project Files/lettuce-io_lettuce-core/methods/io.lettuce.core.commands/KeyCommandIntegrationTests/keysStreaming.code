@@ -1,0 +1,15 @@
+@Test void keysStreaming(){
+  ListStreamingAdapter<String> adapter=new ListStreamingAdapter<>();
+  assertThat(redis.keys("*")).isEqualTo(list());
+  Map<String,String> map=new LinkedHashMap<>();
+  map.put("one","1");
+  map.put("two","2");
+  map.put("three","3");
+  redis.mset(map);
+  Long count=redis.keys(adapter,"???");
+  assertThat(count.intValue()).isEqualTo(2);
+  List<String> keys=adapter.getList();
+  assertThat(keys).hasSize(2);
+  assertThat(keys.contains("one")).isTrue();
+  assertThat(keys.contains("two")).isTrue();
+}

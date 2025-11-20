@@ -1,0 +1,47 @@
+public UnsafeRow getAllBinaryRow(UnsafeRow row) throws UnsupportedEncodingException {
+  UnsafeRow value=new UnsafeRow(this.valuefieldCount);
+  bufferHolder=new BufferHolder(value,0);
+  unsafeRowWriter=new UnsafeRowWriter(bufferHolder,this.valuefieldCount);
+  bufferHolder.reset();
+  ColMeta curColMeta=null;
+  for (  Map.Entry<String,ColMeta> fieldEntry : columToIndx.entrySet()) {
+    curColMeta=fieldEntry.getValue();
+    if (!row.isNullAt(curColMeta.colIndex)) {
+switch (curColMeta.colType) {
+case ColMeta.COL_TYPE_BIT:
+        unsafeRowWriter.write(curColMeta.colIndex,row.getByte(curColMeta.colIndex));
+      break;
+case ColMeta.COL_TYPE_INT:
+case ColMeta.COL_TYPE_LONG:
+case ColMeta.COL_TYPE_INT24:
+    unsafeRowWriter.write(curColMeta.colIndex,BytesTools.int2Bytes(row.getInt(curColMeta.colIndex)));
+  break;
+case ColMeta.COL_TYPE_SHORT:
+unsafeRowWriter.write(curColMeta.colIndex,BytesTools.short2Bytes(row.getShort(curColMeta.colIndex)));
+break;
+case ColMeta.COL_TYPE_LONGLONG:
+unsafeRowWriter.write(curColMeta.colIndex,BytesTools.long2Bytes(row.getLong(curColMeta.colIndex)));
+break;
+case ColMeta.COL_TYPE_FLOAT:
+unsafeRowWriter.write(curColMeta.colIndex,BytesTools.float2Bytes(row.getFloat(curColMeta.colIndex)));
+break;
+case ColMeta.COL_TYPE_DOUBLE:
+unsafeRowWriter.write(curColMeta.colIndex,BytesTools.double2Bytes(row.getDouble(curColMeta.colIndex)));
+break;
+case ColMeta.COL_TYPE_NEWDECIMAL:
+int scale=curColMeta.decimals;
+BigDecimal decimalVal=row.getDecimal(curColMeta.colIndex,scale);
+unsafeRowWriter.write(curColMeta.colIndex,decimalVal.toString().getBytes());
+break;
+default :
+unsafeRowWriter.write(curColMeta.colIndex,row.getBinary(curColMeta.colIndex));
+break;
+}
+}
+ else {
+unsafeRowWriter.setNullAt(curColMeta.colIndex);
+}
+}
+value.setTotalSize(bufferHolder.totalSize());
+return value;
+}

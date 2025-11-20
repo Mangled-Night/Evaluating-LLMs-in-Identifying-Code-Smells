@@ -1,0 +1,24 @@
+@ReceiveEvent public void onLanded(VerticalCollisionEvent event,EntityRef entity,CharacterSoundComponent characterSounds){
+  Vector3f velocity=event.getVelocity();
+  float soundVolumeModifier=(velocity.y * -1 - LANDING_VELOCITY_THRESHOLD) * LANDING_VOLUME_MODIFIER;
+  if (soundVolumeModifier <= 0f) {
+    return;
+  }
+  if (soundVolumeModifier > LANDING_VOLUME_MAX) {
+    soundVolumeModifier=LANDING_VOLUME_MAX;
+  }
+  if (characterSounds.lastSoundTime + MIN_TIME < time.getGameTimeInMs()) {
+    StaticSound sound=null;
+    if (characterSounds.landingSounds.size() > 0) {
+      sound=random.nextItem(characterSounds.landingSounds);
+    }
+ else     if (characterSounds.footstepSounds.size() > 0) {
+      sound=random.nextItem(characterSounds.footstepSounds);
+    }
+    if (sound != null) {
+      entity.send(new PlaySoundEvent(entity,sound,characterSounds.landingVolume * soundVolumeModifier));
+      characterSounds.lastSoundTime=time.getGameTimeInMs();
+      entity.saveComponent(characterSounds);
+    }
+  }
+}

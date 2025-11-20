@@ -1,0 +1,64 @@
+public class IntegrationTestRosterUtil {
+  public static void ensureBothAccountsAreSubscribedToEachOther(  XMPPConnection conOne,  XMPPConnection conTwo,  long timeout) throws TimeoutException, Exception {
+    ensureSubscribedTo(conOne,conTwo,timeout);
+    ensureSubscribedTo(conTwo,conOne,timeout);
+  }
+  public static void ensureSubscribedTo(  final XMPPConnection presenceRequestReceiverConnection,  final XMPPConnection presenceRequestingConnection,  long timeout) throws TimeoutException, Exception {
+    final Roster presenceRequestReceiverRoster=Roster.getInstanceFor(presenceRequestReceiverConnection);
+    final Roster presenceRequestingRoster=Roster.getInstanceFor(presenceRequestingConnection);
+    final EntityFullJid presenceRequestReceiverAddress=presenceRequestReceiverConnection.getUser();
+    final EntityFullJid presenceRequestingAddress=presenceRequestingConnection.getUser();
+    if (presenceRequestReceiverRoster.isSubscribedToMyPresence(presenceRequestingAddress)) {
+      return;
+    }
+    final SubscribeListener subscribeListener=new SubscribeListener(){
+      @Override public SubscribeAnswer processSubscribe(      Jid from,      Presence subscribeRequest){
+        if (from.equals(presenceRequestingConnection.getUser().asBareJid())) {
+          return SubscribeAnswer.Approve;
+        }
+        return SubscribeAnswer.Deny;
+      }
+    }
+;
+    presenceRequestReceiverRoster.addSubscribeListener(subscribeListener);
+    final SimpleResultSyncPoint syncPoint=new SimpleResultSyncPoint();
+    final PresenceEventListener presenceEventListener=new AbstractPresenceEventListener(){
+      @Override public void presenceSubscribed(      BareJid address,      Presence subscribedPresence){
+        if (!address.equals(presenceRequestReceiverAddress.asBareJid())) {
+          return;
+        }
+        syncPoint.signal();
+      }
+    }
+;
+    presenceRequestingRoster.addPresenceEventListener(presenceEventListener);
+    try {
+      presenceRequestingRoster.sendSubscriptionRequest(presenceRequestReceiverAddress.asBareJid());
+      syncPoint.waitForResult(timeout);
+    }
+  finally {
+      presenceRequestReceiverRoster.removeSubscribeListener(subscribeListener);
+      presenceRequestingRoster.removePresenceEventListener(presenceEventListener);
+    }
+  }
+  public static void ensureBothAccountsAreNotInEachOthersRoster(  XMPPConnection conOne,  XMPPConnection conTwo) throws NotLoggedInException, NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    notInRoster(conOne,conTwo);
+    notInRoster(conTwo,conOne);
+  }
+  private static void notInRoster(  XMPPConnection c1,  XMPPConnection c2) throws NotLoggedInException, NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    Roster roster=Roster.getInstanceFor(c1);
+    RosterEntry c2Entry=roster.getEntry(c2.getUser().asBareJid());
+    if (c2Entry == null) {
+      return;
+    }
+    try {
+      roster.removeEntry(c2Entry);
+    }
+ catch (    XMPPErrorException e) {
+      if (e.getStanzaError().getCondition() == StanzaError.Condition.item_not_found) {
+        return;
+      }
+      throw e;
+    }
+  }
+}

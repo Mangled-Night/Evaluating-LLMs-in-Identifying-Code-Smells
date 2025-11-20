@@ -1,0 +1,10 @@
+@Test void reactivePingWithTrace(){
+  ScopedSpan trace=clientTracing.tracer().startScopedSpan("foo");
+  StatefulRedisConnection<String,String> connect=client.connect();
+  connect.reactive().ping().contextWrite(it -> it.put(TraceContext.class,trace.context())).as(StepVerifier::create).expectNext("PONG").verifyComplete();
+  Wait.untilNotEquals(true,spans::isEmpty).waitOrTimeout();
+  trace.finish();
+  List<Span> spans=new ArrayList<>(BraveTracingIntegrationTests.spans);
+  assertThat(spans.get(1).name()).isEqualTo("ping");
+  assertThat(spans.get(2).name()).isEqualTo("foo");
+}

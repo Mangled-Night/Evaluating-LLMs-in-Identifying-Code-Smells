@@ -1,0 +1,18 @@
+public void register(ComponentSystem object){
+  store.add(object);
+  if (object instanceof UpdateSubscriberSystem) {
+    updateSubscribers.add((UpdateSubscriberSystem)object);
+  }
+  if (object instanceof RenderSystem) {
+    renderSubscribers.add((RenderSystem)object);
+  }
+  context.get(EntityManager.class).getEventSystem().registerEventHandler(object);
+  if (initialised) {
+    logger.warn("System " + object.getClass().getName() + " registered post-init.");
+    initialiseSystem(object);
+  }
+}
+public void register(ComponentSystem object,String name){
+  namedLookup.put(name,object);
+  register(object);
+}

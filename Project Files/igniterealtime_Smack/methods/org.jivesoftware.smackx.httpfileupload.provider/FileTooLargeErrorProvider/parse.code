@@ -1,0 +1,32 @@
+@Override public FileTooLargeError parse(XmlPullParser parser,int initialDepth,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+  final String namespace=parser.getNamespace();
+  Long maxFileSize=null;
+  outerloop:   while (true) {
+    XmlPullParser.Event event=parser.next();
+switch (event) {
+case START_ELEMENT:
+      String name=parser.getName();
+switch (name) {
+case "max-file-size":
+      maxFileSize=Long.valueOf(parser.nextText());
+    break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+switch (namespace) {
+case FileTooLargeError.NAMESPACE:
+return new FileTooLargeError(maxFileSize);
+case FileTooLargeError_V0_2.NAMESPACE:
+return new FileTooLargeError_V0_2(maxFileSize);
+default :
+throw new AssertionError();
+}
+}

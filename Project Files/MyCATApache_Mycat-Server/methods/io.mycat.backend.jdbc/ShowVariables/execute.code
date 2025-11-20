@@ -1,0 +1,27 @@
+public static void execute(ServerConnection c,String sql){
+  ByteBuffer buffer=c.allocate();
+  buffer=header.write(buffer,c,true);
+  for (  FieldPacket field : fields) {
+    buffer=field.write(buffer,c,true);
+  }
+  buffer=eof.write(buffer,c,true);
+  byte packetId=eof.packetId;
+  List<String> variableList=parseVariable(sql);
+  for (  String key : variableList) {
+    String value=variables.get(key);
+    if (value != null) {
+      RowDataPacket row=getRow(key,value,c.getCharset());
+      row.packetId=++packetId;
+      buffer=row.write(buffer,c,true);
+    }
+  }
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}
+public static void execute(ServerConnection sc,String orgin,BackendConnection jdbcConnection){
+  execute(sc,orgin);
+  NonBlockingSession session=sc.getSession2();
+  session.releaseConnectionIfSafe(jdbcConnection,LOGGER.isDebugEnabled(),false);
+}

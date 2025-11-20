@@ -1,0 +1,22 @@
+@Test void adapter() throws Exception {
+  final BlockingQueue<Long> localCounts=LettuceFactories.newBlockingQueue();
+  RedisPubSubAdapter<String,String> adapter=new RedisPubSubAdapter<String,String>(){
+    @Override public void subscribed(    String channel,    long count){
+      super.subscribed(channel,count);
+      localCounts.add(count);
+    }
+    @Override public void unsubscribed(    String channel,    long count){
+      super.unsubscribed(channel,count);
+      localCounts.add(count);
+    }
+  }
+;
+  pubsub.getStatefulConnection().addListener(adapter);
+  StepVerifier.create(pubsub.subscribe(channel)).verifyComplete();
+  StepVerifier.create(pubsub.psubscribe(pattern)).verifyComplete();
+  assertThat((long)localCounts.take()).isEqualTo(1L);
+  StepVerifier.create(pubsub2.publish(channel,message)).expectNextCount(1).verifyComplete();
+  StepVerifier.create(pubsub.punsubscribe(pattern)).verifyComplete();
+  StepVerifier.create(pubsub.unsubscribe(channel)).verifyComplete();
+  assertThat((long)localCounts.take()).isEqualTo(0L);
+}

@@ -1,0 +1,27 @@
+private void loadPreviewImages(final GameInfo gameInfo){
+  List<Texture> textures=new ArrayList<>();
+  if (gameInfo != null && gameInfo.getSavePath() != null) {
+    final List<BufferedImage> bufferedImages=GamePreviewImageProvider.getAllPreviewImages(gameInfo.getSavePath());
+    textures=bufferedImages.stream().map(buffImage -> {
+      TextureData textureData;
+      try {
+        textureData=AWTTextureFormat.convertToTextureData(buffImage,Texture.FilterMode.LINEAR);
+      }
+ catch (      IOException e) {
+        logger.error("Converting preview image to texture data failed",e);
+        return null;
+      }
+      return Assets.generateAsset(new ResourceUrn(PREVIEW_IMAGE_URI_PATTERN + bufferedImages.indexOf(buffImage)),textureData,Texture.class);
+    }
+).filter(Objects::nonNull).collect(Collectors.toList());
+  }
+  if (textures.isEmpty()) {
+    textures.add(Assets.getTexture(DEFAULT_PREVIEW_IMAGE_URI).get());
+  }
+  previewSlideshow.clean();
+  textures.forEach(tex -> {
+    UIImage image=new UIImage(null,tex,true);
+    previewSlideshow.addImage(image);
+  }
+);
+}

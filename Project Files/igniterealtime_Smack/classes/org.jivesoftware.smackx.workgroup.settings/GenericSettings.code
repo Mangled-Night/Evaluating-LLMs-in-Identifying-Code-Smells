@@ -1,0 +1,57 @@
+public class GenericSettings extends IQ {
+  private Map<String,String> map=new HashMap<>();
+  private String query;
+  public String getQuery(){
+    return query;
+  }
+  public void setQuery(  String query){
+    this.query=query;
+  }
+  public Map<String,String> getMap(){
+    return map;
+  }
+  public void setMap(  Map<String,String> map){
+    this.map=map;
+  }
+  /** 
+ * Element name of the stanza extension.
+ */
+  public static final String ELEMENT_NAME="generic-metadata";
+  /** 
+ * Namespace of the stanza extension.
+ */
+  public static final String NAMESPACE="http://jivesoftware.com/protocol/workgroup";
+  public GenericSettings(){
+    super(ELEMENT_NAME,NAMESPACE);
+  }
+  @Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(  IQChildElementXmlStringBuilder buf){
+    buf.append('>');
+    if (StringUtils.isNotEmpty(getQuery())) {
+      buf.append("<query>" + getQuery() + "</query>");
+    }
+    return buf;
+  }
+  /** 
+ * Stanza extension provider for SoundSetting Packets.
+ */
+public static class InternalProvider extends IqProvider<GenericSettings> {
+    @Override public GenericSettings parse(    XmlPullParser parser,    int initialDepth,    IqData iqData,    XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+      GenericSettings setting=new GenericSettings();
+      boolean done=false;
+      while (!done) {
+        XmlPullParser.Event eventType=parser.next();
+        if (eventType == XmlPullParser.Event.START_ELEMENT && "entry".equals(parser.getName())) {
+          eventType=parser.next();
+          String name=parser.nextText();
+          eventType=parser.next();
+          String value=parser.nextText();
+          setting.getMap().put(name,value);
+        }
+ else         if (eventType == XmlPullParser.Event.END_ELEMENT && ELEMENT_NAME.equals(parser.getName())) {
+          done=true;
+        }
+      }
+      return setting;
+    }
+  }
+}

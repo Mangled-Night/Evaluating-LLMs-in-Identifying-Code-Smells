@@ -1,0 +1,23 @@
+/** 
+ * Add a new recipient device to the message.
+ * @param contactsDevice device of the recipient
+ * @throws NoIdentityKeyException if we have no identityKey of that device. Can be fixed by fetching andprocessing the devices bundle.
+ * @throws CorruptedOmemoKeyException if the identityKey of that device is corrupted.
+ * @throws UndecidedOmemoIdentityException if the user hasn't yet decided whether to trust that device or not.
+ * @throws UntrustedOmemoIdentityException if the user has decided not to trust that device.
+ * @throws IOException if an I/O error occurred.
+ */
+public void addRecipient(OmemoDevice contactsDevice) throws NoIdentityKeyException, CorruptedOmemoKeyException, UndecidedOmemoIdentityException, UntrustedOmemoIdentityException, IOException {
+  OmemoFingerprint fingerprint;
+  fingerprint=OmemoService.getInstance().getOmemoStoreBackend().getFingerprint(userDevice,contactsDevice);
+switch (trustCallback.getTrust(contactsDevice,fingerprint)) {
+case undecided:
+    throw new UndecidedOmemoIdentityException(contactsDevice);
+case trusted:
+  CiphertextTuple encryptedKey=ratchet.doubleRatchetEncrypt(contactsDevice,messageKey);
+keys.add(new OmemoKeyElement(encryptedKey.getCiphertext(),contactsDevice.getDeviceId(),encryptedKey.isPreKeyMessage()));
+break;
+case untrusted:
+throw new UntrustedOmemoIdentityException(contactsDevice,fingerprint);
+}
+}

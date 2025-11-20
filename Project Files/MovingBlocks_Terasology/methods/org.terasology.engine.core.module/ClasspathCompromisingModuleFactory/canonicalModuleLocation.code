@@ -1,0 +1,17 @@
+/** 
+ * Find the location of the module containing this URL. <p> Accounts for loading modules from development workspaces that may have their build directories on the classpath, as is the case when running tests.
+ * @see #setDefaultCodeSubpath
+ * @see #setDefaultLibsSubpath
+ * @param metadataName the expected name of the metadata file, as it would appear in {@link #getModuleMetadataLoaderMap()}
+ * @param metadataUrl a URL of a metadata file, such as might be returned from {@link ClassLoader#getSystemResource}
+ * @return the module's base directory, or a jar file if it doesn't look like a local build
+ */
+Path canonicalModuleLocation(String metadataName,URL metadataUrl){
+  checkArgument(getModuleMetadataLoaderMap().containsKey(metadataName),"metadataName `%s` is not in loader map",metadataName);
+  if (metadataUrl.getProtocol().equals("jar")) {
+    return modulePathFromMetadataJarUrl(metadataUrl);
+  }
+ else {
+    return modulePathFromMetadataFileUrl(metadataName,metadataUrl);
+  }
+}

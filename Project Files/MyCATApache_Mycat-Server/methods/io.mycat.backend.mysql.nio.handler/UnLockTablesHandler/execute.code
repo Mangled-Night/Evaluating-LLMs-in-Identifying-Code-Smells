@@ -1,0 +1,28 @@
+public void execute(){
+  Map<RouteResultsetNode,BackendConnection> lockedConns=session.getTargetMap();
+  Set<RouteResultsetNode> dnSet=lockedConns.keySet();
+  this.reset(lockedConns.size());
+  if (lockedConns.size() == 0) {
+    LOGGER.warn("find no locked backend connection!" + session.getSource());
+    OkPacket ok=new OkPacket();
+    ok.packetId=++packetId;
+    ok.packetLength=7;
+    ok.serverStatus=session.getSource().isAutocommit() ? 2 : 1;
+    ok.write(session.getSource());
+    return;
+  }
+  for (  RouteResultsetNode dataNode : dnSet) {
+    RouteResultsetNode node=new RouteResultsetNode(dataNode.getName(),ServerParse.UNLOCK,srcStatement);
+    BackendConnection conn=lockedConns.get(dataNode);
+    if (clearIfSessionClosed(session)) {
+      return;
+    }
+    conn.setResponseHandler(this);
+    try {
+      conn.execute(node,session.getSource(),autocommit);
+    }
+ catch (    Exception e) {
+      connectionError(e,conn);
+    }
+  }
+}

@@ -1,0 +1,16 @@
+/** 
+ * Retrieve a set of PoolKey's for all pooled connections that are within the pool but not within the  {@link Partitions}.
+ * @return Set of {@link ConnectionKey}s
+ */
+private Set<ConnectionKey> getStaleConnectionKeys(){
+  Map<ConnectionKey,StatefulRedisConnection<K,V>> map=new ConcurrentHashMap<>();
+  connectionProvider.forEach(map::put);
+  Set<ConnectionKey> stale=new HashSet<>();
+  for (  ConnectionKey connectionKey : map.keySet()) {
+    if (connectionKey.host != null && findNodeByHostAndPort(knownNodes,connectionKey.host,connectionKey.port) != null) {
+      continue;
+    }
+    stale.add(connectionKey);
+  }
+  return stale;
+}

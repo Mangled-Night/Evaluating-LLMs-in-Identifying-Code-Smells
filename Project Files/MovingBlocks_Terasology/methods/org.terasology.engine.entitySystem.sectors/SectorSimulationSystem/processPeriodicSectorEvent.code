@@ -1,0 +1,17 @@
+/** 
+ * Retrieve the periodic event sent to each sector-scope entity, and send the appropriate event(s) depending on the status of the entity's watched chunks. Also send the correct delta, and update the  {@link SectorSimulationComponent#lastSimulationTime}.
+ * @param event the periodic action event sent at intervals based on the entity's max delta values
+ * @param entity the sector-scope entity the event was sent to
+ */
+@ReceiveEvent(components=SectorSimulationComponent.class) public void processPeriodicSectorEvent(PeriodicActionTriggeredEvent event,EntityRef entity){
+  if (event.getActionId().equals(SECTOR_SIMULATION_ACTION)) {
+    long delta=simulationDelta(entity);
+    boolean anyChunksReady=SectorUtil.getWatchedChunks(entity).stream().anyMatch(chunkProvider::isChunkReady);
+    if (anyChunksReady) {
+      sendLoadedSectorUpdateEvent(entity,delta);
+    }
+ else {
+      entity.send(new SectorSimulationEvent(delta));
+    }
+  }
+}

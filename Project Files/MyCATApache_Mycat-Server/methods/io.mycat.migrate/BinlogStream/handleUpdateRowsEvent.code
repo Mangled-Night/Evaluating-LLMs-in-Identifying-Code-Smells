@@ -1,0 +1,54 @@
+private void handleUpdateRowsEvent(Event event){
+  UpdateRowsEventData eventData=event.getData();
+  TableMapEventData tableMapEvent=tablesById.get(eventData.getTableId());
+  if (isShouldBeFilter(tableMapEvent.getDatabase(),tableMapEvent.getTable()))   return;
+  Map<Integer,Map<String,Object>> xxx=tablesColumnMap.get(tableMapEvent.getDatabase() + "." + tableMapEvent.getTable());
+  BitSet inculudeColumn=eventData.getIncludedColumns();
+  StringBuilder sba=new StringBuilder("update ");
+  sba.append(tableMapEvent.getTable());
+  sba.append(" set ");
+  int size=inculudeColumn.length();
+  List<Map.Entry<Serializable[],Serializable[]>> rows=eventData.getRows();
+  for (  Map.Entry<Serializable[],Serializable[]> row : rows) {
+    StringBuilder sb=new StringBuilder(sba);
+    int slot=-1;
+    Map.Entry<Serializable[],Serializable[]> rowMap=row;
+    Serializable[] value=rowMap.getValue();
+    Serializable[] key=rowMap.getKey();
+    for (int i=0; i < size; i++) {
+      int column=inculudeColumn.nextSetBit(i);
+      Map<String,Object> coumnMap=xxx.get(column + 1);
+      sb.append(coumnMap.get("COLUMN_NAME"));
+      sb.append("=");
+      String dataType=(String)coumnMap.get("DATA_TYPE");
+      sb.append(convertBinlogValue(value[i],dataType));
+      if (i != size - 1) {
+        sb.append(",");
+      }
+    }
+    sb.append(" where ");
+    BitSet includedColumnsBeforeUpdate=eventData.getIncludedColumnsBeforeUpdate();
+    for (int i=0; i < size; i++) {
+      int column=includedColumnsBeforeUpdate.nextSetBit(i);
+      Map<String,Object> coumnMap=xxx.get(column + 1);
+      sb.append(coumnMap.get("COLUMN_NAME"));
+      Serializable value1=key[i];
+      if (value1 == null) {
+        sb.append(" is null");
+      }
+ else {
+        sb.append("=");
+        String dataType=(String)coumnMap.get("DATA_TYPE");
+        sb.append(convertBinlogValue(value1,dataType));
+      }
+      String columnName=(String)coumnMap.get("COLUMN_NAME");
+      if ("_slot".equalsIgnoreCase(columnName)) {
+        slot=value1 instanceof BigInteger ? ((BigInteger)value1).intValue() : ((Integer)value1);
+      }
+      if (i != size - 1) {
+        sb.append(" and ");
+      }
+    }
+    checkIfExeSql(tableMapEvent,sb,slot);
+  }
+}

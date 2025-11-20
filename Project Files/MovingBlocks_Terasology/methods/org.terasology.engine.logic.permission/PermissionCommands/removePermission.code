@@ -1,0 +1,21 @@
+@Command(shortDescription="Removes specified permission from player",helpText="Removes specified permission from player",runOnServer=true,requiredPermission=PermissionManager.USER_MANAGEMENT_PERMISSION) public String removePermission(@CommandParam(value="player",suggester=UsernameSuggester.class) String player,@CommandParam("permission") String permission,@Sender EntityRef requester){
+  boolean permissionGiven=false;
+  ClientComponent requesterClientComponent=requester.getComponent(ClientComponent.class);
+  EntityRef requesterClientInfo=requesterClientComponent.clientInfo;
+  if (!permissionManager.hasPermission(requesterClientInfo,permission)) {
+    return String.format("You can't remove the permission %s because you don't have it yourself",permission);
+  }
+  for (  EntityRef client : entityManager.getEntitiesWith(ClientComponent.class)) {
+    ClientComponent clientComponent=client.getComponent(ClientComponent.class);
+    if (clientHasName(clientComponent,player)) {
+      permissionManager.removePermission(clientComponent.clientInfo,permission);
+      permissionGiven=true;
+    }
+  }
+  if (permissionGiven) {
+    return "Permission " + permission + " removed from player "+ player;
+  }
+ else {
+    return "Unable to find player " + player;
+  }
+}

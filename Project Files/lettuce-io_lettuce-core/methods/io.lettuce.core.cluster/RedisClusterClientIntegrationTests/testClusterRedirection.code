@@ -1,0 +1,33 @@
+@Test @SuppressWarnings({"rawtypes"}) void testClusterRedirection(){
+  TestCommandListener listener=new TestCommandListener();
+  clusterClient.getPartitions();
+  try {
+    clusterClient.addListener(listener);
+    RedisAdvancedClusterAsyncCommands<String,String> connection=clusterClient.connect().async();
+    Partitions partitions=clusterClient.getPartitions();
+    for (    RedisClusterNode partition : partitions) {
+      partition.setSlots(Collections.emptyList());
+      if (partition.getFlags().contains(RedisClusterNode.NodeFlag.MYSELF)) {
+        partition.getFlags().add(RedisClusterNode.NodeFlag.UPSTREAM);
+        partition.setSlots(IntStream.range(0,SlotHash.SLOT_COUNT).boxed().collect(Collectors.toList()));
+      }
+    }
+    partitions.updateCache();
+    RedisFuture<String> setB=connection.set(ClusterTestSettings.KEY_B,value);
+    assertThat(setB.toCompletableFuture()).isInstanceOf(AsyncCommand.class);
+    TestFutures.awaitOrTimeout(setB);
+    assertThat(setB.getError()).isNull();
+    assertThat(TestFutures.getOrTimeout(setB)).isEqualTo("OK");
+    RedisFuture<String> setA=connection.set(ClusterTestSettings.KEY_A,value);
+    assertThat((CompletionStage)setA).isInstanceOf(AsyncCommand.class);
+    TestFutures.awaitOrTimeout(setA);
+    assertThat(setA.getError()).isNull();
+    assertThat(TestFutures.getOrTimeout(setA)).isEqualTo("OK");
+    connection.getStatefulConnection().close();
+  }
+  finally {
+    clusterClient.removeListener(listener);
+  }
+  assertThat(listener.started).hasSizeGreaterThanOrEqualTo(2);
+  assertThat(listener.succeeded).hasSizeGreaterThanOrEqualTo(2);
+}

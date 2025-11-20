@@ -1,0 +1,23 @@
+@ReceiveEvent(components=CharacterComponent.class) public void onUseItemButton(UseItemButton event,EntityRef entity,CharacterHeldItemComponent characterHeldItemComponent){
+  if (!event.isDown()) {
+    return;
+  }
+  EntityRef selectedItemEntity=characterHeldItemComponent.selectedItem;
+  if (!selectedItemEntity.exists()) {
+    return;
+  }
+  boolean requestIsValid;
+  if (networkSystem.getMode().isAuthority()) {
+    requestIsValid=true;
+  }
+ else {
+    OnItemUseEvent onItemUseEvent=new OnItemUseEvent();
+    entity.send(onItemUseEvent);
+    requestIsValid=!onItemUseEvent.isConsumed();
+  }
+  if (requestIsValid) {
+    localPlayer.activateOwnedEntityAsClient(selectedItemEntity);
+    entity.saveComponent(characterHeldItemComponent);
+    event.consume();
+  }
+}

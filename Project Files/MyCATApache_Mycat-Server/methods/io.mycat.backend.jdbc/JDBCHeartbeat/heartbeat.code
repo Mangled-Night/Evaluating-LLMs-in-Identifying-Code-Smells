@@ -1,0 +1,29 @@
+@Override public void heartbeat(){
+  if (isStop.get()) {
+    return;
+  }
+  lastSendTime=System.currentTimeMillis();
+  lock.lock();
+  try {
+    isChecking.set(true);
+    try (Connection c=source.getConnection()){
+      try (Statement s=c.createStatement()){
+        s.execute(heartbeatSQL);
+      }
+       c.close();
+    }
+     setResult(OK_STATUS);
+    if (logger.isDebugEnabled()) {
+      logger.debug("JDBCHeartBeat con query sql: " + heartbeatSQL);
+    }
+  }
+ catch (  Exception ex) {
+    logger.error("JDBCHeartBeat error",ex);
+    setResult(ERROR_STATUS);
+  }
+ finally {
+    lock.unlock();
+    this.isChecking.set(false);
+    lastReciveTime=System.currentTimeMillis();
+  }
+}

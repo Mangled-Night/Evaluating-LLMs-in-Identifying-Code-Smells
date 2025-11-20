@@ -1,0 +1,14 @@
+@Override public <T>Optional<Class<? extends T>> findSubTypeOf(String subTypeIdentifier,Class<T> clazz){
+  if (getModuleProviding(clazz) == null) {
+    return typeRegistry.load(subTypeIdentifier).filter(clazz::isAssignableFrom).map(sub -> (Class<? extends T>)sub);
+  }
+  Iterator<Class<? extends T>> possibilities=typeRegistry.getSubtypesOf(clazz).stream().filter(subclass -> doesSubclassMatch(subclass,subTypeIdentifier)).iterator();
+  if (possibilities.hasNext()) {
+    Class<? extends T> possibility=possibilities.next();
+    if (possibilities.hasNext()) {
+      return Optional.empty();
+    }
+    return Optional.of(possibility);
+  }
+  return Optional.empty();
+}

@@ -1,0 +1,43 @@
+/** 
+ * Notify the BOSHConnection about connection state changes. Process the connection listeners and try to login if the connection was formerly authenticated and is now reconnected.
+ */
+@Override public void connectionEvent(BOSHClientConnEvent connEvent){
+  try {
+    if (connEvent.isConnected()) {
+      connected=true;
+      if (isFirstInitialization) {
+        isFirstInitialization=false;
+      }
+ else {
+        if (wasAuthenticated) {
+          try {
+            login();
+          }
+ catch (          Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+      }
+    }
+ else {
+      if (connEvent.isError()) {
+        Throwable cause=connEvent.getCause();
+        Exception e;
+        if (cause instanceof Exception) {
+          e=(Exception)cause;
+        }
+ else {
+          e=new Exception(cause);
+        }
+        notifyConnectionError(e);
+      }
+      connected=false;
+    }
+  }
+  finally {
+    notified=true;
+synchronized (XMPPBOSHConnection.this) {
+      XMPPBOSHConnection.this.notifyAll();
+    }
+  }
+}

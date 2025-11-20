@@ -1,0 +1,16 @@
+public void addJob(SQLJob newJob,boolean parallExecute){
+  SystemConfig system=MycatServer.getInstance().getConfig().getSystem();
+  parallExecute=parallExecute && (system.getParallExecute() == 1);
+  if (parallExecute) {
+    runJob(newJob);
+  }
+ else {
+    waitingJobs.offer(newJob);
+    if (runningJobs.isEmpty()) {
+      SQLJob job=waitingJobs.poll();
+      if (job != null) {
+        runJob(job);
+      }
+    }
+  }
+}

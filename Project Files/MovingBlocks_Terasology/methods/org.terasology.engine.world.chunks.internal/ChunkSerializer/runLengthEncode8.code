@@ -1,0 +1,28 @@
+private static EntityData.RunLengthEncoding8 runLengthEncode8(TeraArray array){
+  EntityData.RunLengthEncoding8.Builder builder=EntityData.RunLengthEncoding8.newBuilder();
+  TByteList values=new TByteArrayList(16384);
+  byte lastItem=(byte)array.get(0,0,0);
+  int counter=0;
+  for (int y=0; y < array.getSizeY(); ++y) {
+    for (int z=0; z < array.getSizeZ(); ++z) {
+      for (int x=0; x < array.getSizeX(); ++x) {
+        byte item=(byte)array.get(x,y,z);
+        if (lastItem != item) {
+          builder.addRunLengths(counter);
+          values.add(lastItem);
+          lastItem=item;
+          counter=1;
+        }
+ else {
+          counter++;
+        }
+      }
+    }
+  }
+  if (lastItem != 0) {
+    builder.addRunLengths(counter);
+    values.add(lastItem);
+  }
+  builder.setValues(ByteString.copyFrom(values.toArray()));
+  return builder.build();
+}

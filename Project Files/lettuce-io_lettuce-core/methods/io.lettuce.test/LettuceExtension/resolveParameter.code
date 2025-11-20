@@ -1,0 +1,14 @@
+@Override public Object resolveParameter(ParameterContext parameterContext,ExtensionContext extensionContext) throws ParameterResolutionException {
+  ExtensionContext.Store store=getStore(extensionContext);
+  Parameter parameter=parameterContext.getParameter();
+  Type parameterizedType=parameter.getParameterizedType();
+  if (parameterContext.isAnnotated(New.class)) {
+    Object instance=doGetInstance(parameterizedType);
+    if (instance instanceof Closeable || instance instanceof AutoCloseable) {
+      CloseAfterTest closeables=store.getOrComputeIfAbsent(CloseAfterTest.class,it -> new CloseAfterTest(),CloseAfterTest.class);
+      closeables.add(closeables);
+    }
+    return instance;
+  }
+  return store.getOrComputeIfAbsent(parameter.getType(),it -> doGetInstance(parameterizedType));
+}

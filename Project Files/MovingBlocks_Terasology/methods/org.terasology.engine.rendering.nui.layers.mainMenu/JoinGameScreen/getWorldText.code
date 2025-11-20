@@ -1,0 +1,17 @@
+private String getWorldText(Future<ServerInfoMessage> info){
+  try {
+    List<String> codedWorldInfo=new ArrayList<>();
+    ServerInfoMessage serverInfoMessage=info.get();
+    if (serverInfoMessage == null) {
+      return FontColor.getColored(translationSystem.translate("${engine:menu#connection-failed}"),Color.RED);
+    }
+    for (    WorldInfo wi : serverInfoMessage.getWorldInfoList()) {
+      float timeInDays=wi.getTime() / (float)WorldTime.DAY_LENGTH;
+      codedWorldInfo.add(String.format("%s (%.2f days)",wi.getTitle(),timeInDays));
+    }
+    return Joiner.on('\n').join(codedWorldInfo);
+  }
+ catch (  ExecutionException|InterruptedException e) {
+    return FontColor.getColored(translationSystem.translate("${engine:menu#connection-failed}"),Color.RED);
+  }
+}

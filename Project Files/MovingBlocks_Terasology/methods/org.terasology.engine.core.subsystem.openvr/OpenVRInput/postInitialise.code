@@ -1,0 +1,24 @@
+/** 
+ * Set up listeners and input devices.
+ * @param rootContext
+ */
+@Override public void postInitialise(Context rootContext){
+  config=context.get(Config.class);
+  if (!config.getRendering().isVrSupport()) {
+    return;
+  }
+  this.context=rootContext;
+  InputSystem inputSystem=context.get(InputSystem.class);
+  if (inputSystem == null) {
+    inputSystem=new InputSystem();
+    inputSystem.setMouseDevice(new LwjglMouseDevice(config.getRendering()));
+    inputSystem.setKeyboardDevice(new LwjglKeyboardDevice());
+    context.put(InputSystem.class,inputSystem);
+    long window=GLFW.glfwGetCurrentContext();
+    ((LwjglKeyboardDevice)inputSystem.getKeyboard()).registerToLwjglWindow(window);
+    ((LwjglMouseDevice)inputSystem.getMouseDevice()).registerToLwjglWindow(window);
+  }
+  controllerDevice=new OpenVRControllers();
+  vrProvider.getState().addControllerListener(controllerDevice);
+  inputSystem.setControllerDevice(controllerDevice);
+}

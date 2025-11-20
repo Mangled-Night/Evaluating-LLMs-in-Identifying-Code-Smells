@@ -1,0 +1,31 @@
+/** 
+ * User0 is connected from 2 resources. User0 is available in both resources but with different priority presence values. User1 sends a message to the bare JID of User0. Check that the resource with highest priority will get the messages.
+ * @throws Exception if an error occurs.
+ */
+public void testHighestPriority() throws Exception {
+  ConnectionConfiguration connectionConfiguration=new ConnectionConfiguration(getHost(),getPort(),getXMPPServiceDomain());
+  XMPPTCPConnection conn3=new XMPPConnection(connectionConfiguration);
+  conn3.connect();
+  conn3.login(getUsername(0),getPassword(0),"Home");
+  Presence presence=new Presence(Presence.Type.available);
+  presence.setPriority(10);
+  conn3.sendStanza(presence);
+  presence=new Presence(Presence.Type.available);
+  presence.setPriority(5);
+  getConnection(0).sendStanza(presence);
+  Thread.sleep(200);
+  StanzaCollector collector=getConnection(0).createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+  StanzaCollector coll3=conn3.createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+  Chat chat=getConnection(1).getChatManager().createChat(getBareJID(0),null);
+  chat.sendMessage("Test 1");
+  chat.sendMessage("Test 2");
+  Message message=(Message)collector.nextResult(2000);
+  assertNull("Resource with lowest priority got the message",message);
+  message=(Message)coll3.nextResult(2000);
+  assertNotNull(message);
+  assertEquals("Test 1",message.getBody());
+  message=(Message)coll3.nextResult(1000);
+  assertNotNull(message);
+  assertEquals("Test 2",message.getBody());
+  conn3.disconnect();
+}

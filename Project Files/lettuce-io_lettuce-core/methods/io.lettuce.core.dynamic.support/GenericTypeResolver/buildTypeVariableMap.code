@@ -1,0 +1,23 @@
+@SuppressWarnings("rawtypes") private static void buildTypeVariableMap(ResolvableType type,Map<TypeVariable,Type> typeVariableMap){
+  if (type != ResolvableType.NONE) {
+    if (type.getType() instanceof ParameterizedType) {
+      TypeVariable<?>[] variables=type.resolve().getTypeParameters();
+      for (int i=0; i < variables.length; i++) {
+        ResolvableType generic=type.getGeneric(i);
+        while (generic.getType() instanceof TypeVariable<?>) {
+          generic=generic.resolveType();
+        }
+        if (generic != ResolvableType.NONE) {
+          typeVariableMap.put(variables[i],generic.getType());
+        }
+      }
+    }
+    buildTypeVariableMap(type.getSuperType(),typeVariableMap);
+    for (    ResolvableType interfaceType : type.getInterfaces()) {
+      buildTypeVariableMap(interfaceType,typeVariableMap);
+    }
+    if (type.resolve().isMemberClass()) {
+      buildTypeVariableMap(ResolvableType.forClass(type.resolve().getEnclosingClass()),typeVariableMap);
+    }
+  }
+}

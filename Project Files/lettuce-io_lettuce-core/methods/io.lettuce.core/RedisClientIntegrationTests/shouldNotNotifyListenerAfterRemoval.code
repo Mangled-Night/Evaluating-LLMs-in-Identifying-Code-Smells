@@ -1,0 +1,16 @@
+@Test void shouldNotNotifyListenerAfterRemoval(){
+  final TestConnectionListener removedListener=new TestConnectionListener();
+  final TestConnectionListener retainedListener=new TestConnectionListener();
+  RedisClient client=RedisClient.create(clientResources,RedisURI.Builder.redis(host,port).build());
+  client.addListener(removedListener);
+  client.addListener(retainedListener);
+  client.removeListener(removedListener);
+  client.connect().close();
+  Wait.untilTrue(() -> retainedListener.onConnected != null).waitOrTimeout();
+  assertThat(retainedListener.onConnected).isNotNull();
+  assertThat(removedListener.onConnected).isNull();
+  assertThat(removedListener.onConnectedSocketAddress).isNull();
+  assertThat(removedListener.onDisconnected).isNull();
+  assertThat(removedListener.onException).isNull();
+  FastShutdown.shutdown(client);
+}

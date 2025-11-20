@@ -1,0 +1,21 @@
+@Test void objectCreationFinishesAfterShutdown(){
+  CompletableFuture<String> progress=new CompletableFuture<>();
+  when(factory.create()).thenReturn(progress);
+  when(factory.destroy(any())).thenReturn(CompletableFuture.completedFuture(null));
+  BoundedAsyncPool<String> pool=new BoundedAsyncPool<>(factory,BoundedPoolConfig.create());
+  CompletableFuture<String> acquire=pool.acquire();
+  assertThat(pool.getIdle()).isZero();
+  assertThat(pool.getObjectCount()).isZero();
+  assertThat(pool.getCreationInProgress()).isEqualTo(1);
+  pool.close();
+  assertThat(acquire.isDone()).isFalse();
+  assertThat(pool.getIdle()).isZero();
+  assertThat(pool.getObjectCount()).isZero();
+  assertThat(pool.getCreationInProgress()).isEqualTo(1);
+  verify(factory,never()).destroy("foo");
+  progress.complete("foo");
+  assertThat(pool.getIdle()).isZero();
+  assertThat(pool.getObjectCount()).isZero();
+  assertThat(pool.getCreationInProgress()).isZero();
+  verify(factory).destroy("foo");
+}

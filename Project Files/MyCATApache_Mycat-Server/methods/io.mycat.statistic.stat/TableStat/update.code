@@ -1,0 +1,24 @@
+public void update(int sqlType,String sql,long startTime,long endTime,List<String> relaTables){
+switch (sqlType) {
+case ServerParse.SELECT:
+    this.rCount.incrementAndGet();
+  break;
+case ServerParse.UPDATE:
+case ServerParse.INSERT:
+case ServerParse.DELETE:
+case ServerParse.REPLACE:
+this.wCount.incrementAndGet();
+break;
+}
+for (String table : relaTables) {
+RelaTable relaTable=this.relaTableMap.get(table);
+if (relaTable == null) {
+relaTable=new RelaTable(table,1);
+}
+ else {
+relaTable.incCount();
+}
+this.relaTableMap.put(table,relaTable);
+}
+this.lastExecuteTime=endTime;
+}

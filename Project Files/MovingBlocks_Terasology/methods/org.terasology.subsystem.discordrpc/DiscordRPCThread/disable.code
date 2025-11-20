@@ -1,0 +1,18 @@
+public synchronized void disable(){
+  disable(false);
+}
+public synchronized void disable(boolean keepConnectionAlive){
+  if (!enabled) {
+    return;
+  }
+  enabled=false;
+  reset(!keepConnectionAlive);
+  if (!keepConnectionAlive) {
+    autoReconnect=false;
+  }
+  if (waiting && thread.isAlive()) {
+synchronized (thread) {
+      thread.notify();
+    }
+  }
+}

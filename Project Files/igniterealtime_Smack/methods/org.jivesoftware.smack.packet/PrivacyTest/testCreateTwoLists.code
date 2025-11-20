@@ -1,0 +1,63 @@
+/** 
+ * Check when a client set more than one list.
+ */
+public void testCreateTwoLists(){
+  try {
+    String listName1="1testCreateTwoLists";
+    String listName2="2testCreateTwoLists";
+    String groupName="testCreateTwoListsGroup";
+    PrivacyListManager privacyManager=PrivacyListManager.getInstanceFor(getConnection(0));
+    PrivacyClient client=new PrivacyClient(privacyManager);
+    privacyManager.addListener(client);
+    ArrayList<PrivacyItem> items=new ArrayList<PrivacyItem>();
+    PrivacyItem item=new PrivacyItem(PrivacyItem.Type.jid.name(),true,1);
+    item.setValue(getConnection(0).getUser());
+    items.add(item);
+    privacyManager.createPrivacyList(listName1,items);
+    Thread.sleep(500);
+    ArrayList<PrivacyItem> itemsList2=new ArrayList<PrivacyItem>();
+    item=new PrivacyItem(PrivacyItem.Type.group.name(),false,2);
+    item.setValue(groupName);
+    item.setFilterMessage(true);
+    itemsList2.add(item);
+    privacyManager.createPrivacyList(listName2,itemsList2);
+    Thread.sleep(500);
+    PrivacyList[] privacyLists=privacyManager.getPrivacyLists();
+    PrivacyList receivedList1=null;
+    PrivacyList receivedList2=null;
+    for (    PrivacyList privacyList : privacyLists) {
+      if (listName1.equals(privacyList.toString())) {
+        receivedList1=privacyList;
+      }
+      if (listName2.equals(privacyList.toString())) {
+        receivedList2=privacyList;
+      }
+    }
+    PrivacyItem receivedItem;
+    assertNotNull(receivedList1);
+    assertEquals(1,receivedList1.getItems().size());
+    receivedItem=receivedList1.getItems().get(0);
+    assertEquals(1,receivedItem.getOrder());
+    assertEquals(PrivacyItem.Type.jid,receivedItem.getType());
+    assertEquals(true,receivedItem.isAllow());
+    assertEquals(getConnection(0).getUser(),receivedItem.getValue());
+    assertNotNull(receivedList2);
+    assertEquals(1,receivedList2.getItems().size());
+    receivedItem=receivedList2.getItems().get(0);
+    assertEquals(2,receivedItem.getOrder());
+    assertEquals(PrivacyItem.Type.group,receivedItem.getType());
+    assertEquals(groupName,receivedItem.getValue());
+    assertEquals(false,receivedItem.isAllow());
+    assertEquals(groupName,receivedItem.getValue());
+    assertEquals(false,receivedItem.isFilterEverything());
+    assertEquals(true,receivedItem.isFilterMessage());
+    assertEquals(false,receivedItem.isFilterPresence_in());
+    assertEquals(false,receivedItem.isFilterPresence_out());
+    privacyManager.deletePrivacyList(listName1);
+    privacyManager.deletePrivacyList(listName2);
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

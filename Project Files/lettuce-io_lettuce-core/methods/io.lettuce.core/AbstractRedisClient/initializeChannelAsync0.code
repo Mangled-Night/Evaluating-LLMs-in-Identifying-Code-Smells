@@ -1,0 +1,41 @@
+private void initializeChannelAsync0(ConnectionBuilder connectionBuilder,CompletableFuture<Channel> channelReadyFuture,SocketAddress redisAddress){
+  logger.debug("Connecting to Redis at {}",redisAddress);
+  Bootstrap redisBootstrap=connectionBuilder.bootstrap();
+  ChannelInitializer<Channel> initializer=connectionBuilder.build(redisAddress);
+  redisBootstrap.handler(initializer);
+  clientResources.nettyCustomizer().afterBootstrapInitialized(redisBootstrap);
+  ChannelFuture connectFuture=redisBootstrap.connect(redisAddress);
+  channelReadyFuture.whenComplete((c,t) -> {
+    if (t instanceof CancellationException) {
+      connectFuture.cancel(true);
+    }
+  }
+);
+  connectFuture.addListener(future -> {
+    if (!future.isSuccess()) {
+      logger.debug("Connecting to Redis at {}: {}",redisAddress,future.cause());
+      connectionBuilder.endpoint().initialState();
+      channelReadyFuture.completeExceptionally(future.cause());
+      return;
+    }
+    RedisHandshakeHandler handshakeHandler=connectFuture.channel().pipeline().get(RedisHandshakeHandler.class);
+    if (handshakeHandler == null) {
+      channelReadyFuture.completeExceptionally(new IllegalStateException("RedisHandshakeHandler not registered"));
+      return;
+    }
+    handshakeHandler.channelInitialized().whenComplete((success,throwable) -> {
+      if (throwable == null) {
+        logger.debug("Connecting to Redis at {}: Success",redisAddress);
+        RedisChannelHandler<?,?> connection=connectionBuilder.connection();
+        connection.registerCloseables(closeableResources,connection);
+        channelReadyFuture.complete(connectFuture.channel());
+        return;
+      }
+      logger.debug("Connecting to Redis at {}, initialization: {}",redisAddress,throwable);
+      connectionBuilder.endpoint().initialState();
+      channelReadyFuture.completeExceptionally(throwable);
+    }
+);
+  }
+);
+}

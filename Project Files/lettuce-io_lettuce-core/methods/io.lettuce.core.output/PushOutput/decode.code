@@ -1,0 +1,35 @@
+private Object decode(Object toDecode,Function<ByteBuffer,Object> decodeFunction){
+  if (toDecode instanceof List) {
+    List<Object> copy=new ArrayList<>(((List<?>)toDecode).size());
+    for (    Object o : (List<?>)toDecode) {
+      copy.add(decode(o,decodeFunction));
+    }
+    return copy;
+  }
+  if (toDecode instanceof Set) {
+    Set<Object> copy=new LinkedHashSet<>(((Set<?>)toDecode).size());
+    for (    Object o : (Set<?>)toDecode) {
+      copy.add(decode(o,decodeFunction));
+    }
+    return copy;
+  }
+  if (toDecode instanceof Map) {
+    Map<Object,Object> copy=new LinkedHashMap<>(((Map<?,?>)toDecode).size());
+    ((Map<?,?>)toDecode).forEach((k,v) -> {
+      copy.put(decode(k,decodeFunction),decode(v,decodeFunction));
+    }
+);
+    return copy;
+  }
+  if (toDecode instanceof ByteBuffer) {
+    ByteBuffer buffer=(ByteBuffer)toDecode;
+    try {
+      buffer.mark();
+      return decodeFunction.apply(buffer);
+    }
+  finally {
+      buffer.reset();
+    }
+  }
+  return toDecode;
+}

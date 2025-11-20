@@ -1,0 +1,16 @@
+/** 
+ * Close all connections.
+ */
+public CompletableFuture<Void> closeAsync(){
+  List<CompletableFuture<?>> close=new ArrayList<>(this.connections.size());
+  List<RedisURI> toRemove=new ArrayList<>(this.connections.size());
+  this.closed=true;
+  for (  Map.Entry<RedisURI,StatefulRedisConnection<String,String>> entry : this.connections.entrySet()) {
+    toRemove.add(entry.getKey());
+    close.add(entry.getValue().closeAsync());
+  }
+  for (  RedisURI redisURI : toRemove) {
+    this.connections.remove(redisURI);
+  }
+  return Futures.allOf(close);
+}

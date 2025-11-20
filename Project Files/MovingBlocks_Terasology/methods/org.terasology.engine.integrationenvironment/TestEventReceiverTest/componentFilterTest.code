@@ -1,0 +1,16 @@
+@Test public void componentFilterTest(){
+  EntityRef entityWithDummy=entityManager.create(new DummyComponent());
+  EntityRef entityWithDummyAndLocation=entityManager.create(new DummyComponent(),new LocationComponent());
+  AtomicInteger callbackInvocations=new AtomicInteger();
+  BiConsumer<DummyEvent,EntityRef> callback=(event,entity) -> callbackInvocations.addAndGet(1);
+  try (TestEventReceiver<DummyEvent> receiver=new TestEventReceiver<>(getHostContext(),DummyEvent.class,callback,DummyComponent.class,LocationComponent.class)){
+    entityWithDummy.send(new DummyEvent());
+    entityWithDummyAndLocation.send(new DummyEvent());
+    List<EntityRef> actualEntities=receiver.getEntityRefs();
+    Assertions.assertEquals(1,callbackInvocations.get());
+    Assertions.assertTrue(actualEntities.contains(entityWithDummyAndLocation));
+    Assertions.assertFalse(actualEntities.contains(entityWithDummy));
+  }
+   entityWithDummy.destroy();
+  entityWithDummyAndLocation.destroy();
+}

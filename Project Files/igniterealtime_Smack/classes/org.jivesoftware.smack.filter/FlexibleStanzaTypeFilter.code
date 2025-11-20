@@ -1,0 +1,23 @@
+/** 
+ * Filters for stanzas of a particular type and allows a custom method to further filter the packets.
+ * @author Florian Schmaus
+ */
+public abstract class FlexibleStanzaTypeFilter<S extends Stanza> implements StanzaFilter {
+  protected final Class<S> stanzaType;
+  public FlexibleStanzaTypeFilter(  Class<S> packetType){
+    this.stanzaType=Objects.requireNonNull(packetType,"Type must not be null");
+  }
+  @SuppressWarnings("unchecked") public FlexibleStanzaTypeFilter(){
+    stanzaType=(Class<S>)((ParameterizedType)getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+  }
+  @Override @SuppressWarnings("unchecked") public final boolean accept(  Stanza packet){
+    if (stanzaType.isInstance(packet)) {
+      return acceptSpecific((S)packet);
+    }
+    return false;
+  }
+  protected abstract boolean acceptSpecific(  S packet);
+  @Override public String toString(){
+    return getClass().getSimpleName() + ": " + stanzaType.toString();
+  }
+}

@@ -1,0 +1,29 @@
+public static String getHomePath(){
+  String home=System.getProperty(SystemConfig.SYS_HOME);
+  if (home != null && home.endsWith(File.pathSeparator)) {
+    home=home.substring(0,home.length() - 1);
+    System.setProperty(SystemConfig.SYS_HOME,home);
+  }
+  if (home == null) {
+    try {
+      String path=new File("..").getCanonicalPath().replaceAll("\\\\","/");
+      File conf=new File(path + "/conf");
+      if (conf.exists() && conf.isDirectory()) {
+        home=path;
+      }
+ else {
+        path=new File(".").getCanonicalPath().replaceAll("\\\\","/");
+        conf=new File(path + "/conf");
+        if (conf.exists() && conf.isDirectory()) {
+          home=path;
+        }
+      }
+      if (home != null) {
+        System.setProperty(SystemConfig.SYS_HOME,home);
+      }
+    }
+ catch (    IOException e) {
+    }
+  }
+  return home;
+}

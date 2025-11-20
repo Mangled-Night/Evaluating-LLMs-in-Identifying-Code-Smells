@@ -1,0 +1,23 @@
+public SchemaConfig(String name,String dataNode,Map<String,TableConfig> tables,int defaultMaxLimit,boolean checkSQLschema,String randomDataNode){
+  this.name=name;
+  this.dataNode=dataNode;
+  this.checkSQLSchema=checkSQLschema;
+  this.tables=tables;
+  this.defaultMaxLimit=defaultMaxLimit;
+  buildJoinMap(tables);
+  this.noSharding=(tables == null || tables.isEmpty());
+  if (noSharding && dataNode == null) {
+    throw new RuntimeException(name + " in noSharding mode schema must have default dataNode ");
+  }
+  this.metaDataNodes=buildMetaDataNodes();
+  this.allDataNodes=buildAllDataNodes();
+  if (this.allDataNodes != null && !this.allDataNodes.isEmpty()) {
+    String[] dnArr=new String[this.allDataNodes.size()];
+    dnArr=this.allDataNodes.toArray(dnArr);
+    this.allDataNodeStrArr=dnArr;
+  }
+ else {
+    this.allDataNodeStrArr=null;
+  }
+  this.randomDataNode=randomDataNode;
+}

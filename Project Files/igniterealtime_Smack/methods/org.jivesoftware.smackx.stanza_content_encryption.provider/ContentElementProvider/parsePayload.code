@@ -1,0 +1,15 @@
+private static void parsePayload(XmlPullParser parser,XmlEnvironment outerXmlEnvironment,ContentElement.Builder builder) throws IOException, XmlPullParserException, SmackParsingException {
+  final int initialDepth=parser.getDepth();
+  while (true) {
+    XmlPullParser.Event tag=parser.next();
+    if (tag == XmlPullParser.Event.START_ELEMENT) {
+      String name=parser.getName();
+      String namespace=parser.getNamespace();
+      XmlElement element=PacketParserUtils.parseExtensionElement(name,namespace,parser,outerXmlEnvironment);
+      builder.addPayloadItem(element);
+    }
+    if (tag == XmlPullParser.Event.END_ELEMENT && parser.getDepth() == initialDepth) {
+      return;
+    }
+  }
+}

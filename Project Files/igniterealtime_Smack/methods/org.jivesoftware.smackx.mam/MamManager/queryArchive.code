@@ -1,0 +1,14 @@
+public MamQuery queryArchive(MamQueryArgs mamQueryArgs) throws NoResponseException, XMPPErrorException, NotConnectedException, NotLoggedInException, InterruptedException {
+  String queryId=StringUtils.secureUniqueRandomString();
+  String node=mamQueryArgs.node;
+  DataForm dataForm=mamQueryArgs.getDataForm(mamVersion);
+  MamQueryIQ mamQueryIQ=getElementFactory().newQueryIQ(queryId,node,dataForm);
+  mamQueryIQ.setType(IQ.Type.set);
+  mamQueryIQ.setTo(archiveAddress);
+  mamQueryArgs.maybeAddRsmSet(mamQueryIQ);
+  return queryArchive(mamQueryIQ);
+}
+private MamQuery queryArchive(MamQueryIQ mamQueryIq) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException, NotLoggedInException {
+  MamQueryPage mamQueryPage=queryArchivePage(mamQueryIq);
+  return new MamQuery(mamQueryPage,mamQueryIq.getNode(),DataForm.from(mamQueryIq));
+}

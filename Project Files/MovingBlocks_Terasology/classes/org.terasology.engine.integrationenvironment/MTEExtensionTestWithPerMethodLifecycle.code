@@ -1,0 +1,34 @@
+/** 
+ * Ensure a test class with a per-method Jupiter lifecycle does not share data between tests.
+ */
+@TestInstance(TestInstance.Lifecycle.PER_METHOD) @TestMethodOrder(MethodOrderer.OrderAnnotation.class) @IntegrationEnvironment public class MTEExtensionTestWithPerMethodLifecycle {
+  @In public EntityManager entityManager;
+  private final ConcurrentHashMap.KeySetView<Object,Boolean> seenNames=ConcurrentHashMap.newKeySet();
+  @BeforeEach void createEntity(  TestInfo testInfo){
+    EntityRef entity=entityManager.create(new DummyComponent());
+    entity.send(new DummyEvent());
+    entity.updateComponent(DummyComponent.class,component -> {
+      component.name=testInfo.getDisplayName() + "#" + UUID.randomUUID();
+      return component;
+    }
+);
+  }
+  @Test @Order(1) public void firstTestFindsThings(){
+    List<EntityRef> entities=Lists.newArrayList(entityManager.getEntitiesWith(DummyComponent.class));
+    assertEquals(1,entities.size());
+    DummyComponent component=entities.get(0).getComponent(DummyComponent.class);
+    assertThat(component.eventReceived).isTrue();
+    assertThat(seenNames).isEmpty();
+    assertThat(component.name).isNotNull();
+    assertThat(seenNames).isEmpty();
+    seenNames.add(component.name);
+  }
+  @Test @Order(2) public void thingsDoNotPolluteSecondTest(){
+    List<EntityRef> entities=Lists.newArrayList(entityManager.getEntitiesWith(DummyComponent.class));
+    assertEquals(1,entities.size());
+    DummyComponent component=entities.get(0).getComponent(DummyComponent.class);
+    assertThat(component.eventReceived).isTrue();
+    assertThat(component.name).isNotNull();
+    assertThat(seenNames).isEmpty();
+  }
+}

@@ -1,0 +1,14 @@
+/** 
+ * @param operation the operation to run - the executing thread will be interrupted when the operation is cancelled
+ * @param canBeCancelled true if the operation is aborted when the {@link Thread#isInterrupted()} flag is set
+ * @throws NullPointerException if operation is null
+ * @throws IllegalArgumentException if startOperation() was called before
+ */
+public void startOperation(Callable<T> operation,boolean canBeCancelled){
+  Preconditions.checkState(parallelTask == null,"startOperation() cannot be called twice");
+  cancelButton.setVisible(canBeCancelled);
+  parallelTask=new FutureTask<>(operation);
+  thread=new Thread(parallelTask,"Parallel Operation");
+  thread.start();
+  WidgetUtil.trySubscribe(this,"cancel",button -> parallelTask.cancel(true));
+}

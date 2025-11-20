@@ -1,0 +1,70 @@
+private void checkCommit(PathChildrenCacheEvent event){
+  InterProcessMutex taskLock=null;
+  try {
+    String path=event.getData().getPath();
+    String taskPath=path.substring(0,path.lastIndexOf("/_commit/"));
+    String taskID=taskPath.substring(taskPath.lastIndexOf('/') + 1,taskPath.length());
+    String lockPath=ZKUtils.getZKBasePath() + "lock/" + taskID+ ".lock";
+    List<String> sucessDataHost=ZKUtils.getConnection().getChildren().forPath(path.substring(0,path.lastIndexOf('/')));
+    String custerName=ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_CLUSTERID);
+    ClusterInfo clusterInfo=JSON.parseObject(ZKUtils.getConnection().getData().forPath("/mycat/" + custerName),ClusterInfo.class);
+    List<String> clusterNodeList=Splitter.on(',').omitEmptyStrings().splitToList(clusterInfo.getClusterNodes());
+    if (sucessDataHost.size() == clusterNodeList.size()) {
+      List<String> taskDataHost=ZKUtils.getConnection().getChildren().forPath(taskPath);
+      List<MigrateTask> allTaskList=MigrateUtils.queryAllTask(taskPath,taskDataHost);
+      taskLock=new InterProcessMutex(ZKUtils.getConnection(),lockPath);
+      taskLock.acquire(120,TimeUnit.SECONDS);
+      TaskNode taskNode=JSON.parseObject(ZKUtils.getConnection().getData().forPath(taskPath),TaskNode.class);
+      if (taskNode.getStatus() == 2) {
+        taskNode.setStatus(3);
+        try {
+          CuratorTransactionFinal transactionFinal=null;
+          check(taskID,allTaskList);
+          SchemaConfig schemaConfig=MycatServer.getInstance().getConfig().getSchemas().get(taskNode.getSchema());
+          TableConfig tableConfig=schemaConfig.getTables().get(taskNode.getTable().toUpperCase());
+          List<String> newDataNodes=Splitter.on(",").omitEmptyStrings().trimResults().splitToList(taskNode.getAdd());
+          List<String> allNewDataNodes=tableConfig.getDataNodes();
+          allNewDataNodes.addAll(newDataNodes);
+          InterProcessMutex ruleLock=new InterProcessMutex(ZKUtils.getConnection(),ZKUtils.getZKBasePath() + "lock/rules.lock");
+          ;
+          try {
+            ruleLock.acquire(30,TimeUnit.SECONDS);
+            transactionFinal=modifyTableConfigRules(transactionFinal,taskNode.getSchema(),taskNode.getTable(),newDataNodes);
+          }
+  finally {
+            ruleLock.release();
+          }
+          transactionFinal=modifyRuleData(transactionFinal,allTaskList,tableConfig,allNewDataNodes);
+          transactionFinal.setData().forPath(taskPath,JSON.toJSONBytes(taskNode));
+          clean(taskID,allTaskList);
+          transactionFinal.commit();
+          forceTableRuleToLocal(taskPath,taskNode);
+          pushACKToClean(taskPath);
+        }
+ catch (        Exception e) {
+          taskNode.addException(e.getLocalizedMessage());
+          ZKUtils.getConnection().setData().forPath(taskPath,JSON.toJSONBytes(taskNode));
+          LOGGER.error("error:",e);
+          return;
+        }
+      }
+ else       if (taskNode.getStatus() == 3) {
+        forceTableRuleToLocal(taskPath,taskNode);
+        pushACKToClean(taskPath);
+      }
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.error("migrate 中 commit 阶段异常");
+    LOGGER.error("error:",e);
+  }
+ finally {
+    if (taskLock != null) {
+      try {
+        taskLock.release();
+      }
+ catch (      Exception ignored) {
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+/** 
+ * Sequentially iterate over keys in the keyspace. This method uses  {@code SCAN} to perform an iterative scan.
+ * @param commands the commands interface, must not be {@code null}.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @return a new {@link Flux}.
+ */
+public static <K,V>Flux<K> scan(RedisKeyReactiveCommands<K,V> commands){
+  return scan(commands,Optional.empty());
+}
+/** 
+ * Sequentially iterate over keys in the keyspace. This method uses  {@code SCAN} to perform an iterative scan.
+ * @param commands the commands interface, must not be {@code null}.
+ * @param scanArgs the scan arguments, must not be {@code null}.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @return a new {@link Flux}.
+ */
+public static <K,V>Flux<K> scan(RedisKeyReactiveCommands<K,V> commands,ScanArgs scanArgs){
+  LettuceAssert.notNull(scanArgs,"ScanArgs must not be null");
+  return scan(commands,Optional.of(scanArgs));
+}
+private static <K,V>Flux<K> scan(RedisKeyReactiveCommands<K,V> commands,Optional<ScanArgs> scanArgs){
+  LettuceAssert.notNull(commands,"RedisKeyCommands must not be null");
+  return scanArgs.map(commands::scan).orElseGet(commands::scan).expand(c -> !c.isFinished() ? scanArgs.map(it -> commands.scan(c,it)).orElseGet(() -> commands.scan(c)) : Mono.empty()).flatMapIterable(KeyScanCursor::getKeys);
+}

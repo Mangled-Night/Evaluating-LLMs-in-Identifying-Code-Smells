@@ -1,0 +1,21 @@
+/** 
+ * Disables the SOCKS5 Bytestream manager by removing the SOCKS5 Bytestream feature from the service discovery, disabling the listener for SOCKS5 Bytestream initiation requests and resetting its internal state, which includes removing this instance from the managers map. <p> To re-enable the SOCKS5 Bytestream feature invoke  {@link #getBytestreamManager(XMPPConnection)}. Using the file transfer API will automatically re-enable the SOCKS5 Bytestream feature.
+ */
+public synchronized void disableService(){
+  XMPPConnection connection=connection();
+  connection.unregisterIQRequestHandler(initiationListener);
+  this.initiationListener.shutdown();
+  this.allRequestListeners.clear();
+  this.userListeners.clear();
+  this.lastWorkingProxy=null;
+  this.proxyBlacklist.clear();
+  this.ignoredBytestreamRequests.clear();
+  managers.remove(connection);
+  if (managers.size() == 0) {
+    Socks5Proxy.getSocks5Proxy().stop();
+  }
+  ServiceDiscoveryManager serviceDiscoveryManager=ServiceDiscoveryManager.getInstanceFor(connection);
+  if (serviceDiscoveryManager != null) {
+    serviceDiscoveryManager.removeFeature(Bytestream.NAMESPACE);
+  }
+}

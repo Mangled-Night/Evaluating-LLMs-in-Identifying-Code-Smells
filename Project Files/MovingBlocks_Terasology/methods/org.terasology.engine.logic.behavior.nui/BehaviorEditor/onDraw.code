@@ -1,0 +1,43 @@
+@Override public void onDraw(final Canvas canvas){
+  super.onDraw(canvas);
+  canvas.addInteractionRegion(mouseInteractionListener);
+  try (SubRegion subRegion=canvas.subRegion(canvas.getRegion(),false)){
+    canvas.setDrawOnTop(true);
+    for (    UIWidget widget : getWidgets()) {
+      if (!widget.isVisible()) {
+        continue;
+      }
+      if (widget instanceof RenderableNode) {
+        RenderableNode renderableNode=(RenderableNode)widget;
+        for (        Port port : renderableNode.getPorts()) {
+          Port targetPort=port.getTargetPort();
+          if (port.isInput() || targetPort == null || !targetPort.node.isVisible()) {
+            continue;
+          }
+          drawConnection(canvas,port,targetPort,port == activeConnectionStart ? Color.BLACK : Color.GREY);
+        }
+      }
+    }
+    if (activeConnectionStart != null) {
+      drawConnection(canvas,activeConnectionStart,mouseWorldPosition,Color.WHITE);
+    }
+    if (selectedNode != null) {
+      Vector2f size=new Vector2f(selectedNode.getSize());
+      Vector2f topLeft=new Vector2f(selectedNode.getPosition());
+      Vector2f topRight=new Vector2f(topLeft);
+      topRight.add(new Vector2f(size.x + .1f,0));
+      Vector2f bottomLeft=new Vector2f(topLeft);
+      bottomLeft.add(new Vector2f(0,size.y + .1f));
+      Vector2f bottomRight=new Vector2f(topLeft);
+      bottomRight.add(new Vector2f(size.x + 0.1f,size.y + 0.1f));
+      drawConnection(canvas,topLeft,topRight,Color.GREEN);
+      drawConnection(canvas,topRight,bottomRight,Color.GREEN);
+      drawConnection(canvas,bottomRight,bottomLeft,Color.GREEN);
+      drawConnection(canvas,bottomLeft,topLeft,Color.GREEN);
+    }
+    if (newNode != null) {
+      newNode.visit(node -> drawWidget(canvas,node));
+    }
+    canvas.setDrawOnTop(false);
+  }
+ }

@@ -1,0 +1,20 @@
+@Override public Transcripts parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, TextParseException, ParseException {
+  Jid userID=ParserUtils.getJidAttribute(parser,"userID");
+  List<Transcripts.TranscriptSummary> summaries=new ArrayList<>();
+  boolean done=false;
+  while (!done) {
+    XmlPullParser.Event eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      if (parser.getName().equals("transcript")) {
+        Transcripts.TranscriptSummary summary=parseSummary(parser);
+        summaries.add(summary);
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if (parser.getName().equals("transcripts")) {
+        done=true;
+      }
+    }
+  }
+  return new Transcripts(userID,summaries);
+}

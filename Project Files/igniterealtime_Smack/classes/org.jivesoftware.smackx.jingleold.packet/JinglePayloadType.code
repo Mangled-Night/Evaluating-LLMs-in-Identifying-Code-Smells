@@ -1,0 +1,83 @@
+/** 
+ * A payload type, contained in a descriptor.
+ * @author Alvaro Saurin
+ */
+public static class JinglePayloadType {
+  public static final String NODENAME="payload-type";
+  private PayloadType payload;
+  /** 
+ * Create a payload type.
+ * @param payload the payload
+ */
+  public JinglePayloadType(  final PayloadType payload){
+    super();
+    this.payload=payload;
+  }
+  /** 
+ * Create an empty payload type.
+ */
+  public JinglePayloadType(){
+    this(null);
+  }
+  /** 
+ * Returns the XML element name of the element.
+ * @return the XML element name of the element.
+ */
+  public static String getElementName(){
+    return NODENAME;
+  }
+  /** 
+ * Get the payload represented.
+ * @return the payload
+ */
+  public PayloadType getPayloadType(){
+    return payload;
+  }
+  /** 
+ * Set the payload represented.
+ * @param payload the payload to set
+ */
+  public void setPayload(  final PayloadType payload){
+    this.payload=payload;
+  }
+  protected String getChildAttributes(){
+    return null;
+  }
+  public String toXML(){
+    StringBuilder buf=new StringBuilder();
+    if (payload != null) {
+      buf.append('<').append(getElementName()).append(' ');
+      if (payload.getId() != PayloadType.INVALID_PT) {
+        buf.append(" id=\"").append(payload.getId()).append('"');
+      }
+      if (payload.getName() != null) {
+        buf.append(" name=\"").append(payload.getName()).append('"');
+      }
+      if (payload.getChannels() != 0) {
+        buf.append(" channels=\"").append(payload.getChannels()).append('"');
+      }
+      if (getChildAttributes() != null) {
+        buf.append(getChildAttributes());
+      }
+      buf.append("/>");
+    }
+    return buf.toString();
+  }
+  /** 
+ * Audio payload type element.
+ */
+public static class Audio extends JinglePayloadType {
+    public Audio(    final PayloadType.Audio audio){
+      super(audio);
+    }
+    @Override protected String getChildAttributes(){
+      StringBuilder buf=new StringBuilder();
+      PayloadType pt=getPayloadType();
+      if (pt instanceof PayloadType.Audio) {
+        PayloadType.Audio pta=(PayloadType.Audio)pt;
+        buf.append(" clockrate=\"").append(pta.getClockRate()).append("\" ");
+      }
+      return buf.toString();
+    }
+  }
+}

@@ -1,0 +1,16 @@
+public Mono<Connections> asMono(Duration timeout,ScheduledExecutorService timeoutExecutor){
+  Connections connections=new Connections(this.connections.size(),nodeList);
+  for (  Map.Entry<RedisURI,CompletableFuture<StatefulRedisConnection<String,String>>> entry : this.connections.entrySet()) {
+    CompletableFuture<StatefulRedisConnection<String,String>> future=entry.getValue();
+    future.whenComplete((connection,throwable) -> {
+      if (throwable != null) {
+        connections.accept(throwable);
+      }
+ else {
+        connections.accept(Tuples.of(entry.getKey(),connection));
+      }
+    }
+);
+  }
+  return Mono.fromCompletionStage(connections.getOrTimeout(timeout,timeoutExecutor));
+}

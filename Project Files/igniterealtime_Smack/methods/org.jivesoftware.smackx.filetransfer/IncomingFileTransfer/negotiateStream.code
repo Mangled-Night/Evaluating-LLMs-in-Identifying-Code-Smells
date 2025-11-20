@@ -1,0 +1,40 @@
+private InputStream negotiateStream() throws SmackException, XMPPErrorException, InterruptedException {
+  setStatus(Status.negotiating_transfer);
+  final StreamNegotiator streamNegotiator=negotiator.selectStreamNegotiator(receiveRequest);
+  setStatus(Status.negotiating_stream);
+  FutureTask<InputStream> streamNegotiatorTask=new FutureTask<>(new Callable<InputStream>(){
+    @Override public InputStream call() throws Exception {
+      return streamNegotiator.createIncomingStream(receiveRequest.getStreamInitiation());
+    }
+  }
+);
+  streamNegotiatorTask.run();
+  InputStream inputStream;
+  try {
+    inputStream=streamNegotiatorTask.get(15,TimeUnit.SECONDS);
+  }
+ catch (  ExecutionException e) {
+    final Throwable cause=e.getCause();
+    if (cause instanceof XMPPErrorException) {
+      throw (XMPPErrorException)cause;
+    }
+    if (cause instanceof InterruptedException) {
+      throw (InterruptedException)cause;
+    }
+    if (cause instanceof NoResponseException) {
+      throw (NoResponseException)cause;
+    }
+    if (cause instanceof SmackException) {
+      throw (SmackException)cause;
+    }
+    throw new SmackException.SmackWrappedException("Error in execution",e);
+  }
+catch (  TimeoutException e) {
+    throw new SmackException.SmackWrappedException("Request timed out",e);
+  }
+ finally {
+    streamNegotiatorTask.cancel(true);
+  }
+  setStatus(Status.negotiated);
+  return inputStream;
+}

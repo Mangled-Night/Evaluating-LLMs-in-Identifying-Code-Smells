@@ -1,0 +1,60 @@
+/** 
+ * rotates through the elements
+ * @param increase where or not to increment index
+ */
+public static void rotateOrder(boolean increase){
+  if (layersFilled.size() > 0) {
+    Collections.sort(layersFilled,(a,b) -> Math.max(a,b));
+    if (increase) {
+      index++;
+    }
+    int iterator;
+    while (index >= layersFilled.size()) {
+      index-=layersFilled.size();
+    }
+    iterator=layersFilled.get(index);
+    boolean loopThroughDone=false;
+    int tempIndex=index;
+    int timesLooping=0;
+    ArrayList<CoreScreenLayer> widgetsCopy=new ArrayList<>(enabledWidgets);
+    while (!loopThroughDone) {
+      for (      CoreScreenLayer widget : widgetsCopy) {
+        if (widget.getManager() != null) {
+          inSortOrder=true;
+          if (widget.getDepth() == iterator) {
+            String widgId=widget.getId();
+            widget.getManager().pushScreen(widgId);
+            widget.getManager().render();
+          }
+          inSortOrder=false;
+        }
+      }
+      if (tempIndex < layersFilled.size()) {
+        iterator=layersFilled.get(tempIndex);
+        tempIndex++;
+      }
+ else {
+        tempIndex=0;
+        iterator=layersFilled.get(tempIndex);
+        tempIndex++;
+      }
+      if (timesLooping > layersFilled.size()) {
+        loopThroughDone=true;
+      }
+      timesLooping++;
+    }
+    for (    CoreScreenLayer layer : enabledWidgets) {
+      if (layer.getManager() != null) {
+        Deque<UIScreenLayer> screens=layer.getManager().getScreens();
+        Deque<UIScreenLayer> toCreate=Queues.newArrayDeque();
+        for (        UIScreenLayer screen : screens) {
+          if (!toCreate.contains(screen)) {
+            toCreate.add(screen);
+          }
+        }
+        layer.getManager().setScreens(toCreate);
+      }
+    }
+    enabledWidgets=widgetsCopy;
+  }
+}

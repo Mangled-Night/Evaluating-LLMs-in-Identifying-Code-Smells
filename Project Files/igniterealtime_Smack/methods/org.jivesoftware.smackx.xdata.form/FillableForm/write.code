@@ -1,0 +1,27 @@
+protected void write(String fieldName,int value){
+  writeTextSingle(fieldName,Integer.toString(value));
+}
+protected void write(String fieldName,Date date){
+  writeTextSingle(fieldName,XmppDateTime.formatXEP0082Date(date));
+}
+public final void write(FormField filledFormField){
+  if (filledFormField.getType() == FormField.Type.fixed) {
+    throw new IllegalArgumentException();
+  }
+  if (!filledFormField.hasValueSet()) {
+    throw new IllegalArgumentException();
+  }
+  String fieldName=filledFormField.getFieldName();
+  if (!getDataForm().hasField(fieldName)) {
+    throw new IllegalArgumentException();
+  }
+  FormField formFieldPrototype=getDataForm().getField(fieldName);
+  for (  FormFieldChildElement formFieldChildelement : formFieldPrototype.getFormFieldChildElements()) {
+    formFieldChildelement.validate(filledFormField);
+  }
+  filledFields.put(fieldName,filledFormField);
+  if (requiredFields.contains(fieldName)) {
+    filledRequiredFields.add(fieldName);
+    missingRequiredFields.remove(fieldName);
+  }
+}

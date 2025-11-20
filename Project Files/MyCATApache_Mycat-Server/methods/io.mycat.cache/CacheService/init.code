@@ -1,0 +1,49 @@
+private void init() throws Exception {
+  Properties props=new Properties();
+  props.load(CacheService.class.getResourceAsStream("/cacheservice.properties"));
+  final String poolFactoryPref="factory.";
+  final String poolKeyPref="pool.";
+  final String layedPoolKeyPref="layedpool.";
+  String[] keys=props.keySet().toArray(new String[0]);
+  Arrays.sort(keys);
+  for (  String key : keys) {
+    if (key.startsWith(poolFactoryPref)) {
+      createPoolFactory(key.substring(poolFactoryPref.length()),(String)props.get(key));
+    }
+ else     if (key.startsWith(poolKeyPref)) {
+      String cacheName=key.substring(poolKeyPref.length());
+      String value=(String)props.get(key);
+      String[] valueItems=value.split(",");
+      if (valueItems.length < 3) {
+        throw new java.lang.IllegalArgumentException("invalid cache config ,key:" + key + " value:"+ value);
+      }
+      String type=valueItems[0];
+      int size=Integer.parseInt(valueItems[1]);
+      int timeOut=Integer.parseInt(valueItems[2]);
+      createPool(cacheName,type,size,timeOut);
+    }
+ else     if (key.startsWith(layedPoolKeyPref)) {
+      String cacheName=key.substring(layedPoolKeyPref.length());
+      String value=(String)props.get(key);
+      String[] valueItems=value.split(",");
+      int index=cacheName.indexOf(".");
+      if (index < 0) {
+        String type=valueItems[0];
+        int size=Integer.valueOf(valueItems[1]);
+        int timeOut=Integer.valueOf(valueItems[2]);
+        createLayeredPool(cacheName,type,size,timeOut);
+      }
+ else {
+        String parent=cacheName.substring(0,index);
+        String child=cacheName.substring(index + 1);
+        CachePool pool=this.allPools.get(parent);
+        if (pool == null || !(pool instanceof LayerCachePool)) {
+          throw new java.lang.IllegalArgumentException("parent pool not exists or not layered cache pool:" + parent + " the child cache is:"+ child);
+        }
+        int size=Integer.valueOf(valueItems[0]);
+        int timeOut=Integer.valueOf(valueItems[1]);
+        ((DefaultLayedCachePool)pool).createChildCache(child,size,timeOut);
+      }
+    }
+  }
+}

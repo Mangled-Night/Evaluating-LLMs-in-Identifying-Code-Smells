@@ -1,0 +1,15 @@
+@Override public int delivery(List<OmsOrderDeliveryParam> deliveryParamList){
+  int count=orderDao.delivery(deliveryParamList);
+  List<OmsOrderOperateHistory> operateHistoryList=deliveryParamList.stream().map(omsOrderDeliveryParam -> {
+    OmsOrderOperateHistory history=new OmsOrderOperateHistory();
+    history.setOrderId(omsOrderDeliveryParam.getOrderId());
+    history.setCreateTime(new Date());
+    history.setOperateMan("后台管理员");
+    history.setOrderStatus(2);
+    history.setNote("完成发货");
+    return history;
+  }
+).collect(Collectors.toList());
+  orderOperateHistoryDao.insertList(operateHistoryList);
+  return count;
+}

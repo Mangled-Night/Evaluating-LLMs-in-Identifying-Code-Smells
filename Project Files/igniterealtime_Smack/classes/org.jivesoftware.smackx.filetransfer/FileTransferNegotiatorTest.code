@@ -1,0 +1,23 @@
+public class FileTransferNegotiatorTest extends SmackTestSuite {
+  private DummyConnection connection;
+  @BeforeEach public void setUp() throws Exception {
+    connection=new DummyConnection();
+    connection.connect();
+    connection.login();
+    ServiceDiscoveryManager.getInstanceFor(connection);
+  }
+  @AfterEach public void tearDown() throws Exception {
+    if (connection != null)     connection.disconnect();
+  }
+  @Test public void verifyForm() throws Exception {
+    FileTransferNegotiator fileNeg=FileTransferNegotiator.getInstanceFor(connection);
+    try {
+      fileNeg.negotiateOutgoingTransfer(JidTestUtil.DUMMY_AT_EXAMPLE_ORG,"streamid","file",1024,null,10);
+    }
+ catch (    NoResponseException e) {
+    }
+    Stanza packet=connection.getSentPacket();
+    String xml=packet.toXML().toString();
+    assertTrue(xml.indexOf("var='stream-method' type='list-single'") != -1);
+  }
+}

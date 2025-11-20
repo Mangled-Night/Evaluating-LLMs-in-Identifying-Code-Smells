@@ -1,0 +1,107 @@
+/** 
+ * Builder class for  {@link SoftwareInfoForm}. <br> To obtain an instance of  {@link Builder}, use  {@link SoftwareInfoForm#getBuilder()} method.<br> Use appropriate setters to include information inside SoftwareInfoForms.
+ */
+public static final class Builder {
+  DataForm.Builder dataFormBuilder;
+  private Builder(){
+    dataFormBuilder=DataForm.builder(DataForm.Type.result);
+    TextSingleFormField formField=FormField.buildHiddenFormType(FORM_TYPE);
+    dataFormBuilder.addField(formField);
+  }
+  /** 
+ * This will allow to include Icon using height, width and Uri's as a {@link FormField}. <br>
+ * @param height  Height of the image
+ * @param width   Width of the image
+ * @param uriList List of URIs
+ * @return Builder
+ */
+  public Builder setIcon(  int height,  int width,  List<MediaElement.Uri> uriList){
+    MediaElement.Builder mediaBuilder=MediaElement.builder();
+    for (    MediaElement.Uri uri : uriList) {
+      mediaBuilder.addUri(uri);
+    }
+    MediaElement mediaElement=mediaBuilder.setHeightAndWidth(height,width).build();
+    return setIcon(mediaElement);
+  }
+  /** 
+ * This will allow to include  {@link MediaElement} directly as a{@link FormField}. <br>
+ * @param mediaElement MediaElement to be included
+ * @return Builder
+ */
+  public Builder setIcon(  MediaElement mediaElement){
+    FormField.Builder<?,?> builder=FormField.builder(ICON);
+    builder.addFormFieldChildElement(mediaElement);
+    dataFormBuilder.addField(builder.build());
+    return this;
+  }
+  /** 
+ * Include Operating System's name as a  {@link FormField}. <br>
+ * @param os Name of the OS
+ * @return Builder
+ */
+  public Builder setOS(  String os){
+    TextSingleFormField.Builder builder=FormField.builder(OS);
+    builder.setValue(os);
+    dataFormBuilder.addField(builder.build());
+    return this;
+  }
+  /** 
+ * Include Operating System's version as a  {@link FormField}. <br>
+ * @param os_version Version of OS
+ * @return Builder
+ */
+  public Builder setOSVersion(  String os_version){
+    TextSingleFormField.Builder builder=FormField.builder(OS_VERSION);
+    builder.setValue(os_version);
+    dataFormBuilder.addField(builder.build());
+    return this;
+  }
+  /** 
+ * Include Software name as a  {@link FormField}. <br>
+ * @param software Name of the software
+ * @return Builder
+ */
+  public Builder setSoftware(  String software){
+    TextSingleFormField.Builder builder=FormField.builder(SOFTWARE);
+    builder.setValue(software);
+    dataFormBuilder.addField(builder.build());
+    return this;
+  }
+  /** 
+ * Include Software Version as a  {@link FormField}. <br>
+ * @param softwareVersion Version of the Software in use
+ * @return Builder
+ */
+  public Builder setSoftwareVersion(  String softwareVersion){
+    TextSingleFormField.Builder builder=FormField.builder(SOFTWARE_VERSION);
+    builder.setValue(softwareVersion);
+    dataFormBuilder.addField(builder.build());
+    return this;
+  }
+  /** 
+ * Include  {@link DataForm} to be encapsulated under SoftwareInfoForm.<br>
+ * @param dataForm The dataform containing Software Information
+ * @return Builder
+ */
+  public Builder setDataForm(  DataForm dataForm){
+    if (dataForm.getTitle() != null || !dataForm.getItems().isEmpty() || dataForm.getReportedData() != null || !dataForm.getInstructions().isEmpty()) {
+      throw new IllegalArgumentException("Illegal Arguements for SoftwareInformation");
+    }
+    String formTypeValue=dataForm.getFormType();
+    if (formTypeValue == null) {
+      throw new IllegalArgumentException("FORM_TYPE Formfield missing");
+    }
+    if (!formTypeValue.equals(SoftwareInfoForm.FORM_TYPE)) {
+      throw new IllegalArgumentException("Malformed FORM_TYPE Formfield encountered");
+    }
+    this.dataFormBuilder=dataForm.asBuilder();
+    return this;
+  }
+  /** 
+ * This method is called to build a  {@link SoftwareInfoForm}. <br>
+ * @return Builder
+ */
+  public SoftwareInfoForm build(){
+    return new SoftwareInfoForm(dataFormBuilder.build());
+  }
+}

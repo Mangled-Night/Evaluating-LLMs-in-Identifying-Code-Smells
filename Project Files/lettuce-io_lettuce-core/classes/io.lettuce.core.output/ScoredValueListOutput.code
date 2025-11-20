@@ -1,0 +1,40 @@
+/** 
+ * {@link List} of values and their associated scores.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @author Will Glozer
+ */
+public class ScoredValueListOutput<K,V> extends CommandOutput<K,V,List<ScoredValue<V>>> implements StreamingOutput<ScoredValue<V>> {
+  private boolean initialized;
+  private Subscriber<ScoredValue<V>> subscriber;
+  private V value;
+  public ScoredValueListOutput(  RedisCodec<K,V> codec){
+    super(codec,Collections.emptyList());
+    setSubscriber(ListSubscriber.instance());
+  }
+  @Override public void set(  ByteBuffer bytes){
+    if (value == null) {
+      value=codec.decodeValue(bytes);
+      return;
+    }
+    double score=LettuceStrings.toDouble(decodeAscii(bytes));
+    set(score);
+  }
+  @Override public void set(  double number){
+    subscriber.onNext(output,ScoredValue.just(number,value));
+    value=null;
+  }
+  @Override public void multi(  int count){
+    if (!initialized) {
+      output=OutputFactory.newList(count);
+      initialized=true;
+    }
+  }
+  @Override public void setSubscriber(  Subscriber<ScoredValue<V>> subscriber){
+    LettuceAssert.notNull(subscriber,"Subscriber must not be null");
+    this.subscriber=subscriber;
+  }
+  @Override public Subscriber<ScoredValue<V>> getSubscriber(){
+    return subscriber;
+  }
+}

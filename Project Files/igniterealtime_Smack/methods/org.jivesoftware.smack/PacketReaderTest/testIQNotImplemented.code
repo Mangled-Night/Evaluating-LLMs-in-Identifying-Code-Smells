@@ -1,0 +1,22 @@
+/** 
+ * Verify that when Smack receives a "not implemented IQ" answers with an IQ packet with error code 501.
+ */
+public void testIQNotImplemented(){
+  IQ iqPacket=new IQ(){
+    public String getChildElementXML(){
+      return "<query xmlns=\"my:ns:test\"/>";
+    }
+  }
+;
+  iqPacket.setTo(getFullJID(1));
+  iqPacket.setType(IQ.Type.get);
+  StanzaCollector collector=getConnection(0).createStanzaCollector(new PacketIDFilter(iqPacket.getStanzaId()));
+  getConnection(0).sendStanza(iqPacket);
+  IQ response=(IQ)collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
+  if (response == null) {
+    fail("No response from the other user.");
+  }
+  assertEquals("The received IQ is not of type ERROR",IQ.Type.error,response.getType());
+  assertEquals("The error code is not 501",501,response.getError().getCode());
+  collector.cancel();
+}

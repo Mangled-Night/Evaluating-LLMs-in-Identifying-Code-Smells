@@ -1,0 +1,47 @@
+public void execute() throws Exception {
+  final ReentrantLock lock=this.lock;
+  lock.lock();
+  try {
+    this.reset(rrs.getNodes().length);
+    this.fieldsReturned=false;
+    this.affectedRows=0L;
+    this.insertId=0L;
+  }
+  finally {
+    lock.unlock();
+  }
+  MycatConfig conf=MycatServer.getInstance().getConfig();
+  startTime=System.currentTimeMillis();
+  LOGGER.debug("rrs.getRunOnSlave()-" + rrs.getRunOnSlaveDebugInfo());
+  int start=0;
+  try {
+    for (    final RouteResultsetNode node : rrs.getNodes()) {
+      BackendConnection conn=session.getTarget(node);
+      if (session.tryExistsCon(conn,node)) {
+        if (LOGGER.isDebugEnabled()) {
+          LOGGER.debug("node.getRunOnSlave()-" + node.getRunOnSlave());
+          LOGGER.debug(new StringBuilder(this.toString()).append(session.getSource()).append(rrs).toString());
+        }
+        node.setRunOnSlave(rrs.getRunOnSlave());
+        if (LOGGER.isDebugEnabled()) {
+          LOGGER.debug("node.getRunOnSlave()-" + node.getRunOnSlave());
+        }
+        _execute(conn,node);
+      }
+ else {
+        node.setRunOnSlave(rrs.getRunOnSlave());
+        PhysicalDBNode dn=conf.getDataNodes().get(node.getName());
+        dn.getConnection(dn.getDatabase(),autocommit,node,this,node);
+      }
+      start++;
+    }
+  }
+ catch (  Exception e) {
+    ServerConnection source=session.getSource();
+    int len=rrs.getNodes().length - start;
+    for (int i=0; i < len; i++) {
+      this.connectionError(e,null);
+    }
+    LOGGER.error(new StringBuilder(this.toString()).append(source).append(rrs).toString(),e);
+  }
+}

@@ -1,0 +1,24 @@
+@Override public void afterEach(ExtensionContext context){
+  DefaultRedisClient.get().setOptions(ClientOptions.builder().build());
+  DefaultRedisClient.get().setDefaultTimeout(Duration.ofSeconds(60));
+  ExtensionContext.Store store=getStore(context);
+  CloseAfterTest closeables=store.get(CloseAfterTest.class,CloseAfterTest.class);
+  if (closeables != null) {
+    List<Object> copy=new ArrayList<>(closeables);
+    closeables.clear();
+    copy.forEach(it -> {
+      try {
+        if (it instanceof Closeable) {
+          ((Closeable)it).close();
+        }
+ else         if (it instanceof AutoCloseable) {
+          ((AutoCloseable)it).close();
+        }
+      }
+ catch (      Exception e) {
+        throw new IllegalStateException(e);
+      }
+    }
+);
+  }
+}

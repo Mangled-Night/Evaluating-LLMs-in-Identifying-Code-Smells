@@ -1,0 +1,13 @@
+/** 
+ * Executed in order: 3
+ */
+@Test void migrateCopyReplace(){
+  assumeTrue(CanConnect.to(host(),port(2)));
+  redis.set(key,value);
+  redis.set("key1",value);
+  redis.set("key2",value);
+  String result=redis.migrate("localhost",TestSettings.port(2),0,10,MigrateArgs.Builder.keys(key).copy().replace());
+  assertThat(result).isEqualTo("OK");
+  result=redis.migrate("localhost",TestSettings.port(2),0,10,MigrateArgs.Builder.keys(Arrays.asList("key1","key2")).replace());
+  assertThat(result).isEqualTo("OK");
+}

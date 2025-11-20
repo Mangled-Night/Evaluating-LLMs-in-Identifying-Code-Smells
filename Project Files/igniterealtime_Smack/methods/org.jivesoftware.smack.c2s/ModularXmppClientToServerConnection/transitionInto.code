@@ -1,0 +1,130 @@
+@Override public StateTransitionResult.AttemptResult transitionInto(WalkStateGraphContext walkStateGraphContext){
+synchronized (ModularXmppClientToServerConnection.this) {
+    if (inputOutputFilters.isEmpty()) {
+      previousInputOutputFilters=null;
+    }
+ else {
+      previousInputOutputFilters=new ArrayList<>(inputOutputFilters.size());
+      previousInputOutputFilters.addAll(inputOutputFilters);
+      inputOutputFilters.clear();
+    }
+  }
+  ListIterator<State> it=walkFromDisconnectToAuthenticated.listIterator(walkFromDisconnectToAuthenticated.size());
+  while (it.hasPrevious()) {
+    State stateToReset=it.previous();
+    stateToReset.resetState();
+  }
+  walkFromDisconnectToAuthenticated=null;
+  return StateTransitionResult.Success.EMPTY_INSTANCE;
+}
+@Override public AttemptResult transitionInto(WalkStateGraphContext walkStateGraphContext) throws XMPPErrorException, SASLErrorException, IOException, SmackException, InterruptedException, FailedNonzaException {
+  Map<XmppClientToServerTransport,List<SmackFuture<LookupConnectionEndpointsResult,Exception>>> lookupFutures=new HashMap<>(transports.size());
+  final int numberOfFutures;
+{
+    List<SmackFuture<?,?>> allFutures=new ArrayList<>();
+    for (    XmppClientToServerTransport transport : transports.values()) {
+      transport.resetDiscoveredConnectionEndpoints();
+      List<SmackFuture<LookupConnectionEndpointsResult,Exception>> transportFutures=transport.lookupConnectionEndpoints();
+      lookupFutures.put(transport,transportFutures);
+      allFutures.addAll(transportFutures);
+    }
+    numberOfFutures=allFutures.size();
+    SmackFuture.await(allFutures,getReplyTimeout(),TimeUnit.MILLISECONDS);
+  }
+  List<LookupConnectionEndpointsFailed> lookupFailures=new ArrayList<>(numberOfFutures);
+  boolean atLeastOneConnectionEndpointDiscovered=false;
+  for (  Map.Entry<XmppClientToServerTransport,List<SmackFuture<LookupConnectionEndpointsResult,Exception>>> entry : lookupFutures.entrySet()) {
+    XmppClientToServerTransport transport=entry.getKey();
+    for (    SmackFuture<LookupConnectionEndpointsResult,Exception> future : entry.getValue()) {
+      LookupConnectionEndpointsResult result=future.getIfAvailable();
+      if (result == null) {
+        continue;
+      }
+      if (result instanceof LookupConnectionEndpointsFailed) {
+        LookupConnectionEndpointsFailed lookupFailure=(LookupConnectionEndpointsFailed)result;
+        lookupFailures.add(lookupFailure);
+        continue;
+      }
+      LookupConnectionEndpointsSuccess successResult=(LookupConnectionEndpointsSuccess)result;
+      transport.loadConnectionEndpoints(successResult);
+      atLeastOneConnectionEndpointDiscovered=true;
+    }
+  }
+  if (!atLeastOneConnectionEndpointDiscovered) {
+    throw SmackException.NoEndpointsDiscoveredException.from(lookupFailures);
+  }
+  if (!lookupFailures.isEmpty()) {
+  }
+  outgoingElementsQueueWasShutdown=outgoingElementsQueue.start();
+  return StateTransitionResult.Success.EMPTY_INSTANCE;
+}
+@Override public StateTransitionResult.AttemptResult transitionInto(WalkStateGraphContext walkStateGraphContext){
+  assert walkFromDisconnectToAuthenticated == null;
+  if (walkStateGraphContext.isWalksFinalState(getStateDescriptor())) {
+    walkFromDisconnectToAuthenticated=walkStateGraphContext.getWalk();
+  }
+  connected=true;
+  return StateTransitionResult.Success.EMPTY_INSTANCE;
+}
+@Override public StateTransitionResult.AttemptResult transitionInto(WalkStateGraphContext walkStateGraphContext) throws IOException, SmackException, InterruptedException, XMPPException {
+  prepareToWaitForFeaturesReceived();
+  LoginContext loginContext=walkStateGraphContext.getLoginContext();
+  SASLMechanism usedSaslMechanism=authenticate(loginContext.username,loginContext.password,config.getAuthzid(),getSSLSession());
+  waitForFeaturesReceived("server stream features after SASL authentication");
+  return new SaslAuthenticationSuccessResult(usedSaslMechanism);
+}
+@Override public StateTransitionResult.AttemptResult transitionInto(WalkStateGraphContext walkStateGraphContext) throws IOException, SmackException, InterruptedException, XMPPException {
+  lastFeaturesReceived=true;
+  notifyWaitingThreads();
+  LoginContext loginContext=walkStateGraphContext.getLoginContext();
+  Resourcepart resource=bindResourceAndEstablishSession(loginContext.resource);
+  streamResumed=false;
+  return new ResourceBoundResult(resource,loginContext.resource);
+}
+@Override public StateTransitionResult.AttemptResult transitionInto(WalkStateGraphContext walkStateGraphContext) throws NotConnectedException, InterruptedException {
+  if (walkFromDisconnectToAuthenticated != null) {
+    assert walkStateGraphContext.getWalk().get(0).getStateDescriptor().getClass() != DisconnectedStateDescriptor.class;
+    walkStateGraphContext.appendWalkTo(walkFromDisconnectToAuthenticated);
+  }
+ else {
+    walkFromDisconnectToAuthenticated=new ArrayList<>(walkStateGraphContext.getWalkLength() + 1);
+    walkStateGraphContext.appendWalkTo(walkFromDisconnectToAuthenticated);
+  }
+  walkFromDisconnectToAuthenticated.add(this);
+  afterSuccessfulLogin(streamResumed);
+  return StateTransitionResult.Success.EMPTY_INSTANCE;
+}
+@Override public StateTransitionResult.AttemptResult transitionInto(WalkStateGraphContext walkStateGraphContext){
+  closingStreamReceived=false;
+  StreamOpenAndCloseFactory openAndCloseFactory=activeTransport.getStreamOpenAndCloseFactory();
+  AbstractStreamClose closeStreamElement=openAndCloseFactory.createStreamClose();
+  boolean streamCloseIssued=outgoingElementsQueue.offerAndShutdown(closeStreamElement);
+  if (streamCloseIssued) {
+    activeTransport.notifyAboutNewOutgoingElements();
+    boolean successfullyReceivedStreamClose=waitForClosingStreamTagFromServer();
+    if (successfullyReceivedStreamClose) {
+      for (Iterator<XmppInputOutputFilter> it=connectionInternal.getXmppInputOutputFilterBeginIterator(); it.hasNext(); ) {
+        XmppInputOutputFilter filter=it.next();
+        filter.closeInputOutput();
+      }
+      activeTransport.afterFiltersClosed();
+      for (Iterator<XmppInputOutputFilter> it=connectionInternal.getXmppInputOutputFilterBeginIterator(); it.hasNext(); ) {
+        XmppInputOutputFilter filter=it.next();
+        try {
+          filter.waitUntilInputOutputClosed();
+        }
+ catch (        IOException|CertificateException|InterruptedException|SmackException|XMPPException e) {
+          LOGGER.log(Level.WARNING,"waitUntilInputOutputClosed() threw",e);
+        }
+      }
+      authenticated=false;
+    }
+  }
+  return StateTransitionResult.Success.EMPTY_INSTANCE;
+}
+@Override public StateTransitionResult.AttemptResult transitionInto(WalkStateGraphContext walkStateGraphContext){
+  activeTransport.disconnect();
+  activeTransport=null;
+  authenticated=connected=false;
+  return StateTransitionResult.Success.EMPTY_INSTANCE;
+}

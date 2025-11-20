@@ -1,0 +1,58 @@
+/** 
+ * <pre> author: Blankj blog  : http://blankj.com time  : 2019/07/09 desc  : </pre>
+ */
+public class ApiClassVisitor extends ClassVisitor {
+  private Map<String,ApiInfo> mApiImplMap;
+  private List<String> mApiClasses;
+  private String className;
+  private String superClassName;
+  private boolean hasAnnotation;
+  private boolean isMock;
+  private String mApiUtilsClass;
+  public ApiClassVisitor(  ClassVisitor classVisitor,  Map<String,ApiInfo> apiImplMap,  List<String> apiClasses,  String apiUtilsClass){
+    super(Opcodes.ASM5,classVisitor);
+    mApiImplMap=apiImplMap;
+    mApiClasses=apiClasses;
+    mApiUtilsClass=apiUtilsClass.replace(".","/");
+  }
+  @Override public void visit(  int version,  int access,  String name,  String signature,  String superName,  String[] interfaces){
+    className=name;
+    superClassName=superName;
+    if ((mApiUtilsClass + "$BaseApi").equals(superName)) {
+      mApiClasses.add(name);
+    }
+    super.visit(version,access,name,signature,superName,interfaces);
+  }
+  @Override public AnnotationVisitor visitAnnotation(  String desc,  boolean visible){
+    if (("L" + mApiUtilsClass + "$Api;").equals(desc)) {
+      hasAnnotation=true;
+      return new AnnotationVisitor(Opcodes.ASM5,super.visitAnnotation(desc,visible)){
+        @Override public void visit(        String name,        Object value){
+          isMock=(boolean)value;
+          super.visit(name,value);
+        }
+      }
+;
+    }
+    return super.visitAnnotation(desc,visible);
+  }
+  @Override public void visitEnd(){
+    super.visitEnd();
+    if (hasAnnotation) {
+      if (!isMock) {
+        ApiInfo apiInfo=mApiImplMap.get(superClassName);
+        if (apiInfo == null || apiInfo.isMock) {
+          mApiImplMap.put(superClassName,new ApiInfo(className,false));
+        }
+ else {
+          throw new IllegalArgumentException("<" + className + "> and <"+ apiInfo.implApiClass+ "> impl same api of <"+ superClassName+ ">");
+        }
+      }
+ else {
+        if (!mApiImplMap.containsKey(superClassName)) {
+          mApiImplMap.put(superClassName,new ApiInfo(className,true));
+        }
+      }
+    }
+  }
+}

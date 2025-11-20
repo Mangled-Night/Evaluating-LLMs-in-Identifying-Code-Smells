@@ -1,0 +1,14 @@
+@Override public void deleteOrder(Long orderId){
+  UmsMember member=memberService.getCurrentMember();
+  OmsOrder order=orderMapper.selectByPrimaryKey(orderId);
+  if (!member.getId().equals(order.getMemberId())) {
+    Asserts.fail("不能删除他人订单！");
+  }
+  if (order.getStatus() == 3 || order.getStatus() == 4) {
+    order.setDeleteStatus(1);
+    orderMapper.updateByPrimaryKey(order);
+  }
+ else {
+    Asserts.fail("只能删除已完成或已关闭的订单！");
+  }
+}

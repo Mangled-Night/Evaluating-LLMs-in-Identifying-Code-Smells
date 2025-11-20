@@ -1,0 +1,19 @@
+/** 
+ * Increases view distance upon receiving an increase view distance event.
+ * @param button The button or key pressed to increase view distance.
+ * @param entity The player entity that triggered the view distance increase.
+ */
+@ReceiveEvent(components=ClientComponent.class) public void onIncreaseViewDistance(IncreaseViewDistanceButton button,EntityRef entity){
+  int viewDistance=config.getRendering().getViewDistance().getIndex();
+  int maxViewDistance=ViewDistance.values().length - 1;
+  if (viewDistance != maxViewDistance) {
+    ViewDistance greaterViewDistance=ViewDistance.forIndex(viewDistance + 1);
+    String greaterViewDistanceStr=translationSystem.translate(greaterViewDistance.toString());
+    fireChangeEvent("Increasing view distance to " + greaterViewDistanceStr + ".",Arrays.asList(entity));
+    if (greaterViewDistance == ViewDistance.MEGA || greaterViewDistance == ViewDistance.EXTREME) {
+      fireChangeEvent("Warning: Increasing view distance to " + greaterViewDistanceStr + " may result in performance issues.",Arrays.asList(entity));
+    }
+    config.getRendering().setViewDistance(greaterViewDistance);
+  }
+  button.consume();
+}

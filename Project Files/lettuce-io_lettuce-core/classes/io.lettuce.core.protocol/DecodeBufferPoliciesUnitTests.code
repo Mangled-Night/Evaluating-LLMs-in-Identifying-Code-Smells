@@ -1,0 +1,23 @@
+/** 
+ * Unit tests for  {@link DecodeBufferPolicies}.
+ * @author Mark Paluch
+ */
+@ExtendWith(MockitoExtension.class) class DecodeBufferPoliciesUnitTests {
+  @Mock ByteBuf byteBuf;
+  @Test void shouldAlwaysDiscard(){
+    DecodeBufferPolicy policy=DecodeBufferPolicies.always();
+    policy.afterDecoding(byteBuf);
+    policy.afterPartialDecode(byteBuf);
+    policy.afterCommandDecoded(byteBuf);
+    verify(byteBuf,never()).discardSomeReadBytes();
+    verify(byteBuf,times(3)).discardReadBytes();
+  }
+  @Test void shouldAlwaysDiscardSomeReadBytes(){
+    DecodeBufferPolicy policy=DecodeBufferPolicies.alwaysSome();
+    policy.afterDecoding(byteBuf);
+    policy.afterPartialDecode(byteBuf);
+    policy.afterCommandDecoded(byteBuf);
+    verify(byteBuf,never()).discardReadBytes();
+    verify(byteBuf,times(3)).discardSomeReadBytes();
+  }
+}

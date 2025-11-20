@@ -1,0 +1,123 @@
+/** 
+ * Instances of this class are responsible for generating the the list of tasks the renderer executes to (eventually) generate the image shown to the user. Tasks are generated out of an ordered list of nodes in the render graph. Each node provides the set of state changes it needs. Tasks are generated for each state change unless they are redundant. State changes from a node are redundant if the previous node want the exact same state change. After tasks for the non-redundant state changes desired by a node have been generated a task is appended to the list, to execute the node's process() method, which is where any rendering actually happens. Finally, each node also provides a list of state change resets: state changes bringing a property back to its default. Tasks are generated also these unless they'd be redundant. A state change reset is redundant if the next node needs to set that property to a non-default value. It should be noted that nodes are skipped if they are disabled.
+ */
+public final class RenderTaskListGenerator {
+  private static final Logger logger=LoggerFactory.getLogger(RenderTaskListGenerator.class);
+  private List<RenderPipelineTask> taskList;
+  private List<Node> nodeList;
+  public RenderTaskListGenerator(){
+    taskList=Lists.newArrayList();
+  }
+  private void logIntermediateRendererListForDebugging(  List<Node> orderedNodes){
+    for (    Node node : orderedNodes) {
+      if (node.isEnabled()) {
+        logger.info(String.format(("----- %s"),node.getClass().getSimpleName()));
+        for (        StateChange desiredStateChange : node.getDesiredStateChanges()) {
+          logger.info(desiredStateChange.toString());
+        }
+        logger.info(String.format("%s: process()",node.toString()));
+      }
+    }
+  }
+  /** 
+ * See the RenderTaskListGenerator class Javadoc for an overview of what this method does.
+ * @param orderedNodes a list of Node instances, ordered to reflect the dependencies between them,i.e. Node A must be processed before Node B to work correctly.
+ * @return an optimized list of RenderPipelineTask instances,ready to be iterated over to execute a frame worth of rendering
+ */
+  public List<RenderPipelineTask> generateFrom(  List<Node> orderedNodes){
+    long startTimeInNanoSeconds=System.nanoTime();
+    nodeList=orderedNodes;
+    taskList.clear();
+    Map<Class<?>,StateChange> persistentStateChanges=Maps.newHashMap();
+    Set<Class<?>> requestedStateChanges=Sets.newHashSet();
+    List<StateChange> stateChangesToAdd=Lists.newArrayList();
+    StateChange persistentStateChange;
+    Iterator<Map.Entry<Class<?>,StateChange>> iterator;
+    Map.Entry<Class<?>,StateChange> entry;
+    Class<?> key;
+    StateChange stateChange;
+    int enabledNodes=0;
+    int potentialTasks=0;
+    for (    Node node : orderedNodes) {
+      if (node.isEnabled()) {
+        if (logger.isDebugEnabled()) {
+          taskList.add(new MarkerTask(node.getUri() + " (" + node.getClass().getSimpleName()+ ")"));
+          enabledNodes++;
+          potentialTasks+=2 * node.getDesiredStateChanges().size() + 1;
+        }
+        for (        StateChange currentStateChange : node.getDesiredStateChanges()) {
+          persistentStateChange=persistentStateChanges.get(currentStateChange.getClass());
+          if (!currentStateChange.equals(persistentStateChange)) {
+            stateChangesToAdd.add(currentStateChange);
+            persistentStateChanges.put(currentStateChange.getClass(),currentStateChange);
+          }
+          requestedStateChanges.add(currentStateChange.getClass());
+        }
+        iterator=persistentStateChanges.entrySet().iterator();
+        while (iterator.hasNext()) {
+          entry=iterator.next();
+          key=entry.getKey();
+          stateChange=entry.getValue();
+          if (!requestedStateChanges.contains(key)) {
+            requestedStateChanges.remove(key);
+            StateChange resetTask=stateChange.getDefaultInstance();
+            if (resetTask != null) {
+              taskList.add(resetTask);
+            }
+            iterator.remove();
+          }
+          requestedStateChanges.remove(key);
+        }
+        taskList.addAll(stateChangesToAdd);
+        stateChangesToAdd.clear();
+        taskList.add(node);
+      }
+    }
+    for (    Map.Entry<Class<?>,StateChange> stateChangeEntry : persistentStateChanges.entrySet()) {
+      taskList.add(stateChangeEntry.getValue().getDefaultInstance());
+    }
+    long endTimeInNanoSeconds=System.nanoTime();
+    logger.debug("===== INTERMEDIATE RENDERER LIST =========================");
+    logIntermediateRendererListForDebugging(orderedNodes);
+    logger.debug("===== RENDERER TASK LIST =================================");
+    logList(taskList);
+    logger.debug("----------------------------------------------------------");
+    logger.debug(String.format("Task list generated in %.3f ms",(endTimeInNanoSeconds - startTimeInNanoSeconds) / 1000000f));
+    logger.debug(String.format("%s nodes, %s enabled - %s tasks (excluding marker tasks) out of %s potential tasks.",nodeList.size(),enabledNodes,taskList.size() - enabledNodes,potentialTasks));
+    logger.debug("----------------------------------------------------------");
+    return taskList;
+  }
+  private void logList(  List<?> list){
+    for (    Object object : list) {
+      logger.debug(object.toString());
+    }
+  }
+  /** 
+ * Forces a refresh of the task list using the latest node list provided to the generateFrom method. A refresh is useful when one of the nodes has been enabled or disabled, as the tasks associated with it need to be added to the task list or removed from it. Tasks "downstream" of the change need to be re-evaluated then, as they might have become redundant. At this stage the refresh uses a brute-force approach: the whole task list is cleared and regenerated. Eventually it will be useful to make sure that only tasks affected by a change are regenerated.
+ */
+  public void refresh(){
+    generateFrom(nodeList);
+  }
+  /** 
+ * Instances of this class are intended to be inserted in the Render Task List. If the content of the task list is printed out by the logger, instances of this class visually separate the tasks related to a node from those of the previous one.
+ */
+private final class MarkerTask implements RenderPipelineTask {
+    private String message;
+    /** 
+ * Instantiate a MarkerTask.
+ * @param message A string used by the toString() method.
+ */
+    private MarkerTask(    String message){
+      this.message=message;
+    }
+    @Override public void process(){
+    }
+    /** 
+ * Returns a string description of the instance.
+ * @return A string in the form: "{@code ----- <message>}", where  {@code <message>} is the string passed to the constructor.
+ */
+    public String toString(){
+      return String.format("----- %s",message);
+    }
+  }
+}

@@ -1,0 +1,25 @@
+public static void start(){
+  String migratePath=ZKUtils.getZKBasePath() + "migrate";
+  try {
+    CuratorFramework client=ZKUtils.getConnection();
+    if (client.checkExists().forPath(migratePath) == null) {
+      client.create().creatingParentsIfNeeded().forPath(migratePath);
+    }
+  }
+ catch (  Exception e) {
+    throw new RuntimeException(e);
+  }
+  ZKUtils.addChildPathCache(migratePath,new PathChildrenCacheListener(){
+    @Override public void childEvent(    CuratorFramework curatorFramework,    PathChildrenCacheEvent fevent) throws Exception {
+switch (fevent.getType()) {
+case CHILD_ADDED:
+        LOGGER.info("table CHILD_ADDED: " + fevent.getData().getPath());
+      ZKUtils.addChildPathCache(fevent.getData().getPath(),new TaskPathChildrenCacheListener());
+    break;
+default :
+  break;
+}
+}
+}
+);
+}

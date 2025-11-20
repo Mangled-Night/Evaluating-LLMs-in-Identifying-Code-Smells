@@ -1,0 +1,41 @@
+private LayerRange getLayerRange(int x,int z,Region region){
+  Vector2i pos=new Vector2i(x,z);
+  if (!layerRangeMap.containsKey(pos)) {
+    int surfaceHeight=(int)Math.floor(region.getFacet(ElevationFacet.class).getWorld(pos));
+    boolean aboveground=ordering > 0;
+    int cumulativeDistanceSmall=0;
+    int cumulativeDistanceLarge=0;
+    LayerRange layerRange=null;
+    List<LayeredZoneRegionFunction> layers=aboveground ? abovegroundLayers : undergroundLayers;
+    int layerIndex;
+    for (layerIndex=0; layerIndex < layers.size(); layerIndex++) {
+      LayeredZoneRegionFunction currentLayer=layers.get(layerIndex);
+      int thickness=currentLayer.layerThickness.get(x,z);
+      cumulativeDistanceLarge+=thickness;
+      if (this.equals(currentLayer)) {
+        if (aboveground) {
+          layerRange=new LayerRange().setMin(surfaceHeight + cumulativeDistanceSmall).setMax(surfaceHeight + cumulativeDistanceLarge);
+          break;
+        }
+ else {
+          layerRange=new LayerRange().setMin(surfaceHeight - cumulativeDistanceLarge).setMax(surfaceHeight - cumulativeDistanceSmall);
+          break;
+        }
+      }
+      cumulativeDistanceSmall+=thickness;
+    }
+    if (layers.size() <= 0 || layerRange == null) {
+      throw new IllegalStateException("Layer for zone '" + parent + "' not found in list of "+ (aboveground ? "aboveground" : "underground")+ " layers.");
+    }
+    if (layerIndex == layers.size() - 1) {
+      if (aboveground) {
+        layerRange.unsetMax();
+      }
+ else {
+        layerRange.unsetMin();
+      }
+    }
+    layerRangeMap.put(pos,layerRange);
+  }
+  return layerRangeMap.get(pos);
+}

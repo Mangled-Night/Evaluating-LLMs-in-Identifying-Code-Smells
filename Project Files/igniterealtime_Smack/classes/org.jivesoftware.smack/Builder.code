@@ -1,0 +1,589 @@
+/** 
+ * A builder for XMPP connection configurations. <p> This is an abstract class that uses the builder design pattern and the "getThis() trick" to recover the type of the builder in a class hierarchies with a self-referential generic supertype. Otherwise chaining of build instructions from the superclasses followed by build instructions of a subclass would not be possible, because the superclass build instructions would return the builder of the superclass and not the one of the subclass. You can read more about it a Angelika Langer's Generics FAQ, especially the entry <a href="http://www.angelikalanger.com/GenericsFAQ/FAQSections/ProgrammingIdioms.html#FAQ206">What is the "getThis()" trick?</a>. </p>
+ * @param < B > the builder type parameter.
+ * @param < C > the resulting connection configuration type parameter.
+ */
+public abstract static class Builder<B extends Builder<B,C>,C extends ConnectionConfiguration> {
+  private SecurityMode securityMode=SecurityMode.required;
+  private DnssecMode dnssecMode=DnssecMode.disabled;
+  private KeyManager[] keyManagers;
+  private SecureRandom sslContextSecureRandom;
+  private String keystorePath;
+  private String keystoreType;
+  private String pkcs11Library="pkcs11.config";
+  private SslContextFactory sslContextFactory;
+  private String[] enabledSSLProtocols;
+  private String[] enabledSSLCiphers;
+  private HostnameVerifier hostnameVerifier;
+  private EntityBareJid authzid;
+  private CharSequence username;
+  private String password;
+  private Resourcepart resource;
+  private Locale language=Locale.getDefault();
+  private boolean sendPresence=true;
+  private ProxyInfo proxy;
+  private CallbackHandler callbackHandler;
+  private SmackDebuggerFactory debuggerFactory;
+  private SocketFactory socketFactory;
+  private DomainBareJid xmppServiceDomain;
+  private InetAddress hostAddress;
+  private DnsName host;
+  private UInt16 port=UInt16.from(5222);
+  private boolean allowEmptyOrNullUsername=false;
+  private boolean saslMechanismsSealed;
+  private Set<String> enabledSaslMechanisms;
+  private X509TrustManager customX509TrustManager;
+  private boolean compressionEnabled=false;
+  private StanzaIdSourceFactory stanzaIdSourceFactory=new StandardStanzaIdSource.Factory();
+  protected Builder(){
+    if (SmackConfiguration.DEBUG) {
+      enableDefaultDebugger();
+    }
+  }
+  /** 
+ * Convenience method to configure the username, password and XMPP service domain.
+ * @param jid the XMPP address of the user.
+ * @param password the password of the user.
+ * @return a reference to this builder.
+ * @throws XmppStringprepException in case the XMPP address is not valid.
+ * @see #setXmppAddressAndPassword(EntityBareJid,String)
+ * @since 4.4.0
+ */
+  public B setXmppAddressAndPassword(  CharSequence jid,  String password) throws XmppStringprepException {
+    return setXmppAddressAndPassword(JidCreate.entityBareFrom(jid),password);
+  }
+  /** 
+ * Convenience method to configure the username, password and XMPP service domain. The localpart of the provided JID is used as username and the domanipart is used as XMPP service domain. <p> Please note that this does and can not configure the client XMPP address. XMPP services are not required to assign bound JIDs where the localpart matches the username and the domainpart matches the verified domainpart. Although most services will follow that pattern. </p>
+ * @param jid TODO javadoc me please
+ * @param password TODO javadoc me please
+ * @return a reference to this builder.
+ * @since 4.4.0
+ */
+  public B setXmppAddressAndPassword(  EntityBareJid jid,  String password){
+    setUsernameAndPassword(jid.getLocalpart(),password);
+    return setXmppDomain(jid.asDomainBareJid());
+  }
+  /** 
+ * Set the XMPP entities username and password. <p> The username is usually the localpart of the clients JID. But some SASL mechanisms or services may require a different format (e.g. the full JID) as used authorization identity. </p>
+ * @param username the username or authorization identity
+ * @param password the password or token used to authenticate
+ * @return a reference to this builder.
+ */
+  public B setUsernameAndPassword(  CharSequence username,  String password){
+    this.username=username;
+    this.password=password;
+    return getThis();
+  }
+  /** 
+ * Set the XMPP domain. The XMPP domain is what follows after the '@' sign in XMPP addresses (JIDs).
+ * @param serviceName the service name
+ * @return a reference to this builder.
+ * @deprecated use {@link #setXmppDomain(DomainBareJid)} instead.
+ */
+  @Deprecated public B setServiceName(  DomainBareJid serviceName){
+    return setXmppDomain(serviceName);
+  }
+  /** 
+ * Set the XMPP domain. The XMPP domain is what follows after the '@' sign in XMPP addresses (JIDs).
+ * @param xmppDomain the XMPP domain.
+ * @return a reference to this builder.
+ */
+  public B setXmppDomain(  DomainBareJid xmppDomain){
+    this.xmppServiceDomain=xmppDomain;
+    return getThis();
+  }
+  /** 
+ * Set the XMPP domain. The XMPP domain is what follows after the '@' sign in XMPP addresses (JIDs).
+ * @param xmppServiceDomain the XMPP domain.
+ * @return a reference to this builder.
+ * @throws XmppStringprepException if the given string is not a domain bare JID.
+ */
+  public B setXmppDomain(  String xmppServiceDomain) throws XmppStringprepException {
+    this.xmppServiceDomain=JidCreate.domainBareFrom(xmppServiceDomain);
+    return getThis();
+  }
+  /** 
+ * Set the resource we are requesting from the server. <p> If <code>resource</code> is <code>null</code>, the default, then the server will automatically create a resource for the client. Note that XMPP clients only suggest this resource to the server. XMPP servers are allowed to ignore the client suggested resource and instead assign a completely different resource (see RFC 6120 § 7.7.1). </p>
+ * @param resource the resource to use.
+ * @return a reference to this builder.
+ * @see <a href="https://tools.ietf.org/html/rfc6120#section-7.7.1">RFC 6120 § 7.7.1</a>
+ */
+  public B setResource(  Resourcepart resource){
+    this.resource=resource;
+    return getThis();
+  }
+  /** 
+ * Set the stream language.
+ * @param language the language to use.
+ * @return a reference to this builder.
+ * @see <a href="https://tools.ietf.org/html/rfc6120#section-4.7.4">RFC 6120 § 4.7.4</a>
+ * @see <a href="https://www.w3.org/TR/xml/#sec-lang-tag">XML 1.0 § 2.12 Language Identification</a>
+ */
+  public B setLanguage(  Locale language){
+    this.language=language;
+    return getThis();
+  }
+  /** 
+ * Set the resource we are requesting from the server.
+ * @param resource the non-null CharSequence to use a resource.
+ * @return a reference ot this builder.
+ * @throws XmppStringprepException if the CharSequence is not a valid resourcepart.
+ * @see #setResource(Resourcepart)
+ */
+  public B setResource(  CharSequence resource) throws XmppStringprepException {
+    Objects.requireNonNull(resource,"resource must not be null");
+    return setResource(Resourcepart.from(resource.toString()));
+  }
+  /** 
+ * Set the Internet address of the host providing the XMPP service. If set, then this will overwrite anything set via  {@link #setHost(CharSequence)}.
+ * @param address the Internet address of the host providing the XMPP service.
+ * @return a reference to this builder.
+ * @since 4.2
+ */
+  public B setHostAddress(  InetAddress address){
+    this.hostAddress=address;
+    return getThis();
+  }
+  /** 
+ * Set the name of the host providing the XMPP service. This method takes DNS names and IP addresses.
+ * @param host the DNS name of the host providing the XMPP service.
+ * @return a reference to this builder.
+ */
+  public B setHost(  CharSequence host){
+    String fqdnOrIpString=host.toString();
+    if (InetAddressUtil.isIpAddress(fqdnOrIpString)) {
+      InetAddress hostInetAddress;
+      try {
+        hostInetAddress=InetAddress.getByName(fqdnOrIpString);
+      }
+ catch (      UnknownHostException e) {
+        throw new AssertionError(e);
+      }
+      setHostAddress(hostInetAddress);
+    }
+ else {
+      DnsName dnsName=DnsName.from(fqdnOrIpString);
+      setHost(dnsName);
+    }
+    return getThis();
+  }
+  /** 
+ * Set the name of the host providing the XMPP service. Note that this method does only allow DNS names and not IP addresses. Use  {@link #setHostAddress(InetAddress)} if you want to explicitly set the Internet address ofthe host providing the XMPP service.
+ * @param host the DNS name of the host providing the XMPP service.
+ * @return a reference to this builder.
+ */
+  public B setHost(  DnsName host){
+    this.host=host;
+    return getThis();
+  }
+  /** 
+ * Set the host to connect to by either its fully qualified domain name (FQDN) or its IP.
+ * @param fqdnOrIp a CharSequence either representing the FQDN or the IP of the host.
+ * @return a reference to this builder.
+ * @see #setHost(DnsName)
+ * @see #setHostAddress(InetAddress)
+ * @since 4.3.2
+ * @deprecated use {@link #setHost(CharSequence)} instead.
+ */
+  @Deprecated public B setHostAddressByNameOrIp(  CharSequence fqdnOrIp){
+    return setHost(fqdnOrIp);
+  }
+  public B setPort(  int port){
+    if (port < 0 || port > 65535) {
+      throw new IllegalArgumentException("Port must be a 16-bit unsigned integer (i.e. between 0-65535. Port was: " + port);
+    }
+    UInt16 portUint16=UInt16.from(port);
+    return setPort(portUint16);
+  }
+  public B setPort(  UInt16 port){
+    this.port=Objects.requireNonNull(port);
+    return getThis();
+  }
+  /** 
+ * Sets a CallbackHandler to obtain information, such as the password or principal information during the SASL authentication. A CallbackHandler will be used <b>ONLY</b> if no password was specified during the login while using SASL authentication.
+ * @param callbackHandler to obtain information, such as the password orprincipal information during the SASL authentication.
+ * @return a reference to this builder.
+ * @deprecated set a callback-handler aware {@link KeyManager} via {@link #setKeyManager(KeyManager)} or{@link #setKeyManagers(KeyManager[])}, created by {@link #getKeyManagersFrom(String,String,CallbackHandler,String)}, instead.
+ */
+  @Deprecated public B setCallbackHandler(  CallbackHandler callbackHandler){
+    this.callbackHandler=callbackHandler;
+    return getThis();
+  }
+  public B setDnssecMode(  DnssecMode dnssecMode){
+    this.dnssecMode=Objects.requireNonNull(dnssecMode,"DNSSEC mode must not be null");
+    return getThis();
+  }
+  public B setCustomX509TrustManager(  X509TrustManager x509TrustManager){
+    this.customX509TrustManager=x509TrustManager;
+    return getThis();
+  }
+  /** 
+ * Sets the TLS security mode used when making the connection. By default, the mode is  {@link SecurityMode#required}.
+ * @param securityMode the security mode.
+ * @return a reference to this builder.
+ */
+  public B setSecurityMode(  SecurityMode securityMode){
+    this.securityMode=securityMode;
+    return getThis();
+  }
+  /** 
+ * Set the  {@link KeyManager}s to initialize the  {@link SSLContext} used by Smack to establish the XMPP connection.
+ * @param keyManagers an array of {@link KeyManager}s to initialize the  {@link SSLContext} with.
+ * @return a reference to this builder.
+ * @since 4.4.5
+ */
+  public B setKeyManagers(  KeyManager[] keyManagers){
+    this.keyManagers=keyManagers;
+    return getThis();
+  }
+  /** 
+ * Set the  {@link KeyManager}s to initialize the  {@link SSLContext} used by Smack to establish the XMPP connection.
+ * @param keyManager the {@link KeyManager}s to initialize the  {@link SSLContext} with.
+ * @return a reference to this builder.
+ * @see #setKeyManagers(KeyManager[])
+ * @since 4.4.5
+ */
+  public B setKeyManager(  KeyManager keyManager){
+    KeyManager[] keyManagers=new KeyManager[]{keyManager};
+    return setKeyManagers(keyManagers);
+  }
+  /** 
+ * Set the  {@link SecureRandom} used to initialize the {@link SSLContext} used by Smack to establish the XMPPconnection. Note that you usually do not need (nor want) to set this. Because if the  {@link SecureRandom} isnot explicitly set, Smack will initialize the  {@link SSLContext} with <code>null</code> as{@link SecureRandom} argument. And all sane {@link SSLContext} implementations will then select a safe securerandom source by default.
+ * @param secureRandom the {@link SecureRandom} to initialize the {@link SSLContext} with.
+ * @return a reference to this builder.
+ * @since 4.4.5
+ */
+  public B setSslContextSecureRandom(  SecureRandom secureRandom){
+    this.sslContextSecureRandom=secureRandom;
+    return getThis();
+  }
+  /** 
+ * Sets the path to the keystore file. The key store file contains the certificates that may be used to authenticate the client to the server, in the event the server requests or requires it.
+ * @param keystorePath the path to the keystore file.
+ * @return a reference to this builder.
+ * @deprecated set a keystore-path aware {@link KeyManager} via {@link #setKeyManager(KeyManager)} or{@link #setKeyManagers(KeyManager[])}, created by {@link #getKeyManagersFrom(String,String,CallbackHandler,String)}, instead.
+ */
+  @Deprecated public B setKeystorePath(  String keystorePath){
+    this.keystorePath=keystorePath;
+    return getThis();
+  }
+  /** 
+ * Sets the keystore type.
+ * @param keystoreType the keystore type.
+ * @return a reference to this builder.
+ * @deprecated set a key-type aware {@link KeyManager} via {@link #setKeyManager(KeyManager)} or{@link #setKeyManagers(KeyManager[])}, created by {@link #getKeyManagersFrom(String,String,CallbackHandler,String)}, instead.
+ */
+  @Deprecated public B setKeystoreType(  String keystoreType){
+    this.keystoreType=keystoreType;
+    return getThis();
+  }
+  /** 
+ * Sets the PKCS11 library file location, needed when the Keystore type is PKCS11.
+ * @param pkcs11Library the path to the PKCS11 library file.
+ * @return a reference to this builder.
+ * @deprecated set a PKCS11-library aware {@link KeyManager} via {@link #setKeyManager(KeyManager)} or{@link #setKeyManagers(KeyManager[])}, created by {@link #getKeyManagersFrom(String,String,CallbackHandler,String)}, instead.
+ */
+  @Deprecated public B setPKCS11Library(  String pkcs11Library){
+    this.pkcs11Library=pkcs11Library;
+    return getThis();
+  }
+  /** 
+ * Sets a custom SSLContext for creating SSL sockets. <p> For more information on how to create a SSLContext see <a href= "http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#X509TrustManager" >Java Secure Socket Extension (JSEE) Reference Guide: Creating Your Own X509TrustManager</a>
+ * @param context the custom SSLContext for new sockets.
+ * @return a reference to this builder.
+ * @deprecated use {@link #setSslContextFactory(SslContextFactory)} instead}.
+ */
+  @Deprecated public B setCustomSSLContext(  SSLContext context){
+    return setSslContextFactory(() -> {
+      return context;
+    }
+);
+  }
+  /** 
+ * Sets a custom SSLContext for creating SSL sockets. <p> For more information on how to create a SSLContext see <a href= "http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#X509TrustManager" >Java Secure Socket Extension (JSEE) Reference Guide: Creating Your Own X509TrustManager</a>
+ * @param sslContextFactory the custom SSLContext for new sockets.
+ * @return a reference to this builder.
+ */
+  public B setSslContextFactory(  SslContextFactory sslContextFactory){
+    this.sslContextFactory=Objects.requireNonNull(sslContextFactory,"The provided SslContextFactory must not be null");
+    return getThis();
+  }
+  /** 
+ * Set the enabled SSL/TLS protocols.
+ * @param enabledSSLProtocols TODO javadoc me please
+ * @return a reference to this builder.
+ */
+  public B setEnabledSSLProtocols(  String[] enabledSSLProtocols){
+    this.enabledSSLProtocols=enabledSSLProtocols;
+    return getThis();
+  }
+  /** 
+ * Set the enabled SSL/TLS ciphers.
+ * @param enabledSSLCiphers the enabled SSL/TLS ciphers
+ * @return a reference to this builder.
+ */
+  public B setEnabledSSLCiphers(  String[] enabledSSLCiphers){
+    this.enabledSSLCiphers=enabledSSLCiphers;
+    return getThis();
+  }
+  /** 
+ * Set the HostnameVerifier used to verify the hostname of SSLSockets used by XMPP connections created with this ConnectionConfiguration.
+ * @param verifier TODO javadoc me please
+ * @return a reference to this builder.
+ */
+  public B setHostnameVerifier(  HostnameVerifier verifier){
+    hostnameVerifier=verifier;
+    return getThis();
+  }
+  /** 
+ * Sets if an initial available presence will be sent to the server. By default an available presence will be sent to the server indicating that this presence is not online and available to receive messages. If you want to log in without being 'noticed' then pass a <code>false</code> value.
+ * @param sendPresence true if an initial available presence will be sent while logging in.
+ * @return a reference to this builder.
+ */
+  public B setSendPresence(  boolean sendPresence){
+    this.sendPresence=sendPresence;
+    return getThis();
+  }
+  public B enableDefaultDebugger(){
+    this.debuggerFactory=SmackConfiguration.getDefaultSmackDebuggerFactory();
+    assert this.debuggerFactory != null;
+    return getThis();
+  }
+  /** 
+ * Set the Smack debugger factory used to construct Smack debuggers.
+ * @param debuggerFactory the Smack debugger factory.
+ * @return a reference to this builder.
+ */
+  public B setDebuggerFactory(  SmackDebuggerFactory debuggerFactory){
+    this.debuggerFactory=debuggerFactory;
+    return getThis();
+  }
+  /** 
+ * Sets the socket factory used to create new xmppConnection sockets. This is useful when connecting through SOCKS5 proxies.
+ * @param socketFactory used to create new sockets.
+ * @return a reference to this builder.
+ */
+  public B setSocketFactory(  SocketFactory socketFactory){
+    this.socketFactory=socketFactory;
+    return getThis();
+  }
+  /** 
+ * Set the information about the Proxy used for the connection.
+ * @param proxyInfo the Proxy information.
+ * @return a reference to this builder.
+ */
+  public B setProxyInfo(  ProxyInfo proxyInfo){
+    this.proxy=proxyInfo;
+    return getThis();
+  }
+  /** 
+ * Allow <code>null</code> or the empty String as username. Some SASL mechanisms (e.g. SASL External) may also signal the username (as "authorization identity"), in which case Smack should not throw an IllegalArgumentException when the username is not set.
+ * @return a reference to this builder.
+ */
+  public B allowEmptyOrNullUsernames(){
+    allowEmptyOrNullUsername=true;
+    return getThis();
+  }
+  /** 
+ * Perform anonymous authentication using SASL ANONYMOUS. Your XMPP service must support this authentication mechanism. This method also calls  {@link #addEnabledSaslMechanism(String)} with "ANONYMOUS" as argument.
+ * @return a reference to this builder.
+ */
+  public B performSaslAnonymousAuthentication(){
+    if (!SASLAuthentication.isSaslMechanismRegistered(SASLAnonymous.NAME)) {
+      throw new IllegalArgumentException("SASL " + SASLAnonymous.NAME + " is not registered");
+    }
+    throwIfEnabledSaslMechanismsSet();
+    allowEmptyOrNullUsernames();
+    addEnabledSaslMechanism(SASLAnonymous.NAME);
+    saslMechanismsSealed=true;
+    return getThis();
+  }
+  /** 
+ * Perform authentication using SASL EXTERNAL. Your XMPP service must support this authentication mechanism. This method also calls  {@link #addEnabledSaslMechanism(String)} with "EXTERNAL" asargument. It also calls  {@link #allowEmptyOrNullUsernames()} and {@link #setSecurityMode(ConnectionConfiguration.SecurityMode)} to{@link SecurityMode#required}.
+ * @param sslContext custom SSLContext to be used.
+ * @return a reference to this builder.
+ */
+  public B performSaslExternalAuthentication(  SSLContext sslContext){
+    if (!SASLAuthentication.isSaslMechanismRegistered(SASLMechanism.EXTERNAL)) {
+      throw new IllegalArgumentException("SASL " + SASLMechanism.EXTERNAL + " is not registered");
+    }
+    setCustomSSLContext(sslContext);
+    throwIfEnabledSaslMechanismsSet();
+    allowEmptyOrNullUsernames();
+    setSecurityMode(SecurityMode.required);
+    addEnabledSaslMechanism(SASLMechanism.EXTERNAL);
+    saslMechanismsSealed=true;
+    return getThis();
+  }
+  private void throwIfEnabledSaslMechanismsSet(){
+    if (enabledSaslMechanisms != null) {
+      throw new IllegalStateException("Enabled SASL mechanisms found");
+    }
+  }
+  /** 
+ * Add the given mechanism to the enabled ones. See  {@link #addEnabledSaslMechanism(Collection)} for a discussion about enabled SASL mechanisms.
+ * @param saslMechanism the name of the mechanism to enable.
+ * @return a reference to this builder.
+ */
+  public B addEnabledSaslMechanism(  String saslMechanism){
+    return addEnabledSaslMechanism(Arrays.asList(StringUtils.requireNotNullNorEmpty(saslMechanism,"saslMechanism must not be null nor empty")));
+  }
+  /** 
+ * Enable the given SASL mechanisms. If you never add a mechanism to the set of enabled ones, <b>all mechanisms known to Smack</b> will be enabled. Only explicitly enable particular SASL mechanisms if you want to limit the used mechanisms to the enabled ones.
+ * @param saslMechanisms a collection of names of mechanisms to enable.
+ * @return a reference to this builder.
+ */
+  public B addEnabledSaslMechanism(  Collection<String> saslMechanisms){
+    if (saslMechanismsSealed) {
+      throw new IllegalStateException("The enabled SASL mechanisms are sealed, you can not add new ones");
+    }
+    CollectionUtil.requireNotEmpty(saslMechanisms,"saslMechanisms");
+    Set<String> blacklistedMechanisms=SASLAuthentication.getBlacklistedSASLMechanisms();
+    for (    String mechanism : saslMechanisms) {
+      if (!SASLAuthentication.isSaslMechanismRegistered(mechanism)) {
+        throw new IllegalArgumentException("SASL " + mechanism + " is not available. Consider registering it with Smack");
+      }
+      if (blacklistedMechanisms.contains(mechanism)) {
+        throw new IllegalArgumentException("SALS " + mechanism + " is blacklisted.");
+      }
+    }
+    if (enabledSaslMechanisms == null) {
+      enabledSaslMechanisms=new HashSet<>(saslMechanisms.size());
+    }
+    enabledSaslMechanisms.addAll(saslMechanisms);
+    return getThis();
+  }
+  /** 
+ * Set the XMPP address to be used as authorization identity. <p> In XMPP, authorization identities are bare jids. In general, callers should allow the server to select the authorization identifier automatically, and not call this. Note that setting the authzid does not set the XMPP service domain, which should typically match. Calling this will also SASL CRAM, since this mechanism does not support authzid. </p>
+ * @param authzid The BareJid to be requested as the authorization identifier.
+ * @return a reference to this builder.
+ * @see <a href="http://tools.ietf.org/html/rfc6120#section-6.3.8">RFC 6120 § 6.3.8. Authorization Identity</a>
+ * @since 4.2
+ */
+  public B setAuthzid(  EntityBareJid authzid){
+    this.authzid=authzid;
+    return getThis();
+  }
+  /** 
+ * Sets if the connection is going to use compression (default false). Compression is only activated if the server offers compression. With compression network traffic can be reduced up to 90%. By default compression is disabled.
+ * @param compressionEnabled if the connection is going to use compression on the HTTP level.
+ * @return a reference to this object.
+ */
+  public B setCompressionEnabled(  boolean compressionEnabled){
+    this.compressionEnabled=compressionEnabled;
+    return getThis();
+  }
+  /** 
+ * Set the factory for stanza ID sources to use.
+ * @param stanzaIdSourceFactory the factory for stanza ID sources to use.
+ * @return a reference to this builder.
+ * @since 4.4
+ */
+  public B setStanzaIdSourceFactory(  StanzaIdSourceFactory stanzaIdSourceFactory){
+    this.stanzaIdSourceFactory=Objects.requireNonNull(stanzaIdSourceFactory);
+    return getThis();
+  }
+  public abstract C build();
+  protected abstract B getThis();
+  public static KeyManager[] getKeyManagersFrom(  String keystoreType,  String keystorePath,  CallbackHandler callbackHandler,  String pkcs11Library) throws NoSuchMethodException, SecurityException, ClassNotFoundException, KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, CertificateException, IOException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, UnsupportedCallbackException, UnrecoverableKeyException {
+    KeyManager[] keyManagers=null;
+    KeyStore ks=null;
+    PasswordCallback pcb=null;
+    if ("PKCS11".equals(keystoreType)) {
+      Constructor<?> c=Class.forName("sun.security.pkcs11.SunPKCS11").getConstructor(InputStream.class);
+      String pkcs11Config="name = SmartCard\nlibrary = " + pkcs11Library;
+      ByteArrayInputStream config=new ByteArrayInputStream(pkcs11Config.getBytes(StandardCharsets.UTF_8));
+      Provider p=(Provider)c.newInstance(config);
+      Security.addProvider(p);
+      ks=KeyStore.getInstance("PKCS11",p);
+      pcb=new PasswordCallback("PKCS11 Password: ",false);
+      callbackHandler.handle(new Callback[]{pcb});
+      ks.load(null,pcb.getPassword());
+    }
+ else     if ("Apple".equals(keystoreType)) {
+      ks=KeyStore.getInstance("KeychainStore","Apple");
+      ks.load(null,null);
+    }
+ else     if (keystoreType != null) {
+      ks=KeyStore.getInstance(keystoreType);
+      if (callbackHandler != null && StringUtils.isNotEmpty(keystorePath)) {
+        pcb=new PasswordCallback("Keystore Password: ",false);
+        callbackHandler.handle(new Callback[]{pcb});
+        ks.load(new FileInputStream(keystorePath),pcb.getPassword());
+      }
+ else {
+        InputStream stream=TLSUtils.getDefaultTruststoreStreamIfPossible();
+        try {
+          char[] password="changeit".toCharArray();
+          try {
+            ks.load(stream,password);
+          }
+  finally {
+            CloseableUtil.maybeClose(stream);
+          }
+        }
+ catch (        IOException e) {
+          LOGGER.log(Level.FINE,"KeyStore load() threw, attempting 'jks' fallback",e);
+          ks=KeyStore.getInstance("jks");
+          stream=TLSUtils.getDefaultTruststoreStreamIfPossible();
+          try {
+            ks.load(stream,null);
+          }
+  finally {
+            CloseableUtil.maybeClose(stream);
+          }
+        }
+      }
+    }
+    if (ks != null) {
+      String keyManagerFactoryAlgorithm=KeyManagerFactory.getDefaultAlgorithm();
+      KeyManagerFactory kmf=KeyManagerFactory.getInstance(keyManagerFactoryAlgorithm);
+      if (kmf != null) {
+        if (pcb == null) {
+          kmf.init(ks,null);
+        }
+ else {
+          kmf.init(ks,pcb.getPassword());
+          pcb.clearPassword();
+        }
+        keyManagers=kmf.getKeyManagers();
+      }
+    }
+    return keyManagers;
+  }
+}
+public static final class Builder {
+  private final AbstractXMPPConnection connection;
+  private Map<QName,ClassAndConsumer<? extends Nonza>> filterAndListeners=new HashMap<>();
+  Builder(  AbstractXMPPConnection connection){
+    this.connection=connection;
+  }
+  public <N extends Nonza>Builder listenFor(  Class<N> nonza,  NonzaListener<N> nonzaListener){
+    QName key=XmppElementUtil.getQNameFor(nonza);
+    ClassAndConsumer<N> classAndConsumer=new ClassAndConsumer<>(nonza,nonzaListener);
+    filterAndListeners.put(key,classAndConsumer);
+    return this;
+  }
+  public NonzaCallback install(){
+    return new NonzaCallback(this);
+  }
+}
+private static final class Builder extends ConnectionConfiguration.Builder<Builder,DummyConnectionConfiguration> {
+  @Override public DummyConnectionConfiguration build(){
+    return new DummyConnectionConfiguration(this);
+  }
+  @Override protected Builder getThis(){
+    return this;
+  }
+}
+public static final class Builder extends ConnectionConfiguration.Builder<Builder,DummyConnectionConfiguration> {
+  private Builder(){
+    setSecurityMode(SecurityMode.disabled);
+  }
+  @Override public DummyConnectionConfiguration build(){
+    return new DummyConnectionConfiguration(this);
+  }
+  @Override protected Builder getThis(){
+    return this;
+  }
+}

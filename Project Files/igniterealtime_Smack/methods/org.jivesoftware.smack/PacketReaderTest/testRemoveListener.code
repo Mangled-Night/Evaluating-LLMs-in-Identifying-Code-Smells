@@ -1,0 +1,17 @@
+/** 
+ * Tests that PacketReader adds new listeners and also removes them correctly.
+ */
+public void testRemoveListener(){
+  PacketListener listener=new PacketListener(){
+    public void processStanza(    Packet packet){
+    }
+  }
+;
+  int listenersSize=getConnection(0).getPacketListeners().size();
+  getConnection(0).addAsyncPacketListener(listener,new MockPacketFilter(true));
+  assertEquals("Listener was not added",listenersSize + 1,getConnection(0).getPacketListeners().size());
+  Message msg=new Message(getConnection(0).getUser(),Message.Type.normal);
+  getConnection(1).sendStanza(msg);
+  getConnection(0).removeAsyncPacketListener(listener);
+  assertEquals("Listener was not removed",listenersSize,getConnection(0).getPacketListeners().size());
+}

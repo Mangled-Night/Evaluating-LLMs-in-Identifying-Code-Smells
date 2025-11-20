@@ -1,0 +1,19 @@
+@Override public long tryNext() throws InsufficientCapacityException {
+  return tryNext(1);
+}
+@Override public long tryNext(int n) throws InsufficientCapacityException {
+  if (n < 1) {
+    throw new IllegalArgumentException("n must be > 0");
+  }
+  long current;
+  long next;
+  do {
+    current=cursor.get();
+    next=current + n;
+    if (!hasAvailableCapacity(gatingSequences,n,current)) {
+      throw InsufficientCapacityException.INSTANCE;
+    }
+  }
+ while (!cursor.compareAndSet(current,next));
+  return next;
+}

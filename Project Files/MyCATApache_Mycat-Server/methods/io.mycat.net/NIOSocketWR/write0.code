@@ -1,0 +1,60 @@
+private boolean write0() throws IOException {
+  int written=0;
+  ByteBuffer buffer=con.writeBuffer;
+  if (buffer != null) {
+    while (buffer.hasRemaining()) {
+      written=channel.write(buffer);
+      if (written > 0) {
+        con.netOutBytes+=written;
+        con.processor.addNetOutBytes(written);
+        con.lastWriteTime=TimeUtil.currentTimeMillis();
+      }
+ else {
+        break;
+      }
+    }
+    if (buffer.hasRemaining()) {
+      con.writeAttempts++;
+      return false;
+    }
+ else {
+      con.writeBuffer=null;
+      con.recycle(buffer);
+    }
+  }
+  while ((buffer=con.writeQueue.poll()) != null) {
+    if (buffer.limit() == 0) {
+      con.recycle(buffer);
+      con.close("quit send");
+      return true;
+    }
+    buffer.flip();
+    try {
+      while (buffer.hasRemaining()) {
+        written=channel.write(buffer);
+        if (written > 0) {
+          con.lastWriteTime=TimeUtil.currentTimeMillis();
+          con.netOutBytes+=written;
+          con.processor.addNetOutBytes(written);
+          con.lastWriteTime=TimeUtil.currentTimeMillis();
+        }
+ else {
+          break;
+        }
+      }
+    }
+ catch (    IOException e) {
+      con.recycle(buffer);
+      throw e;
+    }
+    if (buffer.hasRemaining()) {
+      con.writeBuffer=buffer;
+      con.writeAttempts++;
+      return false;
+    }
+ else {
+      con.recycle(buffer);
+    }
+  }
+  return true;
+}

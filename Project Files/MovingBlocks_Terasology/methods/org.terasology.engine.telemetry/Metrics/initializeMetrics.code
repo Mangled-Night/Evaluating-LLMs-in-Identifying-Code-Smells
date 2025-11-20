@@ -1,0 +1,25 @@
+private void initializeMetrics(Set<Class> metricsClassSet,Context context){
+  for (  Class clazz : metricsClassSet) {
+    Constructor[] constructors=clazz.getConstructors();
+    for (    Constructor constructor : constructors) {
+      Class[] parameters=constructor.getParameterTypes();
+      try {
+        Metric metric;
+        if (parameters.length == 0) {
+          metric=(Metric)constructor.newInstance();
+          classNameToMetric.put(metric.getClass().getName(),metric);
+        }
+ else         if (parameters.length == 1 && parameters[0].equals(Context.class)) {
+          metric=(Metric)constructor.newInstance(context);
+          classNameToMetric.put(metric.getClass().getName(),metric);
+        }
+ else {
+          logger.warn("Can't initialize the Metric, please initialize it and add it to Metrics: {}",constructor);
+        }
+      }
+ catch (      InstantiationException|IllegalAccessException|InvocationTargetException e) {
+        logger.error("Fail to initialize the metric instance: {}",constructor);
+      }
+    }
+  }
+}

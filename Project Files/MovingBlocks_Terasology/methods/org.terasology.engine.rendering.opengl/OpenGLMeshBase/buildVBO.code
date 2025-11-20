@@ -1,0 +1,35 @@
+default VBOContext buildVBO(int vbo,AllocationType allocation,VertexResource[] resources){
+  GL30.glBindBuffer(GL30.GL_ARRAY_BUFFER,vbo);
+  int bufferSize=0;
+  for (  VertexResource vertexResource : resources) {
+    bufferSize+=vertexResource.inSize();
+  }
+  GL30.glBufferData(GL30.GL_ARRAY_BUFFER,bufferSize,allocation.glCall);
+  VBOContext state=new VBOContext();
+  state.entries=new VBOContext.VBOSubBuffer[resources.length];
+  int offset=0;
+  for (int i=0; i < resources.length; i++) {
+    VertexResource resource=resources[i];
+    state.entries[i]=new VBOContext.VBOSubBuffer();
+    state.entries[i].resource=resource;
+    state.entries[i].version=resource.getVersion();
+    state.entries[i].offset=offset;
+    state.entries[i].size=resource.inSize();
+    if (state.entries[i].size == 0) {
+      continue;
+    }
+    int currentOffset=offset;
+    resource.writeBuffer((buffer) -> {
+      GL30.glBufferSubData(GL30.GL_ARRAY_BUFFER,currentOffset,buffer);
+    }
+);
+    for (    VertexResource.VertexDefinition attribute : resource.definitions()) {
+      GL30.glEnableVertexAttribArray(attribute.location);
+      GL30.glVertexAttribPointer(attribute.location,attribute.attribute.count,attribute.attribute.mapping.glType,false,resource.inStride(),offset + attribute.offset);
+    }
+    offset+=resource.inSize();
+  }
+  state.vbo=vbo;
+  GL30.glBindBuffer(GL30.GL_ARRAY_BUFFER,0);
+  return state;
+}

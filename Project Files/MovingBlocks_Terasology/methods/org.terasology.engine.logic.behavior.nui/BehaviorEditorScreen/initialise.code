@@ -1,0 +1,103 @@
+@Override public void initialise(){
+  entityProperties=find("entity_properties",PropertyLayout.class);
+  behaviorEditor=find("tree",BehaviorEditor.class);
+  properties=find("properties",PropertyLayout.class);
+  selectTree=find("select_tree",UIDropdown.class);
+  selectEntity=find("select_entity",UIDropdown.class);
+  palette=find("palette",UIList.class);
+  behaviorEditor.initialize(context);
+  behaviorEditor.bindSelection(new Binding<RenderableNode>(){
+    private PropertyProvider provider=new PropertyProvider(context.get(ReflectFactory.class),providerFactory);
+    @Override public RenderableNode get(){
+      return selectedNode;
+    }
+    @Override public void set(    RenderableNode value){
+      onNodeSelected(value,provider);
+    }
+  }
+);
+  Binding<List<BehaviorTree>> treeBinding=new ReadOnlyBinding<List<BehaviorTree>>(){
+    @Override public List<BehaviorTree> get(){
+      return behaviorSystem.getTrees();
+    }
+  }
+;
+  selectTree.bindOptions(treeBinding);
+  providerFactory.register("behaviorTrees",treeBinding);
+  selectTree.bindSelection(new Binding<BehaviorTree>(){
+    @Override public BehaviorTree get(){
+      return behaviorEditor.getTree();
+    }
+    @Override public void set(    BehaviorTree value){
+      onTreeSelected(value);
+    }
+  }
+);
+  selectEntity.bindOptions(new ReadOnlyBinding<List<Interpreter>>(){
+    @Override public List<Interpreter> get(){
+      return behaviorSystem.getInterpreters();
+    }
+  }
+);
+  selectEntity.bindSelection(new Binding<Interpreter>(){
+    private PropertyProvider provider=new PropertyProvider(context.get(ReflectFactory.class),providerFactory);
+    @Override public Interpreter get(){
+      return selectedInterpreter;
+    }
+    @Override public void set(    Interpreter value){
+      onEntitySelected(value,provider);
+    }
+  }
+);
+  palette.bindSelection(new Binding<BehaviorNodeComponent>(){
+    @Override public BehaviorNodeComponent get(){
+      return null;
+    }
+    @Override public void set(    BehaviorNodeComponent value){
+      onPaletteSelected(value);
+    }
+  }
+);
+  palette.bindList(new ReadOnlyBinding<List<BehaviorNodeComponent>>(){
+    @Override public List<BehaviorNodeComponent> get(){
+      return paletteItems;
+    }
+  }
+);
+  palette.setItemRenderer(new ToStringTextRenderer<BehaviorNodeComponent>(){
+    @Override public String getTooltip(    BehaviorNodeComponent value){
+      return value.description;
+    }
+  }
+);
+  WidgetUtil.trySubscribe(this,"copy",button -> onCopyPressed());
+  WidgetUtil.trySubscribe(this,"layout",button -> onLayoutPressed());
+  WidgetUtil.trySubscribe(this,"new",button -> onNewPressed());
+  WidgetUtil.trySubscribe(this,"assign",button -> onAssignPressed());
+  WidgetUtil.trySubscribe(this,"remove",button -> onRemovePressed());
+  WidgetUtil.trySubscribe(this,"debug_run",button -> {
+    if (selectedInterpreter != null) {
+      selectedInterpreter.run();
+    }
+  }
+);
+  WidgetUtil.trySubscribe(this,"debug_pause",button -> {
+    if (selectedInterpreter != null) {
+      selectedInterpreter.pause();
+    }
+  }
+);
+  WidgetUtil.trySubscribe(this,"debug_reset",button -> {
+    if (selectedInterpreter != null) {
+      selectedInterpreter.reset();
+    }
+  }
+);
+  WidgetUtil.trySubscribe(this,"debug_step",button -> {
+    if (selectedInterpreter != null) {
+      selectedInterpreter.tick(0.1f);
+    }
+  }
+);
+  paletteItems=findPaletteItems();
+}

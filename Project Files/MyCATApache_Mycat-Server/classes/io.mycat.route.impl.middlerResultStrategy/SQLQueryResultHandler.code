@@ -1,0 +1,78 @@
+public class SQLQueryResultHandler implements RouteMiddlerReaultHandler {
+  @Override public String dohandler(  SQLStatement statement,  SQLSelect sqlselect,  SQLObject parent,  List param){
+    if (parent.getParent() instanceof SQLBinaryOpExpr) {
+      SQLBinaryOpExpr pp=(SQLBinaryOpExpr)parent.getParent();
+      SQLExprImpl listExpr=null;
+      if (null == param || param.isEmpty()) {
+        listExpr=new SQLNullExpr();
+      }
+ else {
+        listExpr=new SQLListExpr();
+        ((SQLListExpr)listExpr).getItems().addAll(param);
+      }
+      if (pp.getLeft().equals(parent)) {
+        pp.setLeft(listExpr);
+      }
+ else       if (pp.getRight().equals(parent)) {
+        pp.setRight(listExpr);
+      }
+    }
+ else     if (parent.getParent() instanceof SQLSelectItem) {
+      SQLSelectItem pp=(SQLSelectItem)parent.getParent();
+      SQLExprImpl listExpr=null;
+      if (null == param || param.isEmpty()) {
+        listExpr=new SQLNullExpr();
+      }
+ else {
+        listExpr=new SQLListExpr();
+        ((SQLListExpr)listExpr).getItems().addAll(param);
+      }
+      pp.setExpr(listExpr);
+    }
+ else     if (parent.getParent() instanceof SQLSelectGroupByClause) {
+      SQLSelectGroupByClause pp=(SQLSelectGroupByClause)parent.getParent();
+      List<SQLExpr> items=pp.getItems();
+      for (int i=0; i < items.size(); i++) {
+        SQLExpr expr=items.get(i);
+        if (expr instanceof SQLQueryExpr && ((SQLQueryExpr)expr).getSubQuery().equals(sqlselect)) {
+          SQLExprImpl listExpr=null;
+          if (null == param || param.isEmpty()) {
+            listExpr=new SQLNullExpr();
+          }
+ else {
+            listExpr=new SQLListExpr();
+            ((SQLListExpr)listExpr).getItems().addAll(param);
+          }
+          items.set(i,listExpr);
+        }
+      }
+    }
+ else     if (parent.getParent() instanceof SQLSelectOrderByItem) {
+      SQLSelectOrderByItem orderItem=(SQLSelectOrderByItem)parent.getParent();
+      SQLExprImpl listExpr=null;
+      if (null == param || param.isEmpty()) {
+        listExpr=new SQLNullExpr();
+      }
+ else {
+        listExpr=new SQLListExpr();
+        ((SQLListExpr)listExpr).getItems().addAll(param);
+      }
+      listExpr.setParent(orderItem);
+      orderItem.setExpr(listExpr);
+    }
+ else     if (parent.getParent() instanceof MySqlSelectQueryBlock) {
+      MySqlSelectQueryBlock query=(MySqlSelectQueryBlock)parent.getParent();
+      SQLExprImpl listExpr=null;
+      if (null == param || param.isEmpty()) {
+        listExpr=new SQLNullExpr();
+      }
+ else {
+        listExpr=new SQLListExpr();
+        ((SQLListExpr)listExpr).getItems().addAll(param);
+      }
+      listExpr.setParent(query);
+      query.setWhere(listExpr);
+    }
+    return statement.toString();
+  }
+}

@@ -1,0 +1,8 @@
+@Test void shouldCloseConnections(){
+  when(channelHandlerMock.closeAsync()).thenReturn(CompletableFuture.completedFuture(null));
+  when(clientMock.connectToNodeAsync(eq(StringCodec.UTF8),eq("localhost:1"),any(),any())).thenReturn(ConnectionFuture.from(socketAddressMock,CompletableFuture.completedFuture(nodeConnectionMock)));
+  StatefulRedisConnection<String,String> connection=sut.getConnection(ConnectionIntent.READ,1);
+  assertThat(connection).isNotNull();
+  sut.close();
+  verify(channelHandlerMock).closeAsync();
+}

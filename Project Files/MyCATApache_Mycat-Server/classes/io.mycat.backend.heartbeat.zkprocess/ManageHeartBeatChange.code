@@ -1,0 +1,266 @@
+public class ManageHeartBeatChange implements Runnable {
+  public static final Logger LOGGER=LoggerFactory.getLogger(ManageHeartBeatChange.class);
+  public static int ENTER_SELECT=0;
+  public static int IS_SELECT=1;
+  public static int IS_CHANGING=2;
+  public static int NOT_SELECT=-1;
+  private final String dataHost;
+  private volatile AtomicInteger statue=new AtomicInteger(NOT_SELECT);
+  public ConcurrentSet<String> voteSet=new ConcurrentSet<>();
+  private volatile PathChildrenCache manageVoteCache;
+  private final CuratorFramework client;
+  private final String path;
+  final ScheduledExecutorService service=MycatServer.getInstance().getHeartbeatScheduler();
+  private volatile NodeCache changingResultNode;
+  private final MycatLeaderLatch mycatLeaderLatch;
+  private InterProcessMutex changingStatueLock;
+  private final String manageVotePath;
+  private final String changingResultPath;
+  private long maxTimeToWait=60 * 1000;
+  private final long minTimeToSwitched=30 * 60 * 1000;
+  private volatile long changingFinishDate=0;
+  private volatile ScheduledFuture<?> future=null;
+  private volatile ScheduledFuture<?> changingResultFutrue=null;
+  public ManageHeartBeatChange(  MycatLeaderLatch myLeaderLatch,  final String dataHost) throws Exception {
+    statue.set(NOT_SELECT);
+    this.dataHost=dataHost;
+    this.path=ZKUtils.getZKBasePath() + "heartbeat/" + dataHost+ "/";
+    this.manageVotePath=path + "voteInformation";
+    this.changingResultPath=path + "changingStatue";
+    this.client=ZKUtils.getConnection();
+    changingStatueLock=new InterProcessMutex(client,ZKUtils.getZKBasePath() + "heartbeat/changingStatueLock");
+    this.mycatLeaderLatch=myLeaderLatch;
+  }
+  public boolean addPath(  String nodePath){
+    LOGGER.debug("add vote information " + nodePath);
+    if (TimeUtil.currentTimeMillis() - changingFinishDate < minTimeToSwitched && statue.get() == NOT_SELECT) {
+      try {
+        client.delete().deletingChildrenIfNeeded().forPath(nodePath);
+      }
+ catch (      Exception e) {
+        e.printStackTrace();
+        LOGGER.error("remove vote information debug during not voting time",e);
+      }
+      return false;
+    }
+    if (statue.compareAndSet(NOT_SELECT,ENTER_SELECT)) {
+      future=service.schedule(this,maxTimeToWait,TimeUnit.MILLISECONDS);
+    }
+    if (statue.get() == ENTER_SELECT) {
+      boolean flag=voteSet.add(nodePath);
+      return flag;
+    }
+    return false;
+  }
+  public boolean removePath(  String nodePath){
+    LOGGER.debug("remove vote Information" + nodePath);
+    if (statue.get() == IS_CHANGING) {
+      boolean flag=voteSet.remove(nodePath);
+      if (voteSet.isEmpty() && changingResultFutrue == null) {
+        statue.set(NOT_SELECT);
+      }
+      return flag;
+    }
+    return false;
+  }
+  public void leaderlisten(){
+    try {
+      if (manageVoteCache != null) {
+        manageVoteCache.close();
+      }
+      manageVoteCache=new PathChildrenCache(client,manageVotePath,true);
+      final ManageHeartBeatChange manager=this;
+      manageVoteCache.getListenable().addListener(new PathChildrenCacheListener(){
+        @Override public void childEvent(        CuratorFramework client,        PathChildrenCacheEvent event){
+          LOGGER.debug("event Type " + event.getType());
+          if (null != event.getData()) {
+            Type type=event.getType();
+switch (type) {
+case CHILD_ADDED:
+{
+              }
+case CHILD_UPDATED:
+{
+              manager.addPath(event.getData().getPath());
+              break;
+            }
+case CHILD_REMOVED:
+{
+            manager.removePath(event.getData().getPath());
+            break;
+          }
+default :
+        break;
+    }
+    if (manager.hasCollectFinish()) {
+      manager.run();
+    }
+  }
+}
+}
+);
+manageVoteCache.start();
+if (changingResultNode != null) {
+changingResultNode.close();
+}
+changingResultNode=new NodeCache(client,changingResultPath);
+changingResultNode.start();
+}
+ catch (Exception e) {
+LOGGER.error(e.getMessage());
+e.printStackTrace();
+}
+}
+public void stop(){
+try {
+manageVoteCache.close();
+manageVoteCache=null;
+changingResultNode.close();
+changingResultNode=null;
+}
+ catch (Exception e) {
+LOGGER.error(e.getMessage());
+e.printStackTrace();
+}
+}
+@Override public void run(){
+if (!statue.compareAndSet(ENTER_SELECT,IS_SELECT) || getNodeSize() == 0) {
+return;
+}
+if (future != null) {
+future.cancel(false);
+future=null;
+}
+List<ChildData> ChildDataList=manageVoteCache.getCurrentData();
+Map<Integer,Integer> countMap=new HashMap<>();
+Integer maxIndex=-1;
+Integer maxCount=-1;
+try {
+Collection<Participant> participants=mycatLeaderLatch.getParticipants();
+for (ChildData childData : ChildDataList) {
+String data=new String(childData.getData());
+LOGGER.debug(childData.getPath() + "  " + data);
+int index=data.indexOf("=");
+Integer key=Integer.valueOf(data.substring(index + 1));
+String myId=data.substring(0,index);
+boolean checkExist=false;
+for (Participant participant : participants) {
+  if (participant.getId().equals(myId)) {
+    checkExist=true;
+    break;
+  }
+}
+if (!checkExist) {
+  continue;
+}
+Integer value=countMap.get(key);
+if (value == null) {
+  value=new Integer(0);
+}
+value+=1;
+countMap.put(key,value);
+if (maxCount.compareTo(value) < 0) {
+  maxCount=value;
+  maxIndex=key;
+}
+}
+statue.set(IS_CHANGING);
+if (maxIndex != -1) {
+LOGGER.debug("投票结果：" + dataHost + " = "+ maxIndex);
+ZKUtils.createPath(changingResultPath,"");
+boolean result=MycatServer.getInstance().saveDataHostIndexToZk(dataHost,maxIndex);
+if (result) {
+  startChangingResultListen();
+}
+ else {
+  try {
+    for (    ChildData childData : ChildDataList) {
+      client.delete().deletingChildrenIfNeeded().forPath(childData.getPath());
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.error(e.getMessage());
+    e.printStackTrace();
+  }
+  ;
+}
+}
+ else {
+LOGGER.debug("投票错误：" + dataHost + " = "+ maxIndex);
+}
+}
+ catch (Exception e) {
+LOGGER.error(e.getMessage());
+e.printStackTrace();
+}
+}
+private void startChangingResultListen(){
+changingResultFutrue=service.scheduleAtFixedRate(new Runnable(){
+@Override public void run(){
+ChildData currentData=changingResultNode.getCurrentData();
+if (null != currentData) {
+  try {
+    byte[] data=changingResultNode.getCurrentData().getData();
+    Properties properties=new Properties();
+    properties.load(new ByteArrayInputStream(data));
+    int count=0;
+    Collection<Participant> participants=mycatLeaderLatch.getParticipants();
+    for (    Participant participant : participants) {
+      String key=participant.getId() + "_endTime";
+      String value=properties.getProperty(key);
+      if (!StringUtil.isEmpty(value)) {
+        count++;
+      }
+ else {
+        LOGGER.debug(String.format("%s 还未结束切换",participant.getId()));
+      }
+    }
+    String changingFinishKey=dataHost + "_changing_finish_time";
+    String value=properties.getProperty(changingFinishKey);
+    if (!StringUtil.isEmpty(value)) {
+      changingFinishDate=Long.valueOf(value);
+    }
+    int onLineNode=participants.size();
+    if (count == onLineNode) {
+      LOGGER.debug("所有节点切换完成 ,当前时间" + TimeUtil.currentTimeMillis());
+      Map<String,String> propertyMap=new HashMap<>();
+      propertyMap.put(changingFinishKey,TimeUtil.currentTimeMillis() + "");
+      try {
+        changingStatueLock.acquire(30,TimeUnit.SECONDS);
+        ZKUtils.writeProperty(changingResultPath,propertyMap);
+        if (changingResultFutrue != null) {
+          changingResultFutrue.cancel(false);
+          changingResultFutrue=null;
+        }
+        List<ChildData> ChildDataList=manageVoteCache.getCurrentData();
+        for (        ChildData childData : ChildDataList) {
+          client.delete().deletingChildrenIfNeeded().forPath(childData.getPath());
+        }
+        if (voteSet.isEmpty()) {
+          statue.set(NOT_SELECT);
+        }
+      }
+  finally {
+        changingStatueLock.release();
+      }
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.error(e.getMessage());
+    e.printStackTrace();
+  }
+}
+ else {
+  LOGGER.debug("集群切换结果的状态文件夹 已经被删除！！！");
+}
+}
+}
+,100,1000,TimeUnit.MILLISECONDS);
+}
+public int getNodeSize(){
+return voteSet.size();
+}
+public boolean hasCollectFinish(){
+return voteSet.size() == mycatLeaderLatch.getParticipantsCount();
+}
+}

@@ -1,0 +1,25 @@
+private void aggregateRow(RowDataPacket toRow,RowDataPacket newRow){
+  if (mergCols == null) {
+    return;
+  }
+  if (!ishanlderFirstRow && mergeColsIndex != null && mergeColsIndex.length > 0) {
+    List<byte[]> values=toRow.fieldValues;
+    for (int i=0; i < values.size(); i++) {
+      if (Arrays.binarySearch(mergeColsIndex,i) >= 0) {
+        continue;
+      }
+      if (values.get(i) == null) {
+        values.set(i,newRow.fieldValues.get(i));
+      }
+    }
+    ishanlderFirstRow=true;
+  }
+  for (  MergeCol merg : mergCols) {
+    if (merg.mergeType != MergeCol.MERGE_AVG) {
+      byte[] result=mertFields(toRow.fieldValues.get(merg.colMeta.colIndex),newRow.fieldValues.get(merg.colMeta.colIndex),merg.colMeta.colType,merg.mergeType);
+      if (result != null) {
+        toRow.fieldValues.set(merg.colMeta.colIndex,result);
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+@Override protected IQChildElementXmlStringBuilder getIQChildElementBuilder(IQChildElementXmlStringBuilder xml){
+  xml.attribute("node",node);
+  xml.optAttribute("sessionid",sessionID);
+  xml.optAttribute("status",status);
+  xml.optAttribute("action",action);
+  xml.rightAngleBracket();
+  if (getType() == Type.result) {
+    xml.halfOpenElement("actions");
+    xml.optAttribute("execute",executeAction);
+    if (actions.size() == 0) {
+      xml.closeEmptyElement();
+    }
+ else {
+      xml.rightAngleBracket();
+      for (      AdHocCommand.Action action : actions) {
+        xml.emptyElement(action);
+      }
+      xml.closeElement("actions");
+    }
+  }
+  if (form != null) {
+    xml.append(form.toXML());
+  }
+  for (  AdHocCommandNote note : notes) {
+    xml.halfOpenElement("note").attribute("type",note.getType().toString()).rightAngleBracket();
+    xml.append(note.getValue());
+    xml.closeElement("note");
+  }
+  return xml;
+}

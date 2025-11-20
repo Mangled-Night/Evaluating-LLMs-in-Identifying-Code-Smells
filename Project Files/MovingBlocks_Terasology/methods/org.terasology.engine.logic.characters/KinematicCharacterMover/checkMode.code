@@ -1,0 +1,29 @@
+/** 
+ * Checks whether a character should change movement mode (from being underwater or in a ladder). A higher and lower point of the character is tested for being in water, only if both points are in water does the character count as swimming. <br><br> Sends the OnEnterLiquidEvent and OnLeaveLiquidEvent events.
+ * @param movementComp The movement component of the character.
+ * @param state        The current state of the character.
+ */
+private void checkMode(final CharacterMovementComponent movementComp,final CharacterStateEvent state,final CharacterStateEvent oldState,EntityRef entity,boolean firstRun,boolean isCrouching){
+  if (!state.getMode().respondToEnvironment) {
+    return;
+  }
+  Vector3f worldPos=state.getPosition();
+  Vector3f top=new Vector3f(worldPos);
+  Vector3f bottom=new Vector3f(worldPos);
+  top.y+=0.5f * movementComp.height;
+  bottom.y-=0.5f * movementComp.height;
+  final boolean topUnderwater=worldProvider.getBlock(top).isLiquid();
+  final boolean bottomUnderwater=worldProvider.getBlock(bottom).isLiquid();
+  final boolean newSwimming=!topUnderwater && bottomUnderwater;
+  final boolean newDiving=topUnderwater && bottomUnderwater;
+  boolean newClimbing=false;
+  if (isClimbingAllowed(newSwimming,newDiving)) {
+    Vector3i finalDir;
+    finalDir=findClimbable(movementComp,worldPos,newSwimming,newDiving);
+    if (finalDir != null) {
+      newClimbing=true;
+      state.setClimbDirection(finalDir);
+    }
+  }
+  updateMode(state,newSwimming,newDiving,newClimbing,isCrouching);
+}

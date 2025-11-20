@@ -1,0 +1,47 @@
+public class Async {
+  /** 
+ * Creates a new thread with the given Runnable, marks it daemon, starts it and returns the started thread.
+ * @param runnable TODO javadoc me please
+ * @return the started thread.
+ */
+  public static Thread go(  Runnable runnable){
+    Thread thread=daemonThreadFrom(runnable);
+    thread.start();
+    return thread;
+  }
+  /** 
+ * Creates a new thread with the given Runnable, marks it daemon, sets the name, starts it and returns the started thread.
+ * @param runnable TODO javadoc me please
+ * @param threadName the thread name.
+ * @return the started thread.
+ */
+  public static Thread go(  Runnable runnable,  String threadName){
+    Thread thread=daemonThreadFrom(runnable);
+    thread.setName(threadName);
+    thread.start();
+    return thread;
+  }
+  public static Thread daemonThreadFrom(  Runnable runnable){
+    Thread thread=new Thread(runnable);
+    thread.setDaemon(true);
+    return thread;
+  }
+  /** 
+ * Like  {@link Runnable}, but allows the <code>runOrThrow()</code> method to throw an exception. <p> If the exception is an instance of  {@link RuntimeException}, then it will be re-thrown, otherwise <b>it will be simply logged.</b>
+ */
+public abstract static class ThrowingRunnable implements Runnable {
+    public static final Logger LOGGER=Logger.getLogger(ThrowingRunnable.class.getName());
+    @Override public final void run(){
+      try {
+        runOrThrow();
+      }
+ catch (      Exception e) {
+        if (e instanceof RuntimeException) {
+          throw (RuntimeException)e;
+        }
+        LOGGER.log(Level.WARNING,"Caught Exception",e);
+      }
+    }
+    public abstract void runOrThrow() throws Exception ;
+  }
+}

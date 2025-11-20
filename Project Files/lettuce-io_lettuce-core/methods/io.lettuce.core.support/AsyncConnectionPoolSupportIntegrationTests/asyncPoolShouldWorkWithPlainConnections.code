@@ -1,0 +1,8 @@
+@Test void asyncPoolShouldWorkWithPlainConnections(){
+  AsyncPool<StatefulRedisConnection<String,String>> pool=AsyncConnectionPoolSupport.createBoundedObjectPool(() -> client.connectAsync(StringCodec.ASCII,uri),BoundedPoolConfig.create(),false);
+  borrowAndReturn(pool);
+  StatefulRedisConnection<String,String> connection=TestFutures.getOrTimeout(pool.acquire());
+  assertThat(Proxy.isProxyClass(connection.getClass())).isFalse();
+  pool.release(connection);
+  pool.close();
+}

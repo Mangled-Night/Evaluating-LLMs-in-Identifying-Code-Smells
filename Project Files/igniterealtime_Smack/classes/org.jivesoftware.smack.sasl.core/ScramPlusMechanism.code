@@ -1,0 +1,25 @@
+/** 
+ * SCRAM-X-PLUS implementation. Due limitations of the Java API, this mechanism only supports the 'tls-server-end-point' channel binding type. But on the other hand, the other relevant channel binding type 'tls-unique' has some flaws (see 3SHAKE, RFC 7627).
+ * @author Florian Schmaus
+ */
+public abstract class ScramPlusMechanism extends ScramMechanism {
+  protected ScramPlusMechanism(  ScramHmac scramHmac){
+    super(scramHmac);
+  }
+  @Override public String getName(){
+    return super.getName() + "-PLUS";
+  }
+  @Override protected String getGs2CbindFlag(){
+    return "p=tls-server-end-point";
+  }
+  @Override protected byte[] getChannelBindingData() throws SmackSaslException {
+    byte[] cbData;
+    try {
+      cbData=TLSUtils.getChannelBindingTlsServerEndPoint(sslSession);
+    }
+ catch (    SSLPeerUnverifiedException|CertificateEncodingException|NoSuchAlgorithmException e) {
+      throw new SmackSaslException(e);
+    }
+    return cbData;
+  }
+}

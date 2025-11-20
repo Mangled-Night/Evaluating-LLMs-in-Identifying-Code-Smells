@@ -1,0 +1,185 @@
+public static String getFullStacktrace(ThreadInfo threadInfo){
+  return getFullStacktrace(threadInfo,-1,-1,-1,0,0);
+}
+public static String getFullStacktrace(BlockingLockInfo blockingLockInfo){
+  return getFullStacktrace(blockingLockInfo.getThreadInfo(),-1,-1,-1,blockingLockInfo.getLockIdentityHashCode(),blockingLockInfo.getBlockingThreadCount());
+}
+/** 
+ * 完全从 ThreadInfo 中 copy 过来
+ * @param threadInfo the thread info object
+ * @param cpuUsage will be ignore if cpuUsage < 0 or cpuUsage > 100
+ * @param lockIdentityHashCode 阻塞了其他线程的锁的identityHashCode
+ * @param blockingThreadCount 阻塞了其他线程的数量
+ * @return the string representation of the thread stack
+ */
+public static String getFullStacktrace(ThreadInfo threadInfo,double cpuUsage,long deltaTime,long time,int lockIdentityHashCode,int blockingThreadCount){
+  StringBuilder sb=new StringBuilder("\"" + threadInfo.getThreadName() + "\""+ " Id="+ threadInfo.getThreadId());
+  if (cpuUsage >= 0 && cpuUsage <= 100) {
+    sb.append(" cpuUsage=").append(cpuUsage).append("%");
+  }
+  if (deltaTime >= 0) {
+    sb.append(" deltaTime=").append(deltaTime).append("ms");
+  }
+  if (time >= 0) {
+    sb.append(" time=").append(time).append("ms");
+  }
+  sb.append(" ").append(threadInfo.getThreadState());
+  if (threadInfo.getLockName() != null) {
+    sb.append(" on ").append(threadInfo.getLockName());
+  }
+  if (threadInfo.getLockOwnerName() != null) {
+    sb.append(" owned by \"").append(threadInfo.getLockOwnerName()).append("\" Id=").append(threadInfo.getLockOwnerId());
+  }
+  if (threadInfo.isSuspended()) {
+    sb.append(" (suspended)");
+  }
+  if (threadInfo.isInNative()) {
+    sb.append(" (in native)");
+  }
+  sb.append('\n');
+  int i=0;
+  for (  StackTraceElement ste : threadInfo.getStackTrace()) {
+    sb.append("\tat ").append(ste.toString());
+    sb.append('\n');
+    if (i == 0 && threadInfo.getLockInfo() != null) {
+      Thread.State ts=threadInfo.getThreadState();
+switch (ts) {
+case BLOCKED:
+        sb.append("\t-  blocked on ").append(threadInfo.getLockInfo());
+      sb.append('\n');
+    break;
+case WAITING:
+  sb.append("\t-  waiting on ").append(threadInfo.getLockInfo());
+sb.append('\n');
+break;
+case TIMED_WAITING:
+sb.append("\t-  waiting on ").append(threadInfo.getLockInfo());
+sb.append('\n');
+break;
+default :
+}
+}
+for (MonitorInfo mi : threadInfo.getLockedMonitors()) {
+if (mi.getLockedStackDepth() == i) {
+sb.append("\t-  locked ").append(mi);
+if (mi.getIdentityHashCode() == lockIdentityHashCode) {
+Ansi highlighted=Ansi.ansi().fg(Ansi.Color.RED);
+highlighted.a(" <---- but blocks ").a(blockingThreadCount).a(" other threads!");
+sb.append(highlighted.reset().toString());
+}
+sb.append('\n');
+}
+}
+++i;
+}
+if (i < threadInfo.getStackTrace().length) {
+sb.append("\t...");
+sb.append('\n');
+}
+LockInfo[] locks=threadInfo.getLockedSynchronizers();
+if (locks.length > 0) {
+sb.append("\n\tNumber of locked synchronizers = ").append(locks.length);
+sb.append('\n');
+for (LockInfo li : locks) {
+sb.append("\t- ").append(li);
+if (li.getIdentityHashCode() == lockIdentityHashCode) {
+sb.append(" <---- but blocks ").append(blockingThreadCount);
+sb.append(" other threads!");
+}
+sb.append('\n');
+}
+}
+sb.append('\n');
+return sb.toString().replace("\t","    ");
+}
+public static String getFullStacktrace(BusyThreadInfo threadInfo,int lockIdentityHashCode,int blockingThreadCount){
+  StringBuilder sb=new StringBuilder("\"" + threadInfo.getName() + "\"");
+  if (threadInfo.getId() > 0) {
+    sb.append(" Id=").append(threadInfo.getId());
+  }
+ else {
+    sb.append(" [Internal]");
+  }
+  double cpuUsage=threadInfo.getCpu();
+  if (cpuUsage >= 0 && cpuUsage <= 100) {
+    sb.append(" cpuUsage=").append(cpuUsage).append("%");
+  }
+  if (threadInfo.getDeltaTime() >= 0) {
+    sb.append(" deltaTime=").append(threadInfo.getDeltaTime()).append("ms");
+  }
+  if (threadInfo.getTime() >= 0) {
+    sb.append(" time=").append(threadInfo.getTime()).append("ms");
+  }
+  if (threadInfo.getState() == null) {
+    sb.append("\n\n");
+    return sb.toString();
+  }
+  sb.append(" ").append(threadInfo.getState());
+  if (threadInfo.getLockName() != null) {
+    sb.append(" on ").append(threadInfo.getLockName());
+  }
+  if (threadInfo.getLockOwnerName() != null) {
+    sb.append(" owned by \"").append(threadInfo.getLockOwnerName()).append("\" Id=").append(threadInfo.getLockOwnerId());
+  }
+  if (threadInfo.isSuspended()) {
+    sb.append(" (suspended)");
+  }
+  if (threadInfo.isInNative()) {
+    sb.append(" (in native)");
+  }
+  sb.append('\n');
+  int i=0;
+  for (; i < threadInfo.getStackTrace().length; i++) {
+    StackTraceElement ste=threadInfo.getStackTrace()[i];
+    sb.append("\tat ").append(ste.toString());
+    sb.append('\n');
+    if (i == 0 && threadInfo.getLockInfo() != null) {
+      Thread.State ts=threadInfo.getState();
+switch (ts) {
+case BLOCKED:
+        sb.append("\t-  blocked on ").append(threadInfo.getLockInfo());
+      sb.append('\n');
+    break;
+case WAITING:
+  sb.append("\t-  waiting on ").append(threadInfo.getLockInfo());
+sb.append('\n');
+break;
+case TIMED_WAITING:
+sb.append("\t-  waiting on ").append(threadInfo.getLockInfo());
+sb.append('\n');
+break;
+default :
+}
+}
+for (MonitorInfo mi : threadInfo.getLockedMonitors()) {
+if (mi.getLockedStackDepth() == i) {
+sb.append("\t-  locked ").append(mi);
+if (mi.getIdentityHashCode() == lockIdentityHashCode) {
+Ansi highlighted=Ansi.ansi().fg(Ansi.Color.RED);
+highlighted.a(" <---- but blocks ").a(blockingThreadCount).a(" other threads!");
+sb.append(highlighted.reset().toString());
+}
+sb.append('\n');
+}
+}
+}
+if (i < threadInfo.getStackTrace().length) {
+sb.append("\t...");
+sb.append('\n');
+}
+LockInfo[] locks=threadInfo.getLockedSynchronizers();
+if (locks.length > 0) {
+sb.append("\n\tNumber of locked synchronizers = ").append(locks.length);
+sb.append('\n');
+for (LockInfo li : locks) {
+sb.append("\t- ").append(li);
+if (li.getIdentityHashCode() == lockIdentityHashCode) {
+sb.append(" <---- but blocks ").append(blockingThreadCount);
+sb.append(" other threads!");
+}
+sb.append('\n');
+}
+}
+sb.append('\n');
+return sb.toString().replace("\t","    ");
+}

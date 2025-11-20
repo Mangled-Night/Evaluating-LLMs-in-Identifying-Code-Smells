@@ -1,0 +1,24 @@
+/** 
+ * check inner column exist or not
+ */
+public void checkInnerColumnExist(){
+  lock.lock();
+  try {
+    this.jobCount.set(0);
+    beginTime=new Date().getTime();
+    String[] physicalSchemas=source.getDbPool().getSchemas();
+    for (    String dbName : physicalSchemas) {
+      MySQLConsistencyHelper detector=new MySQLConsistencyHelper(this,null,1);
+      OneRawSQLQueryResultHandler resultHandler=new OneRawSQLQueryResultHandler(new String[]{GlobalTableUtil.INNER_COLUMN},detector);
+      String db=" and table_schema='" + dbName + "'";
+      SQLJob sqlJob=new SQLJob(this.columnExistSQL + db,dbName,resultHandler,source);
+      detector.setSqlJob(sqlJob);
+      LOGGER.debug(sqlJob.toString());
+      sqlJob.run();
+      this.jobCount.incrementAndGet();
+    }
+  }
+  finally {
+    lock.unlock();
+  }
+}

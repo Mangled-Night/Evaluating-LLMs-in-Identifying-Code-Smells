@@ -1,0 +1,11 @@
+@Test void resultOfMultiIsContainedInExecObservable(){
+  StepVerifier.create(commands.multi()).expectNext("OK").verifyComplete();
+  commands.set("key1","value1").toProcessor();
+  commands.set("key2","value2").toProcessor();
+  commands.mget("key1","key2").collectList().toProcessor();
+  commands.llen("something").toProcessor();
+  StepVerifier.create(commands.exec()).consumeNextWith(actual -> {
+    assertThat(actual).contains("OK","OK",list(kv("key1","value1"),kv("key2","value2")),0L);
+  }
+).verifyComplete();
+}

@@ -1,0 +1,20 @@
+@Override public String login(String username,String password){
+  String token=null;
+  try {
+    UserDetails userDetails=loadUserByUsername(username);
+    if (!passwordEncoder.matches(password,userDetails.getPassword())) {
+      Asserts.fail("密码不正确");
+    }
+    if (!userDetails.isEnabled()) {
+      Asserts.fail("帐号已被禁用");
+    }
+    UsernamePasswordAuthenticationToken authentication=new UsernamePasswordAuthenticationToken(userDetails,null,userDetails.getAuthorities());
+    SecurityContextHolder.getContext().setAuthentication(authentication);
+    token=jwtTokenUtil.generateToken(userDetails);
+    insertLoginLog(username);
+  }
+ catch (  AuthenticationException e) {
+    LOGGER.warn("登录异常:{}",e.getMessage());
+  }
+  return token;
+}

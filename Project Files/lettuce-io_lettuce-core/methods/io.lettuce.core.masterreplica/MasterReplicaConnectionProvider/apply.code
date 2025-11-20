@@ -1,0 +1,11 @@
+@Override public ConnectionFuture<StatefulRedisConnection<K,V>> apply(ConnectionKey key){
+  RedisURI.Builder builder=RedisURI.builder(initialRedisUri).withHost(key.host).withPort(key.port);
+  ConnectionFuture<StatefulRedisConnection<K,V>> connectionFuture=redisClient.connectAsync(redisCodec,builder.build());
+  connectionFuture.thenAccept(connection -> {
+synchronized (stateLock) {
+      connection.setAutoFlushCommands(autoFlushCommands);
+    }
+  }
+);
+  return connectionFuture;
+}

@@ -1,0 +1,23 @@
+/** 
+ * 1. Create entries in roster groups 2. Iterate on all the entries and remove them from the roster 3. Check that the number of entries and groups is zero
+ */
+public void testDeleteAllRosterEntries() throws Exception {
+  Roster roster=getConnection(0).getRoster();
+  CountDownLatch latch=new CountDownLatch(2);
+  setupCountdown(latch,roster);
+  roster.createEntry(getBareJID(1),"gato11",new String[]{"Friends"});
+  roster.createEntry(getBareJID(2),"gato12",new String[]{"Family"});
+  waitForCountdown(latch,roster,2);
+  CountDownLatch removeLatch=new CountDownLatch(2);
+  RosterListener latchCounter=new RemovalListener(removeLatch);
+  roster.addRosterListener(latchCounter);
+  for (  RosterEntry entry : roster.getEntries()) {
+    roster.removeEntry(entry);
+  }
+  removeLatch.await(5,TimeUnit.SECONDS);
+  roster.removeRosterListener(latchCounter);
+  assertEquals("Wrong number of entries in connection 0",0,roster.getEntryCount());
+  assertEquals("Wrong number of groups in connection 0",0,roster.getGroupCount());
+  assertEquals("Wrong number of entries in connection 1",0,getConnection(1).getRoster().getEntryCount());
+  assertEquals("Wrong number of groups in connection 1",0,getConnection(1).getRoster().getGroupCount());
+}

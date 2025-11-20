@@ -1,0 +1,20 @@
+@Test public void xreadTransactional(){
+  String initial1=redis.xadd("stream-1",Collections.singletonMap("key1","value1"));
+  String initial2=redis.xadd("stream-2",Collections.singletonMap("key2","value2"));
+  redis.multi();
+  redis.xadd("stream-1",Collections.singletonMap("key3","value3"));
+  redis.xadd("stream-2",Collections.singletonMap("key4","value4"));
+  redis.xread(StreamOffset.from("stream-1",initial1),XReadArgs.StreamOffset.from("stream-2",initial2));
+  TransactionResult exec=redis.exec();
+  String message1=exec.get(0);
+  String message2=exec.get(1);
+  List<StreamMessage<String,String>> messages=exec.get(2);
+  StreamMessage<String,String> firstMessage=messages.get(0);
+  assertThat(firstMessage.getId()).isEqualTo(message1);
+  assertThat(firstMessage.getStream()).isEqualTo("stream-1");
+  assertThat(firstMessage.getBody()).containsEntry("key3","value3");
+  StreamMessage<String,String> secondMessage=messages.get(1);
+  assertThat(secondMessage.getId()).isEqualTo(message2);
+  assertThat(secondMessage.getStream()).isEqualTo("stream-2");
+  assertThat(secondMessage.getBody()).containsEntry("key4","value4");
+}

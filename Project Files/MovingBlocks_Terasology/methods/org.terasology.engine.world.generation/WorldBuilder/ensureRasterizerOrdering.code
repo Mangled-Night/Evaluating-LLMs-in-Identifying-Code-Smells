@@ -1,0 +1,24 @@
+private List<WorldRasterizer> ensureRasterizerOrdering(ListMultimap<Class<? extends WorldFacet>,FacetProvider> providerChains,boolean scalable){
+  List<WorldRasterizer> orderedRasterizers=Lists.newArrayList();
+  Set<Class<? extends WorldRasterizer>> addedRasterizers=new HashSet<>();
+  for (  WorldRasterizer rasterizer : rasterizers) {
+    RequiresRasterizer requiresRasterizer=rasterizer.getClass().getAnnotation(RequiresRasterizer.class);
+    if (requiresRasterizer != null) {
+      List<Class<? extends WorldRasterizer>> antecedentClassList=Arrays.asList(requiresRasterizer.value());
+      List<WorldRasterizer> antecedents=rasterizers.stream().filter(r -> antecedentClassList.contains(r.getClass())).collect(Collectors.toList());
+      antecedents.forEach(dependency -> {
+        if (!addedRasterizers.contains(dependency.getClass())) {
+          tryAddRasterizer(orderedRasterizers,dependency,providerChains,scalable);
+          addedRasterizers.add(dependency.getClass());
+        }
+      }
+);
+      tryAddRasterizer(orderedRasterizers,rasterizer,providerChains,scalable);
+    }
+ else {
+      tryAddRasterizer(orderedRasterizers,rasterizer,providerChains,scalable);
+      addedRasterizers.add(rasterizer.getClass());
+    }
+  }
+  return orderedRasterizers;
+}

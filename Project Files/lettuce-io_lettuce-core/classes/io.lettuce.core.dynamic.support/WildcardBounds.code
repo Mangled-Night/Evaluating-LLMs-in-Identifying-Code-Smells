@@ -1,0 +1,73 @@
+/** 
+ * Internal helper to handle bounds from  {@link WildcardType}s.
+ */
+private static class WildcardBounds {
+  private final Kind kind;
+  private final ResolvableType[] bounds;
+  /** 
+ * Internal constructor to create a new  {@link WildcardBounds} instance.
+ * @param kind the kind of bounds
+ * @param bounds the bounds
+ * @see #get(ResolvableType)
+ */
+  public WildcardBounds(  Kind kind,  ResolvableType[] bounds){
+    this.kind=kind;
+    this.bounds=bounds;
+  }
+  /** 
+ * Return  {@code true} if this bounds is the same kind as the specified bounds.
+ */
+  public boolean isSameKind(  WildcardBounds bounds){
+    return this.kind == bounds.kind;
+  }
+  /** 
+ * Return  {@code true} if this bounds is assignable to all the specified types.
+ * @param types the types to test against
+ * @return {@code true} if this bounds is assignable to all types
+ */
+  public boolean isAssignableFrom(  ResolvableType... types){
+    for (    ResolvableType bound : this.bounds) {
+      for (      ResolvableType type : types) {
+        if (!isAssignable(bound,type)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  private boolean isAssignable(  ResolvableType source,  ResolvableType from){
+    return (this.kind == Kind.UPPER ? source.isAssignableFrom(from) : from.isAssignableFrom(source));
+  }
+  /** 
+ * Return the underlying bounds.
+ */
+  public ResolvableType[] getBounds(){
+    return this.bounds;
+  }
+  /** 
+ * Get a  {@link WildcardBounds} instance for the specified type, returning {@code null} if the specified type cannot beresolved to a  {@link WildcardType}.
+ * @param type the source type
+ * @return a {@link WildcardBounds} instance or {@code null}
+ */
+  public static WildcardBounds get(  ResolvableType type){
+    ResolvableType resolveToWildcard=type;
+    while (!(resolveToWildcard.getType() instanceof WildcardType)) {
+      if (resolveToWildcard == NONE) {
+        return null;
+      }
+      resolveToWildcard=resolveToWildcard.resolveType();
+    }
+    WildcardType wildcardType=(WildcardType)resolveToWildcard.type;
+    Kind boundsType=(wildcardType.getLowerBounds().length > 0 ? Kind.LOWER : Kind.UPPER);
+    Type[] bounds=boundsType == Kind.UPPER ? wildcardType.getUpperBounds() : wildcardType.getLowerBounds();
+    ResolvableType[] resolvableBounds=new ResolvableType[bounds.length];
+    for (int i=0; i < bounds.length; i++) {
+      resolvableBounds[i]=ResolvableType.forType(bounds[i],type.variableResolver);
+    }
+    return new WildcardBounds(boundsType,resolvableBounds);
+  }
+  /** 
+ * The various kinds of bounds.
+ */
+  enum Kind {  UPPER,   LOWER}
+}

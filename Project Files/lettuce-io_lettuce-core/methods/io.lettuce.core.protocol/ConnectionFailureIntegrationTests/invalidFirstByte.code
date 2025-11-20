@@ -1,0 +1,19 @@
+/** 
+ * Expect to run into Invalid first byte exception instead of timeout.
+ * @throws Exception
+ */
+@Test void invalidFirstByte() throws Exception {
+  client.setOptions(ClientOptions.builder().build());
+  RandomResponseServer ts=getRandomResponseServer();
+  RedisURI redisUri=RedisURI.Builder.redis(TestSettings.host(),TestSettings.nonexistentPort()).withTimeout(Duration.ofMinutes(10)).build();
+  try {
+    client.connect(redisUri);
+  }
+ catch (  Exception e) {
+    assertThat(e).isExactlyInstanceOf(RedisConnectionException.class);
+    assertThat(e.getCause()).hasMessageContaining("Invalid first byte:");
+  }
+ finally {
+    ts.shutdown();
+  }
+}

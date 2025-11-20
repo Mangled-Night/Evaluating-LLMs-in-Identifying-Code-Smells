@@ -1,0 +1,55 @@
+private static int batchModeRun(TelnetClient telnet,List<String> commands,final int executionTimeout) throws IOException, InterruptedException {
+  if (commands.size() == 0) {
+    return STATUS_OK;
+  }
+  long startTime=System.currentTimeMillis();
+  final InputStream inputStream=telnet.getInputStream();
+  final OutputStream outputStream=telnet.getOutputStream();
+  final BlockingQueue<String> receviedPromptQueue=new LinkedBlockingQueue<String>(1);
+  Thread printResultThread=new Thread(new Runnable(){
+    @Override public void run(){
+      try {
+        StringBuilder line=new StringBuilder();
+        BufferedReader in=new BufferedReader(new InputStreamReader(inputStream,"UTF-8"));
+        int b=-1;
+        while (true) {
+          b=in.read();
+          if (b == -1) {
+            break;
+          }
+          line.appendCodePoint(b);
+          int index=line.indexOf(PROMPT);
+          if (index > 0) {
+            line.delete(0,index + PROMPT.length());
+            receviedPromptQueue.put("");
+          }
+          System.out.print(Character.toChars(b));
+        }
+      }
+ catch (      Exception e) {
+      }
+    }
+  }
+);
+  printResultThread.start();
+  for (  String command : commands) {
+    if (command.trim().isEmpty()) {
+      continue;
+    }
+    while (receviedPromptQueue.poll(100,TimeUnit.MILLISECONDS) == null) {
+      if (executionTimeout > 0) {
+        long now=System.currentTimeMillis();
+        if (now - startTime > executionTimeout) {
+          return STATUS_EXEC_TIMEOUT;
+        }
+      }
+    }
+    outputStream.write((command + " | plaintext\n").getBytes());
+    outputStream.flush();
+  }
+  receviedPromptQueue.take();
+  outputStream.write("quit\n".getBytes());
+  outputStream.flush();
+  System.out.println();
+  return STATUS_OK;
+}

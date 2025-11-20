@@ -1,0 +1,18 @@
+/** 
+ * Compiles all combination of available features and stores them in two maps for lookup based on a unique hash of features.
+ */
+private void registerAllShaderPermutations(){
+  Set<Set<ShaderProgramFeature>> allPermutations=Sets.powerSet(availableFeatures);
+  for (  Set<ShaderProgramFeature> permutation : allPermutations) {
+    int featureHash=ShaderProgramFeature.getBitset(permutation);
+    int fragShaderId=compileShader(GL20.GL_FRAGMENT_SHADER,permutation);
+    int vertShaderId=compileShader(GL20.GL_VERTEX_SHADER,permutation);
+    if (shaderProgramBase.getGeometryProgram() != null) {
+      int geomShaderId=compileShader(GL32.GL_GEOMETRY_SHADER,permutation);
+      disposalAction.geometryPrograms.put(featureHash,geomShaderId);
+    }
+    disposalAction.fragmentPrograms.put(featureHash,fragShaderId);
+    disposalAction.vertexPrograms.put(featureHash,vertShaderId);
+  }
+  logger.debug("Compiled {} permutations for {}.",allPermutations.size(),getUrn());
+}

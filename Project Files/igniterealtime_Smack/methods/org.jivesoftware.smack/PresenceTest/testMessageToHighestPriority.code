@@ -1,0 +1,46 @@
+/** 
+ * XMPPConnection(0) will send messages to the bareJID of XMPPConnection(1) where the user of XMPPConnection(1) has logged from two different places with different presence priorities.
+ */
+public void testMessageToHighestPriority(){
+  XMPPTCPConnection conn=null;
+  try {
+    conn=createConnection();
+    conn.connect();
+    conn.login(getUsername(1),getUsername(1),"OtherPlace");
+    getConnection(1).sendStanza(new Presence(Presence.Type.available,null,1,Presence.Mode.available));
+    conn.sendStanza(new Presence(Presence.Type.available,null,2,Presence.Mode.available));
+    Thread.sleep(150);
+    Chat chat0=getConnection(0).getChatManager().createChat(getBareJID(1),null);
+    Chat chat1=getConnection(1).getChatManager().createChat(getBareJID(0),chat0.getThreadID(),null);
+    Chat chat2=conn.getChatManager().createChat(getBareJID(0),chat0.getThreadID(),null);
+    chat0.sendMessage("Hello");
+    getConnection(1).sendStanza(new Presence(Presence.Type.available,null,2,Presence.Mode.available));
+    conn.sendStanza(new Presence(Presence.Type.available,null,1,Presence.Mode.available));
+    Thread.sleep(150);
+    chat0.sendMessage("Hello");
+    conn.disconnect();
+    Thread.sleep(150);
+    chat0.sendMessage("Hello");
+    getConnection(1).sendStanza(new Presence(Presence.Type.available,null,2,Presence.Mode.available));
+    conn=createConnection();
+    conn.connect();
+    conn.login(getUsername(1),getPassword(1),"OtherPlace");
+    conn.sendStanza(new Presence(Presence.Type.available,null,1,Presence.Mode.available));
+    chat2=conn.getChatManager().createChat(getBareJID(0),chat0.getThreadID(),null);
+    Thread.sleep(150);
+    chat0.sendMessage("Hello");
+    getConnection(1).sendStanza(new Presence(Presence.Type.available,null,1,Presence.Mode.available));
+    conn.sendStanza(new Presence(Presence.Type.available,null,2,Presence.Mode.available));
+    Thread.sleep(150);
+    chat0.sendMessage("Hello");
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+ finally {
+    if (conn != null) {
+      conn.disconnect();
+    }
+  }
+}

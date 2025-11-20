@@ -1,0 +1,16 @@
+private CachePool getCache(String cacheName){
+  CachePool pool=allCaches.get(cacheName);
+  if (pool == null) {
+    lock.lock();
+    try {
+      pool=allCaches.get(cacheName);
+      if (pool == null) {
+        pool=this.createChildCache(cacheName,this.defaultCacheSize,this.defaulExpiredSeconds);
+      }
+    }
+  finally {
+      lock.unlock();
+    }
+  }
+  return pool;
+}

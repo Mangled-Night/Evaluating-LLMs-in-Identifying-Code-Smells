@@ -1,0 +1,15 @@
+private static void oneSetResponse(String stmt,ServerConnection c,int rs){
+  if ((rs & 0xff) == CHARACTER_SET_CLIENT) {
+    c.write(c.writeToBuffer(OkPacket.OK,c.allocate()));
+  }
+ else {
+    String charset=stmt.substring(rs >>> 8).trim();
+    if (charset.endsWith(";")) {
+      charset=charset.substring(0,charset.length() - 1);
+    }
+    if (charset.startsWith("'") || charset.startsWith("`")) {
+      charset=charset.substring(1,charset.length() - 1);
+    }
+    setCharset(charset,c);
+  }
+}

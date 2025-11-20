@@ -1,0 +1,20 @@
+@Override public void onChunkLoaded(Vector3ic chunkCoordinates){
+  if (renderableRegion.contains(chunkCoordinates)) {
+    Chunk chunk=chunkProvider.getChunk(chunkCoordinates);
+    if (chunk != null) {
+      chunkWorker.add(chunk);
+      if (lodChunkProvider != null) {
+        lodChunkProvider.onRealChunkLoaded(chunkCoordinates);
+      }
+    }
+ else {
+      logger.warn("Warning: onChunkLoaded called for a null chunk!");
+    }
+  }
+  for (  Vector3ic pos : new BlockRegion(chunkCoordinates).expand(1,1,1)) {
+    Chunk chunk=chunkProvider.getChunk(pos);
+    if (chunk != null) {
+      chunk.setDirty(true);
+    }
+  }
+}

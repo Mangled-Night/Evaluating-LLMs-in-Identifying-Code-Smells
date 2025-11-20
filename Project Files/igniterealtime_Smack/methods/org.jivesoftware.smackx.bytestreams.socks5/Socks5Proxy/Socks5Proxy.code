@@ -1,0 +1,35 @@
+/** 
+ * Private constructor.
+ */
+Socks5Proxy(){
+  this.serverProcess=new Socks5ServerProcess();
+  allowAllConnections=false;
+  Enumeration<NetworkInterface> networkInterfaces;
+  try {
+    networkInterfaces=NetworkInterface.getNetworkInterfaces();
+  }
+ catch (  SocketException e) {
+    throw new IllegalStateException(e);
+  }
+  Set<InetAddress> localAddresses=new HashSet<>();
+  for (  NetworkInterface networkInterface : Collections.list(networkInterfaces)) {
+    List<InterfaceAddress> interfaceAddresses=networkInterface.getInterfaceAddresses();
+    for (    InterfaceAddress interfaceAddress : interfaceAddresses) {
+      localAddresses.add(interfaceAddress.getAddress());
+    }
+  }
+  if (localAddresses.isEmpty()) {
+    throw new IllegalStateException("Could not determine any local internet address");
+  }
+  replaceLocalAddresses(localAddresses);
+}
+/** 
+ * Constructor a Socks5Proxy with the given socket. Used for unit test purposes.
+ * @param serverSocket the server socket to use
+ */
+protected Socks5Proxy(ServerSocket serverSocket){
+  this.serverProcess=new Socks5ServerProcess();
+  this.serverSocket=serverSocket;
+  allowAllConnections=true;
+  startServerThread();
+}

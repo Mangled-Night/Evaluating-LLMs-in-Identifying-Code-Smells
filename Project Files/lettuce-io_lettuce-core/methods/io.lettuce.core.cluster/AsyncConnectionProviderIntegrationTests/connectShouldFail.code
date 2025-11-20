@@ -1,0 +1,14 @@
+@Test void connectShouldFail() throws Exception {
+  Socket socket=new Socket(TestSettings.host(),serverSocket.getLocalPort());
+  ClusterClientOptions clientOptions=ClusterClientOptions.builder().protocolVersion(ProtocolVersion.RESP2).socketOptions(SocketOptions.builder().connectTimeout(1,TimeUnit.SECONDS).build()).build();
+  client.setOptions(clientOptions);
+  ConnectionKey connectionKey=new ConnectionKey(ConnectionIntent.READ,"8.8.8.8",TestSettings.port());
+  StopWatch stopWatch=new StopWatch();
+  assertThatThrownBy(() -> TestFutures.awaitOrTimeout(sut.getConnection(connectionKey))).hasCauseInstanceOf(ConnectTimeoutException.class);
+  stopWatch.start();
+  assertThatThrownBy(() -> TestFutures.awaitOrTimeout(sut.getConnection(connectionKey))).hasCauseInstanceOf(ConnectTimeoutException.class);
+  stopWatch.stop();
+  assertThat(TimeUnit.NANOSECONDS.toMillis(stopWatch.getNanoTime())).isBetween(0L,1200L);
+  sut.close();
+  socket.close();
+}

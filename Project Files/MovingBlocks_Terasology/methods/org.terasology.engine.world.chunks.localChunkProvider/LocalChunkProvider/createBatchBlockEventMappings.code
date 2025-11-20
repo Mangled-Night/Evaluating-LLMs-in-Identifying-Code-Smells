@@ -1,0 +1,14 @@
+private TShortObjectMap<TIntList> createBatchBlockEventMappings(Chunk chunk){
+  TShortObjectMap<TIntList> batchBlockMap=new TShortObjectHashMap<>();
+  blockManager.listRegisteredBlocks().stream().filter(Block::isLifecycleEventsRequired).forEach(block -> batchBlockMap.put(block.getId(),new TIntArrayList()));
+  ChunkBlockIterator i=chunk.getBlockIterator();
+  while (i.next()) {
+    if (i.getBlock().isLifecycleEventsRequired()) {
+      TIntList positionList=batchBlockMap.get(i.getBlock().getId());
+      positionList.add(i.getBlockPos().x());
+      positionList.add(i.getBlockPos().y());
+      positionList.add(i.getBlockPos().z());
+    }
+  }
+  return batchBlockMap;
+}

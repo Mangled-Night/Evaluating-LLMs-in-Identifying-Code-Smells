@@ -1,0 +1,23 @@
+@Override public void onReceive(Context context,Intent intent){
+  LOGGER.fine("Ping Alarm broadcast received");
+  Set<Map.Entry<XMPPConnection,ServerPingWithAlarmManager>> managers;
+synchronized (ServerPingWithAlarmManager.class) {
+    managers=new HashSet<>(INSTANCES.entrySet());
+  }
+  for (  Map.Entry<XMPPConnection,ServerPingWithAlarmManager> entry : managers) {
+    XMPPConnection connection=entry.getKey();
+    if (entry.getValue().isEnabled()) {
+      LOGGER.fine("Calling pingServerIfNecessary for connection " + connection);
+      final PingManager pingManager=PingManager.getInstanceFor(connection);
+      Async.go(new Runnable(){
+        @Override public void run(){
+          pingManager.pingServerIfNecessary();
+        }
+      }
+,"PingServerIfNecessary (" + connection.getConnectionCounter() + ')');
+    }
+ else {
+      LOGGER.fine("NOT calling pingServerIfNecessary (disabled) on connection " + connection.getConnectionCounter());
+    }
+  }
+}

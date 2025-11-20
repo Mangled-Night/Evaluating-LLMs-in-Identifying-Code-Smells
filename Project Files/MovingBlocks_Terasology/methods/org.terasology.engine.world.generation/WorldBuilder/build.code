@@ -1,0 +1,13 @@
+public World build(){
+  if (seed == null) {
+    throw new IllegalStateException("Seed has not been set");
+  }
+  for (  FacetProvider provider : providersList) {
+    provider.setSeed(seed);
+  }
+  ListMultimap<Class<? extends WorldFacet>,FacetProvider> providerChains=determineProviderChains(false);
+  ListMultimap<Class<? extends WorldFacet>,FacetProvider> scalableProviderChains=determineProviderChains(true);
+  List<WorldRasterizer> orderedRasterizers=ensureRasterizerOrdering(providerChains,false);
+  List<WorldRasterizer> scalableRasterizers=ensureRasterizerOrdering(scalableProviderChains,true);
+  return new WorldImpl(providerChains,scalableProviderChains,orderedRasterizers,scalableRasterizers,entityProviders,determineBorders(providerChains,orderedRasterizers),seaLevel);
+}

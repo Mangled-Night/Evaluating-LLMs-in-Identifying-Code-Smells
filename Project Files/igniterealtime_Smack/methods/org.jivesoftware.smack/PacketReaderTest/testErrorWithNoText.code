@@ -1,0 +1,29 @@
+/** 
+ * Checks that parser still works when receiving an error text with no description.
+ */
+public void testErrorWithNoText(){
+  Message packet=new Message();
+  packet.setFrom(getFullJID(0));
+  packet.setTo(getFullJID(1));
+  packet.setBody("aloha");
+  getConnection(1).addAsyncPacketListener(new PacketListener(){
+    public void processStanza(    Packet packet){
+      System.out.println(new Date() + " " + packet);
+      Message message=new Message(packet.getFrom());
+      message.setFrom(getFullJID(1));
+      message.setBody("HELLO");
+      getConnection(1).sendStanza(message);
+    }
+  }
+,new StanzaTypeFilter(Message.class));
+  StanzaCollector collector=getConnection(0).createStanzaCollector(new FromMatchesFilter(getFullJID(1)));
+  getConnection(0).sendStanza(packet);
+  assertNotNull("No message was received",collector.nextResult(1000));
+  packet=new Message();
+  packet.setFrom(getFullJID(0));
+  packet.setTo(getFullJID(1));
+  packet.setBody("aloha");
+  packet.setError(new XMPPError(XMPPError.Condition.feature_not_implemented,null));
+  getConnection(0).sendStanza(packet);
+  assertNotNull("No message was received",collector.nextResult(1000));
+}

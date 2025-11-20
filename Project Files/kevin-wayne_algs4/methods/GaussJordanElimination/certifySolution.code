@@ -1,0 +1,41 @@
+private boolean certifySolution(double[][] A,double[] b){
+  if (isFeasible()) {
+    double[] x=primal();
+    for (int i=0; i < n; i++) {
+      double sum=0.0;
+      for (int j=0; j < n; j++) {
+        sum+=A[i][j] * x[j];
+      }
+      if (Math.abs(sum - b[i]) > EPSILON) {
+        StdOut.println("not feasible");
+        StdOut.printf("b[%d] = %8.3f, sum = %8.3f\n",i,b[i],sum);
+        return false;
+      }
+    }
+    return true;
+  }
+ else {
+    double[] y=dual();
+    for (int j=0; j < n; j++) {
+      double sum=0.0;
+      for (int i=0; i < n; i++) {
+        sum+=A[i][j] * y[i];
+      }
+      if (Math.abs(sum) > EPSILON) {
+        StdOut.println("invalid certificate of infeasibility");
+        StdOut.printf("sum = %8.3f\n",sum);
+        return false;
+      }
+    }
+    double sum=0.0;
+    for (int i=0; i < n; i++) {
+      sum+=y[i] * b[i];
+    }
+    if (Math.abs(sum) < EPSILON) {
+      StdOut.println("invalid certificate of infeasibility");
+      StdOut.printf("yb  = %8.3f\n",sum);
+      return false;
+    }
+    return true;
+  }
+}

@@ -1,0 +1,36 @@
+public static final class ListBuilder {
+  private final Builder markup;
+  private final ArrayList<ListElement.ListEntryElement> entries=new ArrayList<>();
+  private int end=-1;
+  private ListBuilder(  Builder markup){
+    this.markup=markup;
+  }
+  /** 
+ * Add an entry to the list. The start index of an entry must correspond to the end index of the previous entry (if a previous entry exists.)
+ * @param start start index
+ * @param end end index
+ * @return list builder
+ */
+  public Builder.ListBuilder addEntry(  int start,  int end){
+    verifyStartEnd(start,end);
+    ListElement.ListEntryElement last=entries.size() == 0 ? null : entries.get(entries.size() - 1);
+    if (last != null && start != this.end) {
+      throw new IllegalArgumentException("Next entries start must be equal to last entries end (" + this.end + ").");
+    }
+    entries.add(new ListElement.ListEntryElement(start));
+    this.end=end;
+    return this;
+  }
+  /** 
+ * End the list.
+ * @return builder TODO javadoc me please
+ */
+  public Builder endList(){
+    if (entries.size() > 0) {
+      ListElement.ListEntryElement first=entries.get(0);
+      ListElement list=new ListElement(first.getStart(),end,entries);
+      markup.lists.add(list);
+    }
+    return markup;
+  }
+}

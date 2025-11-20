@@ -1,0 +1,29 @@
+@Override public void execute(RouteResultsetNode rrn,ServerConnection sc,boolean autocommit) throws IOException {
+  int sqlType=rrn.getSqlType();
+  String orgin=rrn.getStatement();
+  if (LOGGER.isDebugEnabled()) {
+    LOGGER.debug("{}查询任务。。。。{}",id,rrn.getStatement());
+    LOGGER.debug(orgin);
+  }
+  if (sqlType == ServerParse.SELECT || sqlType == ServerParse.SHOW) {
+    if (sqlType == ServerParse.SHOW) {
+      String _newSql=PgSqlApaterUtils.apater(orgin);
+      if (_newSql.trim().substring(0,4).equalsIgnoreCase("show")) {
+        ShowVariables.execute(sc,orgin,this);
+        return;
+      }
+    }
+ else     if ("SELECT CONNECTION_ID()".equalsIgnoreCase(orgin)) {
+      ShowVariables.justReturnValue(sc,String.valueOf(sc.getId()),this);
+      return;
+    }
+  }
+  if (!modifiedSQLExecuted && rrn.isModifySQL()) {
+    modifiedSQLExecuted=true;
+  }
+  String xaTXID=null;
+  if (sc.getSession2().getXaTXID() != null) {
+    xaTXID=sc.getSession2().getXaTXID() + ",'" + getSchema()+ "'";
+  }
+  synAndDoExecute(xaTXID,rrn,sc.getCharsetIndex(),sc.getTxIsolation(),autocommit,sc.isTxReadonly());
+}

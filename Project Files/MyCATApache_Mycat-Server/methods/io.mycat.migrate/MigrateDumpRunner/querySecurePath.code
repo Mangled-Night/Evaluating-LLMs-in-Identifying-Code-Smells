@@ -1,0 +1,17 @@
+private static String querySecurePath(DBHostConfig config){
+  List<Map<String,Object>> list=null;
+  String path=null;
+  Connection con=null;
+  try {
+    con=DriverManager.getConnection("jdbc:mysql://" + config.getUrl(),config.getUser(),config.getPassword());
+    list=executeQuery(con,"show variables like 'secure_file_priv'");
+    if (list != null && list.size() == 1)     path=(String)list.get(0).get("Value");
+  }
+ catch (  SQLException e) {
+    throw new RuntimeException(e);
+  }
+ finally {
+    JdbcUtils.close(con);
+  }
+  return path;
+}

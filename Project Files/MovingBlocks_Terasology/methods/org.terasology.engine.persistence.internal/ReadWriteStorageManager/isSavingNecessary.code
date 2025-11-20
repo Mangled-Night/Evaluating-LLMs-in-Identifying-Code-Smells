@@ -1,0 +1,16 @@
+private boolean isSavingNecessary(){
+  ChunkProvider chunkProvider=CoreRegistry.get(ChunkProvider.class);
+  int unloadedChunkCount=unloadedAndUnsavedChunkMap.size();
+  int loadedChunkCount=chunkProvider.getAllChunks().size();
+  double totalChunkCount=unloadedChunkCount + loadedChunkCount;
+  double percentageUnloaded=100.0 * unloadedChunkCount / totalChunkCount;
+  if (percentageUnloaded >= systemConfig.maxUnloadedChunksPercentageTillSave.get()) {
+    return true;
+  }
+  long currentTime=System.currentTimeMillis();
+  if (nextAutoSave == null) {
+    scheduleNextAutoSave();
+    return false;
+  }
+  return currentTime >= nextAutoSave;
+}

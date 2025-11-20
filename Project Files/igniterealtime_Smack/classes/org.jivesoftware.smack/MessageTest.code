@@ -1,0 +1,219 @@
+/** 
+ * Tests sending messages to other clients.
+ * @author Gaston Dombiak
+ */
+public class MessageTest extends SmackTestCase {
+  public MessageTest(  String arg0){
+    super(arg0);
+  }
+  /** 
+ * Will a user recieve a message from another after only sending the user a directed presence, or will Wildfire intercept for offline storage? User1 becomes lines. User0 never sent an available presence to the server but instead sent one to User1. User1 sends a message to User0. Should User0 get the message?
+ */
+  public void testDirectPresence(){
+    getConnection(1).sendStanza(new Presence(Presence.Type.available));
+    Presence presence=new Presence(Presence.Type.available);
+    presence.setTo(getBareJID(1));
+    getConnection(0).sendStanza(presence);
+    StanzaCollector collector=getConnection(0).createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+    try {
+      getConnection(1).getChatManager().createChat(getBareJID(0),null).sendMessage("Test 1");
+    }
+ catch (    XMPPException e) {
+      e.printStackTrace();
+      fail(e.getMessage());
+    }
+    Message message=(Message)collector.nextResult(2500);
+    assertNotNull("Message not recieved from remote user",message);
+  }
+  /** 
+ * Check that when a client becomes unavailable all messages sent to the client are stored offline. So that when the client becomes available again the offline messages are received.
+ */
+  public void testOfflineMessage(){
+    getConnection(0).sendStanza(new Presence(Presence.Type.available));
+    getConnection(1).sendStanza(new Presence(Presence.Type.available));
+    getConnection(1).sendStanza(new Presence(Presence.Type.unavailable));
+    try {
+      Thread.sleep(500);
+      Chat chat=getConnection(0).getChatManager().createChat(getBareJID(1),null);
+      StanzaCollector collector=getConnection(1).createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+      chat.sendMessage("Test 1");
+      chat.sendMessage("Test 2");
+      Thread.sleep(500);
+      getConnection(1).sendStanza(new Presence(Presence.Type.available));
+      Message message=(Message)collector.nextResult(2500);
+      assertNotNull(message);
+      message=(Message)collector.nextResult(2000);
+      assertNotNull(message);
+      message=(Message)collector.nextResult(1000);
+      assertNull(message);
+    }
+ catch (    Exception e) {
+      e.printStackTrace();
+      fail(e.getMessage());
+    }
+  }
+  /** 
+ * Check that two clients are able to send messages with a body of 4K characters and their connections are not being closed.
+ */
+  public void testHugeMessage(){
+    getConnection(0).sendStanza(new Presence(Presence.Type.available));
+    getConnection(1).sendStanza(new Presence(Presence.Type.available));
+    StanzaCollector collector=getConnection(1).createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+    Message msg=new Message(getFullJID(1),Message.Type.chat);
+    StringBuilder sb=new StringBuilder(5000);
+    for (int i=0; i <= 4000; i++) {
+      sb.append('X');
+    }
+    msg.setBody(sb.toString());
+    getConnection(0).sendStanza(msg);
+    assertTrue("XMPPConnection was closed",getConnection(0).isConnected());
+    Message rcv=(Message)collector.nextResult(1000);
+    assertNotNull("No Message was received",rcv);
+    getConnection(0).sendStanza(msg);
+    assertTrue("XMPPConnection was closed",getConnection(0).isConnected());
+    rcv=(Message)collector.nextResult(1000);
+    assertNotNull("No Message was received",rcv);
+  }
+  /** 
+ * User0 is connected from 2 resources. User0 is available in both resources but with different priority presence values. User1 sends a message to the bare JID of User0. Check that the resource with highest priority will get the messages.
+ * @throws Exception if an error occurs.
+ */
+  public void testHighestPriority() throws Exception {
+    ConnectionConfiguration connectionConfiguration=new ConnectionConfiguration(getHost(),getPort(),getXMPPServiceDomain());
+    XMPPTCPConnection conn3=new XMPPConnection(connectionConfiguration);
+    conn3.connect();
+    conn3.login(getUsername(0),getPassword(0),"Home");
+    Presence presence=new Presence(Presence.Type.available);
+    presence.setPriority(10);
+    conn3.sendStanza(presence);
+    presence=new Presence(Presence.Type.available);
+    presence.setPriority(5);
+    getConnection(0).sendStanza(presence);
+    Thread.sleep(200);
+    StanzaCollector collector=getConnection(0).createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+    StanzaCollector coll3=conn3.createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+    Chat chat=getConnection(1).getChatManager().createChat(getBareJID(0),null);
+    chat.sendMessage("Test 1");
+    chat.sendMessage("Test 2");
+    Message message=(Message)collector.nextResult(2000);
+    assertNull("Resource with lowest priority got the message",message);
+    message=(Message)coll3.nextResult(2000);
+    assertNotNull(message);
+    assertEquals("Test 1",message.getBody());
+    message=(Message)coll3.nextResult(1000);
+    assertNotNull(message);
+    assertEquals("Test 2",message.getBody());
+    conn3.disconnect();
+  }
+  /** 
+ * User0 is connected from 2 resources. User0 is available in both resources but with different show values. User1 sends a message to the bare JID of User0. Check that the resource with highest show value will get the messages.
+ * @throws Exception if an error occurs.
+ */
+  public void testHighestShow() throws Exception {
+    ConnectionConfiguration connectionConfiguration=new ConnectionConfiguration(getHost(),getPort(),getXMPPServiceDomain());
+    XMPPTCPConnection conn3=new XMPPConnection(connectionConfiguration);
+    conn3.connect();
+    conn3.login(getUsername(0),getPassword(0),"Home");
+    Presence presence=new Presence(Presence.Type.available);
+    presence.setMode(Presence.Mode.away);
+    conn3.sendStanza(presence);
+    presence=new Presence(Presence.Type.available);
+    presence.setMode(Presence.Mode.available);
+    getConnection(0).sendStanza(presence);
+    Thread.sleep(200);
+    StanzaCollector collector=getConnection(0).createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+    StanzaCollector coll3=conn3.createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+    Chat chat=getConnection(1).getChatManager().createChat(getBareJID(0),null);
+    chat.sendMessage("Test 1");
+    chat.sendMessage("Test 2");
+    Message message=(Message)coll3.nextResult(2000);
+    assertNull("Resource with lowest show value got the message",message);
+    message=(Message)collector.nextResult(2000);
+    assertNotNull(message);
+    assertEquals("Test 1",message.getBody());
+    message=(Message)collector.nextResult(1000);
+    assertNotNull(message);
+    assertEquals("Test 2",message.getBody());
+    conn3.disconnect();
+  }
+  /** 
+ * User0 is connected from 2 resources. User0 is available in both resources with same priority presence values and same show values. User1 sends a message to the bare JID of User0. Check that the resource with most recent activity will get the messages.
+ * @throws Exception if an error occurs.
+ */
+  public void testMostRecentActive() throws Exception {
+    ConnectionConfiguration connectionConfiguration=new ConnectionConfiguration(getHost(),getPort(),getXMPPServiceDomain());
+    XMPPTCPConnection conn3=new XMPPConnection(connectionConfiguration);
+    conn3.connect();
+    conn3.login(getUsername(0),getPassword(0),"Home");
+    Presence presence=new Presence(Presence.Type.available);
+    presence.setMode(Presence.Mode.available);
+    presence.setPriority(10);
+    conn3.sendStanza(presence);
+    presence=new Presence(Presence.Type.available);
+    presence.setMode(Presence.Mode.available);
+    presence.setPriority(10);
+    getConnection(0).sendStanza(presence);
+    connectionConfiguration=new ConnectionConfiguration(getHost(),getPort(),getXMPPServiceDomain());
+    XMPPTCPConnection conn4=new XMPPConnection(connectionConfiguration);
+    conn4.connect();
+    conn4.login(getUsername(0),getPassword(0),"Home2");
+    presence=new Presence(Presence.Type.available);
+    presence.setMode(Presence.Mode.available);
+    presence.setPriority(4);
+    getConnection(0).sendStanza(presence);
+    Thread.sleep(200);
+    StanzaCollector collector=getConnection(0).createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+    StanzaCollector coll3=conn3.createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+    StanzaCollector coll4=conn4.createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+    conn3.sendStanza(new Message("admin@" + getXMPPServiceDomain()));
+    Chat chat=getConnection(1).getChatManager().createChat(getBareJID(0),null);
+    chat.sendMessage("Test 1");
+    chat.sendMessage("Test 2");
+    Message message=(Message)collector.nextResult(2000);
+    assertNull("Resource with oldest activity got the message",message);
+    message=(Message)coll4.nextResult(2000);
+    assertNull(message);
+    message=(Message)coll3.nextResult(2000);
+    assertNotNull(message);
+    assertEquals("Test 1",message.getBody());
+    message=(Message)coll3.nextResult(1000);
+    assertNotNull(message);
+    assertEquals("Test 2",message.getBody());
+    conn3.disconnect();
+    conn4.disconnect();
+  }
+  /** 
+ * User0 is connected from 1 resource with a negative priority presence. User1 sends a message to the bare JID of User0. Messages should be stored offline. User0 then changes the priority presence to a positive value. Check that offline messages were delivered to the user.
+ * @throws Exception if an error occurs.
+ */
+  public void testOfflineStorageWithNegativePriority() throws Exception {
+    Presence presence=new Presence(Presence.Type.available);
+    presence.setMode(Presence.Mode.available);
+    presence.setPriority(-1);
+    getConnection(0).sendStanza(presence);
+    Thread.sleep(200);
+    StanzaCollector collector=getConnection(0).createStanzaCollector(new MessageTypeFilter(Message.Type.chat));
+    Chat chat=getConnection(1).getChatManager().createChat(getBareJID(0),null);
+    chat.sendMessage("Test 1");
+    chat.sendMessage("Test 2");
+    Message message=(Message)collector.nextResult(2000);
+    assertNull("Messages were not stored offline",message);
+    presence=new Presence(Presence.Type.available);
+    presence.setMode(Presence.Mode.available);
+    presence.setPriority(1);
+    getConnection(0).sendStanza(presence);
+    Thread.sleep(200);
+    message=(Message)collector.nextResult(2000);
+    assertNotNull("Offline messages were not delivered",message);
+    assertEquals("Test 1",message.getBody());
+    message=(Message)collector.nextResult(1000);
+    assertNotNull(message);
+    assertEquals("Test 2",message.getBody());
+  }
+  protected int getMaxConnections(){
+    return 2;
+  }
+  @Override protected boolean sendInitialPresence(){
+    return false;
+  }
+}

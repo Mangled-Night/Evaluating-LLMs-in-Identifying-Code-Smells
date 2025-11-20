@@ -1,0 +1,26 @@
+public static String getLocalHost(){
+  Enumeration<NetworkInterface> ifaces=null;
+  try {
+    ifaces=NetworkInterface.getNetworkInterfaces();
+  }
+ catch (  SocketException e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+  while (ifaces.hasMoreElements()) {
+    NetworkInterface iface=ifaces.nextElement();
+    Enumeration<InetAddress> iaddresses=iface.getInetAddresses();
+    while (iaddresses.hasMoreElements()) {
+      InetAddress iaddress=iaddresses.nextElement();
+      if (!iaddress.isLoopbackAddress() && !iaddress.isLinkLocalAddress() && !iaddress.isSiteLocalAddress()&& !(iaddress instanceof Inet6Address)) {
+        return iaddress.getHostAddress();
+      }
+    }
+  }
+  try {
+    return InetAddress.getLocalHost().getHostAddress();
+  }
+ catch (  Exception e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+  return "127.0.0.1";
+}

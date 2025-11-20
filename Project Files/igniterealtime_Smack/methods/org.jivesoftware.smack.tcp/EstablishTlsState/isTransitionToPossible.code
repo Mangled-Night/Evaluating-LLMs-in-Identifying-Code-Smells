@@ -1,0 +1,22 @@
+@Override public StateTransitionResult.TransitionImpossible isTransitionToPossible(WalkStateGraphContext walkStateGraphContext) throws SecurityRequiredByClientException, SecurityRequiredByServerException {
+  StartTls startTlsFeature=connectionInternal.connection.getFeature(StartTls.class);
+  SecurityMode securityMode=connectionInternal.connection.getConfiguration().getSecurityMode();
+switch (securityMode) {
+case required:
+case ifpossible:
+    if (startTlsFeature == null) {
+      if (securityMode == SecurityMode.ifpossible) {
+        return new StateTransitionResult.TransitionImpossibleReason("Server does not announce support for TLS and we do not required it");
+      }
+      throw new SecurityRequiredByClientException();
+    }
+  return null;
+case disabled:
+if (startTlsFeature != null && startTlsFeature.required()) {
+  throw new SecurityRequiredByServerException();
+}
+return new StateTransitionResult.TransitionImpossibleReason("TLS disabled in client settings and server does not require it");
+default :
+throw new AssertionError("Unknown security mode: " + securityMode);
+}
+}

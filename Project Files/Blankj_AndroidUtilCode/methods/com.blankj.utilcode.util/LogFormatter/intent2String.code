@@ -1,0 +1,109 @@
+private static String intent2String(Intent intent){
+  StringBuilder sb=new StringBuilder(128);
+  sb.append("Intent { ");
+  boolean first=true;
+  String mAction=intent.getAction();
+  if (mAction != null) {
+    sb.append("act=").append(mAction);
+    first=false;
+  }
+  Set<String> mCategories=intent.getCategories();
+  if (mCategories != null) {
+    if (!first) {
+      sb.append(' ');
+    }
+    first=false;
+    sb.append("cat=[");
+    boolean firstCategory=true;
+    for (    String c : mCategories) {
+      if (!firstCategory) {
+        sb.append(',');
+      }
+      sb.append(c);
+      firstCategory=false;
+    }
+    sb.append("]");
+  }
+  Uri mData=intent.getData();
+  if (mData != null) {
+    if (!first) {
+      sb.append(' ');
+    }
+    first=false;
+    sb.append("dat=").append(mData);
+  }
+  String mType=intent.getType();
+  if (mType != null) {
+    if (!first) {
+      sb.append(' ');
+    }
+    first=false;
+    sb.append("typ=").append(mType);
+  }
+  int mFlags=intent.getFlags();
+  if (mFlags != 0) {
+    if (!first) {
+      sb.append(' ');
+    }
+    first=false;
+    sb.append("flg=0x").append(Integer.toHexString(mFlags));
+  }
+  String mPackage=intent.getPackage();
+  if (mPackage != null) {
+    if (!first) {
+      sb.append(' ');
+    }
+    first=false;
+    sb.append("pkg=").append(mPackage);
+  }
+  ComponentName mComponent=intent.getComponent();
+  if (mComponent != null) {
+    if (!first) {
+      sb.append(' ');
+    }
+    first=false;
+    sb.append("cmp=").append(mComponent.flattenToShortString());
+  }
+  Rect mSourceBounds=intent.getSourceBounds();
+  if (mSourceBounds != null) {
+    if (!first) {
+      sb.append(' ');
+    }
+    first=false;
+    sb.append("bnds=").append(mSourceBounds.toShortString());
+  }
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+    ClipData mClipData=intent.getClipData();
+    if (mClipData != null) {
+      if (!first) {
+        sb.append(' ');
+      }
+      first=false;
+      clipData2String(mClipData,sb);
+    }
+  }
+  Bundle mExtras=intent.getExtras();
+  if (mExtras != null) {
+    if (!first) {
+      sb.append(' ');
+    }
+    first=false;
+    sb.append("extras={");
+    sb.append(bundle2String(mExtras));
+    sb.append('}');
+  }
+  if (Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
+    Intent mSelector=intent.getSelector();
+    if (mSelector != null) {
+      if (!first) {
+        sb.append(' ');
+      }
+      first=false;
+      sb.append("sel={");
+      sb.append(mSelector == intent ? "(this Intent)" : intent2String(mSelector));
+      sb.append("}");
+    }
+  }
+  sb.append(" }");
+  return sb.toString();
+}

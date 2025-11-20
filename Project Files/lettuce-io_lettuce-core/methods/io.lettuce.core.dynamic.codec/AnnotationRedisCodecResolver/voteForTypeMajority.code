@@ -1,0 +1,16 @@
+private Voted<RedisCodec<?,?>> voteForTypeMajority(CommandMethod commandMethod){
+  List<Voted<RedisCodec<?,?>>> votes=codecs.stream().map(redisCodec -> new Voted<RedisCodec<?,?>>(redisCodec,0)).collect(Collectors.toList());
+  commandMethod.getParameters().getBindableParameters().forEach(parameter -> {
+    vote(votes,parameter);
+  }
+);
+  Collections.sort(votes);
+  if (votes.isEmpty()) {
+    return null;
+  }
+  Voted<RedisCodec<?,?>> voted=votes.get(votes.size() - 1);
+  if (voted.votes == 0) {
+    return null;
+  }
+  return voted;
+}

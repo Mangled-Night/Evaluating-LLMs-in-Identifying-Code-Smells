@@ -1,0 +1,43 @@
+/** 
+ * 用户购物车信息
+ * @param userId 用户ID
+ * @return 用户购物车信息
+ */
+@GetMapping("index") public Object index(@LoginUser Integer userId){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  List<LitemallCart> list=cartService.queryByUid(userId);
+  List<LitemallCart> cartList=new ArrayList<>();
+  for (  LitemallCart cart : list) {
+    LitemallGoods goods=goodsService.findById(cart.getGoodsId());
+    if (goods == null || !goods.getIsOnSale()) {
+      cartService.deleteById(cart.getId());
+      logger.debug("系统自动删除失效购物车商品 goodsId=" + cart.getGoodsId() + " productId="+ cart.getProductId());
+    }
+ else {
+      cartList.add(cart);
+    }
+  }
+  Integer goodsCount=0;
+  BigDecimal goodsAmount=new BigDecimal(0.00);
+  Integer checkedGoodsCount=0;
+  BigDecimal checkedGoodsAmount=new BigDecimal(0.00);
+  for (  LitemallCart cart : cartList) {
+    goodsCount+=cart.getNumber();
+    goodsAmount=goodsAmount.add(cart.getPrice().multiply(new BigDecimal(cart.getNumber())));
+    if (cart.getChecked()) {
+      checkedGoodsCount+=cart.getNumber();
+      checkedGoodsAmount=checkedGoodsAmount.add(cart.getPrice().multiply(new BigDecimal(cart.getNumber())));
+    }
+  }
+  Map<String,Object> cartTotal=new HashMap<>();
+  cartTotal.put("goodsCount",goodsCount);
+  cartTotal.put("goodsAmount",goodsAmount);
+  cartTotal.put("checkedGoodsCount",checkedGoodsCount);
+  cartTotal.put("checkedGoodsAmount",checkedGoodsAmount);
+  Map<String,Object> result=new HashMap<>();
+  result.put("cartList",cartList);
+  result.put("cartTotal",cartTotal);
+  return ResponseUtil.ok(result);
+}

@@ -1,0 +1,18 @@
+@ReceiveEvent public void onEnterBlock(OnEnterBlockEvent event,EntityRef entity,CharacterSoundComponent characterSounds){
+  if (event.getCharacterRelativePosition().y == 0 && characterSounds.lastSoundTime + MIN_TIME < time.getGameTimeInMs()) {
+    boolean oldBlockIsLiquid=event.getOldBlock().isLiquid();
+    boolean newBlockIsLiquid=event.getNewBlock().isLiquid();
+    StaticSound sound=null;
+    if (!oldBlockIsLiquid && newBlockIsLiquid) {
+      sound=random.nextItem(characterSounds.enterWaterSounds);
+    }
+ else     if (oldBlockIsLiquid && !newBlockIsLiquid) {
+      sound=random.nextItem(characterSounds.leaveWaterSounds);
+    }
+    if (sound != null) {
+      entity.send(new PlaySoundEvent(entity,sound,characterSounds.diveVolume));
+      characterSounds.lastSoundTime=time.getGameTimeInMs();
+      entity.saveComponent(characterSounds);
+    }
+  }
+}

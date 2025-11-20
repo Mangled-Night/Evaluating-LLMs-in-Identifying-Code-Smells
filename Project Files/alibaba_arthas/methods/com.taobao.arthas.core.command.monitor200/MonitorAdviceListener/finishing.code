@@ -1,0 +1,46 @@
+private void finishing(Class<?> clazz,ArthasMethod method,boolean isThrowing,Advice advice){
+  double cost=threadLocalWatch.costInMillis();
+  if (command.isBefore()) {
+    if (!this.conditionResult.get()) {
+      return;
+    }
+  }
+ else {
+    try {
+      if (!isConditionMet(this.command.getConditionExpress(),advice,cost)) {
+        return;
+      }
+    }
+ catch (    ExpressException e) {
+      logger.warn("monitor execute condition-express failed.",e);
+      return;
+    }
+  }
+  final Key key=new Key(clazz.getName(),method.getName());
+  while (true) {
+    AtomicReference<MonitorData> value=monitorData.get(key);
+    if (null == value) {
+      monitorData.putIfAbsent(key,new AtomicReference<MonitorData>(new MonitorData()));
+      continue;
+    }
+    while (true) {
+      MonitorData oData=value.get();
+      MonitorData nData=new MonitorData();
+      nData.setCost(oData.getCost() + cost);
+      nData.setTimestamp(new Date());
+      if (isThrowing) {
+        nData.setFailed(oData.getFailed() + 1);
+        nData.setSuccess(oData.getSuccess());
+      }
+ else {
+        nData.setFailed(oData.getFailed());
+        nData.setSuccess(oData.getSuccess() + 1);
+      }
+      nData.setTotal(oData.getTotal() + 1);
+      if (value.compareAndSet(oData,nData)) {
+        break;
+      }
+    }
+    break;
+  }
+}

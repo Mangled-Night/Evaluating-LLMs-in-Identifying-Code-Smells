@@ -1,0 +1,30 @@
+@Override public boolean onRowData(String dataNode,byte[] rowData){
+  RowDataPacket rowDataPkgold=ResultSetUtil.parseRowData(rowData,bfields);
+  Map<String,byte[]> batchRowsCopy=new ConcurrentHashMap<String,byte[]>();
+  batchRowsCopy.putAll(arows);
+  String id=ByteUtil.getString(rowDataPkgold.fieldValues.get(joinR));
+  byte[] arow=getRow(batchRowsCopy,id,joinL);
+  while (arow != null) {
+    RowDataPacket rowDataPkg=ResultSetUtil.parseRowData(arow,afields);
+    for (int i=1; i < rowDataPkgold.fieldCount; i++) {
+      byte[] bname=rowDataPkgold.fieldValues.get(i);
+      rowDataPkg.add(bname);
+      rowDataPkg.addFieldCount(1);
+    }
+    MiddlerResultHandler middlerResultHandler=session.getMiddlerResultHandler();
+    if (null == middlerResultHandler) {
+      ctx.writeRow(rowDataPkg);
+    }
+ else {
+      if (middlerResultHandler instanceof MiddlerQueryResultHandler) {
+        byte[] columnData=rowDataPkg.fieldValues.get(0);
+        if (columnData != null && columnData.length > 0) {
+          String rowValue=new String(columnData);
+          middlerResultHandler.add(rowValue);
+        }
+      }
+    }
+    arow=getRow(batchRowsCopy,id,joinL);
+  }
+  return false;
+}

@@ -1,0 +1,60 @@
+private void makeObject0(CompletableFuture<T> res){
+  long total=getObjectCount();
+  long creations=objectsInCreationCount.incrementAndGet();
+  if (((long)getActualMaxTotal()) < total + creations) {
+    res.completeExceptionally(POOL_EXHAUSTED);
+    objectsInCreationCount.decrementAndGet();
+    return;
+  }
+  factory.create().whenComplete((o,t) -> {
+    if (t != null) {
+      objectsInCreationCount.decrementAndGet();
+      res.completeExceptionally(new IllegalStateException("Cannot allocate object",t));
+      return;
+    }
+    if (isTestOnCreate()) {
+      factory.validate(o).whenComplete((state,throwable) -> {
+        try {
+          if (isPoolActive() && state != null && state) {
+            objectCount.incrementAndGet();
+            all.add(o);
+            completeAcquire(res,o);
+            return;
+          }
+          if (!isPoolActive()) {
+            rejectPoolClosed(res,o);
+            return;
+          }
+          factory.destroy(o).whenComplete((v,th) -> res.completeExceptionally(new IllegalStateException("Cannot allocate object: Validation failed",throwable)));
+        }
+ catch (        Exception e) {
+          factory.destroy(o).whenComplete((v,th) -> res.completeExceptionally(new IllegalStateException("Cannot allocate object: Validation failed",throwable)));
+        }
+ finally {
+          objectsInCreationCount.decrementAndGet();
+        }
+      }
+);
+      return;
+    }
+    try {
+      if (isPoolActive()) {
+        objectCount.incrementAndGet();
+        all.add(o);
+        completeAcquire(res,o);
+      }
+ else {
+        rejectPoolClosed(res,o);
+      }
+    }
+ catch (    Exception e) {
+      objectCount.decrementAndGet();
+      all.remove(o);
+      factory.destroy(o).whenComplete((v,th) -> res.completeExceptionally(e));
+    }
+ finally {
+      objectsInCreationCount.decrementAndGet();
+    }
+  }
+);
+}

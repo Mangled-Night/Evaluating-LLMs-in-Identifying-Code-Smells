@@ -1,0 +1,32 @@
+private ArthasBootstrap(Instrumentation instrumentation,Map<String,String> args) throws Throwable {
+  this.instrumentation=instrumentation;
+  initFastjson();
+  initSpy();
+  initArthasEnvironment(args);
+  String outputPathStr=configure.getOutputPath();
+  if (outputPathStr == null) {
+    outputPathStr=ArthasConstants.ARTHAS_OUTPUT;
+  }
+  outputPath=new File(outputPathStr);
+  outputPath.mkdirs();
+  loggerContext=LogUtil.initLogger(arthasEnvironment);
+  enhanceClassLoader();
+  initBeans();
+  bind(configure);
+  executorService=Executors.newScheduledThreadPool(1,new ThreadFactory(){
+    @Override public Thread newThread(    Runnable r){
+      final Thread t=new Thread(r,"arthas-command-execute");
+      t.setDaemon(true);
+      return t;
+    }
+  }
+);
+  shutdown=new Thread("as-shutdown-hooker"){
+    @Override public void run(){
+      ArthasBootstrap.this.destroy();
+    }
+  }
+;
+  transformerManager=new TransformerManager(instrumentation);
+  Runtime.getRuntime().addShutdownHook(shutdown);
+}

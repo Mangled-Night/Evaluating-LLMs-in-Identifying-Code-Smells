@@ -1,0 +1,46 @@
+private CarbonManager(XMPPConnection connection){
+  super(connection);
+  ServiceDiscoveryManager sdm=ServiceDiscoveryManager.getInstanceFor(connection);
+  sdm.addFeature(CarbonExtension.NAMESPACE);
+  carbonsListener=new StanzaListener(){
+    @Override public void processStanza(    final Stanza stanza){
+      final Message wrappingMessage=(Message)stanza;
+      final CarbonExtension carbonExtension=CarbonExtension.from(wrappingMessage);
+      final Direction direction=carbonExtension.getDirection();
+      final Forwarded<Message> forwarded=carbonExtension.getForwarded();
+      final Message carbonCopy=forwarded.getForwardedStanza();
+      final BareJid from=carbonCopy.getFrom().asBareJid();
+      carbonsListenerAsyncButOrdered.performAsyncButOrdered(from,new Runnable(){
+        @Override public void run(){
+          for (          CarbonCopyReceivedListener listener : listeners) {
+            listener.onCarbonCopyReceived(direction,carbonCopy,wrappingMessage);
+          }
+        }
+      }
+);
+    }
+  }
+;
+  connection.addConnectionListener(new ConnectionListener(){
+    @Override public void connectionClosed(){
+      enabled_state=false;
+      connection().removeSyncStanzaListener(carbonsListener);
+    }
+    @Override public void authenticated(    XMPPConnection connection,    boolean resumed){
+      if (!resumed) {
+        enabled_state=false;
+        try {
+          if (shouldCarbonsBeEnabled() && isSupportedByServer()) {
+            setCarbonsEnabled(true);
+          }
+        }
+ catch (        InterruptedException|XMPPErrorException|NotConnectedException|NoResponseException e) {
+          LOGGER.log(Level.WARNING,"Cannot check for Carbon support and / or enable carbons.",e);
+        }
+      }
+      addCarbonsListener(connection);
+    }
+  }
+);
+  addCarbonsListener(connection);
+}

@@ -1,0 +1,18 @@
+/** 
+ * Move the auth tag from the end of the cipherText to the messageKey.
+ * @param messageKey source messageKey without authTag
+ * @param cipherText source cipherText with authTag
+ * @param messageKeyWithAuthTag destination messageKey with authTag
+ * @param cipherTextWithoutAuthTag destination cipherText without authTag
+ */
+static void moveAuthTag(byte[] messageKey,byte[] cipherText,byte[] messageKeyWithAuthTag,byte[] cipherTextWithoutAuthTag){
+  if (messageKeyWithAuthTag.length != messageKey.length + 16) {
+    throw new IllegalArgumentException("Length of messageKeyWithAuthTag must be length of messageKey + " + "length of AuthTag (16)");
+  }
+  if (cipherTextWithoutAuthTag.length != cipherText.length - 16) {
+    throw new IllegalArgumentException("Length of cipherTextWithoutAuthTag must be length of cipherText " + "- length of AuthTag (16)");
+  }
+  System.arraycopy(messageKey,0,messageKeyWithAuthTag,0,16);
+  System.arraycopy(cipherText,0,cipherTextWithoutAuthTag,0,cipherTextWithoutAuthTag.length);
+  System.arraycopy(cipherText,cipherText.length - 16,messageKeyWithAuthTag,16,16);
+}

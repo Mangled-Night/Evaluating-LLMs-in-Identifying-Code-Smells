@@ -1,0 +1,27 @@
+private static AudioInputStream getAudioInputStreamFromFile(String filename){
+  if (filename == null) {
+    throw new IllegalArgumentException("filename is null");
+  }
+  try {
+    File file=new File(filename);
+    if (file.exists()) {
+      return AudioSystem.getAudioInputStream(file);
+    }
+    InputStream is1=StdAudio.class.getResourceAsStream(filename);
+    if (is1 != null) {
+      return AudioSystem.getAudioInputStream(is1);
+    }
+    InputStream is2=StdAudio.class.getClassLoader().getResourceAsStream(filename);
+    if (is2 != null) {
+      return AudioSystem.getAudioInputStream(is2);
+    }
+    URL url=new URL(filename);
+    return AudioSystem.getAudioInputStream(url);
+  }
+ catch (  IOException e) {
+    throw new IllegalArgumentException("could not read '" + filename + "'",e);
+  }
+catch (  UnsupportedAudioFileException e) {
+    throw new IllegalArgumentException("file of unsupported audio file format: '" + filename + "'",e);
+  }
+}

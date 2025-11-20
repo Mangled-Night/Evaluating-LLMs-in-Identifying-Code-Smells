@@ -1,0 +1,29 @@
+@Command(shortDescription="Sets up a typical bowling pin arrangement in front of the player. ",helpText="Spawns the specific block in a regular bowling pin pattern, Throw something at it!",runOnServer=true,requiredPermission=PermissionManager.CHEAT_PERMISSION) public String bowlingPrep(@Sender EntityRef sender,@CommandParam("blockName") String blockName){
+  ClientComponent clientComponent=sender.getComponent(ClientComponent.class);
+  LocationComponent characterLocation=clientComponent.character.getComponent(LocationComponent.class);
+  Vector3f spawnPos=characterLocation.getWorldPosition(new Vector3f());
+  Vector3f offset=characterLocation.getWorldDirection(new Vector3f());
+  offset.mul(5);
+  spawnPos.add(offset);
+  BlockFamily block=blockManager.getBlockFamily(blockName);
+  if (block == null) {
+    return "Sorry, your block is not found";
+  }
+  BlockItemFactory blockItemFactory=new BlockItemFactory(entityManager);
+  Vector3f startPos=new Vector3f(spawnPos);
+  float deltax=0.5f;
+  float deltaz=1.0f;
+  float vectorY=0.0f;
+  for (int rownumber=0; rownumber < 4; rownumber++) {
+    startPos.add(deltax * (4 - rownumber),vectorY,deltaz);
+    for (int pinPosx=0; pinPosx <= rownumber; pinPosx++) {
+      EntityRef blockItem=blockItemFactory.newInstance(block);
+      blockItem.send(new DropItemEvent(startPos));
+      if (pinPosx < rownumber) {
+        startPos.add(2 * deltax,0,0);
+      }
+    }
+    startPos.add(-deltax * (rownumber + 4),0,0);
+  }
+  return "prepared 10 " + blockName + " in a bowling pin pattern :)";
+}

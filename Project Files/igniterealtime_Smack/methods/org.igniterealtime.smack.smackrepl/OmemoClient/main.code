@@ -1,0 +1,31 @@
+public static void main(String[] args) throws XMPPException, SmackException, IOException, InterruptedException, CorruptedOmemoKeyException {
+  SmackConfiguration.DEBUG=true;
+  if (args.length != 2) {
+    print("Missing arguments: <jid> <password>");
+    return;
+  }
+  SignalOmemoService.acknowledgeLicense();
+  SignalOmemoService.setup();
+  SignalOmemoService omemoService=(SignalOmemoService)SignalOmemoService.getInstance();
+  Path omemoStoreDirectory=Files.createTempDirectory("omemo-store");
+  omemoService.setOmemoStoreBackend(new SignalCachingOmemoStore(new SignalFileBasedOmemoStore(omemoStoreDirectory.toFile())));
+  EntityBareJid jid=JidCreate.entityBareFromOrThrowUnchecked(args[0]);
+  String password=args[1];
+  OmemoClient client=new OmemoClient(jid,password);
+  try {
+    client.start();
+    while (true) {
+      String input=scanner.nextLine();
+      if (input.startsWith("/quit")) {
+        break;
+      }
+      if (input.isEmpty()) {
+        continue;
+      }
+      client.handleInput(input);
+    }
+  }
+  finally {
+    client.stop();
+  }
+}

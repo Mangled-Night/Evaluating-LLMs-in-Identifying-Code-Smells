@@ -1,0 +1,48 @@
+@Override public final XmlStringBuilder toXML(XmlEnvironment enclosingNamespace){
+  return toXML(enclosingNamespace,true);
+}
+public final XmlStringBuilder toXML(XmlEnvironment enclosingNamespace,boolean includeType){
+  XmlStringBuilder buf=new XmlStringBuilder(this,enclosingNamespace);
+  buf.optAttribute("label",getLabel());
+  buf.optAttribute("var",getFieldName());
+  if (includeType) {
+    buf.attribute("type",getType(),Type.text_single);
+  }
+  if (extraXmlChildElements == null) {
+    populateExtraXmlChildElements();
+  }
+  if (formFieldChildElements.isEmpty() && (extraXmlChildElements == null || extraXmlChildElements.isEmpty())) {
+    buf.closeEmptyElement();
+  }
+ else {
+    buf.rightAngleBracket();
+    buf.optAppend(extraXmlChildElements);
+    buf.append(formFieldChildElements);
+    buf.closeElement(this);
+  }
+  return buf;
+}
+@Override public XmlStringBuilder toXML(org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+  XmlStringBuilder xml=new XmlStringBuilder(this);
+  xml.optAttribute("label",getLabel());
+  xml.rightAngleBracket();
+  xml.element("value",getValueString());
+  xml.closeElement(this);
+  return xml;
+}
+@Override public XmlStringBuilder toXML(XmlEnvironment xmlEnvironment){
+  XmlStringBuilder xml=new XmlStringBuilder(this,xmlEnvironment);
+  xml.rightAngleBracket();
+  xml.escape(description);
+  xml.closeElement(this);
+  return xml;
+}
+@Override public String toXML(XmlEnvironment xmlEnvironment){
+  return '<' + ELEMENT + "/>";
+}
+@Override public XmlStringBuilder toXML(XmlEnvironment xmlEnvironment){
+  XmlStringBuilder xml=new XmlStringBuilder(this,xmlEnvironment);
+  xml.rightAngleBracket();
+  xml.escape(value);
+  return xml.closeElement(this);
+}

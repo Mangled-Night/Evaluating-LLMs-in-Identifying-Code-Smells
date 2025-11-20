@@ -1,0 +1,49 @@
+@Override public void dispose(boolean shuttingDown){
+  ChunkProvider chunkProvider=context.get(ChunkProvider.class);
+  chunkProvider.dispose();
+  AssetTypeManager assetTypeManager=context.get(ModuleAwareAssetTypeManager.class);
+  assetTypeManager.getAssetTypes().forEach(assetType -> {
+    for (    ResourceUrn urn : assetType.getLoadedAssetUrns()) {
+      if (!urn.getModuleName().equals(TerasologyConstants.ENGINE_MODULE)) {
+        assetType.getAsset(urn).ifPresent(Asset::dispose);
+      }
+    }
+  }
+);
+  assetTypeManager.getAssetType(BlockFamilyDefinition.class).ifPresent(AssetType::disposeAll);
+  assetTypeManager.getAssetType(Prefab.class).ifPresent(AssetType::disposeAll);
+  boolean save=networkSystem.getMode().isAuthority();
+  if (save && storageManager != null) {
+    storageManager.waitForCompletionOfPreviousSaveAndStartSaving();
+  }
+  networkSystem.shutdown();
+  eventSystem.process();
+  GameThread.processWaitingProcesses();
+  if (nuiManager != null) {
+    nuiManager.clear();
+  }
+  context.get(AudioManager.class).stopAllSounds();
+  if (worldRenderer != null) {
+    worldRenderer.dispose();
+    worldRenderer=null;
+  }
+  componentSystemManager.shutdown();
+  context.get(PhysicsEngine.class).dispose();
+  entityManager.clear();
+  if (storageManager != null) {
+    storageManager.finishSavingAndShutdown();
+  }
+  ModuleEnvironment oldEnvironment=context.get(ModuleManager.class).getEnvironment();
+  context.get(ModuleManager.class).loadEnvironment(Collections.<Module>emptySet(),true);
+  if (!shuttingDown) {
+    context.get(EnvironmentSwitchHandler.class).handleSwitchToEmptyEnvironment(context);
+  }
+  if (oldEnvironment != null) {
+    oldEnvironment.close();
+  }
+  console.dispose();
+  GameThread.clearWaitingProcesses();
+  if (nuiManager != null) {
+    nuiManager.getHUD().clearVisibleBinding();
+  }
+}

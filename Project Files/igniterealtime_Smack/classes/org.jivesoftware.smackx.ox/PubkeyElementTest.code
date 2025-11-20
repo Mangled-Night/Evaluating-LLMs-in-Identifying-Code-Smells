@@ -1,0 +1,13 @@
+public class PubkeyElementTest extends SmackTestSuite {
+  @SuppressWarnings("UndefinedEquals") @ParameterizedTest @EnumSource(SmackTestUtil.XmlPullParserKind.class) public void providerTest(  SmackTestUtil.XmlPullParserKind parserKind) throws ParseException, XmlPullParserException, IOException, SmackParsingException {
+    String base64EncodedOpenPgpPublicKey="VGhpcyBpcyBqdXN0IGEgdGVzdA==";
+    String pubkeyElement="<pubkey xmlns='urn:xmpp:openpgp:0' date='2018-01-21T10:46:21.000+00:00'>" + "<data>" + base64EncodedOpenPgpPublicKey + "</data>"+ "</pubkey>";
+    Date date=XmppDateTime.parseXEP0082Date("2018-01-21T10:46:21.000+00:00");
+    PubkeyElement element=new PubkeyElement(new PubkeyElement.PubkeyDataElement(base64EncodedOpenPgpPublicKey),date);
+    assertXmlSimilar(pubkeyElement,element.toXML().toString());
+    XmlPullParser parser=SmackTestUtil.getParserFor(pubkeyElement,parserKind);
+    PubkeyElement parsed=PubkeyElementProvider.INSTANCE.parse(parser);
+    assertEquals(element.getDate(),parsed.getDate());
+    assertEquals(element.getDataElement().getB64Data(),parsed.getDataElement().getB64Data());
+  }
+}

@@ -1,0 +1,16 @@
+@Test void disconnectedRejectCommands(){
+  client.setOptions(ClientOptions.builder().disconnectedBehavior(ClientOptions.DisconnectedBehavior.REJECT_COMMANDS).build());
+  RedisAsyncCommands<String,String> connection=client.connect().async();
+  getConnectionWatchdog(connection.getStatefulConnection()).setListenOnChannelInactive(false);
+  connection.quit();
+  Wait.untilTrue(() -> !connection.getStatefulConnection().isOpen()).waitOrTimeout();
+  try {
+    connection.get(key);
+  }
+ catch (  Exception e) {
+    assertThat(e).isInstanceOf(RedisException.class).hasMessageContaining("not connected");
+  }
+ finally {
+    connection.getStatefulConnection().close();
+  }
+}

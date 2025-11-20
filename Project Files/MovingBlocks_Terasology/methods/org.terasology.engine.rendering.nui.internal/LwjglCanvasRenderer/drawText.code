@@ -1,0 +1,31 @@
+@Override public void drawText(String text,Font font,HorizontalAlign hAlign,VerticalAlign vAlign,Rectanglei absoluteRegionRectangle,Colorc color,Colorc shadowColor,float alpha,boolean underlined){
+  Rectanglei absoluteRegion=new Rectanglei(absoluteRegionRectangle);
+  TextCacheKey key=new TextCacheKey(text,font,absoluteRegion.getSizeX(),hAlign,color,shadowColor,underlined);
+  usedText.add(key);
+  Map<Material,Mesh> fontMesh=cachedText.get(key);
+  List<String> lines=TextLineBuilder.getLines(font,text,absoluteRegion.getSizeX());
+  if (fontMesh != null) {
+    for (    Mesh mesh : fontMesh.values()) {
+      if (mesh.isDisposed()) {
+        fontMesh=null;
+        break;
+      }
+    }
+  }
+  if (fontMesh == null) {
+    fontMesh=fontMeshBuilder.createTextMesh((org.terasology.engine.rendering.assets.font.Font)font,lines,absoluteRegion.getSizeX(),hAlign,color,shadowColor,underlined);
+    cachedText.put(key,fontMesh);
+  }
+  Vector2i offset=new Vector2i(absoluteRegion.minX,absoluteRegion.minY);
+  offset.y+=vAlign.getOffset(lines.size() * font.getLineHeight(),absoluteRegion.lengthY());
+  fontMesh.entrySet().stream().filter(entry -> entry.getKey().isRenderable()).forEach(entry -> {
+    entry.getKey().bindTextures();
+    entry.getKey().setMatrix4("projectionMatrix",projMatrix);
+    entry.getKey().setMatrix4("modelViewMatrix",modelMatrixStack);
+    entry.getKey().setFloat4(CROPPING_BOUNDARIES_PARAM,requestedCropRegion.minX,requestedCropRegion.maxX,requestedCropRegion.minY,requestedCropRegion.maxY);
+    entry.getKey().setFloat2("offset",offset.x,offset.y);
+    entry.getKey().setFloat("alpha",alpha);
+    entry.getValue().render();
+  }
+);
+}

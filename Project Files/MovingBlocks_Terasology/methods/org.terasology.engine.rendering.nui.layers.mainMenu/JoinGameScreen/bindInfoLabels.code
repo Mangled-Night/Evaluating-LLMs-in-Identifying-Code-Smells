@@ -1,0 +1,102 @@
+private void bindInfoLabels(){
+  final ReadOnlyBinding<ServerInfo> infoBinding=new ReadOnlyBinding<ServerInfo>(){
+    @Override public ServerInfo get(){
+      return visibleList.getSelection();
+    }
+  }
+;
+  UILabel name=find("name",UILabel.class);
+  if (name != null) {
+    name.bindText(BindHelper.bindBoundBeanProperty("name",infoBinding,ServerInfo.class,String.class));
+  }
+  UILabel owner=find("owner",UILabel.class);
+  if (owner != null) {
+    owner.bindText(BindHelper.bindBoundBeanProperty("owner",infoBinding,ServerInfo.class,String.class));
+  }
+  UILabel address=find("address",UILabel.class);
+  if (address != null) {
+    address.bindText(BindHelper.bindBoundBeanProperty("address",infoBinding,ServerInfo.class,String.class));
+  }
+  UILabel port=find("port",UILabel.class);
+  if (port != null) {
+    port.bindText(new IntToStringBinding(BindHelper.bindBoundBeanProperty("port",infoBinding,ServerInfo.class,int.class)));
+  }
+  UILabel onlinePlayers=find("onlinePlayers",UILabel.class);
+  onlinePlayers.bindText(new ReadOnlyBinding<String>(){
+    @Override public String get(){
+      Future<ServerInfoMessage> info=extInfo.get(visibleList.getSelection());
+      if (info != null) {
+        if (info.isDone()) {
+          return getOnlinePlayersText(info);
+        }
+ else {
+          return translationSystem.translate("${engine:menu#join-server-requested}");
+        }
+      }
+      return null;
+    }
+  }
+);
+  UILabel modules=find("modules",UILabel.class);
+  modules.bindText(new ReadOnlyBinding<String>(){
+    @Override public String get(){
+      Future<ServerInfoMessage> info=extInfo.get(visibleList.getSelection());
+      if (info != null) {
+        if (info.isDone()) {
+          return getModulesText(info);
+        }
+ else {
+          return translationSystem.translate("${engine:menu#join-server-requested}");
+        }
+      }
+      return null;
+    }
+  }
+);
+  UILabel worlds=find("worlds",UILabel.class);
+  worlds.bindText(new ReadOnlyBinding<String>(){
+    @Override public String get(){
+      Future<ServerInfoMessage> info=extInfo.get(visibleList.getSelection());
+      if (info != null) {
+        if (info.isDone()) {
+          return getWorldText(info);
+        }
+ else {
+          return translationSystem.translate("${engine:menu#join-server-requested}");
+        }
+      }
+      return null;
+    }
+  }
+);
+  UIButton joinButton=find("join",UIButton.class);
+  if (joinButton != null) {
+    joinButton.bindEnabled(new ReadOnlyBinding<Boolean>(){
+      @Override public Boolean get(){
+        return infoBinding.get() != null;
+      }
+    }
+);
+    joinButton.subscribe(button -> {
+      config.save();
+      ServerInfo item=infoBinding.get();
+      if (item != null) {
+        join(item.getAddress(),item.getPort());
+      }
+    }
+);
+  }
+  UIButton refreshButton=find("refresh",UIButton.class);
+  if (refreshButton != null) {
+    refreshButton.bindEnabled(new ReadOnlyBinding<Boolean>(){
+      @Override public Boolean get(){
+        return visibleList.getSelection() != null;
+      }
+    }
+);
+    refreshButton.subscribe(button -> {
+      refresh();
+    }
+);
+  }
+}

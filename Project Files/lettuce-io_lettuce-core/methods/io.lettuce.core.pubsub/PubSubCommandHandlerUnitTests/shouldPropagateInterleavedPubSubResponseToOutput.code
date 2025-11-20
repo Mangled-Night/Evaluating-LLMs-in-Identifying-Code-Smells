@@ -1,0 +1,16 @@
+@Test void shouldPropagateInterleavedPubSubResponseToOutput() throws Exception {
+  Command<String,String,String> command1=new Command<>(CommandType.APPEND,new StatusOutput<>(StringCodec.UTF8),null);
+  Command<String,String,String> command2=new Command<>(CommandType.APPEND,new StatusOutput<>(StringCodec.UTF8),null);
+  sut.channelRegistered(context);
+  sut.channelActive(context);
+  stack.add(command1);
+  stack.add(command2);
+  sut.channelRead(context,responseBytes("+OK\r\n*4\r\n$8\r\npmessage\r\n$1\r\n*\r\n$3\r\nfoo\r\n$3\r\nbar\r\n+YEAH\r\n"));
+  assertThat(command1.get()).isEqualTo("OK");
+  assertThat(command2.get()).isEqualTo("YEAH");
+  ArgumentCaptor<PubSubOutput> captor=ArgumentCaptor.forClass(PubSubOutput.class);
+  verify(endpoint).notifyMessage(captor.capture());
+  assertThat(captor.getValue().pattern()).isEqualTo("*");
+  assertThat(captor.getValue().channel()).isEqualTo("foo");
+  assertThat(captor.getValue().get()).isEqualTo("bar");
+}

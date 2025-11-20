@@ -1,0 +1,16 @@
+public RemoteCommand addUser(){
+  return addUser(connection().getXMPPServiceDomain());
+}
+public RemoteCommand addUser(Jid service){
+  return adHocCommandManager.getRemoteCommand(service,COMMAND_NODE_HASHSIGN + "add-user");
+}
+public void addUser(final EntityBareJid userJid,final String password) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  RemoteCommand command=addUser();
+  command.execute();
+  FillableForm answerForm=new FillableForm(command.getForm());
+  answerForm.setAnswer("accountjid",userJid);
+  answerForm.setAnswer("password",password);
+  answerForm.setAnswer("password-verify",password);
+  command.execute(answerForm);
+  assert command.isCompleted();
+}

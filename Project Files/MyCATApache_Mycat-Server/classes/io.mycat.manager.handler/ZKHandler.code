@@ -1,0 +1,104 @@
+/** 
+ * zookeeper 实现动态配置
+ * @author Hash Zhang
+ * @version 1.0
+ * @time 23:35 2016/5/7
+ */
+public class ZKHandler {
+  private static final Logger LOGGER=LoggerFactory.getLogger(ZKHandler.class);
+  /** 
+ * 直接从zk拉所有配置，然后本地执行reload_all
+ */
+  public static final String RELOAD_FROM_ZK="zk reload_from_zk";
+  /** 
+ * 强制所有节点操作
+ */
+  private static final String RELOAD_ALL="all";
+  /** 
+ * 命令节点信息
+ */
+  public static final String ZK_NODE_PATH="command";
+  public static void handle(  String stmt,  ManagerConnection c,  int offset){
+    String command=stmt.toLowerCase();
+    if (RELOAD_FROM_ZK.equals(command)) {
+      try {
+        ZktoXmlMain.ZKLISTENER.notifly(ZkNofiflyCfg.ZK_NOTIFLY_LOAD_ALL.getKey());
+        ReloadHandler.handle("RELOAD @@config_all",c,6);
+        offset+=RELOAD_FROM_ZK.length();
+        ReloadZktoXml.execute(c,"zk reload success ");
+      }
+ catch (      Exception e) {
+        LOGGER.error("ZKHandler loadZktoFile exception",e);
+        c.writeErrMessage(ErrorCode.ER_YES,"zk command send error,command is :" + command);
+      }
+    }
+ else {
+      String[] matchKeys=stmt.split("\\s+");
+      if (null != matchKeys && matchKeys.length > 2) {
+        String key=ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_CLUSTER_NODES);
+        String[] myidArray=key.split(",");
+        String idkeys=matchKeys[1].toLowerCase();
+        StringBuilder commandMsg=new StringBuilder();
+        for (int i=2; i < matchKeys.length; i++) {
+          if (i == matchKeys.length - 1) {
+            commandMsg.append(matchKeys[i]);
+          }
+ else {
+            commandMsg.append(matchKeys[i]).append(" ");
+          }
+        }
+        if (RELOAD_ALL.equals(idkeys)) {
+          try {
+            for (            String myid : myidArray) {
+              sendZkCommand(myid,commandMsg.toString());
+            }
+            ReloadZktoXml.execute(c,"zk reload " + matchKeys[1] + " success ");
+          }
+ catch (          Exception e) {
+            c.writeErrMessage(ErrorCode.ER_YES,"zk command send error");
+          }
+        }
+ else {
+          for (          String myid : myidArray) {
+            if (myid.equals(idkeys)) {
+              try {
+                sendZkCommand(myid,commandMsg.toString());
+                ReloadZktoXml.execute(c,"zk reload " + matchKeys[1] + " success ");
+              }
+ catch (              Exception e) {
+                c.writeErrMessage(ErrorCode.ER_YES,"zk command send error,myid :" + myid);
+              }
+              break;
+            }
+          }
+        }
+      }
+ else {
+        c.writeErrMessage(ErrorCode.ER_YES,"zk command is error");
+      }
+    }
+  }
+  /** 
+ * 向节点发送命令
+ * @param myId 节点的id信息
+ * @param command 命令内容 
+ * @throws Exception 异常信息
+ */
+  private static void sendZkCommand(  String myId,  String command) throws Exception {
+    CuratorFramework zkConn=ZKUtils.getConnection();
+    String basePath=ZKUtils.getZKBasePath();
+    String nodePath=ZKPaths.makePath(basePath,ZK_NODE_PATH + "/" + myId);
+    Stat stat;
+    try {
+      stat=zkConn.checkExists().forPath(nodePath);
+      if (null == stat) {
+        ZKPaths.mkdirs(zkConn.getZookeeperClient().getZooKeeper(),nodePath);
+      }
+      zkConn.setData().inBackground().forPath(nodePath,command.getBytes());
+    }
+ catch (    Exception e) {
+      LOGGER.error("ZKHandler sendZkCommand exception",e);
+      throw e;
+    }
+  }
+}

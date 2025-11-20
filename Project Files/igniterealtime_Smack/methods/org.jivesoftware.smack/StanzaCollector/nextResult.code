@@ -1,0 +1,33 @@
+/** 
+ * Returns the next available packet. The method call will block until the connection's default timeout has elapsed.
+ * @param < P > type of the result stanza.
+ * @return the next available packet.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public <P extends Stanza>P nextResult() throws InterruptedException {
+  return nextResult(connection.getReplyTimeout());
+}
+/** 
+ * Returns the next available stanza. The method call will block (not return) until a stanza is available or the <code>timeout</code> has elapsed or if the connection was terminated because of an error. If the timeout elapses without a result or if there was an connection error, <code>null</code> will be returned.
+ * @param < P > type of the result stanza.
+ * @param timeout the timeout in milliseconds.
+ * @return the next available stanza or <code>null</code> on timeout or connection error.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+@SuppressWarnings("unchecked") public <P extends Stanza>P nextResult(long timeout) throws InterruptedException {
+  throwIfCancelled();
+  P res=null;
+  long remainingWait=timeout;
+  waitStart=System.currentTimeMillis();
+  while (remainingWait > 0 && connectionException == null && !cancelled) {
+synchronized (this) {
+      res=(P)resultQueue.poll();
+      if (res != null) {
+        return res;
+      }
+      wait(remainingWait);
+    }
+    remainingWait=timeout - (System.currentTimeMillis() - waitStart);
+  }
+  return res;
+}

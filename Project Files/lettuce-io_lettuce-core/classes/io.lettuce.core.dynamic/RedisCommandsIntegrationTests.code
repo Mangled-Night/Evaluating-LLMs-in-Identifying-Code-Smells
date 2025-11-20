@@ -1,0 +1,72 @@
+/** 
+ * @author Mark Paluch
+ */
+@ExtendWith(LettuceExtension.class) class RedisCommandsIntegrationTests extends TestSupport {
+  private final RedisClient client;
+  private final RedisCommands<String,String> redis;
+  @Inject RedisCommandsIntegrationTests(  RedisClient client,  StatefulRedisConnection<String,String> connection){
+    this.client=client;
+    this.redis=connection.sync();
+  }
+  @Test void verifierShouldCatchMisspelledDeclarations(){
+    RedisCommandFactory factory=new RedisCommandFactory(redis.getStatefulConnection());
+    assertThat(factory).hasFieldOrPropertyWithValue("verifyCommandMethods",true);
+    try {
+      factory.getCommands(WithTypo.class);
+      fail("Missing CommandCreationException");
+    }
+ catch (    CommandCreationException e) {
+      assertThat(e).hasMessageContaining("Command GAT does not exist.");
+    }
+  }
+  @Test void disabledVerifierDoesNotReportTypo(){
+    RedisCommandFactory factory=new RedisCommandFactory(redis.getStatefulConnection());
+    factory.setVerifyCommandMethods(false);
+    assertThat(factory.getCommands(WithTypo.class)).isNotNull();
+  }
+  @Test void doesNotFailIfCommandRetrievalFails(){
+    StatefulRedisConnection connectionMock=Mockito.mock(StatefulRedisConnection.class);
+    RedisCommands commandsMock=Mockito.mock(RedisCommands.class);
+    when(connectionMock.sync()).thenReturn(commandsMock);
+    doThrow(new RedisCommandExecutionException("ERR unknown command 'COMMAND'")).when(commandsMock).command();
+    RedisCommandFactory factory=new RedisCommandFactory(connectionMock);
+    assertThat(factory).hasFieldOrPropertyWithValue("verifyCommandMethods",false);
+  }
+  @Test void verifierShouldCatchTooFewParametersDeclarations(){
+    RedisCommandFactory factory=new RedisCommandFactory(redis.getStatefulConnection());
+    try {
+      factory.getCommands(TooFewParameters.class);
+      fail("Missing CommandCreationException");
+    }
+ catch (    CommandCreationException e) {
+      assertThat(e).hasMessageContaining("Command GET accepts 1 parameters but method declares 0 parameter");
+    }
+  }
+  @Test void shouldWorkWithPooledConnection() throws Exception {
+    GenericObjectPool<StatefulRedisConnection<String,String>> pool=ConnectionPoolSupport.createGenericObjectPool(client::connect,new GenericObjectPoolConfig<>());
+    try (StatefulRedisConnection<String,String> connection=pool.borrowObject()){
+      RedisCommandFactory factory=new RedisCommandFactory(connection);
+      SimpleCommands commands=factory.getCommands(SimpleCommands.class);
+      commands.get("foo");
+    }
+     pool.close();
+  }
+  @Test void shouldWorkWithAsyncPooledConnection(){
+    BoundedAsyncPool<StatefulRedisConnection<String,String>> pool=AsyncConnectionPoolSupport.createBoundedObjectPool(() -> client.connectAsync(StringCodec.ASCII,RedisURI.create(TestSettings.host(),TestSettings.port())),BoundedPoolConfig.create());
+    try (StatefulRedisConnection<String,String> connection=pool.acquire().join()){
+      RedisCommandFactory factory=new RedisCommandFactory(connection);
+      SimpleCommands commands=factory.getCommands(SimpleCommands.class);
+      commands.get("foo");
+    }
+     pool.close();
+  }
+private interface SimpleCommands extends Commands {
+    String get(    String key);
+  }
+private interface TooFewParameters extends Commands {
+    String get();
+  }
+private interface WithTypo extends Commands {
+    String gat(    String key);
+  }
+}

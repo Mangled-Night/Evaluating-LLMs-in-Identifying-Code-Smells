@@ -1,0 +1,52 @@
+/** 
+ * Computes an Eulerian path in the specified graph, if one exists.
+ * @param G the graph
+ */
+public EulerianPath(Graph G){
+  int oddDegreeVertices=0;
+  int s=nonIsolatedVertex(G);
+  for (int v=0; v < G.V(); v++) {
+    if (G.degree(v) % 2 != 0) {
+      oddDegreeVertices++;
+      s=v;
+    }
+  }
+  if (oddDegreeVertices > 2)   return;
+  if (s == -1)   s=0;
+  Queue<Edge>[] adj=(Queue<Edge>[])new Queue[G.V()];
+  for (int v=0; v < G.V(); v++)   adj[v]=new Queue<Edge>();
+  for (int v=0; v < G.V(); v++) {
+    int selfLoops=0;
+    for (    int w : G.adj(v)) {
+      if (v == w) {
+        if (selfLoops % 2 == 0) {
+          Edge e=new Edge(v,w);
+          adj[v].enqueue(e);
+          adj[w].enqueue(e);
+        }
+        selfLoops++;
+      }
+ else       if (v < w) {
+        Edge e=new Edge(v,w);
+        adj[v].enqueue(e);
+        adj[w].enqueue(e);
+      }
+    }
+  }
+  Stack<Integer> stack=new Stack<Integer>();
+  stack.push(s);
+  path=new Stack<Integer>();
+  while (!stack.isEmpty()) {
+    int v=stack.pop();
+    while (!adj[v].isEmpty()) {
+      Edge edge=adj[v].dequeue();
+      if (edge.isUsed)       continue;
+      edge.isUsed=true;
+      stack.push(v);
+      v=edge.other(v);
+    }
+    path.push(v);
+  }
+  if (path.size() != G.E() + 1)   path=null;
+  assert certifySolution(G);
+}

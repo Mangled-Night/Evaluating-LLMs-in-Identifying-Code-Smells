@@ -1,0 +1,39 @@
+/** 
+ * This test checks, if extending XEP-0107: User Mood using custom mood concretisations works. For that purpose, the second example of XEP-0107 §2.1 is recreated by creating a custom mood concretisation (ecstatic), along with a provider, which is dynamically registered with the  {@link ProviderManager}.
+ */
+public class MoodConcretisationTest extends SmackTestSuite {
+  @Test public void concretisationTest() throws Exception {
+    ProviderManager.addExtensionProvider(EcstaticMoodConcretisation.ELEMENT,EcstaticMoodConcretisation.NAMESPACE,EcstaticMoodConcretisationProvider.INSTANCE);
+    String xml="<mood xmlns='http://jabber.org/protocol/mood'>" + "<happy>" + "<ecstatic xmlns='https://example.org/'/>"+ "</happy>"+ "<text>Yay, the mood spec has been approved!</text>"+ "</mood>";
+    MoodElement element=new MoodElement(new MoodElement.MoodSubjectElement(Mood.happy,new EcstaticMoodConcretisation()),"Yay, the mood spec has been approved!");
+    assertXmlSimilar(xml,element.toXML().toString());
+    XmlPullParser parser=TestUtils.getParser(xml);
+    MoodElement parsed=MoodProvider.INSTANCE.parse(parser);
+    assertXmlSimilar(xml,parsed.toXML().toString());
+    assertTrue(parsed.hasConcretisation());
+    assertTrue(parsed.hasText());
+    assertEquals(EcstaticMoodConcretisation.ELEMENT,parsed.getMoodConcretisation().getMood());
+  }
+  @Test public void unknownConcretisationTest() throws Exception {
+    String xml="<mood xmlns='http://jabber.org/protocol/mood'>" + "<sad>" + "<owl xmlns='https://reddit.com/r/superbowl/'/>"+ "</sad>"+ "<text>Hoot hoot!</text>"+ "</mood>";
+    XmlPullParser parser=TestUtils.getParser(xml);
+    MoodElement element=MoodProvider.INSTANCE.parse(parser);
+    assertFalse(element.hasConcretisation());
+  }
+public static class EcstaticMoodConcretisation extends MoodConcretisation {
+    public static final String NAMESPACE="https://example.org/";
+    public static final String ELEMENT="ecstatic";
+    @Override public String getNamespace(){
+      return NAMESPACE;
+    }
+    @Override public String getElementName(){
+      return ELEMENT;
+    }
+  }
+public static class EcstaticMoodConcretisationProvider extends SimpleMoodConcretisationProvider<EcstaticMoodConcretisation> {
+    @Override protected EcstaticMoodConcretisation simpleExtension(){
+      return new EcstaticMoodConcretisation();
+    }
+    static EcstaticMoodConcretisationProvider INSTANCE=new EcstaticMoodConcretisationProvider();
+  }
+}

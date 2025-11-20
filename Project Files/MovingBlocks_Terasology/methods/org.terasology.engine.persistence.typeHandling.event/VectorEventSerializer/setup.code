@@ -1,0 +1,14 @@
+@BeforeEach public void setup() throws Exception {
+  ContextImpl context=new ContextImpl();
+  CoreRegistry.setContext(context);
+  ModuleManager moduleManager=ModuleManagerFactory.create();
+  context.put(ModuleManager.class,moduleManager);
+  context.put(ReflectFactory.class,reflectFactory);
+  context.put(CopyStrategyLibrary.class,copyStrategies);
+  ModuleTypeRegistry typeRegistry=new ModuleTypeRegistry(moduleManager.getEnvironment());
+  TypeHandlerLibrary typeHandlerLibrary=TypeHandlerLibraryImpl.forModuleEnvironment(moduleManager,typeRegistry);
+  entitySystemLibrary=new EntitySystemLibrary(context,typeHandlerLibrary);
+  serializer=new EventSerializer(entitySystemLibrary.getEventLibrary(),typeHandlerLibrary);
+  registerEvent(Vector3fTestEvent.class);
+  serializer.setIdMapping(eventMap);
+}

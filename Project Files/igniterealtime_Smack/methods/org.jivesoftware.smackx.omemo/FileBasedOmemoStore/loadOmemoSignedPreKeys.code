@@ -1,0 +1,21 @@
+@Override public TreeMap<Integer,T_SigPreKey> loadOmemoSignedPreKeys(OmemoDevice userDevice) throws IOException {
+  File signedPreKeysDirectory=hierarchy.getSignedPreKeysDirectory(userDevice);
+  TreeMap<Integer,T_SigPreKey> signedPreKeys=new TreeMap<>();
+  if (signedPreKeysDirectory == null) {
+    return signedPreKeys;
+  }
+  File[] keys=signedPreKeysDirectory.listFiles();
+  for (  File f : keys != null ? keys : new File[0]) {
+    byte[] bytes=readBytes(f);
+    if (bytes != null) {
+      try {
+        T_SigPreKey p=keyUtil().signedPreKeyFromBytes(bytes);
+        signedPreKeys.put(Integer.parseInt(f.getName()),p);
+      }
+ catch (      IOException e) {
+        LOGGER.log(Level.WARNING,"Could not deserialize signed preKey.",e);
+      }
+    }
+  }
+  return signedPreKeys;
+}

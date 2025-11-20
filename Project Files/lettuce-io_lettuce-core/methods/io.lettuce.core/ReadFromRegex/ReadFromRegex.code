@@ -1,0 +1,12 @@
+public ReadFromRegex(Pattern pattern,boolean orderSensitive){
+  LettuceAssert.notNull(pattern,"Pattern must not be null");
+  this.orderSensitive=orderSensitive;
+  delegate=new UnorderedPredicateReadFromAdapter(redisNodeDescription -> {
+    String host=redisNodeDescription.getUri().getHost();
+    if (LettuceStrings.isEmpty(host)) {
+      return false;
+    }
+    return pattern.matcher(host).matches();
+  }
+);
+}

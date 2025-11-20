@@ -1,0 +1,27 @@
+/** 
+ * 子查询中存在关联查询的情况下,检查关联字段是否是分片字段
+ * @param rulemap
+ * @param ships
+ * @return
+ */
+private boolean checkRuleField(Map<String,RuleConfig> rulemap,MycatSchemaStatVisitor visitor){
+  if (!MycatServer.getInstance().getConfig().getSystem().isSubqueryRelationshipCheck()) {
+    return true;
+  }
+  Set<Relationship> ships=visitor.getRelationships();
+  Iterator<Relationship> iter=ships.iterator();
+  while (iter.hasNext()) {
+    Relationship ship=iter.next();
+    String lefttable=ship.getLeft().getTable().toUpperCase();
+    String righttable=ship.getRight().getTable().toUpperCase();
+    if (lefttable.equals(righttable)) {
+      return true;
+    }
+    RuleConfig leftconfig=rulemap.get(lefttable);
+    RuleConfig rightconfig=rulemap.get(righttable);
+    if (null != leftconfig && null != rightconfig && leftconfig.equals(rightconfig) && leftconfig.getColumn().equals(ship.getLeft().getName().toUpperCase()) && rightconfig.getColumn().equals(ship.getRight().getName().toUpperCase())) {
+      return true;
+    }
+  }
+  return false;
+}

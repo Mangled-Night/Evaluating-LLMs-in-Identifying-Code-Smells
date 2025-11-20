@@ -1,0 +1,59 @@
+/** 
+ * Resolve the IP address. The BasicResolver takes the IP addresses of the interfaces and uses the first non-loopback, non-linklocal and non-sitelocal address.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+@Override public synchronized void resolve(JingleSession session) throws XMPPException, NotConnectedException, InterruptedException {
+  setResolveInit();
+  clearCandidates();
+  Enumeration<NetworkInterface> ifaces=null;
+  try {
+    ifaces=NetworkInterface.getNetworkInterfaces();
+  }
+ catch (  SocketException e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+  while (ifaces.hasMoreElements()) {
+    NetworkInterface iface=ifaces.nextElement();
+    Enumeration<InetAddress> iaddresses=iface.getInetAddresses();
+    while (iaddresses.hasMoreElements()) {
+      InetAddress iaddress=iaddresses.nextElement();
+      if (!iaddress.isLoopbackAddress() && !iaddress.isLinkLocalAddress() && !iaddress.isSiteLocalAddress()) {
+        TransportCandidate tr=new TransportCandidate.Fixed(iaddress.getHostAddress() != null ? iaddress.getHostAddress() : iaddress.getHostName(),getFreePort());
+        tr.setLocalIp(iaddress.getHostAddress() != null ? iaddress.getHostAddress() : iaddress.getHostName());
+        addCandidate(tr);
+        setResolveEnd();
+        return;
+      }
+    }
+  }
+  try {
+    ifaces=NetworkInterface.getNetworkInterfaces();
+  }
+ catch (  SocketException e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+  while (ifaces.hasMoreElements()) {
+    NetworkInterface iface=ifaces.nextElement();
+    Enumeration<InetAddress> iaddresses=iface.getInetAddresses();
+    while (iaddresses.hasMoreElements()) {
+      InetAddress iaddress=iaddresses.nextElement();
+      if (!iaddress.isLoopbackAddress() && !iaddress.isLinkLocalAddress()) {
+        TransportCandidate tr=new TransportCandidate.Fixed(iaddress.getHostAddress() != null ? iaddress.getHostAddress() : iaddress.getHostName(),getFreePort());
+        tr.setLocalIp(iaddress.getHostAddress() != null ? iaddress.getHostAddress() : iaddress.getHostName());
+        addCandidate(tr);
+        setResolveEnd();
+        return;
+      }
+    }
+  }
+  try {
+    TransportCandidate tr=new TransportCandidate.Fixed(InetAddress.getLocalHost().getHostAddress() != null ? InetAddress.getLocalHost().getHostAddress() : InetAddress.getLocalHost().getHostName(),getFreePort());
+    tr.setLocalIp(InetAddress.getLocalHost().getHostAddress() != null ? InetAddress.getLocalHost().getHostAddress() : InetAddress.getLocalHost().getHostName());
+    addCandidate(tr);
+  }
+ catch (  Exception e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+  setResolveEnd();
+}

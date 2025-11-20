@@ -1,0 +1,16 @@
+@Override protected void onEmit(Emission<List<RedisNodeDescription>> emission){
+  List<RedisNodeDescription> result=new ArrayList<>();
+  Map<RedisNodeDescription,Long> latencies=new HashMap<>();
+  for (  RedisNodeDescription node : nodes) {
+    TimedAsyncCommand<String,String,String> future=getRequest(node.getUri());
+    if (future == null || !future.isDone()) {
+      continue;
+    }
+    RedisNodeDescription redisNodeDescription=findNodeByUri(nodes,node.getUri());
+    latencies.put(redisNodeDescription,future.duration());
+    result.add(redisNodeDescription);
+  }
+  SortAction sortAction=SortAction.getSortAction();
+  sortAction.sort(result,new LatencyComparator(latencies));
+  emission.success(result);
+}

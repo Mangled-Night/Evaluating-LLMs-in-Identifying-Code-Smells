@@ -1,0 +1,55 @@
+public class IoTSetRequestProvider extends IqProvider<IoTSetRequest> {
+  @Override public IoTSetRequest parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    List<SetData> data=new ArrayList<>(4);
+    outerloop:     while (true) {
+      final XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+        final String name=parser.getName();
+switch (name) {
+case "bool":
+{
+          String valueName=parser.getAttributeValue(null,"name");
+          String valueString=parser.getAttributeValue(null,"value");
+          boolean value=Boolean.parseBoolean(valueString);
+          data.add(new SetBoolData(valueName,value));
+        }
+      break;
+case "double":
+{
+      String valueName=parser.getAttributeValue(null,"name");
+      String valueString=parser.getAttributeValue(null,"value");
+      double value=Double.parseDouble(valueString);
+      data.add(new SetDoubleData(valueName,value));
+    }
+  break;
+case "int":
+{
+  String valueName=parser.getAttributeValue(null,"name");
+  String valueString=parser.getAttributeValue(null,"value");
+  int value=Integer.parseInt(valueString);
+  data.add(new SetIntData(valueName,value));
+}
+break;
+case "long":
+{
+String valueName=parser.getAttributeValue(null,"name");
+String valueString=parser.getAttributeValue(null,"value");
+long value=Long.parseLong(valueString);
+data.add(new SetLongData(valueName,value));
+}
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return new IoTSetRequest(data);
+}
+}

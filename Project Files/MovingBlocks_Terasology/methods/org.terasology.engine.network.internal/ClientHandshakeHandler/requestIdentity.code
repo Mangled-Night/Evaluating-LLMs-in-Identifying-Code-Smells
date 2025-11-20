@@ -1,0 +1,13 @@
+/** 
+ * Requests a new identity for a client if one doesn't already exist. Generated from the master secret key and server certificate.
+ * @param ctx Channel Handler Context.
+ */
+private void requestIdentity(ChannelHandlerContext ctx){
+  logger.info("No existing identity, requesting one");
+  byte[] preMasterSecret=new byte[IdentityConstants.PREMASTER_SECRET_LENGTH];
+  new SecureRandom().nextBytes(preMasterSecret);
+  byte[] encryptedPreMasterSecret=serverCertificate.encrypt(preMasterSecret);
+  masterSecret=HandshakeCommon.generateMasterSecret(preMasterSecret,clientRandom,serverRandom);
+  ctx.channel().writeAndFlush(NetData.NetMessage.newBuilder().setNewIdentityRequest(NetData.NewIdentityRequest.newBuilder().setPreMasterSecret(ByteString.copyFrom(encryptedPreMasterSecret)).setRandom(ByteString.copyFrom(clientRandom))).build());
+  requestedCertificate=true;
+}

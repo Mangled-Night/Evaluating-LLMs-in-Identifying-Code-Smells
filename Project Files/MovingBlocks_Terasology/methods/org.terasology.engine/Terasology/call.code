@@ -1,0 +1,51 @@
+@Override public Integer call() throws IOException {
+  handleLaunchArguments();
+  setupLogging();
+  SplashScreen splashScreen;
+  if (splashEnabled) {
+    CountDownLatch splashInitLatch=new CountDownLatch(1);
+    GLFWSplashScreen glfwSplash=new GLFWSplashScreen(splashInitLatch);
+    Thread thread=new Thread(glfwSplash,"splashscreen-loop");
+    thread.setDaemon(true);
+    thread.start();
+    try {
+      splashInitLatch.await(1,TimeUnit.SECONDS);
+    }
+ catch (    InterruptedException e) {
+    }
+    splashScreen=glfwSplash;
+  }
+ else {
+    splashScreen=SplashScreenBuilder.createStub();
+  }
+  splashScreen.post("Java Runtime " + System.getProperty("java.version") + " loaded");
+  try {
+    TerasologyEngineBuilder builder=new TerasologyEngineBuilder();
+    populateSubsystems(builder);
+    TerasologyEngine engine=builder.build();
+    engine.subscribe(newStatus -> {
+      if (newStatus == StandardGameStatus.RUNNING) {
+        splashScreen.close();
+      }
+ else {
+        splashScreen.post(newStatus.getDescription());
+      }
+    }
+);
+    if (isHeadless) {
+      engine.subscribeToStateChange(new HeadlessStateChangeListener(engine));
+    }
+    engine.initialize();
+    GameState nextState=chainMainMenuToWorkAroundBug1127(selectNextGameState());
+    if (nextState == null) {
+      return 1;
+    }
+    engine.run(nextState);
+  }
+ catch (  Throwable e) {
+    splashScreen.close();
+    reportException(e);
+    return 1;
+  }
+  return 0;
+}

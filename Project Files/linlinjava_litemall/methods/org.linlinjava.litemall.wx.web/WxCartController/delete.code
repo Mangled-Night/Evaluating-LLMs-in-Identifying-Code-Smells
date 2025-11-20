@@ -1,0 +1,20 @@
+/** 
+ * 购物车商品删除
+ * @param userId 用户ID
+ * @param body   购物车商品信息， { productIds: xxx }
+ * @return 购物车信息成功则 { errno: 0, errmsg: '成功', data: xxx } 失败则 { errno: XXX, errmsg: XXX }
+ */
+@PostMapping("delete") public Object delete(@LoginUser Integer userId,@RequestBody String body){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  if (body == null) {
+    return ResponseUtil.badArgument();
+  }
+  List<Integer> productIds=JacksonUtil.parseIntegerList(body,"productIds");
+  if (productIds == null || productIds.size() == 0) {
+    return ResponseUtil.badArgument();
+  }
+  cartService.delete(productIds,userId);
+  return index(userId);
+}

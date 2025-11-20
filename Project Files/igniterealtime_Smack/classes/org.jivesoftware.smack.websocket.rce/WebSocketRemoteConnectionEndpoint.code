@@ -1,0 +1,69 @@
+public abstract class WebSocketRemoteConnectionEndpoint implements RemoteConnectionEndpoint {
+  public static final String INSECURE_WEB_SOCKET_SCHEME="ws";
+  public static final String SECURE_WEB_SOCKET_SCHEME=INSECURE_WEB_SOCKET_SCHEME + "s";
+  private static final Logger LOGGER=Logger.getAnonymousLogger();
+  private final URI uri;
+  private final UInt16 port;
+  protected WebSocketRemoteConnectionEndpoint(  URI uri){
+    this.uri=uri;
+    int portInt=uri.getPort();
+    if (portInt >= 0) {
+      port=UInt16.from(portInt);
+    }
+ else {
+      port=null;
+    }
+  }
+  public final URI getUri(){
+    return uri;
+  }
+  @Override public final String getHost(){
+    return uri.getHost();
+  }
+  @Override public UInt16 getPort(){
+    return port;
+  }
+  public abstract boolean isSecureEndpoint();
+  private List<? extends InetAddress> inetAddresses;
+  private void resolveInetAddressesIfRequired(){
+    if (inetAddresses != null) {
+      return;
+    }
+    String host=getHost();
+    InetAddress[] addresses;
+    try {
+      addresses=InetAddress.getAllByName(host);
+    }
+ catch (    UnknownHostException e) {
+      LOGGER.log(Level.WARNING,"Could not resolve IP addresses of " + host,e);
+      return;
+    }
+    inetAddresses=Arrays.asList(addresses);
+  }
+  @Override public Collection<? extends InetAddress> getInetAddresses(){
+    resolveInetAddressesIfRequired();
+    return inetAddresses;
+  }
+  @Override public String getDescription(){
+    return null;
+  }
+  @Override public String toString(){
+    return uri.toString();
+  }
+  public static WebSocketRemoteConnectionEndpoint from(  CharSequence uriCharSequence) throws URISyntaxException {
+    String uriString=uriCharSequence.toString();
+    URI uri=URI.create(uriString);
+    return from(uri);
+  }
+  public static WebSocketRemoteConnectionEndpoint from(  URI uri){
+    String scheme=uri.getScheme();
+switch (scheme) {
+case INSECURE_WEB_SOCKET_SCHEME:
+      return new InsecureWebSocketRemoteConnectionEndpoint(uri);
+case SECURE_WEB_SOCKET_SCHEME:
+    return new SecureWebSocketRemoteConnectionEndpoint(uri);
+default :
+  throw new IllegalArgumentException("Only allowed protocols are " + INSECURE_WEB_SOCKET_SCHEME + " and "+ SECURE_WEB_SOCKET_SCHEME);
+}
+}
+}

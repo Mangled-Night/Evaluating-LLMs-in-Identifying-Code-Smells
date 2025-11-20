@@ -1,0 +1,13 @@
+@Override public void postBegin(){
+  Set<Prefab> existingGlobals=Sets.newHashSet();
+  NetworkMode mode=networkSystem.getMode();
+  for (  EntityRef entity : entityManager.getEntitiesWith(AutoCreateComponent.class)) {
+    existingGlobals.add(entity.getParentPrefab());
+  }
+  for (  Prefab prefab : prefabManager.listPrefabs(AutoCreateComponent.class)) {
+    AutoCreateComponent comp=prefab.getComponent(AutoCreateComponent.class);
+    if (!existingGlobals.contains(prefab) && (comp.createClientSide || mode.isAuthority())) {
+      entityManager.create(prefab);
+    }
+  }
+}

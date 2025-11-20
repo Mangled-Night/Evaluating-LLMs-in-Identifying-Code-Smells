@@ -1,0 +1,19 @@
+@Override public int updateVerifyStatus(List<Long> ids,Integer verifyStatus,String detail){
+  PmsProduct product=new PmsProduct();
+  product.setVerifyStatus(verifyStatus);
+  PmsProductExample example=new PmsProductExample();
+  example.createCriteria().andIdIn(ids);
+  List<PmsProductVertifyRecord> list=new ArrayList<>();
+  int count=productMapper.updateByExampleSelective(product,example);
+  for (  Long id : ids) {
+    PmsProductVertifyRecord record=new PmsProductVertifyRecord();
+    record.setProductId(id);
+    record.setCreateTime(new Date());
+    record.setDetail(detail);
+    record.setStatus(verifyStatus);
+    record.setVertifyMan("test");
+    list.add(record);
+  }
+  productVertifyRecordDao.insertList(list);
+  return count;
+}

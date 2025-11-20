@@ -1,0 +1,20 @@
+/** 
+ * @return the priority in which {@code provider} reads {@code facet}. If  {@code provider} updates {@code facet}, it's the update priority; if  {@code provider} requires {@code facet}, it's  {@link UpdatePriority#PRIORITY_REQUIRES}; otherwise, it's  {@link UpdatePriority#PRIORITY_PRODUCES}.
+ */
+private int updatePriority(FacetProvider provider,Class<? extends WorldFacet> facet){
+  Updates updates=provider.getClass().getAnnotation(Updates.class);
+  if (updates != null) {
+    return updates.priority();
+  }
+ else {
+    Requires requires=provider.getClass().getAnnotation(Requires.class);
+    if (requires != null) {
+      for (      Facet f : requires.value()) {
+        if (f.value() == facet) {
+          return UpdatePriority.PRIORITY_REQUIRES;
+        }
+      }
+    }
+    return UpdatePriority.PRIORITY_PRODUCES;
+  }
+}

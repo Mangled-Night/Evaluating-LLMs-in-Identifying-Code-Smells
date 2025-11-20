@@ -1,0 +1,31 @@
+/** 
+ * Test for the Data class.
+ * @author Henning Staib
+ */
+public class DataTest extends SmackTestSuite {
+  @Test public void shouldNotInstantiateWithInvalidArgument(){
+    assertThrows(IllegalArgumentException.class,() -> {
+      new Data(null);
+    }
+);
+  }
+  @Test public void shouldBeOfIQTypeSET(){
+    DataPacketExtension dpe=mock(DataPacketExtension.class);
+    Data data=new Data(dpe);
+    assertEquals(IQ.Type.set,data.getType());
+  }
+  private static final Properties outputProperties=new Properties();
+{
+    outputProperties.put(javax.xml.transform.OutputKeys.OMIT_XML_DECLARATION,"yes");
+  }
+  @Test public void shouldReturnValidIQStanzaXML() throws Exception {
+    String encodedData=Base64.encode("Test");
+    String control=XMLBuilder.create("iq").a("from","romeo@montague.lit/orchard").a("to","juliet@capulet.lit/balcony").a("id","kr91n475").a("type","set").e("data").a("xmlns","http://jabber.org/protocol/ibb").a("seq","0").a("sid","i781hf64").t(encodedData).asString(outputProperties);
+    DataPacketExtension dpe=new DataPacketExtension("i781hf64",0,encodedData);
+    Data data=new Data(dpe);
+    data.setFrom(JidCreate.from("romeo@montague.lit/orchard"));
+    data.setTo(JidCreate.from("juliet@capulet.lit/balcony"));
+    data.setStanzaId("kr91n475");
+    assertXmlSimilar(control,data.toXML(StreamOpen.CLIENT_NAMESPACE).toString());
+  }
+}

@@ -1,0 +1,29 @@
+/** 
+ * 删除订单 <p> 1. 检测当前订单是否可以删除； 2. 删除订单。
+ * @param userId 用户ID
+ * @param body   订单信息，{ orderId：xxx }
+ * @return 订单操作结果
+ */
+public Object delete(Integer userId,String body){
+  if (userId == null) {
+    return ResponseUtil.unlogin();
+  }
+  Integer orderId=JacksonUtil.parseInteger(body,"orderId");
+  if (orderId == null) {
+    return ResponseUtil.badArgument();
+  }
+  LitemallOrder order=orderService.findById(userId,orderId);
+  if (order == null) {
+    return ResponseUtil.badArgument();
+  }
+  if (!order.getUserId().equals(userId)) {
+    return ResponseUtil.badArgumentValue();
+  }
+  OrderHandleOption handleOption=OrderUtil.build(order);
+  if (!handleOption.isDelete()) {
+    return ResponseUtil.fail(ORDER_INVALID_OPERATION,"订单不能删除");
+  }
+  orderService.deleteById(orderId);
+  aftersaleService.deleteByOrderId(userId,orderId);
+  return ResponseUtil.ok();
+}

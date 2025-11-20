@@ -1,0 +1,26 @@
+public class ComponentMetadataTest {
+  private Context context;
+  private ReflectFactory reflectFactory=new ReflectionReflectFactory();
+  private CopyStrategyLibrary copyStrategies=new CopyStrategyLibrary(reflectFactory);
+  @BeforeEach public void prepare(){
+    context=new ContextImpl();
+    context.put(ReflectFactory.class,reflectFactory);
+    context.put(CopyStrategyLibrary.class,copyStrategies);
+  }
+  @Test public void testStaticFieldsIgnored(){
+    Reflections reflections=new Reflections(getClass().getClassLoader());
+    EntitySystemLibrary entitySystemLibrary=new EntitySystemLibrary(context,new TypeHandlerLibraryImpl(reflections));
+    ComponentLibrary lib=entitySystemLibrary.getComponentLibrary();
+    lib.register(new ResourceUrn("unittest:string"),StringComponent.class);
+    ComponentMetadata<StringComponent> metadata=lib.getMetadata(StringComponent.class);
+    assertNull(metadata.getField("STATIC_VALUE"));
+  }
+  @Test public void testOwnsReferencesPopulated(){
+    Reflections reflections=new Reflections(getClass().getClassLoader());
+    EntitySystemLibrary entitySystemLibrary=new EntitySystemLibrary(context,new TypeHandlerLibraryImpl(reflections));
+    ComponentLibrary lib=entitySystemLibrary.getComponentLibrary();
+    lib.register(new ResourceUrn("unittest:owner"),OwnerComponent.class);
+    ComponentMetadata<OwnerComponent> metadata=lib.getMetadata(OwnerComponent.class);
+    assertTrue(metadata.isReferenceOwner());
+  }
+}

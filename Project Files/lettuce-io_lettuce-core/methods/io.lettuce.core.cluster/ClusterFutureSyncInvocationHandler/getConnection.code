@@ -1,0 +1,13 @@
+private Object getConnection(Method method,Object[] args) throws Exception {
+  Method targetMethod=connectionMethodCache.computeIfAbsent(method,this::lookupMethod);
+  Object result=targetMethod.invoke(connection,args);
+  if (result instanceof StatefulRedisClusterConnection) {
+    StatefulRedisClusterConnection<K,V> connection=(StatefulRedisClusterConnection<K,V>)result;
+    return connection.sync();
+  }
+  if (result instanceof StatefulRedisConnection) {
+    StatefulRedisConnection<K,V> connection=(StatefulRedisConnection<K,V>)result;
+    return connection.sync();
+  }
+  throw new IllegalArgumentException("Cannot call method " + method);
+}

@@ -1,0 +1,8 @@
+@Test void disconnectedAcceptCommands(){
+  client.setOptions(ClientOptions.builder().autoReconnect(false).disconnectedBehavior(ClientOptions.DisconnectedBehavior.ACCEPT_COMMANDS).build());
+  RedisAsyncCommands<String,String> connection=client.connect().async();
+  connection.quit();
+  Wait.untilTrue(() -> !connection.getStatefulConnection().isOpen()).waitOrTimeout();
+  connection.get(key);
+  connection.getStatefulConnection().close();
+}

@@ -1,0 +1,25 @@
+@Test void testUnloadChunkAndDeactivationBlock() throws InterruptedException, TimeoutException, ExecutionException {
+  Vector3i chunkPosition=new Vector3i(0,0,0);
+  blockAtBlockManager.setLifecycleEventsRequired(true);
+  blockAtBlockManager.setEntity(mock(EntityRef.class));
+  requestCreatingOrLoadingArea(chunkPosition).get(WAIT_CHUNK_IS_READY_IN_SECONDS,TimeUnit.SECONDS);
+  Assertions.assertTimeoutPreemptively(Duration.of(WAIT_CHUNK_IS_READY_IN_SECONDS,ChronoUnit.SECONDS),() -> {
+    ArgumentCaptor<Event> blockEventCaptor=ArgumentCaptor.forClass(Event.class);
+    while (!blockEventCaptor.getAllValues().stream().filter((e) -> e instanceof BeforeDeactivateBlocks).map((e) -> (BeforeDeactivateBlocks)e).findFirst().isPresent()) {
+      chunkProvider.update();
+      blockEventCaptor=ArgumentCaptor.forClass(Event.class);
+      verify(blockAtBlockManager.getEntity(),atLeast(1)).send(blockEventCaptor.capture());
+    }
+  }
+);
+  final ArgumentCaptor<Event> eventArgumentCaptor=ArgumentCaptor.forClass(Event.class);
+  verify(worldEntity,atLeast(1)).send(eventArgumentCaptor.capture());
+  Optional<BeforeChunkUnload> beforeChunkUnload=eventArgumentCaptor.getAllValues().stream().filter((e) -> e instanceof BeforeChunkUnload).map((e) -> (BeforeChunkUnload)e).findFirst();
+  Assertions.assertTrue(beforeChunkUnload.isPresent(),"World events must have BeforeChunkUnload event when chunk was unload");
+  Assertions.assertEquals(chunkPosition,beforeChunkUnload.get().getChunkPos(),"Chunk position at event not expected");
+  final ArgumentCaptor<Event> blockEventCaptor=ArgumentCaptor.forClass(Event.class);
+  verify(blockAtBlockManager.getEntity(),atLeast(2)).send(blockEventCaptor.capture());
+  Optional<BeforeDeactivateBlocks> beforeDeactivateBlocks=blockEventCaptor.getAllValues().stream().filter((e) -> e instanceof BeforeDeactivateBlocks).map((e) -> (BeforeDeactivateBlocks)e).findFirst();
+  Assertions.assertTrue(beforeDeactivateBlocks.isPresent(),"World events must have BeforeDeactivateBlocks event when chunk with lifecycle blocks was unload");
+  Assertions.assertTrue(beforeDeactivateBlocks.get().blockCount() > 0,"BeforeDeactivateBlocks must have block count more then zero");
+}

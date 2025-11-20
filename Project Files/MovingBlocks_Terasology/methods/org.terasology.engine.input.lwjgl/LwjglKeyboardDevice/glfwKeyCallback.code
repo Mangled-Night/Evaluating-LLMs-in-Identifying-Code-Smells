@@ -1,0 +1,25 @@
+/** 
+ * Callback receive key input events. All keys in  {@link GLFW}
+ * @param window window's pointer
+ * @param key one of key listed in {@link GLFW} GLFW_KEY*, also you can see {@link LwjglKeyboardDevice#GLFW_TO_TERA_MAPPING}
+ * @param scancode
+ * @param action button state now: {@link GLFW#GLFW_PRESS}, {@link GLFW#GLFW_RELEASE} or {@link GLFW#GLFW_REPEAT}
+ * @param mods - modification keys: {@link GLFW#GLFW_MOD_SHIFT} and etc.
+ */
+private void glfwKeyCallback(long window,int key,int scancode,int action,int mods){
+  int teraKey=GLFW_TO_TERA_MAPPING.get(key);
+  Input input=InputType.KEY.getInput(teraKey);
+  ButtonState state;
+  if (action == GLFW.GLFW_PRESS) {
+    buttonStates.add(teraKey);
+    state=ButtonState.DOWN;
+  }
+ else   if (action == GLFW.GLFW_RELEASE) {
+    state=ButtonState.UP;
+    buttonStates.remove(teraKey);
+  }
+ else {
+    state=ButtonState.REPEAT;
+  }
+  rawKeyQueue.offer(new RawKeyboardAction(input,state));
+}

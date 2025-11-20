@@ -1,0 +1,37 @@
+private void processReadyChunks(){
+  while (!readyChunks.isEmpty()) {
+    LodChunk chunk=readyChunks.remove();
+    Vector3i pos=chunk.getPosition(new Vector3i());
+    Integer requiredScale=requiredChunks.get(pos);
+    int scale=chunk.scale;
+    if (requiredScale != null && requiredScale <= scale) {
+      chunk.getMesh().updateMesh();
+      chunk.getMesh().discardData();
+      Vector3i subPos=new Vector3i();
+      if (scale > 0) {
+        int subScale=1 << (scale - 1);
+        for (int dx=0; dx <= subScale; dx+=subScale) {
+          for (int dy=0; dy <= subScale; dy+=subScale) {
+            for (int dz=0; dz <= subScale; dz+=subScale) {
+              pos.add(dx,dy,dz,subPos);
+              if (chunks.get(scale - 1).containsKey(subPos) || scale == 1 && chunkProvider.isChunkReady(subPos)) {
+                chunk.hiddenness++;
+              }
+            }
+          }
+        }
+      }
+ else {
+        chunk.realVersion=chunkProvider.getChunk(pos);
+      }
+      chunks.get(scale).put(new Vector3i(pos),chunk);
+      if (scale < chunkLods) {
+        int mask=~(1 << scale);
+        LodChunk largerChunk=chunks.get(scale + 1).get(new Vector3i(pos.x & mask,pos.y & mask,pos.z & mask));
+        if (largerChunk != null) {
+          largerChunk.hiddenness++;
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+@Test void shouldRefillIdleObjects(){
+  mockCreation();
+  BoundedAsyncPool<String> pool=new BoundedAsyncPool<>(factory,BoundedPoolConfig.builder().maxTotal(20).minIdle(5).build());
+  assertThat(pool.getIdle()).isEqualTo(5);
+  pool.acquire();
+  assertThat(pool.getIdle()).isEqualTo(5);
+  assertThat(pool.getObjectCount()).isEqualTo(6);
+  verify(factory,times(6)).create();
+}

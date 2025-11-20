@@ -1,0 +1,24 @@
+private String getQueryString(){
+  List<String> queryPairs=new ArrayList<>();
+  if (database != 0 && LettuceStrings.isNotEmpty(socket)) {
+    queryPairs.add(PARAMETER_NAME_DATABASE + "=" + database);
+  }
+  if (clientName != null) {
+    queryPairs.add(PARAMETER_NAME_CLIENT_NAME + "=" + urlEncode(clientName));
+  }
+  if (isSsl() && getVerifyMode() != SslVerifyMode.FULL) {
+    queryPairs.add(PARAMETER_NAME_VERIFY_PEER + "=" + verifyMode.name());
+  }
+  if (sentinelMasterId != null) {
+    queryPairs.add(PARAMETER_NAME_SENTINEL_MASTER_ID + "=" + urlEncode(sentinelMasterId));
+  }
+  if (timeout.getSeconds() != DEFAULT_TIMEOUT) {
+    if (timeout.getNano() == 0) {
+      queryPairs.add(PARAMETER_NAME_TIMEOUT + "=" + timeout.getSeconds()+ "s");
+    }
+ else {
+      queryPairs.add(PARAMETER_NAME_TIMEOUT + "=" + timeout.toNanos()+ "ns");
+    }
+  }
+  return queryPairs.stream().collect(Collectors.joining("&"));
+}

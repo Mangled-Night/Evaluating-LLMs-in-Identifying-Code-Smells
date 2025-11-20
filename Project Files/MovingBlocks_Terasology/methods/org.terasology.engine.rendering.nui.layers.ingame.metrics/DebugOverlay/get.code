@@ -1,0 +1,82 @@
+@Override public Boolean get(){
+  return systemConfig.debugEnabled.get();
+}
+@Override public String get(){
+  Runtime runtime=Runtime.getRuntime();
+  long totalHeapSize=runtime.totalMemory();
+  float usedHeapMemory=((float)totalHeapSize - (float)runtime.freeMemory()) / MB_SIZE;
+  String s=String.format("FPS: %.1f, Heap Usage: %.1f MB, Total Heap: %.1f MB, Max Heap: %.1f MB",time.getFps(),usedHeapMemory,totalHeapSize / MB_SIZE,runtime.maxMemory() / MB_SIZE);
+  if (OperatingSystemMemory.isAvailable()) {
+    long dataSize=OperatingSystemMemory.dataAndStackSize();
+    long nonJavaHeapDataSize=dataSize - totalHeapSize;
+    String limitString=(dataLimit > 0) ? String.format(" / %.1f MB (%02d%%)",dataLimit / MB_SIZE,100 * dataSize / dataLimit) : "";
+    return String.format("%s, Data: %.1f MB%s, Extra: %.1f MB",s,dataSize / MB_SIZE,limitString,nonJavaHeapDataSize / MB_SIZE);
+  }
+ else {
+    return s;
+  }
+}
+@Override public String get(){
+  return String.format("Active Entities: %s, Current Target: %s",entityManager.getActiveEntityCount(),cameraTarget.toString());
+}
+@Override public String get(){
+  if (!localPlayer.isValid()) {
+    return "";
+  }
+  Vector3f pos=localPlayer.getPosition(new Vector3f());
+  Vector3i chunkPos=Chunks.toChunkPos(pos,new Vector3i());
+  Vector3f rotation=localPlayer.getViewDirection(new Vector3f());
+  Vector3f cameraPos=localPlayer.getViewPosition(new Vector3f());
+  String orientation="";
+switch (Orientation.fromDirection(rotation.x,rotation.z)) {
+case NORTH:
+    orientation="N";
+  break;
+case EAST:
+orientation="E";
+break;
+case SOUTH:
+orientation="S";
+break;
+case WEST:
+orientation="W";
+break;
+case NORTHEAST:
+orientation="NE";
+break;
+case SOUTHEAST:
+orientation="SE";
+break;
+case SOUTHWEST:
+orientation="SW";
+break;
+case NORTHWEST:
+orientation="NW";
+break;
+}
+return String.format(Locale.US,"Position: (%.2f, %.2f, %.2f), Chunk (%d, %d, %d), " + "Eye (%.2f, %.2f, %.2f), Rot (%.2f, %.2f, %.2f) %s",pos.x,pos.y,pos.z,chunkPos.x,chunkPos.y,chunkPos.z,cameraPos.x,cameraPos.y,cameraPos.z,rotation.x,rotation.y,rotation.z,orientation);
+}
+@Override public String get(){
+  return String.format("World Time: %.3f, Time Dilation: %.1f",worldProvider.getTime().getDays() - 0.0005f,time.getGameTimeDilation());
+}
+@Override public String get(){
+  return "[H] : Debug Documentation";
+}
+@Override public String get(){
+  return "Saving... ";
+}
+@Override public Boolean get(){
+  return storageManager.isSaving();
+}
+@Override public String get(){
+  return "WIREFRAME MODE";
+}
+@Override public Boolean get(){
+  return config.getRendering().getDebug().isWireframe();
+}
+@Override public String get(){
+  return "CHUNK BOUNDING BOX RENDER MODE";
+}
+@Override public Boolean get(){
+  return config.getRendering().getDebug().isRenderChunkBoundingBoxes();
+}

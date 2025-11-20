@@ -1,0 +1,24 @@
+private void checkIfNeedHeartBeat(LinkedList<BackendConnection> heartBeatCons,ConQueue queue,ConcurrentLinkedQueue<BackendConnection> checkLis,long hearBeatTime,long hearBeatTime2){
+  int maxConsInOneCheck=10;
+  Iterator<BackendConnection> checkListItor=checkLis.iterator();
+  while (checkListItor.hasNext()) {
+    BackendConnection con=checkListItor.next();
+    if (con.isClosedOrQuit()) {
+      checkListItor.remove();
+      continue;
+    }
+    if (validSchema(con.getSchema())) {
+      if (con.getLastTime() < hearBeatTime && heartBeatCons.size() < maxConsInOneCheck) {
+        if (checkLis.remove(con)) {
+          con.setBorrowed(true);
+          heartBeatCons.add(con);
+        }
+      }
+    }
+ else     if (con.getLastTime() < hearBeatTime2) {
+      if (checkLis.remove(con)) {
+        con.close(" heart beate idle ");
+      }
+    }
+  }
+}

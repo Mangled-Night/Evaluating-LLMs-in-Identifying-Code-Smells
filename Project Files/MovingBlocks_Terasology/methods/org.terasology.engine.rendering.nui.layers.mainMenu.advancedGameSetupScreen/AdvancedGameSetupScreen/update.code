@@ -1,0 +1,16 @@
+@Override public void update(float delta){
+  super.update(delta);
+  if (needsUpdate && remoteModuleRegistryUpdater.isDone() && !selectModulesConfig.isLocalOnlySelected()) {
+    needsUpdate=false;
+    try {
+      remoteModuleRegistryUpdater.get();
+    }
+ catch (    CancellationException|InterruptedException|ExecutionException ex) {
+      logger.warn("Failed to retrieve module list from meta server",ex);
+      MessagePopup message=getManager().pushScreen(MessagePopup.ASSET_URI,MessagePopup.class);
+      message.setMessage("Warning","Failed to retrieve a module list from the master server. Only locally installed modules are available.");
+      return;
+    }
+    updateModuleInformation();
+  }
+}

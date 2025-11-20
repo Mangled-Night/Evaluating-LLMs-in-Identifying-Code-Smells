@@ -1,0 +1,29 @@
+public static Range parseRangeElement(XmlPullParser parser) throws IOException, XmlPullParserException, SmackParsingException {
+  final int initialDepth=parser.getDepth();
+  final Integer offset=ParserUtils.getIntegerAttribute(parser,Range.ATTR_OFFSET);
+  final Integer length=ParserUtils.getIntegerAttribute(parser,Range.ATTR_LENGTH);
+  HashElement hashElement=null;
+  outerloop:   while (true) {
+    String element;
+    XmlPullParser.Event event=parser.next();
+switch (event) {
+case START_ELEMENT:
+      element=parser.getName();
+switch (element) {
+case HashElement.ELEMENT:
+      hashElement=HashElementProvider.INSTANCE.parse(parser);
+    break;
+}
+break;
+case END_ELEMENT:
+element=parser.getName();
+if (element.equals(Range.ELEMENT) && parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return new Range(offset,length,hashElement);
+}

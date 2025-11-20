@@ -1,0 +1,48 @@
+@Override public CoreScreenLayer pushScreen(ResourceUrn screenUri){
+  return pushScreen(screenUri,CoreScreenLayer.class);
+}
+@Override public <T extends CoreScreenLayer>T pushScreen(ResourceUrn screenUri,Class<T> expectedType){
+  T layer=createScreen(screenUri,expectedType);
+  if (layer != null) {
+    pushScreen(layer);
+  }
+  return layer;
+}
+@Override public CoreScreenLayer pushScreen(String screenUri){
+  return pushScreen(screenUri,CoreScreenLayer.class);
+}
+@Override public <T extends CoreScreenLayer>T pushScreen(String screenUri,Class<T> expectedType){
+  T screen=createScreen(screenUri,expectedType);
+  if (screen != null) {
+    pushScreen(screen);
+  }
+  return screen;
+}
+@Override public CoreScreenLayer pushScreen(UIElement element){
+  return pushScreen(element,CoreScreenLayer.class);
+}
+@Override public <T extends CoreScreenLayer>T pushScreen(UIElement element,Class<T> expectedType){
+  if (element != null && expectedType.isInstance(element.getRootWidget())) {
+    @SuppressWarnings("unchecked") T result=(T)element.getRootWidget();
+    initialiseScreen(result,element.getUrn());
+    pushScreen(result);
+    return result;
+  }
+  return null;
+}
+@Override public void pushScreen(UIScreenLayer screen){
+  TabbingManager.setInitialized(false);
+  if (!screen.isLowerLayerVisible()) {
+    UIScreenLayer current=screens.peek();
+    if (current != null) {
+      current.onHide();
+    }
+  }
+  screens.push(screen);
+  screen.onOpened();
+  String id=screen.getId();
+  if (ResourceUrn.isValid(id)) {
+    ResourceUrn uri=new ResourceUrn(id);
+    screenLookup.put(uri,screen);
+  }
+}

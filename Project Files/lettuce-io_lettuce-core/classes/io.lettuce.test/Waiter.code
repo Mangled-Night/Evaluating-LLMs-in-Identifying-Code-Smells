@@ -1,0 +1,54 @@
+/** 
+ * Utility to await until a  {@link WaitCondition} yields {@code true}.
+ */
+private static class Waiter {
+  private Duration duration;
+  private Sleeper sleeper;
+  private Function<Object,String> messageFunction;
+  private <T>void waitOrTimeout(  Supplier<T> supplier,  Predicate<T> check){
+    try {
+      if (!success(() -> check.test(supplier.get()),Timeout.create(duration))) {
+        if (messageFunction != null) {
+          throw new TimeoutException(messageFunction.apply(supplier.get()));
+        }
+        throw new TimeoutException("Condition not satisfied for: " + supplier.get());
+      }
+    }
+ catch (    Exception e) {
+      throw new IllegalStateException(e);
+    }
+  }
+  private <T>void waitOrTimeout(  WaitCondition waitCondition,  Supplier<T> supplier){
+    try {
+      if (!success(waitCondition,Timeout.create(duration))) {
+        try {
+          if (messageFunction != null) {
+            throw new TimeoutException(messageFunction.apply(supplier.get()));
+          }
+          throw new TimeoutException("Condition not satisfied for: " + supplier.get());
+        }
+ catch (        TimeoutException e) {
+          throw e;
+        }
+catch (        Exception e) {
+          if (messageFunction != null) {
+            throw new ExecutionException(messageFunction.apply(null),e);
+          }
+          throw new ExecutionException("Condition not satisfied",e);
+        }
+      }
+    }
+ catch (    Exception e) {
+      throw new IllegalStateException(e);
+    }
+  }
+  private boolean success(  WaitCondition condition,  Timeout timeout) throws Exception {
+    while (!timeout.hasExpired()) {
+      if (condition.isSatisfied()) {
+        return true;
+      }
+      sleeper.sleep();
+    }
+    return false;
+  }
+}

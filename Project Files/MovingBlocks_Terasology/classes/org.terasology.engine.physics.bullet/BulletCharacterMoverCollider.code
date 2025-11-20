@@ -1,0 +1,37 @@
+private final class BulletCharacterMoverCollider implements CharacterCollider {
+  boolean pending=true;
+  private final Vector3f tempPos=new Vector3f();
+  private final btPairCachingGhostObject collider;
+  private BulletCharacterMoverCollider(  Vector3f pos,  btConvexShape shape,  List<CollisionGroup> groups,  List<CollisionGroup> filters,  EntityRef owner){
+    this(pos,shape,groups,filters,0,owner);
+  }
+  private BulletCharacterMoverCollider(  Vector3f pos,  btConvexShape shape,  List<CollisionGroup> groups,  List<CollisionGroup> filters,  int collisionFlags,  EntityRef owner){
+    this(pos,shape,combineGroups(groups),combineGroups(filters),collisionFlags,owner);
+  }
+  private BulletCharacterMoverCollider(  Vector3f pos,  btConvexShape shape,  short groups,  short filters,  int collisionFlags,  EntityRef owner){
+    collider=createCollider(pos,shape,groups,filters,collisionFlags);
+    collider.userData=owner;
+  }
+  @Override public boolean isPending(){
+    return pending;
+  }
+  @Override public Vector3f getLocation(){
+    Vector3f pos=collider.getWorldTransform().getTranslation(new Vector3f());
+    return new Vector3f(pos.x,pos.y,pos.z);
+  }
+  @Override public void setLocation(  Vector3f loc){
+    Matrix4f matrix=collider.getWorldTransform();
+    matrix.setTranslation(loc);
+    collider.setWorldTransform(matrix);
+  }
+  @Override public SweepCallback sweep(  Vector3f startPos,  Vector3f endPos,  float allowedPenetration,  float slopeFactor){
+    Matrix4f startTransform=new Matrix4f().translationRotateScale(startPos,new Quaternionf(),1.0f);
+    Matrix4f endTransform=new Matrix4f().translationRotateScale(endPos,new Quaternionf(),1.0f);
+    BulletSweepCallback callback=new BulletSweepCallback(collider,startPos,slopeFactor);
+    callback.setCollisionFilterGroup(collider.getBroadphaseHandle().getCollisionFilterGroup());
+    callback.setCollisionFilterMask(collider.getBroadphaseHandle().getCollisionFilterMask());
+    callback.setCollisionFilterGroup((short)(callback.getCollisionFilterGroup() & (~StandardCollisionGroup.SENSOR.getFlag())));
+    collider.convexSweepTest((btConvexShape)(collider.getCollisionShape()),startTransform,endTransform,callback,allowedPenetration);
+    return callback;
+  }
+}

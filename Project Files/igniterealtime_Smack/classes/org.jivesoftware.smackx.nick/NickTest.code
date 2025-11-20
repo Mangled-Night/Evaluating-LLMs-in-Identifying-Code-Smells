@@ -1,0 +1,27 @@
+public class NickTest {
+  /** 
+ * see <a href="https://xmpp.org/extensions/xep-0172.html#example-3">XEP-0172: User Nickname - Example 3</a>
+ */
+  private static final String XML="<nick xmlns='http://jabber.org/protocol/nick'>Ishmael</nick>";
+  @Test public void disallowEmptyNickTest(){
+    assertThrows(IllegalArgumentException.class,() -> new Nick(""),"Empty String as argument MUST cause IllegalArgumentException.");
+  }
+  @Test public void disallowNullNickTest(){
+    assertThrows(IllegalArgumentException.class,() -> new Nick(null),"Null argument MUST cause IllegalArgumentException.");
+  }
+  @Test public void serializationTest(){
+    Nick nick=new Nick("Ishmael");
+    assertXmlSimilar(XML,nick.toXML());
+  }
+  @ParameterizedTest @EnumSource(SmackTestUtil.XmlPullParserKind.class) public void deserializationTest(  SmackTestUtil.XmlPullParserKind parserKind) throws XmlPullParserException, IOException, SmackParsingException {
+    Nick nick=SmackTestUtil.parse(XML,NickProvider.class,parserKind);
+    assertNotNull(nick);
+    assertEquals("Ishmael",nick.getName());
+  }
+  @Test public void nicksAreEscapedTest(){
+    String name="</nick>\"'&";
+    Nick nick=new Nick(name);
+    assertXmlSimilar("<nick xmlns='http://jabber.org/protocol/nick'>" + "&lt;/nick&gt;&quot;&apos;&amp;" + "</nick>",nick.toXML());
+    assertEquals(name,nick.getName());
+  }
+}

@@ -1,0 +1,124 @@
+@Override public Map<String,Object> generateOrder(OrderParam orderParam){
+  List<OmsOrderItem> orderItemList=new ArrayList<>();
+  UmsMember currentMember=memberService.getCurrentMember();
+  List<CartPromotionItem> cartPromotionItemList=cartItemService.listPromotion(currentMember.getId(),orderParam.getCartIds());
+  for (  CartPromotionItem cartPromotionItem : cartPromotionItemList) {
+    OmsOrderItem orderItem=new OmsOrderItem();
+    orderItem.setProductId(cartPromotionItem.getProductId());
+    orderItem.setProductName(cartPromotionItem.getProductName());
+    orderItem.setProductPic(cartPromotionItem.getProductPic());
+    orderItem.setProductAttr(cartPromotionItem.getProductAttr());
+    orderItem.setProductBrand(cartPromotionItem.getProductBrand());
+    orderItem.setProductSn(cartPromotionItem.getProductSn());
+    orderItem.setProductPrice(cartPromotionItem.getPrice());
+    orderItem.setProductQuantity(cartPromotionItem.getQuantity());
+    orderItem.setProductSkuId(cartPromotionItem.getProductSkuId());
+    orderItem.setProductSkuCode(cartPromotionItem.getProductSkuCode());
+    orderItem.setProductCategoryId(cartPromotionItem.getProductCategoryId());
+    orderItem.setPromotionAmount(cartPromotionItem.getReduceAmount());
+    orderItem.setPromotionName(cartPromotionItem.getPromotionMessage());
+    orderItem.setGiftIntegration(cartPromotionItem.getIntegration());
+    orderItem.setGiftGrowth(cartPromotionItem.getGrowth());
+    orderItemList.add(orderItem);
+  }
+  if (!hasStock(cartPromotionItemList)) {
+    Asserts.fail("库存不足，无法下单");
+  }
+  if (orderParam.getCouponId() == null) {
+    for (    OmsOrderItem orderItem : orderItemList) {
+      orderItem.setCouponAmount(new BigDecimal(0));
+    }
+  }
+ else {
+    SmsCouponHistoryDetail couponHistoryDetail=getUseCoupon(cartPromotionItemList,orderParam.getCouponId());
+    if (couponHistoryDetail == null) {
+      Asserts.fail("该优惠券不可用");
+    }
+    handleCouponAmount(orderItemList,couponHistoryDetail);
+  }
+  if (orderParam.getUseIntegration() == null || orderParam.getUseIntegration().equals(0)) {
+    for (    OmsOrderItem orderItem : orderItemList) {
+      orderItem.setIntegrationAmount(new BigDecimal(0));
+    }
+  }
+ else {
+    BigDecimal totalAmount=calcTotalAmount(orderItemList);
+    BigDecimal integrationAmount=getUseIntegrationAmount(orderParam.getUseIntegration(),totalAmount,currentMember,orderParam.getCouponId() != null);
+    if (integrationAmount.compareTo(new BigDecimal(0)) == 0) {
+      Asserts.fail("积分不可用");
+    }
+ else {
+      for (      OmsOrderItem orderItem : orderItemList) {
+        BigDecimal perAmount=orderItem.getProductPrice().divide(totalAmount,3,RoundingMode.HALF_EVEN).multiply(integrationAmount);
+        orderItem.setIntegrationAmount(perAmount);
+      }
+    }
+  }
+  handleRealAmount(orderItemList);
+  lockStock(cartPromotionItemList);
+  OmsOrder order=new OmsOrder();
+  order.setDiscountAmount(new BigDecimal(0));
+  order.setTotalAmount(calcTotalAmount(orderItemList));
+  order.setFreightAmount(new BigDecimal(0));
+  order.setPromotionAmount(calcPromotionAmount(orderItemList));
+  order.setPromotionInfo(getOrderPromotionInfo(orderItemList));
+  if (orderParam.getCouponId() == null) {
+    order.setCouponAmount(new BigDecimal(0));
+  }
+ else {
+    order.setCouponId(orderParam.getCouponId());
+    order.setCouponAmount(calcCouponAmount(orderItemList));
+  }
+  if (orderParam.getUseIntegration() == null) {
+    order.setIntegration(0);
+    order.setIntegrationAmount(new BigDecimal(0));
+  }
+ else {
+    order.setIntegration(orderParam.getUseIntegration());
+    order.setIntegrationAmount(calcIntegrationAmount(orderItemList));
+  }
+  order.setPayAmount(calcPayAmount(order));
+  order.setMemberId(currentMember.getId());
+  order.setCreateTime(new Date());
+  order.setMemberUsername(currentMember.getUsername());
+  order.setPayType(orderParam.getPayType());
+  order.setSourceType(1);
+  order.setStatus(0);
+  order.setOrderType(0);
+  UmsMemberReceiveAddress address=memberReceiveAddressService.getItem(orderParam.getMemberReceiveAddressId());
+  order.setReceiverName(address.getName());
+  order.setReceiverPhone(address.getPhoneNumber());
+  order.setReceiverPostCode(address.getPostCode());
+  order.setReceiverProvince(address.getProvince());
+  order.setReceiverCity(address.getCity());
+  order.setReceiverRegion(address.getRegion());
+  order.setReceiverDetailAddress(address.getDetailAddress());
+  order.setConfirmStatus(0);
+  order.setDeleteStatus(0);
+  order.setIntegration(calcGifIntegration(orderItemList));
+  order.setGrowth(calcGiftGrowth(orderItemList));
+  order.setOrderSn(generateOrderSn(order));
+  List<OmsOrderSetting> orderSettings=orderSettingMapper.selectByExample(new OmsOrderSettingExample());
+  if (CollUtil.isNotEmpty(orderSettings)) {
+    order.setAutoConfirmDay(orderSettings.get(0).getConfirmOvertime());
+  }
+  orderMapper.insert(order);
+  for (  OmsOrderItem orderItem : orderItemList) {
+    orderItem.setOrderId(order.getId());
+    orderItem.setOrderSn(order.getOrderSn());
+  }
+  orderItemDao.insertList(orderItemList);
+  if (orderParam.getCouponId() != null) {
+    updateCouponStatus(orderParam.getCouponId(),currentMember.getId(),1);
+  }
+  if (orderParam.getUseIntegration() != null) {
+    order.setUseIntegration(orderParam.getUseIntegration());
+    memberService.updateIntegration(currentMember.getId(),currentMember.getIntegration() - orderParam.getUseIntegration());
+  }
+  deleteCartItemList(cartPromotionItemList,currentMember);
+  sendDelayMessageCancelOrder(order.getId());
+  Map<String,Object> result=new HashMap<>();
+  result.put("order",order);
+  result.put("orderItemList",orderItemList);
+  return result;
+}

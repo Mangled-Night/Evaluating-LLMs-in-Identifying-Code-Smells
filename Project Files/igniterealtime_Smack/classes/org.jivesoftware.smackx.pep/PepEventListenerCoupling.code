@@ -1,0 +1,18 @@
+private static final class PepEventListenerCoupling<E extends ExtensionElement> {
+  private final String node;
+  private final Class<E> extensionElementType;
+  private final PepEventListener<E> pepEventListener;
+  private PepEventListenerCoupling(  String node,  Class<E> extensionElementType,  PepEventListener<E> pepEventListener){
+    this.node=node;
+    this.extensionElementType=extensionElementType;
+    this.pepEventListener=pepEventListener;
+  }
+  private void invoke(  EntityBareJid from,  ExtensionElement payload,  String id,  Message carrierMessage){
+    if (!extensionElementType.isInstance(payload)) {
+      LOGGER.warning("Ignoring " + payload + " from "+ carrierMessage+ " as it is not of type "+ extensionElementType);
+      return;
+    }
+    E extensionElementPayload=extensionElementType.cast(payload);
+    pepEventListener.onPepEvent(from,extensionElementPayload,id,carrierMessage);
+  }
+}

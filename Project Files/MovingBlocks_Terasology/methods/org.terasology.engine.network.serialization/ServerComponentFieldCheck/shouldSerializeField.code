@@ -1,0 +1,11 @@
+@Override public boolean shouldSerializeField(ReplicatedFieldMetadata<?,?> field,Component object){
+  return shouldSerializeField(field,object,false);
+}
+@Override public boolean shouldSerializeField(ReplicatedFieldMetadata<?,?> field,Component component,boolean componentInitial){
+  boolean initial=entityInitial || componentInitial;
+  boolean result=field.isReplicated() && (initial || !field.getReplicationInfo().initialOnly() && (field.getReplicationInfo().value() == FieldReplicateType.SERVER_TO_CLIENT || (field.getReplicationInfo().value() == FieldReplicateType.SERVER_TO_OWNER && owned) || (field.getReplicationInfo().value().isReplicateFromOwner() && !owned)));
+  if (result && component instanceof ReplicationCheck) {
+    return ((ReplicationCheck)component).shouldReplicate(field,initial,owned);
+  }
+  return result;
+}

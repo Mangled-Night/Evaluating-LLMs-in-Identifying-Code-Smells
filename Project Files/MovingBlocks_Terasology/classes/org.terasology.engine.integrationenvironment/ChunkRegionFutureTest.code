@@ -1,0 +1,19 @@
+@IntegrationEnvironment(networkMode=NetworkMode.LISTEN_SERVER) class ChunkRegionFutureTest {
+  Vector3fc center=new Vector3f(2021,DummyWorldGenerator.SURFACE_HEIGHT,1117);
+  Vector3ic sizeInChunks=new Vector3i(9,3,5);
+  @In WorldProvider world;
+  @Test void createChunkRegionFuture(  EntityManager entityManager,  RelevanceSystem relevanceSystem,  MainLoop mainLoop){
+    ChunkRegionFuture chunkRegionFuture=ChunkRegionFuture.create(entityManager,relevanceSystem,center,sizeInChunks);
+    mainLoop.runUntil(chunkRegionFuture.getFuture());
+    Vector3fc someplaceInside=center.add(sizeInChunks.x() * Chunks.SIZE_X / 3f,0,0,new Vector3f());
+    Vector3fc someplaceOutside=center.add(0,0,sizeInChunks.z() * Chunks.SIZE_Z * 3f,new Vector3f());
+    Block blockAtCenter=world.getBlock(center);
+    Block blockInside=world.getBlock(someplaceInside);
+    Block blockOutside=world.getBlock(someplaceOutside);
+    assertThat(blockAtCenter).isNotNull();
+    assertThat(blockAtCenter.getURI()).isEqualTo(AIR_ID);
+    assertThat(blockInside).isNotNull();
+    assertThat(blockInside.getURI()).isEqualTo(AIR_ID);
+    assertThat(blockOutside.getURI()).isEqualTo(UNLOADED_ID);
+  }
+}

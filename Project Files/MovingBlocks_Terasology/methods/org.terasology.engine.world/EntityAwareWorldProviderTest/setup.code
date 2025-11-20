@@ -1,0 +1,25 @@
+@BeforeEach public void setup() throws Exception {
+  super.setup();
+  GameThread.setToCurrentThread();
+  this.entityManager=context.get(EngineEntityManager.class);
+  AssetManager assetManager=context.get(AssetManager.class);
+  BlockManager blockManager=context.get(BlockManager.class);
+  airBlock=blockManager.getBlock(BlockManager.AIR_ID);
+  worldStub=new WorldProviderCoreStub(airBlock);
+  worldProvider=new EntityAwareWorldProvider(worldStub,context);
+  plainBlock=createBlock("test:plainblock",assetManager,blockManager);
+  prefabWithString=createPrefabWithString("test:prefabWithString","Test",assetManager);
+  blockWithString=createBlockWithPrefab("test:blockWithString",prefabWithString,false,assetManager,blockManager);
+  keepActiveBlock=createBlockWithPrefab("test:keepActiveBlock",prefabWithString,true,assetManager,blockManager);
+  Prefab prefabWithDifferentString=createPrefabWithString("test:prefabWithDifferentString","Test2",assetManager);
+  blockWithDifferentString=createBlockWithPrefab("test:prefabWithDifferentString",prefabWithDifferentString,false,assetManager,blockManager);
+  BlockFamily blockFamily=createBlockFamily("test:blockFamily",prefabWithString,assetManager,blockManager);
+  Iterator<Block> iterator=blockFamily.getBlocks().iterator();
+  blockInFamilyOne=iterator.next();
+  blockInFamilyTwo=iterator.next();
+  PrefabData retainedPrefabData=new PrefabData();
+  retainedPrefabData.addComponent(new RetainedOnBlockChangeComponent(3));
+  Prefab retainedPrefab=assetManager.loadAsset(new ResourceUrn("test:retainedPrefab"),retainedPrefabData,Prefab.class);
+  blockWithRetainedComponent=createBlockWithPrefab("test:blockWithRetainedComponent",retainedPrefab,false,assetManager,blockManager);
+  worldProvider.initialise();
+}

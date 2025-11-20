@@ -1,0 +1,45 @@
+/** 
+ * 移除执行语句中的数据库名
+ * @param stmt		 执行语句
+ * @param schema  	数据库名
+ * @return 			执行语句
+ * @author mycat
+ * @modification 修正移除schema的方法
+ * @date 2016/12/29
+ * @modifiedBy Hash Zhang
+ */
+public static String removeSchema(String stmt,String schema){
+  final String upStmt=stmt.toUpperCase();
+  final String upSchema=schema.toUpperCase() + ".";
+  final String upSchema2=new StringBuilder("`").append(schema.toUpperCase()).append("`.").toString();
+  int strtPos=0;
+  int indx=0;
+  int indx1=upStmt.indexOf(upSchema,strtPos);
+  int indx2=upStmt.indexOf(upSchema2,strtPos);
+  boolean flag=indx1 < indx2 ? indx1 == -1 : indx2 != -1;
+  indx=!flag ? indx1 > 0 ? indx1 : indx2 : indx2 > 0 ? indx2 : indx1;
+  if (indx < 0) {
+    return stmt;
+  }
+  int firstE=upStmt.indexOf("'");
+  int endE=upStmt.lastIndexOf("'");
+  StringBuilder sb=new StringBuilder();
+  while (indx > 0) {
+    sb.append(stmt.substring(strtPos,indx));
+    if (flag) {
+      strtPos=indx + upSchema2.length();
+    }
+ else {
+      strtPos=indx + upSchema.length();
+    }
+    if (indx > firstE && indx < endE && countChar(stmt,indx) % 2 == 1) {
+      sb.append(stmt.substring(indx,indx + schema.length() + 1));
+    }
+    indx1=upStmt.indexOf(upSchema,strtPos);
+    indx2=upStmt.indexOf(upSchema2,strtPos);
+    flag=indx1 < indx2 ? indx1 == -1 : indx2 != -1;
+    indx=!flag ? indx1 > 0 ? indx1 : indx2 : indx2 > 0 ? indx2 : indx1;
+  }
+  sb.append(stmt.substring(strtPos));
+  return sb.toString();
+}

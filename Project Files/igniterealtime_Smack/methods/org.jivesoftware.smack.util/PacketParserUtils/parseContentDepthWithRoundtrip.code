@@ -1,0 +1,38 @@
+private static XmlStringBuilder parseContentDepthWithRoundtrip(XmlPullParser parser,int depth) throws XmlPullParserException, IOException {
+  XmlStringBuilder sb=new XmlStringBuilder();
+  XmlPullParser.Event event=parser.getEventType();
+  boolean startElementJustSeen=false;
+  outerloop:   while (true) {
+switch (event) {
+case START_ELEMENT:
+      startElementJustSeen=true;
+    String openElementTag=parser.getText();
+  sb.append(openElementTag);
+break;
+case END_ELEMENT:
+boolean isEmptyElement=false;
+if (startElementJustSeen) {
+isEmptyElement=true;
+startElementJustSeen=false;
+}
+if (!isEmptyElement) {
+String text=parser.getText();
+sb.append(text);
+}
+if (parser.getDepth() <= depth) {
+break outerloop;
+}
+break;
+default :
+startElementJustSeen=false;
+CharSequence text=parser.getText();
+if (event == XmlPullParser.Event.TEXT_CHARACTERS) {
+text=StringUtils.escapeForXml(text);
+}
+sb.append(text);
+break;
+}
+event=parser.next();
+}
+return sb;
+}

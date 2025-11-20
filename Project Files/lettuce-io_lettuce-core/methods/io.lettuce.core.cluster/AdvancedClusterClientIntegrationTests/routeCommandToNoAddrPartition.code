@@ -1,0 +1,17 @@
+@Test @Inject void routeCommandToNoAddrPartition(@New StatefulRedisClusterConnection<String,String> connectionUnderTest){
+  RedisAdvancedClusterCommands<String,String> sync=connectionUnderTest.sync();
+  try {
+    Partitions partitions=clusterClient.getPartitions();
+    for (    RedisClusterNode partition : partitions) {
+      partition.setUri(RedisURI.create("redis://non.existent.host:1234"));
+    }
+    sync.set("A","value");
+  }
+ catch (  Exception e) {
+    assertThat(e).isInstanceOf(RedisException.class).hasMessageContaining("Unable to connect to");
+  }
+ finally {
+    clusterClient.getPartitions().clear();
+    clusterClient.reloadPartitions();
+  }
+}

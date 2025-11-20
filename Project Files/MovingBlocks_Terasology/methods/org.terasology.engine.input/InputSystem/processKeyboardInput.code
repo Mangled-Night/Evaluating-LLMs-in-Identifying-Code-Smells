@@ -1,0 +1,21 @@
+/** 
+ * Processes input actions by keyboard buttons, sends key events and updates bind buttons accordingly.
+ * @param delta The length of the current frame.
+ */
+private void processKeyboardInput(float delta){
+  Queue<RawKeyboardAction> keyQueue=keyboard.getInputQueue();
+  keyQueue.addAll(simulatedKeys);
+  simulatedKeys.clear();
+  for (  RawKeyboardAction action : keyQueue) {
+    boolean consumed=sendKeyEvent(action.getInput(),action.getState(),delta);
+    BindableButton bind=bindsManager.getKeyBinds().get(action.getInput().getId());
+    if (bind != null && action.getState() != ButtonState.REPEAT) {
+      boolean pressed=action.getState() == ButtonState.DOWN;
+      updateBindState(bind,action.getInput(),pressed,delta,consumed);
+    }
+  }
+  Queue<CharKeyboardAction> charQueue=keyboard.getCharInputQueue();
+  charQueue.addAll(simulatedTextInput);
+  simulatedTextInput.clear();
+  charQueue.forEach((action) -> sendCharEvent(action.getCharacter(),delta));
+}

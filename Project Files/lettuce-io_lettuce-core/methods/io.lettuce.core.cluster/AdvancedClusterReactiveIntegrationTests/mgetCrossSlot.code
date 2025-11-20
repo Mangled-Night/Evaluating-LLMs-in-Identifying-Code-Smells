@@ -1,0 +1,9 @@
+@Test void mgetCrossSlot(){
+  msetCrossSlot();
+  Map<Integer,List<String>> partitioned=SlotHash.partition(StringCodec.UTF8,KeysAndValues.KEYS);
+  assertThat(partitioned.size()).isGreaterThan(100);
+  Flux<KeyValue<String,String>> flux=commands.mget(KeysAndValues.KEYS.toArray(new String[KeysAndValues.COUNT]));
+  List<KeyValue<String,String>> result=flux.collectList().block();
+  assertThat(result).hasSize(KeysAndValues.COUNT);
+  assertThat(result.stream().map(Value::getValue).collect(Collectors.toList())).isEqualTo(KeysAndValues.VALUES);
+}

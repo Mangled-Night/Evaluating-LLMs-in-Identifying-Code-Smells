@@ -1,0 +1,24 @@
+public <T>ObjectConstructor<T> get(TypeInfo<T> typeInfo){
+  final Type type=typeInfo.getType();
+  final Class<T> rawType=typeInfo.getRawType();
+  @SuppressWarnings("unchecked") final InstanceCreator<T> typeCreator=(InstanceCreator<T>)instanceCreators.get(type);
+  if (typeCreator != null) {
+    return () -> typeCreator.createInstance(type);
+  }
+  @SuppressWarnings("unchecked") final InstanceCreator<T> rawTypeCreator=(InstanceCreator<T>)instanceCreators.get(rawType);
+  if (rawTypeCreator != null) {
+    return () -> rawTypeCreator.createInstance(type);
+  }
+  return AccessController.doPrivileged((PrivilegedAction<ObjectConstructor<T>>)() -> {
+    ObjectConstructor<T> defaultConstructor=newNoArgConstructor(rawType);
+    if (defaultConstructor != null) {
+      return defaultConstructor;
+    }
+    ObjectConstructor<T> defaultImplementation=newDefaultConstructor(typeInfo);
+    if (defaultImplementation != null) {
+      return defaultImplementation;
+    }
+    return newUnsafeAllocator(typeInfo);
+  }
+);
+}

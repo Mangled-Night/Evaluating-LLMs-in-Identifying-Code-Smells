@@ -1,0 +1,29 @@
+@Test void testLoadSingleChunkWithBlockLifecycle() throws InterruptedException, ExecutionException, TimeoutException {
+  Vector3i chunkPosition=new Vector3i(0,0,0);
+  Chunk chunk=new ChunkImpl(chunkPosition,blockManager,extraDataManager);
+  generator.createChunk(chunk,null);
+  storageManager.add(chunk);
+  blockAtBlockManager.setLifecycleEventsRequired(true);
+  blockAtBlockManager.setEntity(mock(EntityRef.class));
+  requestCreatingOrLoadingArea(chunkPosition).get(WAIT_CHUNK_IS_READY_IN_SECONDS,TimeUnit.SECONDS);
+  chunkProvider.update();
+  Assertions.assertTrue(((TestChunkStore)storageManager.loadChunkStore(chunkPosition)).isEntityRestored(),"Entities must be restored by loading");
+  final ArgumentCaptor<Event> eventArgumentCaptor=ArgumentCaptor.forClass(Event.class);
+  verify(worldEntity,atLeast(1)).send(eventArgumentCaptor.capture());
+  Event mustBeOnLoadedEvent=eventArgumentCaptor.getAllValues().get(0);
+  Assertions.assertTrue(mustBeOnLoadedEvent instanceof OnChunkLoaded,"Second world event must be OnChunkLoaded");
+  Assertions.assertEquals(chunkPosition,((OnChunkLoaded)mustBeOnLoadedEvent).getChunkPos(),"Chunk position at event not expected");
+  final ArgumentCaptor<Event> blockEventCaptor=ArgumentCaptor.forClass(Event.class);
+  verify(blockAtBlockManager.getEntity(),atLeast(2)).send(blockEventCaptor.capture());
+  Assertions.assertAll("Block events not valid",() -> {
+    Event mustBeOnAddedBlocks=blockEventCaptor.getAllValues().get(0);
+    Assertions.assertTrue(mustBeOnAddedBlocks instanceof OnAddedBlocks,"First block event must be OnAddedBlocks");
+    Assertions.assertTrue(((OnAddedBlocks)mustBeOnAddedBlocks).blockCount() > 0,"Block count on activate must be non zero");
+  }
+,() -> {
+    Event mustBeOnActivatedBlocks=blockEventCaptor.getAllValues().get(1);
+    Assertions.assertTrue(mustBeOnActivatedBlocks instanceof OnActivatedBlocks,"First block event must be OnActivatedBlocks");
+    Assertions.assertTrue(((OnActivatedBlocks)mustBeOnActivatedBlocks).blockCount() > 0,"Block count on activate must be non zero");
+  }
+);
+}

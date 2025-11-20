@@ -1,0 +1,21 @@
+private static void addAndCheckNonExistent(Set<Class<? extends StateDescriptor>> set,String clazzName){
+  Class<?> clazz;
+  try {
+    clazz=Class.forName(clazzName);
+  }
+ catch (  ClassNotFoundException e) {
+    LOGGER.log(Level.FINEST,"Ignoring unknown state descriptor '" + clazzName + "'",e);
+    return;
+  }
+  if (!StateDescriptor.class.isAssignableFrom(clazz)) {
+    throw new IllegalArgumentException(clazz + " is no state descriptor class");
+  }
+  Class<? extends StateDescriptor> stateDescriptorClass=clazz.asSubclass(StateDescriptor.class);
+  addAndCheckNonExistent(set,stateDescriptorClass);
+}
+private static <E>void addAndCheckNonExistent(Set<E> set,E e){
+  boolean newElement=set.add(e);
+  if (!newElement) {
+    throw new IllegalArgumentException("Element already exists in set");
+  }
+}

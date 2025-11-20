@@ -1,0 +1,48 @@
+private void incomingChatMessageListener(final EntityBareJid from,final Message message,Chat chat){
+  Async.go(new Runnable(){
+    @Override public void run(){
+      OpenPgpElement element=message.getExtension(OpenPgpElement.class);
+      if (element == null) {
+        return;
+      }
+      OpenPgpContact contact=getOpenPgpContact(from);
+      OpenPgpMessage decrypted=null;
+      OpenPgpContentElement contentElement=null;
+      try {
+        decrypted=decryptOpenPgpElement(element,contact);
+        contentElement=decrypted.getOpenPgpContentElement();
+      }
+ catch (      PGPException e) {
+        LOGGER.log(Level.WARNING,"Could not decrypt incoming OpenPGP encrypted message",e);
+      }
+catch (      XmlPullParserException|IOException e) {
+        LOGGER.log(Level.WARNING,"Invalid XML content of incoming OpenPGP encrypted message",e);
+      }
+catch (      SmackException.NotLoggedInException e) {
+        LOGGER.log(Level.WARNING,"Cannot determine our JID, since we are not logged in.",e);
+      }
+      if (contentElement instanceof SigncryptElement) {
+        for (        SigncryptElementReceivedListener l : signcryptElementReceivedListeners) {
+          l.signcryptElementReceived(contact,message,(SigncryptElement)contentElement,decrypted.getMetadata());
+        }
+        return;
+      }
+      if (contentElement instanceof SignElement) {
+        for (        SignElementReceivedListener l : signElementReceivedListeners) {
+          l.signElementReceived(contact,message,(SignElement)contentElement,decrypted.getMetadata());
+        }
+        return;
+      }
+      if (contentElement instanceof CryptElement) {
+        for (        CryptElementReceivedListener l : cryptElementReceivedListeners) {
+          l.cryptElementReceived(contact,message,(CryptElement)contentElement,decrypted.getMetadata());
+        }
+        return;
+      }
+ else {
+        throw new AssertionError("Invalid element received: " + contentElement.getClass().getName());
+      }
+    }
+  }
+);
+}

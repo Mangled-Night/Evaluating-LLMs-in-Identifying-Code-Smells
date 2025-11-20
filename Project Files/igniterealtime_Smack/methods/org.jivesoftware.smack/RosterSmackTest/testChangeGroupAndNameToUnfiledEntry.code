@@ -1,0 +1,32 @@
+/** 
+ * 1. Create an unfiled entry with no name 2. Check that the the entry does not belong to any group 3. Change its name and add it to a group 4. Check that the name has been modified and that the entry belongs to a group
+ */
+public void testChangeGroupAndNameToUnfiledEntry(){
+  try {
+    Roster roster=getConnection(0).getRoster();
+    roster.createEntry(getBareJID(1),null,null);
+    Thread.sleep(500);
+    getConnection(1).getRoster().createEntry(getBareJID(0),null,null);
+    long initial=System.currentTimeMillis();
+    while (System.currentTimeMillis() - initial < 5000 && !roster.getPresence(getBareJID(0)).isAvailable()) {
+      Thread.sleep(100);
+    }
+    for (    RosterEntry entry : roster.getEntries()) {
+      assertFalse("The roster entry belongs to a group",!entry.getGroups().isEmpty());
+    }
+    roster.createEntry(getBareJID(1),"NewName",new String[]{"Friends"});
+    Thread.sleep(200);
+    for (    RosterEntry entry : roster.getEntries()) {
+      assertEquals("Name of roster entry is wrong","NewName",entry.getName());
+      assertTrue("The roster entry does not belong to any group",!entry.getGroups().isEmpty());
+    }
+    initial=System.currentTimeMillis();
+    while (System.currentTimeMillis() - initial < 5000 && !roster.getPresence(getBareJID(1)).isAvailable()) {
+      Thread.sleep(100);
+    }
+    assertTrue("Presence not received",roster.getPresence(getBareJID(1)).isAvailable());
+  }
+ catch (  Exception e) {
+    fail(e.getMessage());
+  }
+}

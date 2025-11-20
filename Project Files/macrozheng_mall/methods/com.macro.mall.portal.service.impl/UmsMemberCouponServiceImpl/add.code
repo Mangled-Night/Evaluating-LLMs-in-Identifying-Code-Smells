@@ -1,0 +1,32 @@
+@Override public void add(Long couponId){
+  UmsMember currentMember=memberService.getCurrentMember();
+  SmsCoupon coupon=couponMapper.selectByPrimaryKey(couponId);
+  if (coupon == null) {
+    Asserts.fail("优惠券不存在");
+  }
+  if (coupon.getCount() <= 0) {
+    Asserts.fail("优惠券已经领完了");
+  }
+  Date now=new Date();
+  if (now.before(coupon.getEnableTime())) {
+    Asserts.fail("优惠券还没到领取时间");
+  }
+  SmsCouponHistoryExample couponHistoryExample=new SmsCouponHistoryExample();
+  couponHistoryExample.createCriteria().andCouponIdEqualTo(couponId).andMemberIdEqualTo(currentMember.getId());
+  long count=couponHistoryMapper.countByExample(couponHistoryExample);
+  if (count >= coupon.getPerLimit()) {
+    Asserts.fail("您已经领取过该优惠券");
+  }
+  SmsCouponHistory couponHistory=new SmsCouponHistory();
+  couponHistory.setCouponId(couponId);
+  couponHistory.setCouponCode(generateCouponCode(currentMember.getId()));
+  couponHistory.setCreateTime(now);
+  couponHistory.setMemberId(currentMember.getId());
+  couponHistory.setMemberNickname(currentMember.getNickname());
+  couponHistory.setGetType(1);
+  couponHistory.setUseStatus(0);
+  couponHistoryMapper.insert(couponHistory);
+  coupon.setCount(coupon.getCount() - 1);
+  coupon.setReceiveCount(coupon.getReceiveCount() == null ? 1 : coupon.getReceiveCount() + 1);
+  couponMapper.updateByPrimaryKey(coupon);
+}

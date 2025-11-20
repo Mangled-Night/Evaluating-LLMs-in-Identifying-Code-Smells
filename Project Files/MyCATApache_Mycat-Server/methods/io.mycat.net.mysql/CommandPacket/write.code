@@ -1,0 +1,24 @@
+public void write(OutputStream out) throws IOException {
+  StreamUtil.writeUB3(out,calcPacketSize());
+  StreamUtil.write(out,packetId);
+  StreamUtil.write(out,command);
+  out.write(arg);
+}
+@Override public void write(BackendAIOConnection c){
+  ByteBuffer buffer=c.allocate();
+  try {
+    BufferUtil.writeUB3(buffer,calcPacketSize());
+    buffer.put(packetId);
+    buffer.put(command);
+    buffer=c.writeToBuffer(arg,buffer);
+    c.write(buffer);
+  }
+ catch (  java.nio.BufferOverflowException e1) {
+    buffer=c.checkWriteBuffer(buffer,c.getPacketHeaderSize() + calcPacketSize(),false);
+    BufferUtil.writeUB3(buffer,calcPacketSize());
+    buffer.put(packetId);
+    buffer.put(command);
+    buffer=c.writeToBuffer(arg,buffer);
+    c.write(buffer);
+  }
+}

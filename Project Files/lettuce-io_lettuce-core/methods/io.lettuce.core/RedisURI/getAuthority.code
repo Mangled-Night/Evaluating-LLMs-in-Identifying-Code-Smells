@@ -1,0 +1,44 @@
+private String getAuthority(String scheme,boolean maskCredentials){
+  String authority=null;
+  if (host != null) {
+    if (host.contains(",")) {
+      authority=host;
+    }
+ else {
+      authority=urlEncode(host) + getPortPart(port,scheme);
+    }
+  }
+  if (sentinels.size() != 0) {
+    authority=sentinels.stream().map(redisURI -> {
+      if (LettuceStrings.isNotEmpty(redisURI.getSocket())) {
+        return String.format("[Socket %s]",redisURI.getSocket());
+      }
+      return urlEncode(redisURI.getHost()) + getPortPart(redisURI.getPort(),scheme);
+    }
+).collect(Collectors.joining(","));
+  }
+  if (socket != null) {
+    authority=urlEncode(socket);
+  }
+ else {
+    if (database != 0) {
+      authority+="/" + database;
+    }
+  }
+  if (credentialsProvider != null) {
+    if (!maskCredentials) {
+      authority=urlEncode("**credentialsProvider**") + "@" + authority;
+    }
+  }
+ else {
+    String username=getUsername();
+    char[] password=getPassword();
+    if (password != null && password.length != 0) {
+      authority=urlEncode(maskCredentials ? IntStream.range(0,password.length).mapToObj(ignore -> "*").collect(Collectors.joining()) : new String(password)) + "@" + authority;
+    }
+    if (username != null) {
+      authority=urlEncode(username) + ":" + authority;
+    }
+  }
+  return authority;
+}

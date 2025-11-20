@@ -1,0 +1,23 @@
+public R waitForResult(long timeout) throws E, InterruptedException, TimeoutException {
+synchronized (this) {
+    if (result != null) {
+      return result;
+    }
+    if (exception != null) {
+      throw exception;
+    }
+    final long deadline=System.currentTimeMillis() + timeout;
+    while (result == null && exception == null) {
+      final long now=System.currentTimeMillis();
+      if (now >= deadline)       break;
+      wait(deadline - now);
+    }
+  }
+  if (result != null) {
+    return result;
+  }
+  if (exception != null) {
+    throw exception;
+  }
+  throw new TimeoutException("Timeout expired");
+}

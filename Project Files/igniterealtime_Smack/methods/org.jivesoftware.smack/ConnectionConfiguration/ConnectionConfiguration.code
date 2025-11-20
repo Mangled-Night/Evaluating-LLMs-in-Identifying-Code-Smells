@@ -1,0 +1,44 @@
+protected ConnectionConfiguration(Builder<?,?> builder){
+  try {
+    smackTlsContext=getSmackTlsContext(builder.dnssecMode,builder.sslContextFactory,builder.customX509TrustManager,builder.keyManagers,builder.sslContextSecureRandom,builder.keystoreType,builder.keystorePath,builder.callbackHandler,builder.pkcs11Library);
+  }
+ catch (  UnrecoverableKeyException|KeyManagementException|NoSuchAlgorithmException|CertificateException|KeyStoreException|NoSuchProviderException|IOException|NoSuchMethodException|SecurityException|ClassNotFoundException|InstantiationException|IllegalAccessException|IllegalArgumentException|InvocationTargetException|UnsupportedCallbackException e) {
+    throw new IllegalArgumentException(e);
+  }
+  authzid=builder.authzid;
+  username=builder.username;
+  password=builder.password;
+  callbackHandler=builder.callbackHandler;
+  resource=builder.resource;
+  language=builder.language;
+  xmppServiceDomain=builder.xmppServiceDomain;
+  if (xmppServiceDomain == null) {
+    throw new IllegalArgumentException("Must define the XMPP domain");
+  }
+  DnsName xmppServiceDomainDnsName;
+  try {
+    xmppServiceDomainDnsName=DnsName.from(xmppServiceDomain);
+  }
+ catch (  InvalidDnsNameException e) {
+    LOGGER.log(Level.INFO,"Could not transform XMPP service domain '" + xmppServiceDomain + "' to a DNS name. TLS X.509 certificate validiation may not be possible.",e);
+    xmppServiceDomainDnsName=null;
+  }
+  this.xmppServiceDomainDnsName=xmppServiceDomainDnsName;
+  hostAddress=builder.hostAddress;
+  host=builder.host;
+  port=builder.port;
+  proxy=builder.proxy;
+  socketFactory=builder.socketFactory;
+  dnssecMode=builder.dnssecMode;
+  securityMode=builder.securityMode;
+  enabledSSLProtocols=builder.enabledSSLProtocols;
+  enabledSSLCiphers=builder.enabledSSLCiphers;
+  hostnameVerifier=builder.hostnameVerifier;
+  sendPresence=builder.sendPresence;
+  debuggerFactory=builder.debuggerFactory;
+  allowNullOrEmptyUsername=builder.allowEmptyOrNullUsername;
+  enabledSaslMechanisms=builder.enabledSaslMechanisms;
+  compressionEnabled=builder.compressionEnabled;
+  stanzaIdSourceFactory=builder.stanzaIdSourceFactory;
+  assert enabledSaslMechanisms == null || !enabledSaslMechanisms.isEmpty();
+}

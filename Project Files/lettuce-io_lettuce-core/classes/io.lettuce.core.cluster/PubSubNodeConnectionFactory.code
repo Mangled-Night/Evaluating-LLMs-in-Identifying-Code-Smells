@@ -1,0 +1,11 @@
+@SuppressWarnings("unchecked") class PubSubNodeConnectionFactory extends AbstractClusterNodeConnectionFactory<K,V> {
+  PubSubNodeConnectionFactory(  ClientResources clientResources){
+    super(clientResources);
+  }
+  @Override public ConnectionFuture<StatefulRedisConnection<K,V>> apply(  ConnectionKey key){
+    if (key.nodeId != null) {
+      return redisClusterClient.connectPubSubToNodeAsync((RedisCodec)redisCodec,key.nodeId,getSocketAddressSupplier(key));
+    }
+    return redisClusterClient.connectPubSubToNodeAsync((RedisCodec)redisCodec,key.host + ":" + key.port,getSocketAddressSupplier(key));
+  }
+}

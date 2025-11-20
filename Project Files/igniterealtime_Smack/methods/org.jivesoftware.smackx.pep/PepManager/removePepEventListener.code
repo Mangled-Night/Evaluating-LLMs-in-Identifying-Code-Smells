@@ -1,0 +1,15 @@
+public boolean removePepEventListener(PepEventListener<?> pepEventListener){
+synchronized (pepEventListeners) {
+    PepEventListenerCoupling<?> pepEventListenerCoupling=listenerToCouplingMap.remove(pepEventListener);
+    if (pepEventListenerCoupling == null) {
+      return false;
+    }
+    String node=pepEventListenerCoupling.node;
+    boolean mappingExisted=pepEventListeners.removeOne(node,pepEventListenerCoupling);
+    assert mappingExisted;
+    if (!pepEventListeners.containsKey(pepEventListenerCoupling.node)) {
+      serviceDiscoveryManager.removeFeature(node + PubSubManager.PLUS_NOTIFY);
+    }
+  }
+  return true;
+}

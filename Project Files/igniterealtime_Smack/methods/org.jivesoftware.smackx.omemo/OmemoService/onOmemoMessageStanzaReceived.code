@@ -1,0 +1,68 @@
+@Override public void onOmemoMessageStanzaReceived(Stanza stanza,OmemoManager.LoggedInOmemoManager managerGuard) throws IOException {
+  OmemoManager manager=managerGuard.get();
+synchronized (manager) {
+    OmemoDevice userDevice=manager.getOwnDevice();
+    OmemoElement element=(OmemoElement)stanza.getExtensionElement(OmemoElement.NAME_ENCRYPTED,OmemoElement_VAxolotl.NAMESPACE);
+    if (element == null) {
+      return;
+    }
+    OmemoMessage.Received decrypted;
+    BareJid sender;
+    try {
+      MultiUserChat muc=getMuc(manager.getConnection(),stanza.getFrom());
+      if (muc != null) {
+        Occupant occupant=muc.getOccupant(stanza.getFrom().asEntityFullJidIfPossible());
+        if (occupant == null) {
+          LOGGER.log(Level.WARNING,"Cannot decrypt OMEMO MUC message; MUC Occupant is null.");
+          return;
+        }
+        Jid occupantJid=occupant.getJid();
+        if (occupantJid == null) {
+          LOGGER.log(Level.WARNING,"Cannot decrypt OMEMO MUC message; Senders Jid is null. " + stanza.getFrom());
+          return;
+        }
+        sender=occupantJid.asBareJid();
+        decrypted=decryptMessage(managerGuard,sender,element);
+        manager.notifyOmemoMucMessageReceived(muc,stanza,decrypted);
+      }
+ else {
+        sender=stanza.getFrom().asBareJid();
+        decrypted=decryptMessage(managerGuard,sender,element);
+        manager.notifyOmemoMessageReceived(stanza,decrypted);
+      }
+      if (decrypted.isPreKeyMessage() && OmemoConfiguration.getCompleteSessionWithEmptyMessage()) {
+        LOGGER.log(Level.FINE,"Received a preKeyMessage from " + decrypted.getSenderDevice() + ".\n"+ "Complete the session by sending an empty response message.");
+        try {
+          sendRatchetUpdate(managerGuard,decrypted.getSenderDevice());
+        }
+ catch (        CannotEstablishOmemoSessionException e) {
+          throw new AssertionError("Since we successfully received a message, we MUST be able to " + "establish a session. " + e);
+        }
+catch (        NoSuchAlgorithmException|InterruptedException|SmackException.NotConnectedException|SmackException.NoResponseException e) {
+          LOGGER.log(Level.WARNING,"Cannot send a ratchet update message.",e);
+        }
+      }
+    }
+ catch (    NoRawSessionException e) {
+      OmemoDevice device=e.getDeviceWithoutSession();
+      LOGGER.log(Level.WARNING,"No raw session found for contact " + device + ". ",e);
+      if (OmemoConfiguration.getRepairBrokenSessionsWithPreKeyMessages()) {
+        repairBrokenSessionWithPreKeyMessage(managerGuard,device);
+      }
+    }
+catch (    CorruptedOmemoKeyException|CryptoFailedException e) {
+      LOGGER.log(Level.WARNING,"Could not decrypt incoming message: ",e);
+    }
+    if (getOmemoStoreBackend().loadOmemoPreKeys(userDevice).size() < OmemoConstants.PRE_KEY_COUNT_PER_BUNDLE) {
+      LOGGER.log(Level.FINE,"We used up a preKey. Upload a fresh bundle.");
+      try {
+        getOmemoStoreBackend().replenishKeys(userDevice);
+        OmemoBundleElement bundleElement=getOmemoStoreBackend().packOmemoBundle(userDevice);
+        publishBundle(manager.getConnection(),userDevice,bundleElement);
+      }
+ catch (      CorruptedOmemoKeyException|InterruptedException|SmackException.NoResponseException|SmackException.NotConnectedException|XMPPException.XMPPErrorException|NotALeafNodeException e) {
+        LOGGER.log(Level.WARNING,"Could not republish replenished bundle.",e);
+      }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+public ConfigInitializer(boolean loadDataHost){
+  SchemaLoader schemaLoader=new XMLSchemaLoader();
+  XMLConfigLoader configLoader=new XMLConfigLoader(schemaLoader);
+  schemaLoader=null;
+  this.system=configLoader.getSystemConfig();
+  this.users=configLoader.getUserConfigs();
+  this.schemas=configLoader.getSchemaConfigs();
+  if (loadDataHost) {
+    this.dataHosts=initDataHosts(configLoader);
+    this.dataNodes=initDataNodes(configLoader);
+  }
+  this.firewall=configLoader.getFirewallConfig();
+  this.cluster=initCobarCluster(configLoader);
+  if (system.getSequenceHandlerType() == SystemConfig.SEQUENCEHANDLER_MYSQLDB) {
+    IncrSequenceMySQLHandler.getInstance().load();
+  }
+  if (system.getSequenceHandlerType() == SystemConfig.SEQUENCEHANDLER_LOCAL_TIME) {
+    IncrSequenceTimeHandler.getInstance().load();
+  }
+  if (system.getSequenceHandlerType() == SystemConfig.SEQUENCEHANDLER_ZK_DISTRIBUTED) {
+    DistributedSequenceHandler.getInstance(system).load();
+  }
+  if (system.getSequenceHandlerType() == SystemConfig.SEQUENCEHANDLER_ZK_GLOBAL_INCREMENT) {
+    IncrSequenceZKHandler.getInstance().load();
+  }
+  this.selfChecking0();
+}

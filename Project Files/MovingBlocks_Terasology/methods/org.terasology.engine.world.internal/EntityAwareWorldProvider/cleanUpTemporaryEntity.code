@@ -1,0 +1,32 @@
+private void cleanUpTemporaryEntity(EntityRef entity){
+  Prefab prefab=entity.getParentPrefab();
+  for (  Component comp : entity.iterateComponents()) {
+    if (!COMMON_BLOCK_COMPONENTS.contains(comp.getClass()) && (prefab == null || !prefab.hasComponent(comp.getClass()))) {
+      entity.removeComponent(comp.getClass());
+    }
+  }
+  entity.removeComponent(NetworkComponent.class);
+  if (prefab != null) {
+    for (    Component comp : prefab.iterateComponents()) {
+      Component currentComp=entity.getComponent(comp.getClass());
+      if (currentComp == null) {
+        entity.addComponent(entityManager.getComponentLibrary().copy(comp));
+      }
+ else {
+        ComponentMetadata<?> metadata=entityManager.getComponentLibrary().getMetadata(comp.getClass());
+        boolean changed=false;
+        for (        FieldMetadata field : metadata.getFields()) {
+          Object expected=field.getValue(comp);
+          if (!Objects.equal(expected,field.getValue(currentComp))) {
+            field.setValue(currentComp,expected);
+            changed=true;
+          }
+        }
+        if (changed) {
+          entity.saveComponent(currentComp);
+        }
+      }
+    }
+  }
+  entityManager.destroyEntityWithoutEvents(entity);
+}

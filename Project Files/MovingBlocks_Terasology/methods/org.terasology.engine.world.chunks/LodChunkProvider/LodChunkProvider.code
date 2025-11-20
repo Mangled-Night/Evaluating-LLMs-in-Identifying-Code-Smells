@@ -1,0 +1,15 @@
+public LodChunkProvider(ChunkProvider chunkProvider,BlockManager blockManager,ExtraBlockDataManager extraDataManager,ScalableWorldGenerator generator,ChunkTessellator tessellator){
+  this.chunkProvider=chunkProvider;
+  this.blockManager=blockManager;
+  this.extraDataManager=extraDataManager;
+  this.generator=generator;
+  this.tessellator=tessellator;
+  this.requiredChunks=new ConcurrentHashMap<>();
+  this.nearby=new ClosenessComparator(center);
+  this.neededChunks=new PriorityBlockingQueue<>(11,nearby);
+  for (int i=0; i < 4; i++) {
+    Thread thread=new Thread(this::createChunks,"LOD Chunk Generation " + i);
+    thread.start();
+    generationThreads.add(thread);
+  }
+}

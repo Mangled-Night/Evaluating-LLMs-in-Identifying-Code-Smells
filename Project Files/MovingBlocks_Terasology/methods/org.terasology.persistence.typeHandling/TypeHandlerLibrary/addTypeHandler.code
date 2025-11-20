@@ -1,0 +1,29 @@
+/** 
+ * Adds a  {@link TypeHandler} for the specified type to this {@link TypeHandlerLibrary} by adding to the library anew  {@link TypeHandlerFactory} that returns the {@link TypeHandler} whenever the {@link TypeHandler} for thespecified type is requested. <p> If the specified  {@link SerializationSandbox} does not allow the addition of the given {@link TypeHandler} forthe given type, the  {@link TypeHandler} is not added to the library and false is returned.
+ * @param typeClass The {@link Class} of the type handled by the {@link TypeHandler}.
+ * @param typeHandler The {@link TypeHandler} to add to the library.
+ * @param < T > The type handled by the {@link TypeHandler}.
+ * @return True if the {@link TypeHandler} was successfully added, false otherwise.
+ */
+public <T>boolean addTypeHandler(Class<T> typeClass,TypeHandler<T> typeHandler){
+  return addTypeHandler(TypeInfo.of(typeClass),typeHandler);
+}
+/** 
+ * Adds a  {@link TypeHandler} for the specified type to this {@link TypeHandlerLibrary} by adding to the library anew  {@link TypeHandlerFactory} that returns the {@link TypeHandler} whenever the {@link TypeHandler} for thespecified type is requested. <p> If the specified  {@link SerializationSandbox} does not allow the addition of the given {@link TypeHandler} forthe given type, the  {@link TypeHandler} is not added to the library and false is returned.
+ * @param < T > The type handled by the {@link TypeHandler}.
+ * @param type The {@link TypeInfo} of the type handled by the {@link TypeHandler}.
+ * @param typeHandler The {@link TypeHandler} to add to the library.
+ * @return True if the {@link TypeHandler} was successfully added, false otherwise.
+ */
+public <T>boolean addTypeHandler(TypeInfo<T> type,TypeHandler<T> typeHandler){
+  if (!sandbox.isValidTypeHandlerDeclaration(type,typeHandler)) {
+    return false;
+  }
+  addTypeHandlerFactory(new SpecificTypeHandlerFactory<T>(type){
+    @Override protected TypeHandler<T> createHandler(    TypeHandlerContext context){
+      return typeHandler;
+    }
+  }
+);
+  return true;
+}

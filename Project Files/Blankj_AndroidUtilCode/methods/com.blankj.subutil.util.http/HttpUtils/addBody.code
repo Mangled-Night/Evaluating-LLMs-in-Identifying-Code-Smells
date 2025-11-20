@@ -1,0 +1,23 @@
+private static void addBody(HttpURLConnection conn,Request.Body body) throws IOException {
+  if (body == null) {
+    conn.setRequestMethod("GET");
+  }
+ else {
+    conn.setRequestMethod("POST");
+    conn.setUseCaches(false);
+    conn.setDoOutput(true);
+    conn.setRequestProperty("content-type",body.mediaType);
+    if (body.length > 0) {
+      conn.setRequestProperty("content-length",String.valueOf(body.length));
+    }
+    BufferedOutputStream bos=new BufferedOutputStream(conn.getOutputStream(),10240);
+    if (body.bis != null) {
+      byte[] buffer=new byte[10240];
+      for (int len; (len=body.bis.read(buffer)) != -1; ) {
+        bos.write(buffer,0,len);
+      }
+      bos.close();
+      body.bis.close();
+    }
+  }
+}

@@ -1,0 +1,35 @@
+@IntegrationEnvironment @TestInstance(TestInstance.Lifecycle.PER_METHOD) public class LifecyclePerMethodInjectionTest {
+  @In private Context contextByFieldInjection;
+  @In private GameEngine engineByFieldInjection;
+  private GameEngine engineSeenByBeforeEach;
+  @BeforeAll static void checkingBeforeAllParameterInjection(){
+  }
+  @BeforeEach void checkingBeforeEachParameterInjection(  GameEngine engineParameter,  Context contextParameter){
+    assertThat(engineParameter).isNotNull();
+    assertThat(engineByFieldInjection).isNotNull();
+    assertThat(engineParameter).isEqualTo(engineByFieldInjection);
+    engineSeenByBeforeEach=engineParameter;
+    contextParameter.put(FromBeforeEach.class,new FromBeforeEach());
+    assertThat(contextByFieldInjection.getMaybe(FromBeforeEach.class)).isPresent();
+  }
+  @Test void testMethodParameterInjection(  GameEngine engineParameter,  Context contextParameter){
+    assertThat(engineParameter).isNotNull();
+    assertThat(engineParameter).isEqualTo(engineByFieldInjection);
+    assertThat(engineParameter).isEqualTo(engineSeenByBeforeEach);
+    assertThat(contextParameter.getMaybe(FromBeforeEach.class)).isPresent();
+    assertThat(contextByFieldInjection.getMaybe(FromBeforeEach.class)).isPresent();
+    assertThat(contextByFieldInjection.getMaybe(FromSecondMethod.class)).isEmpty();
+    contextParameter.put(FromFirstMethod.class,new FromFirstMethod());
+    assertThat(contextByFieldInjection.getMaybe(FromFirstMethod.class)).isPresent();
+  }
+  @Test void testSecondMethodIsNotPollutedByFirst(  Context contextParameter){
+    assertThat(contextByFieldInjection.getMaybe(FromFirstMethod.class)).isEmpty();
+    contextParameter.put(FromSecondMethod.class,new FromSecondMethod());
+  }
+private static class FromBeforeEach {
+  }
+private static class FromFirstMethod {
+  }
+private static class FromSecondMethod {
+  }
+}

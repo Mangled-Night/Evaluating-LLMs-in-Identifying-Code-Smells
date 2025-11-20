@@ -1,0 +1,21 @@
+private static boolean copyOrMoveDir(final File srcDir,final File destDir,final OnReplaceListener listener,final boolean isMove){
+  if (srcDir == null || destDir == null)   return false;
+  String srcPath=srcDir.getPath() + File.separator;
+  String destPath=destDir.getPath() + File.separator;
+  if (destPath.contains(srcPath))   return false;
+  if (!srcDir.exists() || !srcDir.isDirectory())   return false;
+  if (!createOrExistsDir(destDir))   return false;
+  File[] files=srcDir.listFiles();
+  if (files != null && files.length > 0) {
+    for (    File file : files) {
+      File oneDestFile=new File(destPath + file.getName());
+      if (file.isFile()) {
+        if (!copyOrMoveFile(file,oneDestFile,listener,isMove))         return false;
+      }
+ else       if (file.isDirectory()) {
+        if (!copyOrMoveDir(file,oneDestFile,listener,isMove))         return false;
+      }
+    }
+  }
+  return !isMove || deleteDir(srcDir);
+}

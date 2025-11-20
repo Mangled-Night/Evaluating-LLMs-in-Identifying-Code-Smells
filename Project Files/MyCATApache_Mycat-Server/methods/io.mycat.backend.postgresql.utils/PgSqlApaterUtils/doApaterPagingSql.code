@@ -1,0 +1,19 @@
+private static String doApaterPagingSql(final String SQL,String sql){
+  int index=SQL.indexOf("LIMIT");
+  String pagingPart=sql.substring(index);
+  String selectPart=sql.substring(0,index);
+  String[] pk=pagingPart.split("(\\s+)|(,)");
+  List<String> slices=new ArrayList<String>();
+  for (  String token : pk) {
+    if (token.trim().length() > 0) {
+      slices.add(token);
+    }
+  }
+  if (slices.size() == 3) {
+    return selectPart + String.format("%s  %s  offset %s",slices.get(0),slices.get(2),slices.get(1));
+  }
+  if (slices.size() == 2) {
+    return selectPart + String.format(" %s %s offset 0 ",slices.get(0),slices.get(1));
+  }
+  return sql;
+}

@@ -1,0 +1,18 @@
+/** 
+ * Makes sure the area containing these chunks is loaded. <p> This method is asynchronous. Pass the result to  {@link #runUntil(ListenableFuture)} if you need to wait until the area is ready.
+ * @see #makeBlocksRelevant(BlockRegionc) makeBlocksRelevant if you have block coordinates instead of chunk coordinates.
+ * @param chunks to mark as relevant
+ * @return relevant chunks
+ */
+@SuppressWarnings("unused") public ListenableFuture<ChunkRegionFuture> makeChunksRelevant(BlockRegion chunks){
+  Vector3f centerPoint=chunkRegionToNewBlockRegion(chunks).center(new Vector3f());
+  return makeChunksRelevant(chunks,centerPoint);
+}
+public ListenableFuture<ChunkRegionFuture> makeChunksRelevant(BlockRegion chunks,Vector3fc centerBlock){
+  Preconditions.checkArgument(chunks.contains(Chunks.toChunkPos(new Vector3i(centerBlock,RoundingMode.FLOOR))),"centerBlock should %s be within the region %s",centerBlock,chunkRegionToNewBlockRegion(chunks));
+  Vector3i desiredSize=chunks.getSize(new Vector3i());
+  EntityManager entityManager=Verify.verifyNotNull(engines.getHostContext().get(EntityManager.class));
+  RelevanceSystem relevanceSystem=Verify.verifyNotNull(engines.getHostContext().get(RelevanceSystem.class));
+  ChunkRegionFuture listener=ChunkRegionFuture.create(entityManager,relevanceSystem,centerBlock,desiredSize);
+  return listener.getFuture();
+}

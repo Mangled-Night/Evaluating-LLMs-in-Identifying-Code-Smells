@@ -1,0 +1,30 @@
+@Override public void run(){
+  logger.info("系统开始处理延时任务---订单超时未付款---" + this.orderId);
+  LitemallOrderService orderService=BeanUtil.getBean(LitemallOrderService.class);
+  LitemallOrderGoodsService orderGoodsService=BeanUtil.getBean(LitemallOrderGoodsService.class);
+  LitemallGoodsProductService productService=BeanUtil.getBean(LitemallGoodsProductService.class);
+  WxOrderService wxOrderService=BeanUtil.getBean(WxOrderService.class);
+  LitemallOrder order=orderService.findById(this.orderId);
+  if (order == null) {
+    return;
+  }
+  if (!OrderUtil.isCreateStatus(order)) {
+    return;
+  }
+  order.setOrderStatus(OrderUtil.STATUS_AUTO_CANCEL);
+  order.setEndTime(LocalDateTime.now());
+  if (orderService.updateWithOptimisticLocker(order) == 0) {
+    throw new RuntimeException("更新数据已失效");
+  }
+  Integer orderId=order.getId();
+  List<LitemallOrderGoods> orderGoodsList=orderGoodsService.queryByOid(orderId);
+  for (  LitemallOrderGoods orderGoods : orderGoodsList) {
+    Integer productId=orderGoods.getProductId();
+    Short number=orderGoods.getNumber();
+    if (productService.addStock(productId,number) == 0) {
+      throw new RuntimeException("商品货品库存增加失败");
+    }
+  }
+  wxOrderService.releaseCoupon(orderId);
+  logger.info("系统结束处理延时任务---订单超时未付款---" + this.orderId);
+}

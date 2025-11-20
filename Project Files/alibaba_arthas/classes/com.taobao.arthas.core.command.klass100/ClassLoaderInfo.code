@@ -1,0 +1,50 @@
+private static class ClassLoaderInfo implements Comparable<ClassLoaderInfo> {
+  private ClassLoader classLoader;
+  private int loadedClassCount=0;
+  ClassLoaderInfo(  ClassLoader classLoader){
+    this.classLoader=classLoader;
+  }
+  public String getName(){
+    if (classLoader != null) {
+      return classLoader.toString();
+    }
+    return "BootstrapClassLoader";
+  }
+  String hashCodeStr(){
+    if (classLoader != null) {
+      return "" + Integer.toHexString(classLoader.hashCode());
+    }
+    return "null";
+  }
+  void increase(){
+    loadedClassCount++;
+  }
+  int loadedClassCount(){
+    return loadedClassCount;
+  }
+  ClassLoader parent(){
+    return classLoader == null ? null : classLoader.getParent();
+  }
+  String parentStr(){
+    if (classLoader == null) {
+      return "null";
+    }
+    ClassLoader parent=classLoader.getParent();
+    if (parent == null) {
+      return "null";
+    }
+    return parent.toString();
+  }
+  @Override public int compareTo(  ClassLoaderInfo other){
+    if (other == null) {
+      return -1;
+    }
+    if (other.classLoader == null) {
+      return -1;
+    }
+    if (this.classLoader == null) {
+      return -1;
+    }
+    return this.classLoader.getClass().getName().compareTo(other.classLoader.getClass().getName());
+  }
+}

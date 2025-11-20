@@ -1,0 +1,26 @@
+private static void checkFromStringCase(String hpString,int defaultPort,String expectHost,int expectPort,boolean expectHasExplicitPort){
+  HostAndPort hp;
+  try {
+    hp=HostAndPort.parse(hpString);
+  }
+ catch (  IllegalArgumentException e) {
+    assertThat(expectHost).isNull();
+    return;
+  }
+  assertThat(expectHost).isNotNull();
+  final boolean badDefaultPort=(defaultPort < 0 || defaultPort > 65535);
+  if (expectHasExplicitPort) {
+    assertThat(hp.hasPort()).isTrue();
+    assertThat(hp.getPort()).isEqualTo(expectPort);
+  }
+ else {
+    assertThat(hp.hasPort()).isFalse();
+    try {
+      hp.getPort();
+      fail("Expected IllegalStateException");
+    }
+ catch (    IllegalStateException expected) {
+    }
+  }
+  assertThat(hp.getHostText()).isEqualTo(expectHost);
+}

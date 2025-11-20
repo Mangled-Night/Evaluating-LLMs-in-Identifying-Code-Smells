@@ -1,0 +1,17 @@
+/** 
+ * Check if properties changed which are essential for cluster operations.
+ * @param o1 the first object to be compared.
+ * @param o2 the second object to be compared.
+ * @return {@code true} if {@code UPSTREAM} or {@code REPLICA} flags changed or the responsible slots changed.
+ */
+public static boolean isChanged(Partitions o1,Partitions o2){
+  if (o1.size() != o2.size()) {
+    return true;
+  }
+  for (  RedisClusterNode base : o2) {
+    if (!essentiallyEqualsTo(base,o1.getPartitionByNodeId(base.getNodeId()))) {
+      return true;
+    }
+  }
+  return false;
+}

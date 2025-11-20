@@ -1,0 +1,19 @@
+@Test void listenerNotificationShouldFailGracefully(){
+  PubSubEndpoint<byte[],byte[]> sut=new PubSubEndpoint<>(ClientOptions.create(),TestClientResources.get());
+  AtomicInteger notified=new AtomicInteger();
+  sut.addListener(new RedisPubSubAdapter<byte[],byte[]>(){
+    @Override public void message(    byte[] channel,    byte[] message){
+      notified.incrementAndGet();
+      throw new UnsupportedOperationException();
+    }
+  }
+);
+  sut.addListener(new RedisPubSubAdapter<byte[],byte[]>(){
+    @Override public void message(    byte[] channel,    byte[] message){
+      notified.incrementAndGet();
+    }
+  }
+);
+  sut.notifyMessage(createMessage("message","channel1",ByteArrayCodec.INSTANCE));
+  assertThat(notified).hasValue(1);
+}

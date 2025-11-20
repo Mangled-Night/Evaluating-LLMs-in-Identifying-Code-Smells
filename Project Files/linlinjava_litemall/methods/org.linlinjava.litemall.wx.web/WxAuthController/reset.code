@@ -1,0 +1,34 @@
+/** 
+ * 账号密码重置
+ * @param body    请求内容{ password: xxx, mobile: xxx code: xxx } 其中code是手机验证码，目前还不支持手机短信验证码
+ * @param request 请求对象
+ * @return 登录结果成功则 { errno: 0, errmsg: '成功' } 失败则 { errno: XXX, errmsg: XXX }
+ */
+@PostMapping("reset") public Object reset(@RequestBody String body,HttpServletRequest request){
+  String password=JacksonUtil.parseString(body,"password");
+  String mobile=JacksonUtil.parseString(body,"mobile");
+  String code=JacksonUtil.parseString(body,"code");
+  if (mobile == null || code == null || password == null) {
+    return ResponseUtil.badArgument();
+  }
+  String cacheCode=CaptchaCodeManager.getCachedCaptcha(mobile);
+  if (cacheCode == null || cacheCode.isEmpty() || !cacheCode.equals(code))   return ResponseUtil.fail(AUTH_CAPTCHA_UNMATCH,"验证码错误");
+  List<LitemallUser> userList=userService.queryByMobile(mobile);
+  LitemallUser user=null;
+  if (userList.size() > 1) {
+    return ResponseUtil.serious();
+  }
+ else   if (userList.size() == 0) {
+    return ResponseUtil.fail(AUTH_MOBILE_UNREGISTERED,"手机号未注册");
+  }
+ else {
+    user=userList.get(0);
+  }
+  BCryptPasswordEncoder encoder=new BCryptPasswordEncoder();
+  String encodedPassword=encoder.encode(password);
+  user.setPassword(encodedPassword);
+  if (userService.updateById(user) == 0) {
+    return ResponseUtil.updatedDataFailed();
+  }
+  return ResponseUtil.ok();
+}

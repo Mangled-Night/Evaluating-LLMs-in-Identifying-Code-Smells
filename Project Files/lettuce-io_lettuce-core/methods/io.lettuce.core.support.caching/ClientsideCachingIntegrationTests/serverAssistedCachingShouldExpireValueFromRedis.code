@@ -1,0 +1,17 @@
+@Test void serverAssistedCachingShouldExpireValueFromRedis() throws InterruptedException {
+  Map<String,String> clientCache=new ConcurrentHashMap<>();
+  StatefulRedisConnection<String,String> otherParty=redisClient.connect();
+  RedisCommands<String,String> commands=otherParty.sync();
+  StatefulRedisConnection<String,String> connection=redisClient.connect();
+  CacheFrontend<String,String> frontend=ClientSideCaching.enable(CacheAccessor.forMap(clientCache),connection,TrackingArgs.Builder.enabled());
+  commands.set(key,value);
+  String cachedValue=frontend.get(key);
+  assertThat(cachedValue).isNotNull();
+  assertThat(clientCache).hasSize(1);
+  commands.pexpire(key,1);
+  Thread.sleep(200);
+  assertThat(clientCache).isEmpty();
+  assertThat(frontend.get(key)).isNull();
+  otherParty.close();
+  frontend.close();
+}

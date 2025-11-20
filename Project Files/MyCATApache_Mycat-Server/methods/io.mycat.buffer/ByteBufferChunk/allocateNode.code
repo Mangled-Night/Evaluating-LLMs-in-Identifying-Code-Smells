@@ -1,0 +1,21 @@
+private int allocateNode(int d){
+  int id=1;
+  int initial=-(1 << d);
+  byte val=memoryMap[id];
+  if (val > d) {
+    return -1;
+  }
+  while (val < d || (id & initial) == 0) {
+    id<<=1;
+    val=memoryMap[id];
+    if (val > d) {
+      id^=1;
+      val=memoryMap[id];
+    }
+  }
+  byte value=memoryMap[id];
+  assert value == d && (id & initial) == 1 << d : String.format("val = %d, id & initial = %d, d = %d",value,id & initial,d);
+  memoryMap[id]=unusable;
+  updateParentsAlloc(id);
+  return id;
+}

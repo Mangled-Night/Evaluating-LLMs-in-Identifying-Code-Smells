@@ -1,0 +1,19 @@
+/** 
+ * Smack provider are the parsers used to deserialize raw XMPP into the according Java  {@link Element}s. <p> At any time when  {@link #parse(XmlPullParser,int,XmlEnvironment)} is invoked any type of exception can be thrown. If the parsedelement does not follow the specification, for example by putting a string where only integers are allowed, then a {@link org.jivesoftware.smack.SmackException} should be thrown.</p>
+ * @author Florian Schmaus
+ * @param < E > the type of the resulting element.
+ */
+public abstract class Provider<E extends Element> extends AbstractProvider<E> {
+  public final E parse(  XmlPullParser parser) throws IOException, XmlPullParserException, SmackParsingException {
+    return parse(parser,null);
+  }
+  public final E parse(  XmlPullParser parser,  XmlEnvironment outerXmlEnvironment) throws IOException, XmlPullParserException, SmackParsingException {
+    ParserUtils.assertAtStartTag(parser);
+    final int initialDepth=parser.getDepth();
+    final XmlEnvironment xmlEnvironment=XmlEnvironment.from(parser,outerXmlEnvironment);
+    E e=wrapExceptions(() -> parse(parser,initialDepth,xmlEnvironment));
+    ParserUtils.forwardToEndTagOfDepth(parser,initialDepth);
+    return e;
+  }
+  public abstract E parse(  XmlPullParser parser,  int initialDepth,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException, ParseException ;
+}

@@ -1,0 +1,52 @@
+@Override protected Object handleInvocation(Object proxy,Method method,Object[] args) throws Throwable {
+  if (method.getName().equals("getStatefulConnection")) {
+    return proxiedConnection;
+  }
+  if (method.getName().equals("getTargetConnection")) {
+    return connection;
+  }
+  if (connection == null) {
+    throw new RedisException("Connection is deallocated and cannot be used anymore.");
+  }
+  if (method.getName().equals("close")) {
+    pool.returnObject(proxiedConnection);
+    connection=null;
+    proxiedConnection=null;
+    connectionProxies.clear();
+    return null;
+  }
+  if (method.getName().equals("closeAsync")) {
+    CompletableFuture<Void> future=pool.returnObjectAsync(proxiedConnection);
+    connection=null;
+    proxiedConnection=null;
+    connectionProxies.clear();
+    return future;
+  }
+  try {
+    if (method.getName().equals("sync") || method.getName().equals("async") || method.getName().equals("reactive")) {
+      return connectionProxies.computeIfAbsent(method,m -> getInnerProxy(method,args));
+    }
+    return method.invoke(connection,args);
+  }
+ catch (  InvocationTargetException e) {
+    throw e.getTargetException();
+  }
+}
+@Override protected Object handleInvocation(Object proxy,Method method,Object[] args) throws Throwable {
+  if (method.getName().equals("getStatefulConnection")) {
+    return proxiedConnection;
+  }
+  try {
+    if (method.getName().equals("close")) {
+      proxiedConnection.close();
+      return null;
+    }
+    if (method.getName().equals("closeAsync")) {
+      return proxiedConnection.closeAsync();
+    }
+    return method.invoke(api,args);
+  }
+ catch (  InvocationTargetException e) {
+    throw e.getTargetException();
+  }
+}

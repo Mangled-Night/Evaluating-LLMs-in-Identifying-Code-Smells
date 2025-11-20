@@ -1,0 +1,39 @@
+@Override public JsonElement serialize(BehaviorNode src,Type typeOfSrc,JsonSerializationContext context){
+  JsonObject node=new JsonObject();
+  if (src instanceof DelegateNode) {
+    DelegateNode delegateNode=(DelegateNode)src;
+    return serialize(delegateNode.delegate,BehaviorNode.class,context);
+  }
+  if (src instanceof CompositeNode) {
+    String name=src.getName();
+    JsonArray array=new JsonArray();
+    for (int i=0; i < src.getChildrenCount(); i++) {
+      array.add(serialize(src.getChild(i),BehaviorNode.class,context));
+    }
+    node.add(name,array);
+  }
+ else   if (src instanceof ActionNode) {
+    ActionNode actionNode=(ActionNode)src;
+    JsonObject content;
+    String name;
+    if (actionNode.action != null) {
+      content=(JsonObject)context.serialize(actionNode.action);
+      name=actionNode.action.getName();
+    }
+ else {
+      content=new JsonObject();
+      name=actionNode.getName();
+    }
+    if (src instanceof DecoratorNode) {
+      DecoratorNode decoratorNode=(DecoratorNode)src;
+      if (decoratorNode.getChildrenCount() > 0) {
+        content.add("child",serialize(decoratorNode.getChild(0),BehaviorNode.class,context));
+      }
+    }
+    node.add(name,content);
+  }
+ else {
+    return new JsonPrimitive(src.getName());
+  }
+  return node;
+}

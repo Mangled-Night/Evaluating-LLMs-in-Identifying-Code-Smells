@@ -1,0 +1,18 @@
+/** 
+ * Returns the reserved room nickname for the user in the room. A user may have a reserved nickname, for example through explicit room registration or database integration. In such cases it may be desirable for the user to discover the reserved nickname before attempting to enter the room.
+ * @return the reserved room nickname or <code>null</code> if none.
+ * @throws SmackException if there was no response from the server.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public String getReservedNickname() throws SmackException, InterruptedException {
+  try {
+    DiscoverInfo result=ServiceDiscoveryManager.getInstanceFor(connection).discoverInfo(room,"x-roomuser-item");
+    for (    DiscoverInfo.Identity identity : result.getIdentities()) {
+      return identity.getName();
+    }
+  }
+ catch (  XMPPException e) {
+    LOGGER.log(Level.SEVERE,"Error retrieving room nickname",e);
+  }
+  return null;
+}

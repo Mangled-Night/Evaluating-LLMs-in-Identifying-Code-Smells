@@ -1,0 +1,22 @@
+@Test public void test() throws Exception {
+  Instrumentation instrumentation=ByteBuddyAgent.install();
+  TestHelper.appendSpyJar(instrumentation);
+  ArthasBootstrap arthasBootstrap=Mockito.mock(ArthasBootstrap.class);
+  Mockito.doCallRealMethod().when(arthasBootstrap).enhanceClassLoader();
+  Configure configure=Mockito.mock(Configure.class);
+  Mockito.when(configure.getEnhanceLoaders()).thenReturn("java.lang.ClassLoader,org.jboss.modules.ConcurrentClassLoader");
+  FieldSetter.setField(arthasBootstrap,ArthasBootstrap.class.getDeclaredField("configure"),configure);
+  FieldSetter.setField(arthasBootstrap,ArthasBootstrap.class.getDeclaredField("instrumentation"),instrumentation);
+  org.jboss.modules.ModuleClassLoader moduleClassLoader=Mockito.mock(ModuleClassLoader.class);
+  boolean flag=false;
+  try {
+    moduleClassLoader.loadClass("java.arthas.SpyAPI");
+  }
+ catch (  Exception e) {
+    flag=true;
+  }
+  assertThat(flag).isTrue();
+  arthasBootstrap.enhanceClassLoader();
+  Class<?> loadClass=moduleClassLoader.loadClass("java.arthas.SpyAPI");
+  System.err.println(loadClass);
+}

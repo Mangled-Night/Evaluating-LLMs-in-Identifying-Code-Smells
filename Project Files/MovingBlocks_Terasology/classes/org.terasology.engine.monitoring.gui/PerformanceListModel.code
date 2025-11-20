@@ -1,0 +1,68 @@
+private final class PerformanceListModel extends AbstractListModel {
+  private final List<Entry> list=new ArrayList<>();
+  private final Map<String,Entry> map=new HashMap<>();
+  private final ExecutorService executor=Executors.newSingleThreadExecutor();
+  private PerformanceListModel(){
+    executor.execute(() -> {
+      Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
+      try {
+        while (!stopThread) {
+          Thread.sleep(1000);
+          try (ThreadActivity ignored=ThreadMonitor.startThreadActivity("Poll")){
+            updateEntries(PerformanceMonitor.getRunningMean(),PerformanceMonitor.getDecayingSpikes());
+          }
+         }
+      }
+ catch (      Exception e) {
+        ThreadMonitor.addError(e);
+        LOGGER.error("Error executing performance monitor update",e);
+      }
+      executor.shutdownNow();
+    }
+);
+  }
+  private void invokeIntervalAdded(  final int a,  final int b){
+    final Object source=this;
+    SwingUtilities.invokeLater(() -> fireIntervalAdded(source,a,b));
+  }
+  private void invokeContentsChanged(  final int a,  final int b){
+    final Object source=this;
+    SwingUtilities.invokeLater(() -> fireContentsChanged(source,a,b));
+  }
+  private void updateEntries(  TObjectDoubleMap<String> means,  TObjectDoubleMap<String> spikes){
+    if (means != null) {
+      for (      final Entry entry : list) {
+        entry.active=false;
+      }
+      means.forEachEntry((key,value) -> {
+        Entry entry=map.get(key);
+        if (entry == null) {
+          entry=new Entry(key);
+          list.add(entry);
+          map.put(key,entry);
+          invokeIntervalAdded(list.size() - 1,list.size() - 1);
+        }
+        entry.active=true;
+        entry.mean=value;
+        return true;
+      }
+);
+      spikes.forEachEntry((key,value) -> {
+        Entry entry=map.get(key);
+        if (entry != null) {
+          entry.spike=value;
+        }
+        return true;
+      }
+);
+      Collections.sort(list);
+      invokeContentsChanged(0,list.size() - 1);
+    }
+  }
+  @Override public int getSize(){
+    return list.size();
+  }
+  @Override public Object getElementAt(  int index){
+    return list.get(index);
+  }
+}

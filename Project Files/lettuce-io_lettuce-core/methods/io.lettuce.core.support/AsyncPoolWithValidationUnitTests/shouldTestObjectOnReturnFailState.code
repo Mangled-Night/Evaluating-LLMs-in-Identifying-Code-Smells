@@ -1,0 +1,10 @@
+@Test void shouldTestObjectOnReturnFailState(){
+  mockCreation();
+  when(factory.validate(any())).thenReturn(failed(new RedisException("foo")));
+  BoundedAsyncPool<String> pool=new BoundedAsyncPool<>(factory,BoundedPoolConfig.builder().testOnRelease().build());
+  CompletableFuture<Void> release=pool.release(TestFutures.getOrTimeout(pool.acquire()));
+  assertThat(pool.getIdle()).isZero();
+  assertThat(pool.getObjectCount()).isZero();
+  assertThat(pool.getCreationInProgress()).isZero();
+  assertThat(release).isCompletedWithValue(null);
+}

@@ -1,0 +1,20 @@
+@Deprecated private static String getRandomDataNode(TableConfig tc){
+  String randomDn=tc.getRandomDataNode();
+  MycatConfig mycatConfig=MycatServer.getInstance().getConfig();
+  if (mycatConfig != null) {
+    PhysicalDBNode physicalDBNode=mycatConfig.getDataNodes().get(randomDn);
+    if (physicalDBNode != null) {
+      if (physicalDBNode.getDbPool().getSource().isAlive()) {
+        for (        PhysicalDBPool pool : MycatServer.getInstance().getConfig().getDataHosts().values()) {
+          if (pool.getSource().getHostConfig().containDataNode(randomDn)) {
+            continue;
+          }
+          if (pool.getSource().isAlive()) {
+            return pool.getSource().getHostConfig().getRandomDataNode();
+          }
+        }
+      }
+    }
+  }
+  return randomDn;
+}

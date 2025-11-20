@@ -1,0 +1,47 @@
+@Override @SuppressWarnings({"rawtypes","unchecked"}) protected Object handleInvocation(Object proxy,Method method,Object[] args) throws Throwable {
+  try {
+    if (method.getName().equals("commands") && args.length == 0) {
+      return proxy;
+    }
+    Method targetMethod=findMethod(commandsInterface,method,connectionMethod);
+    if (targetMethod == null) {
+      Method nodeSelectionMethod=findMethod(NodeSelectionSupport.class,method,nodeSelectionMethods);
+      return nodeSelectionMethod.invoke(selection,args);
+    }
+    Map<RedisClusterNode,CompletableFuture<? extends StatefulRedisConnection<?,?>>> connections=new LinkedHashMap<>(selection.size(),1);
+    connections.putAll(selection.statefulMap());
+    Map<RedisClusterNode,Object> executions=new LinkedHashMap<>(selection.size(),1);
+    AtomicLong timeout=new AtomicLong();
+    for (    Map.Entry<RedisClusterNode,CompletableFuture<? extends StatefulRedisConnection<?,?>>> entry : connections.entrySet()) {
+      CompletableFuture<? extends StatefulRedisConnection<?,?>> connection=entry.getValue();
+      CompletableFuture<Object> result=connection.thenCompose(it -> {
+        try {
+          Object resultValue=doInvoke(args,targetMethod,it);
+          if (timeoutProvider != null && resultValue instanceof RedisCommand && timeout.get() == 0) {
+            timeout.set(timeoutProvider.getTimeoutNs((RedisCommand)resultValue));
+          }
+          if (resultValue instanceof CompletionStage<?>) {
+            return (CompletionStage<Object>)resultValue;
+          }
+          return CompletableFuture.completedFuture(resultValue);
+        }
+ catch (        InvocationTargetException e) {
+          CompletableFuture<Object> future=new CompletableFuture<>();
+          future.completeExceptionally(e.getTargetException());
+          return future;
+        }
+catch (        Exception e) {
+          CompletableFuture<Object> future=new CompletableFuture<>();
+          future.completeExceptionally(e);
+          return future;
+        }
+      }
+);
+      executions.put(entry.getKey(),result);
+    }
+    return getExecutions(executions,timeout.get());
+  }
+ catch (  InvocationTargetException e) {
+    throw e.getTargetException();
+  }
+}

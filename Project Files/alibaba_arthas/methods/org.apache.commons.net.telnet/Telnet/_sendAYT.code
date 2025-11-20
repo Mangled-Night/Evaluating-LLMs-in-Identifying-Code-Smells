@@ -1,0 +1,27 @@
+/** 
+ * Sends an Are You There sequence and waits for the result.
+ * @param timeout - Time to wait for a response (millis.)
+ * @throws IOException - Exception in I/O.
+ * @throws IllegalArgumentException - Illegal argument
+ * @throws InterruptedException - Interrupted during wait.
+ * @return true if AYT received a response, false otherwise
+ */
+final boolean _sendAYT(long timeout) throws IOException, IllegalArgumentException, InterruptedException {
+  boolean retValue=false;
+synchronized (aytMonitor) {
+synchronized (this) {
+      aytFlag=false;
+      _output_.write(_COMMAND_AYT);
+      _output_.flush();
+    }
+    aytMonitor.wait(timeout);
+    if (!aytFlag) {
+      retValue=false;
+      aytFlag=true;
+    }
+ else {
+      retValue=true;
+    }
+  }
+  return (retValue);
+}

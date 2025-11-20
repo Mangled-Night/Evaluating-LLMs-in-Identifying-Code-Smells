@@ -1,0 +1,72 @@
+/** 
+ * Reference-counted wrapper for  {@link PauseDetector} instances.
+ */
+static class DefaultPauseDetectorWrapper implements PauseDetectorWrapper {
+  private static final AtomicLong instanceCounter=new AtomicLong();
+  private final AtomicLong counter=new AtomicLong();
+  private final Lock lock=new ReentrantLock();
+  private volatile PauseDetector pauseDetector;
+  private volatile Thread shutdownHook;
+  /** 
+ * Obtain the current  {@link PauseDetector}. Requires a call to  {@link #retain()} first.
+ * @return
+ */
+  @Override public PauseDetector getPauseDetector(){
+    return pauseDetector;
+  }
+  /** 
+ * Creates or initializes a  {@link PauseDetector} instance after incrementing the usage counter to one. Should be{@link #release() released} once it is no longer in use.
+ */
+  @Override public void retain(){
+    if (counter.incrementAndGet() == 1) {
+      lock.lock();
+      try {
+        if (instanceCounter.getAndIncrement() > 0) {
+          InternalLogger instance=InternalLoggerFactory.getInstance(getClass());
+          instance.info("Initialized PauseDetectorWrapper more than once.");
+        }
+        PauseDetector pauseDetector=new SimplePauseDetector(TimeUnit.MILLISECONDS.toNanos(10),TimeUnit.MILLISECONDS.toNanos(10),3);
+        shutdownHook=new Thread("ShutdownHook for SimplePauseDetector"){
+          @Override public void run(){
+            pauseDetector.shutdown();
+          }
+        }
+;
+        this.pauseDetector=pauseDetector;
+        try {
+          Runtime.getRuntime().addShutdownHook(shutdownHook);
+        }
+ catch (        IllegalStateException ignored) {
+          InternalLogger instance=InternalLoggerFactory.getInstance(getClass());
+          instance.warn("Initialized PauseDetectorWrapper during shutdown; pause detector was shutdown immediately.");
+          pauseDetector.shutdown();
+        }
+      }
+  finally {
+        lock.unlock();
+      }
+    }
+  }
+  /** 
+ * Decrements the usage counter. When reaching  {@code 0}, the  {@link PauseDetector} instance is released.
+ */
+  @Override public void release(){
+    if (counter.decrementAndGet() == 0) {
+      lock.lock();
+      try {
+        instanceCounter.decrementAndGet();
+        pauseDetector.shutdown();
+        pauseDetector=null;
+        try {
+          Runtime.getRuntime().removeShutdownHook(shutdownHook);
+        }
+ catch (        IllegalStateException ignored) {
+        }
+        shutdownHook=null;
+      }
+  finally {
+        lock.unlock();
+      }
+    }
+  }
+}

@@ -1,0 +1,78 @@
+/** 
+ * Manager where TransportMethods are registered.
+ */
+public final class JingleTransportMethodManager extends Manager {
+  private static final WeakHashMap<XMPPConnection,JingleTransportMethodManager> INSTANCES=new WeakHashMap<>();
+  private final HashMap<String,JingleTransportManager<?>> transportManagers=new HashMap<>();
+  private static final String[] transportPreference=new String[]{JingleS5BTransport.NAMESPACE_V1,JingleIBBTransport.NAMESPACE_V1};
+  private JingleTransportMethodManager(  XMPPConnection connection){
+    super(connection);
+  }
+  public static synchronized JingleTransportMethodManager getInstanceFor(  XMPPConnection connection){
+    JingleTransportMethodManager manager=INSTANCES.get(connection);
+    if (manager == null) {
+      manager=new JingleTransportMethodManager(connection);
+      INSTANCES.put(connection,manager);
+    }
+    return manager;
+  }
+  public void registerTransportManager(  JingleTransportManager<?> manager){
+    transportManagers.put(manager.getNamespace(),manager);
+  }
+  public static JingleTransportManager<?> getTransportManager(  XMPPConnection connection,  String namespace){
+    return getInstanceFor(connection).getTransportManager(namespace);
+  }
+  public JingleTransportManager<?> getTransportManager(  String namespace){
+    return transportManagers.get(namespace);
+  }
+  public static JingleTransportManager<?> getTransportManager(  XMPPConnection connection,  Jingle request){
+    return getInstanceFor(connection).getTransportManager(request);
+  }
+  public JingleTransportManager<?> getTransportManager(  Jingle request){
+    JingleContent content=request.getContents().get(0);
+    if (content == null) {
+      return null;
+    }
+    JingleContentTransport transport=content.getTransport();
+    if (transport == null) {
+      return null;
+    }
+    return getTransportManager(transport.getNamespace());
+  }
+  public static JingleTransportManager<?> getBestAvailableTransportManager(  XMPPConnection connection){
+    return getInstanceFor(connection).getBestAvailableTransportManager();
+  }
+  public JingleTransportManager<?> getBestAvailableTransportManager(){
+    JingleTransportManager<?> tm;
+    for (    String ns : transportPreference) {
+      tm=getTransportManager(ns);
+      if (tm != null) {
+        return tm;
+      }
+    }
+    Iterator<String> it=transportManagers.keySet().iterator();
+    if (it.hasNext()) {
+      return getTransportManager(it.next());
+    }
+    return null;
+  }
+  public JingleTransportManager<?> getBestAvailableTransportManager(  Set<String> except){
+    JingleTransportManager<?> tm;
+    for (    String ns : transportPreference) {
+      tm=getTransportManager(ns);
+      if (tm != null) {
+        if (except.contains(tm.getNamespace())) {
+          continue;
+        }
+        return tm;
+      }
+    }
+    for (    String ns : transportManagers.keySet()) {
+      if (except.contains(ns)) {
+        continue;
+      }
+      return getTransportManager(ns);
+    }
+    return null;
+  }
+}

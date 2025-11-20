@@ -1,0 +1,25 @@
+private static void parseClassesToLoad(XmlPullParser parser,boolean optional,Collection<Exception> exceptions,ClassLoader classLoader) throws Exception {
+  final String startName=parser.getName();
+  XmlPullParser.Event eventType;
+  outerloop:   do {
+    eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT && "className".equals(parser.getName())) {
+      String classToLoad=parser.nextText();
+      if (SmackConfiguration.isDisabledSmackClass(classToLoad)) {
+        continue outerloop;
+      }
+      try {
+        loadSmackClass(classToLoad,optional,classLoader);
+      }
+ catch (      Exception e) {
+        if (exceptions != null) {
+          exceptions.add(e);
+        }
+ else {
+          throw e;
+        }
+      }
+    }
+  }
+ while (!(eventType == XmlPullParser.Event.END_ELEMENT && startName.equals(parser.getName())));
+}

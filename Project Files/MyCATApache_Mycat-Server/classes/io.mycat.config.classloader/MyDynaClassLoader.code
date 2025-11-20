@@ -1,0 +1,88 @@
+class MyDynaClassLoader extends ClassLoader {
+  public MyDynaClassLoader(){
+  }
+  public MyDynaClassLoader(  ClassLoader parentLoader){
+    super(parentLoader);
+  }
+  /** 
+ * 加载某个类
+ * @param c
+ * @return
+ * @throws ClassNotFoundException
+ * @throws IOException
+ */
+  public Class<?> loadClass(  String name) throws ClassNotFoundException {
+    if (name.startsWith("java") || name.startsWith("sun") || name.startsWith("io.mycat")) {
+      return super.loadClass(name);
+    }
+    DynaClass dynaClass=loadedDynaClassMap.get(name);
+    if (dynaClass != null) {
+      if (dynaClass.realClass != null) {
+        return dynaClass.realClass;
+      }
+    }
+ else {
+      try {
+        dynaClass=searchFile(extClassHome,name);
+      }
+ catch (      Exception e) {
+        LOGGER.error("SearchFileError",e);
+      }
+    }
+    if (dynaClass == null) {
+      return super.loadClass(name);
+    }
+ else {
+      LOGGER.info("load class from file " + dynaClass.filePath);
+      Class<?> cNew=null;
+      if (dynaClass.isJar) {
+        cNew=dynaClass.realClass;
+      }
+ else {
+        byte[] content;
+        try {
+          content=loadFile(dynaClass.filePath);
+        }
+ catch (        IOException e) {
+          throw new ClassNotFoundException(e.toString());
+        }
+        cNew=super.defineClass(name,content,0,content.length);
+        dynaClass.realClass=cNew;
+      }
+      dynaClass.classObj=null;
+      loadedDynaClassMap.put(name,dynaClass);
+      return cNew;
+    }
+  }
+  private DynaClass searchFile(  String classpath,  String fileName) throws Exception {
+    DynaClass dynCls=null;
+    String path=fileName.replace('.',File.separatorChar) + ".class";
+    System.out.println("class " + classpath + " file "+ path);
+    File f=new File(classpath,path);
+    if (f.isFile()) {
+      String theName=f.getPath();
+      System.out.println("found " + theName);
+      dynCls=new DynaClass(f.getPath());
+      dynCls.lastModified=f.lastModified();
+      return dynCls;
+    }
+ else {
+      path=fileName.replace('.',File.separatorChar) + ".jar";
+      System.out.println("jar " + classpath + " file "+ path);
+      f=new File(classpath,path);
+      if (f.isFile()) {
+        try {
+          dynCls=new DynaClass(f.getPath());
+          dynCls.lastModified=f.lastModified();
+          dynCls.realClass=JarLoader.loadJar(classpath + "/" + path,fileName);
+          dynCls.isJar=true;
+          return dynCls;
+        }
+ catch (        Exception err) {
+          return null;
+        }
+      }
+      return null;
+    }
+  }
+}

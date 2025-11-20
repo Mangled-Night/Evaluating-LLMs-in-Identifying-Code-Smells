@@ -1,0 +1,26 @@
+@Test public void testReserveVertexResource(){
+  VertexResourceBuilder builder=new VertexResourceBuilder();
+  VertexAttributeBinding<Vector3fc,Vector3f> a1=builder.add(0,GLAttributes.VECTOR_3_F_VERTEX_ATTRIBUTE);
+  VertexResource resource=builder.build();
+  a1.reserve(10);
+  a1.put(new Vector3f(10,10,10));
+  a1.put(new Vector3f(5,10,10));
+  a1.put(new Vector3f(15,10,10));
+  assertEquals(3,a1.getPosition());
+  resource.writeBuffer(buffer -> {
+    assertNotNull(buffer);
+    assertEquals(Float.BYTES * 3 * 10,buffer.capacity());
+    assertEquals(Float.BYTES * 3 * 3,buffer.limit());
+    int index=0;
+    assertEquals(10.0f,buffer.getFloat((index++) * Float.BYTES),0.001f);
+    assertEquals(10.0f,buffer.getFloat((index++) * Float.BYTES),0.001f);
+    assertEquals(10.0f,buffer.getFloat((index++) * Float.BYTES),0.001f);
+    assertEquals(5.0f,buffer.getFloat((index++) * Float.BYTES),0.001f);
+    assertEquals(10.0f,buffer.getFloat((index++) * Float.BYTES),0.001f);
+    assertEquals(10.0f,buffer.getFloat((index++) * Float.BYTES),0.001f);
+    assertEquals(15.0f,buffer.getFloat((index++) * Float.BYTES),0.001f);
+    assertEquals(10.0f,buffer.getFloat((index++) * Float.BYTES),0.001f);
+    assertEquals(10.0f,buffer.getFloat((index++) * Float.BYTES),0.001f);
+  }
+);
+}

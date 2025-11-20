@@ -1,0 +1,10 @@
+@Override public RedisFuture<K> randomkey(){
+  Partitions partitions=getStatefulConnection().getPartitions();
+  if (partitions.isEmpty()) {
+    return super.randomkey();
+  }
+  int index=ThreadLocalRandom.current().nextInt(partitions.size());
+  RedisClusterNode partition=partitions.getPartition(index);
+  CompletableFuture<K> future=getConnectionAsync(partition.getUri().getHost(),partition.getUri().getPort()).thenCompose(RedisKeyAsyncCommands::randomkey);
+  return new PipelinedRedisFuture<>(future);
+}

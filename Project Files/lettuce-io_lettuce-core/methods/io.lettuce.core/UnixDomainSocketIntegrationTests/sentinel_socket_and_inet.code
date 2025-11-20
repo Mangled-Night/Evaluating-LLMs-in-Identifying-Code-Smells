@@ -1,0 +1,20 @@
+@Test void sentinel_socket_and_inet() throws Exception {
+  assumeTestSupported();
+  RedisURI uri=new RedisURI();
+  uri.getSentinels().add(getSentinelSocketRedisUri());
+  uri.getSentinels().add(RedisURI.create(RedisURI.URI_SCHEME_REDIS + "://" + TestSettings.host()+ ":26379"));
+  uri.setSentinelMasterId(MASTER_ID);
+  RedisClient redisClient=RedisClient.create(TestClientResources.get(),uri);
+  StatefulRedisSentinelConnection<String,String> sentinelConnection=redisClient.connectSentinel(getSentinelSocketRedisUri());
+  log.info("Masters: " + sentinelConnection.sync().masters());
+  try {
+    redisClient.connect();
+    fail("Missing validation exception");
+  }
+ catch (  RedisConnectionException e) {
+    assertThat(e).hasMessageContaining("You cannot mix unix domain socket and IP socket URI's");
+  }
+ finally {
+    FastShutdown.shutdown(redisClient);
+  }
+}

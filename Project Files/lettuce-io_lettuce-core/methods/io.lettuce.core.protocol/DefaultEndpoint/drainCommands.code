@@ -1,0 +1,21 @@
+protected List<RedisCommand<?,?,?>> drainCommands(){
+  List<RedisCommand<?,?,?>> target=new ArrayList<>(disconnectedBuffer.size() + commandBuffer.size());
+  target.addAll(drainCommands(disconnectedBuffer));
+  target.addAll(drainCommands(commandBuffer));
+  return target;
+}
+/** 
+ * Drain commands from a queue and return only active commands.
+ * @param source the source queue.
+ * @return List of commands.
+ */
+private static List<RedisCommand<?,?,?>> drainCommands(Queue<? extends RedisCommand<?,?,?>> source){
+  List<RedisCommand<?,?,?>> target=new ArrayList<>(source.size());
+  RedisCommand<?,?,?> cmd;
+  while ((cmd=source.poll()) != null) {
+    if (!cmd.isDone() && !ActivationCommand.isActivationCommand(cmd)) {
+      target.add(cmd);
+    }
+  }
+  return target;
+}

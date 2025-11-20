@@ -1,0 +1,22 @@
+@SuppressWarnings("unchecked") private <K,V,S>ConnectionFuture<S> connectStatefulAsync(StatefulRedisConnectionImpl<K,V> connection,Endpoint endpoint,RedisURI redisURI,Supplier<CommandHandler> commandHandlerSupplier){
+  ConnectionBuilder connectionBuilder;
+  if (redisURI.isSsl()) {
+    SslConnectionBuilder sslConnectionBuilder=SslConnectionBuilder.sslConnectionBuilder();
+    sslConnectionBuilder.ssl(redisURI);
+    connectionBuilder=sslConnectionBuilder;
+  }
+ else {
+    connectionBuilder=ConnectionBuilder.connectionBuilder();
+  }
+  ConnectionState state=connection.getConnectionState();
+  state.apply(redisURI);
+  state.setDb(redisURI.getDatabase());
+  connectionBuilder.connection(connection);
+  connectionBuilder.clientOptions(getOptions());
+  connectionBuilder.clientResources(getResources());
+  connectionBuilder.commandHandler(commandHandlerSupplier).endpoint(endpoint);
+  connectionBuilder(getSocketAddressSupplier(redisURI),connectionBuilder,connection.getConnectionEvents(),redisURI);
+  connectionBuilder.connectionInitializer(createHandshake(state));
+  ConnectionFuture<RedisChannelHandler<K,V>> future=initializeChannelAsync(connectionBuilder);
+  return future.thenApply(channelHandler -> (S)connection);
+}

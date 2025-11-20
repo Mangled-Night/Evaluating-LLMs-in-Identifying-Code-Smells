@@ -1,0 +1,30 @@
+public class WebSocketConnection {
+  public static void main(  String[] args) throws URISyntaxException, SmackException, IOException, XMPPException, InterruptedException {
+    String jid, password, websocketEndpoint, messageTo=null;
+    if (args.length < 3 || args.length > 4) {
+      throw new IllegalArgumentException();
+    }
+    jid=args[0];
+    password=args[1];
+    websocketEndpoint=args[2];
+    if (args.length >= 4) {
+      messageTo=args[3];
+    }
+    TLSUtils.setDefaultTrustStoreTypeToJksIfRequired();
+    testWebSocketConnection(jid,password,websocketEndpoint,messageTo);
+  }
+  public static void testWebSocketConnection(  String jid,  String password,  String websocketEndpoint) throws URISyntaxException, SmackException, IOException, XMPPException, InterruptedException {
+    testWebSocketConnection(jid,password,websocketEndpoint,null);
+  }
+  public static void testWebSocketConnection(  String jid,  String password,  String websocketEndpoint,  String messageTo) throws URISyntaxException, SmackException, IOException, XMPPException, InterruptedException {
+    ModularXmppClientToServerConnectionConfiguration.Builder builder=ModularXmppClientToServerConnectionConfiguration.builder();
+    builder.removeAllModules().setXmppAddressAndPassword(jid,password);
+    XmppWebSocketTransportModuleDescriptor.Builder websocketBuilder=XmppWebSocketTransportModuleDescriptor.getBuilder(builder);
+    websocketBuilder.explicitlySetWebSocketEndpointAndDiscovery(websocketEndpoint,false);
+    builder.addModule(websocketBuilder.build());
+    ModularXmppClientToServerConnectionConfiguration config=builder.build();
+    ModularXmppClientToServerConnection connection=new ModularXmppClientToServerConnection(config);
+    connection.setReplyTimeout(5 * 60 * 1000);
+    XmppTools.modularConnectionTest(connection,messageTo);
+  }
+}

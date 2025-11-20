@@ -1,0 +1,16 @@
+private void processLoadClass(CommandProcess process,Instrumentation inst,ClassLoader targetClassLoader){
+  if (targetClassLoader != null) {
+    try {
+      Class<?> clazz=targetClassLoader.loadClass(this.loadClass);
+      process.appendResult(new MessageModel("load class success."));
+      ClassDetailVO classInfo=ClassUtils.createClassInfo(clazz,false,null);
+      process.appendResult(new ClassLoaderModel().setLoadClass(classInfo));
+    }
+ catch (    Throwable e) {
+      logger.warn("load class error, class: {}",this.loadClass,e);
+      process.end(-1,"load class error, class: " + this.loadClass + ", error: "+ e.toString());
+      return;
+    }
+  }
+  process.end();
+}

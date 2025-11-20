@@ -1,0 +1,24 @@
+/** 
+ * Terminates the session with default reason.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void terminate() throws XMPPException, NotConnectedException, InterruptedException {
+  terminate("Closed Locally");
+}
+/** 
+ * Terminates the session with a custom reason.
+ * @param reason the reason.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void terminate(String reason) throws XMPPException, NotConnectedException, InterruptedException {
+  if (isClosed())   return;
+  LOGGER.fine("Terminate " + reason);
+  Jingle jout=new Jingle(JingleActionEnum.SESSION_TERMINATE);
+  jout.setType(IQ.Type.set);
+  sendStanza(jout);
+  triggerSessionClosed(reason);
+}

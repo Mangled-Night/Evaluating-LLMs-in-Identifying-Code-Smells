@@ -1,0 +1,16 @@
+@RequiresPermissions("admin:admin:update") @RequiresPermissionsDesc(menu={"系统管理","管理员管理"},button="编辑") @PostMapping("/update") public Object update(@RequestBody LitemallAdmin admin){
+  Object error=validate(admin);
+  if (error != null) {
+    return error;
+  }
+  Integer anotherAdminId=admin.getId();
+  if (anotherAdminId == null) {
+    return ResponseUtil.badArgument();
+  }
+  admin.setPassword(null);
+  if (adminService.updateById(admin) == 0) {
+    return ResponseUtil.updatedDataFailed();
+  }
+  logHelper.logAuthSucceed("编辑管理员",admin.getUsername());
+  return ResponseUtil.ok(admin);
+}

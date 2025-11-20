@@ -1,0 +1,30 @@
+/** 
+ * 递归拆分OR
+ * @param whereUnit TODO:考虑嵌套or语句，条件中有子查询、 exists等很多种复杂情况是否能兼容
+ */
+private void splitUntilNoOr(WhereUnit whereUnit){
+  if (whereUnit.isFinishedParse()) {
+    if (whereUnit.getSubWhereUnit().size() > 0) {
+      for (int i=0; i < whereUnit.getSubWhereUnit().size(); i++) {
+        splitUntilNoOr(whereUnit.getSubWhereUnit().get(i));
+      }
+    }
+  }
+ else {
+    SQLBinaryOpExpr expr=whereUnit.getCanSplitExpr();
+    if (expr.getOperator() == SQLBinaryOperator.BooleanOr) {
+      addExprIfNotFalse(whereUnit,expr.getRight());
+      if (expr.getLeft() instanceof SQLBinaryOpExpr) {
+        whereUnit.setCanSplitExpr((SQLBinaryOpExpr)expr.getLeft());
+        splitUntilNoOr(whereUnit);
+      }
+ else {
+        addExprIfNotFalse(whereUnit,expr.getLeft());
+      }
+    }
+ else {
+      addExprIfNotFalse(whereUnit,expr);
+      whereUnit.setFinishedParse(true);
+    }
+  }
+}

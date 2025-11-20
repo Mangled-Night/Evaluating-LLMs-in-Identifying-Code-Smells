@@ -1,0 +1,191 @@
+/** 
+ * @author mycat
+ */
+public class RollbackNodeHandler extends MultiNodeHandler {
+  private static final Logger LOGGER=LoggerFactory.getLogger(RollbackNodeHandler.class);
+  protected byte[] responseData;
+  public RollbackNodeHandler(  NonBlockingSession session){
+    super(session);
+  }
+  public RollbackNodeHandler(  NonBlockingSession session,  byte[] responseData){
+    super(session);
+    this.responseData=responseData;
+  }
+  public void rollback(){
+    final int initCount=session.getTargetCount();
+    lock.lock();
+    try {
+      reset(initCount);
+    }
+  finally {
+      lock.unlock();
+    }
+    if (session.closed()) {
+      decrementCountToZero();
+      return;
+    }
+    int start=0;
+    boolean hasClose=false;
+    for (    final RouteResultsetNode node : session.getTargetKeys()) {
+      if (node == null) {
+        LOGGER.error("null is contained in RoutResultsetNodes, source = " + session.getSource());
+        hasClose=true;
+        break;
+      }
+      final BackendConnection conn=session.getTarget(node);
+      if (conn != null) {
+        boolean isClosed=conn.isClosedOrQuit();
+        if (isClosed) {
+          hasClose=true;
+        }
+ else {
+          start++;
+        }
+      }
+    }
+    if (hasClose && session.getXaTXID() == null) {
+      LOGGER.warn("find close back conn close ,so close all back connection" + session.getSource());
+      session.setAutoCommitStatus();
+      this.setFail("receive rollback,but find backend con is closed or quit");
+      this.tryErrorFinished(true);
+      return;
+    }
+    lock.lock();
+    try {
+      reset(start);
+    }
+  finally {
+      lock.unlock();
+    }
+    boolean writeCheckPoint=false;
+    for (    final RouteResultsetNode node : session.getTargetKeys()) {
+      if (node == null) {
+        LOGGER.error("null is contained in RoutResultsetNodes, source = " + session.getSource());
+        continue;
+      }
+      final BackendConnection conn=session.getTarget(node);
+      if (conn != null) {
+        boolean isClosed=conn.isClosedOrQuit();
+        if (isClosed) {
+          this.setFail("receive rollback,but find backend con is closed or quit");
+          LOGGER.error(conn + "receive rollback,but fond backend con is closed or quit");
+          continue;
+        }
+        if (LOGGER.isDebugEnabled()) {
+          LOGGER.debug("rollback job run for " + conn);
+        }
+        if (clearIfSessionClosed(session)) {
+          return;
+        }
+        conn.setResponseHandler(RollbackNodeHandler.this);
+        if (session.getXaTXID() != null && conn instanceof MySQLConnection) {
+          MySQLConnection mysqlCon=(MySQLConnection)conn;
+          String xaTxId=session.getXaTXID();
+          CoordinatorLogEntry coordinatorLogEntry=MultiNodeCoordinator.inMemoryRepository.get(xaTxId);
+          if (coordinatorLogEntry != null) {
+            writeCheckPoint=true;
+            for (int i=0; i < coordinatorLogEntry.participants.length; i++) {
+              if (coordinatorLogEntry.participants[i].resourceName.equals(conn.getSchema())) {
+                coordinatorLogEntry.participants[i].txState=TxState.TX_ROLLBACKED_STATE;
+              }
+            }
+            MultiNodeCoordinator.inMemoryRepository.put(xaTxId,coordinatorLogEntry);
+          }
+          xaTxId=session.getXaTXID() + ",'" + mysqlCon.getSchema()+ "'";
+          if (mysqlCon.getXaStatus() == TxState.TX_STARTED_STATE) {
+            String[] cmds=new String[]{"XA END " + xaTxId + ""," XA ROLLBACK " + xaTxId + ";"};
+            mysqlCon.execBatchCmd(cmds);
+          }
+ else           if (mysqlCon.getXaStatus() == TxState.TX_PREPARED_STATE) {
+            String[] cmds=new String[]{" XA ROLLBACK " + xaTxId + ";"};
+            mysqlCon.execBatchCmd(cmds);
+          }
+ else {
+            LOGGER.warn("{} xaStat is {} ,to rollback is error",mysqlCon,mysqlCon.getXaStatus());
+          }
+          mysqlCon.setXaStatus(TxState.TX_ROLLBACKED_STATE);
+        }
+ else {
+          if (!conn.isClosedOrQuit()) {
+            conn.rollback();
+          }
+        }
+      }
+    }
+    if (writeCheckPoint) {
+      MultiNodeCoordinator.fileRepository.writeCheckpoint(session.getXaTXID(),MultiNodeCoordinator.inMemoryRepository.getAllCoordinatorLogEntries());
+    }
+  }
+  @Override public void okResponse(  byte[] ok,  BackendConnection conn){
+    if (session.getXaTXID() != null) {
+      if (conn instanceof MySQLConnection) {
+        MySQLConnection mysqlCon=(MySQLConnection)conn;
+        if (!mysqlCon.batchCmdFinished()) {
+          return;
+        }
+      }
+    }
+    if (decrementCountBy(1)) {
+      session.clearResources(false);
+      session.setAutoCommitStatus();
+      if (this.isFail() || session.closed()) {
+        tryErrorFinished(true);
+      }
+ else {
+        if (session.getSource().canResponse()) {
+          if (responseData != null) {
+            session.getSource().write(responseData);
+          }
+ else {
+            OkPacket okPacket=new OkPacket();
+            okPacket.read(ok);
+            okPacket.packetId=1;
+            session.getSource().write(okPacket.writeToBytes());
+          }
+        }
+      }
+    }
+  }
+  @Override public void rowEofResponse(  byte[] eof,  BackendConnection conn){
+    LOGGER.error(new StringBuilder().append("unexpected packet for ").append(conn).append(" bound by ").append(session.getSource()).append(": field's eof").toString());
+  }
+  @Override public void connectionAcquired(  BackendConnection conn){
+    LOGGER.error("unexpected invocation: connectionAcquired from rollback");
+  }
+  @Override public void fieldEofResponse(  byte[] header,  List<byte[]> fields,  byte[] eof,  BackendConnection conn){
+    LOGGER.error(new StringBuilder().append("unexpected packet for ").append(conn).append(" bound by ").append(session.getSource()).append(": field's eof").toString());
+  }
+  @Override public void rowResponse(  byte[] row,  BackendConnection conn){
+    LOGGER.error(new StringBuilder().append("unexpected packet for ").append(conn).append(" bound by ").append(session.getSource()).append(": field's eof").toString());
+  }
+  @Override public void writeQueueAvailable(){
+  }
+  public void connectionClose(  BackendConnection conn,  String reason){
+    this.setFail("closed connection:" + reason + " con:"+ conn);
+    boolean finished=false;
+    if (finished == false) {
+      finished=this.decrementCountBy(1);
+    }
+    if (error == null) {
+      error="back connection closed ";
+    }
+    if (finished) {
+      session.setAutoCommitStatus();
+      tryErrorFinished(finished);
+    }
+  }
+  protected void tryErrorFinished(  boolean allEnd){
+    if (allEnd && !session.closed()) {
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("error all end ,clear session resource ");
+      }
+      session.closeAndClearResources(error);
+      session.getSource().clearTxInterrupt();
+      if (responseData != null) {
+        LOGGER.error(this.error);
+        session.getSource().write(responseData);
+      }
+ else       session.getSource().writeErrMessage(ErrorCode.ER_UNKNOWN_ERROR,this.error);
+    }
+  }
+}

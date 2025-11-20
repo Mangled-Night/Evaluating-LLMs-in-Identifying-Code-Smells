@@ -1,0 +1,15 @@
+@Test void partitionNodesAreOffline(){
+  List<RedisURI> seed=LettuceLists.unmodifiableList(URI_1,URI_2,URI_3);
+  redisClusterClient=RedisClusterClient.create(clientResources,seed);
+  Partitions partitions=new Partitions();
+  partitions.addPartition(new RedisClusterNode(URI_1,"a",true,null,0,0,0,new ArrayList<>(),new HashSet<>()));
+  partitions.addPartition(new RedisClusterNode(URI_2,"b",true,null,0,0,0,new ArrayList<>(),new HashSet<>()));
+  redisClusterClient.setPartitions(partitions);
+  try {
+    redisClusterClient.connect();
+    fail("Missing RedisConnectionException");
+  }
+ catch (  RedisConnectionException e) {
+    assertThat(e).hasRootCauseInstanceOf(IOException.class);
+  }
+}

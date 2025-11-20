@@ -1,0 +1,24 @@
+private void registerParameters() throws CommandInitializationException {
+  requiredParameterCount=0;
+  boolean optionalFound=false;
+  for (int i=0; i < commandParameters.size(); i++) {
+    CommandParameter parameter=commandParameters.get(i);
+    if (parameter == null) {
+      throw new CommandInitializationException("A command parameter must not be null! Index: " + i);
+    }
+    if (parameter.isArray() && i < commandParameters.size() - 1) {
+      throw new CommandInitializationException("A varargs parameter must be at the end. Invalid: " + i + "; "+ parameter.getName());
+    }
+    if (parameter.isRequired()) {
+      if (!optionalFound) {
+        requiredParameterCount++;
+      }
+ else {
+        throw new CommandInitializationException("A command definition must not contain a required" + " parameter (" + i + "; "+ parameter.getName()+ ") after an optional parameter.");
+      }
+    }
+ else     if (!optionalFound) {
+      optionalFound=true;
+    }
+  }
+}

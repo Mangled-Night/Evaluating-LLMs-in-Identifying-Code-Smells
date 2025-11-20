@@ -1,0 +1,21 @@
+private int calculateAvailableParameterCount(CommandSegments commandSegments,List<? extends Parameter> bindableParameters){
+  int count=commandSegments.size();
+  for (int i=0; i < bindableParameters.size(); i++) {
+    Parameter bindableParameter=bindableParameters.get(i);
+    boolean consumed=isConsumed(commandSegments,bindableParameter);
+    if (consumed) {
+      continue;
+    }
+    if (bindableParameter.isAssignableTo(KeyValue.class) || bindableParameter.isAssignableTo(ScoredValue.class)) {
+      count++;
+    }
+    if (bindableParameter.isAssignableTo(GeoCoordinates.class) || bindableParameter.isAssignableTo(Range.class)) {
+      count++;
+    }
+    if (bindableParameter.isAssignableTo(Limit.class)) {
+      count+=2;
+    }
+    count++;
+  }
+  return count;
+}

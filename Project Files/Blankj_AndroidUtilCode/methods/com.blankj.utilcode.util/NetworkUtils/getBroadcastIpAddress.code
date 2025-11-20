@@ -1,0 +1,26 @@
+/** 
+ * Return the ip address of broadcast.
+ * @return the ip address of broadcast
+ */
+public static String getBroadcastIpAddress(){
+  try {
+    Enumeration<NetworkInterface> nis=NetworkInterface.getNetworkInterfaces();
+    LinkedList<InetAddress> adds=new LinkedList<>();
+    while (nis.hasMoreElements()) {
+      NetworkInterface ni=nis.nextElement();
+      if (!ni.isUp() || ni.isLoopback())       continue;
+      List<InterfaceAddress> ias=ni.getInterfaceAddresses();
+      for (int i=0, size=ias.size(); i < size; i++) {
+        InterfaceAddress ia=ias.get(i);
+        InetAddress broadcast=ia.getBroadcast();
+        if (broadcast != null) {
+          return broadcast.getHostAddress();
+        }
+      }
+    }
+  }
+ catch (  SocketException e) {
+    e.printStackTrace();
+  }
+  return "";
+}

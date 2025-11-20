@@ -1,0 +1,18 @@
+@Test void shouldCancelCommandsOnEncoderException(){
+  when(channel.isActive()).thenReturn(true);
+  sut.notifyChannelActive(channel);
+  DefaultChannelPromise promise=new DefaultChannelPromise(channel,ImmediateEventExecutor.INSTANCE);
+  when(channel.writeAndFlush(any())).thenAnswer(invocation -> {
+    if (invocation.getArguments()[0] instanceof RedisCommand) {
+      queue.add((RedisCommand)invocation.getArguments()[0]);
+    }
+    if (invocation.getArguments()[0] instanceof Collection) {
+      queue.addAll((Collection)invocation.getArguments()[0]);
+    }
+    return promise;
+  }
+);
+  promise.setFailure(new EncoderException("foo"));
+  sut.write(command);
+  assertThat(command.exception).isInstanceOf(EncoderException.class);
+}

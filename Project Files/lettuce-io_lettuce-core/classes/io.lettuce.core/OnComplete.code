@@ -1,0 +1,57 @@
+/** 
+ * OnComplete  {@link Runnable}. This listener is pooled and must be  {@link #recycle() recycled after usage}.
+ */
+static class OnComplete implements Runnable {
+  private static final Recycler<OnComplete> RECYCLER=new Recycler<OnComplete>(){
+    @Override protected OnComplete newObject(    Handle<OnComplete> handle){
+      return new OnComplete(handle);
+    }
+  }
+;
+  private final Recycler.Handle<OnComplete> handle;
+  private Throwable signal;
+  private Subscriber<?> subscriber;
+  OnComplete(  Recycler.Handle<OnComplete> handle){
+    this.handle=handle;
+  }
+  /** 
+ * Allocate a new instance.
+ * @return
+ * @see Subscriber#onError(Throwable)
+ */
+  static OnComplete newInstance(  Throwable signal,  Subscriber<?> subscriber){
+    OnComplete entry=RECYCLER.get();
+    entry.signal=signal;
+    entry.subscriber=subscriber;
+    return entry;
+  }
+  /** 
+ * Allocate a new instance.
+ * @return
+ * @see Subscriber#onComplete()
+ */
+  static OnComplete newInstance(  Subscriber<?> subscriber){
+    OnComplete entry=RECYCLER.get();
+    entry.signal=null;
+    entry.subscriber=subscriber;
+    return entry;
+  }
+  @Override public void run(){
+    try {
+      if (signal != null) {
+        subscriber.onError(signal);
+      }
+ else {
+        subscriber.onComplete();
+      }
+    }
+  finally {
+      recycle();
+    }
+  }
+  private void recycle(){
+    this.signal=null;
+    this.subscriber=null;
+    handle.recycle(this);
+  }
+}

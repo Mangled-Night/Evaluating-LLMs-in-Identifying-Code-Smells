@@ -1,0 +1,63 @@
+@SmackIntegrationTest public void mamPageTest() throws TimeoutException, Exception {
+  final int messagesPerPage=10;
+  final int numPages=3;
+  final int totalMessages=messagesPerPage * numPages;
+  final List<Message> outgoingMessages=new ArrayList<>(totalMessages);
+  final EntityBareJid userOne=conOne.getUser().asEntityBareJid();
+  final EntityBareJid userTwo=conTwo.getUser().asEntityBareJid();
+  final SimpleResultSyncPoint allMessagesReceived=new SimpleResultSyncPoint();
+  final String lastMessageArchiveUid=mamManagerConTwo.getMessageUidOfLatestMessage();
+  for (int i=0; i < totalMessages; i++) {
+    String messageBody="MAM Page Test " + testRunId + ' '+ (i + 1);
+    Message message=StanzaBuilder.buildMessage().to(userTwo).setBody(messageBody).build();
+    outgoingMessages.add(message);
+  }
+  final String lastBody=outgoingMessages.get(outgoingMessages.size() - 1).getBody();
+  final StanzaListener stanzaListener=new StanzaListener(){
+    @Override public void processStanza(    Stanza stanza){
+      Message message=(Message)stanza;
+      if (message.getBody().equals(lastBody)) {
+        allMessagesReceived.signal();
+      }
+    }
+  }
+;
+  conTwo.addAsyncStanzaListener(stanzaListener,MessageWithBodiesFilter.INSTANCE);
+  try {
+    for (    Message message : outgoingMessages) {
+      conOne.sendStanza(message);
+    }
+    allMessagesReceived.waitForResult(timeout);
+  }
+  finally {
+    conTwo.removeAsyncStanzaListener(stanzaListener);
+  }
+  MamQueryArgs mamQueryArgs=MamQueryArgs.builder().setResultPageSize(messagesPerPage).limitResultsToJid(userOne).afterUid(lastMessageArchiveUid).build();
+  MamQuery mamQuery=mamManagerConTwo.queryArchive(mamQueryArgs);
+  assertFalse(mamQuery.isComplete());
+  assertEquals(messagesPerPage,mamQuery.getMessageCount());
+  List<List<Message>> pages=new ArrayList<>(numPages);
+  pages.add(mamQuery.getMessages());
+  for (int additionalPageRequestNum=0; additionalPageRequestNum < numPages - 1; additionalPageRequestNum++) {
+    List<Message> page=mamQuery.pageNext(messagesPerPage);
+    boolean isLastQuery=additionalPageRequestNum == numPages - 2;
+    if (isLastQuery) {
+      assertTrue(mamQuery.isComplete());
+    }
+ else {
+      assertFalse(mamQuery.isComplete());
+    }
+    assertEquals(messagesPerPage,page.size());
+    pages.add(page);
+  }
+  List<Message> queriedMessages=new ArrayList<>(totalMessages);
+  for (  List<Message> messages : pages) {
+    queriedMessages.addAll(messages);
+  }
+  assertEquals(outgoingMessages.size(),queriedMessages.size());
+  for (int i=0; i < outgoingMessages.size(); i++) {
+    Message outgoingMessage=outgoingMessages.get(i);
+    Message queriedMessage=queriedMessages.get(i);
+    assertEquals(outgoingMessage.getBody(),queriedMessage.getBody());
+  }
+}

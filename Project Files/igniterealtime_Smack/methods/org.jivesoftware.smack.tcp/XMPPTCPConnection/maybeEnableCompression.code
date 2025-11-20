@@ -1,0 +1,24 @@
+/** 
+ * <p> Starts using stream compression that will compress network traffic. Traffic can be reduced up to 90%. Therefore, stream compression is ideal when using a slow speed network connection. However, the server and the client will need to use more CPU time in order to un/compress network data so under high load the server performance might be affected. </p> <p> Stream compression has to have been previously offered by the server. Currently only the zlib method is supported by the client. Stream compression negotiation has to be done before authentication took place. </p>
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws XMPPException if an XMPP protocol error was received.
+ */
+private void maybeEnableCompression() throws SmackException, InterruptedException, XMPPException {
+  if (!config.isCompressionEnabled()) {
+    return;
+  }
+  Compress.Feature compression=getFeature(Compress.Feature.class);
+  if (compression == null) {
+    return;
+  }
+  if ((compressionHandler=maybeGetCompressionHandler(compression)) != null) {
+    compressSyncPoint=false;
+    sendNonza(new Compress(compressionHandler.getCompressionMethod()));
+    waitForConditionOrThrowConnectionException(() -> compressSyncPoint,"establishing stream compression");
+  }
+ else {
+    LOGGER.warning("Could not enable compression because no matching handler/method pair was found");
+  }
+}

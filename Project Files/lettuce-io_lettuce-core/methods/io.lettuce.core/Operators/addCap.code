@@ -1,0 +1,34 @@
+/** 
+ * Cap an addition to Long.MAX_VALUE
+ * @param a left operand
+ * @param b right operand
+ * @return Addition result or Long.MAX_VALUE if overflow
+ */
+static long addCap(long a,long b){
+  long res=a + b;
+  if (res < 0L) {
+    return Long.MAX_VALUE;
+  }
+  return res;
+}
+/** 
+ * Concurrent addition bound to Long.MAX_VALUE. Any concurrent write will "happen before" this operation.
+ * @param < T > the parent instance type
+ * @param updater current field updater
+ * @param instance current instance to update
+ * @param toAdd delta to add
+ * @return value before addition or Long.MAX_VALUE
+ */
+static <T>long addCap(AtomicLongFieldUpdater<T> updater,T instance,long toAdd){
+  long r, u;
+  for (; ; ) {
+    r=updater.get(instance);
+    if (r == Long.MAX_VALUE) {
+      return Long.MAX_VALUE;
+    }
+    u=addCap(r,toAdd);
+    if (updater.compareAndSet(instance,r,u)) {
+      return r;
+    }
+  }
+}

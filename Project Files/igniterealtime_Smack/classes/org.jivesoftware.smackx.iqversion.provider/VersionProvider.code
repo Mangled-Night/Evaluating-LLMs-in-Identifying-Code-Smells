@@ -1,0 +1,35 @@
+public class VersionProvider extends IqProvider<Version> {
+  @Override public Version parse(  XmlPullParser parser,  int initialDepth,  IqData iqData,  XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException {
+    VersionBuilder versionBuilder=Version.builder(iqData);
+    outerloop:     while (true) {
+      XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+        String tagName=parser.getName();
+switch (tagName) {
+case "name":
+        String name=parser.nextText();
+      versionBuilder.setName(name);
+    break;
+case "version":
+  String version=parser.nextText();
+versionBuilder.setVersion(version);
+break;
+case "os":
+String os=parser.nextText();
+versionBuilder.setOs(os);
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth && parser.getName().equals(IQ.QUERY_ELEMENT)) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+return versionBuilder.build();
+}
+}

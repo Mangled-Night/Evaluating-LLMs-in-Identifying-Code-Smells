@@ -1,0 +1,36 @@
+/** 
+ * 编码字符串拆分
+ * @param string          编码字符串
+ * @param splitEscapeChar 分割符
+ * @return 拆分后的字符串数组
+ */
+private String[] escapeSplit(String string,char splitEscapeChar){
+  final ArrayList<String> segmentArrayList=new ArrayList<String>();
+  final Stack<Character> decodeStack=new Stack<Character>();
+  final int stringLength=string.length();
+  for (int index=0; index < stringLength; index++) {
+    boolean isArchive=false;
+    final char c=string.charAt(index);
+    if (isEquals(c,ESCAPE_PREFIX_CHAR)) {
+      decodeStack.push(c);
+      if (index < stringLength - 1) {
+        final char nextChar=string.charAt(++index);
+        decodeStack.push(nextChar);
+      }
+    }
+ else     if (isEquals(c,splitEscapeChar)) {
+      isArchive=true;
+    }
+ else {
+      decodeStack.push(c);
+    }
+    if (isArchive || index == stringLength - 1) {
+      final StringBuilder segmentSB=new StringBuilder(decodeStack.size());
+      while (!decodeStack.isEmpty()) {
+        segmentSB.append(decodeStack.pop());
+      }
+      segmentArrayList.add(segmentSB.reverse().toString().trim());
+    }
+  }
+  return segmentArrayList.toArray(new String[0]);
+}

@@ -1,0 +1,31 @@
+/** 
+ * DataListener handles all In-Band Bytestream IQ stanzas containing a data stanza extension that don't belong to an existing session. <p> If a data stanza is received it looks if a stored In-Band Bytestream session exists. If no session with the given session ID exists an &lt;item-not-found/&gt; error is returned to the sender. <p> Data packets belonging to a running In-Band Bytestream session are processed by more specific listeners registered when an  {@link InBandBytestreamSession}is created.
+ * @author Henning Staib
+ */
+class DataListener extends AbstractIqRequestHandler {
+  private final InBandBytestreamManager manager;
+  /** 
+ * Constructor.
+ * @param manager the In-Band Bytestream manager
+ */
+  DataListener(  InBandBytestreamManager manager){
+    super(DataPacketExtension.ELEMENT,DataPacketExtension.NAMESPACE,IQ.Type.set,Mode.async);
+    this.manager=manager;
+  }
+  @Override public IQ handleIQRequest(  IQ iqRequest){
+    Data data=(Data)iqRequest;
+    InBandBytestreamSession ibbSession=this.manager.getSessions().get(data.getDataPacketExtension().getSessionID());
+    try {
+      if (ibbSession == null) {
+        this.manager.replyItemNotFoundPacket(data);
+      }
+ else {
+        ibbSession.processIQPacket(data);
+      }
+    }
+ catch (    NotConnectedException|InterruptedException|NotLoggedInException e) {
+      return null;
+    }
+    return null;
+  }
+}

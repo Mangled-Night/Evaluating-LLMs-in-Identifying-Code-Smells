@@ -1,0 +1,26 @@
+public UnsafeInMemorySorter(final MemoryConsumer consumer,final DataNodeMemoryManager memoryManager,final RecordComparator recordComparator,final PrefixComparator prefixComparator,long initialSize,boolean canUseRadixSort,boolean enableSort){
+  this(consumer,memoryManager,recordComparator,prefixComparator,consumer.allocateLongArray(initialSize * 2),canUseRadixSort,enableSort);
+}
+public UnsafeInMemorySorter(final MemoryConsumer consumer,final DataNodeMemoryManager memoryManager,final RecordComparator recordComparator,final PrefixComparator prefixComparator,LongArray array,boolean canUseRadixSort,boolean enableSort){
+  this.consumer=consumer;
+  this.memoryManager=memoryManager;
+  this.initialSize=array.size();
+  if (recordComparator != null) {
+    this.sorter=new Sorter<RecordPointerAndKeyPrefix,LongArray>(UnsafeSortDataFormat.INSTANCE);
+    this.sortComparator=new SortComparator(recordComparator,prefixComparator,memoryManager);
+    if (canUseRadixSort && prefixComparator instanceof PrefixComparators.RadixSortSupport) {
+      this.radixSortSupport=(PrefixComparators.RadixSortSupport)prefixComparator;
+    }
+ else {
+      this.radixSortSupport=null;
+    }
+  }
+ else {
+    this.sorter=null;
+    this.sortComparator=null;
+    this.radixSortSupport=null;
+  }
+  this.enableSort=enableSort;
+  this.memoryAllocationFactor=this.radixSortSupport != null ? 2 : 1;
+  this.array=array;
+}

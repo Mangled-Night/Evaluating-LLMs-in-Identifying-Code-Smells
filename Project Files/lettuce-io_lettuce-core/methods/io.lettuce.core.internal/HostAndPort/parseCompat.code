@@ -1,0 +1,16 @@
+/** 
+ * Temporary workaround until Redis provides IPv6 addresses in bracket notation. Allows parsing of  {@code 1.2.3.4:6479} and{@code dead:beef:dead:beef:affe::1:6379} into host and port. We assume the last item after the colon is a port.
+ * @param hostAndPortPart the string containing the host and port
+ * @return the parsed {@link HostAndPort}.
+ */
+public static HostAndPort parseCompat(String hostAndPortPart){
+  int firstColonIndex=hostAndPortPart.indexOf(':');
+  int lastColonIndex=hostAndPortPart.lastIndexOf(':');
+  int bracketIndex=hostAndPortPart.lastIndexOf(']');
+  if (firstColonIndex != lastColonIndex && lastColonIndex != -1 && bracketIndex == -1) {
+    String hostPart=hostAndPortPart.substring(0,lastColonIndex);
+    String portPart=hostAndPortPart.substring(lastColonIndex + 1);
+    return HostAndPort.of(hostPart,Integer.parseInt(portPart));
+  }
+  return HostAndPort.parse(hostAndPortPart);
+}

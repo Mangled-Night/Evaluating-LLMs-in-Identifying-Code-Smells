@@ -1,0 +1,11 @@
+@Test void softRefPoolShouldWorkWithWrappedConnections() throws Exception {
+  SoftReferenceObjectPool<StatefulRedisConnection<String,String>> pool=ConnectionPoolSupport.createSoftReferenceObjectPool(() -> client.connect());
+  StatefulRedisConnection<String,String> connection=pool.borrowObject();
+  assertThat(channels).hasSize(1);
+  RedisCommands<String,String> sync=connection.sync();
+  sync.ping();
+  connection.close();
+  pool.close();
+  Wait.untilTrue(channels::isEmpty).waitOrTimeout();
+  assertThat(channels).isEmpty();
+}

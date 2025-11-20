@@ -1,0 +1,51 @@
+private static RouteResultset routeToDistTableNode(SchemaConfig schema,RouteResultset rrs,String orgSql,Map<String,Map<String,Set<ColumnRoutePair>>> tablesAndConditions,LayerCachePool cachePool,boolean isSelect,Map.Entry<String,Map<String,Set<ColumnRoutePair>>> entry) throws SQLNonTransientException {
+  String tableName=null;
+  if (entry != null) {
+    tableName=entry.getKey().toUpperCase();
+  }
+ else {
+    List<String> tables=rrs.getTables();
+    tableName=tables.get(0);
+  }
+  TableConfig tableConfig=schema.getTables().get(tableName);
+  if (tableConfig == null) {
+    String msg="can't find table define in schema " + tableName + " schema:"+ schema.getName();
+    LOGGER.warn(msg);
+    throw new SQLNonTransientException(msg);
+  }
+  if (tableConfig.isGlobalTable()) {
+    String msg="can't suport district table  " + tableName + " schema:"+ schema.getName()+ " for global table ";
+    LOGGER.warn(msg);
+    throw new SQLNonTransientException(msg);
+  }
+  String partionCol=tableConfig.getPartitionColumn();
+  Set<String> tablesRouteSet=new HashSet<String>();
+  List<String> dataNodes=tableConfig.getDataNodes();
+  if (dataNodes.size() > 1) {
+    String msg="can't suport district table  " + tableName + " schema:"+ schema.getName()+ " for mutiple dataNode "+ dataNodes;
+    LOGGER.warn(msg);
+    throw new SQLNonTransientException(msg);
+  }
+  String dataNode=dataNodes.get(0);
+  RouteResultsetNode[] nodes=null;
+  if (tablesAndConditions.isEmpty()) {
+    List<String> subTables=tableConfig.getDistTables();
+    tablesRouteSet.addAll(subTables);
+    nodes=getNode(rrs,orgSql,tablesRouteSet,dataNode,false,tableName);
+  }
+ else {
+    if (entry == null) {
+      for (      Map.Entry<String,Map<String,Set<ColumnRoutePair>>> entry1 : tablesAndConditions.entrySet()) {
+        setNodes(rrs,tableConfig,partionCol,tablesRouteSet,entry1);
+      }
+    }
+ else {
+      setNodes(rrs,tableConfig,partionCol,tablesRouteSet,entry);
+    }
+    nodes=getNode(rrs,orgSql,tablesRouteSet,dataNode,true,tableName);
+  }
+  rrs.setNodes(nodes);
+  rrs.setSubTables(tablesRouteSet);
+  rrs.setFinishedRoute(true);
+  return rrs;
+}

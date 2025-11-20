@@ -1,0 +1,62 @@
+public void write(OutputStream out) throws IOException {
+  StreamUtil.writeUB3(out,calcPacketSize());
+  StreamUtil.write(out,packetId);
+  StreamUtil.writeUB4(out,clientFlags);
+  StreamUtil.writeUB4(out,maxPacketSize);
+  StreamUtil.write(out,(byte)charsetIndex);
+  out.write(FILLER);
+  if (user == null) {
+    StreamUtil.write(out,(byte)0);
+  }
+ else {
+    StreamUtil.writeWithNull(out,user.getBytes());
+  }
+  if (password == null) {
+    StreamUtil.write(out,(byte)0);
+  }
+ else {
+    StreamUtil.writeWithLength(out,password);
+  }
+  if (database == null) {
+    StreamUtil.write(out,(byte)0);
+  }
+ else {
+    StreamUtil.writeWithNull(out,database.getBytes());
+  }
+}
+@Override public void write(BackendAIOConnection c){
+  ByteBuffer buffer=c.allocate();
+  BufferUtil.writeUB3(buffer,calcPacketSize());
+  buffer.put(packetId);
+  BufferUtil.writeUB4(buffer,clientFlags);
+  BufferUtil.writeUB4(buffer,maxPacketSize);
+  buffer.put((byte)charsetIndex);
+  buffer=c.writeToBuffer(FILLER,buffer);
+  if (user == null) {
+    buffer=c.checkWriteBuffer(buffer,1,true);
+    buffer.put((byte)0);
+  }
+ else {
+    byte[] userData=user.getBytes();
+    buffer=c.checkWriteBuffer(buffer,userData.length + 1,true);
+    BufferUtil.writeWithNull(buffer,userData);
+  }
+  if (password == null) {
+    buffer=c.checkWriteBuffer(buffer,1,true);
+    buffer.put((byte)0);
+  }
+ else {
+    buffer=c.checkWriteBuffer(buffer,BufferUtil.getLength(password),true);
+    BufferUtil.writeWithLength(buffer,password);
+  }
+  if (database == null) {
+    buffer=c.checkWriteBuffer(buffer,1,true);
+    buffer.put((byte)0);
+  }
+ else {
+    byte[] databaseData=database.getBytes();
+    buffer=c.checkWriteBuffer(buffer,databaseData.length + 1,true);
+    BufferUtil.writeWithNull(buffer,databaseData);
+  }
+  c.write(buffer);
+}

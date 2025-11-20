@@ -1,0 +1,20 @@
+/** 
+ * MessageIBBInputStream class implements IBBInputStream to be used with message stanzas encapsulating the data packets.
+ */
+private class MessageIBBInputStream extends IBBInputStream {
+  @Override protected StanzaListener getDataPacketListener(){
+    return new StanzaListener(){
+      @Override public void processStanza(      Stanza packet){
+        DataPacketExtension data=packet.getExtension(DataPacketExtension.class);
+        if (data.getDecodedData() == null) {
+          return;
+        }
+        dataQueue.offer(data);
+      }
+    }
+;
+  }
+  @Override protected StanzaFilter getDataPacketFilter(){
+    return new AndFilter(new StanzaTypeFilter(Message.class),new IBBDataPacketFilter());
+  }
+}

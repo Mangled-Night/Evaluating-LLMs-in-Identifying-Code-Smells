@@ -1,0 +1,14 @@
+private RedisConditions(RedisClusterCommands<String,String> commands){
+  List<CommandDetail> result=CommandDetailParser.parse(commands.command());
+  this.commands=result.stream().collect(Collectors.toMap(commandDetail -> commandDetail.getName().toUpperCase(),CommandDetail::getArity));
+  String info=commands.info("server");
+  try {
+    ByteArrayInputStream inputStream=new ByteArrayInputStream(info.getBytes());
+    Properties p=new Properties();
+    p.load(inputStream);
+    version=Version.parse(p.getProperty("redis_version"));
+  }
+ catch (  IOException e) {
+    throw new IllegalStateException(e);
+  }
+}

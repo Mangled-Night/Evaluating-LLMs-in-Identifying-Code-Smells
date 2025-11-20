@@ -1,0 +1,14 @@
+@ApiOperation(value="新增单页") @RequiresPermissions("cms:page:create") @RequestMapping(value="/create",method=RequestMethod.GET) public String create(){
+  return "/manage/page/create.jsp";
+}
+@ApiOperation(value="新增单页") @RequiresPermissions("cms:page:create") @RequestMapping(value="/create",method=RequestMethod.POST) @ResponseBody public Object create(CmsPage cmsPage){
+  ComplexResult result=FluentValidator.checkAll().on(cmsPage.getTitle(),new LengthValidator(1,20,"标题")).doValidate().result(ResultCollectors.toComplex());
+  if (!result.isSuccess()) {
+    return new CmsResult(CmsResultConstant.INVALID_LENGTH,result.getErrors());
+  }
+  long time=System.currentTimeMillis();
+  cmsPage.setCtime(time);
+  cmsPage.setOrders(time);
+  int count=cmsPageService.insertSelective(cmsPage);
+  return new CmsResult(CmsResultConstant.SUCCESS,count);
+}

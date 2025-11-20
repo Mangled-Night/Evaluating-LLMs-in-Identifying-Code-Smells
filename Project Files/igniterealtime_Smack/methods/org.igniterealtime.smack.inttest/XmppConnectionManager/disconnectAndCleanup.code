@@ -1,0 +1,47 @@
+void disconnectAndCleanup() throws InterruptedException {
+  int successfullyDeletedAccountsCount=0;
+  for (  AbstractXMPPConnection connection : connections.keySet()) {
+    if (sinttestConfiguration.accountRegistration == AccountRegistration.inBandRegistration) {
+      AccountManager accountManager=AccountManager.getInstance(connection);
+      try {
+        accountManager.deleteAccount();
+        successfullyDeletedAccountsCount++;
+      }
+ catch (      NoResponseException|XMPPErrorException|NotConnectedException e) {
+        LOGGER.log(Level.WARNING,"Could not delete dynamically registered account",e);
+      }
+    }
+    connection.disconnect();
+    if (sinttestConfiguration.accountRegistration == AccountRegistration.serviceAdministration) {
+      String username=connection.getConfiguration().getUsername().toString();
+      Localpart usernameAsLocalpart;
+      try {
+        usernameAsLocalpart=Localpart.from(username);
+      }
+ catch (      XmppStringprepException e) {
+        throw new AssertionError(e);
+      }
+      EntityBareJid connectionAddress=JidCreate.entityBareFrom(usernameAsLocalpart,sinttestConfiguration.service);
+      try {
+        adminManager.deleteUser(connectionAddress);
+        successfullyDeletedAccountsCount++;
+      }
+ catch (      NoResponseException|XMPPErrorException|NotConnectedException e) {
+        LOGGER.log(Level.WARNING,"Could not delete dynamically registered account",e);
+      }
+    }
+  }
+  if (sinttestConfiguration.isAccountRegistrationPossible()) {
+    int unsuccessfullyDeletedAccountsCount=connections.size() - successfullyDeletedAccountsCount;
+    if (unsuccessfullyDeletedAccountsCount == 0) {
+      LOGGER.info("Successfully deleted all created accounts ✔");
+    }
+ else {
+      LOGGER.warning("Could not delete all created accounts, " + unsuccessfullyDeletedAccountsCount + " remainaing");
+    }
+  }
+  connections.clear();
+  if (accountRegistrationConnection != null) {
+    accountRegistrationConnection.disconnect();
+  }
+}

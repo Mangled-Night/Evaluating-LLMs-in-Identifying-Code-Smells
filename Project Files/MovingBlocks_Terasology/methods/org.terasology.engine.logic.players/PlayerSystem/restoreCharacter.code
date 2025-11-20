@@ -1,0 +1,22 @@
+private void restoreCharacter(EntityRef entity,EntityRef character){
+  Client clientListener=networkSystem.getOwner(entity);
+  System.out.println(clientListener);
+  updateRelevanceEntity(entity,clientListener.getViewDistance().getChunkDistance());
+  ClientComponent client=entity.getComponent(ClientComponent.class);
+  client.character=character;
+  entity.saveComponent(client);
+  CharacterComponent characterComp=character.getComponent(CharacterComponent.class);
+  if (characterComp != null) {
+    characterComp.controller=entity;
+    character.saveComponent(characterComp);
+    character.setOwner(entity);
+    if (!character.hasComponent(AliveCharacterComponent.class)) {
+      respawnPlayer(entity);
+    }
+    Location.attachChild(character,entity,new Vector3f(),new Quaternionf());
+  }
+ else {
+    character.destroy();
+    spawnPlayer(entity);
+  }
+}

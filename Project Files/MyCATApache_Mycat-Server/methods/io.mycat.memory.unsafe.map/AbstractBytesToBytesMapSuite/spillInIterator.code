@@ -1,0 +1,34 @@
+@Test public void spillInIterator() throws IOException {
+  BytesToBytesMap map=new BytesToBytesMap(dataNodeMemoryManager,blockManager,serializerManager,1,0.75,1024,false);
+  try {
+    int i;
+    for (i=0; i < 1024; i++) {
+      final long[] arr=new long[]{i};
+      final BytesToBytesMap.Location loc=map.lookup(arr,Platform.LONG_ARRAY_OFFSET,8);
+      loc.append(arr,Platform.LONG_ARRAY_OFFSET,8,arr,Platform.LONG_ARRAY_OFFSET,8);
+    }
+    BytesToBytesMap.MapIterator iter=map.iterator();
+    for (i=0; i < 100; i++) {
+      iter.next();
+    }
+    Assert.assertEquals(0,iter.spill(1024L * 10));
+    for (i=100; i < 1024; i++) {
+      iter.next();
+    }
+    BytesToBytesMap.MapIterator iter2=map.destructiveIterator();
+    for (i=0; i < 100; i++) {
+      iter2.next();
+    }
+    Assert.assertTrue(iter2.spill(1024) >= 1024);
+    for (i=100; i < 1024; i++) {
+      iter2.next();
+    }
+    assertFalse(iter2.hasNext());
+  }
+  finally {
+    map.free();
+    for (    File spillFile : spillFilesCreated) {
+      assertFalse("Spill file " + spillFile.getPath() + " was not cleaned up",spillFile.exists());
+    }
+  }
+}

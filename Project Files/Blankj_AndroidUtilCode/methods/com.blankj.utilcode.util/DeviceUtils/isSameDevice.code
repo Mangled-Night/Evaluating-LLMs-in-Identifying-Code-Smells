@@ -1,0 +1,23 @@
+@RequiresPermission(allOf={ACCESS_WIFI_STATE,INTERNET,CHANGE_WIFI_STATE}) public static boolean isSameDevice(final String uniqueDeviceId){
+  if (TextUtils.isEmpty(uniqueDeviceId) && uniqueDeviceId.length() < 33)   return false;
+  if (uniqueDeviceId.equals(udid))   return true;
+  final String cachedId=UtilsBridge.getSpUtils4Utils().getString(KEY_UDID,null);
+  if (uniqueDeviceId.equals(cachedId))   return true;
+  int st=uniqueDeviceId.length() - 33;
+  String type=uniqueDeviceId.substring(st,st + 1);
+  if (type.startsWith("1")) {
+    String macAddress=getMacAddress();
+    if (macAddress.equals("")) {
+      return false;
+    }
+    return uniqueDeviceId.substring(st + 1).equals(getUdid("",macAddress));
+  }
+ else   if (type.startsWith("2")) {
+    final String androidId=getAndroidID();
+    if (TextUtils.isEmpty(androidId)) {
+      return false;
+    }
+    return uniqueDeviceId.substring(st + 1).equals(getUdid("",androidId));
+  }
+  return false;
+}

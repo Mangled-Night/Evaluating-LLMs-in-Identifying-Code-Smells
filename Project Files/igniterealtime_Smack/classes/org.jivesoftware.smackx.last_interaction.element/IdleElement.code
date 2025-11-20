@@ -1,0 +1,60 @@
+public class IdleElement implements ExtensionElement {
+  public static final String NAMESPACE="urn:xmpp:idle:1";
+  public static final String ELEMENT="idle";
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  public static final String ATTR_SINCE="since";
+  private final Date since;
+  /** 
+ * Create a new IdleElement with the current date as date of last user interaction.
+ */
+  public IdleElement(){
+    this(new Date());
+  }
+  /** 
+ * Create a new IdleElement.
+ * @param since date of last user interaction
+ */
+  public IdleElement(  Date since){
+    this.since=Objects.requireNonNull(since);
+  }
+  /** 
+ * Return the value of last user interaction.
+ * @return date of last interaction
+ */
+  public Date getSince(){
+    return since;
+  }
+  /** 
+ * Add an Idle element with current date to the presence.
+ * @param presence presence
+ */
+  public static void addToPresence(  Presence presence){
+    presence.addExtension(new IdleElement());
+  }
+  /** 
+ * Return the IdleElement from a presence. Returns null, if no IdleElement found.
+ * @param presence presence
+ * @return idleElement from presence or null
+ */
+  public static IdleElement fromPresence(  Presence presence){
+    return presence.getExtension(IdleElement.class);
+  }
+  /** 
+ * {@inheritDoc}
+ */
+  @Override public String getNamespace(){
+    return NAMESPACE;
+  }
+  /** 
+ * {@inheritDoc}
+ */
+  @Override public String getElementName(){
+    return ELEMENT;
+  }
+  /** 
+ * {@inheritDoc}
+ */
+  @Override public XmlStringBuilder toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    return new XmlStringBuilder(this).attribute(ATTR_SINCE,since).closeEmptyElement();
+  }
+}

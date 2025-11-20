@@ -1,0 +1,95 @@
+/** 
+ * STUN service definition.
+ */
+protected static class STUNService {
+  private String hostname;
+  private int port;
+  /** 
+ * Basic constructor, with the hostname and port
+ * @param hostname The hostname
+ * @param port     The port
+ */
+  public STUNService(  String hostname,  int port){
+    super();
+    this.hostname=hostname;
+    this.port=port;
+  }
+  /** 
+ * Default constructor, without name and port.
+ */
+  public STUNService(){
+    this(null,-1);
+  }
+  /** 
+ * Get the host name of the STUN service.
+ * @return The host name
+ */
+  public String getHostname(){
+    return hostname;
+  }
+  /** 
+ * Set the hostname of the STUN service.
+ * @param hostname The host name of the service.
+ */
+  public void setHostname(  String hostname){
+    this.hostname=hostname;
+  }
+  /** 
+ * Get the port of the STUN service
+ * @return The port number where the STUN server is waiting.
+ */
+  public int getPort(){
+    return port;
+  }
+  /** 
+ * Set the port number for the STUN service.
+ * @param port The port number.
+ */
+  public void setPort(  int port){
+    this.port=port;
+  }
+  /** 
+ * Basic format test: the service is not null.
+ * @return true if the hostname and port are null
+ */
+  public boolean isNull(){
+    if (hostname == null) {
+      return true;
+    }
+ else     if (hostname.length() == 0) {
+      return true;
+    }
+ else     if (port < 0) {
+      return true;
+    }
+ else {
+      return false;
+    }
+  }
+  /** 
+ * Check a binding with the STUN currentServer. Note: this function blocks for some time, waiting for a response.
+ * @return true if the currentServer is usable.
+ */
+  public boolean checkBinding(){
+    boolean result=false;
+    try {
+      BindingLifetimeTest binding=new BindingLifetimeTest(hostname,port);
+      binding.test();
+      while (true) {
+        Thread.sleep(5000);
+        if (binding.getLifetime() != -1) {
+          if (binding.isCompleted()) {
+            return true;
+          }
+        }
+ else {
+          break;
+        }
+      }
+    }
+ catch (    Exception e) {
+      LOGGER.log(Level.SEVERE,"Exception in checkBinding",e);
+    }
+    return result;
+  }
+}

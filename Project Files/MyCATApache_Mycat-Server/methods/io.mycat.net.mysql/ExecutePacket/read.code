@@ -1,0 +1,39 @@
+public void read(byte[] data,String charset) throws UnsupportedEncodingException {
+  MySQLMessage mm=new MySQLMessage(data);
+  packetLength=mm.readUB3();
+  packetId=mm.read();
+  code=mm.read();
+  statementId=mm.readUB4();
+  flags=mm.read();
+  iterationCount=mm.readUB4();
+  int parameterCount=values.length;
+  if (parameterCount > 0) {
+    nullBitMap=new byte[(parameterCount + 7) / 8];
+    for (int i=0; i < nullBitMap.length; i++) {
+      nullBitMap[i]=mm.read();
+    }
+    newParameterBoundFlag=mm.read();
+  }
+  if (newParameterBoundFlag == (byte)1) {
+    for (int i=0; i < parameterCount; i++) {
+      pstmt.getParametersType()[i]=mm.readUB2();
+    }
+  }
+  byte[] nullBitMap=this.nullBitMap;
+  for (int i=0; i < parameterCount; i++) {
+    BindValue bv=new BindValue();
+    bv.type=pstmt.getParametersType()[i];
+    if ((nullBitMap[i / 8] & (1 << (i & 7))) != 0) {
+      bv.isNull=true;
+    }
+ else {
+      if (!pstmt.hasLongData(i)) {
+        BindValueUtil.read(mm,bv,charset);
+      }
+ else {
+        bv.value=pstmt.getLongData(i).toByteArray();
+      }
+    }
+    values[i]=bv;
+  }
+}

@@ -1,0 +1,45 @@
+public abstract B addValue(CharSequence value);
+public final B addValue(Date date){
+  String dateString=XmppDateTime.formatXEP0082Date(date);
+  return addValueVerbatim(dateString);
+}
+/** 
+ * Set the value.
+ * @param value the value to set.
+ * @return a reference to this builder.
+ * @deprecated use {@link #setValue(CharSequence)} instead.
+ */
+@Deprecated public B addValue(CharSequence value){
+  return setValue(value);
+}
+/** 
+ * Set the value.
+ * @param value the value to set.
+ * @return a reference to this builder.
+ * @deprecated use {@link #setValue(CharSequence)} instead.
+ */
+@Deprecated public Builder addValue(CharSequence value){
+  return setValue(new Value(value));
+}
+public Builder addValue(Jid jid){
+  Value value=new Value(jid);
+  ensureValuesAreInitialized();
+  values.add(jid);
+  rawValues.add(value);
+  return getThis();
+}
+public Builder addValue(Value value) throws XmppStringprepException {
+  Jid jid=JidCreate.from(value.getValue());
+  ensureValuesAreInitialized();
+  values.add(jid);
+  rawValues.add(value);
+  return this;
+}
+@Override public Builder addValue(CharSequence value){
+  return super.addValueVerbatim(value);
+}
+@Override public Builder addValue(CharSequence valueCharSequence){
+  String value=valueCharSequence.toString();
+  List<String> lines=StringUtils.splitLinesPortable(value);
+  return addValues(lines);
+}

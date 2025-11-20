@@ -1,0 +1,79 @@
+/** 
+ * Syntax: INSERT [LOW_PRIORITY | DELAYED | HIGH_PRIORITY] [IGNORE] [INTO] tbl_name [PARTITION (partition_name,...)] [(col_name,...)] {VALUES | VALUE} ({expr | DEFAULT},...),(...),... [ ON DUPLICATE KEY UPDATE col_name=expr [, col_name=expr] ... ] Or: INSERT [LOW_PRIORITY | DELAYED | HIGH_PRIORITY] [IGNORE] [INTO] tbl_name [PARTITION (partition_name,...)] SET col_name={expr | DEFAULT}, ... [ ON DUPLICATE KEY UPDATE col_name=expr [, col_name=expr] ... ] Or: INSERT [LOW_PRIORITY | HIGH_PRIORITY] [IGNORE] [INTO] tbl_name [PARTITION (partition_name,...)] [(col_name,...)] SELECT ... [ ON DUPLICATE KEY UPDATE col_name=expr [, col_name=expr] ... ] mysql> insert user value (33333333,'ddd'); mysql> insert into user value (333333,'ddd'); mysql> insert user values (3333,'ddd'); insert into user(id,name) valueS(1111,'dig'), (1111,  'dig'), (1111,'dig') ,(1111,'dig');
+ * @param sql
+ * @return
+ */
+private static String convertInsertSQL(String sql){
+  try {
+    MySqlStatementParser parser=new MySqlStatementParser(sql);
+    SQLStatement statement=parser.parseStatement();
+    MySqlInsertStatement insert=(MySqlInsertStatement)statement;
+    String tableName=StringUtil.removeBackquote(insert.getTableName().getSimpleName());
+    if (!isGlobalTable(tableName))     return sql;
+    if (!isInnerColExist(tableName))     return sql;
+    if (insert.getQuery() != null)     return sql;
+    StringBuilder sb=new StringBuilder(200).append("insert into ").append(tableName);
+    List<SQLExpr> columns=insert.getColumns();
+    int idx=-1;
+    int colSize=-1;
+    if (columns == null || columns.size() <= 0) {
+      String columnsList=tableColumsMap.get(tableName.toUpperCase());
+      if (StringUtils.isNotBlank(columnsList)) {
+        String newSQL="insert into " + tableName + "("+ columnsList+ ")";
+        MySqlStatementParser newParser=new MySqlStatementParser(newSQL);
+        SQLStatement newStatement=newParser.parseStatement();
+        MySqlInsertStatement newInsert=(MySqlInsertStatement)newStatement;
+        List<SQLExpr> newColumns=newInsert.getColumns();
+        for (int i=0; i < newColumns.size(); i++) {
+          String column=StringUtil.removeBackquote(newInsert.getColumns().get(i).toString());
+          if (column.equalsIgnoreCase(GLOBAL_TABLE_MYCAT_COLUMN))           idx=i;
+        }
+        colSize=newColumns.size();
+        sb.append("(").append(columnsList).append(")");
+      }
+ else {
+        LOGGER.warn("you'd better do not use 'insert into t values(a,b)' Syntax (without column list) on global table, " + "If you do. Then you must make sure inner column '_mycat_op_time' is last column of global table: " + tableName + " in all database. Good luck. ^_^");
+      }
+    }
+ else {
+      sb.append("(");
+      for (int i=0; i < columns.size(); i++) {
+        if (i < columns.size() - 1)         sb.append(columns.get(i).toString()).append(",");
+ else         sb.append(columns.get(i).toString());
+        String column=StringUtil.removeBackquote(insert.getColumns().get(i).toString());
+        if (column.equalsIgnoreCase(GLOBAL_TABLE_MYCAT_COLUMN))         idx=i;
+      }
+      if (idx <= -1)       sb.append(",").append(GLOBAL_TABLE_MYCAT_COLUMN);
+      sb.append(")");
+      colSize=columns.size();
+    }
+    sb.append(" values");
+    List<ValuesClause> vcl=insert.getValuesList();
+    if (vcl != null && vcl.size() > 1) {
+      for (int j=0; j < vcl.size(); j++) {
+        if (j != vcl.size() - 1)         appendValues(vcl.get(j).getValues(),sb,idx,colSize).append(",");
+ else         appendValues(vcl.get(j).getValues(),sb,idx,colSize);
+      }
+    }
+ else {
+      List<SQLExpr> valuse=insert.getValues().getValues();
+      appendValues(valuse,sb,idx,colSize);
+    }
+    List<SQLExpr> dku=insert.getDuplicateKeyUpdate();
+    if (dku != null && dku.size() > 0) {
+      sb.append(" on duplicate key update ");
+      for (int i=0; i < dku.size(); i++) {
+        SQLExpr exp=dku.get(i);
+        if (exp != null) {
+          if (i < dku.size() - 1)           sb.append(exp.toString()).append(",");
+ else           sb.append(exp.toString());
+        }
+      }
+    }
+    return sb.toString();
+  }
+ catch (  Exception e) {
+    LOGGER.warn(e.getMessage());
+    return sql;
+  }
+}

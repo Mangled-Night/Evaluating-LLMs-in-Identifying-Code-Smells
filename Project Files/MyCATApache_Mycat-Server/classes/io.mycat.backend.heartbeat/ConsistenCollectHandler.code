@@ -1,0 +1,99 @@
+public class ConsistenCollectHandler {
+  public static final Logger LOGGER=LoggerFactory.getLogger(ConsistenCollectHandler.class);
+  private AtomicBoolean isStop=new AtomicBoolean(false);
+  private final int retryTime;
+  private final int dnCount;
+  private final long intervalTime;
+  private final String tableName;
+  private final String schemaName;
+  private final AtomicInteger successTime;
+  private final ManagerConnection con;
+  public ConsistenCollectHandler(  ManagerConnection c,  String tableName,  String schemaName,  int dnCount,  int retryTime,  long intervalTime){
+    this.tableName=tableName;
+    this.schemaName=schemaName;
+    this.retryTime=retryTime;
+    this.intervalTime=intervalTime;
+    successTime=new AtomicInteger(0);
+    this.con=c;
+    this.dnCount=dnCount;
+  }
+  private volatile ScheduledFuture<?> task;
+  public void startDetector(){
+    task=MycatServer.getInstance().getScheduler().scheduleAtFixedRate(new ConsisterThread(tableName,schemaName,this),0,intervalTime,TimeUnit.MILLISECONDS);
+  }
+  private ReentrantLock lock=new ReentrantLock();
+  Map<String,List<SQLQueryResult<Map<String,String>>>> resultMap=new HashMap<>();
+  public void onSuccess(  SQLQueryResult<Map<String,String>> result){
+    if (isStop.get() == true) {
+      return;
+    }
+    lock.lock();
+    try {
+      if (!resultMap.containsKey(result.getDataNode())) {
+        resultMap.put(result.getDataNode(),new ArrayList<SQLQueryResult<Map<String,String>>>());
+      }
+      resultMap.get(result.getDataNode()).add(result);
+    }
+  finally {
+      lock.unlock();
+    }
+    int count=successTime.incrementAndGet();
+    LOGGER.info(count + " :{}",JSON.toJSONString(result));
+    if (count == retryTime * dnCount) {
+      cancelTask();
+      if (LOGGER.isDebugEnabled()) {
+        String str="";
+        for (        List<SQLQueryResult<Map<String,String>>> list : resultMap.values()) {
+          str+=JSONObject.toJSONString(list) + "\n";
+        }
+        LOGGER.debug(str);
+      }
+      List<SQLQueryResult<Map<String,String>>> unionResult=resultMap.remove(result.getDataNode());
+      List<SQLQueryResult<Map<String,String>>> tempResult=null;
+      for (      List<SQLQueryResult<Map<String,String>>> list : resultMap.values()) {
+        tempResult=new ArrayList<>();
+        for (        SQLQueryResult<Map<String,String>> r1 : list) {
+          Map<String,String> md1=r1.getResult();
+          String md1_max_column=md1.get(GlobalTableUtil.MAX_COLUMN);
+          for (int i=0; i < unionResult.size(); i++) {
+            Map<String,String> md2=unionResult.get(i).getResult();
+            String md2_max_column=md2.get(GlobalTableUtil.MAX_COLUMN);
+            if (md1.get(GlobalTableUtil.COUNT_COLUMN).equals(md2.get(GlobalTableUtil.COUNT_COLUMN)) && (md1_max_column == null && null == md2_max_column) || (md1_max_column != null && md1_max_column.equals(md2_max_column))) {
+              tempResult.add(r1);
+              unionResult.remove(unionResult.get(i));
+              break;
+            }
+          }
+        }
+        unionResult=tempResult;
+        if (unionResult.size() == 0) {
+          break;
+        }
+      }
+      if (unionResult.size() == 0) {
+        LOGGER.debug("check table " + tableName + " not consistence , get info");
+        CheckGlobalTable.response(con,tableName,"No");
+      }
+ else {
+        LOGGER.debug("check table " + tableName + "  consistence , consistence info"+ JSONObject.toJSONString(unionResult));
+        CheckGlobalTable.response(con,tableName,"Yes");
+      }
+    }
+  }
+  public void cancelTask(){
+    final ScheduledFuture<?> t=task;
+    if (t != null) {
+      t.cancel(false);
+      task=null;
+    }
+  }
+  public void onError(  String msg){
+    this.cancelTask();
+    if (isStop.compareAndSet(false,true)) {
+      con.writeErrMessage(ErrorCode.ERR_HANDLE_DATA,msg);
+    }
+  }
+  public int getRetryTime(){
+    return retryTime;
+  }
+}

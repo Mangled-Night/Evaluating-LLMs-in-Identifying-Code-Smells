@@ -1,0 +1,12 @@
+@Test void testMasterReplicaSentinelBasic(){
+  RedisClient client=RedisClient.create(clientResources);
+  RedisURI redisURI=RedisURI.create("rediss-sentinel://" + TestSettings.host() + ":26379?sentinelMasterId=mymaster");
+  redisURI.setVerifyPeer(false);
+  StatefulRedisMasterReplicaConnection<String,String> connection=MasterReplica.connect(client,StringCodec.UTF8,redisURI);
+  connection.setReadFrom(ReadFrom.REPLICA);
+  connection.sync().set(key,value);
+  connection.sync().set(key,value);
+  connection.sync().get(key);
+  connection.close();
+  FastShutdown.shutdown(client);
+}

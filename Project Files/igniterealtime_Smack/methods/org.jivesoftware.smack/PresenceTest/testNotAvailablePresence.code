@@ -1,0 +1,13 @@
+/** 
+ * User1 logs from 2 resources but only one is available. User0 sends a message to the full JID of the unavailable resource. User1 in the not available resource should receive the message. TODO Fix this in Wildfire but before check if XMPP spec requests this feature
+ */
+public void testNotAvailablePresence() throws XMPPException {
+  getConnection(1).sendStanza(new Presence(Presence.Type.unavailable));
+  XMPPTCPConnection conn=createConnection();
+  conn.connect();
+  conn.login(getUsername(1),getPassword(1),"OtherPlace");
+  Chat chat0=getConnection(0).getChatManager().createChat(getFullJID(1),null);
+  Chat chat1=getConnection(1).getChatManager().createChat(getBareJID(0),chat0.getThreadID(),null);
+  chat0.sendMessage("Hello");
+  conn.disconnect();
+}

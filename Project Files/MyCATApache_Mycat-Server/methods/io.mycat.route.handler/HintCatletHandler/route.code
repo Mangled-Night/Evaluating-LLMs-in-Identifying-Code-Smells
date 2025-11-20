@@ -1,0 +1,29 @@
+/** 
+ * 从全局的schema列表中查询指定的schema是否存在， 如果存在则替换connection属性中原有的schema， 如果不存在，则throws SQLNonTransientException，表示指定的schema 不存在
+ * @param sysConfig
+ * @param schema
+ * @param sqlType
+ * @param realSQL
+ * @param charset
+ * @param info
+ * @param cachePool
+ * @param hintSQLValue
+ * @return
+ * @throws SQLNonTransientException
+ */
+@Override public RouteResultset route(SystemConfig sysConfig,SchemaConfig schema,int sqlType,String realSQL,String charset,ServerConnection sc,LayerCachePool cachePool,String hintSQLValue,int hintSqlType,Map hintMap) throws SQLNonTransientException {
+  String cateletClass=hintSQLValue;
+  if (LOGGER.isDebugEnabled()) {
+    LOGGER.debug("load catelet class:" + hintSQLValue + " to run sql "+ realSQL);
+  }
+  try {
+    Catlet catlet=(Catlet)MycatServer.getInstance().getCatletClassLoader().getInstanceofClass(cateletClass);
+    catlet.route(sysConfig,schema,sqlType,realSQL,charset,sc,cachePool);
+    catlet.processSQL(realSQL,new EngineCtx(sc.getSession2()));
+  }
+ catch (  Exception e) {
+    LOGGER.warn("catlet error " + e);
+    throw new SQLNonTransientException(e);
+  }
+  return null;
+}

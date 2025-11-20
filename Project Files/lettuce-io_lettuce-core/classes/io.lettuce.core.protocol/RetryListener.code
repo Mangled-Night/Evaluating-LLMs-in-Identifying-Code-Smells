@@ -1,0 +1,118 @@
+/** 
+ * A generic future listener which retries unsuccessful writes.
+ */
+static class RetryListener extends ListenerSupport implements GenericFutureListener<Future<Void>> {
+  private static final Recycler<RetryListener> RECYCLER=new Recycler<RetryListener>(){
+    @Override protected RetryListener newObject(    Handle<RetryListener> handle){
+      return new RetryListener(handle);
+    }
+  }
+;
+  private final Recycler.Handle<RetryListener> handle;
+  RetryListener(  Recycler.Handle<RetryListener> handle){
+    this.handle=handle;
+  }
+  static RetryListener newInstance(  DefaultEndpoint endpoint,  RedisCommand<?,?,?> command){
+    RetryListener entry=RECYCLER.get();
+    entry.endpoint=endpoint;
+    entry.sentCommand=command;
+    return entry;
+  }
+  static RetryListener newInstance(  DefaultEndpoint endpoint,  Collection<? extends RedisCommand<?,?,?>> commands){
+    RetryListener entry=RECYCLER.get();
+    entry.endpoint=endpoint;
+    entry.sentCommands=commands;
+    return entry;
+  }
+  @SuppressWarnings("unchecked") @Override public void operationComplete(  Future<Void> future){
+    try {
+      doComplete(future);
+    }
+  finally {
+      recycle();
+    }
+  }
+  private void doComplete(  Future<Void> future){
+    Throwable cause=future.cause();
+    boolean success=future.isSuccess();
+    dequeue();
+    if (success) {
+      return;
+    }
+    if (cause instanceof EncoderException || cause instanceof Error || cause.getCause() instanceof Error) {
+      complete(cause);
+      return;
+    }
+    Channel channel=endpoint.channel;
+    RedisCommand<?,?,?> sentCommand=this.sentCommand;
+    Collection<? extends RedisCommand<?,?,?>> sentCommands=this.sentCommands;
+    potentiallyRequeueCommands(channel,sentCommand,sentCommands);
+    if (!(cause instanceof ClosedChannelException)) {
+      String message="Unexpected exception during request: {}";
+      InternalLogLevel logLevel=InternalLogLevel.WARN;
+      if (cause instanceof IOException && SUPPRESS_IO_EXCEPTION_MESSAGES.contains(cause.getMessage())) {
+        logLevel=InternalLogLevel.DEBUG;
+      }
+      logger.log(logLevel,message,cause.toString(),cause);
+    }
+  }
+  /** 
+ * Requeue command/commands
+ * @param channel
+ * @param sentCommand
+ * @param sentCommands
+ */
+  private void potentiallyRequeueCommands(  Channel channel,  RedisCommand<?,?,?> sentCommand,  Collection<? extends RedisCommand<?,?,?>> sentCommands){
+    if (sentCommand != null && sentCommand.isDone()) {
+      return;
+    }
+    if (sentCommands != null) {
+      boolean foundToSend=false;
+      for (      RedisCommand<?,?,?> command : sentCommands) {
+        if (!command.isDone()) {
+          foundToSend=true;
+          break;
+        }
+      }
+      if (!foundToSend) {
+        return;
+      }
+    }
+    if (channel != null) {
+      DefaultEndpoint endpoint=this.endpoint;
+      channel.eventLoop().submit(() -> {
+        requeueCommands(sentCommand,sentCommands,endpoint);
+      }
+);
+    }
+ else {
+      requeueCommands(sentCommand,sentCommands,endpoint);
+    }
+  }
+  @SuppressWarnings({"unchecked","rawtypes"}) private void requeueCommands(  RedisCommand<?,?,?> sentCommand,  Collection<? extends RedisCommand<?,?,?>> sentCommands,  DefaultEndpoint endpoint){
+    if (sentCommand != null) {
+      try {
+        endpoint.write(sentCommand);
+      }
+ catch (      Exception e) {
+        sentCommand.completeExceptionally(e);
+      }
+    }
+ else {
+      try {
+        endpoint.write((Collection)sentCommands);
+      }
+ catch (      Exception e) {
+        for (        RedisCommand<?,?,?> command : sentCommands) {
+          command.completeExceptionally(e);
+        }
+      }
+    }
+  }
+  private void recycle(){
+    this.endpoint=null;
+    this.sentCommand=null;
+    this.sentCommands=null;
+    handle.recycle(this);
+  }
+}

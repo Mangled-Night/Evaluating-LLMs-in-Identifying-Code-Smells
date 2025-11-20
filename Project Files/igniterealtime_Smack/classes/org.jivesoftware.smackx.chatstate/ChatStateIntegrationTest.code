@@ -1,0 +1,34 @@
+public class ChatStateIntegrationTest extends AbstractSmackIntegrationTest {
+  private final SimpleResultSyncPoint composingSyncPoint=new SimpleResultSyncPoint();
+  private void composingListener(  Chat chat,  ChatState state,  Message message){
+    if (state.equals(ChatState.composing)) {
+      composingSyncPoint.signal();
+    }
+  }
+  private final SimpleResultSyncPoint activeSyncPoint=new SimpleResultSyncPoint();
+  private void activeListener(  Chat chat,  ChatState state,  Message message){
+    if (state.equals(ChatState.active)) {
+      activeSyncPoint.signal();
+    }
+  }
+  public ChatStateIntegrationTest(  SmackIntegrationTestEnvironment environment){
+    super(environment);
+  }
+  @SmackIntegrationTest public void testChatStateListeners() throws Exception {
+    ChatStateManager manOne=ChatStateManager.getInstance(conOne);
+    ChatStateManager manTwo=ChatStateManager.getInstance(conTwo);
+    manTwo.addChatStateListener(this::composingListener);
+    manTwo.addChatStateListener(this::activeListener);
+    Chat chatOne=ChatManager.getInstanceFor(conOne).chatWith(conTwo.getUser().asEntityBareJid());
+    manOne.setCurrentState(ChatState.composing,chatOne);
+    composingSyncPoint.waitForResult(timeout);
+    Chat chat=ChatManager.getInstanceFor(conOne).chatWith(conTwo.getUser().asEntityBareJid());
+    chat.send("Hi!");
+    activeSyncPoint.waitForResult(timeout);
+  }
+  @AfterClass public void cleanup(){
+    ChatStateManager manTwo=ChatStateManager.getInstance(conTwo);
+    manTwo.removeChatStateListener(this::composingListener);
+    manTwo.removeChatStateListener(this::activeListener);
+  }
+}

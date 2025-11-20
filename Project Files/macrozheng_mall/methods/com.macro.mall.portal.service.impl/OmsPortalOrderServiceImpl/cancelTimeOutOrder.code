@@ -1,0 +1,22 @@
+@Override public Integer cancelTimeOutOrder(){
+  Integer count=0;
+  OmsOrderSetting orderSetting=orderSettingMapper.selectByPrimaryKey(1L);
+  List<OmsOrderDetail> timeOutOrders=portalOrderDao.getTimeOutOrders(orderSetting.getNormalOrderOvertime());
+  if (CollectionUtils.isEmpty(timeOutOrders)) {
+    return count;
+  }
+  List<Long> ids=new ArrayList<>();
+  for (  OmsOrderDetail timeOutOrder : timeOutOrders) {
+    ids.add(timeOutOrder.getId());
+  }
+  portalOrderDao.updateOrderStatus(ids,4);
+  for (  OmsOrderDetail timeOutOrder : timeOutOrders) {
+    portalOrderDao.releaseSkuStockLock(timeOutOrder.getOrderItemList());
+    updateCouponStatus(timeOutOrder.getCouponId(),timeOutOrder.getMemberId(),0);
+    if (timeOutOrder.getUseIntegration() != null) {
+      UmsMember member=memberService.getById(timeOutOrder.getMemberId());
+      memberService.updateIntegration(timeOutOrder.getMemberId(),member.getIntegration() + timeOutOrder.getUseIntegration());
+    }
+  }
+  return timeOutOrders.size();
+}

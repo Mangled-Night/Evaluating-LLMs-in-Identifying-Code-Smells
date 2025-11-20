@@ -1,0 +1,18 @@
+/** 
+ * Last step of the recording setup process. Copies the save files from the selected game, transplants them into the 'recordings' folder, and renames the map files to match the provided recording name. Then launches the game loading state.
+ * @param newTitle The title of the new recording.
+ */
+private void loadGame(String newTitle){
+  try {
+    final GameManifest manifest=gameInfo.getManifest();
+    copySaveDirectoryToRecordingLibrary(manifest.getTitle(),newTitle);
+    recordAndReplayUtils.setGameTitle(newTitle);
+    config.getWorldGeneration().setDefaultSeed(manifest.getSeed());
+    config.getWorldGeneration().setWorldTitle(newTitle);
+    CoreRegistry.get(GameEngine.class).changeState(new StateLoading(manifest,NetworkMode.NONE));
+  }
+ catch (  Exception e) {
+    logger.error("Failed to load saved game",e);
+    getManager().pushScreen(MessagePopup.ASSET_URI,MessagePopup.class).setMessage("Error Loading Game",e.getMessage());
+  }
+}

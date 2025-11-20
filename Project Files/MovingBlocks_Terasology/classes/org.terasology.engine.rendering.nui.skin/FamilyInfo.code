@@ -1,0 +1,24 @@
+private static class FamilyInfo extends StyleInfo {
+  public Map<String,ElementInfo> elements;
+  public void apply(  UISkinBuilder builder){
+    super.apply(builder);
+    NUIManager nui=CoreRegistry.get(NUIManager.class);
+    if (nui == null) {
+      logger.warn("NUIManager was unavailable, skipping UISkinFormat as not needed. This may or may not be a problem");
+      return;
+    }
+    if (elements != null) {
+      for (      Map.Entry<String,ElementInfo> entry : elements.entrySet()) {
+        WidgetLibrary library=CoreRegistry.get(NUIManager.class).getWidgetMetadataLibrary();
+        ClassMetadata<? extends UIWidget,?> metadata=library.resolve(entry.getKey(),ModuleContext.getContext());
+        if (metadata != null) {
+          builder.setElementClass(metadata.getType());
+          entry.getValue().apply(builder);
+        }
+ else {
+          logger.warn("Failed to resolve UIWidget class {}, skipping style information",entry.getKey());
+        }
+      }
+    }
+  }
+}

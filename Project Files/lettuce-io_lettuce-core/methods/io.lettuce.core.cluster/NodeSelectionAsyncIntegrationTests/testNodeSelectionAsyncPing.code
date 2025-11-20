@@ -1,0 +1,8 @@
+@Test void testNodeSelectionAsyncPing(){
+  AsyncNodeSelection<String,String> onlyMe=commands.nodes(redisClusterNode -> redisClusterNode.getFlags().contains(RedisClusterNode.NodeFlag.MYSELF));
+  Map<RedisClusterNode,RedisAsyncCommands<String,String>> map=onlyMe.asMap();
+  assertThat(map).hasSize(1);
+  AsyncExecutions<String> ping=onlyMe.commands().ping();
+  CompletionStage<String> completionStage=ping.get(onlyMe.node(0));
+  assertThat(TestFutures.getOrTimeout(completionStage)).isEqualTo("PONG");
+}

@@ -1,0 +1,17 @@
+/** 
+ * A Gson  {@link TypeAdapterFactory} that dynamically looks up the {@link TypeHandler} from a{@link TypeHandlerLibrary} for each type encountered, and creates a {@link GsonTypeHandlerAdapter} withthe retrieved  {@link TypeHandler}.
+ */
+public class GsonTypeSerializationLibraryAdapterFactory implements TypeAdapterFactory {
+  private final TypeHandlerLibrary typeHandlerLibrary;
+  public GsonTypeSerializationLibraryAdapterFactory(  TypeHandlerLibrary typeHandlerLibrary){
+    this.typeHandlerLibrary=typeHandlerLibrary;
+  }
+  @SuppressWarnings("unchecked") @Override public <T>TypeAdapter<T> create(  Gson gson,  TypeToken<T> type){
+    Type rawType=type.getType();
+    TypeHandler<T> typeHandler=(TypeHandler<T>)typeHandlerLibrary.getTypeHandler(rawType).orElse(null);
+    if (typeHandler == null || typeHandler instanceof ObjectFieldMapTypeHandler) {
+      return null;
+    }
+    return new GsonTypeHandlerAdapter<>(typeHandler,gson,type);
+  }
+}

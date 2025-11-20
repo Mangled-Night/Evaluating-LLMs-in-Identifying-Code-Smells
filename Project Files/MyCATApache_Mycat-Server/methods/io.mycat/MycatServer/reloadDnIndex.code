@@ -1,0 +1,13 @@
+public void reloadDnIndex(){
+  if (MycatServer.getInstance().getProcessors() == null)   return;
+  dnIndexProperties=loadDnIndexProps();
+  Map<String,PhysicalDBPool> dataHosts=config.getDataHosts();
+  LOGGER.info("reInitialize dataHost ...");
+  for (  PhysicalDBPool node : dataHosts.values()) {
+    String index=dnIndexProperties.getProperty(node.getHostName(),"0");
+    if (!"0".equals(index)) {
+      LOGGER.info("reinit datahost: " + node.getHostName() + "  to use datasource index:"+ index);
+    }
+    node.switchSource(Integer.parseInt(index),true,"reload dnindex");
+  }
+}

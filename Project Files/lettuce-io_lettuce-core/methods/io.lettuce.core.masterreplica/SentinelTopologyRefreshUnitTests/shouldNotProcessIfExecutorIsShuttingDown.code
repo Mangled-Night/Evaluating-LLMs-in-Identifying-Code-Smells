@@ -1,0 +1,8 @@
+@Test void shouldNotProcessIfExecutorIsShuttingDown(){
+  PubSubMessageHandler adapter=getMessageHandler();
+  sut.bind(refreshRunnable);
+  when(eventExecutors.isShuttingDown()).thenReturn(true);
+  adapter.handle("*","failover-end-for-timeout","");
+  verify(redisClient).connectPubSubAsync(any(),any());
+  verify(eventExecutors,never()).schedule(any(Runnable.class),anyLong(),any());
+}

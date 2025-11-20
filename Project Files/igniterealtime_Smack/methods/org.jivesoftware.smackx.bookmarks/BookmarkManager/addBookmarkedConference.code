@@ -1,0 +1,31 @@
+/** 
+ * Adds or updates a conference in the bookmarks.
+ * @param name the name of the conference
+ * @param jid the jid of the conference
+ * @param isAutoJoin whether or not to join this conference automatically on login
+ * @param nickname the nickname to use for the user when joining the conference
+ * @param password the password to use for the user when joining the conference
+ * @throws XMPPErrorException thrown when there is an issue retrieving the current bookmarks fromthe server.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void addBookmarkedConference(String name,EntityBareJid jid,boolean isAutoJoin,Resourcepart nickname,String password) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  retrieveBookmarks();
+  BookmarkedConference bookmark=new BookmarkedConference(name,jid,isAutoJoin,nickname,password);
+  List<BookmarkedConference> conferences=bookmarks.getBookmarkedConferences();
+  if (conferences.contains(bookmark)) {
+    BookmarkedConference oldConference=conferences.get(conferences.indexOf(bookmark));
+    if (oldConference.isShared()) {
+      throw new IllegalArgumentException("Cannot modify shared bookmark");
+    }
+    oldConference.setAutoJoin(isAutoJoin);
+    oldConference.setName(name);
+    oldConference.setNickname(nickname);
+    oldConference.setPassword(password);
+  }
+ else {
+    bookmarks.addBookmarkedConference(bookmark);
+  }
+  privateDataManager.setPrivateData(bookmarks);
+}

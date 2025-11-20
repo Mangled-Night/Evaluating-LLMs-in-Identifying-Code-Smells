@@ -1,0 +1,26 @@
+private void applyTransformations(GLTF gltf,TFloatList vertices,TFloatList normals){
+  int nodeIndex=-1;
+  for (int i=0; i < gltf.getNodes().size(); i++) {
+    if (gltf.getNodes().get(i).getMesh() == 0) {
+      nodeIndex=i;
+      break;
+    }
+  }
+  Matrix4f transform=getMatrix(gltf,nodeIndex);
+  applyTransformations(vertices,transform,false);
+  transform.setTranslation(new Vector3f());
+  applyTransformations(normals,transform,true);
+}
+private void applyTransformations(TFloatList buffer,Matrix4f transform,boolean normalize){
+  Vector3f current=new Vector3f();
+  for (int i=0; i < buffer.size(); i+=3) {
+    current.set(buffer.get(i),buffer.get(i + 1),buffer.get(i + 2));
+    transform.transformPosition(current);
+    if (normalize) {
+      current.normalize();
+    }
+    buffer.set(i,current.x());
+    buffer.set(i + 1,current.y());
+    buffer.set(i + 2,current.z());
+  }
+}

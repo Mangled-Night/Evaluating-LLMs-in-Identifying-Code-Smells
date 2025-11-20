@@ -1,0 +1,23 @@
+public static BeanConfig loadBean(Element parent,String tagName){
+  NodeList nodeList=parent.getElementsByTagName(tagName);
+  if (nodeList.getLength() > 1) {
+    throw new ConfigException(tagName + " elements length over one!");
+  }
+  return loadBean((Element)nodeList.item(0));
+}
+public static BeanConfig loadBean(Element e){
+  if (e == null) {
+    return null;
+  }
+  BeanConfig bean=new BeanConfig();
+  bean.setName(e.getAttribute("name"));
+  Element element=loadElement(e,"className");
+  if (element != null) {
+    bean.setClassName(element.getTextContent());
+  }
+ else {
+    bean.setClassName(e.getAttribute("class"));
+  }
+  bean.setParams(loadElements(e));
+  return bean;
+}

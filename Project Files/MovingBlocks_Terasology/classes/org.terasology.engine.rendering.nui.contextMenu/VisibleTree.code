@@ -1,0 +1,46 @@
+private static class VisibleTree implements AbstractContextMenuItem {
+  private String name;
+  private List<AbstractContextMenuItem> options=Lists.newArrayList();
+  private boolean visible;
+  VisibleTree(  MenuTree tree,  boolean visible){
+    this.name=tree.getName();
+    for (    AbstractContextMenuItem option : tree.getOptions()) {
+      if (option instanceof MenuTree) {
+        this.options.add(new VisibleTree((MenuTree)option,false));
+      }
+ else {
+        this.options.add(option);
+      }
+    }
+    this.visible=visible;
+  }
+  /** 
+ * @param option The option to be selected.
+ * @return Whether the context menu should be closed after the option is selected
+ */
+  public boolean select(  AbstractContextMenuItem option){
+    if (options.contains(option)) {
+      if (option instanceof ContextMenuOption) {
+        ((ContextMenuOption)option).select();
+        return ((ContextMenuOption)option).isFinalized();
+      }
+ else       if (option instanceof VisibleTree) {
+        ((VisibleTree)option).visible=!((VisibleTree)option).visible;
+        return false;
+      }
+ else {
+        return false;
+      }
+    }
+    return false;
+  }
+  public void setVisible(  boolean visible){
+    this.visible=visible;
+  }
+  public List<AbstractContextMenuItem> getOptions(){
+    return options;
+  }
+  @Override public String toString(){
+    return name;
+  }
+}

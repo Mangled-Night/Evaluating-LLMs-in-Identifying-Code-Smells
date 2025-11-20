@@ -1,0 +1,23 @@
+/** 
+ * @author Mark Paluch
+ */
+@ExtendWith(MockitoExtension.class) @MockitoSettings(strictness=Strictness.LENIENT) class MappingSocketAddressResolverUnitTests {
+  @Mock DnsResolver dnsResolver;
+  @BeforeEach void before() throws UnknownHostException {
+    when(dnsResolver.resolve(anyString())).thenReturn(new InetAddress[0]);
+  }
+  @Test void shouldPassThruHostAndPort(){
+    RedisURI localhost=RedisURI.create("localhost",RedisURI.DEFAULT_REDIS_PORT);
+    MappingSocketAddressResolver resolver=MappingSocketAddressResolver.create(dnsResolver,Function.identity());
+    InetSocketAddress resolve=(InetSocketAddress)resolver.resolve(localhost);
+    assertThat(resolve.getPort()).isEqualTo(RedisURI.DEFAULT_REDIS_PORT);
+    assertThat(resolve.getHostString()).isEqualTo("localhost");
+  }
+  @Test void shouldMapHostAndPort(){
+    RedisURI localhost=RedisURI.create("localhost",RedisURI.DEFAULT_REDIS_PORT);
+    MappingSocketAddressResolver resolver=MappingSocketAddressResolver.create(dnsResolver,it -> HostAndPort.of(it.getHostText() + "-foo",it.getPort() + 100));
+    InetSocketAddress resolve=(InetSocketAddress)resolver.resolve(localhost);
+    assertThat(resolve.getPort()).isEqualTo(RedisURI.DEFAULT_REDIS_PORT + 100);
+    assertThat(resolve.getHostString()).isEqualTo("localhost-foo");
+  }
+}

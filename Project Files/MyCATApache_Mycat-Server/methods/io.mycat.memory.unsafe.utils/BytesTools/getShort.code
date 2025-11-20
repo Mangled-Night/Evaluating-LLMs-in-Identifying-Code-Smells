@@ -1,0 +1,68 @@
+/** 
+ * Convert a byte array  to a short value
+ * @param buf
+ * @return
+ * @throws NumberFormatException
+ */
+public static short getShort(byte[] buf) throws NumberFormatException {
+  return getShort(buf,0,buf.length);
+}
+public static short getShort(byte[] buf,int offset,int endpos) throws NumberFormatException {
+  byte base=10;
+  int s;
+  for (s=offset; s < endpos && Character.isWhitespace((char)buf[s]); ++s) {
+    ;
+  }
+  if (s == endpos) {
+    throw new NumberFormatException(toString(buf));
+  }
+ else {
+    boolean negative=false;
+    if ((char)buf[s] == 45) {
+      negative=true;
+      ++s;
+    }
+ else     if ((char)buf[s] == 43) {
+      ++s;
+    }
+    int save=s;
+    short cutoff=(short)(32767 / base);
+    short cutlim=(short)(32767 % base);
+    if (negative) {
+      ++cutlim;
+    }
+    boolean overflow=false;
+    short i;
+    for (i=0; s < endpos; ++s) {
+      char c=(char)buf[s];
+      if (Character.isDigit(c)) {
+        c=(char)(c - 48);
+      }
+ else {
+        if (!Character.isLetter(c)) {
+          break;
+        }
+        c=(char)(Character.toUpperCase(c) - 65 + 10);
+      }
+      if (c >= base) {
+        break;
+      }
+      if (i <= cutoff && (i != cutoff || c <= cutlim)) {
+        i=(short)(i * base);
+        i=(short)(i + c);
+      }
+ else {
+        overflow=true;
+      }
+    }
+    if (s == save) {
+      throw new NumberFormatException(toString(buf));
+    }
+ else     if (overflow) {
+      throw new NumberFormatException(toString(buf));
+    }
+ else {
+      return negative ? (short)(-i) : i;
+    }
+  }
+}

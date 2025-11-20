@@ -1,0 +1,16 @@
+@Override public ConfirmOrderResult generateConfirmOrder(List<Long> cartIds){
+  ConfirmOrderResult result=new ConfirmOrderResult();
+  UmsMember currentMember=memberService.getCurrentMember();
+  List<CartPromotionItem> cartPromotionItemList=cartItemService.listPromotion(currentMember.getId(),cartIds);
+  result.setCartPromotionItemList(cartPromotionItemList);
+  List<UmsMemberReceiveAddress> memberReceiveAddressList=memberReceiveAddressService.list();
+  result.setMemberReceiveAddressList(memberReceiveAddressList);
+  List<SmsCouponHistoryDetail> couponHistoryDetailList=memberCouponService.listCart(cartPromotionItemList,1);
+  result.setCouponHistoryDetailList(couponHistoryDetailList);
+  result.setMemberIntegration(currentMember.getIntegration());
+  UmsIntegrationConsumeSetting integrationConsumeSetting=integrationConsumeSettingMapper.selectByPrimaryKey(1L);
+  result.setIntegrationConsumeSetting(integrationConsumeSetting);
+  ConfirmOrderResult.CalcAmount calcAmount=calcCartAmount(cartPromotionItemList);
+  result.setCalcAmount(calcAmount);
+  return result;
+}

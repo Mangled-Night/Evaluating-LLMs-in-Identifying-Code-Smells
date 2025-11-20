@@ -1,0 +1,17 @@
+@BeforeEach public void setup() throws Exception {
+  this.system=new VisualCharacterSystem();
+  Context context=new ContextImpl();
+  this.localPlayer=Mockito.mock(LocalPlayer.class);
+  context.put(LocalPlayer.class,localPlayer);
+  Mockito.doAnswer(new Answer(){
+    @Override public Object answer(    InvocationOnMock invocation) throws Throwable {
+      return clientEntityReturnedByLocalPlayer;
+    }
+  }
+).when(localPlayer).getClientEntity();
+  this.entityManager=Mockito.mock(EntityManager.class);
+  Mockito.doReturn(Mockito.mock(EntityBuilder.class)).when(entityManager).newBuilder();
+  context.put(EntityManager.class,this.entityManager);
+  InjectionHelper.inject(system,context);
+  system.setCreateAndAttachVisualEntityStrategy((entityBuilder,characterEntity) -> Mockito.mock(EntityRef.class));
+}

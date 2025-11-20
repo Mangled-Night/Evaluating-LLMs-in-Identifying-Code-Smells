@@ -1,0 +1,37 @@
+@Override public void deserializeWorld(EntityData.GlobalStore world){
+  entityManager.setNextId(world.getNextEntityId());
+  Map<Class<? extends Component>,Integer> componentIdTable=Maps.newHashMap();
+  for (int index=0; index < world.getComponentClassCount(); ++index) {
+    ComponentMetadata<?> componentMetadata=componentLibrary.resolve(world.getComponentClass(index));
+    if (componentMetadata != null) {
+      componentIdTable.put(componentMetadata.getType(),index);
+    }
+  }
+  entitySerializer.setComponentIdMapping(componentIdTable);
+  prefabSerializer.setComponentIdMapping(componentIdTable);
+  ListMultimap<String,EntityData.Prefab> pendingPrefabs=ArrayListMultimap.create();
+  world.getPrefabList().stream().filter(prefabData -> !prefabManager.exists(prefabData.getName())).forEach(prefabData -> {
+    if (!prefabData.hasParentName()) {
+      createPrefab(prefabData);
+    }
+ else {
+      pendingPrefabs.put(prefabData.getParentName(),prefabData);
+    }
+  }
+);
+  while (!pendingPrefabs.isEmpty()) {
+    Iterator<Map.Entry<String,Collection<EntityData.Prefab>>> i=pendingPrefabs.asMap().entrySet().iterator();
+    while (i.hasNext()) {
+      Map.Entry<String,Collection<EntityData.Prefab>> entry=i.next();
+      if (prefabManager.exists(entry.getKey())) {
+        entry.getValue().forEach(this::createPrefab);
+        i.remove();
+      }
+    }
+  }
+  for (  EntityData.Entity entityData : world.getEntityList()) {
+    entitySerializer.deserialize(entityData);
+  }
+  entitySerializer.removeComponentIdMapping();
+  prefabSerializer.removeComponentIdMapping();
+}

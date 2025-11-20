@@ -1,0 +1,14 @@
+@Override public void rowResponse(byte[] row,BackendConnection conn){
+  RowDataPacket rowDataPkg=new RowDataPacket(1);
+  rowDataPkg.read(row);
+  byte[] columnData=rowDataPkg.fieldValues.get(0);
+  String columnVal=new String(columnData);
+  SequenceVal seqVal=(SequenceVal)conn.getAttachment();
+  if (IncrSequenceMySQLHandler.errSeqResult.equals(columnVal)) {
+    seqVal.dbretVal=IncrSequenceMySQLHandler.errSeqResult;
+    LOGGER.warn(" sequnce sql returned err value ,sequence:" + seqVal.seqName + " "+ columnVal+ " sql:"+ seqVal.sql);
+  }
+ else {
+    seqVal.dbretVal=columnVal;
+  }
+}

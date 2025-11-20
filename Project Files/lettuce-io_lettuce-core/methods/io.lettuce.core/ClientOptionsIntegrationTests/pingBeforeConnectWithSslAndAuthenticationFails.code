@@ -1,0 +1,13 @@
+@Test void pingBeforeConnectWithSslAndAuthenticationFails(){
+  WithPassword.run(client,() -> {
+    RedisURI redisURI=RedisURI.Builder.redis(host,6443).withVerifyPeer(false).withSsl(true).build();
+    try {
+      client.connect(redisURI);
+      fail("Missing RedisConnectionException");
+    }
+ catch (    RedisException e) {
+      assertThat(e).isInstanceOf(RedisConnectionException.class).hasRootCauseInstanceOf(RedisCommandExecutionException.class);
+    }
+  }
+);
+}

@@ -1,0 +1,19 @@
+@SuppressWarnings("unchecked") RedisSubscription(StatefulConnection<?,?> connection,RedisCommand<?,?,T> command,boolean dissolve,Executor executor){
+  LettuceAssert.notNull(connection,"Connection must not be null");
+  LettuceAssert.notNull(command,"RedisCommand must not be null");
+  LettuceAssert.notNull(executor,"Executor must not be null");
+  this.connection=connection;
+  this.command=command;
+  this.dissolve=dissolve;
+  this.executor=executor;
+  if (command.getOutput() instanceof StreamingOutput<?>) {
+    StreamingOutput<T> streamingOutput=(StreamingOutput<T>)command.getOutput();
+    if (connection instanceof StatefulRedisConnection<?,?> && ((StatefulRedisConnection)connection).isMulti()) {
+      streamingOutput.setSubscriber(new CompositeSubscriber<>(this,streamingOutput.getSubscriber()));
+    }
+ else {
+      streamingOutput.setSubscriber(this);
+    }
+  }
+  this.subscriptionCommand=new SubscriptionCommand<>(command,this,dissolve);
+}

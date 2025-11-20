@@ -1,0 +1,39 @@
+public abstract class AbstractIqBuilder<IB extends AbstractIqBuilder<IB>> extends StanzaBuilder<IB> implements IqView {
+  protected IQ.Type type=IQ.Type.get;
+  AbstractIqBuilder(  IQ other,  String stanzaId){
+    super(other,stanzaId);
+  }
+  AbstractIqBuilder(  AbstractIqBuilder<?> other){
+    super(other);
+    type=other.type;
+  }
+  AbstractIqBuilder(  StanzaIdSource stanzaIdSource){
+    super(stanzaIdSource);
+  }
+  AbstractIqBuilder(  String stanzaId){
+    super(stanzaId);
+  }
+  public static IqData createResponse(  IqView request){
+    return createResponse(request,IQ.ResponseType.result);
+  }
+  public static IqData createErrorResponse(  IqView request){
+    return createResponse(request,IQ.ResponseType.error);
+  }
+  protected static IqData createResponse(  IqView request,  IQ.ResponseType responseType){
+    if (!(request.getType() == IQ.Type.get || request.getType() == IQ.Type.set)) {
+      throw new IllegalArgumentException("IQ request must be of type 'set' or 'get'. Original IQ: " + request);
+    }
+    IqData commonResponseIqData=buildResponse(request,s -> {
+      return StanzaBuilder.buildIqData(s);
+    }
+);
+    commonResponseIqData.ofType(responseType.getType());
+    return commonResponseIqData;
+  }
+  @Override protected final void addStanzaSpecificAttributes(  ToStringUtil.Builder builder){
+    builder.addValue("type",getType());
+  }
+  @Override public final IQ.Type getType(){
+    return type;
+  }
+}

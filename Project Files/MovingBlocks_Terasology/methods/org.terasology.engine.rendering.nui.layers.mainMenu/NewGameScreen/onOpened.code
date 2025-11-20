@@ -1,0 +1,28 @@
+@Override public void onOpened(){
+  super.onOpened();
+  final UIText gameName=find("gameName",UIText.class);
+  setGameName(gameName);
+  final UIDropdown<Module> gameplay=find("gameplay",UIDropdown.class);
+  String configDefaultModuleName=config.getDefaultModSelection().getDefaultGameplayModuleName();
+  String useThisModuleName="";
+  if ("".equalsIgnoreCase(configDefaultModuleName) || DEFAULT_GAME_TEMPLATE_NAME.equalsIgnoreCase(configDefaultModuleName)) {
+    useThisModuleName=DEFAULT_GAME_TEMPLATE_NAME;
+  }
+ else {
+    useThisModuleName=configDefaultModuleName;
+  }
+  Name defaultGameplayModuleName=new Name(useThisModuleName);
+  Module defaultGameplayModule=moduleManager.getRegistry().getLatestModuleVersion(defaultGameplayModuleName);
+  if (defaultGameplayModule != null) {
+    gameplay.setSelection(defaultGameplayModule);
+    setDefaultGeneratorOfGameplayModule(defaultGameplayModule);
+  }
+ else {
+    for (    Module module : moduleManager.getRegistry()) {
+      if (module != null && StandardModuleExtension.isGameplayModule(module)) {
+        gameplay.setSelection(module);
+        break;
+      }
+    }
+  }
+}

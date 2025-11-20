@@ -1,0 +1,22 @@
+@Override public void set(ByteBuffer bytes){
+  if (messageId == null) {
+    messageId=decodeAscii(bytes);
+    return;
+  }
+  if (consumer == null) {
+    consumer=StringCodec.UTF8.decodeKey(bytes);
+    return;
+  }
+  set(Long.parseLong(decodeAscii(bytes)));
+}
+@Override public void set(long integer){
+  if (msSinceLastDelivery == null) {
+    msSinceLastDelivery=integer;
+    return;
+  }
+  PendingMessage message=new PendingMessage(messageId,consumer,msSinceLastDelivery,integer);
+  messageId=null;
+  consumer=null;
+  msSinceLastDelivery=null;
+  subscriber.onNext(output,message);
+}

@@ -1,0 +1,14 @@
+@ApiOperation(value="认证中心首页") @RequestMapping(value="/index",method=RequestMethod.GET) public String index(HttpServletRequest request) throws Exception {
+  String appid=request.getParameter("appid");
+  String backurl=request.getParameter("backurl");
+  if (StringUtils.isBlank(appid)) {
+    throw new RuntimeException("无效访问！");
+  }
+  UpmsSystemExample upmsSystemExample=new UpmsSystemExample();
+  upmsSystemExample.createCriteria().andNameEqualTo(appid);
+  int count=upmsSystemService.countByExample(upmsSystemExample);
+  if (0 == count) {
+    throw new RuntimeException(String.format("未注册的系统:%s",appid));
+  }
+  return "redirect:/sso/login?backurl=" + URLEncoder.encode(backurl,"utf-8");
+}

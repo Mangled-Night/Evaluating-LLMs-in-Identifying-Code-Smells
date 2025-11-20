@@ -1,0 +1,26 @@
+/** 
+ * ModulesJsonProvider provides game module id and version to  {@link org.terasology.engine.telemetry.logstash.TelemetryLogstashAppender}. These information will then send to the server. The fieldName can be reset in logback.xml.
+ */
+public class ModulesJsonProvider extends AbstractFieldJsonProvider<ILoggingEvent> implements FieldNamesAware<LogstashFieldNames> {
+  public static final String FIELD_MODULES="modules";
+  public ModulesJsonProvider(){
+    setFieldName(FIELD_MODULES);
+  }
+  @Override public void writeTo(  JsonGenerator generator,  ILoggingEvent iLoggingEvent) throws IOException {
+    TelemetryLogstashAppender appender=TelemetryUtils.fetchTelemetryLogstashAppender();
+    Context context=appender.getGameContext();
+    if (context != null) {
+      Metrics metrics=context.get(Metrics.class);
+      Optional<Metric> optional=metrics.getMetric(ModulesMetric.class);
+      if (optional.isPresent()) {
+        Metric modulesMetric=optional.get();
+        Map<String,?> map=modulesMetric.createTelemetryFieldToValue();
+        Map<String,String> stringMap=TelemetryUtils.toStringMap(map);
+        JsonWritingUtils.writeMapStringFields(generator,getFieldName(),stringMap);
+      }
+    }
+  }
+  public void setFieldNames(  LogstashFieldNames fieldNames){
+    setFieldName(fieldNames.getMessage());
+  }
+}

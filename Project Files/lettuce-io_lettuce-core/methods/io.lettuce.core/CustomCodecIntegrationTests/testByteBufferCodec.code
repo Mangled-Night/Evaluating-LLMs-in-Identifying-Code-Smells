@@ -1,0 +1,13 @@
+@Test void testByteBufferCodec(){
+  RedisCommands<ByteBuffer,ByteBuffer> connection=client.connect(new ByteBufferCodec()).sync();
+  String value="üöäü+#";
+  ByteBuffer wrap=ByteBuffer.wrap(value.getBytes());
+  connection.set(wrap,wrap);
+  List<ByteBuffer> keys=connection.keys(wrap);
+  assertThat(keys).hasSize(1);
+  ByteBuffer byteBuffer=keys.get(0);
+  byte[] bytes=new byte[byteBuffer.remaining()];
+  byteBuffer.get(bytes);
+  assertThat(bytes).isEqualTo(value.getBytes());
+  connection.getStatefulConnection().close();
+}

@@ -1,0 +1,11 @@
+@Test void shouldGuardAgainstMultipleCompleteCalls(){
+  CommandWrapper<String,String,String> commandWrapper=new CommandWrapper<>(sut);
+  AtomicInteger counter=new AtomicInteger();
+  commandWrapper.onComplete((s,throwable) -> commandWrapper.completeExceptionally(new IllegalStateException()));
+  commandWrapper.onComplete((s,throwable) -> {
+    counter.incrementAndGet();
+  }
+);
+  commandWrapper.complete();
+  assertThat(counter).hasValue(1);
+}

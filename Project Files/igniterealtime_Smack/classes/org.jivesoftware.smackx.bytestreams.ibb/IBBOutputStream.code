@@ -1,0 +1,123 @@
+/** 
+ * IBBOutputStream class is the base implementation of an In-Band Bytestream output stream. Subclasses of this output stream must provide a method to send data over XMPP stream.
+ */
+private abstract class IBBOutputStream extends OutputStream {
+  protected final byte[] buffer;
+  protected int bufferPointer=0;
+  protected UInt16 seq=UInt16.from(0);
+  protected boolean isClosed=false;
+  /** 
+ * Constructor.
+ */
+  private IBBOutputStream(){
+    this.buffer=new byte[byteStreamRequest.getBlockSize()];
+  }
+  /** 
+ * Writes the given data stanza to the XMPP stream.
+ * @param data the data packet
+ * @throws IOException if an I/O error occurred while sending or if the stream is closed
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+  protected abstract void writeToXML(  DataPacketExtension data) throws IOException, NotConnectedException, InterruptedException ;
+  @Override public synchronized void write(  int b) throws IOException {
+    if (this.isClosed) {
+      throw new IOException("Stream is closed");
+    }
+    if (bufferPointer >= buffer.length) {
+      flushBuffer();
+    }
+    buffer[bufferPointer++]=(byte)b;
+  }
+  @Override public synchronized void write(  byte[] b,  int off,  int len) throws IOException {
+    if (b == null) {
+      throw new NullPointerException();
+    }
+ else     if ((off < 0) || (off > b.length) || (len < 0)|| ((off + len) > b.length)|| ((off + len) < 0)) {
+      throw new IndexOutOfBoundsException();
+    }
+ else     if (len == 0) {
+      return;
+    }
+    if (this.isClosed) {
+      throw new IOException("Stream is closed");
+    }
+    if (len >= buffer.length) {
+      writeOut(b,off,buffer.length);
+      write(b,off + buffer.length,len - buffer.length);
+    }
+ else {
+      writeOut(b,off,len);
+    }
+  }
+  @Override public synchronized void write(  byte[] b) throws IOException {
+    write(b,0,b.length);
+  }
+  /** 
+ * Fills the buffer with the given data and sends it over the XMPP stream if the buffers capacity has been reached. This method is only called from this class so it is assured that the amount of data to send is <= buffer capacity
+ * @param b the data
+ * @param off the data
+ * @param len the number of bytes to write
+ * @throws IOException if an I/O error occurred while sending or if the stream is closed
+ */
+  private synchronized void writeOut(  byte[] b,  int off,  int len) throws IOException {
+    if (this.isClosed) {
+      throw new IOException("Stream is closed");
+    }
+    int available=0;
+    if (len > buffer.length - bufferPointer) {
+      available=buffer.length - bufferPointer;
+      System.arraycopy(b,off,buffer,bufferPointer,available);
+      bufferPointer+=available;
+      flushBuffer();
+    }
+    System.arraycopy(b,off + available,buffer,bufferPointer,len - available);
+    bufferPointer+=len - available;
+  }
+  @Override public synchronized void flush() throws IOException {
+    if (this.isClosed) {
+      throw new IOException("Stream is closed");
+    }
+    flushBuffer();
+  }
+  private synchronized void flushBuffer() throws IOException {
+    if (bufferPointer == 0) {
+      return;
+    }
+    String enc=Base64.encodeToString(buffer,0,bufferPointer);
+    DataPacketExtension data=new DataPacketExtension(byteStreamRequest.getSessionID(),this.seq,enc);
+    try {
+      writeToXML(data);
+    }
+ catch (    InterruptedException|NotConnectedException e) {
+      IOException ioException=new IOException();
+      ioException.initCause(e);
+      throw ioException;
+    }
+    bufferPointer=0;
+    seq=seq.incrementedByOne();
+  }
+  @Override public void close() throws IOException {
+    if (isClosed) {
+      return;
+    }
+    InBandBytestreamSession.this.closeByLocal(false);
+  }
+  /** 
+ * Sets the close flag and optionally flushes the stream.
+ * @param flush if <code>true</code> flushes the stream
+ */
+  protected void closeInternal(  boolean flush){
+    if (this.isClosed) {
+      return;
+    }
+    this.isClosed=true;
+    try {
+      if (flush) {
+        flushBuffer();
+      }
+    }
+ catch (    IOException e) {
+    }
+  }
+}

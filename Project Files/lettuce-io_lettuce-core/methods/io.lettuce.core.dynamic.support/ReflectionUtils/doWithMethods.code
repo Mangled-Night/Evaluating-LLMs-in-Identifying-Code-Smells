@@ -1,0 +1,37 @@
+/** 
+ * Perform the given callback operation on all matching methods of the given class and superclasses. <p> The same named method occurring on subclass and superclass will appear twice, unless excluded by a  {@link MethodFilter}.
+ * @param clazz the class to introspect
+ * @param mc the callback to invoke for each method
+ * @see #doWithMethods(Class,MethodCallback,MethodFilter)
+ */
+public static void doWithMethods(Class<?> clazz,MethodCallback mc){
+  doWithMethods(clazz,mc,null);
+}
+/** 
+ * Perform the given callback operation on all matching methods of the given class and superclasses (or given interface and super-interfaces). <p> The same named method occurring on subclass and superclass will appear twice, unless excluded by the specified {@link MethodFilter}.
+ * @param clazz the class to introspect
+ * @param mc the callback to invoke for each method
+ * @param mf the filter that determines the methods to apply the callback to
+ */
+public static void doWithMethods(Class<?> clazz,MethodCallback mc,MethodFilter mf){
+  Method[] methods=getDeclaredMethods(clazz);
+  for (  Method method : methods) {
+    if (mf != null && !mf.matches(method)) {
+      continue;
+    }
+    try {
+      mc.doWith(method);
+    }
+ catch (    IllegalAccessException ex) {
+      throw new IllegalStateException("Not allowed to access method '" + method.getName() + "': "+ ex);
+    }
+  }
+  if (clazz.getSuperclass() != null) {
+    doWithMethods(clazz.getSuperclass(),mc,mf);
+  }
+ else   if (clazz.isInterface()) {
+    for (    Class<?> superIfc : clazz.getInterfaces()) {
+      doWithMethods(superIfc,mc,mf);
+    }
+  }
+}

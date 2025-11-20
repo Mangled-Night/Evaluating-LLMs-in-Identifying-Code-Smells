@@ -1,0 +1,27 @@
+public class AbstractProviderTest {
+  private static final ExtensionElementProvider<ExtensionElement> NUMBER_FORMAT_THROWING_PROVIDER=new ExtensionElementProvider<ExtensionElement>(){
+    @Override public ExtensionElement parse(    XmlPullParser parser,    int initialDepth,    XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException, ParseException {
+      throw new NumberFormatException();
+    }
+  }
+;
+  private static final String MESSAGE="dummy message";
+  private static final int VALUE=14768234;
+  private static final ExtensionElementProvider<ExtensionElement> PARSE_EXCEPTION_THROWING_PROVIDER=new ExtensionElementProvider<ExtensionElement>(){
+    @Override public ExtensionElement parse(    XmlPullParser parser,    int initialDepth,    XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException, ParseException {
+      throw new ParseException(MESSAGE,VALUE);
+    }
+  }
+;
+  @Test public void testWrapsNumberFormatException() throws XmlPullParserException, IOException {
+    XmlPullParser parser=SmackTestUtil.createDummyParser();
+    assertThrows(AbstractProvider.NumberFormatParseException.class,() -> NUMBER_FORMAT_THROWING_PROVIDER.parse(parser));
+  }
+  @Test public void testWrapsParseException() throws XmlPullParserException, IOException {
+    XmlPullParser parser=SmackTestUtil.createDummyParser();
+    AbstractProvider.TextParseException testParseException=assertThrows(AbstractProvider.TextParseException.class,() -> PARSE_EXCEPTION_THROWING_PROVIDER.parse(parser));
+    ParseException parseException=testParseException.getParseException();
+    assertEquals(MESSAGE,parseException.getMessage());
+    assertEquals(VALUE,parseException.getErrorOffset());
+  }
+}

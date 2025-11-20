@@ -1,0 +1,9 @@
+@Test void shouldWorkWithAsyncPooledConnection(){
+  BoundedAsyncPool<StatefulRedisConnection<String,String>> pool=AsyncConnectionPoolSupport.createBoundedObjectPool(() -> client.connectAsync(StringCodec.ASCII,RedisURI.create(TestSettings.host(),TestSettings.port())),BoundedPoolConfig.create());
+  try (StatefulRedisConnection<String,String> connection=pool.acquire().join()){
+    RedisCommandFactory factory=new RedisCommandFactory(connection);
+    SimpleCommands commands=factory.getCommands(SimpleCommands.class);
+    commands.get("foo");
+  }
+   pool.close();
+}

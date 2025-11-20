@@ -1,0 +1,19 @@
+private CompletionStage<Partitions> fetchPartitions(Iterable<RedisURI> topologyRefreshSource){
+  CompletionStage<Map<RedisURI,Partitions>> topology=refresh.loadViews(topologyRefreshSource,getClusterClientOptions().getSocketOptions().getConnectTimeout(),useDynamicRefreshSources());
+  return topology.thenApply(partitions -> {
+    if (partitions.isEmpty()) {
+      throw new RedisException(String.format("Cannot retrieve initial cluster partitions from initial URIs %s",topologyRefreshSource));
+    }
+    Partitions loadedPartitions=determinePartitions(this.partitions,partitions);
+    RedisURI viewedBy=getViewedBy(partitions,loadedPartitions);
+    for (    RedisClusterNode partition : loadedPartitions) {
+      if (viewedBy != null) {
+        RedisURI uri=partition.getUri();
+        RedisClusterURIUtil.applyUriConnectionSettings(viewedBy,uri);
+      }
+    }
+    topologyRefreshScheduler.activateTopologyRefreshIfNeeded();
+    return loadedPartitions;
+  }
+);
+}

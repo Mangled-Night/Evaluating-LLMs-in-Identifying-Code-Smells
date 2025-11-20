@@ -1,0 +1,28 @@
+public FreeformFamily(BlockFamilyDefinition definition,BlockShape shape,BlockBuilderHelper blockBuilder){
+  super(definition,shape,blockBuilder);
+  BlockUri uri;
+  if (CUBE_SHAPE_URN.equals(shape.getUrn())) {
+    uri=new BlockUri(definition.getUrn());
+  }
+ else {
+    uri=new BlockUri(definition.getUrn(),shape.getUrn());
+  }
+  if (shape.isCollisionYawSymmetric()) {
+    archetypeBlock=blockBuilder.constructSimpleBlock(definition,shape,uri,this);
+  }
+ else {
+    for (    Rotation rot : Rotation.horizontalRotations()) {
+      Side side=rot.rotate(Side.FRONT);
+      Block block=blockBuilder.constructTransformedBlock(definition,shape,side.toString().toLowerCase(Locale.ENGLISH),rot,new BlockUri(uri,new Name(side.name())),this);
+      if (block == null) {
+        throw new IllegalArgumentException("Missing block for side: " + side.toString());
+      }
+      blocks.put(side,block);
+    }
+  }
+  setBlockUri(uri);
+}
+public FreeformFamily(BlockFamilyDefinition blockFamilyDefinition,BlockBuilderHelper blockBuilderHelper){
+  super(blockFamilyDefinition,blockBuilderHelper);
+  throw new UnsupportedOperationException("Shape expected");
+}

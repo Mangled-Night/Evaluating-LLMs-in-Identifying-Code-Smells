@@ -1,0 +1,32 @@
+@Override public DiscoverInfo getDiscoverInfoByUser(ServiceDiscoveryManager serviceDiscoveryManager,Jid jid){
+  DiscoverInfo info=EntityCapsManager.getDiscoverInfoByUser(jid);
+  if (info != null) {
+    return info;
+  }
+  NodeVerHash nodeVerHash=getNodeVerHashByJid(jid);
+  if (nodeVerHash == null) {
+    return null;
+  }
+  try {
+    info=serviceDiscoveryManager.discoverInfo(jid,nodeVerHash.getNodeVer());
+  }
+ catch (  NoResponseException|XMPPErrorException|NotConnectedException|InterruptedException e) {
+    return null;
+  }
+  if (verifyDiscoverInfoVersion(nodeVerHash.getVer(),nodeVerHash.getHash(),info)) {
+    addDiscoverInfoByNode(nodeVerHash.getNodeVer(),info);
+  }
+ else {
+  }
+  return info;
+}
+/** 
+ * Get the discover info given a user name. The discover info is returned if the user has a node#ver associated with it and the node#ver has a discover info associated with it.
+ * @param user TODO javadoc me pleaseuser name (Full JID)
+ * @return the discovered info
+ */
+public static DiscoverInfo getDiscoverInfoByUser(Jid user){
+  NodeVerHash nvh=JID_TO_NODEVER_CACHE.lookup(user);
+  if (nvh == null)   return null;
+  return getDiscoveryInfoByNodeVer(nvh.nodeVer);
+}

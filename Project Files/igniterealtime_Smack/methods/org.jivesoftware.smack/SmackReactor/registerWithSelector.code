@@ -1,0 +1,11 @@
+public SelectionKey registerWithSelector(SelectableChannel channel,int ops,ChannelSelectedCallback callback) throws ClosedChannelException {
+  SelectionKeyAttachment selectionKeyAttachment=new SelectionKeyAttachment(callback);
+  registrationLock.lock();
+  try {
+    selector.wakeup();
+    return channel.register(selector,ops,selectionKeyAttachment);
+  }
+  finally {
+    registrationLock.unlock();
+  }
+}

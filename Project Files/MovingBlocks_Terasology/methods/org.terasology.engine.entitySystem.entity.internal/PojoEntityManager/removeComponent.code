@@ -1,0 +1,19 @@
+/** 
+ * Removes a component from an entity
+ * @param entityId
+ * @param componentClass
+ */
+@Override public <T extends Component>T removeComponent(long entityId,Class<T> componentClass){
+  Optional<ComponentTable> maybeStore=getPool(entityId).map(EngineEntityPool::getComponentStore);
+  Optional<T> component=maybeStore.map(store -> store.get(entityId,componentClass));
+  if (component.isPresent()) {
+    if (eventSystem != null) {
+      EntityRef entityRef=getEntity(entityId);
+      eventSystem.send(entityRef,BeforeDeactivateComponent.newInstance(),component.get());
+      eventSystem.send(entityRef,BeforeRemoveComponent.newInstance(),component.get());
+    }
+    notifyComponentRemoved(getEntity(entityId),componentClass);
+    maybeStore.ifPresent(store -> store.remove(entityId,componentClass));
+  }
+  return component.orElse(null);
+}

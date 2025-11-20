@@ -1,0 +1,27 @@
+private double closest(Point2D[] pointsByX,Point2D[] pointsByY,Point2D[] aux,int lo,int hi){
+  if (hi <= lo)   return Double.POSITIVE_INFINITY;
+  int mid=lo + (hi - lo) / 2;
+  Point2D median=pointsByX[mid];
+  double delta1=closest(pointsByX,pointsByY,aux,lo,mid);
+  double delta2=closest(pointsByX,pointsByY,aux,mid + 1,hi);
+  double delta=Math.min(delta1,delta2);
+  merge(pointsByY,aux,lo,mid,hi);
+  int m=0;
+  for (int i=lo; i <= hi; i++) {
+    if (Math.abs(pointsByY[i].x() - median.x()) < delta)     aux[m++]=pointsByY[i];
+  }
+  for (int i=0; i < m; i++) {
+    for (int j=i + 1; (j < m) && (aux[j].y() - aux[i].y() < delta); j++) {
+      double distance=aux[i].distanceTo(aux[j]);
+      if (distance < delta) {
+        delta=distance;
+        if (distance < bestDistance) {
+          bestDistance=delta;
+          best1=aux[i];
+          best2=aux[j];
+        }
+      }
+    }
+  }
+  return delta;
+}

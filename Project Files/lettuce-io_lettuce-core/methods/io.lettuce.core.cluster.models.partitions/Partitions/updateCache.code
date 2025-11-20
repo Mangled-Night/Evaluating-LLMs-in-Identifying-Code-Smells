@@ -1,0 +1,24 @@
+/** 
+ * Update the partition cache. Updates are necessary after the partition details have changed.
+ */
+public void updateCache(){
+synchronized (partitions) {
+    if (partitions.isEmpty()) {
+      invalidateCache();
+      return;
+    }
+    RedisClusterNode[] slotCache=new RedisClusterNode[SlotHash.SLOT_COUNT];
+    RedisClusterNode[] masterCache=new RedisClusterNode[SlotHash.SLOT_COUNT];
+    List<RedisClusterNode> readView=new ArrayList<>(partitions.size());
+    for (    RedisClusterNode partition : partitions) {
+      readView.add(partition);
+      if (partition.is(RedisClusterNode.NodeFlag.UPSTREAM)) {
+        partition.forEachSlot(i -> masterCache[i]=partition);
+      }
+      partition.forEachSlot(i -> slotCache[i]=partition);
+    }
+    this.slotCache=slotCache;
+    this.masterCache=masterCache;
+    this.nodeReadView=Collections.unmodifiableCollection(readView);
+  }
+}

@@ -1,0 +1,32 @@
+public static class DisposalAction implements DisposableResource {
+  protected int[] buffers=new int[0];
+  private final ResourceUrn urn;
+  private WeakReference<OpenALStreamingSound> asset;
+  public DisposalAction(  ResourceUrn urn){
+    this.urn=urn;
+  }
+  public void setAsset(  OpenALStreamingSound asset){
+    this.asset=new WeakReference<>(asset);
+  }
+  @Override public void close(){
+    try {
+      GameThread.synch(() -> {
+        OpenALStreamingSound sound=asset.get();
+        if (sound != null) {
+          sound.audioManager.purgeSound(sound);
+        }
+        for (        int buffer : buffers) {
+          if (buffer != 0) {
+            AL10.alDeleteBuffers(buffer);
+          }
+        }
+        OpenALException.checkState("Deleting buffer data");
+        buffers=new int[0];
+      }
+);
+    }
+ catch (    InterruptedException e) {
+      logger.error("Failed to dispose {}",urn,e);
+    }
+  }
+}

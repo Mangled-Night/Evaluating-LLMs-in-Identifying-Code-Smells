@@ -1,0 +1,23 @@
+private boolean decode0(ChannelHandlerContext ctx,ByteBuf buffer,RedisCommand<?,?,?> command){
+  if (!decode(buffer,command,getCommandOutput(command))) {
+    if (command instanceof DemandAware.Sink) {
+      DemandAware.Sink sink=(DemandAware.Sink)command;
+      sink.setSource(backpressureSource);
+      ctx.channel().config().setAutoRead(sink.hasDemand());
+    }
+    return false;
+  }
+  if (!ctx.channel().config().isAutoRead()) {
+    ctx.channel().config().setAutoRead(true);
+  }
+  return true;
+}
+private boolean decode0(ChannelHandlerContext ctx,ByteBuf buffer,CommandOutput<?,?,?> pushOutput){
+  if (!rsm.decode(buffer,pushOutput,ctx::fireExceptionCaught)) {
+    return false;
+  }
+  if (!ctx.channel().config().isAutoRead()) {
+    ctx.channel().config().setAutoRead(true);
+  }
+  return true;
+}

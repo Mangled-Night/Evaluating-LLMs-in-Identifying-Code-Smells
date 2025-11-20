@@ -1,0 +1,54 @@
+static class ProcessOutput {
+  private List<Function<String,String>> stdoutHandlerChain;
+  private StatisticsFunction statisticsHandler=null;
+  private List<Function<String,String>> flushHandlerChain=null;
+  private String cacheLocation;
+  private Tty term;
+  public ProcessOutput(  List<Function<String,String>> stdoutHandlerChain,  String cacheLocation,  Tty term){
+    int i=0;
+    for (; i < stdoutHandlerChain.size(); i++) {
+      if (stdoutHandlerChain.get(i) instanceof StatisticsFunction) {
+        break;
+      }
+    }
+    if (i < stdoutHandlerChain.size()) {
+      this.stdoutHandlerChain=stdoutHandlerChain.subList(0,i + 1);
+      this.statisticsHandler=(StatisticsFunction)stdoutHandlerChain.get(i);
+      if (i < stdoutHandlerChain.size() - 1) {
+        flushHandlerChain=stdoutHandlerChain.subList(i + 1,stdoutHandlerChain.size());
+      }
+    }
+ else {
+      this.stdoutHandlerChain=stdoutHandlerChain;
+    }
+    this.cacheLocation=cacheLocation;
+    this.term=term;
+  }
+  private void write(  String data){
+    if (stdoutHandlerChain != null) {
+      int size=stdoutHandlerChain.size();
+      for (int i=0; i < size; i++) {
+        Function<String,String> function=stdoutHandlerChain.get(i);
+        data=function.apply(data);
+      }
+    }
+  }
+  private void close(){
+    if (statisticsHandler != null && flushHandlerChain != null) {
+      String data=statisticsHandler.result();
+      for (      Function<String,String> function : flushHandlerChain) {
+        data=function.apply(data);
+        if (function instanceof StatisticsFunction) {
+          data=((StatisticsFunction)function).result();
+        }
+      }
+    }
+    if (stdoutHandlerChain != null) {
+      for (      Function<String,String> function : stdoutHandlerChain) {
+        if (function instanceof CloseFunction) {
+          ((CloseFunction)function).close();
+        }
+      }
+    }
+  }
+}

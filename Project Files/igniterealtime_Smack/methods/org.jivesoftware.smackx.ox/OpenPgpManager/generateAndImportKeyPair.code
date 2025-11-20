@@ -1,0 +1,19 @@
+/** 
+ * Generate a fresh OpenPGP key pair and import it.
+ * @param ourJid our {@link BareJid}.
+ * @return {@link OpenPgpV4Fingerprint} of the generated key.
+ * @throws NoSuchAlgorithmException if the JVM doesn't support one of the used algorithms.
+ * @throws InvalidAlgorithmParameterException if the used algorithm parameters are invalid.
+ * @throws NoSuchProviderException if we are missing a cryptographic provider.
+ * @throws PGPException PGP is brittle.
+ * @throws IOException IO is dangerous.
+ */
+public OpenPgpV4Fingerprint generateAndImportKeyPair(BareJid ourJid) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, NoSuchProviderException, PGPException, IOException {
+  throwIfNoProviderSet();
+  OpenPgpStore store=provider.getStore();
+  PGPSecretKeyRing keys=generateKeyRing(ourJid);
+  importKeyRing(ourJid,keys);
+  OpenPgpV4Fingerprint fingerprint=new OpenPgpV4Fingerprint(keys);
+  store.setTrust(ourJid,fingerprint,OpenPgpTrustStore.Trust.trusted);
+  return fingerprint;
+}

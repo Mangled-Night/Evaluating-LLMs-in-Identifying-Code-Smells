@@ -1,0 +1,51 @@
+private static TeraArray runLengthDecode(EntityData.RunLengthEncoding16 data){
+  Preconditions.checkState(data.getValuesCount() == data.getRunLengthsCount(),"Expected same number of values as runs");
+  short[] decodedData=new short[Chunks.SIZE_X * Chunks.SIZE_Y * Chunks.SIZE_Z];
+  int index=0;
+  for (int pos=0; pos < data.getValuesCount(); ++pos) {
+    int length=data.getRunLengths(pos);
+    short value=(short)data.getValues(pos);
+    for (int i=0; i < length; ++i) {
+      decodedData[index++]=value;
+    }
+  }
+  return new TeraDenseArray16Bit(Chunks.SIZE_X,Chunks.SIZE_Y,Chunks.SIZE_Z,decodedData);
+}
+private static TeraArray runLengthDecode(EntityData.RunLengthEncoding8 data){
+  Preconditions.checkState(data.getValues().size() == data.getRunLengthsCount(),"Expected same number of values as runs");
+  byte[] decodedData=new byte[Chunks.SIZE_X * Chunks.SIZE_Y * Chunks.SIZE_Z];
+  int index=0;
+  ByteString.ByteIterator valueSource=data.getValues().iterator();
+  for (int pos=0; pos < data.getRunLengthsCount(); ++pos) {
+    int length=data.getRunLengths(pos);
+    byte value=valueSource.nextByte();
+    for (int i=0; i < length; ++i) {
+      decodedData[index++]=value;
+    }
+  }
+  return new TeraDenseArray8Bit(Chunks.SIZE_X,Chunks.SIZE_Y,Chunks.SIZE_Z,decodedData);
+}
+/** 
+ * Decode compressed data into an existing TeraArray. Generic w.r.t. TeraArray subclasses, allowing the data to be used for any type of TeraArray.
+ */
+private static void runLengthDecode(EntityData.RunLengthEncoding16 data,TeraArray array){
+  int index=0;
+  int count=0;
+  int value=0;
+  outer:   for (int y=0; y < array.getSizeY(); ++y) {
+    for (int z=0; z < array.getSizeZ(); ++z) {
+      for (int x=0; x < array.getSizeX(); ++x) {
+        if (count == 0) {
+          if (index >= data.getRunLengthsCount()) {
+            break outer;
+          }
+          count=data.getRunLengths(index);
+          value=data.getValues(index);
+          index++;
+        }
+        count--;
+        array.set(x,y,z,value);
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+/** 
+ * Initialize OMEMO functionality for the given  {@link OmemoManager}.
+ * @param managerGuard OmemoManager we'd like to initialize.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws CorruptedOmemoKeyException if the OMEMO key is corrupted.
+ * @throws XMPPException.XMPPErrorException if there was an XMPP error returned.
+ * @throws SmackException.NotConnectedException if the XMPP connection is not connected.
+ * @throws SmackException.NoResponseException if there was no response from the remote entity.
+ * @throws PubSubException.NotALeafNodeException if a PubSub leaf node operation was attempted on a non-leaf node.
+ * @throws IOException if an I/O error occurred.
+ */
+void init(OmemoManager.LoggedInOmemoManager managerGuard) throws InterruptedException, CorruptedOmemoKeyException, XMPPException.XMPPErrorException, SmackException.NotConnectedException, SmackException.NoResponseException, PubSubException.NotALeafNodeException, IOException {
+  OmemoManager manager=managerGuard.get();
+  OmemoDevice userDevice=manager.getOwnDevice();
+  getOmemoStoreBackend().replenishKeys(userDevice);
+  if (shouldRotateSignedPreKey(userDevice)) {
+    getOmemoStoreBackend().changeSignedPreKey(userDevice);
+  }
+  OmemoBundleElement bundle=getOmemoStoreBackend().packOmemoBundle(userDevice);
+  publishBundle(manager.getConnection(),userDevice,bundle);
+  refreshAndRepublishDeviceList(manager.getConnection(),userDevice);
+}

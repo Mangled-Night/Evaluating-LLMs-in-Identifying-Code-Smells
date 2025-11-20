@@ -1,0 +1,24 @@
+@Test public void clusterForget(){
+  clusterHelper.clusterReset();
+  String result=redis1.clusterMeet(host,ClusterTestSettings.port6);
+  assertThat(result).isEqualTo("OK");
+  Wait.untilTrue(() -> redis1.clusterNodes().contains(redis2.clusterMyId())).waitOrTimeout();
+  Wait.untilTrue(() -> redis2.clusterNodes().contains(redis1.clusterMyId())).waitOrTimeout();
+  Wait.untilTrue(() -> {
+    Partitions partitions=ClusterPartitionParser.parse(redis1.clusterNodes());
+    if (partitions.size() != 2) {
+      return false;
+    }
+    for (    RedisClusterNode redisClusterNode : partitions) {
+      if (redisClusterNode.is(RedisClusterNode.NodeFlag.HANDSHAKE)) {
+        return false;
+      }
+    }
+    return true;
+  }
+).waitOrTimeout();
+  redis1.clusterForget(redis2.clusterMyId());
+  Wait.untilEquals(1,() -> ClusterPartitionParser.parse(redis1.clusterNodes()).size()).waitOrTimeout();
+  Partitions partitionsAfterForget=ClusterPartitionParser.parse(redis1.clusterNodes());
+  assertThat(partitionsAfterForget.getPartitions()).hasSize(1);
+}

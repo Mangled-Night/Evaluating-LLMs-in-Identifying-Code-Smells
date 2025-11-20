@@ -1,0 +1,19 @@
+private void checkForUnload(){
+  PerformanceMonitor.startActivity("Unloading irrelevant chunks");
+  int unloaded=0;
+  Iterator<Vector3ic> iterator=Iterators.concat(Iterators.transform(chunkCache.keySet().iterator(),v -> new Vector3i(v.x(),v.y(),v.z())),loadingPipeline.getProcessingPosition().iterator());
+  while (iterator.hasNext()) {
+    Vector3ic pos=iterator.next();
+    boolean keep=relevanceSystem.isChunkInRegions(pos);
+    if (!keep && unloadChunkInternal(pos)) {
+      iterator.remove();
+      if (++unloaded >= UNLOAD_PER_FRAME) {
+        break;
+      }
+    }
+  }
+  if (unloaded > 0) {
+    logger.debug("Unload {} chunks",unloaded);
+  }
+  PerformanceMonitor.endActivity();
+}

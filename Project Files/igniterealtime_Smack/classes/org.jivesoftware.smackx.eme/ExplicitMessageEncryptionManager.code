@@ -1,0 +1,24 @@
+public final class ExplicitMessageEncryptionManager {
+  private static final Map<XMPPConnection,ExplicitMessageEncryptionManager> INSTANCES=new WeakHashMap<>();
+static {
+    XMPPConnectionRegistry.addConnectionCreationListener(new ConnectionCreationListener(){
+      @Override public void connectionCreated(      XMPPConnection connection){
+        getInstanceFor(connection);
+      }
+    }
+);
+  }
+  public static final String NAMESPACE_V0=ExplicitMessageEncryptionElement.NAMESPACE;
+  public static synchronized ExplicitMessageEncryptionManager getInstanceFor(  XMPPConnection connection){
+    ExplicitMessageEncryptionManager manager=INSTANCES.get(connection);
+    if (manager == null) {
+      manager=new ExplicitMessageEncryptionManager(connection);
+      INSTANCES.put(connection,manager);
+    }
+    return manager;
+  }
+  private ExplicitMessageEncryptionManager(  XMPPConnection connection){
+    ServiceDiscoveryManager sdm=ServiceDiscoveryManager.getInstanceFor(connection);
+    sdm.addFeature(NAMESPACE_V0);
+  }
+}

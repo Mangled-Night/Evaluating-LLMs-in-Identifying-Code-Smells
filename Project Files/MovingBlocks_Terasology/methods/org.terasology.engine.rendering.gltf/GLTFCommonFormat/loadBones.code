@@ -1,0 +1,39 @@
+protected List<Bone> loadBones(GLTF gltf,GLTFSkin skin,List<byte[]> loadedBuffers){
+  List<Bone> bones=new ArrayList<>();
+  TIntIntMap boneToJoint=new TIntIntHashMap();
+  List<Matrix4f> inverseMats=loadInverseMats(skin.getInverseBindMatrices(),skin.getJoints().size(),gltf,loadedBuffers);
+  for (int i=0; i < skin.getJoints().size(); i++) {
+    int nodeIndex=skin.getJoints().get(i);
+    GLTFNode node=gltf.getNodes().get(nodeIndex);
+    Vector3f position=new Vector3f();
+    Quaternionf rotation=new Quaternionf();
+    Vector3f scale=new Vector3f(1,1,1);
+    if (node.getTranslation() != null) {
+      position.set(node.getTranslation());
+    }
+    if (node.getRotation() != null) {
+      rotation.set(node.getRotation());
+    }
+    if (node.getScale() != null) {
+      scale.set(node.getScale());
+    }
+    String boneName=node.getName();
+    if (Strings.isNullOrEmpty(boneName)) {
+      boneName="bone_" + i;
+    }
+    Bone bone=new Bone(i,boneName,new Matrix4f().translationRotateScale(position,rotation,scale));
+    bone.setInverseBindMatrix(inverseMats.get(i));
+    bones.add(bone);
+    boneToJoint.put(nodeIndex,i);
+  }
+  for (int i=0; i < skin.getJoints().size(); i++) {
+    int nodeIndex=skin.getJoints().get(i);
+    GLTFNode node=gltf.getNodes().get(nodeIndex);
+    Bone bone=bones.get(i);
+    TIntIterator iterator=node.getChildren().iterator();
+    while (iterator.hasNext()) {
+      bone.addChild(bones.get(boneToJoint.get(iterator.next())));
+    }
+  }
+  return bones;
+}

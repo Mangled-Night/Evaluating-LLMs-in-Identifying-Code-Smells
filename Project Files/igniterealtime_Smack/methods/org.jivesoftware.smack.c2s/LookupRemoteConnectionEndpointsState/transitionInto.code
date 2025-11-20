@@ -1,0 +1,41 @@
+@Override public AttemptResult transitionInto(WalkStateGraphContext walkStateGraphContext) throws XMPPErrorException, SASLErrorException, IOException, SmackException, InterruptedException, FailedNonzaException {
+  Map<XmppClientToServerTransport,List<SmackFuture<LookupConnectionEndpointsResult,Exception>>> lookupFutures=new HashMap<>(transports.size());
+  final int numberOfFutures;
+{
+    List<SmackFuture<?,?>> allFutures=new ArrayList<>();
+    for (    XmppClientToServerTransport transport : transports.values()) {
+      transport.resetDiscoveredConnectionEndpoints();
+      List<SmackFuture<LookupConnectionEndpointsResult,Exception>> transportFutures=transport.lookupConnectionEndpoints();
+      lookupFutures.put(transport,transportFutures);
+      allFutures.addAll(transportFutures);
+    }
+    numberOfFutures=allFutures.size();
+    SmackFuture.await(allFutures,getReplyTimeout(),TimeUnit.MILLISECONDS);
+  }
+  List<LookupConnectionEndpointsFailed> lookupFailures=new ArrayList<>(numberOfFutures);
+  boolean atLeastOneConnectionEndpointDiscovered=false;
+  for (  Map.Entry<XmppClientToServerTransport,List<SmackFuture<LookupConnectionEndpointsResult,Exception>>> entry : lookupFutures.entrySet()) {
+    XmppClientToServerTransport transport=entry.getKey();
+    for (    SmackFuture<LookupConnectionEndpointsResult,Exception> future : entry.getValue()) {
+      LookupConnectionEndpointsResult result=future.getIfAvailable();
+      if (result == null) {
+        continue;
+      }
+      if (result instanceof LookupConnectionEndpointsFailed) {
+        LookupConnectionEndpointsFailed lookupFailure=(LookupConnectionEndpointsFailed)result;
+        lookupFailures.add(lookupFailure);
+        continue;
+      }
+      LookupConnectionEndpointsSuccess successResult=(LookupConnectionEndpointsSuccess)result;
+      transport.loadConnectionEndpoints(successResult);
+      atLeastOneConnectionEndpointDiscovered=true;
+    }
+  }
+  if (!atLeastOneConnectionEndpointDiscovered) {
+    throw SmackException.NoEndpointsDiscoveredException.from(lookupFailures);
+  }
+  if (!lookupFailures.isEmpty()) {
+  }
+  outgoingElementsQueueWasShutdown=outgoingElementsQueue.start();
+  return StateTransitionResult.Success.EMPTY_INSTANCE;
+}

@@ -1,0 +1,27 @@
+public class RoomInfoTest {
+  @Test public void validateRoomWithEmptyForm(){
+    DataForm dataForm=DataForm.builder(DataForm.Type.result).build();
+    DiscoverInfo discoInfo=DiscoverInfo.builder("disco1").addExtension(dataForm).build();
+    RoomInfo roomInfo=new RoomInfo(discoInfo);
+    assertTrue(roomInfo.getDescription().isEmpty());
+    assertTrue(roomInfo.getSubject().isEmpty());
+    assertEquals(-1,roomInfo.getOccupantsCount());
+  }
+  @Test public void validateRoomWithForm(){
+    DataForm.Builder dataForm=DataForm.builder(DataForm.Type.result);
+    TextSingleFormField.Builder desc=FormField.builder("muc#roominfo_description");
+    desc.setValue("The place for all good witches!");
+    dataForm.addField(desc.build());
+    TextSingleFormField.Builder subject=FormField.builder("muc#roominfo_subject");
+    subject.setValue("Spells");
+    dataForm.addField(subject.build());
+    TextSingleFormField.Builder occupants=FormField.builder("muc#roominfo_occupants");
+    occupants.setValue("3");
+    dataForm.addField(occupants.build());
+    DiscoverInfo discoInfo=DiscoverInfo.builder("disco1").addExtension(dataForm.build()).build();
+    RoomInfo roomInfo=new RoomInfo(discoInfo);
+    assertEquals("The place for all good witches!",roomInfo.getDescription());
+    assertEquals("Spells",roomInfo.getSubject());
+    assertEquals(3,roomInfo.getOccupantsCount());
+  }
+}

@@ -1,0 +1,18 @@
+public DataMigrator(String[] args){
+  margs=new DataMigratorArgs(args);
+  executor=new ThreadPoolExecutor(margs.getThreadCount(),margs.getThreadCount(),0L,TimeUnit.MILLISECONDS,new LinkedBlockingQueue<Runnable>(),new ThreadPoolExecutor.CallerRunsPolicy());
+  try {
+    createTempParentDir(margs.getTempFileDir());
+    ConfigComparer loader=new ConfigComparer(margs.isAwaysUseMaster());
+    migrateTables=loader.getMigratorTables();
+    for (    TableMigrateInfo table : migrateTables) {
+      table.setTableStructure();
+      table.createTableToNewDataNodes();
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.error(e.getMessage(),e);
+    System.out.println(e.getMessage());
+    System.exit(-1);
+  }
+}

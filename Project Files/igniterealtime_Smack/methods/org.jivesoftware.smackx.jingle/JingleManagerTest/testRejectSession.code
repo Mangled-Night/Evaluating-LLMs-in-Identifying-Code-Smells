@@ -1,0 +1,67 @@
+/** 
+ * This is a simple test where the user_2 rejects the Jingle session.
+ */
+public void testRejectSession(){
+  resetCounter();
+  try {
+    FixedResolver tr0=new FixedResolver("127.0.0.1",22222);
+    FixedTransportManager ftm0=new FixedTransportManager(tr0);
+    TestMediaManager tmm0=new TestMediaManager(ftm0);
+    tmm0.setPayloads(getTestPayloads1());
+    List<JingleMediaManager> trl0=new ArrayList<JingleMediaManager>();
+    trl0.add(tmm0);
+    FixedResolver tr1=new FixedResolver("127.0.0.1",22444);
+    FixedTransportManager ftm1=new FixedTransportManager(tr1);
+    TestMediaManager tmm1=new TestMediaManager(ftm1);
+    tmm1.setPayloads(getTestPayloads1());
+    List<JingleMediaManager> trl1=new ArrayList<JingleMediaManager>();
+    trl1.add(tmm1);
+    JingleManager man0=new JingleManager(getConnection(0),trl0);
+    JingleManager man1=new JingleManager(getConnection(1),trl1);
+    man1.addJingleSessionRequestListener(new JingleSessionRequestListener(){
+      /** 
+ * Called when a new session request is detected
+ */
+      public void sessionRequested(      final JingleSessionRequest request){
+        System.out.println("Session request detected, from " + request.getFrom());
+        try {
+          JingleSession session=request.accept();
+          session.startIncoming();
+          session.terminate();
+        }
+ catch (        XMPPException e) {
+          LOGGER.log(Level.WARNING,"exception",e);
+        }
+      }
+    }
+);
+    System.out.println("Starting session request, to " + getFullJID(1) + "...");
+    JingleSession session0=man0.createOutgoingJingleSession(getFullJID(1));
+    session0.addListener(new JingleSessionListener(){
+      public void sessionClosed(      String reason,      JingleSession jingleSession){
+        incCounter();
+        System.out.println("The session has been closed");
+      }
+      public void sessionClosedOnError(      XMPPException e,      JingleSession jingleSession){
+      }
+      public void sessionDeclined(      String reason,      JingleSession jingleSession){
+        System.out.println("The session has been detected as rejected with reason: " + reason);
+      }
+      public void sessionEstablished(      PayloadType pt,      TransportCandidate rc,      TransportCandidate lc,      JingleSession jingleSession){
+      }
+      public void sessionMediaReceived(      JingleSession jingleSession,      String participant){
+      }
+      public void sessionRedirected(      String redirection,      JingleSession jingleSession){
+      }
+    }
+);
+    session0.startOutgoing();
+    Thread.sleep(50000);
+    Thread.sleep(10000);
+    assertTrue(valCounter() > 0);
+  }
+ catch (  Exception e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+    fail("An error occurred with Jingle");
+  }
+}

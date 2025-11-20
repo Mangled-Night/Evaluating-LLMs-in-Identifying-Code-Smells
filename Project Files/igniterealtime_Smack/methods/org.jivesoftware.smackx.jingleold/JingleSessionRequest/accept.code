@@ -1,0 +1,17 @@
+/** 
+ * Accepts this request and creates the incoming Jingle session.
+ * @return Returns the IncomingJingleSession on which thenegotiation can be carried out.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public synchronized JingleSession accept() throws XMPPException, SmackException, InterruptedException {
+  JingleSession session;
+synchronized (manager) {
+    session=manager.createIncomingJingleSession(this);
+    session.setSid(this.getSessionID());
+    session.updatePacketListener();
+    session.receivePacketAndRespond(this.getJingle());
+  }
+  return session;
+}

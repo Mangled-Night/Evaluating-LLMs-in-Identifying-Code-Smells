@@ -1,0 +1,44 @@
+public void refresh(){
+  ModuleManager moduleManager=verifyNotNull(context.get(ModuleManager.class),"no ModuleManager");
+  List<WorldGeneratorInfo> infos=Lists.newArrayList();
+  for (  Name moduleId : moduleManager.getRegistry().getModuleIds()) {
+    Module module=moduleManager.getRegistry().getLatestModuleVersion(moduleId);
+    DependencyResolver resolver=new DependencyResolver(moduleManager.getRegistry());
+    ResolutionResult resolutionResult=resolver.resolve(module.getId());
+    if (resolutionResult.isSuccess()) {
+      try (ModuleEnvironment tempEnvironment=moduleManager.loadEnvironment(resolutionResult.getModules(),false)){
+        for (        Class<?> generatorClass : tempEnvironment.getTypesAnnotatedWith(RegisterWorldGenerator.class)) {
+          Name providedBy=tempEnvironment.getModuleProviding(generatorClass);
+          if (providedBy == null) {
+            String s="{} found while inspecting {} but is not provided by any module.";
+            if (!ModuleManager.isLoadingClasspathModules()) {
+              logger.warn(s,generatorClass,moduleId);
+            }
+ else {
+              logger.debug(s,generatorClass,moduleId);
+            }
+          }
+ else           if (providedBy.equals(module.getId())) {
+            RegisterWorldGenerator annotation=generatorClass.getAnnotation(RegisterWorldGenerator.class);
+            if (isValidWorldGenerator(generatorClass)) {
+              SimpleUri uri=new SimpleUri(moduleId,annotation.id());
+              infos.add(new WorldGeneratorInfo(uri,annotation.displayName(),annotation.description()));
+              logger.debug("{} added from {}",uri,generatorClass);
+            }
+ else {
+              logger.error("{} marked to be registered as a World Generator, " + "but is not a subclass of WorldGenerator or lacks the correct constructor",generatorClass);
+            }
+          }
+        }
+      }
+ catch (      Exception e) {
+        logger.error("Error loading world generator in module {}, skipping",module.getId(),e);
+      }
+    }
+ else {
+      logger.warn("Could not resolve dependencies for module: {}",module);
+    }
+  }
+  Collections.sort(infos);
+  generatorInfo=ImmutableList.copyOf(infos);
+}

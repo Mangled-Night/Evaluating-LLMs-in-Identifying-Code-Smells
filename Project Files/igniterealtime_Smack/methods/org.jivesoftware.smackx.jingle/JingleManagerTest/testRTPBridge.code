@@ -1,0 +1,62 @@
+/** 
+ * RTP Bridge Test
+ */
+public void testRTPBridge(){
+  resetCounter();
+  try {
+    ProviderManager.getInstance().addIQProvider(RTPBridge.NAME,RTPBridge.NAMESPACE,new RTPBridge.Provider());
+    RTPBridge response=RTPBridge.getRTPBridge(getConnection(0),"102");
+class Listener implements Runnable {
+      private byte[] buf=new byte[5000];
+      private DatagramSocket dataSocket;
+      private DatagramPacket packet;
+      public Listener(      DatagramSocket dataSocket){
+        this.dataSocket=dataSocket;
+      }
+      public void run(){
+        try {
+          while (true) {
+            packet=new DatagramPacket(buf,buf.length);
+            dataSocket.receive(packet);
+            incCounter();
+          }
+        }
+ catch (        Exception e) {
+          LOGGER.log(Level.WARNING,"exception",e);
+        }
+      }
+    }
+    try {
+      byte packet[]={0,0,1,1,1,1,1};
+      DatagramSocket ds0=new DatagramSocket(14004,InetAddress.getByName("0.0.0.0"));
+      DatagramSocket ds1=new DatagramSocket(14050,InetAddress.getByName("0.0.0.0"));
+      DatagramPacket echo0=new DatagramPacket(packet,packet.length,InetAddress.getLocalHost(),response.getPortA());
+      DatagramPacket echo1=new DatagramPacket(packet,packet.length,InetAddress.getLocalHost(),response.getPortB());
+      ds1.send(echo1);
+      ds0.send(echo0);
+      Thread.sleep(500);
+      Thread t0=new Thread(new Listener(ds0));
+      Thread t1=new Thread(new Listener(ds1));
+      t0.start();
+      t1.start();
+      int repeat=300;
+      for (int i=0; i < repeat; i++) {
+        ds0.send(echo0);
+        ds1.send(echo1);
+        Thread.sleep(200);
+      }
+      System.out.println(valCounter());
+      assertTrue(valCounter() == repeat * 2 + 1);
+      t0.stop();
+      t1.stop();
+      ds0.close();
+      ds1.close();
+    }
+ catch (    Exception e) {
+      LOGGER.log(Level.WARNING,"exception",e);
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+}

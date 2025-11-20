@@ -1,0 +1,31 @@
+@SuppressWarnings({"rawtypes","unchecked"}) class CompositeCommandLookupStrategy implements ExecutableCommandLookupStrategy {
+  private final AsyncExecutableCommandLookupStrategy async;
+  private final ReactiveExecutableCommandLookupStrategy reactive;
+  CompositeCommandLookupStrategy(){
+    CommandMethodVerifier verifier=verifyCommandMethods ? commandMethodVerifier : CommandMethodVerifier.NONE;
+    AbstractRedisReactiveCommands reactive=getReactiveCommands();
+    LettuceAssert.isTrue(reactive != null,"Reactive commands is null");
+    this.async=new AsyncExecutableCommandLookupStrategy(redisCodecs,commandOutputFactoryResolver,verifier,(StatefulConnection)connection);
+    this.reactive=new ReactiveExecutableCommandLookupStrategy(redisCodecs,commandOutputFactoryResolver,verifier,reactive);
+  }
+  private AbstractRedisReactiveCommands getReactiveCommands(){
+    Object reactive=null;
+    if (connection instanceof StatefulRedisConnection) {
+      reactive=((StatefulRedisConnection)connection).reactive();
+    }
+    if (connection instanceof StatefulRedisClusterConnection) {
+      reactive=((StatefulRedisClusterConnection)connection).reactive();
+    }
+    if (reactive != null && Proxy.isProxyClass(reactive.getClass())) {
+      InvocationHandler invocationHandler=Proxy.getInvocationHandler(reactive);
+      reactive=ConnectionWrapping.unwrap(invocationHandler);
+    }
+    return (AbstractRedisReactiveCommands)reactive;
+  }
+  @Override public ExecutableCommand resolveCommandMethod(  CommandMethod method,  RedisCommandsMetadata metadata){
+    if (method.isReactiveExecution()) {
+      return reactive.resolveCommandMethod(method,metadata);
+    }
+    return async.resolveCommandMethod(method,metadata);
+  }
+}

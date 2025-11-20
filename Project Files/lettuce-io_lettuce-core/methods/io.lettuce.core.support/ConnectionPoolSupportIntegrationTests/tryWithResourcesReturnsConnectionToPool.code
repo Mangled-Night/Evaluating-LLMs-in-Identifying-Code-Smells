@@ -1,0 +1,17 @@
+@Test void tryWithResourcesReturnsConnectionToPool() throws Exception {
+  GenericObjectPool<StatefulRedisConnection<String,String>> pool=ConnectionPoolSupport.createGenericObjectPool(() -> client.connect(),new GenericObjectPoolConfig<>());
+  StatefulRedisConnection<String,String> usedConnection=null;
+  try (StatefulRedisConnection<String,String> connection=pool.borrowObject()){
+    RedisCommands<String,String> sync=connection.sync();
+    sync.ping();
+    usedConnection=connection;
+  }
+   try {
+    usedConnection.isMulti();
+    fail("Missing RedisException");
+  }
+ catch (  RedisException e) {
+    assertThat(e).hasMessageContaining("deallocated");
+  }
+  pool.close();
+}

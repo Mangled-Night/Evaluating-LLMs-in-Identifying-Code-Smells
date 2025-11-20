@@ -1,0 +1,37 @@
+@Test void emitEventOnReconnectFailure() throws Exception {
+  RandomResponseServer ts=getRandomResponseServer();
+  Queue<Event> queue=new ConcurrentLinkedQueue<>();
+  ClientResources clientResources=ClientResources.create();
+  RedisURI redisUri=RedisURI.create(defaultRedisUri.toURI());
+  RedisClient client=RedisClient.create(clientResources);
+  client.setOptions(ClientOptions.builder().build());
+  try {
+    RedisAsyncCommandsImpl<String,String> connection=(RedisAsyncCommandsImpl<String,String>)client.connect(redisUri).async();
+    ConnectionWatchdog connectionWatchdog=ConnectionTestUtil.getConnectionWatchdog(connection.getStatefulConnection());
+    redisUri.setPort(TestSettings.nonexistentPort());
+    client.getResources().eventBus().get().subscribe(queue::add);
+    connection.quit();
+    Wait.untilTrue(() -> !connection.getStatefulConnection().isOpen()).waitOrTimeout();
+    connectionWatchdog.run(0);
+    Delay.delay(Duration.ofMillis(500));
+    connection.getStatefulConnection().close();
+    assertThat(queue).isNotEmpty();
+    List<ReconnectFailedEvent> failures=queue.stream().filter(ReconnectFailedEvent.class::isInstance).map(ReconnectFailedEvent.class::cast).sorted(Comparator.comparingInt(ReconnectFailedEvent::getAttempt)).collect(Collectors.toList());
+    assertThat(failures.size()).isGreaterThanOrEqualTo(2);
+    ReconnectFailedEvent failure1=failures.get(0);
+    assertThat(failure1.localAddress()).isEqualTo(LocalAddress.ANY);
+    assertThat(failure1.remoteAddress()).isInstanceOf(InetSocketAddress.class);
+    assertThat(failure1.getCause()).hasMessageContaining("Invalid first byte");
+    assertThat(failure1.getAttempt()).isZero();
+    ReconnectFailedEvent failure2=failures.get(1);
+    assertThat(failure2.localAddress()).isEqualTo(LocalAddress.ANY);
+    assertThat(failure2.remoteAddress()).isInstanceOf(InetSocketAddress.class);
+    assertThat(failure2.getCause()).hasMessageContaining("Invalid first byte");
+    assertThat(failure2.getAttempt()).isOne();
+  }
+  finally {
+    ts.shutdown();
+    FastShutdown.shutdown(client);
+    FastShutdown.shutdown(clientResources);
+  }
+}

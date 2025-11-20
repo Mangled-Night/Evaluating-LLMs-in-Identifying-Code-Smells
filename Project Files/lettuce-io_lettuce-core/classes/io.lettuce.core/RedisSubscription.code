@@ -1,0 +1,202 @@
+/** 
+ * Implementation of  {@link Subscription}. This subscription can receive demand for data signals with  {@link #request(long)}. It maintains a  {@link State} to react on pull signals like demand for data or push signals as soon as data isavailable. Subscription behavior and state transitions are kept inside the  {@link State}.
+ * @param < T > data element type
+ */
+static class RedisSubscription<T> extends StreamingOutput.Subscriber<T> implements Subscription {
+  static final InternalLogger LOG=InternalLoggerFactory.getInstance(RedisPublisher.class);
+  static final int ST_PROGRESS=0;
+  static final int ST_COMPLETED=1;
+  @SuppressWarnings({"rawtypes","unchecked"}) static final AtomicLongFieldUpdater<RedisSubscription> DEMAND=AtomicLongFieldUpdater.newUpdater(RedisSubscription.class,"demand");
+  @SuppressWarnings({"rawtypes","unchecked"}) static final AtomicReferenceFieldUpdater<RedisSubscription,State> STATE=AtomicReferenceFieldUpdater.newUpdater(RedisSubscription.class,State.class,"state");
+  @SuppressWarnings({"rawtypes","unchecked"}) static final AtomicReferenceFieldUpdater<RedisSubscription,CommandDispatch> COMMAND_DISPATCH=AtomicReferenceFieldUpdater.newUpdater(RedisSubscription.class,CommandDispatch.class,"commandDispatch");
+  private final SubscriptionCommand<?,?,T> subscriptionCommand;
+  private final boolean traceEnabled=LOG.isTraceEnabled();
+  final Queue<T> data=Operators.newQueue();
+  final StatefulConnection<?,?> connection;
+  final RedisCommand<?,?,T> command;
+  final boolean dissolve;
+  private final Executor executor;
+  @SuppressWarnings("unused") volatile long demand;
+  @SuppressWarnings("unused") volatile State state=State.UNSUBSCRIBED;
+  @SuppressWarnings("unused") volatile CommandDispatch commandDispatch=CommandDispatch.UNDISPATCHED;
+  volatile boolean allDataRead=false;
+  volatile RedisSubscriber<? super T> subscriber;
+  @SuppressWarnings("unchecked") RedisSubscription(  StatefulConnection<?,?> connection,  RedisCommand<?,?,T> command,  boolean dissolve,  Executor executor){
+    LettuceAssert.notNull(connection,"Connection must not be null");
+    LettuceAssert.notNull(command,"RedisCommand must not be null");
+    LettuceAssert.notNull(executor,"Executor must not be null");
+    this.connection=connection;
+    this.command=command;
+    this.dissolve=dissolve;
+    this.executor=executor;
+    if (command.getOutput() instanceof StreamingOutput<?>) {
+      StreamingOutput<T> streamingOutput=(StreamingOutput<T>)command.getOutput();
+      if (connection instanceof StatefulRedisConnection<?,?> && ((StatefulRedisConnection)connection).isMulti()) {
+        streamingOutput.setSubscriber(new CompositeSubscriber<>(this,streamingOutput.getSubscriber()));
+      }
+ else {
+        streamingOutput.setSubscriber(this);
+      }
+    }
+    this.subscriptionCommand=new SubscriptionCommand<>(command,this,dissolve);
+  }
+  /** 
+ * Subscription procedure called by a  {@link Publisher}
+ * @param subscriber the subscriber, must not be {@code null}.
+ */
+  void subscribe(  Subscriber<? super T> subscriber){
+    if (subscriber == null) {
+      throw new NullPointerException("Subscriber must not be null");
+    }
+    State state=state();
+    if (traceEnabled) {
+      LOG.trace("{} subscribe: {}@{}",state,subscriber.getClass().getName(),subscriber.hashCode());
+    }
+    state.subscribe(this,subscriber);
+  }
+  /** 
+ * Signal for data demand.
+ * @param n number of requested elements.
+ */
+  @Override public final void request(  long n){
+    State state=state();
+    if (traceEnabled) {
+      LOG.trace("{} request: {}",state,n);
+    }
+    state.request(this,n);
+  }
+  /** 
+ * Cancels a command.
+ */
+  @Override public final void cancel(){
+    State state=state();
+    if (traceEnabled) {
+      LOG.trace("{} cancel",state);
+    }
+    state.cancel(this);
+  }
+  /** 
+ * Called by  {@link StreamingOutput} to dispatch data (push).
+ * @param t element
+ */
+  @Override public void onNext(  T t){
+    LettuceAssert.notNull(t,"Data must not be null");
+    State state=state();
+    if (state == State.COMPLETED) {
+      return;
+    }
+    if (data.isEmpty() && state() == State.DEMAND) {
+      long initial=getDemand();
+      if (initial > 0) {
+        try {
+          DEMAND.decrementAndGet(this);
+          this.subscriber.onNext(t);
+        }
+ catch (        Exception e) {
+          onError(e);
+        }
+        return;
+      }
+    }
+    if (!data.offer(t)) {
+      Subscriber<?> subscriber=this.subscriber;
+      Context context=Context.empty();
+      if (subscriber instanceof CoreSubscriber) {
+        context=((CoreSubscriber)subscriber).currentContext();
+      }
+      Throwable e=Operators.onOperatorError(this,Exceptions.failWithOverflow(),t,context);
+      onError(e);
+      return;
+    }
+    onDataAvailable();
+  }
+  /** 
+ * Called via a listener interface to indicate that reading is possible.
+ */
+  final void onDataAvailable(){
+    State state=state();
+    if (traceEnabled) {
+      LOG.trace("{} onDataAvailable()",state);
+    }
+    state.onDataAvailable(this);
+  }
+  /** 
+ * Called via a listener interface to indicate that all data has been read.
+ */
+  final void onAllDataRead(){
+    State state=state();
+    if (traceEnabled) {
+      LOG.trace("{} onAllDataRead()",state);
+    }
+    allDataRead=true;
+    onDataAvailable();
+  }
+  /** 
+ * Called by a listener interface to indicate that as error has occurred.
+ * @param t the error
+ */
+  final void onError(  Throwable t){
+    State state=state();
+    if (LOG.isErrorEnabled()) {
+      LOG.trace("{} onError(): {}",state,t.toString(),t);
+    }
+    state.onError(this,t);
+  }
+  /** 
+ * Reads data from the input, if possible.
+ * @return the data that was read or {@code null}
+ */
+  protected T read(){
+    return data.poll();
+  }
+  boolean hasDemand(){
+    return getDemand() > 0;
+  }
+  private long getDemand(){
+    return DEMAND.get(this);
+  }
+  boolean changeState(  State oldState,  State newState){
+    return STATE.compareAndSet(this,oldState,newState);
+  }
+  boolean afterRead(){
+    return changeState(State.READING,getDemand() > 0 ? State.DEMAND : State.NO_DEMAND);
+  }
+  public boolean complete(){
+    return changeState(State.READING,State.COMPLETED);
+  }
+  void checkCommandDispatch(){
+    COMMAND_DISPATCH.get(this).dispatch(this);
+  }
+  @SuppressWarnings({"unchecked","rawtypes"}) void dispatchCommand(){
+    connection.dispatch((RedisCommand)subscriptionCommand);
+  }
+  void checkOnDataAvailable(){
+    if (data.isEmpty()) {
+      potentiallyReadMore();
+    }
+    if (!data.isEmpty()) {
+      onDataAvailable();
+    }
+  }
+  void potentiallyReadMore(){
+    if ((getDemand() + 1) > data.size()) {
+      state().readData(this);
+    }
+  }
+  /** 
+ * Reads and publishes data from the input. Continues until either there is no more demand, or until there is no more data to be read.
+ */
+  void readAndPublish(){
+    while (hasDemand()) {
+      T data=read();
+      if (data == null) {
+        return;
+      }
+      DEMAND.decrementAndGet(this);
+      this.subscriber.onNext(data);
+    }
+  }
+  RedisPublisher.State state(){
+    return STATE.get(this);
+  }
+}

@@ -1,0 +1,17 @@
+/** 
+ * Registers extended discovery information of this XMPP entity. When this client is queried for its information this data form will be returned as specified by XEP-0128. <p> Since no stanza is actually sent to the server it is safe to perform this operation before logging to the server. In fact, you may want to configure the extended info before logging to the server so that the information is already available if it is required upon login.
+ * @param extendedInfo the data form that contains the extend service discovery information.
+ * @return the old data form which got replaced (if any)
+ * @since 4.4.0
+ */
+public DataForm addExtendedInfo(DataForm extendedInfo){
+  String formType=extendedInfo.getFormType();
+  StringUtils.requireNotNullNorEmpty(formType,"The data form must have a form type set");
+  DataForm removedDataForm;
+synchronized (this) {
+    removedDataForm=DataForm.remove(extendedInfos,formType);
+    extendedInfos.add(extendedInfo);
+    renewEntityCapsVersion();
+  }
+  return removedDataForm;
+}

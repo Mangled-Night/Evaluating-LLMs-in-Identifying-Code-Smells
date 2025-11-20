@@ -1,0 +1,24 @@
+/** 
+ * Wrapper for  {@link #challengeReceived(String,boolean)}, with <code>finalChallenge</code> set to <code>false</code>.
+ * @param challenge the challenge Nonza.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+void challengeReceived(SaslNonza.Challenge challenge) throws SmackException, InterruptedException {
+  challengeReceived(challenge.getData(),false);
+}
+/** 
+ * The server is challenging the SASL authentication we just sent. Forward the challenge to the current SASLMechanism we are using. The SASLMechanism will eventually send a response to the server. The length of the challenge-response sequence varies according to the SASLMechanism in use.
+ * @param challenge a base64 encoded string representing the challenge.
+ * @param finalChallenge true if this is the last challenge send by the server within the success stanza
+ * @throws SmackSaslException if a SASL specific error occurred.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+private void challengeReceived(String challenge,boolean finalChallenge) throws SmackSaslException, NotConnectedException, InterruptedException {
+  SASLMechanism mechanism;
+synchronized (this) {
+    mechanism=currentMechanism;
+  }
+  mechanism.challengeReceived(challenge,finalChallenge);
+}

@@ -1,0 +1,26 @@
+@Override public List<IQ> dispatchIncomingPacket(IQ iq,String id) throws XMPPException, SmackException, InterruptedException {
+  List<IQ> responses=new ArrayList<>();
+  if (iq != null) {
+    if (iq.getType().equals(IQ.Type.error)) {
+    }
+ else     if (iq.getType().equals(IQ.Type.result)) {
+      if (isExpectedId(iq.getStanzaId())) {
+        removeExpectedId(iq.getStanzaId());
+      }
+    }
+ else     if (iq instanceof Jingle) {
+      Jingle jingle=(Jingle)iq;
+      for (      JingleContent jingleContent : jingle.getContentsList()) {
+        if (jingleContent.getName().equals(name)) {
+          if (mediaNeg != null) {
+            responses.addAll(mediaNeg.dispatchIncomingPacket(iq,id));
+          }
+          if (transNeg != null) {
+            responses.addAll(transNeg.dispatchIncomingPacket(iq,id));
+          }
+        }
+      }
+    }
+  }
+  return responses;
+}

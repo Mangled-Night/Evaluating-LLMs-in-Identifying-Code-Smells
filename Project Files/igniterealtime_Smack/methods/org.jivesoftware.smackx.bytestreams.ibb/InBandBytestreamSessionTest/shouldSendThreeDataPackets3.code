@@ -1,0 +1,20 @@
+/** 
+ * Test the output stream write(byte[], int, int) method.
+ * @throws Exception should not happen
+ */
+@Test public void shouldSendThreeDataPackets3() throws Exception {
+  InBandBytestreamSession session=new InBandBytestreamSession(connection,initBytestream,initiatorJID);
+  IQ resultIQ=IBBPacketUtils.createResultIQ(initiatorJID,targetJID);
+  protocol.addResponse(resultIQ,incrementingSequence);
+  protocol.addResponse(resultIQ,incrementingSequence);
+  protocol.addResponse(resultIQ,incrementingSequence);
+  byte[] controlData=new byte[(blockSize * 3) - 2];
+  OutputStream outputStream=session.getOutputStream();
+  int off=0;
+  for (int i=1; i <= 7; i++) {
+    outputStream.write(controlData,off,i);
+    off+=i;
+  }
+  outputStream.flush();
+  protocol.verifyAll();
+}

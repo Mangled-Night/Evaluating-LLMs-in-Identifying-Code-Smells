@@ -1,0 +1,16 @@
+@Override public void newStreamOpenWaitForFeaturesSequence(String waitFor) throws InterruptedException, SmackException, XMPPException {
+  ModularXmppClientToServerConnection.this.newStreamOpenWaitForFeaturesSequence(waitFor);
+}
+private void newStreamOpenWaitForFeaturesSequence(String waitFor) throws InterruptedException, SmackException, XMPPException {
+  prepareToWaitForFeaturesReceived();
+  StreamOpenAndCloseFactory streamOpenAndCloseFactory=activeTransport.getStreamOpenAndCloseFactory();
+  CharSequence from=null;
+  CharSequence localpart=connectionInternal.connection.getConfiguration().getUsername();
+  DomainBareJid xmppServiceDomain=getXMPPServiceDomain();
+  if (localpart != null) {
+    from=XmppStringUtils.completeJidFrom(localpart,xmppServiceDomain);
+  }
+  AbstractStreamOpen streamOpen=streamOpenAndCloseFactory.createStreamOpen(xmppServiceDomain,from,getStreamId(),getConfiguration().getXmlLang());
+  sendStreamOpen(streamOpen);
+  waitForFeaturesReceived(waitFor);
+}

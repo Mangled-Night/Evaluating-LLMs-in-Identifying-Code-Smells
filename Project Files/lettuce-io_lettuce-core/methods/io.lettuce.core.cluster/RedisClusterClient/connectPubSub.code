@@ -1,0 +1,18 @@
+/** 
+ * Connect to a Redis Cluster using pub/sub connections and treat keys and values as UTF-8 strings. <p> What to expect from this connection: </p> <ul> <li>A <i>default</i> connection is created to the node with the least number of clients</li> <li>Pub/sub commands are sent to the node with the least number of clients</li> <li>Keyless commands are send to the default connection</li> <li>Single-key keyspace commands are routed to the appropriate node</li> <li>Multi-key keyspace commands require the same slot-hash and are routed to the appropriate node</li> </ul>
+ * @return A new stateful Redis Cluster connection
+ */
+public StatefulRedisClusterPubSubConnection<String,String> connectPubSub(){
+  return connectPubSub(newStringStringCodec());
+}
+/** 
+ * Connect to a Redis Cluster using pub/sub connections. Use the supplied  {@link RedisCodec codec} to encode/decode keys andvalues. <p> What to expect from this connection: </p> <ul> <li>A <i>default</i> connection is created to the node with the least number of clients</li> <li>Pub/sub commands are sent to the node with the least number of clients</li> <li>Keyless commands are send to the default connection</li> <li>Single-key keyspace commands are routed to the appropriate node</li> <li>Multi-key keyspace commands require the same slot-hash and are routed to the appropriate node</li> </ul>
+ * @param codec Use this codec to encode/decode keys and values, must not be {@code null}
+ * @param < K > Key type
+ * @param < V > Value type
+ * @return A new stateful Redis Cluster connection
+ */
+public <K,V>StatefulRedisClusterPubSubConnection<K,V> connectPubSub(RedisCodec<K,V> codec){
+  assertInitialPartitions();
+  return getConnection(connectClusterPubSubAsync(codec));
+}

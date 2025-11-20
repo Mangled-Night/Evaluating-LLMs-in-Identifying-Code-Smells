@@ -1,0 +1,18 @@
+public RemoteCommand deleteUser(){
+  return deleteUser(connection().getXMPPServiceDomain());
+}
+public RemoteCommand deleteUser(Jid service){
+  return adHocCommandManager.getRemoteCommand(service,COMMAND_NODE_HASHSIGN + "delete-user");
+}
+public void deleteUser(EntityBareJid userJidToDelete) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  Set<EntityBareJid> userJidsToDelete=Collections.singleton(userJidToDelete);
+  deleteUser(userJidsToDelete);
+}
+public void deleteUser(Set<EntityBareJid> jidsToDelete) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  RemoteCommand command=deleteUser();
+  command.execute();
+  FillableForm answerForm=new FillableForm(command.getForm());
+  answerForm.setAnswer("accountjids",jidsToDelete);
+  command.execute(answerForm);
+  assert command.isCompleted();
+}

@@ -1,0 +1,16 @@
+@Test public void testRemoveLightOverlappingAtEdge(){
+  Vector3i lightPos=new Vector3i(2,0,0);
+  StubPropagatorWorldView worldView=new StubPropagatorWorldView(testingRegion,air);
+  worldView.setBlockAt(new Vector3i(0,0,0),weakLight);
+  worldView.setBlockAt(lightPos,weakLight);
+  BatchPropagator propagator=new StandardBatchPropagator(lightRules,worldView);
+  propagator.process(new BlockChange(ZERO_VECTOR,air,weakLight),new BlockChange(lightPos,air,weakLight));
+  worldView.setBlockAt(lightPos,air);
+  propagator.process(new BlockChange(lightPos,weakLight,air));
+  for (int i=0; i < weakLight.getLuminance() + 1; ++i) {
+    byte expectedLuminance=(byte)Math.max(0,weakLight.getLuminance() - i);
+    for (    Vector3ic pos : Diamond3iIterable.shell(new Vector3i(0,0,0),i).build()) {
+      assertEquals(expectedLuminance,worldView.getValueAt(pos));
+    }
+  }
+}

@@ -1,0 +1,68 @@
+/** 
+ * Request slot and uploaded file to HTTP file upload service. You don't need to request slot and upload file separately, this method will do both. Note that this is a synchronous call -- Smack must wait for the server response.
+ * @param file file to be uploaded
+ * @return public URL for sharing uploaded file
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws XMPPException.XMPPErrorException if there was an XMPP error returned.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws IOException in case of HTTP upload errors
+ */
+public URL uploadFile(File file) throws InterruptedException, XMPPException.XMPPErrorException, SmackException, IOException {
+  return uploadFile(file,null);
+}
+/** 
+ * Request slot and uploaded file to HTTP file upload service with progress callback. You don't need to request slot and upload file separately, this method will do both. Note that this is a synchronous call -- Smack must wait for the server response.
+ * @param file file to be uploaded
+ * @param listener Upload progress listener or null
+ * @return public URL for sharing uploaded file
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws XMPPException.XMPPErrorException if there was an XMPP error returned.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws IOException if an I/O error occurred.
+ */
+public URL uploadFile(File file,UploadProgressListener listener) throws InterruptedException, XMPPException.XMPPErrorException, SmackException, IOException {
+  if (!file.isFile()) {
+    throw new FileNotFoundException("The path " + file.getAbsolutePath() + " is not a file");
+  }
+  final Slot slot=requestSlot(file.getName(),file.length(),"application/octet-stream");
+  final long fileSize=file.length();
+  final FileInputStream fis=new FileInputStream(file);
+  upload(fis,fileSize,slot,listener);
+  return slot.getGetUrl();
+}
+/** 
+ * Request slot and uploaded stream to HTTP upload service. You don't need to request slot and upload input stream separately, this method will do both. Note that this is a synchronous call -- Smack must wait for the server response.
+ * @param inputStream Input stream used for the upload.
+ * @param fileName Name of the file.
+ * @param fileSize Size of the file.
+ * @return public URL for sharing uploaded file
+ * @throws XMPPErrorException XMPPErrorException if there was an XMPP error returned.
+ * @throws InterruptedException If the calling thread was interrupted.
+ * @throws SmackException If Smack detected an exceptional situation.
+ * @throws IOException If an I/O error occurred.
+ */
+public URL uploadFile(InputStream inputStream,String fileName,long fileSize) throws XMPPErrorException, InterruptedException, SmackException, IOException {
+  return uploadFile(inputStream,fileName,fileSize,null);
+}
+/** 
+ * Request slot and uploaded stream to HTTP upload service. You don't need to request slot and upload input stream separately, this method will do both. Note that this is a synchronous call -- Smack must wait for the server response.
+ * @param inputStream Input stream used for the upload.
+ * @param fileName Name of the file.
+ * @param fileSize file size in bytes.
+ * @param listener upload progress listener or null.
+ * @return public URL for sharing uploaded file
+ * @throws XMPPErrorException XMPPErrorException if there was an XMPP error returned.
+ * @throws InterruptedException If the calling thread was interrupted.
+ * @throws SmackException If Smack detected an exceptional situation.
+ * @throws IOException If an I/O error occurred.
+ */
+public URL uploadFile(InputStream inputStream,String fileName,long fileSize,UploadProgressListener listener) throws XMPPErrorException, InterruptedException, SmackException, IOException {
+  Objects.requireNonNull(inputStream,"Input Stream cannot be null");
+  Objects.requireNonNull(fileName,"Filename Stream cannot be null");
+  if (fileSize < 0) {
+    throw new IllegalArgumentException("File size cannot be negative");
+  }
+  final Slot slot=requestSlot(fileName,fileSize,"application/octet-stream");
+  upload(inputStream,fileSize,slot,listener);
+  return slot.getGetUrl();
+}

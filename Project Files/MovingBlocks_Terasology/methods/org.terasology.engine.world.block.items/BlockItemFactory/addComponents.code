@@ -1,0 +1,13 @@
+/** 
+ * Mutate the builder to add components from the given component container. <p> A component is only added to the builder if at least one of the following conditions holds: <ul> <li>the component class is annotated with  {@link AddToBlockBasedItem}</li> <li>the container contains a  {@link RetainComponentsComponent} and the component class is listed asretained</li> </ul> <p> Components that should be added to the block item entity are <emph>copied</emph>.
+ * @param builder the builder to add the components to
+ * @param components the container with potential components to add
+ */
+private void addComponents(EntityBuilder builder,ComponentContainer components){
+  final Set<Class<? extends Component>> retainComponents=Optional.ofNullable(components.getComponent(RetainComponentsComponent.class)).map(retain -> retain.components).orElse(Collections.emptySet());
+  for (  Component component : components.iterateComponents()) {
+    if (keepByAnnotation(component) || retainComponents.contains(component.getClass())) {
+      builder.addComponent(entityManager.getComponentLibrary().copy(component));
+    }
+  }
+}

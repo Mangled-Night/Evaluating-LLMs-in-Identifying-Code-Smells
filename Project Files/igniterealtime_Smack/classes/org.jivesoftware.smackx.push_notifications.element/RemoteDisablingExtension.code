@@ -1,0 +1,45 @@
+public static class RemoteDisablingExtension implements ExtensionElement {
+  public static final String NAMESPACE=PubSub.NAMESPACE;
+  public static final String ELEMENT=PubSub.ELEMENT;
+  public static final QName QNAME=new QName(NAMESPACE,ELEMENT);
+  private final String node;
+  private final Jid userJid;
+  public RemoteDisablingExtension(  String node,  Jid userJid){
+    this.node=node;
+    this.userJid=userJid;
+  }
+  @Override public String getElementName(){
+    return PubSub.ELEMENT;
+  }
+  @Override public String getNamespace(){
+    return PubSub.NAMESPACE;
+  }
+  /** 
+ * Get the node.
+ * @return the node
+ */
+  public String getNode(){
+    return node;
+  }
+  /** 
+ * Get the user JID.
+ * @return the user JID
+ */
+  public Jid getUserJid(){
+    return userJid;
+  }
+  @Override public CharSequence toXML(  org.jivesoftware.smack.packet.XmlEnvironment enclosingNamespace){
+    XmlStringBuilder xml=new XmlStringBuilder(this);
+    xml.attribute("node",node);
+    xml.rightAngleBracket();
+    xml.halfOpenElement("affiliation");
+    xml.attribute("jid",userJid);
+    xml.attribute("affiliation","none");
+    xml.closeEmptyElement();
+    xml.closeElement(this);
+    return xml;
+  }
+  public static RemoteDisablingExtension from(  Message message){
+    return message.getExtension(RemoteDisablingExtension.class);
+  }
+}

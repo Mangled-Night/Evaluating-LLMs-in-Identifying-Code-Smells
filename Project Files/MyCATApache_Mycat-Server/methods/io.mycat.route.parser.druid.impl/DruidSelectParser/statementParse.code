@@ -1,0 +1,13 @@
+@Override public void statementParse(SchemaConfig schema,RouteResultset rrs,SQLStatement stmt){
+  SQLSelectStatement selectStmt=(SQLSelectStatement)stmt;
+  SQLSelectQuery sqlSelectQuery=selectStmt.getSelect().getQuery();
+  if (sqlSelectQuery instanceof MySqlSelectQueryBlock) {
+    MySqlSelectQueryBlock mysqlSelectQuery=(MySqlSelectQueryBlock)selectStmt.getSelect().getQuery();
+    parseOrderAggGroupMysql(schema,stmt,rrs,mysqlSelectQuery);
+    if ((mysqlSelectQuery.isForUpdate() || mysqlSelectQuery.isLockInShareMode()) && rrs.isAutocommit() == false) {
+      rrs.setCanRunInReadDB(false);
+    }
+  }
+ else   if (sqlSelectQuery instanceof SQLUnionQuery) {
+  }
+}

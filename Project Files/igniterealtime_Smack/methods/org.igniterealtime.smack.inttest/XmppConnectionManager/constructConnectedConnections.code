@@ -1,0 +1,16 @@
+<C extends AbstractXMPPConnection>List<C> constructConnectedConnections(XmppConnectionDescriptor<C,? extends ConnectionConfiguration,? extends ConnectionConfiguration.Builder<?,?>> connectionDescriptor,int count) throws InterruptedException, SmackException, IOException, XMPPException {
+  List<C> connections=new ArrayList<>(count);
+synchronized (connectionPool) {
+    @SuppressWarnings("unchecked") List<C> pooledConnections=(List<C>)connectionPool.getAll(connectionDescriptor);
+    while (count > 0 && !pooledConnections.isEmpty()) {
+      C connection=pooledConnections.remove(pooledConnections.size() - 1);
+      connections.add(connection);
+      count--;
+    }
+  }
+  for (int i=0; i < count; i++) {
+    C connection=constructConnectedConnection(connectionDescriptor);
+    connections.add(connection);
+  }
+  return connections;
+}

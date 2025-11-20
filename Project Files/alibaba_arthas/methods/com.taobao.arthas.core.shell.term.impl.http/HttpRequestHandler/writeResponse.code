@@ -1,0 +1,8 @@
+private ChannelFuture writeResponse(ChannelHandlerContext ctx,HttpResponse response){
+  if (!HttpUtil.isTransferEncodingChunked(response) && response instanceof DefaultFullHttpResponse) {
+    response.headers().set(HttpHeaderNames.CONTENT_LENGTH,((DefaultFullHttpResponse)response).content().readableBytes());
+    return ctx.writeAndFlush(response);
+  }
+  ctx.write(response);
+  return ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+}

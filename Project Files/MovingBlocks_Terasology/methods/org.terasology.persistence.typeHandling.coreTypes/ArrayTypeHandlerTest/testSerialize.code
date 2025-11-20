@@ -1,0 +1,11 @@
+@Test void testSerialize(){
+  IntTypeHandler elementTypeHandler=mock(IntTypeHandler.class);
+  ArrayTypeHandler<Integer> typeHandler=new ArrayTypeHandler<>(elementTypeHandler,TypeInfo.of(Integer.class));
+  Integer[] array=new Integer[ARRAY_SIZE];
+  final int[] c={0};
+  Collections.nCopies(array.length,-1).forEach(i -> array[c[0]++]=i);
+  PersistedDataSerializer context=mock(PersistedDataSerializer.class);
+  typeHandler.serialize(array,context);
+  verify(elementTypeHandler,times(array.length)).serialize(any(),any());
+  verify(context).serialize(argThat((ArgumentMatcher<Iterable<PersistedData>>)argument -> argument instanceof Collection && ((Collection)argument).size() == array.length));
+}

@@ -1,0 +1,51 @@
+/** 
+ * 单表路由
+ */
+public static RouteResultset tryRouteForOneTable(SchemaConfig schema,DruidShardingParseInfo ctx,RouteCalculateUnit routeUnit,String tableName,RouteResultset rrs,boolean isSelect,LayerCachePool cachePool) throws SQLNonTransientException {
+  if (isNoSharding(schema,tableName)) {
+    return routeToSingleNode(rrs,schema.getDataNode(),ctx.getSql());
+  }
+  TableConfig tc=schema.getTables().get(tableName);
+  if (tc == null) {
+    String msg="can't find table define in schema " + tableName + " schema:"+ schema.getName();
+    LOGGER.warn(msg);
+    throw new SQLNonTransientException(msg);
+  }
+  Map<String,Map<String,Set<ColumnRoutePair>>> tablesAndConditions=routeUnit.getTablesAndConditions();
+  if (tc.isDistTable()) {
+    Set<String> keySet=tablesAndConditions.keySet();
+    return routeToDistTableNode(schema,rrs,ctx.getSql(),tablesAndConditions,cachePool,isSelect,null);
+  }
+  if (tc.isGlobalTable()) {
+    if (isSelect) {
+      rrs.setCacheAble(false);
+      return routeToSingleNode(rrs,getAliveRandomDataNode(tc),ctx.getSql());
+    }
+ else {
+      return routeToMultiNode(false,rrs,tc.getDataNodes(),ctx.getSql(),true);
+    }
+  }
+ else {
+    if (!checkRuleRequired(schema,ctx,routeUnit,tc)) {
+      throw new IllegalArgumentException("route rule for table " + tc.getName() + " is required: "+ ctx.getSql());
+    }
+    if (tc.getPartitionColumn() == null && !tc.isSecondLevel()) {
+      return routeToMultiNode(rrs.isCacheAble(),rrs,tc.getDataNodes(),ctx.getSql());
+    }
+ else {
+      Map<String,Set<String>> tablesRouteMap=new HashMap<String,Set<String>>();
+      if (routeUnit.getTablesAndConditions() != null && routeUnit.getTablesAndConditions().size() > 0) {
+        RouterUtil.findRouteWithcConditionsForTables(schema,rrs,routeUnit.getTablesAndConditions(),tablesRouteMap,ctx.getSql(),cachePool,isSelect);
+        if (rrs.isFinishedRoute()) {
+          return rrs;
+        }
+      }
+      if (tablesRouteMap.get(tableName) == null) {
+        return routeToMultiNode(rrs.isCacheAble(),rrs,tc.getDataNodes(),ctx.getSql());
+      }
+ else {
+        return routeToMultiNode(rrs.isCacheAble(),rrs,tablesRouteMap.get(tableName),ctx.getSql());
+      }
+    }
+  }
+}

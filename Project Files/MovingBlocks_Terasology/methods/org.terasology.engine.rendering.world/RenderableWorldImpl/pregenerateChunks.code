@@ -1,0 +1,33 @@
+/** 
+ * @return true if pregeneration is complete
+ */
+@Override public boolean pregenerateChunks(){
+  boolean pregenerationIsComplete=true;
+  chunkProvider.update();
+  Chunk chunk;
+  ChunkMesh newMesh;
+  ChunkView localView;
+  for (  Vector3ic chunkCoordinates : calculateRenderableRegion(renderingConfig.getViewDistance())) {
+    chunk=chunkProvider.getChunk(chunkCoordinates);
+    if (chunk == null) {
+      pregenerationIsComplete=false;
+    }
+ else     if (chunk.isDirty()) {
+      localView=worldProvider.getLocalView(chunkCoordinates);
+      if (localView == null) {
+        continue;
+      }
+      chunk.setDirty(false);
+      newMesh=chunkTessellator.generateMesh(localView);
+      newMesh.updateMesh();
+      newMesh.discardData();
+      if (chunk.hasMesh()) {
+        chunk.getMesh().dispose();
+      }
+      chunk.setMesh(newMesh);
+      pregenerationIsComplete=false;
+      break;
+    }
+  }
+  return pregenerationIsComplete;
+}

@@ -1,0 +1,13 @@
+protected void parseOrderAggGroupMysql(SchemaConfig schema,SQLStatement stmt,RouteResultset rrs,MySqlSelectQueryBlock mysqlSelectQuery){
+  MySqlSchemaStatVisitor visitor=new MySqlSchemaStatVisitor();
+  stmt.accept(visitor);
+  if (!isNeedParseOrderAgg) {
+    return;
+  }
+  Map<String,String> aliaColumns=parseAggGroupCommon(schema,stmt,rrs,mysqlSelectQuery);
+  if (mysqlSelectQuery.getOrderBy() != null) {
+    List<SQLSelectOrderByItem> orderByItems=mysqlSelectQuery.getOrderBy().getItems();
+    rrs.setOrderByCols(buildOrderByCols(orderByItems,aliaColumns));
+  }
+  isNeedParseOrderAgg=false;
+}

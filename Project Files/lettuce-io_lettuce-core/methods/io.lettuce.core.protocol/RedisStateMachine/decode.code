@@ -1,0 +1,40 @@
+/** 
+ * Decode a command using the input buffer.
+ * @param buffer Buffer containing data from the server.
+ * @param output Current command output.
+ * @return true if a complete response was read.
+ */
+public boolean decode(ByteBuf buffer,CommandOutput<?,?,?> output){
+  return decode(buffer,output,ex -> {
+  }
+);
+}
+/** 
+ * Attempt to decode a redis response and return a flag indicating whether a complete response was read.
+ * @param buffer Buffer containing data from the server.
+ * @param output Current command output.
+ * @param errorHandler the error handler
+ * @return true if a complete response was read.
+ */
+public boolean decode(ByteBuf buffer,CommandOutput<?,?,?> output,Consumer<Exception> errorHandler){
+  buffer.touch("RedisStateMachine.decode(…)");
+  if (isEmpty(stack)) {
+    add(stack,new State());
+  }
+  if (output == null) {
+    return isEmpty(stack);
+  }
+  boolean resp3Indicator=doDecode(buffer,output,errorHandler);
+  if (debugEnabled) {
+    logger.debug("Decode done, empty stack: {}",isEmpty(stack));
+  }
+  if (isDiscoverProtocol()) {
+    if (resp3Indicator) {
+      setProtocolVersion(ProtocolVersion.RESP3);
+    }
+ else {
+      setProtocolVersion(ProtocolVersion.RESP2);
+    }
+  }
+  return isEmpty(stack);
+}

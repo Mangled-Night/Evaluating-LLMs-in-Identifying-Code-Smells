@@ -1,0 +1,21 @@
+@BeforeEach public void setup(){
+  context=new ContextImpl();
+  context.put(RecordAndReplayCurrentStatus.class,new RecordAndReplayCurrentStatus());
+  context.put(ModuleManager.class,moduleManager);
+  CoreRegistry.setContext(context);
+  Reflections reflections=new Reflections(getClass().getClassLoader());
+  TypeHandlerLibrary serializationLibrary=new TypeHandlerLibraryImpl(reflections);
+  serializationLibrary.addTypeHandler(Vector3f.class,new Vector3fTypeHandler());
+  serializationLibrary.addTypeHandler(Quaternionf.class,new QuaternionfTypeHandler());
+  NetworkSystem networkSystem=mock(NetworkSystem.class);
+  when(networkSystem.getMode()).thenReturn(NetworkMode.NONE);
+  context.put(NetworkSystem.class,networkSystem);
+  EntitySystemSetupUtil.addReflectionBasedLibraries(context);
+  EntitySystemSetupUtil.addEntityManagementRelatedClasses(context);
+  EngineEntityManager entityManager=context.get(EngineEntityManager.class);
+  entityManager.getComponentLibrary().register(new ResourceUrn("test","gettersetter"),GetterSetterComponent.class);
+  entityManager.getComponentLibrary().register(new ResourceUrn("test","string"),StringComponent.class);
+  entityManager.getComponentLibrary().register(new ResourceUrn("test","integer"),IntegerComponent.class);
+  ComponentLibrary componentLibrary=entityManager.getComponentLibrary();
+  componentSerializer=new ComponentSerializer(componentLibrary,serializationLibrary);
+}

@@ -1,0 +1,30 @@
+/** 
+ * Computes a value histogram for each byte in the given array.
+ * @param array array to count records in.
+ * @param numRecords number of data records in the array.
+ * @param startByteIndex the first byte to compute counts for (the prior are skipped).
+ * @param endByteIndex the last byte to compute counts for.
+ * @return an array of eight 256-byte count arrays, one for each byte starting from the leastsignificant byte. If the byte does not need sorting the array will be null.
+ */
+private static long[][] getCounts(LongArray array,int numRecords,int startByteIndex,int endByteIndex){
+  long[][] counts=new long[8][];
+  long bitwiseMax=0;
+  long bitwiseMin=-1L;
+  long maxOffset=array.getBaseOffset() + numRecords * 8;
+  Object baseObject=array.getBaseObject();
+  for (long offset=array.getBaseOffset(); offset < maxOffset; offset+=8) {
+    long value=Platform.getLong(baseObject,offset);
+    bitwiseMax|=value;
+    bitwiseMin&=value;
+  }
+  long bitsChanged=bitwiseMin ^ bitwiseMax;
+  for (int i=startByteIndex; i <= endByteIndex; i++) {
+    if (((bitsChanged >>> (i * 8)) & 0xff) != 0) {
+      counts[i]=new long[256];
+      for (long offset=array.getBaseOffset(); offset < maxOffset; offset+=8) {
+        counts[i][(int)((Platform.getLong(baseObject,offset) >>> (i * 8)) & 0xff)]++;
+      }
+    }
+  }
+  return counts;
+}

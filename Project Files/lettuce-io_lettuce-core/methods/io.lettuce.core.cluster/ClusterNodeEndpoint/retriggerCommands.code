@@ -1,0 +1,13 @@
+protected void retriggerCommands(Collection<RedisCommand<?,?,?>> commands){
+  for (  RedisCommand<?,?,?> queuedCommand : commands) {
+    if (queuedCommand == null || queuedCommand.isCancelled()) {
+      continue;
+    }
+    try {
+      clusterChannelWriter.write(queuedCommand);
+    }
+ catch (    RedisException e) {
+      queuedCommand.completeExceptionally(e);
+    }
+  }
+}

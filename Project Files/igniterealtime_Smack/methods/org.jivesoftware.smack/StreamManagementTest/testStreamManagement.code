@@ -1,0 +1,19 @@
+@SmackIntegrationTest public void testStreamManagement(XMPPTCPConnection conOne,XMPPTCPConnection conTwo) throws InterruptedException, SmackException, IOException, XMPPException {
+  final String body1="Hi, what's up? " + testRunId;
+  final String body2="Hi, what's up? I've been just instantly shutdown" + testRunId;
+  final String body3="Hi, what's up? I've been just resumed" + testRunId;
+  final StanzaCollector collector=conTwo.createStanzaCollector(new AndFilter(MessageWithBodiesFilter.INSTANCE,FromMatchesFilter.createFull(conOne.getUser())));
+  try {
+    send(body1,conOne,conTwo);
+    assertMessageWithBodyReceived(body1,collector);
+    conOne.instantShutdown();
+    send(body2,conOne,conTwo);
+    conOne.connect().login();
+    assertMessageWithBodyReceived(body2,collector);
+    send(body3,conOne,conTwo);
+    assertMessageWithBodyReceived(body3,collector);
+  }
+  finally {
+    collector.cancel();
+  }
+}

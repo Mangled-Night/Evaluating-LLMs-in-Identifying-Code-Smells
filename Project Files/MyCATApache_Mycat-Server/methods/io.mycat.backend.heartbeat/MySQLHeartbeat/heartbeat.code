@@ -1,0 +1,44 @@
+/** 
+ * execute heart beat
+ */
+public void heartbeat(){
+  final ReentrantLock lock=this.lock;
+  if (!lock.tryLock()) {
+    return;
+  }
+  try {
+    if (isChecking.compareAndSet(false,true)) {
+      MySQLDetector detector=this.detector;
+      if (detector == null || detector.isQuit()) {
+        try {
+          detector=new MySQLDetector(this);
+          detector.setHeartbeatTimeout(this.getHeartbeatTimeout());
+          detector.heartbeat();
+        }
+ catch (        Exception e) {
+          LOGGER.warn(source.getConfig().toString(),e);
+          setResult(ERROR_STATUS,detector,null);
+          return;
+        }
+        this.detector=detector;
+      }
+ else {
+        detector.heartbeat();
+      }
+    }
+ else {
+      MySQLDetector detector=this.detector;
+      if (detector != null) {
+        if (detector.isQuit()) {
+          isChecking.compareAndSet(true,false);
+        }
+ else         if (detector.isHeartbeatTimeout()) {
+          setResult(TIMEOUT_STATUS,detector,null);
+        }
+      }
+    }
+  }
+  finally {
+    lock.unlock();
+  }
+}

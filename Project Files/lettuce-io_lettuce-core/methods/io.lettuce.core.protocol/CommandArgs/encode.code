@@ -1,0 +1,60 @@
+/** 
+ * Encode the  {@link CommandArgs} and write the arguments to the {@link ByteBuf}.
+ * @param buf the target buffer.
+ */
+public void encode(ByteBuf buf){
+  buf.touch("CommandArgs.encode(…)");
+  for (  SingularArgument singularArgument : singularArguments) {
+    singularArgument.encode(buf);
+  }
+}
+/** 
+ * Encode the argument and write it to the  {@code buffer}.
+ * @param buffer
+ */
+abstract void encode(ByteBuf buffer);
+@Override void encode(ByteBuf buffer){
+  writeBytes(buffer,val);
+}
+@Override void encode(ByteBuf target){
+  StringArgument.writeString(target,Long.toString(val));
+}
+@Override void encode(ByteBuf target){
+  StringArgument.writeString(target,Double.toString(val));
+}
+@Override void encode(ByteBuf target){
+  writeString(target,val);
+}
+@Override void encode(ByteBuf target){
+  writeString(target,val);
+}
+@SuppressWarnings("unchecked") @Override void encode(ByteBuf target){
+  if (codec instanceof ToByteBufEncoder) {
+    ToByteBufEncoder<K,V> toByteBufEncoder=(ToByteBufEncoder<K,V>)codec;
+    ByteBuf temporaryBuffer=target.alloc().buffer(toByteBufEncoder.estimateSize(key) + 6);
+    try {
+      toByteBufEncoder.encodeKey(key,temporaryBuffer);
+      ByteBufferArgument.writeByteBuf(target,temporaryBuffer);
+    }
+  finally {
+      temporaryBuffer.release();
+    }
+    return;
+  }
+  ByteBufferArgument.writeByteBuffer(target,codec.encodeKey(key));
+}
+@SuppressWarnings("unchecked") @Override void encode(ByteBuf target){
+  if (codec instanceof ToByteBufEncoder) {
+    ToByteBufEncoder<K,V> toByteBufEncoder=(ToByteBufEncoder<K,V>)codec;
+    ByteBuf temporaryBuffer=target.alloc().buffer(toByteBufEncoder.estimateSize(val) + 6);
+    try {
+      toByteBufEncoder.encodeValue(val,temporaryBuffer);
+      ByteBufferArgument.writeByteBuf(target,temporaryBuffer);
+    }
+  finally {
+      temporaryBuffer.release();
+    }
+    return;
+  }
+  ByteBufferArgument.writeByteBuffer(target,codec.encodeValue(val));
+}

@@ -1,0 +1,47 @@
+/** 
+ * Creates a new workgroup instance using the specified workgroup JID (eg support@workgroup.example.com) and XMPP connection. The connection must have undergone a successful login before being used to construct an instance of this class.
+ * @param workgroupJID the JID of the workgroup.
+ * @param connection   an XMPP connection which must have already undergone asuccessful login.
+ */
+public Workgroup(EntityBareJid workgroupJID,XMPPConnection connection){
+  if (!connection.isAuthenticated()) {
+    throw new IllegalStateException("Must login to server before creating workgroup.");
+  }
+  this.workgroupJID=workgroupJID;
+  this.connection=connection;
+  inQueue=false;
+  invitationListeners=new CopyOnWriteArraySet<>();
+  queueListeners=new CopyOnWriteArraySet<>();
+  addQueueListener(new QueueListener(){
+    @Override public void joinedQueue(){
+      inQueue=true;
+    }
+    @Override public void departedQueue(){
+      inQueue=false;
+      queuePosition=-1;
+      queueRemainingTime=-1;
+    }
+    @Override public void queuePositionUpdated(    int currentPosition){
+      queuePosition=currentPosition;
+    }
+    @Override public void queueWaitTimeUpdated(    int secondsRemaining){
+      queueRemainingTime=secondsRemaining;
+    }
+  }
+);
+  MultiUserChatManager.getInstanceFor(connection).addInvitationListener(new org.jivesoftware.smackx.muc.InvitationListener(){
+    @Override public void invitationReceived(    XMPPConnection conn,    org.jivesoftware.smackx.muc.MultiUserChat room,    EntityJid inviter,    String reason,    String password,    Message message,    MUCUser.Invite invitation){
+      inQueue=false;
+      queuePosition=-1;
+      queueRemainingTime=-1;
+    }
+  }
+);
+  StanzaFilter typeFilter=new StanzaTypeFilter(Message.class);
+  connection.addAsyncStanzaListener(new StanzaListener(){
+    @Override public void processStanza(    Stanza packet){
+      handlePacket(packet);
+    }
+  }
+,typeFilter);
+}

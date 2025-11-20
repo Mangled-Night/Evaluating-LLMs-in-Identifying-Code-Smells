@@ -1,0 +1,48 @@
+public class MonitoringSubsystem implements EngineSubsystem {
+  public static final Duration JMX_INTERVAL=Duration.ofSeconds(5);
+  private AdvancedMonitor advancedMonitor;
+  @Override public String getName(){
+    return "Monitoring";
+  }
+  @Override public void initialise(  GameEngine engine,  Context rootContext){
+    if (rootContext.get(SystemConfig.class).monitoringEnabled.get()) {
+      advancedMonitor=new AdvancedMonitor();
+      advancedMonitor.setVisible(true);
+    }
+    initMicrometerMetrics(rootContext.get(Time.class));
+  }
+  /** 
+ * Initialize Micrometer metrics and publishers.
+ * @see org.terasology.engine.core.GameScheduler GameScheduler for global Reactor metrics
+ * @param time provides statistics<p> Note  {@link org.terasology.engine.core.EngineTime EngineTime}does not serve the same role as a  {@link Clock micrometer Clock}. (Not yet. Maybe it should?)
+ */
+  private void initMicrometerMetrics(  Time time){
+    MeterRegistry meterRegistry=Metrics.globalRegistry;
+    Gauge.builder("terasology.fps",time::getFps).description("framerate").baseUnit("Hz").register(meterRegistry);
+    MeterRegistry jmxMeterRegistry=new JmxMeterRegistry(new JmxConfig(){
+      @Override public String get(      String key){
+        return null;
+      }
+      @Override public Duration step(){
+        return JMX_INTERVAL;
+      }
+    }
+,Clock.SYSTEM);
+    Metrics.addRegistry(jmxMeterRegistry);
+  }
+  /** 
+ * Installs all the micrometer built-in metrics. <p> Don't add these if you only intend to view them through a JMX registry, because they are already available from the default JMX server even without micrometer. Add them if you have a different agent you want them published through.
+ */
+  @SuppressWarnings("unused") void initAllJvmMetrics(  MeterRegistry registry){
+    new ClassLoaderMetrics().bindTo(registry);
+    new JvmMemoryMetrics().bindTo(registry);
+    new JvmGcMetrics().bindTo(registry);
+    new JvmThreadMetrics().bindTo(registry);
+    new ProcessorMetrics().bindTo(registry);
+  }
+  @Override public void shutdown(){
+    if (advancedMonitor != null) {
+      advancedMonitor.close();
+    }
+  }
+}

@@ -1,0 +1,44 @@
+@Override public void streamOpened(String prefix,Map<String,String> attributes){
+  if (LOGGER.isLoggable(STREAM_OPEN_CLOSE_DEBUG_LOG_LEVEL)) {
+    LOGGER.log(STREAM_OPEN_CLOSE_DEBUG_LOG_LEVEL,"Stream of " + this + " opened. prefix="+ prefix+ " attributes="+ attributes);
+  }
+  final String prefixXmlns="xmlns:" + prefix;
+  final StringBuilder streamClose=new StringBuilder(32);
+  final StringBuilder streamOpen=new StringBuilder(256);
+  streamOpen.append('<');
+  streamClose.append("</");
+  if (StringUtils.isNotEmpty(prefix)) {
+    streamOpen.append(prefix).append(':');
+    streamClose.append(prefix).append(':');
+  }
+  streamOpen.append("stream");
+  streamClose.append("stream>");
+  for (  Map.Entry<String,String> entry : attributes.entrySet()) {
+    String attributeName=entry.getKey();
+    String attributeValue=entry.getValue();
+switch (attributeName) {
+case "to":
+case "from":
+case "id":
+case "version":
+      break;
+case "xml:lang":
+    streamOpen.append(" xml:lang='").append(attributeValue).append('\'');
+  break;
+case "xmlns":
+streamOpen.append(" xmlns='").append(attributeValue).append('\'');
+break;
+default :
+if (attributeName.equals(prefixXmlns)) {
+streamOpen.append(' ').append(prefixXmlns).append("='").append(attributeValue).append('\'');
+break;
+}
+LOGGER.info("Unknown <stream/> attribute: " + attributeName);
+break;
+}
+}
+streamOpen.append('>');
+this.streamOpen=streamOpen.toString();
+this.streamClose=streamClose.toString();
+connectionInternal.onStreamOpen(this.streamOpen);
+}

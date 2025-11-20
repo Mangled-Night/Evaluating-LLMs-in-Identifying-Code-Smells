@@ -1,0 +1,14 @@
+@Test void selectiveBatchingShouldHandleErrors(){
+  RedisCommandFactory factory=new RedisCommandFactory(redis.getStatefulConnection());
+  SelectiveBatching api=factory.getCommands(SelectiveBatching.class);
+  api.set("k1",value,CommandBatching.queue());
+  api.llen("k1",CommandBatching.queue());
+  try {
+    api.flush();
+    fail("Missing BatchException");
+  }
+ catch (  BatchException e) {
+    assertThat(redis.get("k1")).isEqualTo(value);
+    assertThat(e.getFailedCommands()).hasSize(1);
+  }
+}

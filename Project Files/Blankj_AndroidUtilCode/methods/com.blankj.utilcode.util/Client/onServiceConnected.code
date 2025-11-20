@@ -1,0 +1,15 @@
+@Override public void onServiceConnected(ComponentName name,IBinder service){
+  Log.d("MessengerUtils","client service connected " + name);
+  mServer=new Messenger(service);
+  int key=UtilsBridge.getCurrentProcessName().hashCode();
+  Message msg=Message.obtain(mReceiveServeMsgHandler,WHAT_SUBSCRIBE,key,0);
+  msg.getData().setClassLoader(MessengerUtils.class.getClassLoader());
+  msg.replyTo=mClient;
+  try {
+    mServer.send(msg);
+  }
+ catch (  RemoteException e) {
+    e.printStackTrace();
+  }
+  sendCachedMsg2Server();
+}

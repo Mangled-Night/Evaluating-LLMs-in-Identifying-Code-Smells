@@ -1,0 +1,12 @@
+@SuppressWarnings("unchecked") private static Supplier<Object> findSupplier(Type type){
+  ResolvableType requested=ResolvableType.forType(type);
+  Supplier<?> supplier=SUPPLIERS.stream().filter(it -> {
+    ResolvableType providedType=ResolvableType.forType(it.getClass()).as(Supplier.class).getGeneric(0);
+    if (requested.isAssignableFrom(providedType)) {
+      return true;
+    }
+    return false;
+  }
+).findFirst().orElseThrow(() -> new NoSuchElementException("Cannot find a factory for " + type));
+  return (Supplier)supplier;
+}

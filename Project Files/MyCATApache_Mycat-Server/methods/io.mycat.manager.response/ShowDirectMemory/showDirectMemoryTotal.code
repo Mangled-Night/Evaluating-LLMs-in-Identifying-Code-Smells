@@ -1,0 +1,87 @@
+public static void showDirectMemoryTotal(ManagerConnection c){
+  ByteBuffer buffer=c.allocate();
+  buffer=totalHeader.write(buffer,c,true);
+  for (  FieldPacket field : totalFields) {
+    buffer=field.write(buffer,c,true);
+  }
+  buffer=totalEof.write(buffer,c,true);
+  byte packetId=totalEof.packetId;
+  long usedforMerge=0;
+  long usedforNetwork=0;
+  long chunkSizeBytes=0;
+  int chunkCount=0;
+  if (processorBufferPoolType == 2 && bufferPool instanceof NettyBufferPool) {
+    List<PoolArenaMetric> list=((NettyBufferPool)bufferPool).getAllocator().getAlloc().directArenas();
+    chunkSizeBytes=((NettyBufferPool)bufferPool).getAllocator().getChunkSize();
+    long pageSize=((NettyBufferPool)bufferPool).getAllocator().getPageSize();
+    long chunksUsedBytes=0;
+    for (    PoolArenaMetric pool : list) {
+      List<PoolChunkListMetric> pcks=pool.chunkLists();
+      for (      PoolChunkListMetric pck : pcks) {
+        Iterator<PoolChunkMetric> it=pck.iterator();
+        while (it.hasNext()) {
+          chunkCount++;
+          PoolChunkMetric p=it.next();
+          chunksUsedBytes+=(chunkSizeBytes - p.freeBytes());
+        }
+      }
+      List<PoolSubpageMetric> tinySubpages=pool.tinySubpages();
+      for (      PoolSubpageMetric tiny : tinySubpages) {
+        chunksUsedBytes-=(pageSize - (tiny.maxNumElements() - tiny.numAvailable()) * tiny.elementSize());
+      }
+      List<PoolSubpageMetric> smallSubpages=pool.smallSubpages();
+      for (      PoolSubpageMetric small : smallSubpages) {
+        chunksUsedBytes-=(pageSize - (small.maxNumElements() - small.numAvailable()) * small.elementSize());
+      }
+    }
+    usedforNetwork=chunkCount * chunkSizeBytes;
+  }
+  ConcurrentHashMap<Long,Long> bufferpoolUsageMap=bufferPool.getNetDirectMemoryUsage();
+  RowDataPacket row=new RowDataPacket(TOTAL_FIELD_COUNT);
+  try {
+    row.add(JavaUtils.bytesToString2(Platform.getMaxDirectMemory()).getBytes(c.getCharset()));
+    if (useOffHeapForMerge == 1) {
+      ConcurrentHashMap<Long,Long> concurrentHashMap=MycatServer.getInstance().getMyCatMemory().getResultMergeMemoryManager().getDirectMemorUsage();
+      for (      Map.Entry<Long,Long> entry : concurrentHashMap.entrySet()) {
+        usedforMerge+=entry.getValue();
+      }
+    }
+    if (processorBufferPoolType == 2) {
+      usedforNetwork=chunkSizeBytes * chunkCount;
+    }
+ else {
+      for (      Map.Entry<Long,Long> entry : bufferpoolUsageMap.entrySet()) {
+        usedforNetwork+=entry.getValue();
+      }
+    }
+    row.add(JavaUtils.bytesToString2(usedforMerge + usedforNetwork).getBytes(c.getCharset()));
+    long totalAvailable=0;
+    if (useOffHeapForMerge == 1) {
+      totalAvailable=(long)(Platform.getMaxDirectMemory() * MyCatMemory.DIRECT_SAFETY_FRACTION);
+    }
+ else {
+      totalAvailable=Platform.getMaxDirectMemory();
+    }
+    row.add(JavaUtils.bytesToString2(totalAvailable - usedforMerge - usedforNetwork).getBytes(c.getCharset()));
+    if (useOffHeapForMerge == 1) {
+      row.add(("" + MyCatMemory.DIRECT_SAFETY_FRACTION).getBytes(c.getCharset()));
+    }
+ else {
+      row.add(("1.0").getBytes(c.getCharset()));
+    }
+    long resevedForOs=0;
+    if (useOffHeapForMerge == 1) {
+      resevedForOs=(long)((1 - MyCatMemory.DIRECT_SAFETY_FRACTION) * (Platform.getMaxDirectMemory() - 2 * MycatServer.getInstance().getTotalNetWorkBufferSize()));
+    }
+    row.add(resevedForOs > 0 ? JavaUtils.bytesToString2(resevedForOs).getBytes(c.getCharset()) : "0".getBytes(c.getCharset()));
+    row.packetId=++packetId;
+    buffer=row.write(buffer,c,true);
+  }
+ catch (  UnsupportedEncodingException e) {
+    e.printStackTrace();
+  }
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

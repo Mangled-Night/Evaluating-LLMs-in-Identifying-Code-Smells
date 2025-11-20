@@ -1,0 +1,56 @@
+/** 
+ * GET  MaxDirectMemory Size,from Netty Project!
+ */
+private static long maxDirectMemory(){
+  long maxDirectMemory=0L;
+  Class t;
+  try {
+    t=Class.forName("sun.misc.VM",true,getSystemClassLoader());
+    Method runtimeClass=t.getDeclaredMethod("maxDirectMemory",new Class[0]);
+    maxDirectMemory=((Number)runtimeClass.invoke((Object)null,new Object[0])).longValue();
+  }
+ catch (  Throwable var8) {
+    ;
+  }
+  if (maxDirectMemory > 0L) {
+    return maxDirectMemory;
+  }
+ else {
+    try {
+      t=Class.forName("java.lang.management.ManagementFactory",true,getSystemClassLoader());
+      Class var10=Class.forName("java.lang.management.RuntimeMXBean",true,getSystemClassLoader());
+      Object runtime=t.getDeclaredMethod("getRuntimeMXBean",new Class[0]).invoke((Object)null,new Object[0]);
+      List vmArgs=(List)var10.getDeclaredMethod("getInputArguments",new Class[0]).invoke(runtime,new Object[0]);
+      label41:       for (int i=vmArgs.size() - 1; i >= 0; --i) {
+        Matcher m=MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN.matcher((CharSequence)vmArgs.get(i));
+        if (m.matches()) {
+          maxDirectMemory=Long.parseLong(m.group(1));
+switch (m.group(2).charAt(0)) {
+case 'G':
+case 'g':
+            maxDirectMemory*=1073741824L;
+          break label41;
+case 'K':
+case 'k':
+        maxDirectMemory*=1024L;
+      break label41;
+case 'M':
+case 'm':
+    maxDirectMemory*=1048576L;
+default :
+  break label41;
+}
+}
+}
+}
+ catch (Throwable var9) {
+logger.error(var9.getMessage());
+}
+if (maxDirectMemory <= 0L) {
+maxDirectMemory=Runtime.getRuntime().maxMemory();
+}
+ else {
+}
+return maxDirectMemory;
+}
+}

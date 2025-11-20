@@ -1,0 +1,28 @@
+/** 
+ * distribute datanodes in multi hosts,means ,dn1 (host1),dn100 (host2),dn300(host3),dn2(host1),dn101(host2),dn301(host3)...etc 将每个host上的datanode按照host重新排列。比如上面的例子host1拥有dn1,dn2，host2拥有dn100，dn101，host3拥有dn300，dn301, 按照host重新排列： 0->dn1 (host1),1->dn100(host2),2->dn300(host3),3->dn2(host1),4->dn101(host2),5->dn301(host3)
+ * @param theDataNodes
+ */
+private void distributeDataNodes(ArrayList<String> theDataNodes){
+  Map<String,ArrayList<String>> newDataNodeMap=new HashMap<String,ArrayList<String>>(dataHosts.size());
+  for (  String dn : theDataNodes) {
+    DataNodeConfig dnConf=dataNodes.get(dn);
+    String host=dnConf.getDataHost();
+    ArrayList<String> hostDns=newDataNodeMap.get(host);
+    hostDns=(hostDns == null) ? new ArrayList<String>() : hostDns;
+    hostDns.add(dn);
+    newDataNodeMap.put(host,hostDns);
+  }
+  ArrayList<String> result=new ArrayList<String>(theDataNodes.size());
+  boolean hasData=true;
+  while (hasData) {
+    hasData=false;
+    for (    ArrayList<String> dns : newDataNodeMap.values()) {
+      if (!dns.isEmpty()) {
+        result.add(dns.remove(0));
+        hasData=true;
+      }
+    }
+  }
+  theDataNodes.clear();
+  theDataNodes.addAll(result);
+}

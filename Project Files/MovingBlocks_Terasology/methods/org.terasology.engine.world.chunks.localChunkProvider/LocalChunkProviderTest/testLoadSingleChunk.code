@@ -1,0 +1,14 @@
+@Test void testLoadSingleChunk() throws InterruptedException, ExecutionException, TimeoutException {
+  Vector3i chunkPosition=new Vector3i(0,0,0);
+  Chunk chunk=new ChunkImpl(chunkPosition,blockManager,extraDataManager);
+  generator.createChunk(chunk,null);
+  storageManager.add(chunk);
+  requestCreatingOrLoadingArea(chunkPosition).get(WAIT_CHUNK_IS_READY_IN_SECONDS,TimeUnit.SECONDS);
+  chunkProvider.update();
+  Assertions.assertTrue(((TestChunkStore)storageManager.loadChunkStore(chunkPosition)).isEntityRestored(),"Entities must be restored by loading");
+  final ArgumentCaptor<Event> eventArgumentCaptor=ArgumentCaptor.forClass(Event.class);
+  verify(worldEntity,atLeast(1)).send(eventArgumentCaptor.capture());
+  Event mustBeOnLoadedEvent=eventArgumentCaptor.getAllValues().get(0);
+  Assertions.assertTrue(mustBeOnLoadedEvent instanceof OnChunkLoaded,"Second world event must be OnChunkLoaded");
+  Assertions.assertEquals(chunkPosition,((OnChunkLoaded)mustBeOnLoadedEvent).getChunkPos(),"Chunk position at event not expected");
+}

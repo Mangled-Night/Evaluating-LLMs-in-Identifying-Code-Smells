@@ -1,0 +1,64 @@
+/** 
+ * 处理注释中类型为datanode 的情况
+ * @author zhuam
+ */
+public class HintDataNodeHandler implements HintHandler {
+  private static final Logger LOGGER=LoggerFactory.getLogger(HintSchemaHandler.class);
+  @Override public RouteResultset route(  SystemConfig sysConfig,  SchemaConfig schema,  int sqlType,  String realSQL,  String charset,  ServerConnection sc,  LayerCachePool cachePool,  String hintSQLValue,  int hintSqlType,  Map hintMap) throws SQLNonTransientException {
+    String stmt=realSQL;
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("route datanode sql hint from " + stmt);
+    }
+    RouteResultset rrs=new RouteResultset(stmt,sqlType);
+    PhysicalDBNode dataNode=MycatServer.getInstance().getConfig().getDataNodes().get(hintSQLValue);
+    if (dataNode != null) {
+      rrs=RouterUtil.routeToSingleNode(rrs,dataNode.getName(),stmt);
+    }
+ else {
+      String msg="can't find hint datanode:" + hintSQLValue;
+      LOGGER.warn(msg);
+      throw new SQLNonTransientException(msg);
+    }
+    if (rrs.getSqlType() == ServerParse.LOAD_DATA_INFILE_SQL) {
+      LOGGER.info("load data use annotation datanode");
+      rrs.getNodes()[0].setLoadData(parseLoadDataPram(stmt,charset));
+    }
+    return rrs;
+  }
+  private LoadData parseLoadDataPram(  String sql,  String connectionCharset){
+    SQLStatementParser parser=new MycatStatementParser(sql);
+    MySqlLoadDataInFileStatement statement=(MySqlLoadDataInFileStatement)parser.parseStatement();
+    LoadData loadData=new LoadData();
+    SQLTextLiteralExpr rawLineEnd=(SQLTextLiteralExpr)statement.getLinesTerminatedBy();
+    String lineTerminatedBy=rawLineEnd == null ? "\n" : rawLineEnd.getText();
+    loadData.setLineTerminatedBy(lineTerminatedBy);
+    SQLTextLiteralExpr rawFieldEnd=(SQLTextLiteralExpr)statement.getColumnsTerminatedBy();
+    String fieldTerminatedBy=rawFieldEnd == null ? "\t" : rawFieldEnd.getText();
+    loadData.setFieldTerminatedBy(fieldTerminatedBy);
+    SQLTextLiteralExpr rawEnclosed=(SQLTextLiteralExpr)statement.getColumnsEnclosedBy();
+    String enclose=rawEnclosed == null ? null : rawEnclosed.getText();
+    loadData.setEnclose(enclose);
+    SQLTextLiteralExpr escapseExpr=(SQLTextLiteralExpr)statement.getColumnsEscaped();
+    String escapse=escapseExpr == null ? "\\" : escapseExpr.getText();
+    loadData.setEscape(escapse);
+    String charset=statement.getCharset() != null ? statement.getCharset() : connectionCharset;
+    loadData.setCharset(charset);
+    String fileName=parseFileName(sql);
+    if (StringUtils.isBlank(fileName)) {
+      throw new RuntimeException(" file name is null !");
+    }
+    loadData.setFileName(fileName);
+    return loadData;
+  }
+  private String parseFileName(  String sql){
+    if (sql.contains("'")) {
+      int beginIndex=sql.indexOf("'");
+      return sql.substring(beginIndex + 1,sql.indexOf("'",beginIndex + 1));
+    }
+ else     if (sql.contains("\"")) {
+      int beginIndex=sql.indexOf("\"");
+      return sql.substring(beginIndex + 1,sql.indexOf("\"",beginIndex + 1));
+    }
+    return null;
+  }
+}

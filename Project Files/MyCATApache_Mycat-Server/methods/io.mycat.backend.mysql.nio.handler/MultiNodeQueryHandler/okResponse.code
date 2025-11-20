@@ -1,0 +1,82 @@
+@Override public void okResponse(byte[] data,BackendConnection conn){
+  this.netOutBytes+=data.length;
+  boolean executeResponse=conn.syncAndExcute();
+  if (LOGGER.isDebugEnabled()) {
+    LOGGER.debug("received ok response ,executeResponse:" + executeResponse + " from "+ conn);
+  }
+  if (executeResponse) {
+    ServerConnection source=session.getSource();
+    OkPacket ok=new OkPacket();
+    ok.read(data);
+    lock.lock();
+    try {
+      affectedRows+=ok.affectedRows;
+    }
+  finally {
+      lock.unlock();
+    }
+    if (ok.hasMoreResultsExists()) {
+      return;
+    }
+    boolean isCanClose2Client=(!rrs.isCallStatement()) || (rrs.isCallStatement() && !rrs.getProcedure().isResultSimpleValue());
+    lock.lock();
+    try {
+      if (ok.insertId > 0) {
+        if (rrs.getAutoIncrement()) {
+          insertId=(insertId == 0) ? ok.insertId : Math.max(insertId,ok.insertId);
+        }
+ else {
+          insertId=(insertId == 0) ? ok.insertId : Math.min(insertId,ok.insertId);
+        }
+      }
+    }
+ catch (    Exception e) {
+      LOGGER.error(e.getMessage(),e);
+    }
+ finally {
+      lock.unlock();
+    }
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug(this.toString() + "on row okResponse " + conn+ "  "+ errorRepsponsed.get()+ "  "+ nodeCount);
+    }
+    boolean isEndPacket=isCallProcedure ? decrementOkCountBy(1) : decrementCountBy(1);
+    if (isEndPacket && isCanClose2Client) {
+      if (this.isFail() || session.closed()) {
+        processFinishWork(createErrPkg(this.error).writeToBytes(),false,conn);
+        return;
+      }
+      lock.lock();
+      try {
+        ok.packetId=++packetId;
+        if (rrs.isLoadData()) {
+          ok.message=("Records: " + affectedRows + "  Deleted: 0  Skipped: 0  Warnings: 0").getBytes();
+          source.getLoadDataInfileHandler().clear();
+        }
+        if (rrs.isGlobalTable()) {
+          affectedRows=affectedRows / rrs.getNodes().length;
+        }
+        ok.affectedRows=affectedRows;
+        ok.serverStatus=source.isAutocommit() ? 2 : 1;
+        if (insertId > 0) {
+          ok.insertId=rrs.getAutoIncrement() ? (insertId - affectedRows + 1) : insertId;
+          source.setLastInsertId(insertId);
+        }
+        if (source.canResponse()) {
+          processFinishWork(ok.writeToBytes(),true,conn);
+        }
+      }
+ catch (      Exception e) {
+        handleDataProcessException(e);
+      }
+ finally {
+        lock.unlock();
+      }
+    }
+    int currentExecCount=this.incExecCount();
+    if (currentExecCount == rrs.getNodes().length) {
+      source.setExecuteSql(null);
+      QueryResult queryResult=new QueryResult(session.getSource().getSchema(),session.getSource().getUser(),rrs.getSqlType(),rrs.getStatement(),selectRows,netInBytes,netOutBytes,startTime,System.currentTimeMillis(),0,source.getHost());
+      QueryResultDispatcher.dispatchQuery(queryResult);
+    }
+  }
+}

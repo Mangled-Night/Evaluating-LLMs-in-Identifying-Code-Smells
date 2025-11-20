@@ -1,0 +1,35 @@
+public void execute(){
+  try {
+    List<String> tables=parseTables(sql);
+    SchemaConfig schemaConfig=MycatServer.getInstance().getConfig().getSchemas().get(sc.getSchema());
+    String routeDataNode=null;
+    for (    String table : tables) {
+      TableConfig tc=schemaConfig.getTables().get(table.toUpperCase());
+      if (tc != null) {
+        routeDataNode=tc.getDataNodes().get(0);
+      }
+ else {
+        routeDataNode=schemaConfig.getDataNode();
+      }
+      if (tc != null && !tc.isGlobalTable()) {
+        break;
+      }
+    }
+    if (routeDataNode == null) {
+      doFinished(true,"can't find route node");
+      return;
+    }
+    PhysicalDBNode dn=MycatServer.getInstance().getConfig().getDataNodes().get(routeDataNode);
+    PhysicalDatasource ds=dn.getDbPool().getSource();
+    if (ds.getConfig().getDbType().equalsIgnoreCase("MYSQL")) {
+      ds.getConnection(dn.getDatabase(),true,this,null);
+    }
+ else {
+      doFinished(true,"Does not support getting metadata from non-mysql database");
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.info("can't get connection for sql ,error:",e);
+    doFinished(true,e.getMessage());
+  }
+}

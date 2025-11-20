@@ -1,0 +1,33 @@
+@Test public void testPeakMemoryUsed() throws Exception {
+  final long recordLengthBytes=8;
+  final long pageSizeBytes=256;
+  final long numRecordsPerPage=pageSizeBytes / recordLengthBytes;
+  final UnsafeExternalSorter sorter=UnsafeExternalSorter.create(DATA_NODE_MEMORY_MANAGER,blockManager,serializerManager,recordComparator,prefixComparator,1024,pageSizeBytes,shouldUseRadixSort(),true);
+  long previousPeakMemory=sorter.getPeakMemoryUsedBytes();
+  long newPeakMemory;
+  try {
+    for (int i=0; i < numRecordsPerPage * 10; i++) {
+      insertNumber(sorter,i);
+      newPeakMemory=sorter.getPeakMemoryUsedBytes();
+      if (i % numRecordsPerPage == 0) {
+        assertEquals(previousPeakMemory + pageSizeBytes,newPeakMemory);
+      }
+ else {
+        assertEquals(previousPeakMemory,newPeakMemory);
+      }
+      previousPeakMemory=newPeakMemory;
+    }
+    sorter.spill();
+    newPeakMemory=sorter.getPeakMemoryUsedBytes();
+    assertEquals(previousPeakMemory,newPeakMemory);
+    for (int i=0; i < numRecordsPerPage; i++) {
+      insertNumber(sorter,i);
+    }
+    newPeakMemory=sorter.getPeakMemoryUsedBytes();
+    assertEquals(previousPeakMemory,newPeakMemory);
+  }
+  finally {
+    sorter.cleanupResources();
+    assertSpillFilesWereCleanedUp();
+  }
+}

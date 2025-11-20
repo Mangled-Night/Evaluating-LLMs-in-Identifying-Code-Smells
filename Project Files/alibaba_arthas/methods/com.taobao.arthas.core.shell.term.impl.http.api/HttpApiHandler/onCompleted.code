@@ -1,0 +1,15 @@
+public void onCompleted(DefaultFullHttpResponse httpResponse){
+  ByteBuf content=httpResponse.content();
+  content.clear();
+  if (content.capacity() == jsonBufferSize) {
+    if (!byteBufPool.offer(content)) {
+      content.release();
+    }
+  }
+ else {
+    content.release();
+    if (byteBufPool.remainingCapacity() > 0) {
+      byteBufPool.offer(Unpooled.buffer(jsonBufferSize));
+    }
+  }
+}

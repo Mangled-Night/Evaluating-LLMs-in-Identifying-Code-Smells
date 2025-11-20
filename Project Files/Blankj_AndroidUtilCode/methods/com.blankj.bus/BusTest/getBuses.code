@@ -1,0 +1,17 @@
+private static Map<String,List<BusInfo>> getBuses() throws IOException {
+  Map<String,List<BusInfo>> busMap=new HashMap<>();
+  ClassReader cr=new ClassReader(BusTest.class.getName());
+  ClassWriter cw=new ClassWriter(cr,0);
+  ClassVisitor cv=new BusClassVisitor(cw,busMap,BusUtils.class.getName());
+  cr.accept(cv,ClassReader.SKIP_FRAMES);
+  for (  List<BusInfo> value : busMap.values()) {
+    value.sort(new Comparator<BusInfo>(){
+      @Override public int compare(      BusInfo t0,      BusInfo t1){
+        return t1.priority - t0.priority;
+      }
+    }
+);
+  }
+  System.out.println("busMap = " + busMap);
+  return busMap;
+}

@@ -1,0 +1,44 @@
+/** 
+ * return connection for read balance
+ * @param handler
+ * @param attachment
+ * @param database
+ * @throws Exception
+ */
+public void getRWBanlanceCon(String schema,boolean autocommit,ResponseHandler handler,Object attachment,String database) throws Exception {
+  PhysicalDatasource theNode=null;
+  ArrayList<PhysicalDatasource> okSources=null;
+switch (banlance) {
+case BALANCE_ALL_BACK:
+{
+      okSources=getAllActiveRWSources(true,false,checkSlaveSynStatus());
+      if (okSources.isEmpty()) {
+        theNode=this.getSource();
+      }
+ else {
+        theNode=randomSelect(okSources);
+      }
+      break;
+    }
+case BALANCE_ALL:
+{
+    okSources=getAllActiveRWSources(true,true,checkSlaveSynStatus());
+    theNode=randomSelect(okSources);
+    break;
+  }
+case BALANCE_ALL_READ:
+{
+  okSources=getAllActiveRWSources(false,false,checkSlaveSynStatus());
+  theNode=randomSelect(okSources);
+  break;
+}
+case BALANCE_NONE:
+default :
+theNode=this.getSource();
+}
+if (LOGGER.isDebugEnabled()) {
+LOGGER.debug("select read source " + theNode.getName() + " for dataHost:"+ this.getHostName());
+}
+theNode.setReadCount();
+theNode.getConnection(schema,autocommit,handler,attachment);
+}

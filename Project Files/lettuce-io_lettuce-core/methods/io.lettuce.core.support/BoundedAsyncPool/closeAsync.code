@@ -1,0 +1,18 @@
+@Override public CompletableFuture<Void> closeAsync(){
+  if (!isPoolActive()) {
+    return closeFuture;
+  }
+  state=State.TERMINATING;
+  CompletableFuture<Void> clear=clearAsync();
+  state=State.TERMINATED;
+  clear.whenComplete((aVoid,throwable) -> {
+    if (throwable != null) {
+      closeFuture.completeExceptionally(throwable);
+    }
+ else {
+      closeFuture.complete(aVoid);
+    }
+  }
+);
+  return closeFuture;
+}

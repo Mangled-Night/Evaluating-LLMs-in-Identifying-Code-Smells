@@ -1,0 +1,20 @@
+/** 
+ * XXX Default access superclass workaround. When a  {@code public} class has a default access superclass with {@code public} members,these members are accessible. Calling them from compiled code works fine. Unfortunately, on some JVMs, using reflection to invoke these members seems to (wrongly) prevent access even when the modifier is  {@code public}. Calling  {@code setAccessible(true)} solves the problem but will only work fromsufficiently privileged code. Better workarounds would be gratefully accepted.
+ * @param o the AccessibleObject to set as accessible
+ * @return a boolean indicating whether the accessibility of the object was set to true.
+ */
+static boolean setAccessibleWorkaround(final AccessibleObject o){
+  if (o == null || o.isAccessible()) {
+    return false;
+  }
+  final Member m=(Member)o;
+  if (!o.isAccessible() && Modifier.isPublic(m.getModifiers()) && isPackageAccess(m.getDeclaringClass().getModifiers())) {
+    try {
+      o.setAccessible(true);
+      return true;
+    }
+ catch (    final SecurityException e) {
+    }
+  }
+  return false;
+}

@@ -1,0 +1,13 @@
+@Override public OpenPgpElementAndMetadata sign(SignElement element,OpenPgpSelf self) throws IOException, PGPException {
+  InputStream plainText=element.toInputStream();
+  ByteArrayOutputStream cipherText=new ByteArrayOutputStream();
+  EncryptionStream cipherStream=PGPainless.encryptAndOrSign().onOutputStream(cipherText).withOptions(ProducerOptions.sign(new SigningOptions().addInlineSignature(getStore().getKeyRingProtector(),self.getSigningKeyRing(),"xmpp:" + self.getJid().toString(),DocumentSignatureType.BINARY_DOCUMENT)).setAsciiArmor(false));
+  Streams.pipeAll(plainText,cipherStream);
+  plainText.close();
+  cipherStream.flush();
+  cipherStream.close();
+  cipherText.close();
+  String base64=Base64.encodeToString(cipherText.toByteArray());
+  OpenPgpElement openPgpElement=new OpenPgpElement(base64);
+  return new OpenPgpElementAndMetadata(openPgpElement,cipherStream.getResult());
+}

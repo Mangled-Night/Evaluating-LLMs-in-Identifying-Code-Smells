@@ -1,0 +1,25 @@
+/** 
+ * Initializes the writer in order to be used. It is called at the first connection and also is invoked if the connection is disconnected by an error.
+ */
+void init(){
+  shutdownTimestamp=null;
+  if (unacknowledgedStanzas != null) {
+    drainWriterQueueToUnacknowledgedStanzas();
+  }
+  queue.start();
+  running=true;
+  Async.go(new Runnable(){
+    @Override public void run(){
+      LOGGER.finer(threadName + " start");
+      try {
+        writePackets();
+      }
+  finally {
+        LOGGER.finer(threadName + " exit");
+        running=false;
+        notifyWaitingThreads();
+      }
+    }
+  }
+,threadName);
+}

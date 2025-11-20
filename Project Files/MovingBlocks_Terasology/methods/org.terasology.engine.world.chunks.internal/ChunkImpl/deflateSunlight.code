@@ -1,0 +1,26 @@
+@Override public void deflateSunlight(){
+  final TeraDeflator def=new TeraStandardDeflator();
+  if (logger.isDebugEnabled()) {
+    int blocksSize=blockData.getEstimatedMemoryConsumptionInBytes();
+    int sunlightSize=sunlightData.getEstimatedMemoryConsumptionInBytes();
+    int sunlightRegenSize=sunlightRegenData.getEstimatedMemoryConsumptionInBytes();
+    int lightSize=lightData.getEstimatedMemoryConsumptionInBytes();
+    int totalSize=blocksSize + sunlightRegenSize + sunlightSize+ lightSize;
+    sunlightData=def.deflate(sunlightData);
+    sunlightRegenData=def.deflate(sunlightRegenData);
+    int sunlightReduced=sunlightData.getEstimatedMemoryConsumptionInBytes();
+    int sunlightRegenReduced=sunlightRegenData.getEstimatedMemoryConsumptionInBytes();
+    int totalReduced=blocksSize + sunlightRegenReduced + sunlightReduced+ lightSize;
+    double sunlightPercent=100d - (100d / sunlightSize * sunlightReduced);
+    double sunlightRegenPercent=100d - (100d / sunlightRegenSize * sunlightRegenReduced);
+    double totalPercent=100d - (100d / totalSize * totalReduced);
+    logger.debug("chunk {}: " + "size-before: {} " + "bytes, size-after: {} "+ "bytes, total-deflated-by: {}%, "+ "sunlight-deflated-by={}%, "+ "sunlight-regen-deflated-by={}%",chunkPos,SIZE_FORMAT.format(totalSize),SIZE_FORMAT.format(totalReduced),PERCENT_FORMAT.format(totalPercent),PERCENT_FORMAT.format(sunlightPercent),PERCENT_FORMAT.format(sunlightRegenPercent));
+    ChunkMonitor.fireChunkDeflated(this,totalSize,totalReduced);
+  }
+ else {
+    final int oldSize=getEstimatedMemoryConsumptionInBytes();
+    sunlightData=def.deflate(sunlightData);
+    sunlightRegenData=def.deflate(sunlightRegenData);
+    ChunkMonitor.fireChunkDeflated(this,oldSize,getEstimatedMemoryConsumptionInBytes());
+  }
+}

@@ -1,0 +1,24 @@
+@Override public CommandSegments createCommandSegments(CommandMethod commandMethod){
+  if (CommandSegmentParser.INSTANCE.hasCommandString(commandMethod)) {
+    return CommandSegmentParser.INSTANCE.createCommandSegments(commandMethod);
+  }
+  LetterCase letterCase=getLetterCase(commandMethod);
+  Strategy strategy=getNamingStrategy(commandMethod);
+  List<String> parts=parseMethodName(commandMethod.getName(),strategy);
+  return createCommandSegments(parts,letterCase);
+}
+private CommandSegments createCommandSegments(List<String> parts,LetterCase letterCase){
+  List<CommandSegment> segments=new ArrayList<>(parts.size());
+  for (  String part : parts) {
+    if (letterCase == LetterCase.AS_IS) {
+      segments.add(CommandSegment.constant(part));
+    }
+ else {
+      segments.add(CommandSegment.constant(part.toUpperCase()));
+    }
+  }
+  return new CommandSegments(segments);
+}
+@Override public CommandSegments createCommandSegments(CommandMethod commandMethod){
+  return parse(getCommandString(commandMethod));
+}

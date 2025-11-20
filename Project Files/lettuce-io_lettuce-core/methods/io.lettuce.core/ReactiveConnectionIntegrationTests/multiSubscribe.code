@@ -1,0 +1,11 @@
+@Test void multiSubscribe() throws Exception {
+  CountDownLatch latch=new CountDownLatch(4);
+  reactive.set(key,"1").subscribe(s -> latch.countDown());
+  Mono<Long> incr=reactive.incr(key);
+  incr.subscribe(s -> latch.countDown());
+  incr.subscribe(s -> latch.countDown());
+  incr.subscribe(s -> latch.countDown());
+  latch.await();
+  Wait.untilEquals("4",() -> redis.get(key)).waitOrTimeout();
+  assertThat(redis.get(key)).isEqualTo("4");
+}

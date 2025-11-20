@@ -1,0 +1,22 @@
+@Test public void testSearchDuplicationByDistance(){
+  SpaceTree<Object> tree=new SpaceTree<>(3);
+  Object[] objects={new Object(),new Object(),new Object(),new Object(),new Object(),new Object()};
+  float[][] locations={{0f,0f,0f},{0f,0f,1f},{0f,0f,2f},{0f,0f,3f},{0f,0f,4f},{0f,0f,5f}};
+  for (int i=0; i < objects.length; i++) {
+    tree.add(locations[i],objects[i]);
+  }
+  float delta=0.0000001f;
+  Collection<DimensionalMap.Entry<Object>> nearest=tree.findNearest(locations[2],3);
+  assertEquals(3,nearest.size());
+  Iterator<DimensionalMap.Entry<Object>> nearestIterator=nearest.iterator();
+  DimensionalMap.Entry<Object> firstNearest=nearestIterator.next();
+  DimensionalMap.Entry<Object> secondNearest=nearestIterator.next();
+  DimensionalMap.Entry<Object> thirdNearest=nearestIterator.next();
+  assertSame(objects[2],firstNearest.value);
+  assertTrue(objects[1] == secondNearest.value || objects[3] == secondNearest.value);
+  assertTrue(objects[1] == thirdNearest.value || objects[3] == thirdNearest.value);
+  assertNotSame(secondNearest.value,thirdNearest.value);
+  assertEquals(0,firstNearest.distance,delta);
+  assertEquals(1,secondNearest.distance,delta);
+  assertEquals(1,thirdNearest.distance,delta);
+}

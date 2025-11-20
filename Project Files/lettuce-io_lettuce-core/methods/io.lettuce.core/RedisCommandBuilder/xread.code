@@ -1,0 +1,16 @@
+public Command<K,V,List<StreamMessage<K,V>>> xread(XReadArgs xReadArgs,StreamOffset<K>[] streams){
+  LettuceAssert.notNull(streams,"Streams " + MUST_NOT_BE_NULL);
+  LettuceAssert.isTrue(streams.length > 0,"Streams " + MUST_NOT_BE_EMPTY);
+  CommandArgs<K,V> args=new CommandArgs<>(codec);
+  if (xReadArgs != null) {
+    xReadArgs.build(args);
+  }
+  args.add("STREAMS");
+  for (  StreamOffset<K> stream : streams) {
+    args.addKey(stream.name);
+  }
+  for (  StreamOffset<K> stream : streams) {
+    args.add(stream.offset);
+  }
+  return createCommand(XREAD,new StreamReadOutput<>(codec),args);
+}

@@ -1,0 +1,79 @@
+/** 
+ * Create a new  {@code SET} subcommand.
+ * @param bitFieldType the bit field type, must not be {@code null}.
+ * @param offset bitfield offset
+ * @param value the value
+ * @return a new {@code SET} subcommand for the given {@code bitFieldType},  {@code offset} and {@code value}.
+ */
+public static BitFieldArgs set(BitFieldType bitFieldType,int offset,long value){
+  return new BitFieldArgs().set(bitFieldType,offset,value);
+}
+/** 
+ * Create a new  {@code SET} subcommand.
+ * @param bitFieldType the bit field type, must not be {@code null}.
+ * @param offset bitfield offset, must not be {@code null}.
+ * @param value the value
+ * @return a new {@code SET} subcommand for the given {@code bitFieldType},  {@code offset} and {@code value}.
+ * @since 4.3
+ */
+public static BitFieldArgs set(BitFieldType bitFieldType,Offset offset,long value){
+  return new BitFieldArgs().set(bitFieldType,offset,value);
+}
+/** 
+ * Adds a new  {@code SET} subcommand using offset {@code 0} and the field type of the previous command.
+ * @param value the value
+ * @return a new {@code SET} subcommand for the given {@code bitFieldType},  {@code offset} and {@code value}.
+ * @throws IllegalStateException if no previous field type was found
+ */
+public BitFieldArgs set(long value){
+  return set(previousFieldType(),value);
+}
+/** 
+ * Adds a new  {@code SET} subcommand using offset {@code 0}.
+ * @param bitFieldType the bit field type, must not be {@code null}.
+ * @param value the value
+ * @return a new {@code SET} subcommand for the given {@code bitFieldType},  {@code offset} and {@code value}.
+ */
+public BitFieldArgs set(BitFieldType bitFieldType,long value){
+  return set(bitFieldType,0,value);
+}
+/** 
+ * Adds a new  {@code SET} subcommand using the field type of the previous command.
+ * @param offset bitfield offset
+ * @param value the value
+ * @return a new {@code SET} subcommand for the given {@code bitFieldType},  {@code offset} and {@code value}.
+ * @throws IllegalStateException if no previous field type was found
+ */
+public BitFieldArgs set(int offset,long value){
+  return set(previousFieldType(),offset,value);
+}
+/** 
+ * Adds a new  {@code SET} subcommand.
+ * @param bitFieldType the bit field type, must not be {@code null}.
+ * @param offset bitfield offset
+ * @param value the value
+ * @return a new {@code SET} subcommand for the given {@code bitFieldType},  {@code offset} and {@code value}.
+ */
+public BitFieldArgs set(BitFieldType bitFieldType,int offset,long value){
+  return addSubCommand(new Set(bitFieldType,false,offset,value));
+}
+/** 
+ * Adds a new  {@code SET} subcommand.
+ * @param bitFieldType the bit field type, must not be {@code null}.
+ * @param offset bitfield offset, must not be {@code null}.
+ * @param value the value
+ * @return a new {@code SET} subcommand for the given {@code bitFieldType},  {@code offset} and {@code value}.
+ * @since 4.3
+ */
+public BitFieldArgs set(BitFieldType bitFieldType,Offset offset,long value){
+  LettuceAssert.notNull(offset,"BitFieldOffset must not be null");
+  return addSubCommand(new Set(bitFieldType,offset.isMultiplyByTypeWidth(),offset.getOffset(),value));
+}
+private Set(BitFieldType bitFieldType,boolean bitOffset,int offset,long value){
+  LettuceAssert.notNull(bitFieldType,"BitFieldType must not be null");
+  LettuceAssert.isTrue(offset > -1,"Offset must be greater or equal to 0");
+  this.bitFieldType=bitFieldType;
+  this.bitOffset=bitOffset;
+  this.offset=offset;
+  this.value=value;
+}

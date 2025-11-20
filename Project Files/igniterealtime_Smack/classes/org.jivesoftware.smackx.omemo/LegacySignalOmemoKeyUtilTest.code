@@ -1,0 +1,41 @@
+/** 
+ * Test SignalOmemoKeyUtil methods.
+ * @author Paul Schaub
+ */
+public class LegacySignalOmemoKeyUtilTest extends SmackTestSuite {
+  private final SignalOmemoKeyUtil keyUtil=new SignalOmemoKeyUtil();
+  @Test public void omemoIdentityKeyPairSerializationTest() throws CorruptedOmemoKeyException {
+    IdentityKeyPair ikp=keyUtil.generateOmemoIdentityKeyPair();
+    byte[] bytes=keyUtil.identityKeyPairToBytes(ikp);
+    assertNotNull("serialized identityKeyPair must not be null.",bytes);
+    assertNotSame("serialized identityKeyPair must not be of length 0.",0,bytes.length);
+    IdentityKeyPair ikp2=keyUtil.identityKeyPairFromBytes(bytes);
+    assertTrue("Deserialized IdentityKeyPairs PublicKey must equal the originals one.",ikp.getPublicKey().equals(ikp2.getPublicKey()));
+  }
+  @Test public void omemoIdentityKeySerializationTest(){
+    IdentityKey k=keyUtil.generateOmemoIdentityKeyPair().getPublicKey();
+    try {
+      assertEquals("Deserialized IdentityKey must equal the original one.",k,keyUtil.identityKeyFromBytes(keyUtil.identityKeyToBytes(k)));
+    }
+ catch (    CorruptedOmemoKeyException e) {
+      fail("Caught exception while serializing and deserializing identityKey (" + e + "): "+ e.getMessage());
+    }
+  }
+  @Test public void generateOmemoSignedPreKeyTest(){
+    IdentityKeyPair ikp=keyUtil.generateOmemoIdentityKeyPair();
+    try {
+      SignedPreKeyRecord spk=keyUtil.generateOmemoSignedPreKey(ikp,1);
+      assertNotNull("SignedPreKey must not be null.",spk);
+      assertEquals("SignedPreKeyId must match.",1,spk.getId());
+      assertEquals("singedPreKeyId must match here also.",1,keyUtil.signedPreKeyIdFromKey(spk));
+    }
+ catch (    CorruptedOmemoKeyException e) {
+      fail("Caught an exception while generating signedPreKey (" + e + "): "+ e.getMessage());
+    }
+  }
+  @Test public void getFingerprintTest(){
+    IdentityKeyPair ikp=keyUtil.generateOmemoIdentityKeyPair();
+    IdentityKey ik=ikp.getPublicKey();
+    assertTrue("Length of fingerprint must be 64.",keyUtil.getFingerprintOfIdentityKey(ik).length() == 64);
+  }
+}

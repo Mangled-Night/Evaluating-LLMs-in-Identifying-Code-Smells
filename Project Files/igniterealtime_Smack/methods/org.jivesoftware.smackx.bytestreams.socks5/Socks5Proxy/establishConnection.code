@@ -1,0 +1,47 @@
+/** 
+ * Negotiates a SOCKS5 connection and stores it on success.
+ * @param socket connection to the client
+ * @throws SmackException if client requests a connection in an unsupported way
+ * @throws IOException if a network error occurred
+ */
+private void establishConnection(Socket socket) throws SmackException, IOException {
+  DataOutputStream out=new DataOutputStream(socket.getOutputStream());
+  DataInputStream in=new DataInputStream(socket.getInputStream());
+  int b=in.read();
+  if (b != 5) {
+    throw new SmackException.SmackMessageException("Only SOCKS5 supported: Peer send " + b + " but we expect 5");
+  }
+  b=in.read();
+  byte[] auth=new byte[b];
+  in.readFully(auth);
+  byte[] authMethodSelectionResponse=new byte[2];
+  authMethodSelectionResponse[0]=(byte)0x05;
+  boolean noAuthMethodFound=false;
+  for (int i=0; i < auth.length; i++) {
+    if (auth[i] == (byte)0x00) {
+      noAuthMethodFound=true;
+      break;
+    }
+  }
+  if (!noAuthMethodFound) {
+    authMethodSelectionResponse[1]=(byte)0xFF;
+    out.write(authMethodSelectionResponse);
+    out.flush();
+    throw new SmackException.SmackMessageException("Authentication method not supported");
+  }
+  authMethodSelectionResponse[1]=(byte)0x00;
+  out.write(authMethodSelectionResponse);
+  out.flush();
+  byte[] connectionRequest=Socks5Utils.receiveSocks5Message(in);
+  String responseDigest=new String(connectionRequest,5,connectionRequest[4],StandardCharsets.UTF_8);
+  if (!allowAllConnections && !Socks5Proxy.this.allowedConnections.contains(responseDigest)) {
+    connectionRequest[1]=(byte)0x05;
+    out.write(connectionRequest);
+    out.flush();
+    throw new SmackException.SmackMessageException("Connection with digest '" + responseDigest + "' is not allowed");
+  }
+  Socks5Proxy.this.connectionMap.put(responseDigest,socket);
+  connectionRequest[1]=(byte)0x00;
+  out.write(connectionRequest);
+  out.flush();
+}

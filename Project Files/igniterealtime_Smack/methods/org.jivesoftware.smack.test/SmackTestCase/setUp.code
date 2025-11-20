@@ -1,0 +1,48 @@
+protected void setUp() throws Exception {
+  super.setUp();
+  init();
+  if (getMaxConnections() < 1) {
+    return;
+  }
+  connections=new XMPPTCPConnection[getMaxConnections()];
+  usernames=new String[getMaxConnections()];
+  passwords=new String[getMaxConnections()];
+  try {
+    for (int i=0; i < getMaxConnections(); i++) {
+      connections[i]=createConnection();
+      if (!createOfflineConnections())       connections[i].connect();
+      String currentPassword=usernamePrefix + (i + 1);
+      String currentUser=currentPassword;
+      if (passwordPrefix != null)       currentPassword=(samePassword ? passwordPrefix : passwordPrefix + (i + 1));
+      usernames[i]=currentUser;
+      passwords[i]=currentPassword;
+    }
+    host=connections[0].getHost();
+    serviceName=connections[0].getXMPPServiceDomain();
+    if (!createOfflineConnections()) {
+      for (int i=0; i < getMaxConnections(); i++) {
+        String currentUser=usernames[i];
+        String currentPassword=passwords[i];
+        try {
+          getConnection(i).login(currentUser,currentPassword,"Smack");
+        }
+ catch (        XMPPException e) {
+          if (!getConnection(0).getAccountManager().supportsAccountCreation())           fail("Server does not support account creation");
+          try {
+            createAccount(i,currentUser,currentPassword);
+          }
+ catch (          Exception e1) {
+            e1.printStackTrace();
+            fail("Could not create user: " + currentUser);
+          }
+          i--;
+        }
+      }
+      Thread.sleep(150);
+    }
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

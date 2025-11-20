@@ -1,0 +1,33 @@
+private void open(boolean isAnim){
+  swipeMenuOpened=new WeakReference<>(this);
+  if (isAnim) {
+    ValueAnimator anim=ValueAnimator.ofInt(getScrollX(),mMenusWidth);
+    anim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener(){
+      @Override public void onAnimationUpdate(      ValueAnimator animation){
+        scrollTo((int)animation.getAnimatedValue(),0);
+      }
+    }
+);
+    anim.setInterpolator(OPEN_INTERPOLATOR);
+    anim.setDuration(ANIM_TIMING).start();
+    for (    final MenuBean menu : mMenus) {
+      ValueAnimator menuAnim=ValueAnimator.ofInt(menu.getParams().leftMargin,menu.getOpenMargin());
+      menuAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener(){
+        @Override public void onAnimationUpdate(        ValueAnimator animation){
+          menu.getParams().leftMargin=(int)animation.getAnimatedValue();
+          menu.getView().requestLayout();
+        }
+      }
+);
+      menuAnim.setInterpolator(OPEN_INTERPOLATOR);
+      menuAnim.setDuration(ANIM_TIMING).start();
+    }
+  }
+ else {
+    scrollTo(mMenusWidth,0);
+    for (    final MenuBean menu : mMenus) {
+      menu.getParams().leftMargin=menu.getOpenMargin();
+      menu.getView().requestLayout();
+    }
+  }
+}

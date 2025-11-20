@@ -1,0 +1,20 @@
+/** 
+ * Try to find  {@link ConstraintWidgetFactory} for this {@link Setting}.
+ * @param setting for constaint factory.
+ * @param < T > type of settings
+ * @return {@link ConstraintWidgetFactory} for {@link Setting} if found, {@code Optinal.empty()} otherwise.
+ */
+<T>Optional<ConstraintWidgetFactory<T,?>> getConstraintWidgetFactory(Setting<T> setting){
+  SettingConstraint<?> constraint=setting.getConstraint();
+  if (constraint != null) {
+    for (    Class<? extends ConstraintWidgetFactory> widgetType : environment.getSubtypesOf(ConstraintWidgetFactory.class)) {
+      Type constraintType=ReflectionUtil.getTypeParameterForSuper(widgetType,ConstraintWidgetFactory.class,1);
+      if (constraint.getClass().equals(ReflectionUtil.getRawType(constraintType))) {
+        ConstraintWidgetFactory<T,?> factory=InjectionHelper.createWithConstructorInjection(widgetType,context);
+        InjectionHelper.inject(factory,In.class,ImmutableMap.of(AssetManager.class,assetManager));
+        return Optional.of(factory);
+      }
+    }
+  }
+  return Optional.empty();
+}

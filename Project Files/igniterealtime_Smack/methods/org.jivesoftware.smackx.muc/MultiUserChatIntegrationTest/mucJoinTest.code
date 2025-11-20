@@ -1,0 +1,19 @@
+/** 
+ * Asserts that when a user joins a room, they are themselves included on the list of users notified (self-presence). <p>From XEP-0045 § 7.2.2:</p> <blockquote> ...the service MUST also send presence from the new participant's occupant JID to the full JIDs of all the occupants (including the new occupant) </blockquote>
+ * @throws Exception when errors occur
+ */
+@SmackIntegrationTest public void mucJoinTest() throws Exception {
+  EntityBareJid mucAddress=getRandomRoom("smack-inttest-join");
+  MultiUserChat muc=mucManagerOne.getMultiUserChat(mucAddress);
+  try {
+    Presence reflectedJoinPresence=muc.join(Resourcepart.from("nick-one"));
+    MUCUser mucUser=MUCUser.from(reflectedJoinPresence);
+    assertNotNull(mucUser);
+    assertTrue(mucUser.getStatus().contains(MUCUser.Status.PRESENCE_TO_SELF_110));
+    assertEquals(mucAddress + "/nick-one",reflectedJoinPresence.getFrom().toString());
+    assertEquals(conOne.getUser().asEntityFullJidIfPossible().toString(),reflectedJoinPresence.getTo().toString());
+  }
+  finally {
+    tryDestroy(muc);
+  }
+}

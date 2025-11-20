@@ -1,0 +1,47 @@
+/** 
+ * Return the unique device id. <pre>{1}{UUID(macAddress)}</pre> <pre>{2}{UUID(androidId )}</pre> <pre>{9}{UUID(random    )}</pre>
+ * @return the unique device id
+ */
+public static String getUniqueDeviceId(){
+  return getUniqueDeviceId("",true);
+}
+/** 
+ * Return the unique device id. <pre>android 10 deprecated {prefix}{1}{UUID(macAddress)}</pre> <pre>{prefix}{2}{UUID(androidId )}</pre> <pre>{prefix}{9}{UUID(random    )}</pre>
+ * @param prefix The prefix of the unique device id.
+ * @return the unique device id
+ */
+public static String getUniqueDeviceId(String prefix){
+  return getUniqueDeviceId(prefix,true);
+}
+/** 
+ * Return the unique device id. <pre>{1}{UUID(macAddress)}</pre> <pre>{2}{UUID(androidId )}</pre> <pre>{9}{UUID(random    )}</pre>
+ * @param useCache True to use cache, false otherwise.
+ * @return the unique device id
+ */
+public static String getUniqueDeviceId(boolean useCache){
+  return getUniqueDeviceId("",useCache);
+}
+/** 
+ * Return the unique device id. <pre>android 10 deprecated {prefix}{1}{UUID(macAddress)}</pre> <pre>{prefix}{2}{UUID(androidId )}</pre> <pre>{prefix}{9}{UUID(random    )}</pre>
+ * @param prefix   The prefix of the unique device id.
+ * @param useCache True to use cache, false otherwise.
+ * @return the unique device id
+ */
+public static String getUniqueDeviceId(String prefix,boolean useCache){
+  if (!useCache) {
+    return getUniqueDeviceIdReal(prefix);
+  }
+  if (udid == null) {
+synchronized (DeviceUtils.class) {
+      if (udid == null) {
+        final String id=UtilsBridge.getSpUtils4Utils().getString(KEY_UDID,null);
+        if (id != null) {
+          udid=id;
+          return udid;
+        }
+        return getUniqueDeviceIdReal(prefix);
+      }
+    }
+  }
+  return udid;
+}

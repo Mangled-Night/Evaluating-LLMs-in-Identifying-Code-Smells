@@ -1,0 +1,21 @@
+public void write(byte[] data){
+  ByteBuffer buffer=allocate();
+  buffer=writeToBuffer(data,buffer);
+  write(buffer);
+}
+@Override public final void write(ByteBuffer buffer){
+  if (isSupportCompress()) {
+    ByteBuffer newBuffer=CompressUtil.compressMysqlPacket(buffer,this,compressUnfinishedDataQueue);
+    writeQueue.offer(newBuffer);
+  }
+ else {
+    writeQueue.offer(buffer);
+  }
+  try {
+    this.socketWR.doNextWriteCheck();
+  }
+ catch (  Exception e) {
+    LOGGER.warn("write err:",e);
+    this.close("write err:" + e);
+  }
+}

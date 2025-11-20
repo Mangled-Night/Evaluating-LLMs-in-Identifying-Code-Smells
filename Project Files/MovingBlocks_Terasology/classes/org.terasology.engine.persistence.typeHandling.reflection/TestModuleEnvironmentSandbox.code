@@ -1,0 +1,22 @@
+@ExtendWith(PathManagerProvider.class) @ExtendWith(MockitoExtension.class) @SuppressWarnings("FieldCanBeLocal") public class TestModuleEnvironmentSandbox {
+  private ModuleEnvironmentSandbox sandbox;
+  private TypeRegistry typeRegistry;
+  private ModuleManager moduleManager;
+  private ModuleEnvironment environment;
+  @BeforeEach protected void provideSandbox(  PathManager pathManager) throws Exception {
+    when(pathManager.getModulePaths()).thenReturn(Collections.emptyList());
+    moduleManager=ModuleManagerFactory.create();
+    environment=moduleManager.getEnvironment();
+    typeRegistry=new ModuleTypeRegistry(environment);
+    sandbox=new ModuleEnvironmentSandbox(moduleManager,typeRegistry);
+  }
+  @Test public void findSubtypeOfGlobalClass(){
+    assertNotEmpty(sandbox.findSubTypeOf("org.joml.Vector3f",org.joml.Vector3fc.class));
+  }
+  @Test public void findSubtypeOfEngineClass(){
+    assertNotEmpty(sandbox.findSubTypeOf("engine:AbstractBlockFamily",BlockFamily.class));
+  }
+  @Test public void findSubtypeOfModuleClass(){
+    assertNotEmpty(sandbox.findSubTypeOf("unittest:ExampleClass",ExampleInterface.class));
+  }
+}

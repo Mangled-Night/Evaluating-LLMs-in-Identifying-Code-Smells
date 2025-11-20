@@ -1,0 +1,30 @@
+public boolean render(Graphics g,int x,int y){
+  lock.readLock().lock();
+  try {
+    if (imageA != null) {
+      g.drawImage(imageA,x,y,null);
+      return true;
+    }
+  }
+  finally {
+    lock.readLock().unlock();
+  }
+  return false;
+}
+private void render(Graphics2D g,int offsetx,int offsety,int width,int height,List<ChunkMonitorEntry> chunkEntries){
+  final Rectangle box=calcBox(chunkEntries);
+  renderBackground(g,width,height);
+  renderChunks(g,offsetx,offsety,chunkEntries);
+  renderBox(g,offsetx,offsety,box);
+  renderSelectedChunk(g,offsetx,offsety,selectedChunk);
+}
+private void render(){
+  final Graphics2D g=image.getGraphics();
+  if (g != null) {
+    final int iw=image.getWidth();
+    final int ih=image.getHeight();
+    render(g,centerOffsetX + offsetX,centerOffsetY + offsetY,iw,ih,chunks);
+    image.swap();
+    repaint();
+  }
+}

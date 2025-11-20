@@ -1,0 +1,51 @@
+private void reconnect0(CompletableFuture<Channel> result,SocketAddress remoteAddress){
+  ChannelHandler handler=bootstrap.config().handler();
+  if (SslConnectionBuilder.isSslChannelInitializer(handler)) {
+    bootstrap.handler(SslConnectionBuilder.withSocketAddress(handler,remoteAddress));
+  }
+  ChannelFuture connectFuture=bootstrap.connect(remoteAddress);
+  logger.debug("Reconnecting to Redis at {}",remoteAddress);
+  result.whenComplete((c,t) -> {
+    if (t instanceof CancellationException) {
+      connectFuture.cancel(true);
+    }
+  }
+);
+  connectFuture.addListener(future -> {
+    if (!future.isSuccess()) {
+      result.completeExceptionally(future.cause());
+      return;
+    }
+    RedisHandshakeHandler handshakeHandler=connectFuture.channel().pipeline().get(RedisHandshakeHandler.class);
+    if (handshakeHandler == null) {
+      result.completeExceptionally(new IllegalStateException("RedisHandshakeHandler not registered"));
+      return;
+    }
+    handshakeHandler.channelInitialized().whenComplete((success,throwable) -> {
+      if (throwable != null) {
+        if (isExecutionException(throwable)) {
+          result.completeExceptionally(throwable);
+          return;
+        }
+        if (clientOptions.isCancelCommandsOnReconnectFailure()) {
+          connectionFacade.reset();
+        }
+        if (clientOptions.isSuspendReconnectOnProtocolFailure()) {
+          logger.error("Disabling autoReconnect due to initialization failure",throwable);
+          setReconnectSuspended(true);
+        }
+        result.completeExceptionally(throwable);
+        return;
+      }
+      if (logger.isDebugEnabled()) {
+        logger.info("Reconnected to {}, Channel {}",remoteAddress,ChannelLogDescriptor.logDescriptor(connectFuture.channel()));
+      }
+ else {
+        logger.info("Reconnected to {}",remoteAddress);
+      }
+      result.complete(connectFuture.channel());
+    }
+);
+  }
+);
+}

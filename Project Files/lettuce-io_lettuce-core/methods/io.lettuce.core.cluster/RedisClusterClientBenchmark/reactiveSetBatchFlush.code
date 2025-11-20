@@ -1,0 +1,11 @@
+@Benchmark @OperationsPerInvocation(BATCH_SIZE) public void reactiveSetBatchFlush(){
+  connection.setAutoFlushCommands(false);
+  for (int i=0; i < BATCH_SIZE; i++) {
+    monos[i]=connection.reactive().set(KEY,KEY);
+  }
+  Flux.merge(monos).doOnSubscribe(subscription -> {
+    connection.flushCommands();
+    connection.setAutoFlushCommands(true);
+  }
+).blockLast();
+}

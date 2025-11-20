@@ -1,0 +1,12 @@
+@Bean SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
+  ExpressionUrlAuthorizationConfigurer<HttpSecurity>.ExpressionInterceptUrlRegistry registry=httpSecurity.authorizeRequests();
+  for (  String url : ignoreUrlsConfig.getUrls()) {
+    registry.antMatchers(url).permitAll();
+  }
+  registry.antMatchers(HttpMethod.OPTIONS).permitAll();
+  registry.and().authorizeRequests().anyRequest().authenticated().and().csrf().disable().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and().exceptionHandling().accessDeniedHandler(restfulAccessDeniedHandler).authenticationEntryPoint(restAuthenticationEntryPoint).and().addFilterBefore(jwtAuthenticationTokenFilter,UsernamePasswordAuthenticationFilter.class);
+  if (dynamicSecurityService != null) {
+    registry.and().addFilterBefore(dynamicSecurityFilter,FilterSecurityInterceptor.class);
+  }
+  return httpSecurity.build();
+}

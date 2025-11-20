@@ -1,0 +1,12 @@
+@Test void pmessage() throws Exception {
+  pubsub.psubscribe(pattern).await(1,TimeUnit.MINUTES);
+  assertThat(patterns.take()).isEqualTo(pattern);
+  redis.publish(channel,message);
+  assertThat(patterns.take()).isEqualTo(pattern);
+  assertThat(channels.take()).isEqualTo(channel);
+  assertThat(messages.take()).isEqualTo(message);
+  redis.publish("channel2","msg 2!");
+  assertThat(patterns.take()).isEqualTo(pattern);
+  assertThat(channels.take()).isEqualTo("channel2");
+  assertThat(messages.take()).isEqualTo("msg 2!");
+}

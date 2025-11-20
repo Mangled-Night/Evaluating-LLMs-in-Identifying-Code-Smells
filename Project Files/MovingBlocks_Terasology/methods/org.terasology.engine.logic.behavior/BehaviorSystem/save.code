@@ -1,0 +1,22 @@
+public void save(BehaviorTree tree){
+  Path savePath;
+  ResourceUrn uri=tree.getUrn();
+  if (BEHAVIORS.equals(uri.getModuleName())) {
+    savePath=PathManager.getInstance().getHomeModPath().resolve(BEHAVIORS.toString()).resolve("assets").resolve("behaviors");
+  }
+ else {
+    Path overridesPath=PathManager.getInstance().getHomeModPath().resolve(BEHAVIORS.toString()).resolve("overrides");
+    savePath=overridesPath.resolve(uri.getModuleName().toString()).resolve("behaviors");
+  }
+  BehaviorTreeFormat loader=new BehaviorTreeFormat();
+  try {
+    Files.createDirectories(savePath);
+    Path file=savePath.resolve(uri.getResourceName() + ".behavior");
+    try (FileOutputStream fos=new FileOutputStream(file.toFile())){
+      loader.save(fos,tree.getData());
+    }
+   }
+ catch (  IOException e) {
+    throw new RuntimeException("Cannot save asset " + uri + " to "+ savePath,e);
+  }
+}

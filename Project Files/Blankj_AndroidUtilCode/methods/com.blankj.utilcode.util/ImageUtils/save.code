@@ -1,0 +1,119 @@
+/** 
+ * Save the bitmap.
+ * @param src      The source of bitmap.
+ * @param filePath The path of file.
+ * @param format   The format of the image.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean save(final Bitmap src,final String filePath,final CompressFormat format){
+  return save(src,filePath,format,100,false);
+}
+/** 
+ * Save the bitmap.
+ * @param src    The source of bitmap.
+ * @param file   The file.
+ * @param format The format of the image.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean save(final Bitmap src,final File file,final CompressFormat format){
+  return save(src,file,format,100,false);
+}
+/** 
+ * Save the bitmap.
+ * @param src      The source of bitmap.
+ * @param filePath The path of file.
+ * @param format   The format of the image.
+ * @param recycle  True to recycle the source of bitmap, false otherwise.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean save(final Bitmap src,final String filePath,final CompressFormat format,final boolean recycle){
+  return save(src,filePath,format,100,recycle);
+}
+/** 
+ * Save the bitmap.
+ * @param src     The source of bitmap.
+ * @param file    The file.
+ * @param format  The format of the image.
+ * @param recycle True to recycle the source of bitmap, false otherwise.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean save(final Bitmap src,final File file,final CompressFormat format,final boolean recycle){
+  return save(src,file,format,100,recycle);
+}
+/** 
+ * Save the bitmap.
+ * @param src      The source of bitmap.
+ * @param filePath The path of file.
+ * @param format   The format of the image.
+ * @param quality  Hint to the compressor, 0-100. 0 meaning compress forsmall size, 100 meaning compress for max quality. Some formats, like PNG which is lossless, will ignore the quality setting
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean save(final Bitmap src,final String filePath,final CompressFormat format,final int quality){
+  return save(src,UtilsBridge.getFileByPath(filePath),format,quality,false);
+}
+/** 
+ * Save the bitmap.
+ * @param src    The source of bitmap.
+ * @param file   The file.
+ * @param format The format of the image.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean save(final Bitmap src,final File file,final CompressFormat format,final int quality){
+  return save(src,file,format,quality,false);
+}
+/** 
+ * Save the bitmap.
+ * @param src      The source of bitmap.
+ * @param filePath The path of file.
+ * @param format   The format of the image.
+ * @param quality  Hint to the compressor, 0-100. 0 meaning compress forsmall size, 100 meaning compress for max quality. Some formats, like PNG which is lossless, will ignore the quality setting
+ * @param recycle  True to recycle the source of bitmap, false otherwise.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean save(final Bitmap src,final String filePath,final CompressFormat format,final int quality,final boolean recycle){
+  return save(src,UtilsBridge.getFileByPath(filePath),format,quality,recycle);
+}
+/** 
+ * Save the bitmap.
+ * @param src     The source of bitmap.
+ * @param file    The file.
+ * @param format  The format of the image.
+ * @param quality Hint to the compressor, 0-100. 0 meaning compress forsmall size, 100 meaning compress for max quality. Some formats, like PNG which is lossless, will ignore the quality setting
+ * @param recycle True to recycle the source of bitmap, false otherwise.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+public static boolean save(final Bitmap src,final File file,final CompressFormat format,final int quality,final boolean recycle){
+  if (isEmptyBitmap(src)) {
+    Log.e("ImageUtils","bitmap is empty.");
+    return false;
+  }
+  if (src.isRecycled()) {
+    Log.e("ImageUtils","bitmap is recycled.");
+    return false;
+  }
+  if (!UtilsBridge.createFileByDeleteOldFile(file)) {
+    Log.e("ImageUtils","create or delete file <" + file + "> failed.");
+    return false;
+  }
+  OutputStream os=null;
+  boolean ret=false;
+  try {
+    os=new BufferedOutputStream(new FileOutputStream(file));
+    ret=src.compress(format,quality,os);
+    if (recycle && !src.isRecycled())     src.recycle();
+  }
+ catch (  IOException e) {
+    e.printStackTrace();
+  }
+ finally {
+    try {
+      if (os != null) {
+        os.close();
+      }
+    }
+ catch (    IOException e) {
+      e.printStackTrace();
+    }
+  }
+  return ret;
+}

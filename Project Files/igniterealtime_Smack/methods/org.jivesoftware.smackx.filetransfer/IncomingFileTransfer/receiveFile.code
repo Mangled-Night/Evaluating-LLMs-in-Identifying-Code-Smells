@@ -1,0 +1,73 @@
+/** 
+ * Negotiates the stream method to transfer the file over and then returns the negotiated stream.
+ * @return The negotiated InputStream from which to read the data.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws XMPPErrorException If there is an error in the negotiation process an exceptionis thrown.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public InputStream receiveFile() throws SmackException, XMPPErrorException, InterruptedException {
+  if (inputStream != null) {
+    throw new IllegalStateException("Transfer already negotiated!");
+  }
+  try {
+    inputStream=negotiateStream();
+  }
+ catch (  XMPPErrorException e) {
+    setException(e);
+    throw e;
+  }
+  return inputStream;
+}
+/** 
+ * This method negotiates the stream and then transfer's the file over the negotiated stream. The transferred file will be saved at the provided location. This method will return immediately, file transfer progress can be monitored through several methods: <UL> <LI> {@link FileTransfer#getStatus()}</LI> <LI> {@link FileTransfer#getProgress()}</LI> <LI> {@link FileTransfer#isDone()}</LI> </UL>
+ * @param file The location to save the file.
+ * @throws SmackException when the file transfer fails
+ * @throws IOException if an I/O error occurred.
+ * @throws IllegalArgumentException This exception is thrown when the the provided file iseither null, or cannot be written to.
+ */
+public void receiveFile(final File file) throws SmackException, IOException {
+  if (file == null) {
+    throw new IllegalArgumentException("File cannot be null");
+  }
+  if (!file.exists()) {
+    file.createNewFile();
+  }
+  if (!file.canWrite()) {
+    throw new IllegalArgumentException("Cannot write to provided file");
+  }
+  Thread transferThread=new Thread(new Runnable(){
+    @Override public void run(){
+      try {
+        inputStream=negotiateStream();
+      }
+ catch (      Exception e) {
+        setStatus(FileTransfer.Status.error);
+        setException(e);
+        return;
+      }
+      OutputStream outputStream=null;
+      try {
+        outputStream=new FileOutputStream(file);
+        setStatus(Status.in_progress);
+        writeToStream(inputStream,outputStream);
+      }
+ catch (      FileNotFoundException e) {
+        setStatus(Status.error);
+        setError(Error.bad_file);
+        setException(e);
+      }
+catch (      IOException e) {
+        setStatus(Status.error);
+        setError(Error.stream);
+        setException(e);
+      }
+      if (getStatus().equals(Status.in_progress)) {
+        setStatus(Status.complete);
+      }
+      CloseableUtil.maybeClose(inputStream,LOGGER);
+      CloseableUtil.maybeClose(outputStream,LOGGER);
+    }
+  }
+,"File Transfer " + streamID);
+  transferThread.start();
+}

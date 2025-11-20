@@ -1,0 +1,20 @@
+public static void processConfigFile(InputStream cfgFileStream,Collection<Exception> exceptions) throws Exception {
+  processConfigFile(cfgFileStream,exceptions,SmackInitialization.class.getClassLoader());
+}
+public static void processConfigFile(InputStream cfgFileStream,Collection<Exception> exceptions,ClassLoader classLoader) throws Exception {
+  XmlPullParser parser=PacketParserUtils.getParserFor(cfgFileStream);
+  XmlPullParser.Event eventType=parser.getEventType();
+  do {
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      if (parser.getName().equals("startupClasses")) {
+        parseClassesToLoad(parser,false,exceptions,classLoader);
+      }
+ else       if (parser.getName().equals("optionalStartupClasses")) {
+        parseClassesToLoad(parser,true,exceptions,classLoader);
+      }
+    }
+    eventType=parser.next();
+  }
+ while (eventType != XmlPullParser.Event.END_DOCUMENT);
+  CloseableUtil.maybeClose(cfgFileStream,LOGGER);
+}

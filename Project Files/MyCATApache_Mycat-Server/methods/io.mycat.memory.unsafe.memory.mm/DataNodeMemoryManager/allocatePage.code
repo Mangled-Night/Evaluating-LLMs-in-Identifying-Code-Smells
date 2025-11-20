@@ -1,0 +1,42 @@
+/** 
+ * Allocate a block of memory that will be tracked in the MemoryManager's page table; this is intended for allocating large blocks of Tungsten memory that will be shared between operators. Returns `null` if there was not enough memory to allocate the page. May return a page that contains fewer bytes than requested, so callers should verify the size of returned pages.
+ */
+public MemoryBlock allocatePage(long size,MemoryConsumer consumer){
+  if (size > MAXIMUM_PAGE_SIZE_BYTES) {
+    throw new IllegalArgumentException("Cannot allocate a page with more than " + MAXIMUM_PAGE_SIZE_BYTES + " bytes");
+  }
+  long acquired=0;
+  try {
+    acquired=acquireExecutionMemory(size,tungstenMemoryMode,consumer);
+  }
+ catch (  InterruptedException e) {
+    logger.error(e.getMessage());
+  }
+  if (acquired <= 0) {
+    return null;
+  }
+  final int pageNumber;
+synchronized (this) {
+    pageNumber=allocatedPages.nextClearBit(0);
+    if (pageNumber >= PAGE_TABLE_SIZE) {
+      releaseExecutionMemory(acquired,tungstenMemoryMode,consumer);
+      throw new IllegalStateException("Have already allocated a maximum of " + PAGE_TABLE_SIZE + " pages");
+    }
+    allocatedPages.set(pageNumber);
+  }
+  MemoryBlock page=null;
+  try {
+    page=memoryManager.tungstenMemoryAllocator().allocate(acquired);
+  }
+ catch (  OutOfMemoryError e) {
+    logger.warn("Failed to allocate a page ({} bytes), try again.",acquired);
+synchronized (this) {
+      acquiredButNotUsed+=acquired;
+      allocatedPages.clear(pageNumber);
+    }
+    return allocatePage(size,consumer);
+  }
+  page.pageNumber=pageNumber;
+  pageTable[pageNumber]=page;
+  return page;
+}

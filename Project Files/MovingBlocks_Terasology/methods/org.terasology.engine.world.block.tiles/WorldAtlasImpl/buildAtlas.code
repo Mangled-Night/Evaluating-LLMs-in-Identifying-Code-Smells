@@ -1,0 +1,19 @@
+private void buildAtlas(){
+  calculateAtlasSizes();
+  int numMipMaps=getNumMipmaps();
+  ByteBuffer[] data=createAtlasMipmaps(numMipMaps,TRANSPARENT_COLOR,tiles,"tiles.png");
+  ByteBuffer[] dataNormal=createAtlasMipmaps(numMipMaps,UNIT_Z_COLOR,tilesNormal,"tilesNormal.png",tilesGloss);
+  ByteBuffer[] dataHeight=createAtlasMipmaps(numMipMaps,MID_RED_COLOR,tilesHeight,"tilesHeight.png");
+  TextureData terrainTexData=new TextureData(atlasSize,atlasSize,data,Texture.WrapMode.CLAMP,Texture.FilterMode.NEAREST);
+  Texture terrainTex=Assets.generateAsset(new ResourceUrn("engine:terrain"),terrainTexData,Texture.class);
+  TextureData terrainNormalData=new TextureData(atlasSize,atlasSize,dataNormal,Texture.WrapMode.CLAMP,Texture.FilterMode.NEAREST);
+  Assets.generateAsset(new ResourceUrn("engine:terrainNormal"),terrainNormalData,Texture.class);
+  TextureData terrainHeightData=new TextureData(atlasSize,atlasSize,dataHeight,Texture.WrapMode.CLAMP,Texture.FilterMode.LINEAR);
+  Assets.generateAsset(new ResourceUrn("engine:terrainHeight"),terrainHeightData,Texture.class);
+  MaterialData terrainMatData=new MaterialData(Assets.getShader("engine:block").get());
+  terrainMatData.setParam("textureAtlas",terrainTex);
+  terrainMatData.setParam("colorOffset",new float[]{1,1,1});
+  terrainMatData.setParam("textured",true);
+  Assets.generateAsset(new ResourceUrn("engine:terrain"),terrainMatData,Material.class);
+  createTextureAtlas(terrainTex);
+}

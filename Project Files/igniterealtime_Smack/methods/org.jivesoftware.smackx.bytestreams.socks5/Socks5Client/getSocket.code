@@ -1,0 +1,39 @@
+/** 
+ * Returns the initialized socket that can be used to transfer data between peers via the SOCKS5 proxy.
+ * @param timeout timeout to connect to SOCKS5 proxy in milliseconds
+ * @return socket the initialized socket
+ * @throws IOException if initializing the socket failed due to a network error
+ * @throws TimeoutException if connecting to SOCKS5 proxy timed out
+ * @throws InterruptedException if the current thread was interrupted while waiting
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws SmackMessageException if there was an error.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws NoResponseException if there was no response from the remote entity.
+ */
+public Socket getSocket(int timeout) throws IOException, InterruptedException, TimeoutException, XMPPException, SmackMessageException, NotConnectedException, NoResponseException {
+  FutureTask<Socket> futureTask=new FutureTask<>(new Callable<Socket>(){
+    @Override public Socket call() throws IOException, SmackMessageException {
+      Socket socket=new Socket();
+      SocketAddress socketAddress=new InetSocketAddress(streamHost.getAddress().asInetAddress(),streamHost.getPort());
+      socket.connect(socketAddress);
+      try {
+        establish(socket);
+      }
+ catch (      SmackMessageException e) {
+        if (!socket.isClosed()) {
+          CloseableUtil.maybeClose(socket,LOGGER);
+        }
+        throw e;
+      }
+      return socket;
+    }
+  }
+);
+  Async.go(futureTask,"SOCKS5 client connecting to " + streamHost);
+  try {
+    return futureTask.get(timeout,TimeUnit.MILLISECONDS);
+  }
+ catch (  ExecutionException e) {
+    throw new IOException("ExecutionException while SOCKS5 client attempting to connect to " + streamHost,e);
+  }
+}

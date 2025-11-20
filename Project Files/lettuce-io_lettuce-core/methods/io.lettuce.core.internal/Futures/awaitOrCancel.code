@@ -1,0 +1,21 @@
+/** 
+ * Wait until futures are complete or the supplied timeout is reached. Commands are canceled if the timeout is reached but the command is not finished.
+ * @param cmd Command to wait for
+ * @param timeout Maximum time to wait for futures to complete
+ * @param unit Unit of time for the timeout
+ * @param < T > Result type
+ * @return Result of the command.
+ * @since 6.0
+ */
+public static <T>T awaitOrCancel(RedisFuture<T> cmd,long timeout,TimeUnit unit){
+  try {
+    if (timeout > 0 && !cmd.await(timeout,unit)) {
+      cmd.cancel(true);
+      throw ExceptionFactory.createTimeoutException(Duration.ofNanos(unit.toNanos(timeout)));
+    }
+    return cmd.get();
+  }
+ catch (  Exception e) {
+    throw Exceptions.bubble(e);
+  }
+}

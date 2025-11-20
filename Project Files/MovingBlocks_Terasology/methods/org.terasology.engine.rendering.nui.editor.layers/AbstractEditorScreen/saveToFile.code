@@ -1,0 +1,31 @@
+/** 
+ * Saves the contents of the editor as a JSON string to a specified file.
+ * @param file The file to save to.
+ */
+protected void saveToFile(File file){
+  try (BufferedOutputStream outputStream=new BufferedOutputStream(new FileOutputStream(file))){
+    saveToFile(outputStream);
+    setUnsavedChangesPresent(false);
+  }
+ catch (  IOException e) {
+    logger.warn("Could not save asset",e);
+  }
+}
+/** 
+ * Saves the contents of the editor as a JSON string to a specified file.
+ * @param path The path to save to.
+ */
+protected void saveToFile(Path path){
+  try (BufferedOutputStream outputStream=new BufferedOutputStream(Files.newOutputStream(path))){
+    saveToFile(outputStream);
+    setUnsavedChangesPresent(false);
+  }
+ catch (  IOException e) {
+    logger.warn("Could not save asset",e);
+  }
+}
+private void saveToFile(BufferedOutputStream outputStream) throws IOException {
+  JsonElement json=JsonTreeConverter.deserialize(getEditor().getModel().getNode(0).getRoot());
+  String jsonString=new GsonBuilder().setPrettyPrinting().create().toJson(json);
+  outputStream.write(jsonString.getBytes());
+}

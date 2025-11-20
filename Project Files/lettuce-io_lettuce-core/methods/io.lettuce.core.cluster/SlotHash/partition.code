@@ -1,0 +1,20 @@
+/** 
+ * Partition keys by slot-hash. The resulting map honors order of the keys.
+ * @param codec codec to encode the key.
+ * @param keys iterable of keys.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @return map between slot-hash and an ordered list of keys.
+ */
+public static <K,V>Map<Integer,List<K>> partition(RedisCodec<K,V> codec,Iterable<K> keys){
+  Map<Integer,List<K>> partitioned=new HashMap<>();
+  for (  K key : keys) {
+    int slot=getSlot(codec.encodeKey(key));
+    if (!partitioned.containsKey(slot)) {
+      partitioned.put(slot,new ArrayList<>());
+    }
+    Collection<K> list=partitioned.get(slot);
+    list.add(key);
+  }
+  return partitioned;
+}

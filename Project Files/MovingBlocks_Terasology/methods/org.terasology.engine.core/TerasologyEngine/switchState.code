@@ -1,0 +1,14 @@
+private void switchState(GameState newState){
+  if (currentState != null) {
+    currentState.dispose();
+  }
+  CoreRegistry.setContext(newState.getContext());
+  currentState=newState;
+  LoggingContext.setGameState(newState);
+  newState.init(this);
+  stateChangeSubscribers.forEach(StateChangeSubscriber::onStateChange);
+  InputSystem inputSystem=rootContext.get(InputSystem.class);
+  if (inputSystem != null) {
+    inputSystem.drainQueues();
+  }
+}

@@ -1,0 +1,139 @@
+@Override public void initialise(){
+  availableAssetDropdown=find(AVAILABLE_ASSETS_ID,UIDropdownScrollable.class);
+  UIDropdownScrollable<ResourceUrn> availableScreenDropdown=find(AVAILABLE_SCREENS_ID,UIDropdownScrollable.class);
+  JsonEditorTreeView editor=find(EDITOR_TREE_VIEW_ID,JsonEditorTreeView.class);
+  selectedScreenBox=find(SELECTED_SCREEN_ID,UIBox.class);
+  super.setEditorSystem(nuiSkinEditorSystem);
+  super.setEditor(editor);
+  List<String> availableAssetList=Lists.newArrayList();
+  availableAssetList.add(CREATE_NEW_SKIN);
+  availableAssetList.addAll(assetManager.getAvailableAssets(UISkinAsset.class).stream().map(Object::toString).collect(Collectors.toList()));
+  Collections.sort(availableAssetList);
+  if (availableAssetDropdown != null) {
+    availableAssetDropdown.setOptions(availableAssetList);
+    availableAssetDropdown.bindSelection(new Binding<String>(){
+      @Override public String get(){
+        return selectedAsset;
+      }
+      @Override public void set(      String value){
+        selectedAssetPending=value;
+        if (CREATE_NEW_SKIN.equals(value)) {
+          selectedAssetPath=null;
+          resetState(NUIEditorNodeUtils.createNewSkin());
+        }
+ else {
+          selectAsset(new ResourceUrn(value));
+        }
+      }
+    }
+);
+  }
+  if (availableScreenDropdown != null) {
+    List<ResourceUrn> availableScreenList=Lists.newArrayList(assetManager.getAvailableAssets(UIElement.class));
+    Collections.sort(availableScreenList);
+    availableScreenDropdown.setOptions(availableScreenList);
+    availableScreenDropdown.bindEnabled(new ReadOnlyBinding<Boolean>(){
+      @Override public Boolean get(){
+        return selectedAsset != null;
+      }
+    }
+);
+    availableScreenDropdown.bindSelection(new Binding<ResourceUrn>(){
+      @Override public ResourceUrn get(){
+        return selectedScreen;
+      }
+      @Override public void set(      ResourceUrn value){
+        selectedScreen=value;
+        resetPreviewWidget();
+      }
+    }
+);
+  }
+  if (editor != null) {
+    editor.setContextMenuTreeProducer(node -> {
+      NUIEditorMenuTreeBuilder nuiEditorMenuTreeBuilder=new NUIEditorMenuTreeBuilder();
+      nuiEditorMenuTreeBuilder.setManager(getManager());
+      nuiEditorMenuTreeBuilder.putConsumer(NUIEditorMenuTreeBuilder.OPTION_COPY,getEditor()::copyNode);
+      nuiEditorMenuTreeBuilder.putConsumer(NUIEditorMenuTreeBuilder.OPTION_PASTE,getEditor()::pasteNode);
+      nuiEditorMenuTreeBuilder.putConsumer(NUIEditorMenuTreeBuilder.OPTION_EDIT,this::editNode);
+      nuiEditorMenuTreeBuilder.putConsumer(NUIEditorMenuTreeBuilder.OPTION_DELETE,getEditor()::deleteNode);
+      nuiEditorMenuTreeBuilder.putConsumer(NUIEditorMenuTreeBuilder.OPTION_ADD_WIDGET,this::addWidget);
+      nuiEditorMenuTreeBuilder.subscribeAddContextMenu(n -> {
+        getEditor().fireUpdateListeners();
+        if (n.getValue().getType() == JsonTreeValue.Type.KEY_VALUE_PAIR) {
+          getEditor().getModel().getNode(getEditor().getSelectedIndex()).setExpanded(true);
+          getEditor().getModel().resetNodes();
+          getEditor().setSelectedIndex(getEditor().getModel().indexOf(n));
+          editNode(n);
+        }
+      }
+);
+      return nuiEditorMenuTreeBuilder.createPrimarySkinContextMenu(node);
+    }
+);
+    editor.setEditor(this::editNode,getManager());
+    editor.subscribeTreeViewUpdate(() -> {
+      getEditor().addToHistory();
+      resetPreviewWidget();
+      updateConfig();
+      setUnsavedChangesPresent(true);
+      updateAutosave();
+    }
+);
+  }
+  UIButton save=find("save",UIButton.class);
+  save.bindEnabled(new ReadOnlyBinding<Boolean>(){
+    @Override public Boolean get(){
+      return CREATE_NEW_SKIN.equals(selectedAsset) || areUnsavedChangesPresent();
+    }
+  }
+);
+  save.subscribe(button -> {
+    LookAndFeel currentLookAndFeel=UIManager.getLookAndFeel();
+    try {
+      UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+    }
+ catch (    ClassNotFoundException|IllegalAccessException|InstantiationException|UnsupportedLookAndFeelException ignored) {
+    }
+    JFileChooser fileChooser=new JFileChooser(){
+      @Override protected JDialog createDialog(      Component parent){
+        JDialog dialog=super.createDialog(parent);
+        dialog.setLocationByPlatform(true);
+        dialog.setAlwaysOnTop(true);
+        return dialog;
+      }
+    }
+;
+    fileChooser.setSelectedFile(new File(CREATE_NEW_SKIN.equals(selectedAsset) ? "untitled.skin" : selectedAsset.split(":")[1] + ".skin"));
+    fileChooser.setFileFilter(new FileNameExtensionFilter("Skin asset file (*.skin)","skin"));
+    if (fileChooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+      saveToFile(fileChooser.getSelectedFile());
+      deleteAutosave();
+    }
+    try {
+      UIManager.setLookAndFeel(currentLookAndFeel);
+    }
+ catch (    UnsupportedLookAndFeelException ignored) {
+    }
+  }
+);
+  UIButton override=find("override",UIButton.class);
+  override.bindEnabled(new ReadOnlyBinding<Boolean>(){
+    @Override public Boolean get(){
+      return selectedAssetPath != null && areUnsavedChangesPresent();
+    }
+  }
+);
+  override.subscribe(button -> {
+    saveToFile(selectedAssetPath);
+    deleteAutosave();
+  }
+);
+  WidgetUtil.trySubscribe(this,"settings",button -> getManager().pushScreen(NUIEditorSettingsScreen.ASSET_URI,NUIEditorSettingsScreen.class));
+  WidgetUtil.trySubscribe(this,"copy",button -> copyJson());
+  WidgetUtil.trySubscribe(this,"paste",button -> pasteJson());
+  WidgetUtil.trySubscribe(this,"undo",button -> undo());
+  WidgetUtil.trySubscribe(this,"redo",button -> redo());
+  WidgetUtil.trySubscribe(this,"close",button -> nuiSkinEditorSystem.toggleEditor());
+  updateConfig();
+}

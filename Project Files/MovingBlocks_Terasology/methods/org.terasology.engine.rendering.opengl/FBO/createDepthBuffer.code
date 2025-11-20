@@ -1,0 +1,27 @@
+private static void createDepthBuffer(FBO fbo,Dimensions dimensions,boolean useStencilBuffer){
+  fbo.depthStencilTextureId=glGenTextures();
+  GL30.glBindTexture(GL30.GL_TEXTURE_2D,fbo.depthStencilTextureId);
+  setTextureParameters(GL30.GL_NEAREST);
+  if (!useStencilBuffer) {
+    allocateTexture(dimensions,GL30.GL_DEPTH_COMPONENT32F,GL30.GL_DEPTH_COMPONENT,GL30.GL_FLOAT);
+    float[] borderColor={1.0f,1.0f,1.0f,1.0f};
+    GL30.glTexParameterfv(GL30.GL_TEXTURE_2D,GL30.GL_TEXTURE_BORDER_COLOR,borderColor);
+  }
+ else {
+    allocateTexture(dimensions,GL30.GL_DEPTH24_STENCIL8,GL30.GL_DEPTH_STENCIL,GL30.GL_UNSIGNED_INT_24_8);
+  }
+  fbo.depthStencilRboId=GL30.glGenRenderbuffers();
+  GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER,fbo.depthStencilRboId);
+  if (!useStencilBuffer) {
+    GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER,GL14.GL_DEPTH_COMPONENT24,fbo.dimensions.width,fbo.dimensions.height);
+  }
+ else {
+    GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER,GL30.GL_DEPTH24_STENCIL8,fbo.dimensions.width,fbo.dimensions.height);
+  }
+  GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER,0);
+  GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER,GL30.GL_DEPTH_ATTACHMENT,GL30.GL_RENDERBUFFER,fbo.depthStencilRboId);
+  GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER,GL30.GL_DEPTH_ATTACHMENT,GL30.GL_TEXTURE_2D,fbo.depthStencilTextureId,0);
+  if (useStencilBuffer) {
+    GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER,GL30.GL_STENCIL_ATTACHMENT,GL11.GL_TEXTURE_2D,fbo.depthStencilTextureId,0);
+  }
+}

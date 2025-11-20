@@ -1,0 +1,29 @@
+private Object[] processParametersMethod(List<String> rawParameters,EntityRef sender) throws CommandParameterParseException {
+  Object[] processedParameters=new Object[executionMethodParameters.size()];
+  Queue<String> parameterStrings=Queues.newArrayDeque(rawParameters);
+  for (int i=0; i < executionMethodParameters.size(); i++) {
+    Parameter parameterType=executionMethodParameters.get(i);
+    if (parameterType instanceof CommandParameter) {
+      CommandParameter parameter=(CommandParameter)parameterType;
+      if (parameterStrings.isEmpty()) {
+        if (parameter.isArray()) {
+          processedParameters[i]=parameter.getArrayValue(Collections.<String>emptyList());
+        }
+ else {
+          processedParameters[i]=null;
+        }
+      }
+ else       if (parameter.isArray()) {
+        processedParameters[i]=parameter.getArrayValue(Lists.newArrayList(parameterStrings));
+        parameterStrings.clear();
+      }
+ else {
+        processedParameters[i]=parameter.getValue(parameterStrings.poll());
+      }
+    }
+ else     if (parameterType == MarkerParameters.SENDER) {
+      processedParameters[i]=sender;
+    }
+  }
+  return processedParameters;
+}

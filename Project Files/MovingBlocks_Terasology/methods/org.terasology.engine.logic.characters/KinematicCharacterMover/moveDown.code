@@ -1,0 +1,74 @@
+private boolean moveDown(float dist,float slopeFactor,CharacterCollider collider,Vector3f position){
+  if (collider == null) {
+    position.y+=dist;
+    return false;
+  }
+  float remainingDist=-dist;
+  Vector3f targetPos=new Vector3f(position);
+  targetPos.y-=remainingDist + VERTICAL_PENETRATION_LEEWAY;
+  Vector3f normalizedDir=new Vector3f(0,-1,0);
+  boolean hit=false;
+  int iteration=0;
+  while (remainingDist > physics.getEpsilon() && iteration++ < 10) {
+    SweepCallback callback=collider.sweep(position,targetPos,VERTICAL_PENETRATION,-1.0f);
+    float actualDist=Math.max(0,(remainingDist + VERTICAL_PENETRATION_LEEWAY) * callback.getClosestHitFraction() - VERTICAL_PENETRATION_LEEWAY);
+    Vector3f expectedMove=new Vector3f(targetPos);
+    expectedMove.sub(position);
+    if (expectedMove.lengthSquared() > physics.getEpsilon()) {
+      expectedMove.normalize();
+      expectedMove.mul(actualDist);
+      position.add(expectedMove);
+    }
+    remainingDist-=actualDist;
+    if (remainingDist < physics.getEpsilon()) {
+      break;
+    }
+    if (callback.hasHit()) {
+      float originalSlope=callback.getHitNormalWorld().dot(new Vector3f(0,1,0));
+      if (originalSlope < slopeFactor) {
+        float slope=callback.calculateAverageSlope(originalSlope,CHECK_FORWARD_DIST);
+        if (slope < slopeFactor) {
+          remainingDist-=actualDist;
+          expectedMove.set(targetPos);
+          expectedMove.sub(position);
+          extractResidualMovement(callback.getHitNormalWorld(),expectedMove);
+          float sqrDist=expectedMove.lengthSquared();
+          if (sqrDist > physics.getEpsilon()) {
+            expectedMove.normalize();
+            if (expectedMove.dot(normalizedDir) <= 0.0f) {
+              hit=true;
+              break;
+            }
+          }
+ else {
+            hit=true;
+            break;
+          }
+          if (expectedMove.y > -physics.getEpsilon()) {
+            hit=true;
+            break;
+          }
+          normalizedDir.set(expectedMove);
+          expectedMove.mul(-remainingDist / expectedMove.y + HORIZONTAL_PENETRATION_LEEWAY);
+          targetPos.set(position);
+          targetPos.add(expectedMove);
+        }
+ else {
+          hit=true;
+          break;
+        }
+      }
+ else {
+        hit=true;
+        break;
+      }
+    }
+ else {
+      break;
+    }
+  }
+  if (iteration >= 10) {
+    hit=true;
+  }
+  return hit;
+}

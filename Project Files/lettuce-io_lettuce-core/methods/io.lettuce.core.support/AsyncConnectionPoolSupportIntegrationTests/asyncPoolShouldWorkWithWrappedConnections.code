@@ -1,0 +1,11 @@
+@Test void asyncPoolShouldWorkWithWrappedConnections(){
+  BoundedAsyncPool<StatefulRedisConnection<String,String>> pool=AsyncConnectionPoolSupport.createBoundedObjectPool(() -> client.connectAsync(StringCodec.ASCII,uri),BoundedPoolConfig.create());
+  borrowAndReturn(pool);
+  borrowAndClose(pool);
+  borrowAndCloseAsync(pool);
+  TestFutures.awaitOrTimeout(pool.release(TestFutures.getOrTimeout(pool.acquire()).sync().getStatefulConnection()));
+  TestFutures.awaitOrTimeout(pool.release(TestFutures.getOrTimeout(pool.acquire()).async().getStatefulConnection()));
+  assertThat(channels).hasSize(1);
+  pool.close();
+  assertThat(channels).isEmpty();
+}

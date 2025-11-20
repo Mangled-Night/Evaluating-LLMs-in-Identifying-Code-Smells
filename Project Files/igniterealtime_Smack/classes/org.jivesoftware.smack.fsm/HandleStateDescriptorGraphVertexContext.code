@@ -1,0 +1,24 @@
+private static final class HandleStateDescriptorGraphVertexContext {
+  private final Set<Class<? extends StateDescriptor>> handledStateDescriptors=new HashSet<>();
+  Map<Class<? extends StateDescriptor>,GraphVertex<StateDescriptor>> graphVertexes;
+  MultiMap<Class<? extends StateDescriptor>,Class<? extends StateDescriptor>> inferredForwardEdges;
+  private HandleStateDescriptorGraphVertexContext(  Map<Class<? extends StateDescriptor>,GraphVertex<StateDescriptor>> graphVertexes,  MultiMap<Class<? extends StateDescriptor>,Class<? extends StateDescriptor>> inferredForwardEdges){
+    this.graphVertexes=graphVertexes;
+    this.inferredForwardEdges=inferredForwardEdges;
+  }
+  private boolean recurseInto(  Class<? extends StateDescriptor> stateDescriptorClass){
+    boolean wasAdded=handledStateDescriptors.add(stateDescriptorClass);
+    boolean alreadyHandled=!wasAdded;
+    return alreadyHandled;
+  }
+  private GraphVertex<StateDescriptor> getOrConstruct(  Class<? extends StateDescriptor> stateDescriptorClass) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+    GraphVertex<StateDescriptor> graphVertexStateDescriptor=graphVertexes.get(stateDescriptorClass);
+    if (graphVertexStateDescriptor == null) {
+      graphVertexStateDescriptor=addNewStateDescriptorGraphVertex(stateDescriptorClass,graphVertexes);
+      for (      Class<? extends StateDescriptor> inferredSuccessor : inferredForwardEdges.getAll(stateDescriptorClass)) {
+        graphVertexStateDescriptor.getElement().addSuccessor(inferredSuccessor);
+      }
+    }
+    return graphVertexStateDescriptor;
+  }
+}

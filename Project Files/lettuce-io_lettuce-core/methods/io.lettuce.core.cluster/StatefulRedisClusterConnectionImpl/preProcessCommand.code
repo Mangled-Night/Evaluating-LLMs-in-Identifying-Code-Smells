@@ -1,0 +1,35 @@
+private <T>RedisCommand<K,V,T> preProcessCommand(RedisCommand<K,V,T> command){
+  RedisCommand<K,V,T> local=command;
+  if (local.getType().name().equals(AUTH.name())) {
+    local=attachOnComplete(local,status -> {
+      if (status.equals("OK")) {
+        List<char[]> args=CommandArgsAccessor.getCharArrayArguments(command.getArgs());
+        if (!args.isEmpty()) {
+          this.connectionState.setUserNamePassword(args);
+        }
+ else {
+          List<String> stringArgs=CommandArgsAccessor.getStringArguments(command.getArgs());
+          this.connectionState.setUserNamePassword(stringArgs.stream().map(String::toCharArray).collect(Collectors.toList()));
+        }
+      }
+    }
+);
+  }
+  if (local.getType().name().equals(READONLY.name())) {
+    local=attachOnComplete(local,status -> {
+      if (status.equals("OK")) {
+        this.connectionState.setReadOnly(true);
+      }
+    }
+);
+  }
+  if (local.getType().name().equals(READWRITE.name())) {
+    local=attachOnComplete(local,status -> {
+      if (status.equals("OK")) {
+        this.connectionState.setReadOnly(false);
+      }
+    }
+);
+  }
+  return local;
+}

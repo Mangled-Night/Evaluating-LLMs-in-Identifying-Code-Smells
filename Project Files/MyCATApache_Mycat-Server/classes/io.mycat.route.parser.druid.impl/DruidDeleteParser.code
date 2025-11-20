@@ -1,0 +1,18 @@
+public class DruidDeleteParser extends DefaultDruidParser {
+  @Override public void statementParse(  SchemaConfig schema,  RouteResultset rrs,  SQLStatement stmt) throws SQLNonTransientException {
+    MySqlDeleteStatement delete=(MySqlDeleteStatement)stmt;
+    String tableName=StringUtil.removeBackquote(delete.getTableName().getSimpleName().toUpperCase());
+    if (!ctx.getTables().contains(tableName)) {
+      ctx.addTable(tableName);
+    }
+    TableConfig tableConfig=schema.getTables().get(tableName);
+    if (tableConfig != null && !tableConfig.primaryKeyIsPartionKey()) {
+      String cacheName=schema.getName() + "_" + tableName;
+      cacheName=cacheName.toUpperCase();
+      for (      CachePool value : MycatServer.getInstance().getCacheService().getAllCachePools().values()) {
+        value.clearCache(cacheName);
+        value.getCacheStatic().reset();
+      }
+    }
+  }
+}

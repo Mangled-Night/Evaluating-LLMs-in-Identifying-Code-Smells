@@ -1,0 +1,28 @@
+public TypeInformation<?> getSuperTypeInformation(Class<?> superType){
+  Class<?> rawType=getType();
+  if (!superType.isAssignableFrom(rawType)) {
+    return null;
+  }
+  if (getType().equals(superType)) {
+    return this;
+  }
+  List<Type> candidates=new ArrayList<Type>();
+  Type genericSuperclass=rawType.getGenericSuperclass();
+  if (genericSuperclass != null) {
+    candidates.add(genericSuperclass);
+  }
+  candidates.addAll(Arrays.asList(rawType.getGenericInterfaces()));
+  for (  Type candidate : candidates) {
+    TypeInformation<?> candidateInfo=createInfo(candidate);
+    if (superType.equals(candidateInfo.getType())) {
+      return candidateInfo;
+    }
+ else {
+      TypeInformation<?> nestedSuperType=candidateInfo.getSuperTypeInformation(superType);
+      if (nestedSuperType != null) {
+        return nestedSuperType;
+      }
+    }
+  }
+  return null;
+}

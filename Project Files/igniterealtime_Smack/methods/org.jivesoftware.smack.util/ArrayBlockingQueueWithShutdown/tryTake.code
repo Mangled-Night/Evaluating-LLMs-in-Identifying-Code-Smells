@@ -1,0 +1,19 @@
+public TryTakeResult<E> tryTake(){
+  boolean locked=lock.tryLock();
+  if (!locked) {
+    return new TryTakeResult<E>(TryTakeResultCode.couldNotLock);
+  }
+  try {
+    if (isShutdown) {
+      return new TryTakeResult<E>(TryTakeResultCode.queueWasShutDown);
+    }
+    if (hasNoElements()) {
+      return new TryTakeResult<E>(TryTakeResultCode.queueWasEmpty);
+    }
+    E element=extract();
+    return new TryTakeResult<E>(element);
+  }
+  finally {
+    lock.unlock();
+  }
+}

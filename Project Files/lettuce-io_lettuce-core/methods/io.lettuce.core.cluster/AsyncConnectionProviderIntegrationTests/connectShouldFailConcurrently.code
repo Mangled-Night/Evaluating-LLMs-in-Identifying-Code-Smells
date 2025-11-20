@@ -1,0 +1,33 @@
+@Test void connectShouldFailConcurrently() throws Exception {
+  Socket socket=new Socket(TestSettings.host(),serverSocket.getLocalPort());
+  ClusterClientOptions clientOptions=ClusterClientOptions.builder().protocolVersion(ProtocolVersion.RESP2).socketOptions(SocketOptions.builder().connectTimeout(1,TimeUnit.SECONDS).build()).build();
+  client.setOptions(clientOptions);
+  ConnectionKey connectionKey=new ConnectionKey(ConnectionIntent.READ,"8.8.8.8",TestSettings.port());
+  Thread t1=new Thread(() -> {
+    try {
+      sut.getConnection(connectionKey);
+    }
+ catch (    Exception e) {
+    }
+  }
+);
+  Thread t2=new Thread(() -> {
+    try {
+      sut.getConnection(connectionKey);
+    }
+ catch (    Exception e) {
+    }
+  }
+);
+  t1.start();
+  t2.start();
+  connectInitiated.await();
+  StopWatch stopWatch=new StopWatch();
+  stopWatch.start();
+  t1.join(2000);
+  t2.join(2000);
+  stopWatch.stop();
+  assertThat(TimeUnit.NANOSECONDS.toMillis(stopWatch.getNanoTime())).isBetween(0L,1300L);
+  sut.close();
+  socket.close();
+}

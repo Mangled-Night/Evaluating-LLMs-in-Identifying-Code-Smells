@@ -1,0 +1,10 @@
+@Test void getButNoPartitionForSlothash(){
+  for (  RedisClusterNode redisClusterNode : clusterClient.getPartitions()) {
+    redisClusterNode.setSlots(new ArrayList<>());
+  }
+  RedisChannelHandler rch=(RedisChannelHandler)connection;
+  ClusterDistributionChannelWriter writer=(ClusterDistributionChannelWriter)rch.getChannelWriter();
+  writer.setPartitions(clusterClient.getPartitions());
+  clusterClient.getPartitions().reload(clusterClient.getPartitions().getPartitions());
+  assertThatThrownBy(() -> sync.get(key)).isInstanceOf(RedisException.class);
+}

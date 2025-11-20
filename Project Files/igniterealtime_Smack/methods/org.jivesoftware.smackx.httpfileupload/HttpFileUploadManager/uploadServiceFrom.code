@@ -1,0 +1,28 @@
+private static UploadService uploadServiceFrom(DiscoverInfo discoverInfo){
+  assert containsHttpFileUploadNamespace(discoverInfo);
+  UploadService.Version version;
+  if (discoverInfo.containsFeature(NAMESPACE)) {
+    version=Version.v0_3;
+  }
+ else   if (discoverInfo.containsFeature(NAMESPACE_0_2)) {
+    version=Version.v0_2;
+  }
+ else {
+    throw new AssertionError();
+  }
+  DomainBareJid address=discoverInfo.getFrom().asDomainBareJid();
+  DataForm dataForm=DataForm.from(discoverInfo);
+  if (dataForm == null) {
+    return new UploadService(address,version);
+  }
+  FormField field=dataForm.getField("max-file-size");
+  if (field == null) {
+    return new UploadService(address,version);
+  }
+  String maxFileSizeValue=field.getFirstValue();
+  if (maxFileSizeValue == null) {
+    return new UploadService(address,version);
+  }
+  Long maxFileSize=Long.valueOf(maxFileSizeValue);
+  return new UploadService(address,version,maxFileSize);
+}

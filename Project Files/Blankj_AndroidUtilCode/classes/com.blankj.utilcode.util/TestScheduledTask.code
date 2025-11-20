@@ -1,0 +1,24 @@
+abstract static class TestScheduledTask<T> extends ThreadUtils.Task<T> {
+  private static final AtomicInteger ATOMIC_INTEGER=new AtomicInteger();
+  private int mTimes;
+  CountDownLatch mLatch;
+  TestScheduledTask(  final CountDownLatch latch,  final int times){
+    mLatch=latch;
+    mTimes=times;
+  }
+  abstract void onTestSuccess(  T result);
+  @Override public void onSuccess(  T result){
+    onTestSuccess(result);
+    if (ATOMIC_INTEGER.addAndGet(1) % mTimes == 0) {
+      mLatch.countDown();
+    }
+  }
+  @Override public void onCancel(){
+    System.out.println(Thread.currentThread() + " onCancel: ");
+    mLatch.countDown();
+  }
+  @Override public void onFail(  Throwable t){
+    System.out.println(Thread.currentThread() + " onFail: " + t);
+    mLatch.countDown();
+  }
+}

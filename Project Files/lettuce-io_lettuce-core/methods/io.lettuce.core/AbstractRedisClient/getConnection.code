@@ -1,0 +1,40 @@
+/** 
+ * Retrieve the connection from  {@link ConnectionFuture}. Performs a blocking  {@link ConnectionFuture#get()} to synchronizethe channel/connection initialization. Any exception is rethrown as  {@link RedisConnectionException}.
+ * @param connectionFuture must not be null.
+ * @param < T > Connection type.
+ * @return the connection.
+ * @throws RedisConnectionException in case of connection failures.
+ * @since 4.4
+ */
+protected <T>T getConnection(ConnectionFuture<T> connectionFuture){
+  try {
+    return connectionFuture.get();
+  }
+ catch (  InterruptedException e) {
+    Thread.currentThread().interrupt();
+    throw RedisConnectionException.create(connectionFuture.getRemoteAddress(),e);
+  }
+catch (  Exception e) {
+    throw RedisConnectionException.create(connectionFuture.getRemoteAddress(),Exceptions.unwrap(e));
+  }
+}
+/** 
+ * Retrieve the connection from  {@link ConnectionFuture}. Performs a blocking  {@link ConnectionFuture#get()} to synchronizethe channel/connection initialization. Any exception is rethrown as  {@link RedisConnectionException}.
+ * @param connectionFuture must not be null.
+ * @param < T > Connection type.
+ * @return the connection.
+ * @throws RedisConnectionException in case of connection failures.
+ * @since 5.0
+ */
+protected <T>T getConnection(CompletableFuture<T> connectionFuture){
+  try {
+    return connectionFuture.get();
+  }
+ catch (  InterruptedException e) {
+    Thread.currentThread().interrupt();
+    throw RedisConnectionException.create(e);
+  }
+catch (  Exception e) {
+    throw RedisConnectionException.create(Exceptions.unwrap(e));
+  }
+}

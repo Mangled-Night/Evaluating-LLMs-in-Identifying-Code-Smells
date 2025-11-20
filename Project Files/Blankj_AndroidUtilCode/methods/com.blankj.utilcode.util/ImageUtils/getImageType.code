@@ -1,0 +1,76 @@
+/** 
+ * Return the type of image.
+ * @param filePath The path of file.
+ * @return the type of image
+ */
+public static ImageType getImageType(final String filePath){
+  return getImageType(UtilsBridge.getFileByPath(filePath));
+}
+/** 
+ * Return the type of image.
+ * @param file The file.
+ * @return the type of image
+ */
+public static ImageType getImageType(final File file){
+  if (file == null)   return null;
+  InputStream is=null;
+  try {
+    is=new FileInputStream(file);
+    ImageType type=getImageType(is);
+    if (type != null) {
+      return type;
+    }
+  }
+ catch (  IOException e) {
+    e.printStackTrace();
+  }
+ finally {
+    try {
+      if (is != null) {
+        is.close();
+      }
+    }
+ catch (    IOException e) {
+      e.printStackTrace();
+    }
+  }
+  return null;
+}
+private static ImageType getImageType(final InputStream is){
+  if (is == null)   return null;
+  try {
+    byte[] bytes=new byte[12];
+    return is.read(bytes) != -1 ? getImageType(bytes) : null;
+  }
+ catch (  IOException e) {
+    e.printStackTrace();
+    return null;
+  }
+}
+private static ImageType getImageType(final byte[] bytes){
+  String type=UtilsBridge.bytes2HexString(bytes).toUpperCase();
+  if (type.contains("FFD8FF")) {
+    return ImageType.TYPE_JPG;
+  }
+ else   if (type.contains("89504E47")) {
+    return ImageType.TYPE_PNG;
+  }
+ else   if (type.contains("47494638")) {
+    return ImageType.TYPE_GIF;
+  }
+ else   if (type.contains("49492A00") || type.contains("4D4D002A")) {
+    return ImageType.TYPE_TIFF;
+  }
+ else   if (type.contains("424D")) {
+    return ImageType.TYPE_BMP;
+  }
+ else   if (type.startsWith("52494646") && type.endsWith("57454250")) {
+    return ImageType.TYPE_WEBP;
+  }
+ else   if (type.contains("00000100") || type.contains("00000200")) {
+    return ImageType.TYPE_ICO;
+  }
+ else {
+    return ImageType.TYPE_UNKNOWN;
+  }
+}

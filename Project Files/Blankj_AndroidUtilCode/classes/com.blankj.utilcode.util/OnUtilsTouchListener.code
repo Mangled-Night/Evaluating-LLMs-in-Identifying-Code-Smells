@@ -1,0 +1,33 @@
+private static class OnUtilsTouchListener implements View.OnTouchListener {
+  public static OnUtilsTouchListener getInstance(){
+    return LazyHolder.INSTANCE;
+  }
+  private OnUtilsTouchListener(){
+  }
+  @Override public boolean onTouch(  final View v,  MotionEvent event){
+    int action=event.getAction();
+    if (action == MotionEvent.ACTION_DOWN) {
+      processScale(v,true);
+      processAlpha(v,true);
+    }
+ else     if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+      processScale(v,false);
+      processAlpha(v,false);
+    }
+    return false;
+  }
+  private void processScale(  final View view,  boolean isDown){
+    Object tag=view.getTag(PRESSED_VIEW_SCALE_TAG);
+    if (!(tag instanceof Float))     return;
+    float value=isDown ? 1 + (Float)tag : 1;
+    view.animate().scaleX(value).scaleY(value).setDuration(200).start();
+  }
+  private void processAlpha(  final View view,  boolean isDown){
+    Object tag=view.getTag(isDown ? PRESSED_VIEW_ALPHA_TAG : PRESSED_VIEW_ALPHA_SRC_TAG);
+    if (!(tag instanceof Float))     return;
+    view.setAlpha((Float)tag);
+  }
+private static class LazyHolder {
+    private static final OnUtilsTouchListener INSTANCE=new OnUtilsTouchListener();
+  }
+}

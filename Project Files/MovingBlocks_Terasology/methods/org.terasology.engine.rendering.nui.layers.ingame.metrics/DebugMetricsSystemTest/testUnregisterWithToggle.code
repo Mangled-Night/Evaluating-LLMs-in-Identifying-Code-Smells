@@ -1,0 +1,18 @@
+@Test public void testUnregisterWithToggle(){
+  DebugMetricsSystem system=getEmptySystem();
+  List<MetricsMode> modes=Lists.newArrayList(new RunningMeansMode(),new SpikesMode(),new RunningThreadsMode());
+  for (  MetricsMode mode : modes) {
+    system.register(mode);
+  }
+  assertEquals(4,system.getNumberOfModes());
+  assertEquals(NullMetricsMode.class,system.getCurrentMode().getClass());
+  for (  MetricsMode mode : modes) {
+    assertEquals(mode,system.toggle());
+  }
+  assertEquals(modes.get(2),system.getCurrentMode());
+  system.unregister(modes.get(2));
+  assertEquals(3,system.getNumberOfModes());
+  assertEquals(modes.get(0),system.toggle());
+  system.unregister(modes.get(0));
+  assertEquals(modes.get(1),system.getCurrentMode());
+}

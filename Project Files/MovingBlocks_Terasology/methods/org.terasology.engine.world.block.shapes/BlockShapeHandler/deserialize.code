@@ -1,0 +1,25 @@
+@Override public BlockShapeData deserialize(JsonElement json,Type typeOfT,JsonDeserializationContext context) throws JsonParseException {
+  BlockShapeData shape=new BlockShapeData();
+  JsonObject shapeObj=json.getAsJsonObject();
+  if (shapeObj.has(DISPLAY_NAME)) {
+    shape.setDisplayName(shapeObj.getAsJsonPrimitive(DISPLAY_NAME).getAsString());
+  }
+  for (  BlockPart part : BlockPart.values()) {
+    if (shapeObj.has(part.toString().toLowerCase(Locale.ENGLISH))) {
+      JsonObject meshObj=shapeObj.getAsJsonObject(part.toString().toLowerCase(Locale.ENGLISH));
+      shape.setMeshPart(part,(BlockMeshPart)context.deserialize(meshObj,BlockMeshPart.class));
+      if (part.isSide() && meshObj.has(FULL_SIDE)) {
+        shape.setBlockingSide(part.getSide(),meshObj.get(FULL_SIDE).getAsBoolean());
+      }
+    }
+  }
+  if (shapeObj.has(COLLISION) && shapeObj.get(COLLISION).isJsonObject()) {
+    JsonObject collisionInfo=shapeObj.get(COLLISION).getAsJsonObject();
+    processCollision(context,shape,collisionInfo);
+  }
+ else {
+    shape.setCollisionShape(COLLISION_SHAPE_FACTORY.getNewUnitCube());
+    shape.setCollisionSymmetric(true);
+  }
+  return shape;
+}

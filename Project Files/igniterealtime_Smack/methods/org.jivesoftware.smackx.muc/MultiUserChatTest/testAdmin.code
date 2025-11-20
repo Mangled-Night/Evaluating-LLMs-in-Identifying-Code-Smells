@@ -1,0 +1,87 @@
+public void testAdmin(){
+  final String[] answer=new String[8];
+  try {
+    makeRoomModerated();
+    MultiUserChat muc2=new MultiUserChat(getConnection(1),room);
+    muc2.join("testbot2");
+    muc2.addUserStatusListener(new DefaultUserStatusListener(){
+      public void membershipGranted(){
+        super.membershipGranted();
+        answer[0]="I'm a member";
+      }
+      public void membershipRevoked(){
+        super.membershipRevoked();
+        answer[1]="I'm not a member";
+      }
+      public void adminGranted(){
+        super.adminGranted();
+        answer[2]="I'm an admin";
+      }
+      public void adminRevoked(){
+        super.adminRevoked();
+        answer[3]="I'm not an admin";
+      }
+    }
+);
+    MultiUserChat muc3=new MultiUserChat(getConnection(2),room);
+    muc3.join("testbot3");
+    muc3.addParticipantStatusListener(new DefaultParticipantStatusListener(){
+      public void membershipGranted(      String participant){
+        super.membershipGranted(participant);
+        answer[4]=participant;
+      }
+      public void membershipRevoked(      String participant){
+        super.membershipRevoked(participant);
+        answer[5]=participant;
+      }
+      public void adminGranted(      String participant){
+        super.adminGranted(participant);
+        answer[6]=participant;
+      }
+      public void adminRevoked(      String participant){
+        super.adminRevoked(participant);
+        answer[7]=participant;
+      }
+    }
+);
+    try {
+      muc2.grantAdmin(getBareJID(2));
+      fail("User2 was able to grant admin privileges");
+    }
+ catch (    XMPPException e) {
+      XMPPError xmppError=e.getStanzaError();
+      assertNotNull("No XMPPError was received granting admin privileges",xmppError);
+      assertEquals("A visitor was able to grant admin privileges to another visitor",403,xmppError.getCode());
+    }
+    muc.grantAdmin(getBareJID(1));
+    Thread.sleep(300);
+    assertEquals("User2 didn't receive the grant admin notification","I'm an admin",answer[2]);
+    assertEquals("User3 didn't receive user2's grant admin notification",room + "/testbot2",answer[6]);
+    muc.revokeMembership(getBareJID(1));
+    Thread.sleep(300);
+    assertEquals("User2 didn't receive the revoke admin notification","I'm not an admin",answer[3]);
+    assertEquals("User3 didn't receive user2's revoke admin notification",room + "/testbot2",answer[7]);
+    clearAnswer(answer);
+    muc.grantMembership(getBareJID(1));
+    Thread.sleep(300);
+    muc.grantAdmin(getBareJID(1));
+    Thread.sleep(300);
+    assertEquals("User2 didn't receive the revoke membership notification","I'm not a member",answer[1]);
+    assertEquals("User2 didn't receive the grant admin notification","I'm an admin",answer[2]);
+    assertEquals("User3 didn't receive user2's revoke membership notification",room + "/testbot2",answer[5]);
+    assertEquals("User3 didn't receive user2's grant admin notification",room + "/testbot2",answer[6]);
+    clearAnswer(answer);
+    muc.revokeAdmin(getBareJID(1));
+    Thread.sleep(300);
+    assertEquals("User2 didn't receive the revoke admin notification","I'm not an admin",answer[3]);
+    assertEquals("User2 didn't receive the grant membership notification","I'm a member",answer[0]);
+    assertEquals("User3 didn't receive user2's revoke admin notification",room + "/testbot2",answer[7]);
+    assertEquals("User3 didn't receive user2's grant membership notification",room + "/testbot2",answer[4]);
+    muc2.leave();
+    muc3.leave();
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

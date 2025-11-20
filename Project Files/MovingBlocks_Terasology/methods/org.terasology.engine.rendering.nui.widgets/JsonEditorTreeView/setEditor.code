@@ -1,0 +1,26 @@
+public void setEditor(Consumer<JsonTree> editorFunction,NUIManager manager){
+  subscribeNodeClick((event,node) -> {
+    if (event.getMouseButton() == MouseInput.MOUSE_RIGHT) {
+      setSelectedIndex(getModel().indexOf(node));
+      setAlternativeWidget(null);
+      MenuTree menuTree=contextMenuTreeProducer.apply((JsonTree)node);
+      ContextMenuUtils.showContextMenu(manager,event.getMouse().getPosition(),menuTree);
+    }
+  }
+);
+  subscribeNodeDoubleClick((event,node) -> {
+    if (event.getMouseButton() == MouseInput.MOUSE_LEFT) {
+      editorFunction.accept((JsonTree)node);
+    }
+  }
+);
+  subscribeKeyEvent(event -> {
+    if (event.isDown() && event.getKey() == Keyboard.Key.F2) {
+      Integer selectedIndex=getSelectedIndex();
+      if (selectedIndex != null) {
+        editorFunction.accept((JsonTree)getModel().getNode(selectedIndex));
+      }
+    }
+  }
+);
+}

@@ -1,0 +1,10 @@
+@Test void shouldScanIteratively(){
+  for (int i=0; i < 1000; i++) {
+    redis.set("key-" + i,value);
+  }
+  ScanIterator<String> scan=ScanIterator.scan(redis);
+  List<String> list=Flux.fromIterable(() -> scan).collectList().block();
+  RedisReactiveCommands<String,String> reactive=redis.getStatefulConnection().reactive();
+  StepVerifier.create(ScanStream.scan(reactive,ScanArgs.Builder.limit(200)).take(250)).expectNextCount(250).verifyComplete();
+  StepVerifier.create(ScanStream.scan(reactive)).expectNextSequence(list).verifyComplete();
+}

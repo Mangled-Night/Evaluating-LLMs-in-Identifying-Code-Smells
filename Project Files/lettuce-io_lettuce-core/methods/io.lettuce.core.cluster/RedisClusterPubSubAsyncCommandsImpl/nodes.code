@@ -1,0 +1,8 @@
+@SuppressWarnings("unchecked") @Override public PubSubAsyncNodeSelection<K,V> nodes(Predicate<RedisClusterNode> predicate){
+  PubSubAsyncNodeSelection<K,V> selection=new StaticPubSubAsyncNodeSelection<>(getStatefulConnection(),predicate);
+  NodeSelectionInvocationHandler h=new NodeSelectionInvocationHandler((AbstractNodeSelection<?,?,?,?>)selection,RedisPubSubAsyncCommands.class,ASYNC);
+  return (PubSubAsyncNodeSelection<K,V>)Proxy.newProxyInstance(NodeSelectionSupport.class.getClassLoader(),new Class<?>[]{NodeSelectionPubSubAsyncCommands.class,PubSubAsyncNodeSelection.class},h);
+}
+protected List<RedisClusterNode> nodes(){
+  return redisClusterNodes;
+}

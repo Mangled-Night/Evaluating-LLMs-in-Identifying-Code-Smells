@@ -1,0 +1,25 @@
+/** 
+ * Prepare an unchecked  {@link RuntimeException} that will bubble upstream if thrown by an operator.
+ * @param t the root cause
+ * @return an unchecked exception that should choose bubbling up over error callback path.
+ */
+public static RuntimeException bubble(Throwable t){
+  Throwable throwableToUse=unwrap(t);
+  if (throwableToUse instanceof TimeoutException) {
+    return new RedisCommandTimeoutException(throwableToUse);
+  }
+  if (throwableToUse instanceof InterruptedException) {
+    Thread.currentThread().interrupt();
+    return new RedisCommandInterruptedException(throwableToUse);
+  }
+  if (throwableToUse instanceof RedisCommandExecutionException) {
+    return ExceptionFactory.createExecutionException(throwableToUse.getMessage(),throwableToUse);
+  }
+  if (throwableToUse instanceof RedisException) {
+    return (RedisException)throwableToUse;
+  }
+  if (throwableToUse instanceof RuntimeException) {
+    return (RuntimeException)throwableToUse;
+  }
+  return new RedisException(throwableToUse);
+}

@@ -1,0 +1,17 @@
+@Test public void nestedBlockQuoteTest() throws Exception {
+  String xml="<markup xmlns='urn:xmpp:markup:0'>" + "<bquote start='0' end='57'/>" + "<bquote start='11' end='34'/>"+ "</markup>";
+  MarkupElement.Builder m=MarkupElement.getBuilder();
+  m.setBlockQuote(0,57);
+  m.setBlockQuote(11,34);
+  assertXmlSimilar(xml,m.build().toXML().toString());
+  XmlPullParser parser=TestUtils.getParser(xml);
+  MarkupElement parsed=new MarkupElementProvider().parse(parser);
+  List<MarkupElement.MarkupChildElement> children=parsed.getChildElements();
+  assertEquals(2,children.size());
+  BlockQuoteElement q1=(BlockQuoteElement)children.get(0);
+  BlockQuoteElement q2=(BlockQuoteElement)children.get(1);
+  assertEquals(0,q1.getStart());
+  assertEquals(57,q1.getEnd());
+  assertEquals(11,q2.getStart());
+  assertEquals(34,q2.getEnd());
+}

@@ -1,0 +1,17 @@
+@Test void shouldCompleteOnlyOnce(){
+  subscription=new RedisPublisher.RedisSubscription<>(mock(StatefulConnection.class),command,false,ImmediateEventExecutor.INSTANCE);
+  subscription.subscribe(subscriber);
+  subscription.changeState(RedisPublisher.State.NO_DEMAND,RedisPublisher.State.DEMAND);
+  subscription.request(1);
+  RedisPublisher.SubscriptionCommand<String,String,String> wrapper=new RedisPublisher.SubscriptionCommand<>(command,subscription,false);
+  command.getOutput().setSingle(ByteBuffer.wrap("Hello".getBytes(StandardCharsets.UTF_8)));
+  wrapper.onComplete((s,throwable) -> {
+    wrapper.completeExceptionally(new IllegalStateException());
+  }
+);
+  wrapper.complete();
+  verify(subscriber).onSubscribe(any());
+  verify(subscriber).onNext("Hello");
+  verify(subscriber).onComplete();
+  verifyNoMoreInteractions(subscriber);
+}

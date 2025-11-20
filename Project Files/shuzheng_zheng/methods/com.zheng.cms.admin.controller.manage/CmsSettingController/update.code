@@ -1,0 +1,14 @@
+@ApiOperation(value="修改设置") @RequiresPermissions("cms:setting:update") @RequestMapping(value="/update/{id}",method=RequestMethod.GET) public String update(@PathVariable("id") int id,ModelMap modelMap){
+  CmsSetting setting=cmsSettingService.selectByPrimaryKey(id);
+  modelMap.put("setting",setting);
+  return "/manage/setting/update.jsp";
+}
+@ApiOperation(value="修改设置") @RequiresPermissions("cms:setting:update") @RequestMapping(value="/update/{id}",method=RequestMethod.POST) @ResponseBody public Object update(@PathVariable("id") int id,CmsSetting cmsSetting){
+  ComplexResult result=FluentValidator.checkAll().on(cmsSetting.getSettingKey(),new LengthValidator(1,20,"键")).doValidate().result(ResultCollectors.toComplex());
+  if (!result.isSuccess()) {
+    return new CmsResult(CmsResultConstant.INVALID_LENGTH,result.getErrors());
+  }
+  cmsSetting.setSettingId(id);
+  int count=cmsSettingService.updateByPrimaryKeySelective(cmsSetting);
+  return new CmsResult(CmsResultConstant.SUCCESS,count);
+}

@@ -1,0 +1,8 @@
+@Test void testMasterSlaveSentinelBasic(){
+  RedisURI uri=RedisURI.create("redis-sentinel://127.0.0.1:21379,127.0.0.1:22379,127.0.0.1:26379?sentinelMasterId=mymaster&timeout=5s");
+  StatefulRedisMasterSlaveConnection<String,String> connection=MasterSlave.connect(redisClient,StringCodec.UTF8,uri);
+  connection.setReadFrom(ReadFrom.UPSTREAM);
+  String server=slaveCall(connection);
+  assertThatServerIs(server,"master");
+  connection.close();
+}

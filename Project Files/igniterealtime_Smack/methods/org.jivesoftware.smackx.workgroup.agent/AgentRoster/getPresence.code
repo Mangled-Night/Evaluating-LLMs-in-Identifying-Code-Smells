@@ -1,0 +1,36 @@
+/** 
+ * Returns the presence info for a particular agent, or <code>null</code> if the agent is unavailable (offline) or if no presence information is available.<p>
+ * @param user a fully qualified xmpp JID. The address could be in any valid format (e.g."domain/resource", "user@domain" or "user@domain/resource").
+ * @return the agent's current presence, or <code>null</code> if the agent is unavailableor if no presence information is available..
+ */
+public Presence getPresence(Jid user){
+  Jid key=getPresenceMapKey(user);
+  Map<Resourcepart,Presence> userPresences=presenceMap.get(key);
+  if (userPresences == null) {
+    Presence presence=StanzaBuilder.buildPresence().ofType(Presence.Type.unavailable).from(user).build();
+    return presence;
+  }
+ else {
+    Iterator<Resourcepart> it=userPresences.keySet().iterator();
+    Presence p;
+    Presence presence=null;
+    while (it.hasNext()) {
+      p=userPresences.get(it.next());
+      if (presence == null) {
+        presence=p;
+      }
+ else {
+        if (p.getPriority() > presence.getPriority()) {
+          presence=p;
+        }
+      }
+    }
+    if (presence == null) {
+      presence=synthesizeUnvailablePresence(user);
+      return presence;
+    }
+ else {
+      return presence;
+    }
+  }
+}

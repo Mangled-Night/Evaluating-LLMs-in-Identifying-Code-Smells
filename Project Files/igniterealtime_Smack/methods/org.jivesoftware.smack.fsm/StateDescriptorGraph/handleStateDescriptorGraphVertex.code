@@ -1,0 +1,61 @@
+private static void handleStateDescriptorGraphVertex(GraphVertex<StateDescriptor> node,HandleStateDescriptorGraphVertexContext context,boolean failOnUnknownStates) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+  Class<? extends StateDescriptor> stateDescriptorClass=node.element.getClass();
+  boolean alreadyHandled=context.recurseInto(stateDescriptorClass);
+  if (alreadyHandled) {
+    return;
+  }
+  Set<Class<? extends StateDescriptor>> successorClasses=node.element.getSuccessors();
+  int numSuccessors=successorClasses.size();
+  Map<Class<? extends StateDescriptor>,GraphVertex<StateDescriptor>> successorStateDescriptors=new HashMap<>(numSuccessors);
+  for (  Class<? extends StateDescriptor> successorClass : successorClasses) {
+    GraphVertex<StateDescriptor> successorGraphNode=context.getOrConstruct(successorClass);
+    successorStateDescriptors.put(successorClass,successorGraphNode);
+  }
+switch (numSuccessors) {
+case 0:
+    throw new IllegalStateException("State " + stateDescriptorClass + " has no successor");
+case 1:
+  GraphVertex<StateDescriptor> soleSuccessorNode=successorStateDescriptors.values().iterator().next();
+node.addOutgoingEdge(soleSuccessorNode);
+handleStateDescriptorGraphVertex(soleSuccessorNode,context,failOnUnknownStates);
+return;
+}
+Map<Class<? extends StateDescriptor>,GraphVertex<Class<? extends StateDescriptor>>> preferenceGraph=new HashMap<>(numSuccessors);
+for (GraphVertex<StateDescriptor> successorStateDescriptorGraphNode : successorStateDescriptors.values()) {
+StateDescriptor successorStateDescriptor=successorStateDescriptorGraphNode.element;
+Class<? extends StateDescriptor> successorStateDescriptorClass=successorStateDescriptor.getClass();
+for (Class<? extends StateDescriptor> subordinateClass : successorStateDescriptor.getSubordinates()) {
+if (failOnUnknownStates && !successorClasses.contains(subordinateClass)) {
+throw new IllegalStateException(successorStateDescriptor + " points to a subordinate '" + subordinateClass+ "' which is not part of the successor set");
+}
+GraphVertex<Class<? extends StateDescriptor>> superiorClassNode=lookupAndCreateIfRequired(preferenceGraph,successorStateDescriptorClass);
+GraphVertex<Class<? extends StateDescriptor>> subordinateClassNode=lookupAndCreateIfRequired(preferenceGraph,subordinateClass);
+superiorClassNode.addOutgoingEdge(subordinateClassNode);
+}
+for (Class<? extends StateDescriptor> superiorClass : successorStateDescriptor.getSuperiors()) {
+if (failOnUnknownStates && !successorClasses.contains(superiorClass)) {
+throw new IllegalStateException(successorStateDescriptor + " points to a superior '" + superiorClass+ "' which is not part of the successor set");
+}
+GraphVertex<Class<? extends StateDescriptor>> subordinateClassNode=lookupAndCreateIfRequired(preferenceGraph,successorStateDescriptorClass);
+GraphVertex<Class<? extends StateDescriptor>> superiorClassNode=lookupAndCreateIfRequired(preferenceGraph,superiorClass);
+superiorClassNode.addOutgoingEdge(subordinateClassNode);
+}
+}
+List<GraphVertex<Class<? extends StateDescriptor>>> sortedSuccessors=topologicalSort(preferenceGraph.values());
+outerloop: for (Class<? extends StateDescriptor> successorStateDescriptor : successorClasses) {
+for (GraphVertex<Class<? extends StateDescriptor>> sortedSuccessor : sortedSuccessors) {
+if (sortedSuccessor.getElement() == successorStateDescriptor) {
+continue outerloop;
+}
+}
+sortedSuccessors.add(new GraphVertex<>(successorStateDescriptor));
+}
+for (GraphVertex<Class<? extends StateDescriptor>> successor : sortedSuccessors) {
+GraphVertex<StateDescriptor> successorVertex=successorStateDescriptors.get(successor.element);
+if (successorVertex == null) {
+continue;
+}
+node.addOutgoingEdge(successorVertex);
+handleStateDescriptorGraphVertex(successorVertex,context,failOnUnknownStates);
+}
+}

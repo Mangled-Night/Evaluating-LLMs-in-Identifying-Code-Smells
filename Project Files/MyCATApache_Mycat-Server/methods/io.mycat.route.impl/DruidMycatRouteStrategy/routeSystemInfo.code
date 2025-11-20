@@ -1,0 +1,17 @@
+public RouteResultset routeSystemInfo(SchemaConfig schema,int sqlType,String stmt,RouteResultset rrs) throws SQLSyntaxErrorException {
+switch (sqlType) {
+case ServerParse.SHOW:
+    return analyseShowSQL(schema,rrs,stmt);
+case ServerParse.SELECT:
+  int index=stmt.indexOf("@@");
+if (index > 0 && "SELECT".equals(stmt.substring(0,index).trim().toUpperCase())) {
+  return analyseDoubleAtSgin(schema,rrs,stmt);
+}
+break;
+case ServerParse.DESCRIBE:
+int ind=stmt.indexOf(' ');
+stmt=stmt.trim();
+return analyseDescrSQL(schema,rrs,stmt,ind + 1);
+}
+return null;
+}

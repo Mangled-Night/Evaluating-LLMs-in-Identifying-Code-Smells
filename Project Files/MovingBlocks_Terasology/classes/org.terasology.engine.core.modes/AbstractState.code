@@ -1,0 +1,44 @@
+public abstract class AbstractState implements GameState {
+  protected Context context;
+  protected EngineEntityManager entityManager;
+  protected EventSystem eventSystem;
+  protected ComponentSystemManager componentSystemManager;
+  protected void initEntityAndComponentManagers(  boolean isHeadless){
+    verifyNotNull(context);
+    CoreRegistry.setContext(context);
+    EntitySystemSetupUtil.addEntityManagementRelatedClasses(context);
+    entityManager=context.get(EngineEntityManager.class);
+    eventSystem=context.get(EventSystem.class);
+    context.put(Console.class,new ConsoleImpl(context));
+    if (!isHeadless) {
+      NUIManager nuiManager=new NUIManagerInternal((TerasologyCanvasRenderer)context.get(CanvasRenderer.class),context);
+      context.put(NUIManager.class,nuiManager);
+    }
+    componentSystemManager=new ComponentSystemManager(context);
+    context.put(ComponentSystemManager.class,componentSystemManager);
+    componentSystemManager.register(new ConsoleSystem(),"engine:ConsoleSystem");
+    componentSystemManager.register(new CoreCommands(),"engine:CoreCommands");
+  }
+  protected static void createLocalPlayer(  Context context){
+    EngineEntityManager entityManager=context.get(EngineEntityManager.class);
+    EntityRef localPlayerEntity=entityManager.create(new ClientComponent());
+    LocalPlayer localPlayer=new LocalPlayer();
+    localPlayer.setRecordAndReplayClasses(context.get(DirectionAndOriginPosRecorderList.class),context.get(RecordAndReplayCurrentStatus.class));
+    context.put(LocalPlayer.class,localPlayer);
+    localPlayer.setClientEntity(localPlayerEntity);
+  }
+  @Override public void dispose(  boolean shuttingDown){
+    if (eventSystem != null) {
+      eventSystem.process();
+    }
+    if (componentSystemManager != null) {
+      componentSystemManager.shutdown();
+    }
+    if (entityManager != null) {
+      entityManager.clear();
+    }
+  }
+  @Override public Context getContext(){
+    return context;
+  }
+}

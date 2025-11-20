@@ -1,0 +1,42 @@
+/** 
+ * The class that is responsible for searching the SpaceTree
+ */
+private static final class TreeSearch<T> {
+  private float maxDistance;
+  private int maxCapacity;
+  private TreeMultimap<Float,Entry<T>> results=TreeMultimap.create(new Comparator<Float>(){
+    @Override public int compare(    Float o1,    Float o2){
+      return o1.compareTo(o2);
+    }
+  }
+,Ordering.arbitrary());
+  /** 
+ * Constructor for the TreeSearch object.
+ * @param maxDistance   The max distance of the TreeSearch object will search
+ * @param maxCapacity   The maximum capacity of the TreeSearch object for nodes
+ */
+  private TreeSearch(  float maxDistance,  int maxCapacity){
+    this.maxDistance=maxDistance;
+    this.maxCapacity=maxCapacity;
+  }
+  /** 
+ * Adds an object to the results of the search as long as maxCapacity nor maxDistance is not exceeded.
+ * @param entry     The object to add to the results of the search
+ */
+  void addEntry(  Entry<T> entry){
+    results.put(entry.distance,entry);
+    int size=results.size();
+    if (size > maxCapacity) {
+      Float maxDistanceInResults=results.keySet().last();
+      NavigableSet<Entry<T>> entriesAtThisDistance=results.get(maxDistanceInResults);
+      entriesAtThisDistance.pollLast();
+      if (entriesAtThisDistance.size() == 0) {
+        results.removeAll(maxDistanceInResults);
+      }
+      maxDistance=results.keySet().last();
+    }
+ else     if (size == maxCapacity) {
+      maxDistance=results.keySet().last();
+    }
+  }
+}

@@ -1,0 +1,27 @@
+/** 
+ * Adds a new url or updates an already existing url in the bookmarks.
+ * @param URL the url of the bookmark
+ * @param name the name of the bookmark
+ * @param isRSS whether or not the url is an rss feed
+ * @throws XMPPErrorException thrown when there is an error retriving or saving bookmarks from or tothe server
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void addBookmarkedURL(String URL,String name,boolean isRSS) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  retrieveBookmarks();
+  BookmarkedURL bookmark=new BookmarkedURL(URL,name,isRSS);
+  List<BookmarkedURL> urls=bookmarks.getBookmarkedURLS();
+  if (urls.contains(bookmark)) {
+    BookmarkedURL oldURL=urls.get(urls.indexOf(bookmark));
+    if (oldURL.isShared()) {
+      throw new IllegalArgumentException("Cannot modify shared bookmarks");
+    }
+    oldURL.setName(name);
+    oldURL.setRss(isRSS);
+  }
+ else {
+    bookmarks.addBookmarkedURL(bookmark);
+  }
+  privateDataManager.setPrivateData(bookmarks);
+}

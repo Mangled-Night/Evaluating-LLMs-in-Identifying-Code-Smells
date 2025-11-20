@@ -1,0 +1,20 @@
+@Override public FileVisitResult postVisitDirectory(Path dir,IOException exc) throws IOException {
+  Files.delete(dir);
+  return FileVisitResult.CONTINUE;
+}
+@Override public FileVisitResult postVisitDirectory(Path dir,IOException exc) throws IOException {
+  try {
+    Files.delete(dir);
+  }
+ catch (  DirectoryNotEmptyException e) {
+    logger.warn("The save job could not cleanup a temporarly created directory, it will retry once in one second");
+    try {
+      Thread.sleep(1000L);
+    }
+ catch (    InterruptedException e1) {
+      Thread.currentThread().interrupt();
+    }
+    Files.delete(dir);
+  }
+  return FileVisitResult.CONTINUE;
+}

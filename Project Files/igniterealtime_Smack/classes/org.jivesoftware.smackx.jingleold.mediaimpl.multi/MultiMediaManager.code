@@ -1,0 +1,57 @@
+/** 
+ * Implements a MultiMediaManager using other JingleMediaManager implementations. It supports every Codec that JingleMediaManagers added has.
+ * @author Thiago Camargo
+ */
+public class MultiMediaManager extends JingleMediaManager {
+  public static final String MEDIA_NAME="Multi";
+  private static final List<JingleMediaManager> managers=new ArrayList<>();
+  private PayloadType preferredPayloadType=null;
+  public MultiMediaManager(  JingleTransportManager transportManager){
+    super(transportManager);
+  }
+  public void addMediaManager(  JingleMediaManager manager){
+    managers.add(manager);
+  }
+  public void removeMediaManager(  JingleMediaManager manager){
+    managers.remove(manager);
+  }
+  /** 
+ * Return all supported Payloads for this Manager.
+ * @return The Payload List
+ */
+  @Override public List<PayloadType> getPayloads(){
+    List<PayloadType> list=new ArrayList<>();
+    if (preferredPayloadType != null)     list.add(preferredPayloadType);
+    for (    JingleMediaManager manager : managers) {
+      for (      PayloadType payloadType : manager.getPayloads()) {
+        if (!list.contains(payloadType) && !payloadType.equals(preferredPayloadType))         list.add(payloadType);
+      }
+    }
+    return list;
+  }
+  /** 
+ * Returns a new JingleMediaSession.
+ * @param payloadType payloadType
+ * @param remote      remote Candidate
+ * @param local       local Candidate
+ * @return JingleMediaSession JingleMediaSession
+ */
+  @Override public JingleMediaSession createMediaSession(  PayloadType payloadType,  final TransportCandidate remote,  final TransportCandidate local,  final JingleSession jingleSession){
+    for (    JingleMediaManager manager : managers) {
+      if (manager.getPayloads().contains(payloadType)) {
+        return manager.createMediaSession(payloadType,remote,local,jingleSession);
+      }
+    }
+    return null;
+  }
+  @Override public PayloadType getPreferredPayloadType(){
+    if (preferredPayloadType != null)     return preferredPayloadType;
+    return super.getPreferredPayloadType();
+  }
+  public void setPreferredPayloadType(  PayloadType preferredPayloadType){
+    this.preferredPayloadType=preferredPayloadType;
+  }
+  @Override public String getName(){
+    return MEDIA_NAME;
+  }
+}

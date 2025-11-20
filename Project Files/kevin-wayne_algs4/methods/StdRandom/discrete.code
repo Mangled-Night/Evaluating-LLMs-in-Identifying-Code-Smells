@@ -1,0 +1,53 @@
+/** 
+ * Returns a random integer from the specified discrete distribution.
+ * @param probabilities the probability of occurrence of each integer
+ * @return a random integer from a discrete distribution:{@code i} with probability {@code probabilities[i]}
+ * @throws IllegalArgumentException if {@code probabilities} is {@code null}
+ * @throws IllegalArgumentException if sum of array entries is not (very nearly) equal to {@code 1.0}
+ * @throws IllegalArgumentException unless {@code probabilities[i] >= 0.0} for each index {@code i}
+ */
+public static int discrete(double[] probabilities){
+  if (probabilities == null)   throw new IllegalArgumentException("argument array must not be null");
+  double EPSILON=1.0E-14;
+  double sum=0.0;
+  for (int i=0; i < probabilities.length; i++) {
+    if (!(probabilities[i] >= 0.0))     throw new IllegalArgumentException("array entry " + i + " must be non-negative: "+ probabilities[i]);
+    sum+=probabilities[i];
+  }
+  if (sum > 1.0 + EPSILON || sum < 1.0 - EPSILON)   throw new IllegalArgumentException("sum of array entries does not approximately equal 1.0: " + sum);
+  while (true) {
+    double r=uniformDouble();
+    sum=0.0;
+    for (int i=0; i < probabilities.length; i++) {
+      sum=sum + probabilities[i];
+      if (sum > r)       return i;
+    }
+  }
+}
+/** 
+ * Returns a random integer from the specified discrete distribution.
+ * @param frequencies the frequency of occurrence of each integer
+ * @return a random integer from a discrete distribution:{@code i} with probability proportional to {@code frequencies[i]}
+ * @throws IllegalArgumentException if {@code frequencies} is {@code null}
+ * @throws IllegalArgumentException if all array entries are {@code 0}
+ * @throws IllegalArgumentException if {@code frequencies[i]} is negative for any index {@code i}
+ * @throws IllegalArgumentException if sum of frequencies exceeds {@code Integer.MAX_VALUE} (2<sup>31</sup> - 1)
+ */
+public static int discrete(int[] frequencies){
+  if (frequencies == null)   throw new IllegalArgumentException("argument array must not be null");
+  long sum=0;
+  for (int i=0; i < frequencies.length; i++) {
+    if (frequencies[i] < 0)     throw new IllegalArgumentException("array entry " + i + " must be non-negative: "+ frequencies[i]);
+    sum+=frequencies[i];
+  }
+  if (sum == 0)   throw new IllegalArgumentException("at least one array entry must be positive");
+  if (sum >= Integer.MAX_VALUE)   throw new IllegalArgumentException("sum of frequencies overflows an int");
+  double r=uniformInt((int)sum);
+  sum=0;
+  for (int i=0; i < frequencies.length; i++) {
+    sum+=frequencies[i];
+    if (sum > r)     return i;
+  }
+  assert false;
+  return -1;
+}

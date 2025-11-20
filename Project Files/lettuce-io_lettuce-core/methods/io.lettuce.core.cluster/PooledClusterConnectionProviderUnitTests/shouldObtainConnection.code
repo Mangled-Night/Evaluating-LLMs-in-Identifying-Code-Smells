@@ -1,0 +1,8 @@
+@Test void shouldObtainConnection(){
+  when(clientMock.connectToNodeAsync(eq(StringCodec.UTF8),eq("localhost:1"),any(),any())).thenReturn(ConnectionFuture.from(socketAddressMock,CompletableFuture.completedFuture(nodeConnectionMock)));
+  StatefulRedisConnection<String,String> connection=sut.getConnection(ConnectionIntent.READ,1);
+  assertThat(connection).isSameAs(nodeConnectionMock);
+  verify(connection).setAutoFlushCommands(true);
+  verify(connection).addListener(any(PushListener.class));
+  verifyNoMoreInteractions(connection);
+}

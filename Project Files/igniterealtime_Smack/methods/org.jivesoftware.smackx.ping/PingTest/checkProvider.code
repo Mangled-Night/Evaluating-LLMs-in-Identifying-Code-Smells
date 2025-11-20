@@ -1,0 +1,15 @@
+@Test public void checkProvider() throws Exception {
+  String control="<iq from='capulet.lit' to='juliet@capulet.lit/balcony' id='s2c1' type='get'>" + "<ping xmlns='urn:xmpp:ping'/>" + "</iq>";
+  DummyConnection con=new DummyConnection();
+  con.connect();
+  PingManager.getInstanceFor(con);
+  IQ pingRequest=PacketParserUtils.parseStanza(control);
+  assertTrue(pingRequest instanceof Ping);
+  con.processStanza(pingRequest);
+  Stanza pongPacket=con.getSentPacket();
+  assertTrue(pongPacket instanceof IQ);
+  IQ pong=(IQ)pongPacket;
+  assertThat("capulet.lit",equalsCharSequence(pong.getTo()));
+  assertEquals("s2c1",pong.getStanzaId());
+  assertEquals(IQ.Type.result,pong.getType());
+}

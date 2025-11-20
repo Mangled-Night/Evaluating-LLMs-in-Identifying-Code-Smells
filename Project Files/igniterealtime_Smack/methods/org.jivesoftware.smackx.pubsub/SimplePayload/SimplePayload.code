@@ -1,0 +1,33 @@
+/** 
+ * Construct a <code>SimplePayload</code> object with the specified element name, namespace and content.  The content must be well formed XML.
+ * @param xmlPayload The payload data
+ */
+public SimplePayload(String xmlPayload){
+  XmlPullParser parser;
+  try {
+    parser=PacketParserUtils.getParserFor(xmlPayload);
+  }
+ catch (  XmlPullParserException|IOException e) {
+    throw new AssertionError(e);
+  }
+  QName qname=parser.getQName();
+  payload=xmlPayload;
+  elemName=StringUtils.requireNotNullNorEmpty(qname.getLocalPart(),"Could not determine element name from XML payload");
+  ns=StringUtils.requireNotNullNorEmpty(qname.getNamespaceURI(),"Could not determine namespace from XML payload");
+}
+/** 
+ * Construct a <code>SimplePayload</code> object with the specified element name, namespace and content.  The content must be well formed XML.
+ * @param elementName The root element name (of the payload)
+ * @param namespace The namespace of the payload, null if there is none
+ * @param xmlPayload The payload data
+ * @deprecated use {@link #SimplePayload(String)} insteas.
+ */
+@Deprecated public SimplePayload(String elementName,String namespace,CharSequence xmlPayload){
+  this(xmlPayload.toString());
+  if (!elementName.equals(this.elemName)) {
+    throw new IllegalArgumentException();
+  }
+  if (!namespace.equals(this.ns)) {
+    throw new IllegalArgumentException();
+  }
+}

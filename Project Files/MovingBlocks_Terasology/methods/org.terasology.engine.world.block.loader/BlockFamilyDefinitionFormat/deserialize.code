@@ -1,0 +1,41 @@
+@Override public BlockFamilyDefinitionData deserialize(JsonElement json,Type typeOfT,JsonDeserializationContext context) throws JsonParseException {
+  JsonObject jsonObject=json.getAsJsonObject();
+  BlockFamilyDefinitionData base=createBaseData(jsonObject);
+  BlockFamilyDefinitionData result=new BlockFamilyDefinitionData(base);
+  setBoolean(result::setTemplate,jsonObject,"template");
+  setObject(result::setBlockFamily,jsonObject,"family",Class.class,context);
+  setObject(result::setCategories,jsonObject,"categories",listOfStringType,context);
+  deserializeSectionDefinitionData(result.getBaseSection(),jsonObject,context);
+  if (result.getBlockFamily() != null) {
+    for (    MultiSection multiSection : BlockFamilyLibrary.getMultiSections(result.getBlockFamily())) {
+      if (jsonObject.has(multiSection.name()) && jsonObject.get(multiSection.name()).isJsonObject()) {
+        JsonObject jsonMultiSection=jsonObject.getAsJsonObject(multiSection.name());
+        for (        String section : multiSection.appliesToSections()) {
+          SectionDefinitionData sectionData=result.getSections().get(section);
+          if (sectionData == null) {
+            sectionData=new SectionDefinitionData(base.getSection(section));
+            deserializeSectionDefinitionData(sectionData,jsonObject,context);
+            result.getSections().put(section,sectionData);
+          }
+          deserializeSectionDefinitionData(sectionData,jsonMultiSection,context);
+        }
+      }
+    }
+    for (    String section : BlockFamilyLibrary.getSections(result.getBlockFamily())) {
+      if (jsonObject.has(section) && jsonObject.get(section).isJsonObject()) {
+        SectionDefinitionData sectionData=result.getSections().get(section);
+        if (sectionData == null) {
+          sectionData=new SectionDefinitionData(base.getSection(section));
+          deserializeSectionDefinitionData(sectionData,jsonObject,context);
+          result.getSections().put(section,sectionData);
+        }
+        deserializeSectionDefinitionData(sectionData,jsonObject.getAsJsonObject(section),context);
+      }
+    }
+  }
+  return result;
+}
+@Override public Class<? extends BlockFamily> deserialize(JsonElement json,Type typeOfT,JsonDeserializationContext context) throws JsonParseException {
+  BlockFamilyLibrary library=CoreRegistry.get(BlockFamilyLibrary.class);
+  return library.getBlockFamily(json.getAsString());
+}

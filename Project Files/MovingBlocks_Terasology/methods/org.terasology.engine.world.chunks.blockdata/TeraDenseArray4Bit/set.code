@@ -1,0 +1,36 @@
+@Override public int set(int x,int y,int z,int value){
+  int row=y * getSizeXZHalf();
+  int pos=pos(x,z);
+  if (pos < getSizeXZHalf()) {
+    byte raw=data[row + pos];
+    byte old=TeraArrayUtils.getHi(raw);
+    data[row + pos]=TeraArrayUtils.setHi(raw,value);
+    return old;
+  }
+  pos=pos - getSizeXZHalf();
+  byte raw=data[row + pos];
+  byte old=TeraArrayUtils.getLo(raw);
+  data[row + pos]=TeraArrayUtils.setLo(raw,value);
+  return old;
+}
+@Override public boolean set(int x,int y,int z,int value,int expected){
+  int row=y * getSizeXZHalf();
+  int pos=pos(x,z);
+  if (pos < getSizeXZHalf()) {
+    byte raw=data[row + pos];
+    byte old=TeraArrayUtils.getHi(raw);
+    if (old == expected) {
+      data[row + pos]=TeraArrayUtils.setHi(raw,value);
+      return true;
+    }
+    return false;
+  }
+  pos=pos - getSizeXZHalf();
+  byte raw=data[row + pos];
+  byte old=TeraArrayUtils.getLo(raw);
+  if (old == expected) {
+    data[row + pos]=TeraArrayUtils.setLo(raw,value);
+    return true;
+  }
+  return false;
+}

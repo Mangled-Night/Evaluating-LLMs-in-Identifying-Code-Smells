@@ -1,0 +1,22 @@
+/** 
+ * Sends the completed configuration form to the server. The room will be configured with the new settings defined in the form.
+ * @param form the form with the new settings.
+ * @throws XMPPErrorException if an error occurs setting the new rooms' configuration.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+public void sendConfigurationForm(FillableForm form) throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+  final DataForm dataForm;
+  if (form != null) {
+    dataForm=form.getDataFormToSubmit();
+  }
+ else {
+    dataForm=DataForm.builder().build();
+  }
+  MUCOwner iq=new MUCOwner();
+  iq.setTo(room);
+  iq.setType(IQ.Type.set);
+  iq.addExtension(dataForm);
+  connection.sendIqRequestAndWaitForResponse(iq);
+}

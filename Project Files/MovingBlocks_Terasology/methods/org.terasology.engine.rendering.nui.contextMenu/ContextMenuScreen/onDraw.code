@@ -1,0 +1,24 @@
+@Override public void onDraw(Canvas canvas){
+  canvas.addInteractionRegion(mainListener);
+  Vector2i currentPosition=null;
+  int currentWidth=0;
+  for (  UIList<AbstractContextMenuItem> level : menuWidgets) {
+    if (level.isVisible()) {
+      if (currentPosition == null) {
+        currentPosition=new Vector2i(position);
+      }
+ else {
+        currentPosition.x+=currentWidth;
+      }
+      Vector2i preferredSize=canvas.calculatePreferredSize(level);
+      Rectanglei region=new Rectanglei(currentPosition.x,currentPosition.y).setSize(preferredSize.x,preferredSize.y);
+      double percentageThreshold=0.9;
+      int canvasHeight=canvas.getRegion().getSizeY();
+      if (region.maxY > canvasHeight * percentageThreshold) {
+        region=new Rectanglei(region.minX,region.minY - (region.maxY - canvasHeight) - (int)(canvasHeight * (1 - percentageThreshold))).setSize(region.maxX,canvasHeight);
+      }
+      currentWidth=canvas.calculatePreferredSize(level).x() - 8;
+      canvas.drawWidget(level,region);
+    }
+  }
+}

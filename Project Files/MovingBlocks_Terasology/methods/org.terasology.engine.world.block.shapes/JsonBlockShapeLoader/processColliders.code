@@ -1,0 +1,31 @@
+private void processColliders(JsonDeserializationContext context,JsonArray colliderArray,BlockShapeData shape){
+  List<ColliderInfo> colliders=Lists.newArrayList();
+  for (  JsonElement elem : colliderArray) {
+    if (elem.isJsonObject()) {
+      JsonObject colliderObj=elem.getAsJsonObject();
+      if (colliderObj.has(TYPE) && colliderObj.get(TYPE).isJsonPrimitive() && colliderObj.getAsJsonPrimitive(TYPE).isString()) {
+        String type=colliderObj.get(TYPE).getAsString();
+        if (AABB.equals(type)) {
+          colliders.add(processAABBShape(context,colliderObj));
+        }
+ else         if (SPHERE.equals(type)) {
+          colliders.add(processSphereShape(context,colliderObj));
+        }
+      }
+    }
+  }
+  if (colliders.size() > 1) {
+    ColliderInfo info=processCompoundShape(colliders);
+    shape.setCollisionShape(info.collisionShape);
+    shape.setCollisionOffset(info.offset);
+  }
+ else   if (colliders.size() == 1) {
+    shape.setCollisionShape(colliders.get(0).collisionShape);
+    shape.setCollisionOffset(colliders.get(0).offset);
+  }
+ else {
+    shape.setCollisionShape(COLLISION_SHAPE_FACTORY.getNewUnitCube());
+    shape.setCollisionOffset(new Vector3f(0,0,0));
+    shape.setCollisionSymmetric(true);
+  }
+}

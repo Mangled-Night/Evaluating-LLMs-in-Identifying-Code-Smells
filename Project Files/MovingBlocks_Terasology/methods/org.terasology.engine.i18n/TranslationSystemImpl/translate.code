@@ -1,0 +1,26 @@
+@Override public String translate(String id){
+  return translate(id,systemConfig.locale.get());
+}
+@Override public String translate(String text,Locale otherLocale){
+  TemplateEngine templateEngine=new TemplateEngineImpl(id -> {
+    ResourceUrn uri=new ResourceUrn(id);
+    ResourceUrn projectUri=new ResourceUrn(uri.getModuleName(),uri.getResourceName());
+    TranslationProject project=getProject(projectUri);
+    if (project != null) {
+      Optional<String> opt=project.translate(uri.getFragmentName(),otherLocale);
+      if (opt.isPresent()) {
+        return opt.get();
+      }
+ else {
+        logger.warn("No translation for '{}'",id);
+        return "?" + uri.getFragmentName() + "?";
+      }
+    }
+ else {
+      logger.warn("Invalid project id '{}'",id);
+      return "?" + uri.getFragmentName() + "?";
+    }
+  }
+);
+  return templateEngine.transform(text);
+}

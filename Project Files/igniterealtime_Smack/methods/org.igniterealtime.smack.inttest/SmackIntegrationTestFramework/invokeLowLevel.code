@@ -1,0 +1,28 @@
+private List<ConcreteTest> invokeLowLevel(LowLevelTestMethod lowLevelTestMethod,AbstractSmackLowLevelIntegrationTest test){
+  Collection<? extends XmppConnectionDescriptor<?,?,?>> connectionDescriptors;
+  if (lowLevelTestMethod.smackIntegrationTestAnnotation.onlyDefaultConnectionType()) {
+    XmppConnectionDescriptor<?,?,?> defaultConnectionDescriptor=connectionManager.getDefaultConnectionDescriptor();
+    connectionDescriptors=Collections.singleton(defaultConnectionDescriptor);
+  }
+ else {
+    connectionDescriptors=connectionManager.getConnectionDescriptors();
+  }
+  List<ConcreteTest> resultingConcreteTests=new ArrayList<>(connectionDescriptors.size());
+  for (  XmppConnectionDescriptor<?,?,?> connectionDescriptor : connectionDescriptors) {
+    String connectionNick=connectionDescriptor.getNickname();
+    if (config.enabledConnections != null && !config.enabledConnections.contains(connectionNick)) {
+      DisabledTest disabledTest=new DisabledTest(lowLevelTestMethod.testMethod,"Not creating test for " + lowLevelTestMethod + " with connection '"+ connectionNick+ "', as this connection type is not enabled");
+      testRunResult.disabledTests.add(disabledTest);
+      continue;
+    }
+    if (config.disabledConnections != null && config.disabledConnections.contains(connectionNick)) {
+      DisabledTest disabledTest=new DisabledTest(lowLevelTestMethod.testMethod,"Not creating test for " + lowLevelTestMethod + " with connection '"+ connectionNick+ ", as this connection type is disabled");
+      testRunResult.disabledTests.add(disabledTest);
+      continue;
+    }
+    ConcreteTest.Executor executor=() -> lowLevelTestMethod.invoke(test,connectionDescriptor);
+    ConcreteTest concreteTest=new ConcreteTest(TestType.LowLevel,lowLevelTestMethod.testMethod,executor,connectionDescriptor.getNickname());
+    resultingConcreteTests.add(concreteTest);
+  }
+  return resultingConcreteTests;
+}

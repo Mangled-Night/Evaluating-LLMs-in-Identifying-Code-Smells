@@ -1,0 +1,25 @@
+@Test public void randomizedStressTest(){
+  final int size=65536;
+  final Map<ByteBuffer,byte[]> expected=new HashMap<ByteBuffer,byte[]>();
+  final BytesToBytesMap map=new BytesToBytesMap(dataNodeMemoryManager,size,PAGE_SIZE_BYTES);
+  try {
+    for (int i=0; i < size * 0.9; i++) {
+      final byte[] key=getRandomByteArray(rand.nextInt(10) + 1);
+      final byte[] value=getRandomByteArray(rand.nextInt(10) + 1);
+      if (!expected.containsKey(ByteBuffer.wrap(key))) {
+        expected.put(ByteBuffer.wrap(key),value);
+        final BytesToBytesMap.Location loc=map.lookup(key,Platform.BYTE_ARRAY_OFFSET,key.length);
+        Assert.assertFalse(loc.isDefined());
+        Assert.assertTrue(loc.append(key,Platform.BYTE_ARRAY_OFFSET,key.length,value,Platform.BYTE_ARRAY_OFFSET,value.length));
+        Assert.assertTrue(loc.isDefined());
+        Assert.assertEquals(key.length,loc.getKeyLength());
+        Assert.assertEquals(value.length,loc.getValueLength());
+        Assert.assertTrue(arrayEquals(key,loc.getKeyBase(),loc.getKeyOffset(),key.length));
+        Assert.assertTrue(arrayEquals(value,loc.getValueBase(),loc.getValueOffset(),value.length));
+      }
+    }
+  }
+  finally {
+    map.free();
+  }
+}

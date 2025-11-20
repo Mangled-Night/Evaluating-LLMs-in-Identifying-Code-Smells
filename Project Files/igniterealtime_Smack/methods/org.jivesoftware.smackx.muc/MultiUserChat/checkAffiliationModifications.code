@@ -1,0 +1,81 @@
+/** 
+ * Fires notification events if the affiliation of a room occupant has changed. If the occupant that changed his affiliation is your occupant then the <code>UserStatusListeners</code> added to this <code>MultiUserChat</code> will be fired. On the other hand, if the occupant that changed his affiliation is not yours then the <code>ParticipantStatusListeners</code> added to this <code>MultiUserChat</code> will be fired. The following table shows the events that will be fired depending on the previous and new affiliation of the occupant. <pre> <table border="1"> <tr><td><b>Old</b></td><td><b>New</b></td><td><b>Events</b></td></tr> <tr><td>None</td><td>Member</td><td>membershipGranted</td></tr> <tr><td>Member</td><td>Admin</td><td>membershipRevoked + adminGranted</td></tr> <tr><td>Admin</td><td>Owner</td><td>adminRevoked + ownershipGranted</td></tr> <tr><td>None</td><td>Admin</td><td>adminGranted</td></tr> <tr><td>None</td><td>Owner</td><td>ownershipGranted</td></tr> <tr><td>Member</td><td>Owner</td><td>membershipRevoked + ownershipGranted</td></tr> <tr><td>Owner</td><td>Admin</td><td>ownershipRevoked + adminGranted</td></tr> <tr><td>Admin</td><td>Member</td><td>adminRevoked + membershipGranted</td></tr> <tr><td>Member</td><td>None</td><td>membershipRevoked</td></tr> <tr><td>Owner</td><td>Member</td><td>ownershipRevoked + membershipGranted</td></tr> <tr><td>Owner</td><td>None</td><td>ownershipRevoked</td></tr> <tr><td>Admin</td><td>None</td><td>adminRevoked</td></tr> <tr><td><i>Anyone</i></td><td>Outcast</td><td>banned</td></tr> </table> </pre>
+ * @param oldAffiliation the previous affiliation of the user in the room before receiving thenew presence
+ * @param newAffiliation the new affiliation of the user in the room after receiving the newpresence
+ * @param isUserModification whether the received presence is about your user in the room or not
+ * @param from the occupant whose role in the room has changed(e.g. room@conference.jabber.org/nick).
+ */
+private void checkAffiliationModifications(MUCAffiliation oldAffiliation,MUCAffiliation newAffiliation,boolean isUserModification,EntityFullJid from){
+  if (MUCAffiliation.owner.equals(oldAffiliation) && !MUCAffiliation.owner.equals(newAffiliation)) {
+    if (isUserModification) {
+      for (      UserStatusListener listener : userStatusListeners) {
+        listener.ownershipRevoked();
+      }
+    }
+ else {
+      for (      ParticipantStatusListener listener : participantStatusListeners) {
+        listener.ownershipRevoked(from);
+      }
+    }
+  }
+ else   if (MUCAffiliation.admin.equals(oldAffiliation) && !MUCAffiliation.admin.equals(newAffiliation)) {
+    if (isUserModification) {
+      for (      UserStatusListener listener : userStatusListeners) {
+        listener.adminRevoked();
+      }
+    }
+ else {
+      for (      ParticipantStatusListener listener : participantStatusListeners) {
+        listener.adminRevoked(from);
+      }
+    }
+  }
+ else   if (MUCAffiliation.member.equals(oldAffiliation) && !MUCAffiliation.member.equals(newAffiliation)) {
+    if (isUserModification) {
+      for (      UserStatusListener listener : userStatusListeners) {
+        listener.membershipRevoked();
+      }
+    }
+ else {
+      for (      ParticipantStatusListener listener : participantStatusListeners) {
+        listener.membershipRevoked(from);
+      }
+    }
+  }
+  if (!MUCAffiliation.owner.equals(oldAffiliation) && MUCAffiliation.owner.equals(newAffiliation)) {
+    if (isUserModification) {
+      for (      UserStatusListener listener : userStatusListeners) {
+        listener.ownershipGranted();
+      }
+    }
+ else {
+      for (      ParticipantStatusListener listener : participantStatusListeners) {
+        listener.ownershipGranted(from);
+      }
+    }
+  }
+ else   if (!MUCAffiliation.admin.equals(oldAffiliation) && MUCAffiliation.admin.equals(newAffiliation)) {
+    if (isUserModification) {
+      for (      UserStatusListener listener : userStatusListeners) {
+        listener.adminGranted();
+      }
+    }
+ else {
+      for (      ParticipantStatusListener listener : participantStatusListeners) {
+        listener.adminGranted(from);
+      }
+    }
+  }
+ else   if (!MUCAffiliation.member.equals(oldAffiliation) && MUCAffiliation.member.equals(newAffiliation)) {
+    if (isUserModification) {
+      for (      UserStatusListener listener : userStatusListeners) {
+        listener.membershipGranted();
+      }
+    }
+ else {
+      for (      ParticipantStatusListener listener : participantStatusListeners) {
+        listener.membershipGranted(from);
+      }
+    }
+  }
+}

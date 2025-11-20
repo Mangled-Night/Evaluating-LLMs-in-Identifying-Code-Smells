@@ -1,0 +1,41 @@
+@Override public void deflate(){
+  final TeraDeflator def=new TeraStandardDeflator();
+  if (logger.isDebugEnabled()) {
+    int blocksSize=blockData.getEstimatedMemoryConsumptionInBytes();
+    int sunlightSize=sunlightData.getEstimatedMemoryConsumptionInBytes();
+    int sunlightRegenSize=sunlightRegenData.getEstimatedMemoryConsumptionInBytes();
+    int lightSize=lightData.getEstimatedMemoryConsumptionInBytes();
+    int extraSize=0;
+    for (    TeraArray extraDatum : extraData) {
+      extraSize+=extraDatum.getEstimatedMemoryConsumptionInBytes();
+    }
+    int totalSize=blocksSize + sunlightRegenSize + sunlightSize+ lightSize+ extraSize;
+    blockData=def.deflate(blockData);
+    lightData=def.deflate(lightData);
+    for (int i=0; i < extraData.length; i++) {
+      extraData[i]=def.deflate(extraData[i]);
+    }
+    int blocksReduced=blockData.getEstimatedMemoryConsumptionInBytes();
+    int lightReduced=lightData.getEstimatedMemoryConsumptionInBytes();
+    int extraReduced=0;
+    for (    TeraArray extraDatum : extraData) {
+      extraReduced+=extraDatum.getEstimatedMemoryConsumptionInBytes();
+    }
+    int totalReduced=blocksReduced + sunlightRegenSize + sunlightSize+ lightReduced+ extraReduced;
+    double blocksPercent=100d - (100d / blocksSize * blocksReduced);
+    double lightPercent=100d - (100d / lightSize * lightReduced);
+    double extraPercent=100d - (100d / extraSize * extraReduced);
+    double totalPercent=100d - (100d / totalSize * totalReduced);
+    logger.debug("chunk {}: " + "size-before: {} " + "bytes, size-after: {} "+ "bytes, total-deflated-by: {}%, "+ "blocks-deflated-by={}%, "+ "light-deflated-by={}%, "+ "extra-data-deflated-by={}%",chunkPos,SIZE_FORMAT.format(totalSize),SIZE_FORMAT.format(totalReduced),PERCENT_FORMAT.format(totalPercent),PERCENT_FORMAT.format(blocksPercent),PERCENT_FORMAT.format(lightPercent),PERCENT_FORMAT.format(extraPercent));
+    ChunkMonitor.fireChunkDeflated(this,totalSize,totalReduced);
+  }
+ else {
+    final int oldSize=getEstimatedMemoryConsumptionInBytes();
+    blockData=def.deflate(blockData);
+    lightData=def.deflate(lightData);
+    for (int i=0; i < extraData.length; i++) {
+      extraData[i]=def.deflate(extraData[i]);
+    }
+    ChunkMonitor.fireChunkDeflated(this,oldSize,getEstimatedMemoryConsumptionInBytes());
+  }
+}

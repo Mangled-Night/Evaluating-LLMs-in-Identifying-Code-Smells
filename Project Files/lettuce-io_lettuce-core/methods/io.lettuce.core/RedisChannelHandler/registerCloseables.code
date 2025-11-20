@@ -1,0 +1,30 @@
+/** 
+ * Register Closeable resources. Internal access only.
+ * @param registry registry of closeables
+ * @param closeables closeables to register
+ */
+public void registerCloseables(final Collection<Closeable> registry,Closeable... closeables){
+  registry.addAll(Arrays.asList(closeables));
+  addListener(resource -> {
+    for (    Closeable closeable : closeables) {
+      if (closeable == RedisChannelHandler.this) {
+        continue;
+      }
+      try {
+        if (closeable instanceof AsyncCloseable) {
+          ((AsyncCloseable)closeable).closeAsync();
+        }
+ else {
+          closeable.close();
+        }
+      }
+ catch (      IOException e) {
+        if (debugEnabled) {
+          logger.debug(e.toString(),e);
+        }
+      }
+    }
+    registry.removeAll(Arrays.asList(closeables));
+  }
+);
+}

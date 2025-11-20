@@ -1,0 +1,12 @@
+@Override public void activated(){
+  super.activated();
+  for (  RedisFuture<Void> command : resubscribe()) {
+    command.exceptionally(throwable -> {
+      if (throwable instanceof RedisCommandExecutionException) {
+        InternalLoggerFactory.getInstance(getClass()).warn("Re-subscribe failed: " + command.getError());
+      }
+      return null;
+    }
+);
+  }
+}

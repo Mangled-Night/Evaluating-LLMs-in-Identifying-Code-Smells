@@ -1,0 +1,13 @@
+private int UpData(SQLUpdateStatement state){
+  SQLTableSource table=state.getTableSource();
+  DBCollection coll=this._db.getCollection(table.toString());
+  SQLExpr expr=state.getWhere();
+  BSONObject query=parserWhere(expr);
+  BasicBSONObject set=new BasicBSONObject();
+  for (  SQLUpdateSetItem col : state.getItems()) {
+    set.put(getFieldName2(col.getColumn()),getExpValue(col.getValue()));
+  }
+  BSONObject mod=new BasicBSONObject("$set",set);
+  coll.update(query,mod,null);
+  return 1;
+}

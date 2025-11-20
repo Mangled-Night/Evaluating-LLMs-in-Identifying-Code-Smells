@@ -1,0 +1,95 @@
+/** 
+ * @author Mark Paluch
+ */
+@ExtendWith(MockitoExtension.class) class ReactiveBackpressurePropagationUnitTests {
+  private CommandHandler commandHandler;
+  private EmbeddedChannel embeddedChannel;
+  @Mock private Endpoint endpoint;
+  @Mock private ClientResources clientResources;
+  @Mock private CommandLatencyCollector latencyCollector;
+  @Mock private StatefulConnection statefulConnection;
+  @BeforeEach void before(){
+    when(clientResources.commandLatencyRecorder()).thenReturn(latencyCollector);
+    when(clientResources.tracing()).thenReturn(Tracing.disabled());
+    when(statefulConnection.dispatch(any(RedisCommand.class))).thenAnswer(invocation -> {
+      RedisCommand command=(RedisCommand)invocation.getArguments()[0];
+      embeddedChannel.writeOutbound(command);
+      return command;
+    }
+);
+    commandHandler=new CommandHandler(ClientOptions.create(),clientResources,endpoint);
+    embeddedChannel=new EmbeddedChannel(commandHandler);
+    embeddedChannel.connect(new LocalAddress("remote"));
+  }
+  @Test void writeCommand() throws Exception {
+    Command<String,String,List<String>> lrange=new Command<>(CommandType.LRANGE,new ValueListOutput<>(StringCodec.UTF8));
+    RedisPublisher<String,String,String> publisher=new RedisPublisher<>((Command)lrange,statefulConnection,true,ImmediateEventExecutor.INSTANCE);
+    CountDownLatch pressureArrived=new CountDownLatch(1);
+    CountDownLatch buildPressure=new CountDownLatch(1);
+    CountDownLatch waitForPressureReduced=new CountDownLatch(2);
+    CountDownLatch waitForWorkCompleted=new CountDownLatch(4);
+    Flux.from(publisher).limitRate(2).publishOn(Schedulers.single()).doOnNext(s -> {
+      try {
+        pressureArrived.countDown();
+        buildPressure.await();
+      }
+ catch (      InterruptedException e) {
+      }
+      waitForPressureReduced.countDown();
+      waitForWorkCompleted.countDown();
+    }
+).subscribe();
+    assertThat(embeddedChannel.config().isAutoRead()).isTrue();
+    embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.arrayHeader(4)));
+    embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.bulkString("one")));
+    pressureArrived.await();
+    assertThat(embeddedChannel.config().isAutoRead()).isTrue();
+    embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.bulkString("two")));
+    embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.bulkString("three")));
+    assertThat(embeddedChannel.config().isAutoRead()).isFalse();
+    buildPressure.countDown();
+    waitForPressureReduced.await();
+    assertThat(embeddedChannel.config().isAutoRead()).isTrue();
+    embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.bulkString("four")));
+    waitForWorkCompleted.await();
+    assertThat(embeddedChannel.config().isAutoRead()).isTrue();
+  }
+  @Test void writeCommandAndCancelInTheMiddle() throws Exception {
+    Command<String,String,List<String>> lrange=new Command<>(CommandType.LRANGE,new ValueListOutput<>(StringCodec.UTF8));
+    RedisPublisher<String,String,String> publisher=new RedisPublisher<>(lrange,statefulConnection,true,ImmediateEventExecutor.INSTANCE);
+    CountDownLatch pressureArrived=new CountDownLatch(1);
+    CountDownLatch buildPressure=new CountDownLatch(1);
+    CountDownLatch waitForPressureReduced=new CountDownLatch(2);
+    Disposable cancellation=Flux.from(publisher).limitRate(2).publishOn(Schedulers.single()).doOnNext(s -> {
+      try {
+        pressureArrived.countDown();
+        buildPressure.await();
+      }
+ catch (      InterruptedException e) {
+      }
+      waitForPressureReduced.countDown();
+    }
+).subscribe();
+    assertThat(embeddedChannel.config().isAutoRead()).isTrue();
+    embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.arrayHeader(4)));
+    embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.bulkString("one")));
+    pressureArrived.await();
+    assertThat(embeddedChannel.config().isAutoRead()).isTrue();
+    embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.bulkString("two")));
+    embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.bulkString("three")));
+    assertThat(embeddedChannel.config().isAutoRead()).isFalse();
+    cancellation.dispose();
+    assertThat(embeddedChannel.config().isAutoRead()).isTrue();
+    buildPressure.countDown();
+    embeddedChannel.writeInbound(Unpooled.wrappedBuffer(RESP.bulkString("four")));
+    assertThat(embeddedChannel.config().isAutoRead()).isTrue();
+  }
+static class RESP {
+    static byte[] arrayHeader(    int count){
+      return String.format("*%d\r\n",count).getBytes();
+    }
+    static byte[] bulkString(    String string){
+      return String.format("$%d\r\n%s\r\n",string.getBytes().length,string).getBytes();
+    }
+  }
+}

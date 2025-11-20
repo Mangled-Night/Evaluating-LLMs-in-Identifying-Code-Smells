@@ -1,0 +1,35 @@
+public class OmemoMessageBuilderTest extends SmackTestSuite {
+  private static final byte[] messageKey=new byte[16];
+  private static final byte[] cipherTextWithAuthTag=new byte[35 + 16];
+  public OmemoMessageBuilderTest(){
+    Random random=new Random();
+    random.nextBytes(messageKey);
+    random.nextBytes(cipherTextWithAuthTag);
+  }
+  @Test public void testMoveAuthTag(){
+    byte[] authTag=new byte[16];
+    System.arraycopy(cipherTextWithAuthTag,35,authTag,0,16);
+    byte[] messageKeyWithAuthTag=new byte[16 + 16];
+    byte[] cipherTextWithoutAuthTag=new byte[35];
+    OmemoMessageBuilder.moveAuthTag(messageKey,cipherTextWithAuthTag,messageKeyWithAuthTag,cipherTextWithoutAuthTag);
+    byte[] checkCipherText=new byte[35];
+    System.arraycopy(cipherTextWithAuthTag,0,checkCipherText,0,35);
+    assertTrue(Arrays.equals(checkCipherText,cipherTextWithoutAuthTag));
+    byte[] checkMessageKey=new byte[16];
+    System.arraycopy(messageKeyWithAuthTag,0,checkMessageKey,0,16);
+    assertTrue(Arrays.equals(checkMessageKey,messageKey));
+    byte[] checkAuthTag=new byte[16];
+    System.arraycopy(messageKeyWithAuthTag,16,checkAuthTag,0,16);
+    assertTrue(Arrays.equals(checkAuthTag,authTag));
+  }
+  @Test(expected=IllegalArgumentException.class) public void testCheckIllegalMessageKeyWithAuthTagLength(){
+    byte[] illegalMessageKey=new byte[16 + 15];
+    byte[] cipherTextWithoutAuthTag=new byte[35];
+    OmemoMessageBuilder.moveAuthTag(messageKey,cipherTextWithAuthTag,illegalMessageKey,cipherTextWithoutAuthTag);
+  }
+  @Test(expected=IllegalArgumentException.class) public void testCheckIllegalCipherTextWithoutAuthTagLength(){
+    byte[] messageKeyWithAuthTag=new byte[16 + 16];
+    byte[] illegalCipherTextWithoutAuthTag=new byte[39];
+    OmemoMessageBuilder.moveAuthTag(messageKey,cipherTextWithAuthTag,messageKeyWithAuthTag,illegalCipherTextWithoutAuthTag);
+  }
+}

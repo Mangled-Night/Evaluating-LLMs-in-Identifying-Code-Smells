@@ -1,0 +1,7 @@
+@Test void closeWithQueuedCommandsFails(){
+  disconnectedBuffer.add(command);
+  when(clusterChannelWriter.write(any(RedisCommand.class))).thenThrow(new RedisException("meh"));
+  sut.closeAsync();
+  assertThat(command.isDone()).isTrue();
+  assertThatThrownBy(() -> TestFutures.awaitOrTimeout(command)).isInstanceOf(RedisException.class);
+}

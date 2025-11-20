@@ -1,0 +1,24 @@
+@Override public ByteBuffer write(ByteBuffer bb,FrontendConnection c,boolean writeSocketIfFull){
+  bb=c.checkWriteBuffer(bb,c.getPacketHeaderSize(),writeSocketIfFull);
+  BufferUtil.writeUB3(bb,calcPacketSize());
+  bb.put(packetId);
+  for (int i=0; i < numFields; i++) {
+    if (!isNullAt(i)) {
+      byte[] fv=this.getBinary(i);
+      if (fv.length == 0) {
+        bb=c.checkWriteBuffer(bb,1,writeSocketIfFull);
+        bb.put(UnsafeRow.EMPTY_MARK);
+      }
+ else {
+        bb=c.checkWriteBuffer(bb,BufferUtil.getLength(fv),writeSocketIfFull);
+        BufferUtil.writeLength(bb,fv.length);
+        bb=c.writeToBuffer(fv,bb);
+      }
+    }
+ else {
+      bb=c.checkWriteBuffer(bb,1,writeSocketIfFull);
+      bb.put(UnsafeRow.NULL_MARK);
+    }
+  }
+  return bb;
+}

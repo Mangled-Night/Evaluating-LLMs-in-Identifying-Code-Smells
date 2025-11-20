@@ -1,0 +1,13 @@
+@Test public void forwardedWithDelayTest() throws Exception {
+  XmlPullParser parser;
+  String control;
+  Forwarded<?> fwd;
+  control=XMLBuilder.create("forwarded").a("xmlns","urn:xmpp:forwarded:0").e("message").a("from","romeo@montague.com").up().e("delay").ns(DelayInformation.NAMESPACE).a("stamp","2010-07-10T23:08:25Z").asString(outputProperties);
+  parser=PacketParserUtils.getParserFor(control);
+  fwd=new ForwardedProvider().parse(parser);
+  DelayInformation delay=fwd.getDelayInformation();
+  assertNotNull(delay);
+  assertThat("romeo@montague.com",equalsCharSequence(fwd.getForwardedStanza().getFrom()));
+  assertEquals(XmlPullParser.Event.END_ELEMENT,parser.getEventType());
+  assertEquals("forwarded",parser.getName());
+}

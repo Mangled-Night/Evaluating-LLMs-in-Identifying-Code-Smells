@@ -1,0 +1,12 @@
+@Test void role(){
+  RedisCommands<String,String> connection=redisClient.connect(RedisURI.Builder.redis(host,26380).build()).sync();
+  try {
+    List<Object> objects=connection.role();
+    assertThat(objects).hasSize(2);
+    assertThat(objects.get(0)).isEqualTo("sentinel");
+    assertThat(objects.get(1).toString()).isEqualTo("[" + SentinelTestSettings.MASTER_ID + "]");
+  }
+  finally {
+    connection.getStatefulConnection().close();
+  }
+}

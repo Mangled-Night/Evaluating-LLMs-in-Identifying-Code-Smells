@@ -1,0 +1,37 @@
+/** 
+ * Return the blur bitmap using render script.
+ * @param src    The source of bitmap.
+ * @param radius The radius(0...25).
+ * @return the blur bitmap
+ */
+@RequiresApi(Build.VERSION_CODES.JELLY_BEAN_MR1) public static Bitmap renderScriptBlur(final Bitmap src,@FloatRange(from=0,to=25,fromInclusive=false) final float radius){
+  return renderScriptBlur(src,radius,false);
+}
+/** 
+ * Return the blur bitmap using render script.
+ * @param src     The source of bitmap.
+ * @param radius  The radius(0...25).
+ * @param recycle True to recycle the source of bitmap, false otherwise.
+ * @return the blur bitmap
+ */
+@RequiresApi(Build.VERSION_CODES.JELLY_BEAN_MR1) public static Bitmap renderScriptBlur(final Bitmap src,@FloatRange(from=0,to=25,fromInclusive=false) final float radius,final boolean recycle){
+  RenderScript rs=null;
+  Bitmap ret=recycle ? src : src.copy(src.getConfig(),true);
+  try {
+    rs=RenderScript.create(Utils.getApp());
+    rs.setMessageHandler(new RenderScript.RSMessageHandler());
+    Allocation input=Allocation.createFromBitmap(rs,ret,Allocation.MipmapControl.MIPMAP_NONE,Allocation.USAGE_SCRIPT);
+    Allocation output=Allocation.createTyped(rs,input.getType());
+    ScriptIntrinsicBlur blurScript=ScriptIntrinsicBlur.create(rs,Element.U8_4(rs));
+    blurScript.setInput(input);
+    blurScript.setRadius(radius);
+    blurScript.forEach(output);
+    output.copyTo(ret);
+  }
+  finally {
+    if (rs != null) {
+      rs.destroy();
+    }
+  }
+  return ret;
+}

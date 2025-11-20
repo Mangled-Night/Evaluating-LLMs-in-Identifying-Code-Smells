@@ -1,0 +1,25 @@
+private static void assertReferencesQueueSize(ReferenceQueue<?> referenceQueue,int expectedSize) throws IllegalArgumentException, InterruptedException {
+  final int timeout=120000;
+  final int maxAttempts=3;
+  for (int itemsRemoved=0; itemsRemoved < expectedSize; ++itemsRemoved) {
+    int attempt=0;
+    Reference<?> reference=null;
+    do {
+      reference=referenceQueue.remove(timeout);
+      if (reference != null) {
+        break;
+      }
+      attempt++;
+      String message="No reference to a gc'ed object found after " + timeout + "ms in the "+ attempt+ ". attempt.";
+      if (attempt >= maxAttempts) {
+        fail(message);
+      }
+      LOGGER.warning(message);
+      triggerGarbageCollection();
+    }
+ while (true);
+    reference.clear();
+  }
+  Reference<?> reference=referenceQueue.poll();
+  assertNull(reference,"Reference queue is not empty when it should be");
+}

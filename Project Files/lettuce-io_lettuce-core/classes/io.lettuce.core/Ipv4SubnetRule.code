@@ -1,0 +1,34 @@
+static class Ipv4SubnetRule implements SubnetRule {
+  private static final int IPV4_BYTE_COUNT=4;
+  private final int networkAddress;
+  private final int subnetMask;
+  private final ConcurrentLruCache<String,Integer> ipv4AddressCache;
+  Ipv4SubnetRule(  String ipAddress,  int cidrPrefix,  ConcurrentLruCache<String,Integer> ipv4AddressCache){
+    LettuceAssert.isTrue(NetUtil.isValidIpV4Address(ipAddress),() -> String.format("Invalid IPv4 IP address %s",ipAddress));
+    LettuceAssert.isTrue(0 <= cidrPrefix && cidrPrefix <= 32,() -> String.format("Invalid CIDR prefix %d",cidrPrefix));
+    this.subnetMask=toSubnetMask(cidrPrefix);
+    this.networkAddress=toNetworkAddress(ipAddress,this.subnetMask);
+    this.ipv4AddressCache=ipv4AddressCache;
+  }
+  /** 
+ * return  {@code true} if the {@code ipAddress} is in this subnet. If {@code ipAddress} is not valid IPv4 style(e.g., IPv6 style)  {@code false} is always returned.
+ */
+  @Override public boolean isInSubnet(  String ipAddress){
+    if (LettuceStrings.isEmpty(ipAddress) || !NetUtil.isValidIpV4Address(ipAddress)) {
+      return false;
+    }
+    Integer address=ipv4AddressCache.get(ipAddress);
+    return (address & subnetMask) == networkAddress;
+  }
+  private int toSubnetMask(  int cidrPrefix){
+    return (int)(-1L << (32 - cidrPrefix));
+  }
+  private int toNetworkAddress(  String ipAddress,  int subnetMask){
+    return toInt(ipAddress) & subnetMask;
+  }
+  static int toInt(  String ipAddress){
+    byte[] octets=NetUtil.createByteArrayFromIpAddressString(ipAddress);
+    LettuceAssert.isTrue(octets != null && octets.length == IPV4_BYTE_COUNT,() -> String.format("Invalid IP address %s",ipAddress));
+    return ((octets[0] & 0xff) << 24) | ((octets[1] & 0xff) << 16) | ((octets[2] & 0xff) << 8)| (octets[3] & 0xff);
+  }
+}

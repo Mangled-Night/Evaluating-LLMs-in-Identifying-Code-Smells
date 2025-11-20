@@ -1,0 +1,22 @@
+/** 
+ * Propagates a value from a position out into all adjacent blocks. <p> If the value spreading into a block is larger than the current value there, set it and queue it for propagating again If the value is smaller than the current value, do nothing
+ * @param pos The initial position
+ * @param value The value to propagate
+ */
+private void push(Vector3ic pos,byte value){
+  Block block=world.getBlockAt(pos);
+  Vector3i adjPos=new Vector3i();
+  for (  Side side : Side.values()) {
+    byte propagatedValue=rules.propagateValue(value,side,block,scale);
+    if (rules.canSpreadOutOf(block,side)) {
+      side.getAdjacentPos(pos,adjPos);
+      byte adjValue=world.getValueAt(adjPos);
+      if (adjValue < propagatedValue && adjValue != PropagatorWorldView.UNAVAILABLE) {
+        Block adjBlock=world.getBlockAt(adjPos);
+        if (rules.canSpreadInto(adjBlock,side.reverse())) {
+          increase(adjPos,propagatedValue);
+        }
+      }
+    }
+  }
+}

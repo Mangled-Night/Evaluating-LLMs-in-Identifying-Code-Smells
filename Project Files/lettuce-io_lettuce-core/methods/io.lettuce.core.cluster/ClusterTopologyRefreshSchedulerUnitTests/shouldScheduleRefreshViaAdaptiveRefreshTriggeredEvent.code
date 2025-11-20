@@ -1,0 +1,10 @@
+@Test void shouldScheduleRefreshViaAdaptiveRefreshTriggeredEvent(){
+  ClusterClientOptions clusterClientOptions=ClusterClientOptions.builder().topologyRefreshOptions(immediateRefresh).build();
+  when(clusterClient.getClusterClientOptions()).thenReturn(clusterClientOptions);
+  sut.onMovedRedirection();
+  ArgumentCaptor<AdaptiveRefreshTriggeredEvent> captor=ArgumentCaptor.forClass(AdaptiveRefreshTriggeredEvent.class);
+  verify(eventBus).publish(captor.capture());
+  AdaptiveRefreshTriggeredEvent capture=captor.getValue();
+  capture.scheduleRefresh();
+  verify(eventExecutors,times(2)).submit(any(Runnable.class));
+}

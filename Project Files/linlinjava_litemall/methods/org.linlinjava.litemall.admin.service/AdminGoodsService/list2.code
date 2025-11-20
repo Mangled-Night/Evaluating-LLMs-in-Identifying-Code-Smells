@@ -1,0 +1,31 @@
+public Object list2(){
+  List<LitemallCategory> l1CatList=categoryService.queryL1();
+  List<CatVo> categoryList=new ArrayList<>(l1CatList.size());
+  for (  LitemallCategory l1 : l1CatList) {
+    CatVo l1CatVo=new CatVo();
+    l1CatVo.setValue(l1.getId());
+    l1CatVo.setLabel(l1.getName());
+    List<LitemallCategory> l2CatList=categoryService.queryByPid(l1.getId());
+    List<CatVo> children=new ArrayList<>(l2CatList.size());
+    for (    LitemallCategory l2 : l2CatList) {
+      CatVo l2CatVo=new CatVo();
+      l2CatVo.setValue(l2.getId());
+      l2CatVo.setLabel(l2.getName());
+      children.add(l2CatVo);
+    }
+    l1CatVo.setChildren(children);
+    categoryList.add(l1CatVo);
+  }
+  List<LitemallBrand> list=brandService.all();
+  List<Map<String,Object>> brandList=new ArrayList<>(l1CatList.size());
+  for (  LitemallBrand brand : list) {
+    Map<String,Object> b=new HashMap<>(2);
+    b.put("value",brand.getId());
+    b.put("label",brand.getName());
+    brandList.add(b);
+  }
+  Map<String,Object> data=new HashMap<>();
+  data.put("categoryList",categoryList);
+  data.put("brandList",brandList);
+  return ResponseUtil.ok(data);
+}

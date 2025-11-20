@@ -1,0 +1,20 @@
+/** 
+ * Returns a new special Writer that wraps the new connection Writer. The connection has been secured so the connection is using a new reader and writer. The debugger needs to wrap the new reader and writer to keep being notified of the connection traffic.
+ * @param writer connection writer.
+ * @return a new special Writer that wraps the new connection Writer.
+ */
+public final Writer newConnectionWriter(Writer writer){
+  XmlPrettyPrinter xmlPrettyPrinter=XmlPrettyPrinter.builder().setPrettyWriter(sb -> outgoingStreamSink(sb)).build();
+  outgoingStreamSplitterForPrettyPrinting=new XmppXmlSplitter(xmlPrettyPrinter);
+  ObservableWriter observableWriter=new ObservableWriter(writer);
+  observableWriter.addWriterListener(writtenString -> {
+    try {
+      outgoingStreamSplitterForPrettyPrinting.append(writtenString);
+    }
+ catch (    IOException e) {
+      throw new AssertionError(e);
+    }
+  }
+);
+  return observableWriter;
+}

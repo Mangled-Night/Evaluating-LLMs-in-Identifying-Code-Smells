@@ -1,0 +1,88 @@
+@Override public void okResponse(byte[] ok,BackendConnection conn){
+  if (conn instanceof MySQLConnection) {
+    MySQLConnection mysqlCon=(MySQLConnection)conn;
+switch (mysqlCon.getXaStatus()) {
+case TxState.TX_STARTED_STATE:
+      if (mysqlCon.batchCmdFinished()) {
+        String xaTxId=session.getXaTXID();
+        CoordinatorLogEntry coordinatorLogEntry=inMemoryRepository.get(xaTxId);
+        for (int i=0; i < coordinatorLogEntry.participants.length; i++) {
+          if (coordinatorLogEntry.participants[i].resourceName.equals(conn.getSchema())) {
+            coordinatorLogEntry.participants[i].txState=TxState.TX_PREPARED_STATE;
+          }
+        }
+        inMemoryRepository.put(xaTxId,coordinatorLogEntry);
+        mysqlCon.setXaStatus(TxState.TX_PREPARED_STATE);
+        if (prepareCount.decrementAndGet() == 0) {
+          fileRepository.writeCheckpoint(xaTxId,inMemoryRepository.getAllCoordinatorLogEntries());
+          if (faileCount.get() > 0) {
+            this.tryErrorFinished(true);
+            return;
+          }
+          coorXaStatus=TxState.TX_PREPARED_STATE;
+          for (          RouteResultsetNode rrn : session.getTargetKeys()) {
+            if (rrn == null) {
+              LOGGER.error("null is contained in RoutResultsetNodes, source = " + session.getSource());
+              continue;
+            }
+            final BackendConnection backConn=session.getTarget(rrn);
+            if (conn != null) {
+              if (conn instanceof MySQLConnection) {
+                MySQLConnection backMysqlCon=(MySQLConnection)backConn;
+                if (session.getXaTXID() != null) {
+                  xaTxId=session.getXaTXID() + ",'" + backMysqlCon.getSchema()+ "'";
+                }
+                if (backMysqlCon.getXaStatus() == TxState.TX_PREPARED_STATE) {
+                  String cmd="XA COMMIT " + xaTxId;
+                  if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Start execute the  cmd : " + cmd + " current connection:"+ conn.getHost()+ ":"+ conn.getPort());
+                  }
+                  backMysqlCon.execCmd(cmd);
+                }
+ else {
+                  LOGGER.info("{} not in PREPARED_STATE",backMysqlCon);
+                }
+              }
+            }
+          }
+        }
+      }
+    return;
+case TxState.TX_PREPARED_STATE:
+{
+    String xaTxId=session.getXaTXID();
+    CoordinatorLogEntry coordinatorLogEntry=inMemoryRepository.get(xaTxId);
+    for (int i=0; i < coordinatorLogEntry.participants.length; i++) {
+      if (coordinatorLogEntry.participants[i].resourceName.equals(conn.getSchema())) {
+        coordinatorLogEntry.participants[i].txState=TxState.TX_COMMITED_STATE;
+      }
+    }
+    inMemoryRepository.put(xaTxId,coordinatorLogEntry);
+    fileRepository.writeCheckpoint(xaTxId,inMemoryRepository.getAllCoordinatorLogEntries());
+    mysqlCon.setXaStatus(TxState.TX_INITIALIZE_STATE);
+    break;
+  }
+default :
+}
+}
+if (this.cmdHandler.relaseConOnOK()) {
+if (prepareCount.get() == 0) {
+session.releaseConnection(conn);
+}
+}
+ else {
+session.releaseConnectionIfSafe(conn,LOGGER.isDebugEnabled(),false);
+}
+if (this.finished()) {
+if (cmdHandler.isAutoClearSessionCons()) {
+session.clearResources(false);
+}
+if (session.getXaTXID() != null) {
+session.setXATXEnabled(false);
+}
+if (session.getSource().isPreAcStates()) {
+session.getSource().setAutocommit(true);
+}
+cmdHandler.okResponse(session,ok);
+}
+}

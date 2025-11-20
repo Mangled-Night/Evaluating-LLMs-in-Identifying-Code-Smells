@@ -1,0 +1,50 @@
+private void buildShadowCorners(){
+  if (isCircle) {
+    float size=mContentBounds.width() / 2 - 1f;
+    RectF innerBounds=new RectF(-size,-size,size,size);
+    RectF outerBounds=new RectF(innerBounds);
+    outerBounds.inset(-mShadowSize,-mShadowSize);
+    if (mCornerShadowPath == null) {
+      mCornerShadowPath=new Path();
+    }
+ else {
+      mCornerShadowPath.reset();
+    }
+    mCornerShadowPath.setFillType(Path.FillType.EVEN_ODD);
+    mCornerShadowPath.moveTo(-size,0);
+    mCornerShadowPath.rLineTo(-mShadowSize,0);
+    mCornerShadowPath.arcTo(outerBounds,180f,180f,false);
+    mCornerShadowPath.arcTo(outerBounds,0f,180f,false);
+    mCornerShadowPath.arcTo(innerBounds,180f,180f,false);
+    mCornerShadowPath.arcTo(innerBounds,0f,180f,false);
+    mCornerShadowPath.close();
+    float shadowRadius=-outerBounds.top;
+    if (shadowRadius > 0f) {
+      float startRatio=size / shadowRadius;
+      mCornerShadowPaint.setShader(new RadialGradient(0,0,shadowRadius,new int[]{0,mShadowStartColor,mShadowEndColor},new float[]{0.0F,startRatio,1.0F},Shader.TileMode.CLAMP));
+    }
+    return;
+  }
+  RectF innerBounds=new RectF(-mCornerRadius,-mCornerRadius,mCornerRadius,mCornerRadius);
+  RectF outerBounds=new RectF(innerBounds);
+  outerBounds.inset(-mShadowSize,-mShadowSize);
+  if (mCornerShadowPath == null) {
+    mCornerShadowPath=new Path();
+  }
+ else {
+    mCornerShadowPath.reset();
+  }
+  mCornerShadowPath.setFillType(Path.FillType.EVEN_ODD);
+  mCornerShadowPath.moveTo(-mCornerRadius,0);
+  mCornerShadowPath.rLineTo(-mShadowSize,0);
+  mCornerShadowPath.arcTo(outerBounds,180f,90f,false);
+  mCornerShadowPath.arcTo(innerBounds,270f,-90f,false);
+  mCornerShadowPath.close();
+  float shadowRadius=-outerBounds.top;
+  if (shadowRadius > 0f) {
+    float startRatio=mCornerRadius / shadowRadius;
+    mCornerShadowPaint.setShader(new RadialGradient(0,0,shadowRadius,new int[]{0,mShadowStartColor,mShadowEndColor},new float[]{0F,startRatio,1F},Shader.TileMode.CLAMP));
+  }
+  mEdgeShadowPaint.setShader(new LinearGradient(0,innerBounds.top,0,outerBounds.top,mShadowStartColor,mShadowEndColor,Shader.TileMode.CLAMP));
+  mEdgeShadowPaint.setAntiAlias(false);
+}

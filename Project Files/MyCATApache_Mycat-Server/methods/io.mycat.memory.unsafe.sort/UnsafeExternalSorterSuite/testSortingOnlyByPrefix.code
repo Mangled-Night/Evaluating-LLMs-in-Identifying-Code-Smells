@@ -1,0 +1,19 @@
+@Test public void testSortingOnlyByPrefix() throws Exception {
+  final UnsafeExternalSorter sorter=newSorter();
+  insertNumber(sorter,5);
+  insertNumber(sorter,1);
+  insertNumber(sorter,3);
+  sorter.spill();
+  insertNumber(sorter,4);
+  sorter.spill();
+  insertNumber(sorter,2);
+  UnsafeSorterIterator iter=sorter.getSortedIterator();
+  for (int i=1; i <= 5; i++) {
+    iter.loadNext();
+    assertEquals(i,iter.getKeyPrefix());
+    assertEquals(4,iter.getRecordLength());
+    assertEquals(i,Platform.getInt(iter.getBaseObject(),iter.getBaseOffset()));
+  }
+  sorter.cleanupResources();
+  assertSpillFilesWereCleanedUp();
+}

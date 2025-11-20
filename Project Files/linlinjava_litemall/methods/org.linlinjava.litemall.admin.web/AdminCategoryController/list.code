@@ -1,0 +1,30 @@
+@RequiresPermissions("admin:category:list") @RequiresPermissionsDesc(menu={"商场管理","类目管理"},button="查询") @GetMapping("/list") public Object list(){
+  List<CategoryVo> categoryVoList=new ArrayList<>();
+  List<LitemallCategory> categoryList=categoryService.queryByPid(0);
+  for (  LitemallCategory category : categoryList) {
+    CategoryVo categoryVO=new CategoryVo();
+    categoryVO.setId(category.getId());
+    categoryVO.setDesc(category.getDesc());
+    categoryVO.setIconUrl(category.getIconUrl());
+    categoryVO.setPicUrl(category.getPicUrl());
+    categoryVO.setKeywords(category.getKeywords());
+    categoryVO.setName(category.getName());
+    categoryVO.setLevel(category.getLevel());
+    List<CategoryVo> children=new ArrayList<>();
+    List<LitemallCategory> subCategoryList=categoryService.queryByPid(category.getId());
+    for (    LitemallCategory subCategory : subCategoryList) {
+      CategoryVo subCategoryVo=new CategoryVo();
+      subCategoryVo.setId(subCategory.getId());
+      subCategoryVo.setDesc(subCategory.getDesc());
+      subCategoryVo.setIconUrl(subCategory.getIconUrl());
+      subCategoryVo.setPicUrl(subCategory.getPicUrl());
+      subCategoryVo.setKeywords(subCategory.getKeywords());
+      subCategoryVo.setName(subCategory.getName());
+      subCategoryVo.setLevel(subCategory.getLevel());
+      children.add(subCategoryVo);
+    }
+    categoryVO.setChildren(children);
+    categoryVoList.add(categoryVO);
+  }
+  return ResponseUtil.okList(categoryVoList);
+}

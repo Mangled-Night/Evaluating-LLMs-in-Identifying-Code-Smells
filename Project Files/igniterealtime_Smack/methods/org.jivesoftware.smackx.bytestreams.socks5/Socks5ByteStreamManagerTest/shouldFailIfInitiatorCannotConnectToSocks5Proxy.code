@@ -1,0 +1,50 @@
+/** 
+ * Invoking  {@link Socks5BytestreamManager#establishSession(org.jxmpp.jid.Jid,String)} should fail ifinitiator can not connect to the SOCKS5 proxy used by target.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws XmppStringprepException if the provided string is invalid.
+ */
+@Test public void shouldFailIfInitiatorCannotConnectToSocks5Proxy() throws SmackException, InterruptedException, XMPPException, XmppStringprepException {
+  final Protocol protocol=new Protocol();
+  final XMPPConnection connection=ConnectionUtils.createMockedConnection(protocol,initiatorJID);
+  final String sessionID="session_id_shouldFailIfInitiatorCannotConnectToSocks5Proxy";
+  final DomainBareJid proxyJID=JidCreate.domainBareFrom("s5b-proxy.initiator.org");
+  final String proxyAddress="192.0.2.1";
+  Socks5BytestreamManager byteStreamManager=Socks5BytestreamManager.getBytestreamManager(connection);
+  byteStreamManager.setAnnounceLocalStreamHost(false);
+  byteStreamManager.setProxyConnectionTimeout(3000);
+  DiscoverInfoBuilder discoverInfoBuilder=Socks5PacketUtils.createDiscoverInfo(targetJID,initiatorJID);
+  discoverInfoBuilder.addFeature(Bytestream.NAMESPACE);
+  protocol.addResponse(discoverInfoBuilder.build(),Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  DiscoverItems discoverItems=Socks5PacketUtils.createDiscoverItems(xmppServer,initiatorJID);
+  Item item=new Item(proxyJID);
+  discoverItems.addItem(item);
+  protocol.addResponse(discoverItems,Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  DiscoverInfoBuilder proxyInfo=Socks5PacketUtils.createDiscoverInfo(proxyJID,initiatorJID);
+  Identity identity=new Identity("proxy",proxyJID.toString(),"bytestreams");
+  proxyInfo.addIdentity(identity);
+  protocol.addResponse(proxyInfo.build(),Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  Bytestream streamHostInfo=Socks5PacketUtils.createBytestreamResponse(proxyJID,initiatorJID);
+  streamHostInfo.addStreamHost(proxyJID,proxyAddress,7778);
+  protocol.addResponse(streamHostInfo,Verification.correspondingSenderReceiver,Verification.requestTypeGET);
+  Bytestream streamHostUsedPacket=Socks5PacketUtils.createBytestreamResponse(targetJID,initiatorJID);
+  streamHostUsedPacket.setSessionID(sessionID);
+  streamHostUsedPacket.setUsedHost(proxyJID);
+  protocol.addResponse(streamHostUsedPacket,new Verification<Bytestream,Bytestream>(){
+    @Override public void verify(    Bytestream request,    Bytestream response){
+      assertEquals(response.getSessionID(),request.getSessionID());
+      assertEquals(1,request.getStreamHosts().size());
+      StreamHost streamHost=(StreamHost)request.getStreamHosts().toArray()[0];
+      assertEquals(response.getUsedHost().getJID(),streamHost.getJID());
+    }
+  }
+,Verification.correspondingSenderReceiver,Verification.requestTypeSET);
+  IOException e=assertThrows(IOException.class,() -> {
+    byteStreamManager.establishSession(targetJID,sessionID);
+  }
+);
+  protocol.verifyAll();
+  Throwable actualCause=e.getCause();
+  assertEquals(TimeoutException.class,actualCause.getClass(),"Unexpected throwable: " + actualCause + '.'+ ExceptionUtil.getStackTrace(actualCause));
+}

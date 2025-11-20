@@ -1,0 +1,65 @@
+/** 
+ * Raw UDP profile.
+ */
+public static class RawUdp extends JingleTransport {
+  public static final String NAMESPACE="http://www.xmpp.org/extensions/xep-0177.html#ns";
+  public RawUdp(){
+    super();
+    setNamespace(NAMESPACE);
+  }
+  /** 
+ * Add a transport candidate.
+ * @see org.jivesoftware.smackx.jingleold.packet.JingleTransport#addCandidate(org.jivesoftware.smackx.jingleold.packet.JingleTransport.JingleTransportCandidate)
+ */
+  @Override public void addCandidate(  final JingleTransportCandidate candidate){
+    candidates.clear();
+    super.addCandidate(candidate);
+  }
+  /** 
+ * Get the list of candidates. As a "raw-udp" transport can only contain one candidate, we use the first in the list...
+ * @see org.jivesoftware.smackx.jingleold.packet.JingleTransport#getCandidates()
+ */
+  @Override public List<JingleTransportCandidate> getCandidatesList(){
+    List<JingleTransportCandidate> copy=new ArrayList<>();
+    List<JingleTransportCandidate> superCandidatesList=super.getCandidatesList();
+    if (superCandidatesList.size() > 0) {
+      copy.add(superCandidatesList.get(0));
+    }
+    return copy;
+  }
+  /** 
+ * Raw-udp transport candidate.
+ */
+public static class Candidate extends JingleTransportCandidate {
+    /** 
+ * Default constructor.
+ */
+    public Candidate(){
+      super();
+    }
+    /** 
+ * Constructor with a transport candidate.
+ * @param tc the transport candidate.
+ */
+    public Candidate(    final TransportCandidate tc){
+      super(tc);
+    }
+    /** 
+ * Get the elements of this candidate.
+ */
+    @Override protected String getChildElements(){
+      StringBuilder buf=new StringBuilder();
+      if (transportCandidate != null && transportCandidate instanceof TransportCandidate.Fixed) {
+        TransportCandidate.Fixed tcf=(TransportCandidate.Fixed)transportCandidate;
+        buf.append(" generation=\"").append(tcf.getGeneration()).append('"');
+        buf.append(" ip=\"").append(tcf.getIp()).append('"');
+        buf.append(" port=\"").append(tcf.getPort()).append('"');
+        String name=tcf.getName();
+        if (name != null) {
+          buf.append(" name=\"").append(name).append('"');
+        }
+      }
+      return buf.toString();
+    }
+  }
+}

@@ -1,0 +1,28 @@
+@Override public StateTransitionResult.AttemptResult transitionInto(WalkStateGraphContext walkStateGraphContext){
+  closingStreamReceived=false;
+  StreamOpenAndCloseFactory openAndCloseFactory=activeTransport.getStreamOpenAndCloseFactory();
+  AbstractStreamClose closeStreamElement=openAndCloseFactory.createStreamClose();
+  boolean streamCloseIssued=outgoingElementsQueue.offerAndShutdown(closeStreamElement);
+  if (streamCloseIssued) {
+    activeTransport.notifyAboutNewOutgoingElements();
+    boolean successfullyReceivedStreamClose=waitForClosingStreamTagFromServer();
+    if (successfullyReceivedStreamClose) {
+      for (Iterator<XmppInputOutputFilter> it=connectionInternal.getXmppInputOutputFilterBeginIterator(); it.hasNext(); ) {
+        XmppInputOutputFilter filter=it.next();
+        filter.closeInputOutput();
+      }
+      activeTransport.afterFiltersClosed();
+      for (Iterator<XmppInputOutputFilter> it=connectionInternal.getXmppInputOutputFilterBeginIterator(); it.hasNext(); ) {
+        XmppInputOutputFilter filter=it.next();
+        try {
+          filter.waitUntilInputOutputClosed();
+        }
+ catch (        IOException|CertificateException|InterruptedException|SmackException|XMPPException e) {
+          LOGGER.log(Level.WARNING,"waitUntilInputOutputClosed() threw",e);
+        }
+      }
+      authenticated=false;
+    }
+  }
+  return StateTransitionResult.Success.EMPTY_INSTANCE;
+}

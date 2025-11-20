@@ -1,0 +1,18 @@
+@Override Partitions getPartitions(Partitions current,Map<RedisURI,Partitions> topologyViews){
+  if (topologyViews.isEmpty()) {
+    return current;
+  }
+  List<VotedPartitions> votedList=new ArrayList<>();
+  for (  Partitions partitions : topologyViews.values()) {
+    int knownNodes=0;
+    for (    RedisClusterNode knownNode : current) {
+      if (partitions.getPartitionByNodeId(knownNode.getNodeId()) != null) {
+        knownNodes++;
+      }
+    }
+    votedList.add(new VotedPartitions(knownNodes,partitions));
+  }
+  Collections.shuffle(votedList);
+  Collections.sort(votedList,(o1,o2) -> Integer.compare(o2.votes,o1.votes));
+  return votedList.get(0).partitions;
+}

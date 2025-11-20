@@ -1,0 +1,143 @@
+private final class RenderTask implements Runnable {
+  private RenderTask(){
+  }
+  private Rectangle calcBox(  List<ChunkMonitorEntry> chunkEntries){
+    if (chunkEntries.isEmpty()) {
+      return new Rectangle(0,0,0,0);
+    }
+    int xmin=Integer.MAX_VALUE;
+    int xmax=Integer.MIN_VALUE;
+    int ymin=Integer.MAX_VALUE;
+    int ymax=Integer.MIN_VALUE;
+    for (    ChunkMonitorEntry entry : chunkEntries) {
+      final Vector3ic pos=entry.getPosition();
+      if (pos.y() != renderY) {
+        continue;
+      }
+      if (pos.x() < xmin) {
+        xmin=pos.x();
+      }
+      if (pos.x() > xmax) {
+        xmax=pos.x();
+      }
+      if (pos.z() < ymin) {
+        ymin=pos.z();
+      }
+      if (pos.z() > ymax) {
+        ymax=pos.z();
+      }
+    }
+    return new Rectangle(xmin,ymin,xmax - xmin + 1,ymax - ymin + 1);
+  }
+  private Color calcChunkColor(  ChunkMonitorEntry entry){
+    final Chunk chunk=entry.getLatestChunk();
+    if (chunk == null) {
+      return COLOR_DEAD;
+    }
+    if (chunk.getMesh() != null) {
+      return COLOR_HIGHLIGHT_TESSELLATION;
+    }
+    if (chunk.isReady()) {
+      return COLOR_COMPLETE;
+    }
+ else {
+      return COLOR_INTERNAL_LIGHT_GENERATION_PENDING;
+    }
+  }
+  private void renderSelectedChunk(  Graphics2D g,  int offsetx,  int offsety,  Vector3i pos){
+    if (pos != null) {
+      g.setColor(COLOR_SELECTED_CHUNK);
+      g.drawRect(pos.x * chunkSize + offsetx,pos.z * chunkSize + offsety,chunkSize - 1,chunkSize - 1);
+      g.drawRect(pos.x * chunkSize + offsetx - 1,pos.z * chunkSize + offsety - 1,chunkSize + 1,chunkSize + 1);
+    }
+  }
+  private void renderBox(  Graphics2D g,  int offsetx,  int offsety,  Rectangle box){
+    g.setColor(Color.WHITE);
+    g.drawRect(box.x * chunkSize + offsetx,box.y * chunkSize + offsety,box.width * chunkSize - 1,box.height * chunkSize - 1);
+  }
+  private void renderBackground(  Graphics2D g,  int width,  int height){
+    g.setColor(Color.BLACK);
+    g.fillRect(0,0,width,height);
+  }
+  private void renderChunks(  Graphics2D g,  int offsetx,  int offsety,  List<ChunkMonitorEntry> chunkEntries){
+    chunkEntries.stream().filter(entry -> entry.getPosition().y() == renderY).forEach(entry -> renderChunk(g,offsetx,offsety,entry.getPosition(),entry));
+  }
+  private void renderChunk(  Graphics2D g,  int offsetx,  int offsety,  Vector3ic pos,  ChunkMonitorEntry entry){
+    g.setColor(calcChunkColor(entry));
+    g.fillRect(pos.x() * chunkSize + offsetx + 1,pos.z() * chunkSize + offsety + 1,chunkSize - 2,chunkSize - 2);
+  }
+  private void render(  Graphics2D g,  int offsetx,  int offsety,  int width,  int height,  List<ChunkMonitorEntry> chunkEntries){
+    final Rectangle box=calcBox(chunkEntries);
+    renderBackground(g,width,height);
+    renderChunks(g,offsetx,offsety,chunkEntries);
+    renderBox(g,offsetx,offsety,box);
+    renderSelectedChunk(g,offsetx,offsety,selectedChunk);
+  }
+  private void render(){
+    final Graphics2D g=image.getGraphics();
+    if (g != null) {
+      final int iw=image.getWidth();
+      final int ih=image.getHeight();
+      render(g,centerOffsetX + offsetX,centerOffsetY + offsetY,iw,ih,chunks);
+      image.swap();
+      repaint();
+    }
+  }
+  private void repaint(){
+    SwingUtilities.invokeLater(ChunkMonitorDisplay.this::repaint);
+  }
+  private long poll(  List<Request> output) throws InterruptedException {
+    long time=System.currentTimeMillis();
+    final Request r=queue.poll(500,TimeUnit.MILLISECONDS);
+    if (r != null) {
+      output.add(r);
+      queue.drainTo(output);
+    }
+    return (System.currentTimeMillis() - time);
+  }
+  private void doFollowPlayer(){
+    final Vector3i pos=calcPlayerChunkPos();
+    if (pos != null) {
+      setRenderY(pos.y);
+    }
+  }
+  @Override public void run(){
+    Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
+    final List<Request> requests=new LinkedList<>();
+    try {
+      while (!stopThread) {
+        final long slept=poll(requests);
+        boolean needsRendering=false;
+        boolean fastResume=false;
+        for (        Request r : requests) {
+          try (ThreadActivity ignored=ThreadMonitor.startThreadActivity(r.getName())){
+            r.execute();
+          }
+ catch (          Exception e) {
+            ThreadMonitor.addError(e);
+            logger.error("Error executing chunk monitor update",e);
+          }
+ finally {
+            needsRendering|=r.needsRendering();
+            fastResume|=r.fastResume();
+          }
+        }
+        requests.clear();
+        if (followPlayer) {
+          doFollowPlayer();
+        }
+        if (needsRendering) {
+          render();
+        }
+        if (!fastResume && (slept <= 400)) {
+          Thread.sleep(refreshInterval - slept);
+        }
+      }
+    }
+ catch (    Exception e) {
+      ThreadMonitor.addError(e);
+      logger.error("Error executing chunk monitor update",e);
+    }
+    executor.shutdownNow();
+  }
+}

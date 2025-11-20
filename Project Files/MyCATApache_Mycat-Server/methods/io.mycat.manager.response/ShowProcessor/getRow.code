@@ -1,0 +1,44 @@
+private static RowDataPacket getRow(NIOProcessor processor,String charset){
+  BufferPool pool=processor.getBufferPool();
+  RowDataPacket row=new RowDataPacket(FIELD_COUNT);
+  long bufferSize=0;
+  long bufferCapacity=0;
+  long free=0;
+  long bufferUsagePercent=0;
+  long bufferSharedOpts=pool.getSharedOptsCount();
+  try {
+    if (pool instanceof ByteBufferArena) {
+      ByteBufferArena bufferPool=(ByteBufferArena)pool;
+      bufferSize=bufferPool.size();
+      bufferCapacity=bufferPool.capacity();
+      free=bufferSize - bufferCapacity;
+      bufferUsagePercent=(long)((bufferCapacity) * 100.0 / bufferSize);
+    }
+ else     if (pool instanceof DirectByteBufferPool) {
+      DirectByteBufferPool bufferPool=(DirectByteBufferPool)pool;
+      bufferSize=bufferPool.size();
+      bufferCapacity=bufferPool.getNetDirectMemoryUsage().values().stream().mapToLong(i -> i).count();
+      free=bufferSize - bufferCapacity;
+      bufferSharedOpts=bufferPool.getSharedOptsCount();
+      bufferUsagePercent=(long)((bufferCapacity) * 100.0 / bufferSize);
+    }
+ else {
+      return row;
+    }
+    row.add(processor.getName().getBytes());
+    row.add(LongUtil.toBytes(processor.getNetInBytes()));
+    row.add(LongUtil.toBytes(processor.getNetOutBytes()));
+    row.add(LongUtil.toBytes(0));
+    row.add(IntegerUtil.toBytes(0));
+    row.add(IntegerUtil.toBytes(processor.getWriteQueueSize()));
+    row.add(LongUtil.toBytes(free));
+    row.add(LongUtil.toBytes(bufferSize));
+    row.add(LongUtil.toBytes(bufferUsagePercent));
+    row.add(LongUtil.toBytes(bufferSharedOpts));
+    row.add(IntegerUtil.toBytes(processor.getFrontends().size()));
+    row.add(IntegerUtil.toBytes(processor.getBackends().size()));
+  }
+  finally {
+    return row;
+  }
+}

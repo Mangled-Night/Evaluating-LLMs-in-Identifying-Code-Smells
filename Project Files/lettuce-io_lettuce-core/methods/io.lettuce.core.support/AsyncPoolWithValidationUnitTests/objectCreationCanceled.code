@@ -1,0 +1,12 @@
+@Test void objectCreationCanceled(){
+  CompletableFuture<String> progress=new CompletableFuture<>();
+  when(factory.create()).thenReturn(progress);
+  BoundedAsyncPool<String> pool=new BoundedAsyncPool<>(factory,BoundedPoolConfig.create());
+  CompletableFuture<String> acquire=pool.acquire();
+  acquire.cancel(true);
+  progress.complete("foo");
+  assertThat(pool.getIdle()).isEqualTo(1);
+  assertThat(pool.getObjectCount()).isEqualTo(1);
+  assertThat(pool.getCreationInProgress()).isZero();
+  verify(factory,never()).destroy(anyString());
+}

@@ -1,0 +1,23 @@
+@Test void noCommandsExecutedAfterConnectionIsDisconnected(){
+  StatefulRedisConnection<String,String> connection=client.connect();
+  connection.sync().quit();
+  Wait.untilTrue(() -> !connection.isOpen()).waitOrTimeout();
+  try {
+    connection.sync().incr(key);
+  }
+ catch (  RedisException e) {
+    assertThat(e).isInstanceOf(RedisException.class);
+  }
+  connection.close();
+  StatefulRedisConnection<String,String> connection2=client.connect();
+  connection2.async().quit();
+  Delay.delay(Duration.ofMillis(100));
+  try {
+    Wait.untilTrue(() -> !connection.isOpen()).waitOrTimeout();
+    connection2.sync().incr(key);
+  }
+ catch (  Exception e) {
+    assertThat(e).isExactlyInstanceOf(RedisException.class).hasMessageContaining("not connected");
+  }
+  connection2.close();
+}

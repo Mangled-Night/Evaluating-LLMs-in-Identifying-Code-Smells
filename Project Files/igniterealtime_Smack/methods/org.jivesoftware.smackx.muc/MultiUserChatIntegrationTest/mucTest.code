@@ -1,0 +1,28 @@
+@SmackIntegrationTest public void mucTest() throws Exception {
+  EntityBareJid mucAddress=getRandomRoom("smack-inttest-message");
+  MultiUserChat mucAsSeenByOne=mucManagerOne.getMultiUserChat(mucAddress);
+  MultiUserChat mucAsSeenByTwo=mucManagerTwo.getMultiUserChat(mucAddress);
+  final String mucMessage="Smack Integration Test MUC Test Message " + randomString;
+  final ResultSyncPoint<String,Exception> resultSyncPoint=new ResultSyncPoint<>();
+  mucAsSeenByTwo.addMessageListener(new MessageListener(){
+    @Override public void processMessage(    Message message){
+      String body=message.getBody();
+      if (mucMessage.equals(body)) {
+        resultSyncPoint.signal(body);
+      }
+    }
+  }
+);
+  createMuc(mucAsSeenByOne,"one-" + randomString);
+  mucAsSeenByTwo.join(Resourcepart.from("two-" + randomString));
+  mucAsSeenByOne.sendMessage(mucMessage);
+  try {
+    resultSyncPoint.waitForResult(timeout);
+  }
+ catch (  TimeoutException e) {
+    throw new AssertionError("Failed to receive presence",e);
+  }
+ finally {
+    tryDestroy(mucAsSeenByOne);
+  }
+}

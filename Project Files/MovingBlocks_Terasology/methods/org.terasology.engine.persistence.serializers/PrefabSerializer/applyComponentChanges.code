@@ -1,0 +1,26 @@
+private void applyComponentChanges(Module context,EntityData.Prefab prefabData,PrefabData result){
+  for (  String removedComponent : prefabData.getRemovedComponentList()) {
+    ComponentMetadata<?> metadata=componentLibrary.resolve(removedComponent,context);
+    if (metadata != null) {
+      result.removeComponent(metadata.getType());
+    }
+  }
+  for (  EntityData.Component componentData : prefabData.getComponentList()) {
+    ComponentMetadata<?> metadata=componentLibrary.resolve(componentData.getType(),context);
+    if (metadata != null) {
+      Component existing=result.getComponent(metadata.getType());
+      if (existing != null) {
+        componentSerializer.deserializeOnto(existing,componentData,context);
+      }
+ else {
+        Component newComponent=componentSerializer.deserialize(componentData,context);
+        if (newComponent != null) {
+          result.addComponent(newComponent);
+        }
+      }
+    }
+ else     if (componentData.hasType()) {
+      logger.warn("Prefab '{}' contains unknown component '{}'",prefabData.getName(),componentData.getType());
+    }
+  }
+}

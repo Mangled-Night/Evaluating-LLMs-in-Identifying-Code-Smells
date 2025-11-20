@@ -1,0 +1,50 @@
+private void initHost(){
+  loadProcesses.add(new RegisterMods(context,gameManifest));
+  if (!headless) {
+    loadProcesses.add(new InitialiseRendering(context));
+  }
+  loadProcesses.add(new InitialiseEntitySystem(context));
+  loadProcesses.add(new RegisterBlocks(context,gameManifest));
+  if (!headless) {
+    loadProcesses.add(new InitialiseGraphics(context));
+  }
+  loadProcesses.add(new LoadPrefabs(context));
+  loadProcesses.add(new ProcessBlockPrefabs(context));
+  loadProcesses.add(new InitialiseComponentSystemManager(context));
+  if (!headless) {
+    loadProcesses.add(new RegisterInputSystem(context));
+  }
+  loadProcesses.add(new RegisterSystems(context,netMode));
+  loadProcesses.add(new InitialiseCommandSystem(context));
+  loadProcesses.add(new LoadExtraBlockData(context));
+  loadProcesses.add(new InitialiseWorld(gameManifest,context));
+  loadProcesses.add(new RegisterBlockFamilies(context));
+  loadProcesses.add(new EnsureSaveGameConsistency(context));
+  loadProcesses.add(new InitialisePhysics(context));
+  loadProcesses.add(new InitialiseSystems(context));
+  loadProcesses.add(new PreBeginSystems(context));
+  loadProcesses.add(new LoadEntities(context));
+  loadProcesses.add(new InitialiseBlockTypeEntities(context));
+  loadProcesses.add(new CreateWorldEntity(context,gameManifest));
+  loadProcesses.add(new InitialiseWorldGenerator(context));
+  loadProcesses.add(new InitialiseRecordAndReplay(context));
+  if (netMode.isServer()) {
+    boolean dedicated;
+    if (netMode == NetworkMode.DEDICATED_SERVER) {
+      dedicated=true;
+    }
+ else     if (netMode == NetworkMode.LISTEN_SERVER) {
+      dedicated=false;
+    }
+ else {
+      throw new IllegalStateException("Invalid server mode: " + netMode);
+    }
+    loadProcesses.add(new StartServer(context,dedicated));
+  }
+  loadProcesses.add(new PostBeginSystems(context));
+  if (netMode.hasLocalClient()) {
+    loadProcesses.add(new SetupLocalPlayer(context));
+    loadProcesses.add(new AwaitCharacterSpawn(context));
+  }
+  loadProcesses.add(new PrepareWorld(context));
+}

@@ -1,0 +1,45 @@
+/** 
+ * This method handles the stream negotiation process and transmits the file to the remote user. It returns immediately and the progress of the file transfer can be monitored through several methods: <UL> <LI> {@link FileTransfer#getStatus()}<LI> {@link FileTransfer#getProgress()}<LI> {@link FileTransfer#isDone()}</UL>
+ * @param in the stream to transfer to the remote entity.
+ * @param fileName the name of the file that is transferred
+ * @param fileSize the size of the file that is transferred
+ * @param description a description for the file to transfer.
+ */
+public synchronized void sendStream(final InputStream in,final String fileName,final long fileSize,final String description){
+  checkTransferThread();
+  setFileInfo(fileName,fileSize);
+  transferThread=new Thread(new Runnable(){
+    @Override public void run(){
+      try {
+        outputStream=negotiateStream(fileName,fileSize,description);
+      }
+ catch (      XMPPErrorException e) {
+        handleXMPPException(e);
+        return;
+      }
+catch (      Exception e) {
+        setException(e);
+      }
+      if (outputStream == null) {
+        return;
+      }
+      if (!updateStatus(Status.negotiated,Status.in_progress)) {
+        return;
+      }
+      try {
+        writeToStream(in,outputStream);
+      }
+ catch (      IOException e) {
+        setStatus(FileTransfer.Status.error);
+        setException(e);
+      }
+ finally {
+        CloseableUtil.maybeClose(in,LOGGER);
+        CloseableUtil.maybeClose(outputStream,LOGGER);
+      }
+      updateStatus(Status.in_progress,FileTransfer.Status.complete);
+    }
+  }
+,"File Transfer " + streamID);
+  transferThread.start();
+}

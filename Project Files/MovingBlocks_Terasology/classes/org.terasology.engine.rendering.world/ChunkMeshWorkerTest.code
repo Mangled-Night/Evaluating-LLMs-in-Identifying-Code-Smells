@@ -1,0 +1,127 @@
+@ExtendWith(MockitoExtension.class) public class ChunkMeshWorkerTest {
+  static final Duration EXPECTED_DURATION=Duration.ofSeconds(4);
+  static Vector3ic position0=new Vector3i(123,456,789);
+  final Vector3i currentPosition=new Vector3i(position0);
+  Comparator<RenderableChunk> comparator=Comparator.comparingDouble(chunk -> chunk.getRenderPosition().distanceSquared(currentPosition.x,currentPosition.y,currentPosition.z));
+  ChunkMeshWorker worker;
+  /** 
+ * Creates a new mock ChunkMesh. <p> A simple work function for  {@link ChunkMeshWorker}.
+ */
+  static Mono<Tuple2<Chunk,ChunkMesh>> alwaysCreateMesh(  Chunk chunk){
+    chunk.setDirty(false);
+    return Mono.just(Tuples.of(chunk,mock(ChunkMesh.class)));
+  }
+  /** 
+ * Create a new Chunk at this position. <p> The  {@link DummyChunk} is marked {@code ready} and {@code dirty}.
+ */
+  static Chunk newDirtyChunk(  Vector3ic position){
+    var chunk=new DummyChunk(position);
+    chunk.markReady();
+    chunk.setDirty(true);
+    return chunk;
+  }
+  /** 
+ * Creates a new ChunkMeshWorker with a StepVerifier on its output. <p> Sets  {@link #worker} to a new {@link ChunkMeshWorker}.
+ * @return A verifier for {@link ChunkMeshWorker#getCompletedChunks()}.
+ */
+  protected StepVerifier.Step<Chunk> completedChunksStepVerifier(){
+    StepVerifier.setDefaultTimeout(EXPECTED_DURATION);
+    return StepVerifier.withVirtualTime(() -> {
+      worker=new ChunkMeshWorker(ChunkMeshWorkerTest::alwaysCreateMesh,comparator,Schedulers.parallel(),Schedulers.single());
+      return worker.getCompletedChunks();
+    }
+);
+  }
+  /** 
+ * Get completed Chunks as a list. <p> Applies the given function to a new  {@link ChunkMeshWorker}, and returns the list of completed {@link Chunk Chunks}. <p> Assumes the work will not be delayed by more than  {@link #EXPECTED_DURATION}.
+ */
+  protected List<Chunk> getChunksThatResultFrom(  Consumer<ChunkMeshWorker> withWorker){
+    var scheduler=VirtualTimeScheduler.create();
+    var workerB=new ChunkMeshWorker(ChunkMeshWorkerTest::alwaysCreateMesh,comparator,scheduler,scheduler);
+    var completed=workerB.getCompletedChunks().subscribeWith(TestSubscriber.create());
+    withWorker.accept(workerB);
+    scheduler.advanceTimeBy(EXPECTED_DURATION);
+    return completed.getReceivedOnNext();
+  }
+  @Test void testMultipleChunks(){
+    var chunk1=newDirtyChunk(position0);
+    var chunk2=newDirtyChunk(new Vector3i(position0).add(1,0,0));
+    var resultingChunks=getChunksThatResultFrom(worker -> {
+      worker.add(chunk1);
+      worker.add(chunk2);
+      worker.update();
+    }
+);
+    assertThat(resultingChunks).containsExactly(chunk1,chunk2);
+  }
+  @Test void testChunkIsNotProcessedTwice(){
+    var chunk1=newDirtyChunk(position0);
+    completedChunksStepVerifier().then(() -> {
+      worker.add(chunk1);
+      worker.add(chunk1);
+      worker.update();
+    }
+).expectNextCount(1).as("expect only one result").then(() -> {
+      worker.add(chunk1);
+      worker.update();
+    }
+).verifyTimeout(EXPECTED_DURATION);
+  }
+  @Test void testChunkIsRegeneratedIfDirty(){
+    var chunk1=newDirtyChunk(position0);
+    completedChunksStepVerifier().then(() -> {
+      worker.add(chunk1);
+      worker.update();
+    }
+).expectNext(chunk1).as("initial generation").then(() -> {
+      chunk1.setDirty(true);
+      worker.update();
+    }
+).expectNext(chunk1).as("regenerating after dirty").verifyTimeout(EXPECTED_DURATION);
+  }
+  @Test void testChunkCanBeRemovedBeforeMeshGeneration(){
+    var chunk=newDirtyChunk(position0);
+    completedChunksStepVerifier().then(() -> {
+      worker.add(chunk);
+      worker.remove(chunk);
+      worker.update();
+    }
+).verifyTimeout(EXPECTED_DURATION);
+  }
+  @Test void testDoubleRemoveIsNoProblem(){
+    var chunk=newDirtyChunk(position0);
+    completedChunksStepVerifier().then(() -> {
+      worker.add(chunk);
+      worker.remove(chunk);
+      worker.update();
+    }
+).then(() -> {
+      worker.remove(chunk);
+      worker.update();
+    }
+).verifyTimeout(EXPECTED_DURATION);
+  }
+  @Test void testChunkCanBeRemovedByPosition(){
+    var chunk=newDirtyChunk(position0);
+    completedChunksStepVerifier().then(() -> {
+      worker.add(chunk);
+      worker.remove(position0);
+      worker.update();
+    }
+).verifyTimeout(EXPECTED_DURATION);
+  }
+  @Test void testWorkIsPrioritized(){
+    var nearChunk=newDirtyChunk(position0);
+    var farChunk=newDirtyChunk(new Vector3i(position0).add(100,0,0));
+    var completed=getChunksThatResultFrom(worker -> {
+      worker.add(farChunk);
+      worker.add(nearChunk);
+      worker.update();
+    }
+);
+    assertThat(completed).containsExactly(nearChunk,farChunk).inOrder();
+  }
+  @Test @Disabled("TODO") void testWorkerStopsWhenShutDown(){
+    fail("TODO: add shutdown method");
+  }
+}

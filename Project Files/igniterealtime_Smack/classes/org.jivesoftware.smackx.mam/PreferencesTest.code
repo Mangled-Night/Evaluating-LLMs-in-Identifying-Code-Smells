@@ -1,0 +1,19 @@
+public class PreferencesTest {
+  private static final String retrievePrefsStanzaExample="<iq id='sarasa' type='get'>" + "<prefs xmlns='" + MamVersion.MAM2.getNamespace() + "'/>"+ "</iq>";
+  private static final String updatePrefsStanzaExample="<iq id='sarasa' type='set'>" + "<prefs xmlns='" + MamVersion.MAM2.getNamespace() + "' default='roster'>"+ "<always>"+ "<jid>romeo@montague.lit</jid>"+ "<jid>other@montague.lit</jid>"+ "</always>"+ "<never>"+ "<jid>montague@montague.lit</jid>"+ "</never>"+ "</prefs>"+ "</iq>";
+  @Test public void checkRetrievePrefsStanza() throws Exception {
+    MamPrefsIQ mamPrefIQ=MamVersion.MAM2.newElementFactory().newPrefsIQ();
+    mamPrefIQ.setStanzaId("sarasa");
+    assertEquals(mamPrefIQ.toXML(StreamOpen.CLIENT_NAMESPACE).toString(),retrievePrefsStanzaExample);
+  }
+  @Test public void checkUpdatePrefsStanza() throws Exception {
+    List<Jid> alwaysJids=new ArrayList<>();
+    alwaysJids.add(JidCreate.from("romeo@montague.lit"));
+    alwaysJids.add(JidCreate.from("other@montague.lit"));
+    List<Jid> neverJids=new ArrayList<>();
+    neverJids.add(JidCreate.from("montague@montague.lit"));
+    MamPrefsIQ mamPrefIQ=MamVersion.MAM2.newElementFactory().newPrefsIQ(alwaysJids,neverJids,DefaultBehavior.roster);
+    mamPrefIQ.setStanzaId("sarasa");
+    assertEquals(mamPrefIQ.toXML(StreamOpen.CLIENT_NAMESPACE).toString(),updatePrefsStanzaExample);
+  }
+}

@@ -1,0 +1,88 @@
+@Override public void drawTextureBordered(UITextureRegion texture,Rectanglei regionRectangle,Border border,boolean tile,float ux,float uy,float uw,float uh,float alpha){
+  if (!((TextureRegion)texture).getTexture().isLoaded()) {
+    return;
+  }
+  Rectanglei region=new Rectanglei(regionRectangle);
+  if (!currentTextureCropRegion.equals(requestedCropRegion) && !(currentTextureCropRegion.containsRectangle(region) && requestedCropRegion.containsRectangle(region))) {
+    textureMat.setFloat4(CROPPING_BOUNDARIES_PARAM,requestedCropRegion.minX,requestedCropRegion.maxX,requestedCropRegion.minY,requestedCropRegion.maxY);
+    currentTextureCropRegion=requestedCropRegion;
+  }
+  Vector2i textureSize=new Vector2i(TeraMath.ceilToInt(texture.getWidth() * uw),TeraMath.ceilToInt(texture.getHeight() * uh));
+  TextureCacheKey key=new TextureCacheKey(textureSize,new Vector2i(region.getSizeX(),region.getSizeY()),border,tile);
+  usedTextures.add(key);
+  Mesh mesh=cachedTextures.get(key);
+  if (mesh == null || mesh.isDisposed()) {
+    MeshBuilder builder=new MeshBuilder();
+    float topTex=(float)border.getTop() / textureSize.y;
+    float leftTex=(float)border.getLeft() / textureSize.x;
+    float bottomTex=1f - (float)border.getBottom() / textureSize.y;
+    float rightTex=1f - (float)border.getRight() / textureSize.x;
+    int centerHoriz=region.getSizeX() - border.getTotalWidth();
+    int centerVert=region.getSizeY() - border.getTotalHeight();
+    float top=(float)border.getTop() / region.getSizeY();
+    float left=(float)border.getLeft() / region.getSizeX();
+    float bottom=1f - (float)border.getBottom() / region.getSizeY();
+    float right=1f - (float)border.getRight() / region.getSizeX();
+    if (border.getTop() != 0) {
+      if (border.getLeft() != 0) {
+        addRectPoly(builder,0,0,left,top,0,0,leftTex,topTex);
+      }
+      if (tile) {
+        addTiles(builder,new Rectanglei(border.getLeft(),0).setSize(centerHoriz,border.getTop()),new Rectanglef(left,0,right,top),new Vector2i(textureSize.x - border.getTotalWidth(),border.getTop()),new Rectanglef(leftTex,0,rightTex,topTex));
+      }
+ else {
+        addRectPoly(builder,left,0,right,top,leftTex,0,rightTex,topTex);
+      }
+      if (border.getRight() != 0) {
+        addRectPoly(builder,right,0,1,top,rightTex,0,1,topTex);
+      }
+    }
+    if (border.getLeft() != 0) {
+      if (tile) {
+        addTiles(builder,new Rectanglei(0,border.getTop()).setSize(border.getLeft(),centerVert),new Rectanglef(0,top,left,bottom),new Vector2i(border.getLeft(),textureSize.y - border.getTotalHeight()),new Rectanglef(0,topTex,leftTex,bottomTex));
+      }
+ else {
+        addRectPoly(builder,0,top,left,bottom,0,topTex,leftTex,bottomTex);
+      }
+    }
+    if (tile) {
+      addTiles(builder,new Rectanglei(border.getLeft(),border.getTop()).setSize(centerHoriz,centerVert),new Rectanglef(left,top,right,bottom),new Vector2i(textureSize.x - border.getTotalWidth(),textureSize.y - border.getTotalHeight()),new Rectanglef(leftTex,topTex,rightTex,bottomTex));
+    }
+ else {
+      addRectPoly(builder,left,top,right,bottom,leftTex,topTex,rightTex,bottomTex);
+    }
+    if (border.getRight() != 0) {
+      if (tile) {
+        addTiles(builder,new Rectanglei(region.getSizeX() - border.getRight(),border.getTop()).setSize(border.getRight(),centerVert),new Rectanglef(right,top,1,bottom),new Vector2i(border.getRight(),textureSize.y - border.getTotalHeight()),new Rectanglef(rightTex,topTex,1,bottomTex));
+      }
+ else {
+        addRectPoly(builder,right,top,1,bottom,rightTex,topTex,1,bottomTex);
+      }
+    }
+    if (border.getBottom() != 0) {
+      if (border.getLeft() != 0) {
+        addRectPoly(builder,0,bottom,left,1,0,bottomTex,leftTex,1);
+      }
+      if (tile) {
+        addTiles(builder,new Rectanglei(border.getLeft(),region.getSizeY() - border.getBottom()).setSize(centerHoriz,border.getBottom()),new Rectanglef(left,bottom,right,1),new Vector2i(textureSize.x - border.getTotalWidth(),border.getBottom()),new Rectanglef(leftTex,bottomTex,rightTex,1));
+      }
+ else {
+        addRectPoly(builder,left,bottom,right,1,leftTex,bottomTex,rightTex,1);
+      }
+      if (border.getRight() != 0) {
+        addRectPoly(builder,right,bottom,1,1,rightTex,bottomTex,1,1);
+      }
+    }
+    mesh=builder.build();
+    cachedTextures.put(key,mesh);
+  }
+  textureMat.setFloat2("scale",region.getSizeX(),region.getSizeY());
+  textureMat.setFloat2("offset",region.minX,region.minY);
+  Rectanglef textureArea=texture.getRegion();
+  textureMat.setFloat2("texOffset",textureArea.minX + ux * textureArea.lengthX(),textureArea.minY + uy * textureArea.lengthY());
+  textureMat.setFloat2("texSize",uw * textureArea.lengthX(),uh * textureArea.lengthY());
+  textureMat.setTexture("tex",((TextureRegion)texture).getTexture());
+  textureMat.setFloat4("color",1,1,1,alpha);
+  textureMat.bindTextures();
+  mesh.render();
+}

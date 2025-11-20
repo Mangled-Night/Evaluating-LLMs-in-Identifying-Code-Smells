@@ -1,0 +1,27 @@
+/** 
+ * @see io.netty.channel.ChannelInboundHandlerAdapter#channelInactive(io.netty.channel.ChannelHandlerContext)
+ */
+@Override public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+  if (debugEnabled) {
+    logger.debug("{} channelInactive()",logPrefix());
+  }
+  if (channel != null && ctx.channel() != channel) {
+    logger.debug("{} My channel and ctx.channel mismatch. Propagating event to other listeners.",logPrefix());
+    super.channelInactive(ctx);
+    return;
+  }
+  tracedEndpoint=null;
+  setState(LifecycleState.DISCONNECTED);
+  setState(LifecycleState.DEACTIVATING);
+  endpoint.notifyChannelInactive(ctx.channel());
+  endpoint.notifyDrainQueuedCommands(this);
+  setState(LifecycleState.DEACTIVATED);
+  PristineFallbackCommand command=this.fallbackCommand;
+  if (isProtectedMode(command)) {
+    onProtectedMode(command.getOutput().getError());
+  }
+  if (debugEnabled) {
+    logger.debug("{} channelInactive() done",logPrefix());
+  }
+  super.channelInactive(ctx);
+}

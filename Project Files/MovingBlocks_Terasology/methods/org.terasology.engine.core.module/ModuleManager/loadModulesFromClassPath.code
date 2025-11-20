@@ -1,0 +1,31 @@
+private void loadModulesFromClassPath(){
+  ClasspathCompromisingModuleFactory ccModuleFactory=(ClasspathCompromisingModuleFactory)this.moduleFactory;
+  for (  String metadataName : ccModuleFactory.getModuleMetadataLoaderMap().keySet()) {
+    Enumeration<URL> urls;
+    try {
+      urls=ClassLoader.getSystemResources(metadataName);
+    }
+ catch (    IOException e) {
+      throw new RuntimeException(e);
+    }
+    while (urls.hasMoreElements()) {
+      URL url=urls.nextElement();
+      logger.debug("Probably a module in U:{}",url);
+      Path path=ccModuleFactory.canonicalModuleLocation(metadataName,url);
+      Module module;
+      try {
+        module=ccModuleFactory.createModule(path.toFile());
+      }
+ catch (      IOException e) {
+        logger.warn("Failed to create module from {}",path,e);
+        continue;
+      }
+      if (registry.add(module)) {
+        logger.info("Loaded {} from {}",module.getId(),path);
+      }
+ else {
+        logger.info("Module {} from {} was a duplicate; not registering this copy.",module.getId(),path);
+      }
+    }
+  }
+}

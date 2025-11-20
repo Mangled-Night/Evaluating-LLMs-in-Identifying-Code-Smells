@@ -1,0 +1,23 @@
+/** 
+ * Implementation of a an observer which registers beans to the CDI container for the detected RedisURIs. <p> The repository beans are associated to the EntityManagers using their qualifiers.
+ * @param beanManager The BeanManager instance.
+ */
+void afterBeanDiscovery(@Observes AfterBeanDiscovery afterBeanDiscovery,BeanManager beanManager){
+  int counter=0;
+  for (  Entry<Set<Annotation>,Bean<RedisURI>> entry : redisUris.entrySet()) {
+    Bean<RedisURI> redisUri=entry.getValue();
+    Set<Annotation> qualifiers=entry.getKey();
+    String clientBeanName=RedisClient.class.getSimpleName();
+    String clusterClientBeanName=RedisClusterClient.class.getSimpleName();
+    if (!containsDefault(qualifiers)) {
+      clientBeanName+=counter;
+      clusterClientBeanName+=counter;
+      counter++;
+    }
+    Bean<ClientResources> clientResources=this.clientResources.get(qualifiers);
+    RedisClientCdiBean clientBean=new RedisClientCdiBean(redisUri,clientResources,beanManager,qualifiers,clientBeanName);
+    register(afterBeanDiscovery,qualifiers,clientBean);
+    RedisClusterClientCdiBean clusterClientBean=new RedisClusterClientCdiBean(redisUri,clientResources,beanManager,qualifiers,clusterClientBeanName);
+    register(afterBeanDiscovery,qualifiers,clusterClientBean);
+  }
+}

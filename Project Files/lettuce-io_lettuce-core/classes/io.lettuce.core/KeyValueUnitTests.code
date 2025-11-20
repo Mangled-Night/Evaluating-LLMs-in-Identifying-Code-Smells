@@ -1,0 +1,60 @@
+/** 
+ * @author Will Glozer
+ * @author Mark Paluch
+ */
+class KeyValueUnitTests {
+  @Test void shouldCreateEmptyKeyValueFromOptional(){
+    KeyValue<String,String> value=KeyValue.from("key",Optional.<String>empty());
+    assertThat(value.hasValue()).isFalse();
+  }
+  @Test void shouldCreateEmptyValue(){
+    KeyValue<String,String> value=KeyValue.empty("key");
+    assertThat(value.hasValue()).isFalse();
+  }
+  @Test void shouldCreateNonEmptyValueFromOptional(){
+    KeyValue<Long,String> value=KeyValue.from(1L,Optional.of("hello"));
+    assertThat(value.hasValue()).isTrue();
+    assertThat(value.getValue()).isEqualTo("hello");
+  }
+  @Test void shouldCreateEmptyValueFromValue(){
+    KeyValue<String,String> value=KeyValue.fromNullable("key",null);
+    assertThat(value.hasValue()).isFalse();
+  }
+  @Test void shouldCreateNonEmptyValueFromValue(){
+    KeyValue<String,String> value=KeyValue.fromNullable("key","hello");
+    assertThat(value.hasValue()).isTrue();
+    assertThat(value.getValue()).isEqualTo("hello");
+  }
+  @Test void justShouldCreateValueFromValue(){
+    KeyValue<String,String> value=KeyValue.just("key","hello");
+    assertThat(value.hasValue()).isTrue();
+    assertThat(value.getKey()).isEqualTo("key");
+  }
+  @Test void justShouldRejectEmptyValueFromValue(){
+    assertThatThrownBy(() -> just(null)).isInstanceOf(IllegalArgumentException.class);
+  }
+  @Test void shouldCreateNonEmptyValue(){
+    KeyValue<String,String> value=KeyValue.from("key",Optional.of("hello"));
+    assertThat(value.hasValue()).isTrue();
+    assertThat(value.getValue()).isEqualTo("hello");
+  }
+  @Test void equals(){
+    KeyValue<String,String> kv=kv("key","value");
+    assertThat(kv.equals(kv("key","value"))).isTrue();
+    assertThat(kv.equals(null)).isFalse();
+    assertThat(kv.equals(kv("a","value"))).isFalse();
+    assertThat(kv.equals(kv("key","b"))).isFalse();
+  }
+  @Test void testHashCode(){
+    assertThat(kv("key","value").hashCode() != 0).isTrue();
+  }
+  @Test void toStringShouldRenderCorrectly(){
+    KeyValue<String,String> value=KeyValue.from("key",Optional.of("hello"));
+    KeyValue<String,String> empty=KeyValue.fromNullable("key",null);
+    assertThat(value.toString()).isEqualTo("KeyValue[key, hello]");
+    assertThat(empty.toString()).isEqualTo("KeyValue[key].empty");
+  }
+  KeyValue<String,String> kv(  String key,  String value){
+    return KeyValue.just(key,value);
+  }
+}

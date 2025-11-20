@@ -1,0 +1,18 @@
+public static long execulteCount(String sql,String toDn) throws SQLException, IOException {
+  PhysicalDBNode dbNode=MycatServer.getInstance().getConfig().getDataNodes().get(toDn);
+  PhysicalDBPool dbPool=dbNode.getDbPool();
+  PhysicalDatasource datasource=dbPool.getSources()[dbPool.getActivedIndex()];
+  DBHostConfig config=datasource.getConfig();
+  Connection con=null;
+  try {
+    con=DriverManager.getConnection("jdbc:mysql://" + config.getUrl() + "/"+ dbNode.getDatabase(),config.getUser(),config.getPassword());
+    List<Map<String,Object>> result=JdbcUtils.executeQuery(con,sql,new ArrayList<>());
+    if (result.size() == 1) {
+      return (long)result.get(0).get("count");
+    }
+  }
+  finally {
+    JdbcUtils.close(con);
+  }
+  return 0;
+}

@@ -1,0 +1,11 @@
+@Override protected CommandOutputFactory resolveCommandOutputFactory(OutputSelector outputSelector){
+  streamingExecution=ReactiveTypes.isMultiValueType(outputSelector.getOutputType().getRawClass());
+  OutputSelector componentType=new OutputSelector(outputSelector.getOutputType().getGeneric(0),outputSelector.getRedisCodec());
+  if (streamingExecution) {
+    CommandOutputFactory streamingFactory=getOutputResolver().resolveStreamingCommandOutput(componentType);
+    if (streamingExecution && streamingFactory != null) {
+      return streamingFactory;
+    }
+  }
+  return super.resolveCommandOutputFactory(componentType);
+}

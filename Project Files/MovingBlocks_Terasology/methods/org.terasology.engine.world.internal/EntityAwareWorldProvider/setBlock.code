@@ -1,0 +1,12 @@
+@Override public Block setBlock(Vector3ic pos,Block type){
+  if (GameThread.isCurrentThread()) {
+    EntityRef blockEntity=getBlockEntityAt(pos);
+    Block oldType=super.setBlock(pos,type);
+    final Set<Class<? extends Component>> retainComponents=Optional.ofNullable(blockEntity.getComponent(RetainComponentsComponent.class)).map(retainComponentsComponent -> retainComponentsComponent.components).orElse(Collections.emptySet());
+    if (oldType != null) {
+      updateBlockEntity(blockEntity,pos,oldType,type,false,retainComponents);
+    }
+    return oldType;
+  }
+  return null;
+}

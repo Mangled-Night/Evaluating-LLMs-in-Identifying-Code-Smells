@@ -1,0 +1,16 @@
+@Override public void onChunkReady(Vector3ic chunkPos){
+  WorldProvider worldProvider=context.get(WorldProvider.class);
+  List<NetData.BlockChangeMessage> updateBlockMessages=awaitingChunkReadyBlockUpdates.removeAll(new Vector3i(chunkPos));
+  for (  NetData.BlockChangeMessage message : updateBlockMessages) {
+    Vector3i pos=NetMessageUtil.convert(message.getPos());
+    Block newBlock=blockManager.getBlock((short)message.getNewBlock());
+    worldProvider.setBlock(pos,newBlock);
+  }
+  List<NetData.ExtraDataChangeMessage> updateExtraDataMessages=awaitingChunkReadyExtraDataUpdates.removeAll(new Vector3i(chunkPos));
+  for (  NetData.ExtraDataChangeMessage message : updateExtraDataMessages) {
+    Vector3i pos=NetMessageUtil.convert(message.getPos());
+    int newValue=message.getNewData();
+    int i=message.getIndex();
+    worldProvider.setExtraData(i,pos,newValue);
+  }
+}

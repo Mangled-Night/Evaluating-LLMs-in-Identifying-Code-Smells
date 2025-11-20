@@ -1,0 +1,79 @@
+public void testGetAffiliationList(){
+  try {
+    MultiUserChat muc2=new MultiUserChat(getConnection(1),room);
+    muc2.join("testbot2");
+    MultiUserChat muc3=new MultiUserChat(getConnection(2),room);
+    muc3.join("testbot3");
+    muc.grantOwnership(getBareJID(1));
+    muc.grantModerator("testbot3");
+    Collection<Affiliate> affiliates=muc.getOwners();
+    assertEquals("Room does not have 2 owners",2,affiliates.size());
+    for (    Affiliate affiliate1 : affiliates) {
+      if (getBareJID(0).equals(affiliate1.getJid())) {
+        assertEquals("Wrong affiliation","owner",affiliate1.getAffiliation());
+        assertEquals("Wrong role","moderator",affiliate1.getRole());
+        assertEquals("Wrong nick","testbot",affiliate1.getNick());
+      }
+ else       if (getBareJID(1).equals(affiliate1.getJid())) {
+        assertEquals("Wrong affiliation","owner",affiliate1.getAffiliation());
+        assertEquals("Wrong role","moderator",affiliate1.getRole());
+        assertEquals("Wrong nick","testbot2",affiliate1.getNick());
+      }
+ else {
+        fail("Unknown owner " + affiliate1.getJid());
+      }
+    }
+    affiliates=muc.getAdmins();
+    assertEquals("Room has admins",0,affiliates.size());
+    affiliates=muc.getMembers();
+    assertEquals("Room has admins",0,affiliates.size());
+    muc.grantMembership(getBareJID(1));
+    affiliates=muc.getMembers();
+    assertEquals("Room has admins",1,affiliates.size());
+    Affiliate affiliate=(Affiliate)affiliates.iterator().next();
+    assertEquals("Wrong member jid",getBareJID(1),affiliate.getJid());
+    affiliates=muc.getOutcasts();
+    assertEquals("Room has outcasts",0,affiliates.size());
+    Collection<Occupant> occupants=muc.getModerators();
+    assertEquals("Room does not have 2 moderators",2,occupants.size());
+    for (    Occupant occupant1 : occupants) {
+      if (getFullJID(0).equals(occupant1.getJid())) {
+        assertEquals("Wrong affiliation","owner",occupant1.getAffiliation());
+        assertEquals("Wrong role","moderator",occupant1.getRole());
+        assertEquals("Wrong nick","testbot",occupant1.getNick());
+      }
+ else       if (getFullJID(2).equals(occupant1.getJid())) {
+        assertEquals("Wrong affiliation","none",occupant1.getAffiliation());
+        assertEquals("Wrong role","moderator",occupant1.getRole());
+        assertEquals("Wrong nick","testbot3",occupant1.getNick());
+      }
+ else {
+        fail("Unknown moderator " + occupant1.getJid());
+      }
+    }
+    occupants=muc.getParticipants();
+    assertEquals("Room does not have 1 participant",1,occupants.size());
+    Occupant occupant=(Occupant)occupants.iterator().next();
+    assertEquals("Wrong participant jid",getFullJID(1),occupant.getJid());
+    Thread.sleep(500);
+    occupant=muc.getOccupant(room + "/testbot2");
+    assertNotNull("Occupant was not found",occupant);
+    assertEquals("Wrong occupant jid",getFullJID(1),occupant.getJid());
+    assertEquals("Wrong occupant affiliation","member",occupant.getAffiliation());
+    assertEquals("Wrong occupant role","participant",occupant.getRole());
+    assertEquals("Wrong occupant nick","testbot2",occupant.getNick());
+    try {
+      muc2.getOwners();
+      fail("User2 was able to get the list of owners");
+    }
+ catch (    XMPPException e) {
+      XMPPError xmppError=e.getStanzaError();
+      assertNotNull("No XMPPError was received getting the list of owners",xmppError);
+      assertEquals("A member was able to get the list of owners",403,xmppError.getCode());
+    }
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    fail(e.getMessage());
+  }
+}

@@ -1,0 +1,21 @@
+/** 
+ * Value object encapsulating tracing options.
+ * @author Mark Paluch
+ * @since 5.2
+ */
+static class BraveTracingOptions {
+  private final String serviceName;
+  private final Consumer<zipkin2.Endpoint.Builder> endpointCustomizer;
+  private final BiConsumer<RedisCommand<Object,Object,Object>,brave.Span> spanCustomizer;
+  BraveTracingOptions(  String serviceName,  Consumer<zipkin2.Endpoint.Builder> endpointCustomizer,  BiConsumer<RedisCommand<Object,Object,Object>,brave.Span> spanCustomizer){
+    this.serviceName=serviceName;
+    this.endpointCustomizer=endpointCustomizer;
+    this.spanCustomizer=spanCustomizer;
+  }
+  void customizeEndpoint(  zipkin2.Endpoint.Builder builder){
+    this.endpointCustomizer.accept(builder);
+  }
+  @SuppressWarnings("unchecked") void customizeSpan(  RedisCommand<?,?,?> command,  brave.Span span){
+    this.spanCustomizer.accept((RedisCommand<Object,Object,Object>)command,span);
+  }
+}

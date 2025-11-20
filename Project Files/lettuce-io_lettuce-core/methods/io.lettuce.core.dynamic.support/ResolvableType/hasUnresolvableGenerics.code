@@ -1,0 +1,26 @@
+/** 
+ * Determine whether the underlying type has any unresolvable generics: either through an unresolvable type variable on the type itself or through implementing a generic interface in a raw fashion, i.e. without substituting that interface's type variables. The result will be  {@code true} only in those two scenarios.
+ */
+public boolean hasUnresolvableGenerics(){
+  if (this == NONE) {
+    return false;
+  }
+  ResolvableType[] generics=getGenerics();
+  for (  ResolvableType generic : generics) {
+    if (generic.isUnresolvableTypeVariable() || generic.isWildcardWithoutBounds()) {
+      return true;
+    }
+  }
+  Class<?> resolved=resolve();
+  if (resolved != null) {
+    for (    Type genericInterface : resolved.getGenericInterfaces()) {
+      if (genericInterface instanceof Class) {
+        if (forClass((Class<?>)genericInterface).hasGenerics()) {
+          return true;
+        }
+      }
+    }
+    return getSuperType().hasUnresolvableGenerics();
+  }
+  return false;
+}

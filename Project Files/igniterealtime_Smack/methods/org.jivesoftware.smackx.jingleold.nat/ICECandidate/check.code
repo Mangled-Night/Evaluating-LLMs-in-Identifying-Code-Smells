@@ -1,0 +1,59 @@
+/** 
+ * Check if a transport candidate is usable. The transport resolver should check if the transport candidate the other endpoint has provided is usable. ICE Candidate can check connectivity using UDP echo Test.
+ */
+@SuppressWarnings("UnusedVariable") @Override public void check(final List<TransportCandidate> localCandidates){
+  final ICECandidate checkingCandidate=this;
+  Thread checkThread=new Thread(new Runnable(){
+    @Override public void run(){
+      final TestResult result=new TestResult();
+      if (getType().equals(Type.relay)) {
+        triggerCandidateChecked(false);
+        return;
+      }
+      ResultListener resultListener=new ResultListener(){
+        @Override public void testFinished(        TestResult testResult,        TransportCandidate candidate){
+          if (testResult.isReachable() && checkingCandidate.equals(candidate)) {
+            result.setResult(true);
+            LOGGER.fine("Candidate reachable: " + candidate.getIp() + ":"+ candidate.getPort()+ " from "+ getIp()+ ":"+ getPort());
+          }
+        }
+      }
+;
+      for (      TransportCandidate candidate : localCandidates) {
+        CandidateEcho echo=candidate.getCandidateEcho();
+        if (echo != null) {
+          if (candidate instanceof ICECandidate) {
+            ICECandidate iceCandidate=(ICECandidate)candidate;
+            if (iceCandidate.getType().equals(getType())) {
+              try {
+                echo.addResultListener(resultListener);
+                InetAddress address=InetAddress.getByName(getIp());
+                echo.testASync(checkingCandidate,getPassword());
+              }
+ catch (              UnknownHostException e) {
+                LOGGER.log(Level.WARNING,"exception",e);
+              }
+            }
+          }
+        }
+      }
+      for (int i=0; i < 10 && !result.isReachable(); i++)       try {
+        LOGGER.severe("ICE Candidate retry #" + i);
+        Thread.sleep(400);
+      }
+ catch (      InterruptedException e) {
+        LOGGER.log(Level.WARNING,"exception",e);
+      }
+      for (      TransportCandidate candidate : localCandidates) {
+        CandidateEcho echo=candidate.getCandidateEcho();
+        if (echo != null) {
+          echo.removeResultListener(resultListener);
+        }
+      }
+      triggerCandidateChecked(result.isReachable());
+    }
+  }
+,"Transport candidate check");
+  checkThread.setName("Transport candidate test");
+  checkThread.start();
+}

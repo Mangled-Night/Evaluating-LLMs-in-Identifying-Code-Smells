@@ -1,0 +1,36 @@
+public static InternetAddress from(String address){
+  final InternetAddress internetAddress;
+  if (InetAddressUtil.isIpV4Address(address)) {
+    internetAddress=new InternetAddress.Ipv4(address);
+  }
+ else   if (InetAddressUtil.isIpV6Address(address)) {
+    internetAddress=new InternetAddress.Ipv6(address);
+  }
+ else   if (address.contains(".")) {
+    InternetAddress domainNameInternetAddress;
+    try {
+      DnsName dnsName=DnsName.from(address);
+      domainNameInternetAddress=new InternetAddress.DomainName(address,dnsName);
+    }
+ catch (    InvalidDnsNameException e) {
+      domainNameInternetAddress=new InternetAddress.InvalidDomainName(address,e);
+    }
+    internetAddress=domainNameInternetAddress;
+  }
+ else {
+    DnsLabel dnsLabel=DnsLabel.from(address);
+    internetAddress=new InternetAddress.DomainNameLabel(address,dnsLabel);
+  }
+  return internetAddress;
+}
+public static InternetAddress from(InetAddress inetAddress){
+  if (inetAddress instanceof Inet4Address) {
+    return new InternetAddress.Ipv4(inetAddress.getHostAddress(),(Inet4Address)inetAddress);
+  }
+ else   if (inetAddress instanceof Inet6Address) {
+    return new InternetAddress.Ipv6(inetAddress.getHostAddress(),(Inet6Address)inetAddress);
+  }
+ else {
+    throw new IllegalArgumentException("Unknown type " + inetAddress.getClass() + " of "+ inetAddress);
+  }
+}

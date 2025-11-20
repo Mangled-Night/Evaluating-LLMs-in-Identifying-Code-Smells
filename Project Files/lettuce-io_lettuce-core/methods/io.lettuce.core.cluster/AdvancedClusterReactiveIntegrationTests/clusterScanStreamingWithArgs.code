@@ -1,0 +1,16 @@
+@Test void clusterScanStreamingWithArgs(){
+  RedisAdvancedClusterCommands<String,String> sync=commands.getStatefulConnection().sync();
+  sync.mset(KeysAndValues.MAP);
+  ListStreamingAdapter<String> adapter=new ListStreamingAdapter<>();
+  StreamScanCursor scanCursor=null;
+  do {
+    if (scanCursor == null) {
+      scanCursor=commands.scan(adapter,ScanArgs.Builder.matches("a*")).block();
+    }
+ else {
+      scanCursor=commands.scan(adapter,scanCursor,ScanArgs.Builder.matches("a*")).block();
+    }
+  }
+ while (!scanCursor.isFinished());
+  assertThat(adapter.getList()).containsAll(KeysAndValues.KEYS.stream().filter(k -> k.startsWith("a")).collect(Collectors.toList()));
+}

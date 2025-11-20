@@ -1,0 +1,39 @@
+/** 
+ * Open a connection to a Redis Sentinel that treats keys and values as UTF-8 strings.
+ * @return A new stateful Redis Sentinel connection
+ */
+public StatefulRedisSentinelConnection<String,String> connectSentinel(){
+  return connectSentinel(newStringStringCodec());
+}
+/** 
+ * Open a connection to a Redis Sentinel that treats keys and use the supplied  {@link RedisCodec codec} to encode/decodekeys and values. The client  {@link RedisURI} must contain one or more sentinels.
+ * @param codec Use this codec to encode/decode keys and values, must not be {@code null}
+ * @param < K > Key type
+ * @param < V > Value type
+ * @return A new stateful Redis Sentinel connection
+ */
+public <K,V>StatefulRedisSentinelConnection<K,V> connectSentinel(RedisCodec<K,V> codec){
+  checkForRedisURI();
+  return getConnection(connectSentinelAsync(codec,this.redisURI,getDefaultTimeout()));
+}
+/** 
+ * Open a connection to a Redis Sentinel using the supplied  {@link RedisURI} that treats keys and values as UTF-8 strings.The client  {@link RedisURI} must contain one or more sentinels.
+ * @param redisURI the Redis server to connect to, must not be {@code null}
+ * @return A new connection
+ */
+public StatefulRedisSentinelConnection<String,String> connectSentinel(RedisURI redisURI){
+  assertNotNull(redisURI);
+  return getConnection(connectSentinelAsync(newStringStringCodec(),redisURI,redisURI.getTimeout()));
+}
+/** 
+ * Open a connection to a Redis Sentinel using the supplied  {@link RedisURI} and use the supplied {@link RedisCodec codec}to encode/decode keys and values. The client  {@link RedisURI} must contain one or more sentinels.
+ * @param codec the Redis server to connect to, must not be {@code null}
+ * @param redisURI the Redis server to connect to, must not be {@code null}
+ * @param < K > Key type
+ * @param < V > Value type
+ * @return A new connection
+ */
+public <K,V>StatefulRedisSentinelConnection<K,V> connectSentinel(RedisCodec<K,V> codec,RedisURI redisURI){
+  assertNotNull(redisURI);
+  return getConnection(connectSentinelAsync(codec,redisURI,redisURI.getTimeout()));
+}

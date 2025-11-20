@@ -1,0 +1,21 @@
+/** 
+ * Convert URL to File, with support for  {@code jar} URLs. 
+ */
+private static File urlToFile(URL url){
+  URL fileUrl=url;
+  if (url.getProtocol().equals("jar")) {
+    try {
+      JarURLConnection connection=(JarURLConnection)url.openConnection();
+      fileUrl=connection.getJarFileURL();
+    }
+ catch (    IOException e) {
+      throw new RuntimeException("Failed to get file from " + url);
+    }
+  }
+  try {
+    return new File(fileUrl.toURI());
+  }
+ catch (  URISyntaxException e) {
+    throw new RuntimeException("Failed to get file from " + url,e);
+  }
+}

@@ -1,0 +1,28 @@
+/** 
+ * Retrieve a  {@link RedisClusterNode} by its hostname/port considering node aliases.
+ * @param host hostname.
+ * @param port port number.
+ * @return the {@link RedisClusterNode} or {@code null} if not found.
+ */
+public RedisClusterNode getPartition(String host,int port){
+  for (  RedisClusterNode partition : nodeReadView) {
+    RedisURI uri=partition.getUri();
+    if (matches(uri,host,port)) {
+      return partition;
+    }
+    for (    RedisURI redisURI : partition.getAliases()) {
+      if (matches(redisURI,host,port)) {
+        return partition;
+      }
+    }
+  }
+  return null;
+}
+/** 
+ * Returns the  {@link RedisClusterNode} at {@code index}.
+ * @param index the index
+ * @return the requested element using the read-view.
+ */
+public RedisClusterNode getPartition(int index){
+  return partitions.get(index);
+}

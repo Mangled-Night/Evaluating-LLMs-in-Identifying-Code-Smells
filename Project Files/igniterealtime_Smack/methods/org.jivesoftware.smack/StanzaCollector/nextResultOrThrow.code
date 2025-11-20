@@ -1,0 +1,43 @@
+/** 
+ * Returns the next available stanza. The method in equivalent to {@link #nextResultOrThrow(long)} where the timeout argument is the default reply timeout ofthe connection associated with this collector.
+ * @param < P > type of the result stanza.
+ * @return the next available stanza.
+ * @throws XMPPErrorException in case an error response was received.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws NotConnectedException if the XMPP connection is not connected.
+ * @see #nextResultOrThrow(long)
+ */
+public <P extends Stanza>P nextResultOrThrow() throws NoResponseException, XMPPErrorException, InterruptedException, NotConnectedException {
+  return nextResultOrThrow(connection.getReplyTimeout());
+}
+/** 
+ * Returns the next available stanza. The method call will block until a stanza is available or the <code>timeout</code> has elapsed. This method does also cancel the collector in every case. <p> Three things can happen when waiting for an response: </p> <ol> <li>A result response arrives.</li> <li>An error response arrives.</li> <li>An timeout occurs.</li> <li>The thread is interrupted</li> </ol> <p> in which this method will </p> <ol> <li>return with the result.</li> <li>throw an  {@link XMPPErrorException}.</li> <li>throw an  {@link NoResponseException}.</li> <li>throw an  {@link InterruptedException}.</li> </ol> <p> Additionally the method will throw a  {@link NotConnectedException} if no response wasreceived and the connection got disconnected. </p>
+ * @param timeout the amount of time to wait for the next stanza in milliseconds.
+ * @param < P > type of the result stanza.
+ * @return the next available stanza.
+ * @throws NoResponseException if there was no response from the server.
+ * @throws XMPPErrorException in case an error response was received.
+ * @throws InterruptedException if the calling thread was interrupted.
+ * @throws NotConnectedException if there was no response and the connection got disconnected.
+ */
+public <P extends Stanza>P nextResultOrThrow(long timeout) throws NoResponseException, XMPPErrorException, InterruptedException, NotConnectedException {
+  P result;
+  try {
+    result=nextResult(timeout);
+  }
+  finally {
+    cancel();
+  }
+  if (result == null) {
+    if (connectionException != null) {
+      throw new NotConnectedException(connection,packetFilter,connectionException);
+    }
+    if (!connection.isConnected()) {
+      throw new NotConnectedException(connection,packetFilter);
+    }
+    throw NoResponseException.newWith(timeout,this,cancelled);
+  }
+  XMPPErrorException.ifHasErrorThenThrow(result);
+  return result;
+}

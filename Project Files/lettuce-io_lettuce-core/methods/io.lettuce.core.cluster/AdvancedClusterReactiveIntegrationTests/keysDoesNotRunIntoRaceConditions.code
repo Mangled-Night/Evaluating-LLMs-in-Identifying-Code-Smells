@@ -1,0 +1,14 @@
+@Test void keysDoesNotRunIntoRaceConditions(){
+  List<RedisFuture<?>> futures=new ArrayList<>();
+  RedisClusterAsyncCommands<String,String> async=commands.getStatefulConnection().async();
+  TestFutures.awaitOrTimeout(async.flushall());
+  for (int i=0; i < 1000; i++) {
+    futures.add(async.set("key-" + i,"value-" + i));
+  }
+  TestFutures.awaitOrTimeout(futures);
+  for (int i=0; i < 1000; i++) {
+    CompletableFuture<Long> future=commands.keys("*").count().toFuture();
+    TestFutures.awaitOrTimeout(future);
+    assertThat(future).isCompletedWithValue(1000L);
+  }
+}

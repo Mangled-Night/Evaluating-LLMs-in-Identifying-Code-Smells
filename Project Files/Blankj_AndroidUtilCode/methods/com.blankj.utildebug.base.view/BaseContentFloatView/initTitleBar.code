@@ -1,0 +1,73 @@
+private void initTitleBar(){
+  bcfTitleRl=findViewById(R.id.bcfTitleRl);
+  bcfCloseIv=findViewById(R.id.bcfCloseIv);
+  bcfTitleTv=findViewById(R.id.bcfTitleTv);
+  bcfAdjustIv=findViewById(R.id.bcfAdjustIv);
+  bcfTitleTv.setText(bindTitle());
+  ClickUtils.applyPressedBgDark(bcfTitleRl);
+  bcfTitleRl.setOnClickListener(new ClickUtils.OnMultiClickListener(2){
+    @Override public void onTriggerClick(    View v){
+      mLayoutParams.alpha=mLayoutParams.alpha == 0.5f ? 1f : 0.5f;
+      WindowHelper.updateViewLayout(BaseContentFloatView.this,mLayoutParams);
+      DebugConfig.saveViewAlpha(BaseContentFloatView.this,mLayoutParams.alpha);
+    }
+    @Override public void onBeforeTriggerClick(    View v,    int count){
+      if (count == 1) {
+      }
+    }
+  }
+);
+  TouchUtils.setOnTouchListener(bcfTitleRl,new TouchUtils.OnTouchUtilsListener(){
+    @Override public boolean onDown(    View view,    int x,    int y,    MotionEvent event){
+      return true;
+    }
+    @Override public boolean onMove(    View view,    int direction,    int x,    int y,    int dx,    int dy,    int totalX,    int totalY,    MotionEvent event){
+      mLayoutParams.y=Math.min(Math.max(mLayoutParams.y + dy,0),WindowHelper.getAppWindowHeight() - bcfRootLayout.getHeight());
+      WindowHelper.updateViewLayout(BaseContentFloatView.this,mLayoutParams);
+      return true;
+    }
+    @Override public boolean onStop(    View view,    int direction,    int x,    int y,    int totalX,    int totalY,    int vx,    int vy,    MotionEvent event){
+      DebugConfig.saveViewY(BaseContentFloatView.this,mLayoutParams.y);
+      return true;
+    }
+  }
+);
+  ClickUtils.applyPressedBgDark(bcfCloseIv,0.8f);
+  bcfCloseIv.setOnClickListener(new OnClickListener(){
+    @Override public void onClick(    View v){
+      dismiss();
+    }
+  }
+);
+  ClickUtils.applyPressedBgDark(bcfAdjustIv,0.8f);
+  bcfAdjustIv.setOnClickListener(new OnClickListener(){
+    @Override public void onClick(    View v){
+      FloatToast.showLong(FloatToast.WARNING,StringUtils.getString(R.string.du_adjust_tips));
+    }
+  }
+);
+  TouchUtils.setOnTouchListener(bcfAdjustIv,new TouchUtils.OnTouchUtilsListener(){
+    private int minHeight;
+    @Override public boolean onDown(    View view,    int x,    int y,    MotionEvent event){
+      int[] locations=new int[2];
+      getLocationOnScreen(locations);
+      mLayoutParams.height=WindowHelper.getAppWindowHeight() - locations[1];
+      WindowHelper.updateViewLayout(BaseContentFloatView.this,mLayoutParams);
+      minHeight=bcfTitleRl.getHeight() + SizeUtils.dp2px(30);
+      return true;
+    }
+    @Override public boolean onMove(    View view,    int direction,    int x,    int y,    int dx,    final int dy,    int totalX,    int totalY,    MotionEvent event){
+      ViewGroup.LayoutParams layoutParams=bcfRootLayout.getLayoutParams();
+      layoutParams.height=Math.min(Math.max(bcfRootLayout.getHeight() + dy,minHeight),mLayoutParams.height);
+      bcfRootLayout.setLayoutParams(layoutParams);
+      return true;
+    }
+    @Override public boolean onStop(    View view,    int direction,    int x,    int y,    int totalX,    int totalY,    int vx,    int vy,    MotionEvent event){
+      mLayoutParams.height=bcfRootLayout.getHeight();
+      WindowHelper.updateViewLayout(BaseContentFloatView.this,mLayoutParams);
+      DebugConfig.saveViewHeight(BaseContentFloatView.this,mLayoutParams.height);
+      return true;
+    }
+  }
+);
+}

@@ -1,0 +1,21 @@
+/** 
+ * Opens the NUI editor for a ui screen
+ * @param uri String containing ui screen name
+ * @return String containing final message
+ */
+@Command(shortDescription="Opens the NUI editor for a ui screen",requiredPermission=PermissionManager.NO_PERMISSION) public String editScreen(@CommandParam(value="uri",suggester=ScreenSuggester.class) String uri){
+  if (!nuiEditorSystem.isEditorActive()) {
+    nuiEditorSystem.toggleEditor();
+  }
+  Set<ResourceUrn> urns=assetManager.resolve(uri,UIElement.class);
+switch (urns.size()) {
+case 0:
+    return String.format("No asset found for screen '%s'",uri);
+case 1:
+  ResourceUrn urn=urns.iterator().next();
+((NUIEditorScreen)nuiManager.getScreen(NUIEditorScreen.ASSET_URI)).selectAsset(urn);
+return "Success";
+default :
+return String.format("Multiple matches for screen '%s': {%s}",uri,Arrays.toString(urns.toArray()));
+}
+}

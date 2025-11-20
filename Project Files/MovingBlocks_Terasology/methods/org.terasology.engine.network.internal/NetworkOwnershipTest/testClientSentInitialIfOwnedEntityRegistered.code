@@ -1,0 +1,11 @@
+@Test public void testClientSentInitialIfOwnedEntityRegistered(){
+  connectClient();
+  EntityBuilder builder=entityManager.newBuilder();
+  NetworkComponent netComp=builder.addComponent(new NetworkComponent());
+  netComp.replicateMode=NetworkComponent.ReplicateMode.OWNER;
+  builder.setOwner(clientEntity);
+  EntityRef entity=builder.build();
+  networkSystem.registerNetworkEntity(entity);
+  assertTrue(entity.getComponent(NetworkComponent.class).getNetworkId() != 0);
+  verify(client).setNetInitial(entity.getComponent(NetworkComponent.class).getNetworkId());
+}

@@ -1,0 +1,47 @@
+/** 
+ * 从UnsafeRow转换成BinaryRowDataPacket 说明: 当开启<b>isOffHeapuseOffHeapForMerge</b>参数时,会使用UnsafeRow封装数据, 因此需要从这个对象里面将数据封装成BinaryRowDataPacket
+ * @param fieldPackets
+ * @param unsafeRow
+ */
+public void read(List<FieldPacket> fieldPackets,UnsafeRow unsafeRow){
+  this.fieldPackets=fieldPackets;
+  this.fieldCount=unsafeRow.numFields();
+  this.fieldValues=new ArrayList<byte[]>(fieldCount);
+  this.packetId=unsafeRow.packetId;
+  this.nullBitMap=new byte[(fieldCount + 7 + 2) / 8];
+  for (int i=0; i < this.fieldCount; i++) {
+    byte[] fv=unsafeRow.getBinary(i);
+    FieldPacket fieldPk=fieldPackets.get(i);
+    if (fv == null) {
+      storeNullBitMap(i);
+      this.fieldValues.add(fv);
+    }
+ else {
+      convert(fv,fieldPk);
+    }
+  }
+}
+/** 
+ * 从RowDataPacket转换成BinaryRowDataPacket
+ * @param fieldPackets 字段包集合
+ * @param rowDataPk 文本协议行数据包
+ */
+public void read(List<FieldPacket> fieldPackets,RowDataPacket rowDataPk){
+  this.fieldPackets=fieldPackets;
+  this.fieldCount=rowDataPk.fieldCount;
+  this.fieldValues=new ArrayList<byte[]>(fieldCount);
+  this.packetId=rowDataPk.packetId;
+  this.nullBitMap=new byte[(fieldCount + 7 + 2) / 8];
+  List<byte[]> _fieldValues=rowDataPk.fieldValues;
+  for (int i=0; i < fieldCount; i++) {
+    byte[] fv=_fieldValues.get(i);
+    FieldPacket fieldPk=fieldPackets.get(i);
+    if (fv == null) {
+      storeNullBitMap(i);
+      this.fieldValues.add(fv);
+    }
+ else {
+      convert(fv,fieldPk);
+    }
+  }
+}

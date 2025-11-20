@@ -1,0 +1,10 @@
+@Override public void recordCommandLatency(SocketAddress local,SocketAddress remote,ProtocolKeyword protocolKeyword,long firstResponseLatency,long completionLatency){
+  if (!isEnabled()) {
+    return;
+  }
+  CommandLatencyId commandLatencyId=createId(local,remote,protocolKeyword);
+  Timer firstResponseTimer=firstResponseTimers.computeIfAbsent(commandLatencyId,this::firstResponseTimer);
+  firstResponseTimer.record(firstResponseLatency,TimeUnit.NANOSECONDS);
+  Timer completionTimer=completionTimers.computeIfAbsent(commandLatencyId,this::completionTimer);
+  completionTimer.record(completionLatency,TimeUnit.NANOSECONDS);
+}

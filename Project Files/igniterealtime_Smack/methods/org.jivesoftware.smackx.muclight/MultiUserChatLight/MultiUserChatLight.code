@@ -1,0 +1,16 @@
+MultiUserChatLight(XMPPConnection connection,EntityJid room){
+  this.connection=connection;
+  this.room=room;
+  fromRoomFilter=FromMatchesFilter.create(room);
+  fromRoomGroupChatFilter=new AndFilter(fromRoomFilter,MessageTypeFilter.GROUPCHAT);
+  messageListener=new StanzaListener(){
+    @Override public void processStanza(    Stanza packet) throws NotConnectedException {
+      Message message=(Message)packet;
+      for (      MessageListener listener : messageListeners) {
+        listener.processMessage(message);
+      }
+    }
+  }
+;
+  connection.addSyncStanzaListener(messageListener,fromRoomGroupChatFilter);
+}

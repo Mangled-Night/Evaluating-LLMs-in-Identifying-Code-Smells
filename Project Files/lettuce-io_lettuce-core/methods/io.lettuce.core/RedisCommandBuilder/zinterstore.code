@@ -1,0 +1,12 @@
+Command<K,V,Long> zinterstore(K destination,K... keys){
+  notEmpty(keys);
+  return zinterstore(destination,new ZAggregateArgs(),keys);
+}
+Command<K,V,Long> zinterstore(K destination,ZAggregateArgs aggregateArgs,K... keys){
+  LettuceAssert.notNull(destination,"Destination " + MUST_NOT_BE_NULL);
+  LettuceAssert.notNull(aggregateArgs,"ZStoreArgs " + MUST_NOT_BE_NULL);
+  notEmpty(keys);
+  CommandArgs<K,V> args=new CommandArgs<>(codec).addKey(destination).add(keys.length).addKeys(keys);
+  aggregateArgs.build(args);
+  return createCommand(ZINTERSTORE,new IntegerOutput<>(codec),args);
+}

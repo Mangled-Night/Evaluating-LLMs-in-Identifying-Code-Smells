@@ -1,0 +1,29 @@
+/** 
+ * Extracts the name from an entity. If the entity is a character, then the display name from the  {@link ClientComponent#clientInfo} is used.Otherwise the entity itself is checked for a  {@link DisplayNameComponent}. In the last case, the prefab name of the entity is used, e.g. "engine:player" will be parsed to "Player".
+ * @param instigator The entity for which an instigator name is needed.
+ * @return The instigator name.
+ */
+public String getInstigatorName(EntityRef instigator){
+  if (instigator.hasComponent(CharacterComponent.class)) {
+    EntityRef instigatorClient=instigator.getComponent(CharacterComponent.class).controller;
+    EntityRef instigatorClientInfo=instigatorClient.getComponent(ClientComponent.class).clientInfo;
+    DisplayNameComponent displayNameComponent=instigatorClientInfo.getComponent(DisplayNameComponent.class);
+    return displayNameComponent.name;
+  }
+ else   if (instigator.getParentPrefab() != null) {
+    Prefab parentPrefab=instigator.getParentPrefab();
+    if (parentPrefab.hasComponent(DisplayNameComponent.class)) {
+      DisplayNameComponent displayNameComponent=parentPrefab.getComponent(DisplayNameComponent.class);
+      return displayNameComponent.name;
+    }
+ else {
+      String instigatorName=parentPrefab.getName();
+      instigatorName=instigatorName.replaceAll(".*:(.*)","$1");
+      instigatorName=Character.toUpperCase(instigatorName.charAt(0)) + instigatorName.substring(1);
+      return instigatorName;
+    }
+  }
+ else {
+    return null;
+  }
+}

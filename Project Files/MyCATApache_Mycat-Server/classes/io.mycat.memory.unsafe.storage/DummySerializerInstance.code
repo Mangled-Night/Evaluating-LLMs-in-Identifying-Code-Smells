@@ -1,0 +1,44 @@
+/** 
+ * Unfortunately, we need a serializer instance in order to construct a DiskRowWriter. Our shuffle write path doesn't actually use this serializer (since we end up calling the `write() OutputStream methods), but DiskRowWriter still calls some methods on it. To work around this, we pass a dummy no-op serializer.
+ */
+public final class DummySerializerInstance extends SerializerInstance {
+  public static final DummySerializerInstance INSTANCE=new DummySerializerInstance();
+  private DummySerializerInstance(){
+  }
+  @Override public SerializationStream serializeStream(  final OutputStream s){
+    return new SerializationStream(){
+      @Override public SerializationStream writeObject(      Object o){
+        return null;
+      }
+      @Override public void flush(){
+        try {
+          s.flush();
+        }
+ catch (        IOException e) {
+          Platform.throwException(e);
+        }
+      }
+      @Override public void close(){
+        try {
+          s.close();
+        }
+ catch (        IOException e) {
+          Platform.throwException(e);
+        }
+      }
+    }
+;
+  }
+  public <T>ByteBuffer serialize(  T t,  T ev1){
+    throw new UnsupportedOperationException();
+  }
+  public DeserializationStream deserializeStream(  InputStream s){
+    throw new UnsupportedOperationException();
+  }
+  public <T>T deserialize(  ByteBuffer bytes,  ClassLoader loader,  T ev1){
+    throw new UnsupportedOperationException();
+  }
+  public <T>T deserialize(  ByteBuffer bytes,  T ev1){
+    throw new UnsupportedOperationException();
+  }
+}

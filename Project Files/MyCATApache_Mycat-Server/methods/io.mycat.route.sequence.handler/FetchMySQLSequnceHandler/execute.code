@@ -1,0 +1,14 @@
+public void execute(SequenceVal seqVal){
+  MycatConfig conf=MycatServer.getInstance().getConfig();
+  PhysicalDBNode mysqlDN=conf.getDataNodes().get(seqVal.dataNode);
+  try {
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("execute in datanode " + seqVal.dataNode + " for fetch sequnce sql "+ seqVal.sql);
+    }
+    mysqlDN.getConnection(mysqlDN.getDatabase(),true,new RouteResultsetNode(seqVal.dataNode,ServerParse.UPDATE,seqVal.sql),this,seqVal);
+  }
+ catch (  Exception e) {
+    seqVal.dbfinished=true;
+    LOGGER.warn("get connection err " + e);
+  }
+}

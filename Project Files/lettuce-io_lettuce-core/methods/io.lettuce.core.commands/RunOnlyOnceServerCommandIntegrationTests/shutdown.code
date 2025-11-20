@@ -1,0 +1,16 @@
+/** 
+ * Executed in order: 4 this test causes a stop of the redis. This means, you cannot repeat the test without restarting your redis.
+ */
+@Test void shutdown(){
+  assumeTrue(CanConnect.to(host(),port(2)));
+  final RedisAsyncCommands<String,String> commands=client.connect(RedisURI.Builder.redis(host(),port(2)).build()).async();
+  try {
+    commands.shutdown(true);
+    commands.shutdown(false);
+    Wait.untilTrue(() -> !commands.getStatefulConnection().isOpen()).waitOrTimeout();
+    assertThat(commands.getStatefulConnection().isOpen()).isFalse();
+  }
+  finally {
+    commands.getStatefulConnection().close();
+  }
+}

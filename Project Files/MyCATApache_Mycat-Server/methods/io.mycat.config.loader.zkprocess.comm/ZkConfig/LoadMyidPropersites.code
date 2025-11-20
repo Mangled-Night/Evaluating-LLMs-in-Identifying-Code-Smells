@@ -1,0 +1,25 @@
+/** 
+ * 加载myid配制文件信息 方法描述
+ * @return
+ * @创建日期 2016年9月15日
+ */
+private static Properties LoadMyidPropersites(){
+  Properties pros=new Properties();
+  try (InputStream configIS=ZkConfig.class.getResourceAsStream(ZK_CONFIG_FILE_NAME)){
+    if (configIS == null) {
+      return null;
+    }
+    pros.load(configIS);
+  }
+ catch (  IOException e) {
+    LOGGER.error("ZkConfig LoadMyidPropersites error:",e);
+    throw new RuntimeException("can't find myid properties file : " + ZK_CONFIG_FILE_NAME);
+  }
+  String zkURL=pros.getProperty(ZkParamCfg.ZK_CFG_URL.getKey());
+  String myid=pros.getProperty(ZkParamCfg.ZK_CFG_MYID.getKey());
+  String clusterId=pros.getProperty(ZkParamCfg.ZK_CFG_CLUSTERID.getKey());
+  if (Strings.isNullOrEmpty(clusterId) || Strings.isNullOrEmpty(zkURL) || Strings.isNullOrEmpty(myid)) {
+    throw new RuntimeException("clusterId and zkURL and myid must not be null or empty!");
+  }
+  return pros;
+}

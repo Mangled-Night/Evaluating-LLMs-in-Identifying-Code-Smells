@@ -1,0 +1,28 @@
+private boolean doDecode(ByteBuf buffer,CommandOutput<?,?,?> output,Consumer<Exception> errorHandler){
+  boolean resp3Indicator=false;
+  State.Result result;
+  while (!isEmpty(stack)) {
+    State state=peek(stack);
+    if (state.type == null) {
+      if (!buffer.isReadable()) {
+        break;
+      }
+      state.type=readReplyType(buffer);
+      if (state.type == HELLO_V3 || state.type == MAP) {
+        resp3Indicator=true;
+      }
+      buffer.markReaderIndex();
+    }
+    result=state.type.handle(this,state,buffer,output,errorHandler);
+    if (State.Result.BREAK_LOOP.equals(result)) {
+      break;
+    }
+ else     if (State.Result.CONTINUE_LOOP.equals(result)) {
+      continue;
+    }
+    buffer.markReaderIndex();
+    remove(stack);
+    output.complete(size(stack));
+  }
+  return resp3Indicator;
+}

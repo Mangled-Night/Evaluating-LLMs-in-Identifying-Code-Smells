@@ -1,0 +1,12 @@
+@Test void connectTimeout() throws Exception {
+  try (ServerSocket serverSocket=new ServerSocket(0)){
+    RedisURI redisURI=RedisURI.Builder.redis(TestSettings.host(),serverSocket.getLocalPort()).withTimeout(Duration.ofMillis(500)).build();
+    try {
+      client.connect(redisURI);
+      fail("Missing RedisConnectionException");
+    }
+ catch (    RedisException e) {
+      assertThat(e).isInstanceOf(RedisConnectionException.class).hasRootCauseInstanceOf(RedisCommandTimeoutException.class);
+    }
+  }
+ }

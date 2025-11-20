@@ -1,0 +1,20 @@
+/** 
+ * RFC 5802 § 2.2 Hi(str, salt, i) <p> Hi() is, essentially, PBKDF2 [RFC2898] with HMAC() as the pseudorandom function (PRF) and with dkLen == output length of HMAC() == output length of H(). </p>
+ * @param normalizedPassword the normalized password.
+ * @param salt TODO javadoc me please
+ * @param iterations TODO javadoc me please
+ * @return the result of the Hi function.
+ * @throws SmackSaslException if a SASL related error occurs.
+ */
+private byte[] hi(String normalizedPassword,byte[] salt,int iterations) throws SmackSaslException {
+  byte[] key=normalizedPassword.getBytes(StandardCharsets.UTF_8);
+  byte[] u=hmac(key,ByteUtils.concat(salt,ONE));
+  byte[] res=u.clone();
+  for (int i=1; i < iterations; i++) {
+    u=hmac(key,u);
+    for (int j=0; j < u.length; j++) {
+      res[j]^=u[j];
+    }
+  }
+  return res;
+}

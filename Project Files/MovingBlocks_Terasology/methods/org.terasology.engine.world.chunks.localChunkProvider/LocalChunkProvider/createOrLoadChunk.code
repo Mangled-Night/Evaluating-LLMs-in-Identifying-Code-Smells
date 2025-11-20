@@ -1,0 +1,18 @@
+protected ListenableFuture<Chunk> createOrLoadChunk(Vector3ic chunkPos){
+  Vector3i pos=new Vector3i(chunkPos);
+  return loadingPipeline.invokeGeneratorTask(pos,() -> {
+    ChunkStore chunkStore=storageManager.loadChunkStore(pos);
+    Chunk chunk;
+    EntityBufferImpl buffer=new EntityBufferImpl();
+    if (chunkStore == null) {
+      chunk=new ChunkImpl(pos,blockManager,extraDataManager);
+      generator.createChunk(chunk,buffer);
+      generateQueuedEntities.put(chunk.getPosition(),buffer.getAll());
+    }
+ else {
+      chunk=chunkStore.getChunk();
+    }
+    return chunk;
+  }
+);
+}

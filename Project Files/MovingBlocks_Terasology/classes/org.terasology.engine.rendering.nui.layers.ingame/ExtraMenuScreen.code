@@ -1,0 +1,18 @@
+/** 
+ * Handles the "Extras" button from the game's pause menu screen.
+ */
+public class ExtraMenuScreen extends CoreScreenLayer {
+  public static final ResourceUrn ASSET_URI=new ResourceUrn("engine:extraMenuScreen");
+  @In private Time time;
+  @In private NetworkSystem networkSystem;
+  @Override public void initialise(){
+    setAnimationSystem(MenuAnimationSystems.createDefaultSwipeAnimation());
+    WidgetUtil.trySubscribe(this,"telemetry",button -> triggerForwardAnimation(TelemetryScreen.ASSET_URI));
+    WidgetUtil.trySubscribe(this,"devTools",widget -> triggerForwardAnimation(DevToolsMenuScreen.ASSET_URI));
+    WidgetUtil.trySubscribe(this,"crashReporter",widget -> CrashReporter.report(new Throwable("There is no error."),LoggingContext.getLoggingPath(),CrashReporter.MODE.ISSUE_REPORTER));
+    WidgetUtil.trySubscribe(this,"close",widget -> triggerBackAnimation());
+  }
+  @Override public boolean isLowerLayerVisible(){
+    return false;
+  }
+}

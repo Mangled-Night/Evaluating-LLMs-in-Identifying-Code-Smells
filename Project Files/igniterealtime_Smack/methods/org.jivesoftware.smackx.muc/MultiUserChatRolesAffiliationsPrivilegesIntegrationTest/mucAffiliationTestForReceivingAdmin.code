@@ -1,0 +1,26 @@
+/** 
+ * Asserts that a user who undergoes an affiliation change receives that change as a presence update <p>From XEP-0045 § 5.2.2:</p> <blockquote> ...a MUC service implementation MUST change the user's affiliation to reflect the change and communicate that to all occupants... </blockquote> <p>From XEP-0045 § 10.6:</p> <blockquote> If the user is in the room, the service MUST then send updated presence from this individual to all occupants, indicating the granting of admin status... </blockquote>
+ * @throws Exception when errors occur
+ */
+@SmackIntegrationTest public void mucAffiliationTestForReceivingAdmin() throws Exception {
+  EntityBareJid mucAddress=getRandomRoom("smack-inttest");
+  MultiUserChat mucAsSeenByOne=mucManagerOne.getMultiUserChat(mucAddress);
+  MultiUserChat mucAsSeenByTwo=mucManagerTwo.getMultiUserChat(mucAddress);
+  final ResultSyncPoint<String,Exception> resultSyncPoint=new ResultSyncPoint<>();
+  mucAsSeenByTwo.addUserStatusListener(new UserStatusListener(){
+    @Override public void adminGranted(){
+      resultSyncPoint.signal("done");
+    }
+  }
+);
+  createMuc(mucAsSeenByOne,"one-" + randomString);
+  try {
+    final Resourcepart nicknameTwo=Resourcepart.from("two-" + randomString);
+    mucAsSeenByTwo.join(nicknameTwo);
+    mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
+    resultSyncPoint.waitForResult(timeout);
+  }
+  finally {
+    tryDestroy(mucAsSeenByOne);
+  }
+}

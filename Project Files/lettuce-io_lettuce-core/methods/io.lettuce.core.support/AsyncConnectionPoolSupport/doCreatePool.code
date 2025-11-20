@@ -1,0 +1,23 @@
+protected static <T extends StatefulConnection<?,?>>BoundedAsyncPool<T> doCreatePool(Supplier<CompletionStage<T>> connectionSupplier,BoundedPoolConfig config,boolean wrapConnections){
+  LettuceAssert.notNull(connectionSupplier,"Connection supplier must not be null");
+  LettuceAssert.notNull(config,"BoundedPoolConfig must not be null");
+  AtomicReference<Origin<T>> poolRef=new AtomicReference<>();
+  BoundedAsyncPool<T> pool=new BoundedAsyncPool<T>(new RedisPooledObjectFactory<T>(connectionSupplier),config,false){
+    @Override public CompletableFuture<T> acquire(){
+      CompletableFuture<T> acquire=super.acquire();
+      if (wrapConnections) {
+        return acquire.thenApply(it -> ConnectionWrapping.wrapConnection(it,poolRef.get()));
+      }
+      return acquire;
+    }
+    @Override @SuppressWarnings("unchecked") public CompletableFuture<Void> release(    T object){
+      if (wrapConnections && object instanceof HasTargetConnection) {
+        return super.release((T)((HasTargetConnection)object).getTargetConnection());
+      }
+      return super.release(object);
+    }
+  }
+;
+  poolRef.set(new AsyncPoolWrapper<>(pool));
+  return pool;
+}

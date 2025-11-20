@@ -1,0 +1,60 @@
+public static int renderParagraph(Canvas canvas,ParagraphRenderable.HyperlinkRegister register,ParagraphRenderStyle baseRenderStyle,int xShift,int leftIndent,int rightIndent,ContainerRenderSpace containerRenderSpace,int containerWidth,int startY,ParagraphData paragraphData){
+  int yShift=startY;
+  ParagraphRenderable paragraphContents=paragraphData.getParagraphContents();
+  ParagraphRenderStyle paragraphRenderStyle=getParagraphRenderStyle(baseRenderStyle,paragraphData);
+  ParagraphRenderStyle.ClearStyle clearStyle=paragraphRenderStyle.getClearStyle();
+  if (clearStyle != ParagraphRenderStyle.ClearStyle.NONE) {
+    yShift=Math.max(yShift,containerRenderSpace.getNextClearYPosition(clearStyle));
+  }
+  ParagraphRenderStyle.FloatStyle floatStyle=paragraphRenderStyle.getFloatStyle();
+  if (floatStyle == ParagraphRenderStyle.FloatStyle.LEFT || floatStyle == ParagraphRenderStyle.FloatStyle.RIGHT) {
+    int leftParagraphIndent=paragraphRenderStyle.getParagraphMarginLeft().getValue(containerWidth) + paragraphRenderStyle.getParagraphPaddingLeft().getValue(containerWidth);
+    int rightParagraphIndent=paragraphRenderStyle.getParagraphMarginRight().getValue(containerWidth) + paragraphRenderStyle.getParagraphPaddingRight().getValue(containerWidth);
+    int paragraphWidth=Math.max(paragraphRenderStyle.getParagraphMinimumWidth().getValue(containerWidth),paragraphContents.getContentsMinWidth(paragraphRenderStyle) + leftParagraphIndent + rightParagraphIndent);
+    int height=paragraphRenderStyle.getParagraphMarginTop().getValue(containerWidth) + paragraphRenderStyle.getParagraphPaddingTop().getValue(containerWidth);
+    int paragraphHeight=paragraphContents.getPreferredContentsHeight(paragraphRenderStyle,0,new ContainerFlowContainerRenderSpace(paragraphWidth),leftParagraphIndent + rightParagraphIndent);
+    height+=paragraphHeight;
+    height+=paragraphRenderStyle.getParagraphPaddingBottom().getValue(containerWidth) + paragraphRenderStyle.getParagraphMarginBottom().getValue(containerWidth);
+    Rectanglei position;
+    if (floatStyle == ParagraphRenderStyle.FloatStyle.LEFT) {
+      position=containerRenderSpace.addLeftFloat(yShift,paragraphWidth,height);
+    }
+ else {
+      position=containerRenderSpace.addRightFloat(yShift,paragraphWidth,height);
+    }
+    Rectanglei paragraphBorderRegion=new Rectanglei(position.minX + paragraphRenderStyle.getParagraphMarginLeft().getValue(containerWidth),position.minY + paragraphRenderStyle.getParagraphMarginTop().getValue(containerWidth),position.maxX - paragraphRenderStyle.getParagraphMarginRight().getValue(containerWidth) - 1,position.maxY - paragraphRenderStyle.getParagraphMarginBottom().getValue(containerWidth) - 1);
+    Color paragraphBackground=paragraphRenderStyle.getParagraphBackground();
+    if (paragraphBackground != null) {
+      canvas.drawFilledRectangle(paragraphBorderRegion,paragraphBackground);
+    }
+    Vector2i paragraphStart=new Vector2i(position.minX,position.minY + paragraphRenderStyle.getParagraphMarginTop().getValue(containerWidth) + paragraphRenderStyle.getParagraphPaddingTop().getValue(containerWidth));
+    paragraphContents.renderContents(canvas,paragraphStart,new ContainerFlowContainerRenderSpace(paragraphWidth),leftParagraphIndent,rightParagraphIndent,paragraphRenderStyle,paragraphRenderStyle.getHorizontalAlignment(),register);
+    yShift=position.minY;
+  }
+ else {
+    yShift+=paragraphRenderStyle.getParagraphMarginTop().getValue(containerWidth);
+    int leftParagraphIndent=paragraphRenderStyle.getParagraphMarginLeft().getValue(containerWidth) + paragraphRenderStyle.getParagraphPaddingLeft().getValue(containerWidth);
+    int rightParagraphIndent=paragraphRenderStyle.getParagraphMarginRight().getValue(containerWidth) + paragraphRenderStyle.getParagraphPaddingRight().getValue(containerWidth);
+    int paragraphHeight=paragraphContents.getPreferredContentsHeight(paragraphRenderStyle,yShift + paragraphRenderStyle.getParagraphPaddingTop().getValue(containerWidth),containerRenderSpace,leftIndent + leftParagraphIndent + rightParagraphIndent+ rightIndent);
+    Color paragraphBackground=paragraphRenderStyle.getParagraphBackground();
+    if (paragraphBackground != null) {
+      int borderAdvance=0;
+      int borderHeight=paragraphHeight + paragraphRenderStyle.getParagraphPaddingTop().getValue(containerWidth) + paragraphRenderStyle.getParagraphPaddingBottom().getValue(containerWidth);
+      while (borderAdvance < borderHeight) {
+        int backgroundStart=yShift + borderAdvance;
+        int availableBackgroundWidth=containerRenderSpace.getWidthForVerticalPosition(backgroundStart);
+        int backgroundAdvance=containerRenderSpace.getAdvanceForVerticalPosition(backgroundStart);
+        int maxSpace=containerRenderSpace.getNextWidthChange(backgroundStart);
+        Rectanglei backgroundRegion=RectUtility.createFromMinAndSize(xShift + paragraphRenderStyle.getParagraphMarginLeft().getValue(containerWidth) + backgroundAdvance,backgroundStart,availableBackgroundWidth - 1,Math.min(maxSpace,borderHeight - borderAdvance) - 1);
+        canvas.drawFilledRectangle(backgroundRegion,paragraphBackground);
+        borderAdvance+=maxSpace - backgroundStart;
+      }
+    }
+    yShift+=paragraphRenderStyle.getParagraphPaddingTop().getValue(containerWidth);
+    paragraphContents.renderContents(canvas,new Vector2i(xShift,yShift),containerRenderSpace,leftIndent + leftParagraphIndent,rightIndent + rightParagraphIndent,paragraphRenderStyle,paragraphRenderStyle.getHorizontalAlignment(),register);
+    yShift+=paragraphHeight;
+    yShift+=paragraphRenderStyle.getParagraphPaddingBottom().getValue(containerWidth);
+    yShift+=paragraphRenderStyle.getParagraphMarginBottom().getValue(containerWidth);
+  }
+  return yShift - startY;
+}

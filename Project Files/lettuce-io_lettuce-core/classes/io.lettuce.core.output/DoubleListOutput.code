@@ -1,0 +1,26 @@
+/** 
+ * {@link List} of Double output.
+ * @param < K > Key type.
+ * @param < V > Value type.
+ * @author dengliming
+ * @author Mark Paluch
+ * @since 6.1
+ */
+public class DoubleListOutput<K,V> extends CommandOutput<K,V,List<Double>> {
+  private boolean initialized;
+  public DoubleListOutput(  RedisCodec<K,V> codec){
+    super(codec,new ArrayList<>());
+  }
+  @Override public void set(  ByteBuffer bytes){
+    output.add(bytes != null ? parseDouble(decodeAscii(bytes)) : null);
+  }
+  @Override public void set(  double number){
+    output.add(number);
+  }
+  @Override public void multi(  int count){
+    if (!initialized) {
+      output=OutputFactory.newList(count);
+      initialized=true;
+    }
+  }
+}

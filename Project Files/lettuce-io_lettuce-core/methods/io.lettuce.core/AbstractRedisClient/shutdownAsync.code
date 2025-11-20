@@ -1,0 +1,23 @@
+/** 
+ * Shutdown this client and close all open connections asynchronously. Once all connections are closed, the associated {@link ClientResources} are shut down/released gracefully considering quiet time and the shutdown timeout. The clientshould be discarded after calling shutdown. The shutdown is executed without quiet time and a timeout of 2 {@link TimeUnit#SECONDS}.
+ * @since 4.4
+ * @see EventExecutorGroup#shutdownGracefully(long,long,TimeUnit)
+ */
+public CompletableFuture<Void> shutdownAsync(){
+  return shutdownAsync(0,2,TimeUnit.SECONDS);
+}
+/** 
+ * Shutdown this client and close all open connections asynchronously. Once all connections are closed, the associated {@link ClientResources} are shut down/released gracefully considering quiet time and the shutdown timeout. The clientshould be discarded after calling shutdown.
+ * @param quietPeriod the quiet period to allow the executor gracefully shut down.
+ * @param timeout the maximum amount of time to wait until the backing executor is shutdown regardless if a task wassubmitted during the quiet period.
+ * @param timeUnit the unit of {@code quietPeriod} and {@code timeout}.
+ * @since 4.4
+ * @see EventExecutorGroup#shutdownGracefully(long,long,TimeUnit)
+ */
+public CompletableFuture<Void> shutdownAsync(long quietPeriod,long timeout,TimeUnit timeUnit){
+  if (shutdown.compareAndSet(false,true)) {
+    logger.debug("Initiate shutdown ({}, {}, {})",quietPeriod,timeout,timeUnit);
+    return closeResources().thenCompose((value) -> closeClientResources(quietPeriod,timeout,timeUnit));
+  }
+  return CompletableFuture.completedFuture(null);
+}

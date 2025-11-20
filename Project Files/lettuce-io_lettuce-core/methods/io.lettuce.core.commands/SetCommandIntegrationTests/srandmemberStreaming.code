@@ -1,0 +1,8 @@
+@Test void srandmemberStreaming(){
+  assertThat(redis.spop(key)).isNull();
+  redis.sadd(key,"a","b","c","d");
+  ListStreamingAdapter<String> streamingAdapter=new ListStreamingAdapter<>();
+  Long count=redis.srandmember(streamingAdapter,key,2);
+  assertThat(count.longValue()).isEqualTo(2);
+  assertThat(set("a","b","c","d").containsAll(streamingAdapter.getList())).isTrue();
+}

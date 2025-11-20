@@ -1,0 +1,24 @@
+private void invoke(AbstractSmackLowLevelIntegrationTest test,XmppConnectionDescriptor<?,?,?> connectionDescriptor) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, InterruptedException, SmackException, IOException, XMPPException {
+  final int connectionCount;
+  if (parameterListOfConnections) {
+    connectionCount=smackIntegrationTestAnnotation.connectionCount();
+    if (connectionCount < 1) {
+      throw new IllegalArgumentException(testMethod + " is annotated to use less than one connection ('" + connectionCount+ ')');
+    }
+  }
+ else {
+    connectionCount=testMethod.getParameterCount();
+  }
+  List<? extends AbstractXMPPConnection> connections=connectionManager.constructConnectedConnections(connectionDescriptor,connectionCount);
+  if (parameterListOfConnections) {
+    testMethod.invoke(test,connections);
+  }
+ else {
+    Object[] connectionsArray=new Object[connectionCount];
+    for (int i=0; i < connectionsArray.length; i++) {
+      connectionsArray[i]=connections.remove(0);
+    }
+    testMethod.invoke(test,connectionsArray);
+  }
+  connectionManager.recycle(connections);
+}

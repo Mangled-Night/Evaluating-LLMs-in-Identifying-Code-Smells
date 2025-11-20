@@ -1,0 +1,18 @@
+/** 
+ * Updates the autosave file with the current state of the tree.
+ */
+protected void updateAutosave(){
+  if (!disableAutosave) {
+    try (BufferedOutputStream outputStream=new BufferedOutputStream(Files.newOutputStream(getAutosaveFile()))){
+      JsonElement editorContents=JsonTreeConverter.deserialize(getEditor().getModel().getNode(0).getRoot());
+      JsonObject autosaveObject=new JsonObject();
+      autosaveObject.addProperty("selectedAsset",getSelectedAsset());
+      autosaveObject.add("editorContents",editorContents);
+      String jsonString=new GsonBuilder().setPrettyPrinting().create().toJson(autosaveObject);
+      outputStream.write(jsonString.getBytes());
+    }
+ catch (    IOException e) {
+      logger.warn("Could not save to autosave file",e);
+    }
+  }
+}

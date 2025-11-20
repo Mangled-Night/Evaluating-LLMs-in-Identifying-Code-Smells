@@ -1,0 +1,45 @@
+private static String limitDB2(SQLSelect select,String dbType,int offset,int count){
+  SQLSelectQuery query=select.getQuery();
+  SQLBinaryOpExpr gt=new SQLBinaryOpExpr(new SQLIdentifierExpr("ROWNUM"),SQLBinaryOperator.GreaterThan,new SQLNumberExpr(offset),JdbcConstants.DB2);
+  SQLBinaryOpExpr lteq=new SQLBinaryOpExpr(new SQLIdentifierExpr("ROWNUM"),SQLBinaryOperator.LessThanOrEqual,new SQLNumberExpr(count + offset),JdbcConstants.DB2);
+  SQLBinaryOpExpr pageCondition=new SQLBinaryOpExpr(gt,SQLBinaryOperator.BooleanAnd,lteq,JdbcConstants.DB2);
+  if (query instanceof SQLSelectQueryBlock) {
+    DB2SelectQueryBlock queryBlock=(DB2SelectQueryBlock)query;
+    List<SQLSelectItem> selectItemList=queryBlock.getSelectList();
+    for (int i=0; i < selectItemList.size(); i++) {
+      SQLSelectItem sqlSelectItem=selectItemList.get(i);
+      SQLExpr expr=sqlSelectItem.getExpr();
+      String alias=sqlSelectItem.getAlias();
+      if (expr instanceof SQLAllColumnExpr && alias == null) {
+        sqlSelectItem.setExpr(new SQLPropertyExpr(new SQLIdentifierExpr("XXYY"),"*"));
+        queryBlock.getFrom().setAlias("XXYY");
+      }
+    }
+    SQLAggregateExpr aggregateExpr=new SQLAggregateExpr("ROW_NUMBER");
+    SQLOrderBy orderBy=select.getOrderBy();
+    aggregateExpr.setOver(new SQLOver(orderBy));
+    select.setOrderBy(null);
+    queryBlock.getSelectList().add(new SQLSelectItem(aggregateExpr,"ROWNUM"));
+    DB2SelectQueryBlock countQueryBlock=new DB2SelectQueryBlock();
+    countQueryBlock.getSelectList().add(new SQLSelectItem(new SQLAllColumnExpr()));
+    countQueryBlock.setFrom(new SQLSubqueryTableSource(select,"XX"));
+    countQueryBlock.setWhere(pageCondition);
+    return SQLUtils.toSQLString(countQueryBlock,dbType);
+  }
+  DB2SelectQueryBlock countQueryBlock=new DB2SelectQueryBlock();
+  countQueryBlock.getSelectList().add(new SQLSelectItem(new SQLPropertyExpr(new SQLIdentifierExpr("XX"),"*")));
+  SQLAggregateExpr aggregateExpr=new SQLAggregateExpr("ROW_NUMBER");
+  SQLOrderBy orderBy=select.getOrderBy();
+  aggregateExpr.setOver(new SQLOver(orderBy));
+  select.setOrderBy(null);
+  countQueryBlock.getSelectList().add(new SQLSelectItem(aggregateExpr,"ROWNUM"));
+  countQueryBlock.setFrom(new SQLSubqueryTableSource(select,"XX"));
+  if (offset <= 0) {
+    return SQLUtils.toSQLString(countQueryBlock,dbType);
+  }
+  DB2SelectQueryBlock offsetQueryBlock=new DB2SelectQueryBlock();
+  offsetQueryBlock.getSelectList().add(new SQLSelectItem(new SQLAllColumnExpr()));
+  offsetQueryBlock.setFrom(new SQLSubqueryTableSource(new SQLSelect(countQueryBlock),"XXX"));
+  offsetQueryBlock.setWhere(pageCondition);
+  return SQLUtils.toSQLString(offsetQueryBlock,dbType);
+}

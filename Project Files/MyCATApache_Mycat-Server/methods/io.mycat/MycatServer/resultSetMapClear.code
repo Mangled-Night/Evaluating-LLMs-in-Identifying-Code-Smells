@@ -1,0 +1,30 @@
+/** 
+ * 在bufferpool使用率大于使用率阈值时不清理 在bufferpool使用率小于使用率阈值时清理大结果集清单内容
+ */
+private Runnable resultSetMapClear(){
+  return new Runnable(){
+    @Override public void run(){
+      try {
+        BufferPool bufferPool=getBufferPool();
+        long bufferSize=bufferPool.size();
+        long bufferCapacity=bufferPool.capacity();
+        long bufferUsagePercent=(bufferCapacity - bufferSize) * 100 / bufferCapacity;
+        if (bufferUsagePercent < config.getSystem().getBufferUsagePercent()) {
+          Map<String,UserStat> map=UserStatAnalyzer.getInstance().getUserStatMap();
+          Set<String> userSet=config.getUsers().keySet();
+          for (          String user : userSet) {
+            UserStat userStat=map.get(user);
+            if (userStat != null) {
+              SqlResultSizeRecorder recorder=userStat.getSqlResultSizeRecorder();
+              recorder.clearSqlResultSet();
+            }
+          }
+        }
+      }
+ catch (      Exception e) {
+        LOGGER.warn("resultSetMapClear err " + e);
+      }
+    }
+  }
+;
+}

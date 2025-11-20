@@ -1,0 +1,16 @@
+@Test void serverAssistedCachingShouldUseValueLoader() throws InterruptedException {
+  Map<String,String> clientCache=new ConcurrentHashMap<>();
+  StatefulRedisConnection<String,String> otherParty=redisClient.connect();
+  RedisCommands<String,String> commands=otherParty.sync();
+  StatefulRedisConnection<String,String> connection=redisClient.connect();
+  CacheFrontend<String,String> frontend=ClientSideCaching.enable(CacheAccessor.forMap(clientCache),connection,TrackingArgs.Builder.enabled().noloop());
+  String shouldLoad=frontend.get(key,() -> "myvalue");
+  assertThat(shouldLoad).isEqualTo("myvalue");
+  assertThat(clientCache).hasSize(1);
+  assertThat(commands.get(key)).isEqualTo("myvalue");
+  commands.set(key,value);
+  Thread.sleep(100);
+  assertThat(clientCache).isEmpty();
+  otherParty.close();
+  frontend.close();
+}

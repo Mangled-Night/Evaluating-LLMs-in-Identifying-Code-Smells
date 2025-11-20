@@ -1,0 +1,12 @@
+@Test void errorInMulti(){
+  StepVerifier.create(commands.multi()).expectNext("OK").verifyComplete();
+  commands.set(key,value).toProcessor();
+  commands.lpop(key).toProcessor();
+  commands.get(key).toProcessor();
+  StepVerifier.create(commands.exec()).consumeNextWith(actual -> {
+    assertThat((String)actual.get(0)).isEqualTo("OK");
+    assertThat((Object)actual.get(1)).isInstanceOf(RedisException.class);
+    assertThat((String)actual.get(2)).isEqualTo(value);
+  }
+).verifyComplete();
+}

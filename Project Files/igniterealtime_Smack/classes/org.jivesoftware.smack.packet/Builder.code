@@ -1,0 +1,170 @@
+public abstract static class Builder<B extends Builder<B>> {
+  protected String textNamespace;
+  protected Map<String,String> descriptiveTexts;
+  protected List<XmlElement> extensions;
+  public B setDescriptiveTexts(  Map<String,String> descriptiveTexts){
+    if (descriptiveTexts == null) {
+      this.descriptiveTexts=null;
+      return getThis();
+    }
+    for (    String key : descriptiveTexts.keySet()) {
+      if (key == null) {
+        throw new IllegalArgumentException("descriptiveTexts cannot contain null key");
+      }
+    }
+    if (this.descriptiveTexts == null) {
+      this.descriptiveTexts=descriptiveTexts;
+    }
+ else {
+      this.descriptiveTexts.putAll(descriptiveTexts);
+    }
+    return getThis();
+  }
+  public B setDescriptiveEnText(  String descriptiveEnText){
+    if (descriptiveTexts == null) {
+      descriptiveTexts=new HashMap<>();
+    }
+    descriptiveTexts.put("en",descriptiveEnText);
+    return getThis();
+  }
+  public B setDescriptiveEnText(  String descriptiveEnText,  Exception exception){
+    StringBuilder sb=new StringBuilder(512);
+    sb.append(descriptiveEnText).append('\n');
+    String stacktrace=ExceptionUtil.getStackTrace(exception);
+    sb.append(stacktrace);
+    return setDescriptiveEnText(sb.toString());
+  }
+  public B setTextNamespace(  String textNamespace){
+    this.textNamespace=textNamespace;
+    return getThis();
+  }
+  public B setExtensions(  List<XmlElement> extensions){
+    if (this.extensions == null) {
+      this.extensions=extensions;
+    }
+ else {
+      this.extensions.addAll(extensions);
+    }
+    return getThis();
+  }
+  public B addExtension(  XmlElement extension){
+    if (extensions == null) {
+      extensions=new ArrayList<>();
+    }
+    extensions.add(extension);
+    return getThis();
+  }
+  protected abstract B getThis();
+}
+public static final class Builder {
+  private final String name;
+  private final String namespace;
+  private Map<String,String> attributes;
+  private String text;
+  private MultiMap<QName,StandardExtensionElement> elements;
+  private Builder(  String name,  String namespace){
+    this.name=name;
+    this.namespace=namespace;
+  }
+  public Builder addAttribute(  String name,  String value){
+    StringUtils.requireNotNullNorEmpty(name,"Attribute name must be set");
+    Objects.requireNonNull(value,"Attribute value must be not null");
+    if (attributes == null) {
+      attributes=new LinkedHashMap<>();
+    }
+    attributes.put(name,value);
+    return this;
+  }
+  public Builder addAttributes(  Map<String,String> attributes){
+    if (this.attributes == null) {
+      this.attributes=new LinkedHashMap<>(attributes.size());
+    }
+    this.attributes.putAll(attributes);
+    return this;
+  }
+  public Builder setText(  String text){
+    this.text=Objects.requireNonNull(text,"Text must be not null");
+    return this;
+  }
+  public Builder addElement(  StandardExtensionElement element){
+    Objects.requireNonNull(element,"Element must not be null");
+    if (elements == null) {
+      elements=new MultiMap<>();
+    }
+    QName key=element.getQName();
+    elements.put(key,element);
+    return this;
+  }
+  public Builder addElement(  String name,  String textValue){
+    StandardExtensionElement element=StandardExtensionElement.builder(name,this.namespace).setText(textValue).build();
+    return addElement(element);
+  }
+  public StandardExtensionElement build(){
+    return new StandardExtensionElement(name,namespace,attributes,text,elements);
+  }
+}
+public static final class Builder extends AbstractError.Builder<Builder> {
+  private Condition condition;
+  private String conditionText;
+  private String errorGenerator;
+  private Type type;
+  private Builder(){
+  }
+  public Builder setCondition(  Condition condition){
+    this.condition=condition;
+    return this;
+  }
+  public Builder setType(  Type type){
+    this.type=type;
+    return this;
+  }
+  public Builder setConditionText(  String conditionText){
+    this.conditionText=conditionText;
+    return this;
+  }
+  public Builder setErrorGenerator(  String errorGenerator){
+    this.errorGenerator=errorGenerator;
+    return this;
+  }
+  public Builder copyFrom(  StanzaError xmppError){
+    setCondition(xmppError.getCondition());
+    setType(xmppError.getType());
+    setConditionText(xmppError.getConditionText());
+    setErrorGenerator(xmppError.getErrorGenerator());
+    setDescriptiveTexts(xmppError.descriptiveTexts);
+    setTextNamespace(xmppError.textNamespace);
+    setExtensions(xmppError.extensions);
+    return this;
+  }
+  public StanzaError build(){
+    return new StanzaError(condition,conditionText,errorGenerator,type,descriptiveTexts,extensions);
+  }
+  @Override protected Builder getThis(){
+    return this;
+  }
+}
+public static class Builder {
+  private String namespace;
+  private String language;
+  private XmlEnvironment next;
+  public Builder withNamespace(  String namespace){
+    this.namespace=namespace;
+    return this;
+  }
+  public Builder withLanguage(  String language){
+    this.language=language;
+    return this;
+  }
+  public Builder withNext(  XmlEnvironment next){
+    this.next=next;
+    return this;
+  }
+  public Builder with(  AbstractStreamOpen streamOpen){
+    withNamespace(streamOpen.getNamespace());
+    withLanguage(streamOpen.getLanguage());
+    return this;
+  }
+  public XmlEnvironment build(){
+    return new XmlEnvironment(this);
+  }
+}

@@ -1,0 +1,24 @@
+/** 
+ * @author Mark Paluch
+ */
+class StringReactiveCommandIntegrationTests extends StringCommandIntegrationTests {
+  private final RedisCommands<String,String> redis;
+  private final RedisReactiveCommands<String,String> reactive;
+  @Inject StringReactiveCommandIntegrationTests(  StatefulRedisConnection<String,String> connection){
+    super(ReactiveSyncInvocationHandler.sync(connection));
+    this.redis=connection.sync();
+    this.reactive=connection.reactive();
+  }
+  @Test void mget(){
+    redis.set(key,value);
+    redis.set("key1",value);
+    redis.set("key2",value);
+    Flux<KeyValue<String,String>> mget=reactive.mget(key,"key1","key2");
+    StepVerifier.create(mget.next()).expectNext(KeyValue.just(key,value)).verifyComplete();
+  }
+  @Test void mgetEmpty(){
+    redis.set(key,value);
+    Flux<KeyValue<String,String>> mget=reactive.mget("unknown");
+    StepVerifier.create(mget.next()).expectNext(KeyValue.empty("unknown")).verifyComplete();
+  }
+}

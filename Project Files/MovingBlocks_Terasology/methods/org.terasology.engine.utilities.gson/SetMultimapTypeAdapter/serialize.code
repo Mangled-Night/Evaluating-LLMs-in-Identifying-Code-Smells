@@ -1,0 +1,22 @@
+@Override public JsonElement serialize(SetMultimap<String,V> src,Type typeOfSrc,JsonSerializationContext context){
+  JsonObject result=new JsonObject();
+  List<String> keys=Lists.newArrayList(src.keys());
+  Collections.sort(keys);
+  for (  String key : keys) {
+    Collection<V> values=src.get(key);
+    if (values.size() > 1) {
+      JsonArray array=new JsonArray();
+      for (      V value : values) {
+        array.add(context.serialize(value));
+      }
+      result.add(key,array);
+    }
+ else     if (values.size() == 1) {
+      result.add(key,context.serialize(values.iterator().next()));
+    }
+ else {
+      result.add(key,context.serialize(""));
+    }
+  }
+  return result;
+}

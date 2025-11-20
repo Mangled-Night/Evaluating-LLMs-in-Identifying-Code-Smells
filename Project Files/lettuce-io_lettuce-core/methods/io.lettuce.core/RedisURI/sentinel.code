@@ -1,0 +1,59 @@
+/** 
+ * Set Sentinel host. Creates a new builder.
+ * @param host the host name
+ * @return new builder with Sentinel host/port.
+ */
+public static Builder sentinel(String host){
+  LettuceAssert.notEmpty(host,"Host must not be empty");
+  Builder builder=RedisURI.builder();
+  return builder.withSentinel(host);
+}
+/** 
+ * Set Sentinel host and port. Creates a new builder.
+ * @param host the host name
+ * @param port the port
+ * @return new builder with Sentinel host/port.
+ */
+public static Builder sentinel(String host,int port){
+  LettuceAssert.notEmpty(host,"Host must not be empty");
+  LettuceAssert.isTrue(isValidPort(port),() -> String.format("Port out of range: %s",port));
+  Builder builder=RedisURI.builder();
+  return builder.withSentinel(host,port);
+}
+/** 
+ * Set Sentinel host and master id. Creates a new builder.
+ * @param host the host name
+ * @param masterId sentinel master id
+ * @return new builder with Sentinel host/port.
+ */
+public static Builder sentinel(String host,String masterId){
+  return sentinel(host,DEFAULT_SENTINEL_PORT,masterId);
+}
+/** 
+ * Set Sentinel host, port and master id. Creates a new builder.
+ * @param host the host name
+ * @param port the port
+ * @param masterId sentinel master id
+ * @return new builder with Sentinel host/port.
+ */
+public static Builder sentinel(String host,int port,String masterId){
+  return sentinel(host,port,masterId,null);
+}
+/** 
+ * Set Sentinel host, port, master id and Sentinel authentication. Creates a new builder.
+ * @param host the host name
+ * @param port the port
+ * @param masterId sentinel master id
+ * @param password the Sentinel password (supported since Redis 5.0.1)
+ * @return new builder with Sentinel host/port.
+ * @deprecated since 6.0, use {@link #sentinel(String,int,String)} and{@link #withAuthentication(String,CharSequence)} instead.
+ */
+@Deprecated public static Builder sentinel(String host,int port,String masterId,CharSequence password){
+  LettuceAssert.notEmpty(host,"Host must not be empty");
+  LettuceAssert.isTrue(isValidPort(port),() -> String.format("Port out of range: %s",port));
+  Builder builder=RedisURI.builder();
+  if (password != null) {
+    builder.sentinelPassword=password.toString().toCharArray();
+  }
+  return builder.withSentinelMasterId(masterId).withSentinel(host,port);
+}

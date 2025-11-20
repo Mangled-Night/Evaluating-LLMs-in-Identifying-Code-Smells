@@ -1,0 +1,46 @@
+private List<RouteCalculateUnit> buildRouteCalculateUnits(MycatSchemaStatVisitor visitor,List<List<Condition>> conditionList){
+  List<RouteCalculateUnit> retList=new ArrayList<RouteCalculateUnit>();
+  for (int i=0; i < conditionList.size(); i++) {
+    RouteCalculateUnit routeCalculateUnit=new RouteCalculateUnit();
+    for (    Condition condition : conditionList.get(i)) {
+      List<Object> values=condition.getValues();
+      if (values.size() == 0) {
+        continue;
+      }
+      if (checkConditionValues(values)) {
+        String columnName=StringUtil.removeBackquote(condition.getColumn().getName().toUpperCase());
+        String tableName=StringUtil.removeBackquote(condition.getColumn().getTable().toUpperCase());
+        int index=0;
+        if (visitor.getAliasMap() != null && visitor.getAliasMap().get(tableName) != null && !visitor.getAliasMap().get(tableName).equals(tableName)) {
+          tableName=visitor.getAliasMap().get(tableName);
+        }
+        if ((index=tableName.indexOf(".")) != -1) {
+          tableName=tableName.substring(index + 1);
+        }
+        tableName=tableName.toUpperCase();
+        boolean noFindTable=true;
+        if (visitor.getAliasMap() != null) {
+          for (          String value : visitor.getAliasMap().values()) {
+            if (value.equalsIgnoreCase(tableName)) {
+              noFindTable=false;
+              break;
+            }
+          }
+        }
+        if (noFindTable) {
+          continue;
+        }
+        String operator=condition.getOperator();
+        if (operator.equals("between")) {
+          RangeValue rv=new RangeValue(values.get(0),values.get(1),RangeValue.EE);
+          routeCalculateUnit.addShardingExpr(tableName.toUpperCase(),columnName,rv);
+        }
+ else         if (operator.equals("=") || operator.toLowerCase().equals("in")) {
+          routeCalculateUnit.addShardingExpr(tableName.toUpperCase(),columnName,values.toArray());
+        }
+      }
+    }
+    retList.add(routeCalculateUnit);
+  }
+  return retList;
+}

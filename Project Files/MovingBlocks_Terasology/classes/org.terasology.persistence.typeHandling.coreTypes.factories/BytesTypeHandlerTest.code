@@ -1,0 +1,27 @@
+class BytesTypeHandlerTest {
+  @Test void byteSerializeDeserialize(){
+    byte expectedObj=(byte)0xFF;
+    PersistedBytes data=serialize(expectedObj,new ByteTypeHandler());
+    Assertions.assertEquals(expectedObj,data.getAsBytes()[0]);
+    byte obj=deserialize(data,new ByteTypeHandler());
+    Assertions.assertEquals(expectedObj,obj);
+  }
+  @Test void intDeserializeAsByte(){
+    byte expectedObj=(byte)0xFF;
+    byte obj=deserialize(new PersistedInteger(expectedObj),new ByteTypeHandler());
+    Assertions.assertEquals(expectedObj,obj);
+  }
+  @Test void byteArraySerializeDeserialize(){
+    byte[] expectedObj=new byte[]{(byte)0xFF};
+    PersistedBytes data=serialize(expectedObj,new ByteArrayTypeHandler());
+    Assertions.assertEquals(expectedObj,data.getAsBytes());
+    byte[] obj=deserialize(data,new ByteArrayTypeHandler());
+    Assertions.assertEquals(expectedObj,obj);
+  }
+  private <R extends PersistedData,T>R serialize(  T obj,  TypeHandler<T> typeHandler){
+    return (R)typeHandler.serialize(obj,new InMemoryPersistedDataSerializer());
+  }
+  private <R extends PersistedData,T>T deserialize(  R data,  TypeHandler<T> typeHandler){
+    return typeHandler.deserializeOrNull(data);
+  }
+}

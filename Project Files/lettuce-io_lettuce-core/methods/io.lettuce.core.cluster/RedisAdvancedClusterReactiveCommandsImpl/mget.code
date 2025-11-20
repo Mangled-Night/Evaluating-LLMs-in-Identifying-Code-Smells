@@ -1,0 +1,47 @@
+@Override public Flux<KeyValue<K,V>> mget(K... keys){
+  return mget(Arrays.asList(keys));
+}
+@SuppressWarnings({"unchecked","rawtypes"}) public Flux<KeyValue<K,V>> mget(Iterable<K> keys){
+  List<K> keyList=LettuceLists.newList(keys);
+  Map<Integer,List<K>> partitioned=SlotHash.partition(codec,keyList);
+  if (partitioned.size() < 2) {
+    return super.mget(keyList);
+  }
+  List<Publisher<KeyValue<K,V>>> publishers=new ArrayList<>();
+  for (  Map.Entry<Integer,List<K>> entry : partitioned.entrySet()) {
+    publishers.add(super.mget(entry.getValue()));
+  }
+  Flux<KeyValue<K,V>> fluxes=Flux.concat(publishers);
+  Mono<List<KeyValue<K,V>>> map=fluxes.collectList().map(vs -> {
+    KeyValue<K,V>[] values=new KeyValue[vs.size()];
+    int offset=0;
+    for (    Map.Entry<Integer,List<K>> entry : partitioned.entrySet()) {
+      for (int i=0; i < keyList.size(); i++) {
+        int index=entry.getValue().indexOf(keyList.get(i));
+        if (index == -1) {
+          continue;
+        }
+        values[i]=vs.get(offset + index);
+      }
+      offset+=entry.getValue().size();
+    }
+    return Arrays.asList(values);
+  }
+);
+  return map.flatMapIterable(keyValues -> keyValues);
+}
+@Override public Mono<Long> mget(KeyValueStreamingChannel<K,V> channel,K... keys){
+  return mget(channel,Arrays.asList(keys));
+}
+@Override public Mono<Long> mget(KeyValueStreamingChannel<K,V> channel,Iterable<K> keys){
+  List<K> keyList=LettuceLists.newList(keys);
+  Map<Integer,List<K>> partitioned=SlotHash.partition(codec,keyList);
+  if (partitioned.size() < 2) {
+    return super.mget(channel,keyList);
+  }
+  List<Publisher<Long>> publishers=new ArrayList<>();
+  for (  Map.Entry<Integer,List<K>> entry : partitioned.entrySet()) {
+    publishers.add(super.mget(channel,entry.getValue()));
+  }
+  return Flux.merge(publishers).reduce((accu,next) -> accu + next);
+}

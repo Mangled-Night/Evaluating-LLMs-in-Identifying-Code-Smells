@@ -1,0 +1,17 @@
+private void appendXmlTo(Consumer<CharSequence> charSequenceSink,XmlEnvironment enclosingXmlEnvironment){
+  for (  CharSequence csq : sb.getAsList()) {
+    if (csq instanceof XmlStringBuilder) {
+      ((XmlStringBuilder)csq).appendXmlTo(charSequenceSink,enclosingXmlEnvironment);
+    }
+ else     if (csq instanceof XmlNsAttribute) {
+      XmlNsAttribute xmlNsAttribute=(XmlNsAttribute)csq;
+      if (!xmlNsAttribute.value.equals(enclosingXmlEnvironment.getEffectiveNamespace())) {
+        charSequenceSink.accept(xmlNsAttribute);
+        enclosingXmlEnvironment=new XmlEnvironment(xmlNsAttribute.value);
+      }
+    }
+ else {
+      charSequenceSink.accept(csq);
+    }
+  }
+}

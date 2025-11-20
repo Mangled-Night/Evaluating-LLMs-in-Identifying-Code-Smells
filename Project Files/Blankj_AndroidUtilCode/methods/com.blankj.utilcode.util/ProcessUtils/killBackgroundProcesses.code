@@ -1,0 +1,23 @@
+/** 
+ * Kill background processes. <p>Must hold  {@code <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />}</p>
+ * @param packageName The name of the package.
+ * @return {@code true}: success<br> {@code false}: fail
+ */
+@RequiresPermission(KILL_BACKGROUND_PROCESSES) public static boolean killBackgroundProcesses(@NonNull final String packageName){
+  ActivityManager am=(ActivityManager)Utils.getApp().getSystemService(Context.ACTIVITY_SERVICE);
+  List<ActivityManager.RunningAppProcessInfo> info=am.getRunningAppProcesses();
+  if (info == null || info.size() == 0)   return true;
+  for (  ActivityManager.RunningAppProcessInfo aInfo : info) {
+    if (Arrays.asList(aInfo.pkgList).contains(packageName)) {
+      am.killBackgroundProcesses(packageName);
+    }
+  }
+  info=am.getRunningAppProcesses();
+  if (info == null || info.size() == 0)   return true;
+  for (  ActivityManager.RunningAppProcessInfo aInfo : info) {
+    if (Arrays.asList(aInfo.pkgList).contains(packageName)) {
+      return false;
+    }
+  }
+  return true;
+}

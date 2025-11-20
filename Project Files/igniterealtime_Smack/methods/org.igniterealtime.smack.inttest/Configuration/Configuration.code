@@ -1,0 +1,69 @@
+private Configuration(Configuration.Builder builder) throws KeyManagementException, NoSuchAlgorithmException {
+  service=Objects.requireNonNull(builder.service,"'service' must be set. Either via 'properties' files or via system property 'sinttest.service'.");
+  serviceTlsPin=builder.serviceTlsPin;
+  if (serviceTlsPin != null) {
+    SSLContext sslContext=Java7Pinning.forPin(serviceTlsPin);
+    sslContextFactory=() -> sslContext;
+  }
+ else {
+    sslContextFactory=null;
+  }
+  securityMode=builder.securityMode;
+  if (builder.replyTimeout > 0) {
+    replyTimeout=builder.replyTimeout;
+  }
+ else {
+    replyTimeout=60000;
+  }
+  debugger=builder.debugger;
+  if (StringUtils.isNotEmpty(builder.adminAccountUsername,builder.adminAccountPassword)) {
+    accountRegistration=AccountRegistration.serviceAdministration;
+  }
+ else   if (StringUtils.isNotEmpty(builder.accountOneUsername,builder.accountOnePassword,builder.accountTwoUsername,builder.accountTwoPassword,builder.accountThreeUsername,builder.accountThreePassword)) {
+    accountRegistration=AccountRegistration.disabled;
+  }
+ else {
+    accountRegistration=AccountRegistration.inBandRegistration;
+  }
+  this.adminAccountUsername=builder.adminAccountUsername;
+  this.adminAccountPassword=builder.adminAccountPassword;
+  boolean accountOnePasswordSet=StringUtils.isNotEmpty(builder.accountOnePassword);
+  if (accountOnePasswordSet != StringUtils.isNotEmpty(builder.accountTwoPassword) || accountOnePasswordSet != StringUtils.isNotEmpty(builder.accountThreePassword)) {
+    throw new IllegalArgumentException();
+  }
+  this.accountOneUsername=builder.accountOneUsername;
+  this.accountOnePassword=builder.accountOnePassword;
+  this.accountTwoUsername=builder.accountTwoUsername;
+  this.accountTwoPassword=builder.accountTwoPassword;
+  this.accountThreeUsername=builder.accountThreeUsername;
+  this.accountThreePassword=builder.accountThreePassword;
+  this.enabledTests=CollectionUtil.nullSafeUnmodifiableSet(builder.enabledTests);
+  this.enabledTestsMap=convertTestsToMap(enabledTests);
+  this.disabledTests=CollectionUtil.nullSafeUnmodifiableSet(builder.disabledTests);
+  this.disabledTestsMap=convertTestsToMap(disabledTests);
+  this.defaultConnectionNickname=builder.defaultConnectionNickname;
+  this.enabledConnections=builder.enabledConnections;
+  this.disabledConnections=builder.disabledConnections;
+  this.testPackages=builder.testPackages;
+  this.configurationApplier=b -> {
+    if (sslContextFactory != null) {
+      b.setSslContextFactory(sslContextFactory);
+    }
+    b.setSecurityMode(securityMode);
+    b.setXmppDomain(service);
+switch (debugger) {
+case enhanced:
+      b.setDebuggerFactory(EnhancedDebugger.Factory.INSTANCE);
+    break;
+case console:
+  b.setDebuggerFactory(ConsoleDebugger.Factory.INSTANCE);
+break;
+case none:
+break;
+}
+}
+;
+this.verbose=builder.verbose;
+this.dnsResolver=builder.dnsResolver;
+this.compatibilityMode=builder.compatibilityMode;
+}

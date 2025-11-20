@@ -1,0 +1,27 @@
+/** 
+ * 清理 reload @@config_all 后，老的 connection 连接
+ * @return
+ */
+private Runnable dataSourceOldConsClear(){
+  return new Runnable(){
+    @Override public void run(){
+      timerExecutor.execute(new Runnable(){
+        @Override public void run(){
+          long sqlTimeout=MycatServer.getInstance().getConfig().getSystem().getSqlExecuteTimeout() * 1000L;
+          long currentTime=TimeUtil.currentTimeMillis();
+          Iterator<BackendConnection> iter=NIOProcessor.backends_old.iterator();
+          while (iter.hasNext()) {
+            BackendConnection con=iter.next();
+            long lastTime=con.getLastTime();
+            if (currentTime - lastTime > sqlTimeout) {
+              con.close("clear old backend connection ...");
+              iter.remove();
+            }
+          }
+        }
+      }
+);
+    }
+  }
+;
+}

@@ -1,0 +1,32 @@
+public void shutdown(T shutdownTask,boolean awaitComplete){
+  if (!shutdownTask.isTerminateSignal()) {
+    throw new IllegalArgumentException("Expected task to provide terminate signal");
+  }
+  if (!awaitComplete) {
+    taskQueue.drainTo(Lists.newArrayList());
+  }
+  for (int i=0; i < threads; ++i) {
+    try {
+      taskQueue.offer(shutdownTask,250,TimeUnit.MILLISECONDS);
+    }
+ catch (    InterruptedException e) {
+      logger.error("Failed to enqueue shutdown request",e);
+    }
+  }
+  AccessController.doPrivileged((PrivilegedAction<Object>)() -> {
+    executorService.shutdown();
+    try {
+      if (!executorService.awaitTermination(20,TimeUnit.SECONDS)) {
+        logger.warn("Timed out awaiting thread termination");
+        executorService.shutdownNow();
+      }
+    }
+ catch (    InterruptedException e) {
+      logger.warn("Interrupted awaiting chunk thread termination");
+      executorService.shutdownNow();
+    }
+    return null;
+  }
+);
+  running=false;
+}

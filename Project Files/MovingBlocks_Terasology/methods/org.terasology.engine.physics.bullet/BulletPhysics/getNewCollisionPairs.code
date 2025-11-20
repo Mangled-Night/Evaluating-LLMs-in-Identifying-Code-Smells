@@ -1,0 +1,57 @@
+private Collection<? extends PhysicsSystem.CollisionPair> getNewCollisionPairs(){
+  discreteDynamicsWorld.getCollisionWorld().performDiscreteCollisionDetection();
+  List<PhysicsSystem.CollisionPair> collisionPairs=Lists.newArrayList();
+  for (  btPairCachingGhostObject trigger : entityTriggers.values()) {
+    EntityRef entity=(EntityRef)trigger.userData;
+    btBroadphasePairArray pairs=trigger.getOverlappingPairCache().getOverlappingPairArray();
+    for (int x=0; x < pairs.size(); x++) {
+      btBroadphasePair initialPair=pairs.at(x);
+      EntityRef otherEntity=null;
+      btBroadphaseProxy p0=btBroadphaseProxy.obtain(initialPair.getPProxy0().getCPointer(),false);
+      btBroadphaseProxy p1=btBroadphaseProxy.obtain(initialPair.getPProxy1().getCPointer(),false);
+      if (p0.getClientObject() == trigger.getCPointer()) {
+        btCollisionObject other=btCollisionObject.getInstance(p1.getClientObject());
+        if (other.userData instanceof EntityRef) {
+          otherEntity=(EntityRef)other.userData;
+        }
+      }
+ else {
+        btCollisionObject other=btCollisionObject.getInstance(p0.getClientObject());
+        if (other.userData instanceof EntityRef) {
+          otherEntity=(EntityRef)other.userData;
+        }
+      }
+      if (otherEntity == null || otherEntity == EntityRef.NULL) {
+        continue;
+      }
+      btBroadphasePair pair=discreteDynamicsWorld.getPairCache().findPair(p0,p1);
+      if (pair == null) {
+        continue;
+      }
+      manifolds.clear();
+      if (pair.getAlgorithm() != null) {
+        pair.getAlgorithm().getAllContactManifolds(manifolds);
+      }
+      for (int y=0; y < manifolds.size(); y++) {
+        btPersistentManifold manifold=manifolds.atConst(y);
+        for (int point=0; point < manifold.getNumContacts(); ++point) {
+          btManifoldPoint manifoldPoint=manifold.getContactPoint(point);
+          if (manifoldPoint.getDistance() < 0.f) {
+            Vector3f a1=new Vector3f();
+            manifoldPoint.getPositionWorldOnA(a1);
+            Vector3f a2=new Vector3f();
+            manifoldPoint.getPositionWorldOnB(a2);
+            int l=manifoldPoint.getLifeTime();
+            Vector3f a3=new Vector3f();
+            manifoldPoint.getNormalWorldOnB(a3);
+            collisionPairs.add(new PhysicsSystem.CollisionPair(entity,otherEntity,a1,a2,manifoldPoint.getDistance(),a3));
+            break;
+          }
+        }
+      }
+      btBroadphaseProxy.free(p0);
+      btBroadphaseProxy.free(p1);
+    }
+  }
+  return collisionPairs;
+}

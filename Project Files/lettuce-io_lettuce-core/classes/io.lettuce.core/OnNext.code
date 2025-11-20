@@ -1,0 +1,41 @@
+/** 
+ * OnNext  {@link Runnable}. This listener is pooled and must be  {@link #recycle() recycled after usage}.
+ */
+static class OnNext implements Runnable {
+  private static final Recycler<OnNext> RECYCLER=new Recycler<OnNext>(){
+    @Override protected OnNext newObject(    Handle<OnNext> handle){
+      return new OnNext(handle);
+    }
+  }
+;
+  private final Recycler.Handle<OnNext> handle;
+  private Object signal;
+  private Subscriber<Object> subscriber;
+  OnNext(  Recycler.Handle<OnNext> handle){
+    this.handle=handle;
+  }
+  /** 
+ * Allocate a new instance.
+ * @return
+ * @see Subscriber#onNext(Object)
+ */
+  static OnNext newInstance(  Object signal,  Subscriber<?> subscriber){
+    OnNext entry=RECYCLER.get();
+    entry.signal=signal;
+    entry.subscriber=(Subscriber)subscriber;
+    return entry;
+  }
+  @Override public void run(){
+    try {
+      subscriber.onNext(signal);
+    }
+  finally {
+      recycle();
+    }
+  }
+  private void recycle(){
+    this.signal=null;
+    this.subscriber=null;
+    handle.recycle(this);
+  }
+}

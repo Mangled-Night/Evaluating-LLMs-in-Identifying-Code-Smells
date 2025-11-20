@@ -1,0 +1,29 @@
+/** 
+ * select  行结束标志返回时触发，将EOF标志写入缓冲区，最后调用source.write(buffer)将缓冲区放入前端连接的写缓冲队列中，等待NIOSocketWR将其发送给应用
+ */
+@Override public void rowEofResponse(byte[] eof,BackendConnection conn){
+  this.netOutBytes+=eof.length;
+  ServerConnection source=session.getSource();
+  conn.recordSql(source.getHost(),source.getSchema(),node.getStatement());
+  if (!rrs.isCallStatement() || (rrs.isCallStatement() && rrs.getProcedure().isResultSimpleValue())) {
+    session.releaseConnectionIfSafe(conn,LOGGER.isDebugEnabled(),false);
+    endRunning();
+  }
+  eof[3]=++packetId;
+  buffer=source.writeToBuffer(eof,allocBuffer());
+  int resultSize=source.getWriteQueue().size() * MycatServer.getInstance().getConfig().getSystem().getBufferPoolPageSize();
+  resultSize=resultSize + buffer.position();
+  MiddlerResultHandler middlerResultHandler=session.getMiddlerResultHandler();
+  if (middlerResultHandler != null) {
+    middlerResultHandler.secondEexcute();
+  }
+ else {
+    if (!errorRepsponsed.get() && !session.closed() && source.canResponse()) {
+      source.write(buffer);
+    }
+  }
+  source.setExecuteSql(null);
+  source.getListener().fireEvent(SqlExecuteStage.END);
+  QueryResult queryResult=new QueryResult(session.getSource().getSchema(),session.getSource().getUser(),rrs.getSqlType(),rrs.getStatement(),affectedRows,netInBytes,netOutBytes,startTime,System.currentTimeMillis(),resultSize,source.getHost());
+  QueryResultDispatcher.dispatchQuery(queryResult);
+}

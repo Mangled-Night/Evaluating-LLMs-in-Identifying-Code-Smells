@@ -1,0 +1,23 @@
+@BenchmarkMode(Mode.AverageTime) @OutputTimeUnit(TimeUnit.NANOSECONDS) @Warmup(iterations=1) @Measurement(iterations=1) public class EntityCreateBenchmark {
+  @Benchmark public EntityRef createEntity(  StateObject state){
+    return state.entityManager.create(state.entityData);
+  }
+@State(Scope.Thread) public static class StateObject {
+    private List<Component> entityData;
+    private PojoEntityManager entityManager;
+    @Setup(Level.Invocation) public void setup(){
+      entityData=Lists.newArrayList();
+      entityManager=new PojoEntityManager();
+      FastRandom rand=new FastRandom(0L);
+      if (rand.nextFloat() < 0.75f) {
+        entityData.add(new LocationComponent());
+      }
+      if (rand.nextFloat() < 0.5f) {
+        entityData.add(new MeshComponent());
+      }
+      if (rand.nextFloat() < 0.25f) {
+        entityData.add(new BlockComponent());
+      }
+    }
+  }
+}

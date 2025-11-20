@@ -1,0 +1,83 @@
+/** 
+ * UPDATE [LOW_PRIORITY] [IGNORE] table_reference SET col_name1={expr1|DEFAULT} [, col_name2={expr2|DEFAULT}] ... [WHERE where_condition] [ORDER BY ...] [LIMIT row_count] Multiple-table syntax: UPDATE [LOW_PRIORITY] [IGNORE] table_references SET col_name1={expr1|DEFAULT} [, col_name2={expr2|DEFAULT}] ... [WHERE where_condition] update user, tuser set user.name='dddd',tuser.pwd='aaa'  where user.id=2 and tuser.id=0;
+ * @param sql update tuser set pwd='aaa', name='digdee' where id=0;
+ * @return
+ */
+public static String convertUpdateSQL(String sql){
+  try {
+    MySqlStatementParser parser=new MySqlStatementParser(sql);
+    SQLStatement stmt=parser.parseStatement();
+    if (!(stmt instanceof MySqlUpdateStatement)) {
+      return sql;
+    }
+    MySqlUpdateStatement update=(MySqlUpdateStatement)stmt;
+    SQLTableSource ts=update.getTableSource();
+    if (ts != null && ts.toString().contains(",")) {
+      System.out.println(ts.toString());
+      LOGGER.warn("Do not support Multiple-table udpate syntax...");
+      return sql;
+    }
+    String tableName=StringUtil.removeBackquote(update.getTableName().getSimpleName());
+    if (!isGlobalTable(tableName))     return sql;
+    if (!isInnerColExist(tableName))     return sql;
+    StringBuilder sb=new StringBuilder(150);
+    SQLExpr se=update.getWhere();
+    if (se instanceof SQLInSubQueryExpr) {
+      int idx=sql.toUpperCase().indexOf(" SET ") + 5;
+      sb.append(sql.substring(0,idx)).append(GLOBAL_TABLE_MYCAT_COLUMN).append("=").append(operationTimestamp).append(",").append(sql.substring(idx));
+      return sb.toString();
+    }
+    String where=null;
+    if (update.getWhere() != null)     where=update.getWhere().toString();
+    SQLOrderBy orderBy=update.getOrderBy();
+    SQLLimit limit=update.getLimit();
+    sb.append("update ").append(tableName).append(" set ");
+    List<SQLUpdateSetItem> items=update.getItems();
+    boolean flag=false;
+    for (int i=0; i < items.size(); i++) {
+      SQLUpdateSetItem item=items.get(i);
+      String col=item.getColumn().toString();
+      String val=item.getValue().toString();
+      if (StringUtil.removeBackquote(col).equalsIgnoreCase(GLOBAL_TABLE_MYCAT_COLUMN)) {
+        flag=true;
+        sb.append(col).append("=");
+        if (i != items.size() - 1)         sb.append(operationTimestamp).append(",");
+ else         sb.append(operationTimestamp);
+      }
+ else {
+        sb.append(col).append("=");
+        if (i != items.size() - 1)         sb.append(val).append(",");
+ else         sb.append(val);
+      }
+    }
+    if (!flag) {
+      sb.append(",").append(GLOBAL_TABLE_MYCAT_COLUMN).append("=").append(operationTimestamp);
+    }
+    sb.append(" where ").append(where);
+    if (orderBy != null && orderBy.getItems() != null && orderBy.getItems().size() > 0) {
+      sb.append(" order by ");
+      for (int i=0; i < orderBy.getItems().size(); i++) {
+        SQLSelectOrderByItem item=orderBy.getItems().get(i);
+        SQLOrderingSpecification os=item.getType();
+        sb.append(item.getExpr().toString());
+        if (i < orderBy.getItems().size() - 1) {
+          if (os != null)           sb.append(" ").append(os.toString());
+          sb.append(",");
+        }
+ else {
+          if (os != null)           sb.append(" ").append(os.toString());
+        }
+      }
+    }
+    if (limit != null) {
+      sb.append(" limit ");
+      if (limit.getOffset() != null)       sb.append(limit.getOffset().toString()).append(",");
+      sb.append(limit.getRowCount().toString());
+    }
+    return sb.toString();
+  }
+ catch (  Exception e) {
+    LOGGER.warn(e.getMessage());
+    return sql;
+  }
+}

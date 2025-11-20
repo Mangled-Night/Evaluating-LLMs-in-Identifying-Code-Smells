@@ -1,0 +1,35 @@
+private Map<Integer,Map<String,Set<Block>>> getFieldsFromAnnotations(Context context){
+  ModuleEnvironment environment=context.get(ModuleManager.class).getEnvironment();
+  Collection<Block> blocks=context.get(BlockManager.class).listRegisteredBlocks();
+  Map<Integer,Map<String,Set<Block>>> fieldss=new HashMap<>();
+  TERA_ARRAY_FACTORIES.forEach((size,fac) -> fieldss.put(size,new HashMap<>()));
+  for (  Class<?> type : environment.getTypesAnnotatedWith(ExtraDataSystem.class)) {
+    for (    Method method : type.getMethods()) {
+      RegisterExtraData registerAnnotation=method.getAnnotation(RegisterExtraData.class);
+      if (registerAnnotation != null) {
+        String errorType=validRegistrationMethod(method,registerAnnotation);
+        if (errorType != null) {
+          logger.error("Unable to register extra block data: " + errorType + " for {}.{}: should be \"public static boolean {}(Block block)\", and bitSize should be 4, 8 or 16.",type.getName(),method.getName(),method.getName());
+          continue;
+        }
+        method.setAccessible(true);
+        Set<Block> includedBlocks=new HashSet<>();
+        for (        Block block : blocks) {
+          try {
+            if ((boolean)method.invoke(null,block)) {
+              includedBlocks.add(block);
+            }
+          }
+ catch (          IllegalAccessException e) {
+            throw new RuntimeException("Incorrect access modifier on register extra data method",e);
+          }
+catch (          InvocationTargetException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        fieldss.get(registerAnnotation.bitSize()).put(registerAnnotation.name(),includedBlocks);
+      }
+    }
+  }
+  return fieldss;
+}

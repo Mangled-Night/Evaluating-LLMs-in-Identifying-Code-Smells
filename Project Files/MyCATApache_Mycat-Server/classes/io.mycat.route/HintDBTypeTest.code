@@ -1,0 +1,35 @@
+public class HintDBTypeTest {
+  protected Map<String,SchemaConfig> schemaMap;
+  protected LayerCachePool cachePool=new SimpleCachePool();
+  protected RouteStrategy routeStrategy;
+  public HintDBTypeTest(){
+    String schemaFile="/route/schema.xml";
+    String ruleFile="/route/rule.xml";
+    SchemaLoader schemaLoader=new XMLSchemaLoader(schemaFile,ruleFile);
+    schemaMap=schemaLoader.getSchemas();
+    MycatServer.getInstance().getConfig().getSchemas().putAll(schemaMap);
+    RouteStrategyFactory.init();
+    routeStrategy=RouteStrategyFactory.getRouteStrategy("druidparser");
+  }
+  /** 
+ * 测试注解
+ * @throws Exception
+ */
+  @Test public void testHint() throws Exception {
+    SchemaConfig schema=schemaMap.get("TESTDB");
+    String sql="/*!mycat:db_type=master*/select * from employee where sharding_id=1";
+    CacheService cacheService=new CacheService();
+    RouteService routerService=new RouteService(cacheService);
+    RouteResultset rrs=routerService.route(new SystemConfig(),schema,ServerParse.SELECT,sql,"UTF-8",null);
+    Assert.assertTrue(!rrs.getRunOnSlave());
+    sql="/*#mycat:db_type=master*/select * from employee where sharding_id=1";
+    rrs=routerService.route(new SystemConfig(),schema,ServerParse.SELECT,sql,"UTF-8",null);
+    Assert.assertTrue(!rrs.getRunOnSlave());
+    sql="/*mycat:db_type=master*/select * from employee where sharding_id=1";
+    rrs=routerService.route(new SystemConfig(),schema,ServerParse.SELECT,sql,"UTF-8",null);
+    Assert.assertTrue(!rrs.getRunOnSlave());
+    sql="select * from employee where sharding_id=1";
+    rrs=routerService.route(new SystemConfig(),schema,ServerParse.SELECT,sql,"UTF-8",null);
+    Assert.assertTrue(rrs.getRunOnSlave() == null);
+  }
+}

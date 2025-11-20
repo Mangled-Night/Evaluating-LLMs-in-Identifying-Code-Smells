@@ -1,0 +1,19 @@
+private BlockFamilyDefinitionData createBaseData(JsonObject jsonObject){
+  JsonPrimitive basedOn=jsonObject.getAsJsonPrimitive("basedOn");
+  if (basedOn != null && !basedOn.getAsString().isEmpty()) {
+    Optional<BlockFamilyDefinition> baseDef=assetManager.getAsset(basedOn.getAsString(),BlockFamilyDefinition.class);
+    if (baseDef.isPresent()) {
+      BlockFamilyDefinitionData data=baseDef.get().getData();
+      if (data.getBlockFamily() == FreeformFamily.class) {
+        data.setBlockFamily(null);
+      }
+      return data;
+    }
+ else {
+      throw new JsonParseException("Unable to resolve based block definition '" + basedOn.getAsString() + "'");
+    }
+  }
+  BlockFamilyDefinitionData data=new BlockFamilyDefinitionData();
+  data.getBaseSection().setSounds(assetManager.getAsset("engine:default",BlockSounds.class).get());
+  return data;
+}

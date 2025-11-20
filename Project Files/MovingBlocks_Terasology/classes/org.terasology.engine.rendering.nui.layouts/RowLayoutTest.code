@@ -1,0 +1,62 @@
+public class RowLayoutTest {
+  private static final int CANVAS_HEIGHT=200;
+  private static final int CANVAS_WIDTH=200;
+  private RowLayout rowLayout;
+  private Canvas canvas;
+  private UIWidget itemAt1x1;
+  private UIWidget itemAt1x2;
+  private UIWidget itemAt1x3;
+  @BeforeEach public void setup(){
+    rowLayout=new RowLayout();
+    itemAt1x1=mock(UIWidget.class);
+    itemAt1x2=mock(UIWidget.class);
+    itemAt1x3=mock(UIWidget.class);
+    canvas=mock(Canvas.class);
+    when(canvas.calculateRestrictedSize(eq(itemAt1x1),any(Vector2i.class))).thenReturn(new Vector2i(50,10));
+    when(canvas.calculateRestrictedSize(eq(itemAt1x2),any(Vector2i.class))).thenReturn(new Vector2i(5,5));
+    when(canvas.calculateRestrictedSize(eq(itemAt1x3),any(Vector2i.class))).thenReturn(new Vector2i(10,15));
+    Vector2i availableSize=new Vector2i(CANVAS_WIDTH,CANVAS_HEIGHT);
+    when(canvas.size()).thenReturn(availableSize);
+    rowLayout.addWidget(itemAt1x1,null);
+    rowLayout.addWidget(itemAt1x2,null);
+    rowLayout.addWidget(itemAt1x3,null);
+  }
+  @Test public void testAllRelativeWidths() throws Exception {
+    rowLayout.setColumnRatios(0.4f,0.5f,0.1f);
+    rowLayout.setHorizontalSpacing(0);
+    Vector2i result=rowLayout.getPreferredContentSize(canvas,canvas.size());
+    assertEquals(CANVAS_WIDTH,result.x);
+    assertEquals(15,result.y);
+    rowLayout.onDraw(canvas);
+    final int width1=CANVAS_WIDTH * 4 / 10;
+    final int width2=CANVAS_WIDTH / 2;
+    final int width3=CANVAS_WIDTH / 10;
+    verify(canvas).drawWidget(itemAt1x1,RectUtility.createFromMinAndSize(0,0,width1,CANVAS_HEIGHT));
+    verify(canvas).drawWidget(itemAt1x2,RectUtility.createFromMinAndSize(width1,0,width2,CANVAS_HEIGHT));
+    verify(canvas).drawWidget(itemAt1x3,RectUtility.createFromMinAndSize(width1 + width2,0,width3,CANVAS_HEIGHT));
+  }
+  @Test public void testNoRelativeWidths() throws Exception {
+    rowLayout.setHorizontalSpacing(0);
+    Vector2i result=rowLayout.getPreferredContentSize(canvas,canvas.size());
+    assertEquals(CANVAS_WIDTH,result.x);
+    assertEquals(15,result.y);
+    rowLayout.onDraw(canvas);
+    verify(canvas).drawWidget(itemAt1x1,RectUtility.createFromMinAndSize(0,0,CANVAS_WIDTH / 3,CANVAS_HEIGHT));
+    verify(canvas).drawWidget(itemAt1x2,RectUtility.createFromMinAndSize(CANVAS_WIDTH / 3,0,CANVAS_WIDTH / 3,CANVAS_HEIGHT));
+    verify(canvas).drawWidget(itemAt1x3,RectUtility.createFromMinAndSize(CANVAS_WIDTH / 3 + CANVAS_WIDTH / 3,0,CANVAS_WIDTH / 3,CANVAS_HEIGHT));
+  }
+  @Test public void testSomeRelativeWidths() throws Exception {
+    rowLayout.setColumnRatios(0.5f);
+    rowLayout.setHorizontalSpacing(0);
+    Vector2i result=rowLayout.getPreferredContentSize(canvas,canvas.size());
+    assertEquals(CANVAS_WIDTH,result.x);
+    assertEquals(15,result.y);
+    rowLayout.onDraw(canvas);
+    final int width1=CANVAS_WIDTH / 2;
+    final int width2=(CANVAS_WIDTH - width1) / 2;
+    final int width3=(CANVAS_WIDTH - width1) / 2;
+    verify(canvas).drawWidget(itemAt1x1,RectUtility.createFromMinAndSize(0,0,width1,CANVAS_HEIGHT));
+    verify(canvas).drawWidget(itemAt1x2,RectUtility.createFromMinAndSize(width1,0,width2,CANVAS_HEIGHT));
+    verify(canvas).drawWidget(itemAt1x3,RectUtility.createFromMinAndSize(width1 + width2,0,width3,CANVAS_HEIGHT));
+  }
+}

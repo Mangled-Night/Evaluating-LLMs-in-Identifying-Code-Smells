@@ -1,0 +1,22 @@
+@Test public void testTimeout() throws InterruptedException {
+  CountDownLatch latch=new CountDownLatch(1);
+  ThreadUtils.Task<Boolean> task=new ThreadUtils.SimpleTask<Boolean>(){
+    @Override public Boolean doInBackground() throws Throwable {
+      System.out.println("doInBackground start");
+      Thread.sleep(2000);
+      System.out.println("doInBackground end");
+      return null;
+    }
+    @Override public void onSuccess(    Boolean result){
+      System.out.println("onSuccess");
+    }
+  }
+.setTimeout(1000,new ThreadUtils.Task.OnTimeoutListener(){
+    @Override public void onTimeout(){
+      System.out.println("onTimeout");
+    }
+  }
+);
+  ThreadUtils.executeByCached(task);
+  latch.await(3,TimeUnit.SECONDS);
+}

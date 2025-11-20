@@ -1,0 +1,64 @@
+public static final class NetworkChangedReceiver extends BroadcastReceiver {
+  private static NetworkChangedReceiver getInstance(){
+    return LazyHolder.INSTANCE;
+  }
+  private NetworkType mType;
+  private Set<OnNetworkStatusChangedListener> mListeners=new HashSet<>();
+  @RequiresPermission(ACCESS_NETWORK_STATE) void registerListener(  final OnNetworkStatusChangedListener listener){
+    if (listener == null)     return;
+    UtilsBridge.runOnUiThread(new Runnable(){
+      @Override @RequiresPermission(ACCESS_NETWORK_STATE) public void run(){
+        int preSize=mListeners.size();
+        mListeners.add(listener);
+        if (preSize == 0 && mListeners.size() == 1) {
+          mType=getNetworkType();
+          IntentFilter intentFilter=new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+          Utils.getApp().registerReceiver(NetworkChangedReceiver.getInstance(),intentFilter);
+        }
+      }
+    }
+);
+  }
+  boolean isRegistered(  final OnNetworkStatusChangedListener listener){
+    if (listener == null)     return false;
+    return mListeners.contains(listener);
+  }
+  void unregisterListener(  final OnNetworkStatusChangedListener listener){
+    if (listener == null)     return;
+    UtilsBridge.runOnUiThread(new Runnable(){
+      @Override public void run(){
+        int preSize=mListeners.size();
+        mListeners.remove(listener);
+        if (preSize == 1 && mListeners.size() == 0) {
+          Utils.getApp().unregisterReceiver(NetworkChangedReceiver.getInstance());
+        }
+      }
+    }
+);
+  }
+  @Override public void onReceive(  Context context,  Intent intent){
+    if (ConnectivityManager.CONNECTIVITY_ACTION.equals(intent.getAction())) {
+      UtilsBridge.runOnUiThreadDelayed(new Runnable(){
+        @Override @RequiresPermission(ACCESS_NETWORK_STATE) public void run(){
+          NetworkType networkType=NetworkUtils.getNetworkType();
+          if (mType == networkType)           return;
+          mType=networkType;
+          if (networkType == NetworkType.NETWORK_NO) {
+            for (            OnNetworkStatusChangedListener listener : mListeners) {
+              listener.onDisconnected();
+            }
+          }
+ else {
+            for (            OnNetworkStatusChangedListener listener : mListeners) {
+              listener.onConnected(networkType);
+            }
+          }
+        }
+      }
+,1000);
+    }
+  }
+private static class LazyHolder {
+    private static final NetworkChangedReceiver INSTANCE=new NetworkChangedReceiver();
+  }
+}

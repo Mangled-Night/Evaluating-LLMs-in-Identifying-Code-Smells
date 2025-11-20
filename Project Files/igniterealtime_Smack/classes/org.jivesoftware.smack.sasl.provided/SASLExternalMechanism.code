@@ -1,0 +1,35 @@
+/** 
+ * Implementation of the SASL-EXTERNAL authentication mechanism.
+ * @author Daniele Ricci
+ */
+public class SASLExternalMechanism extends SASLMechanism {
+  public static final String NAME=EXTERNAL;
+  @Override protected void authenticateInternal(  CallbackHandler cbh){
+  }
+  @Override protected byte[] getAuthenticationText(){
+    if (authorizationId != null) {
+      return toBytes(authorizationId.toString());
+    }
+    if (StringUtils.isNullOrEmpty(authenticationId)) {
+      return null;
+    }
+    return toBytes(XmppStringUtils.completeJidFrom(authenticationId,serviceName));
+  }
+  @Override public String getName(){
+    return NAME;
+  }
+  @Override public int getPriority(){
+    return 510;
+  }
+  @Override protected SASLMechanism newInstance(){
+    return new SASLExternalMechanism();
+  }
+  @Override public void checkIfSuccessfulOrThrow(){
+  }
+  @Override public boolean authzidSupported(){
+    return true;
+  }
+  @Override public boolean requiresPassword(){
+    return false;
+  }
+}

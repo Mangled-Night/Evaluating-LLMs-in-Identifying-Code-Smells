@@ -1,0 +1,22 @@
+public class ExtensionElementFilter<E extends ExtensionElement> implements StanzaFilter {
+  private final Class<E> extensionElementClass;
+  private final QName extensionElementQName;
+  public ExtensionElementFilter(  Class<E> extensionElementClass){
+    this.extensionElementClass=extensionElementClass;
+    extensionElementQName=XmppElementUtil.getQNameFor(extensionElementClass);
+  }
+  @Override public final boolean accept(  Stanza stanza){
+    XmlElement extensionElement=stanza.getExtension(extensionElementQName);
+    if (extensionElement == null) {
+      return false;
+    }
+    if (!extensionElementClass.isInstance(extensionElement)) {
+      return false;
+    }
+    E specificExtensionElement=extensionElementClass.cast(extensionElement);
+    return accept(specificExtensionElement);
+  }
+  public boolean accept(  E extensionElement){
+    return true;
+  }
+}

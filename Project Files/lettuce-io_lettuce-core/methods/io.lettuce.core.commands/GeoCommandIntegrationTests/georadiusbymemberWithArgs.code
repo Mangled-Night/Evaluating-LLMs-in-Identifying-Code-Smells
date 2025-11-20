@@ -1,0 +1,26 @@
+@Test void georadiusbymemberWithArgs(){
+  prepareGeo();
+  List<GeoWithin<String>> empty=redis.georadiusbymember(key,"Bahn",1,GeoArgs.Unit.km,new GeoArgs().withHash().withCoordinates().withDistance().desc());
+  assertThat(empty).isNotEmpty();
+  List<GeoWithin<String>> withDistanceAndCoordinates=redis.georadiusbymember(key,"Bahn",5,GeoArgs.Unit.km,new GeoArgs().withCoordinates().withDistance().desc());
+  assertThat(withDistanceAndCoordinates).hasSize(2);
+  GeoWithin<String> weinheim=withDistanceAndCoordinates.get(0);
+  assertThat(weinheim.getMember()).isEqualTo("Weinheim");
+  assertThat(weinheim.getGeohash()).isNull();
+  assertThat(weinheim.getDistance()).isNotNull();
+  assertThat(weinheim.getCoordinates()).isNotNull();
+  List<GeoWithin<String>> withDistanceAndHash=redis.georadiusbymember(key,"Bahn",5,GeoArgs.Unit.km,new GeoArgs().withDistance().withHash().desc());
+  assertThat(withDistanceAndHash).hasSize(2);
+  GeoWithin<String> weinheimDistanceHash=withDistanceAndHash.get(0);
+  assertThat(weinheimDistanceHash.getMember()).isEqualTo("Weinheim");
+  assertThat(weinheimDistanceHash.getGeohash()).isNotNull();
+  assertThat(weinheimDistanceHash.getDistance()).isNotNull();
+  assertThat(weinheimDistanceHash.getCoordinates()).isNull();
+  List<GeoWithin<String>> withCoordinates=redis.georadiusbymember(key,"Bahn",5,GeoArgs.Unit.km,new GeoArgs().withCoordinates().desc());
+  assertThat(withCoordinates).hasSize(2);
+  GeoWithin<String> weinheimCoordinates=withCoordinates.get(0);
+  assertThat(weinheimCoordinates.getMember()).isEqualTo("Weinheim");
+  assertThat(weinheimCoordinates.getGeohash()).isNull();
+  assertThat(weinheimCoordinates.getDistance()).isNull();
+  assertThat(weinheimCoordinates.getCoordinates()).isNotNull();
+}

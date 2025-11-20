@@ -1,0 +1,19 @@
+/** 
+ * Returns a iterator, which will return the rows in the order as inserted. It is the caller's responsibility to call `cleanupResources()` after consuming this iterator. TODO: support forced spilling
+ */
+public UnsafeSorterIterator getIterator() throws IOException {
+  if (spillWriters.isEmpty()) {
+    assert (inMemSorter != null);
+    return inMemSorter.getSortedIterator();
+  }
+ else {
+    LinkedList<UnsafeSorterIterator> queue=new LinkedList<UnsafeSorterIterator>();
+    for (    UnsafeSorterSpillWriter spillWriter : spillWriters) {
+      queue.add(spillWriter.getReader(serializerManager));
+    }
+    if (inMemSorter != null) {
+      queue.add(inMemSorter.getSortedIterator());
+    }
+    return new ChainedIterator(queue);
+  }
+}

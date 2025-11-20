@@ -1,0 +1,17 @@
+/** 
+ * Rate-limited method that notifies the given  {@link Consumer} once the current {@link Timeout} is expired.
+ * @param timeoutConsumer callback.
+ */
+protected void onEvent(Consumer<Timeout> timeoutConsumer){
+  Timeout existingTimeout=timeoutRef.get();
+  if (existingTimeout != null) {
+    if (!existingTimeout.isExpired()) {
+      return;
+    }
+  }
+  Timeout timeout=new Timeout(this.timeout,this.timeUnit);
+  boolean state=timeoutRef.compareAndSet(existingTimeout,timeout);
+  if (state) {
+    timeoutConsumer.accept(timeout);
+  }
+}

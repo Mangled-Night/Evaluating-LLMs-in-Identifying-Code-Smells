@@ -1,0 +1,21 @@
+/** 
+ * Opens the NUI editor for a ui skin
+ * @param uri String containing name of ui skin
+ * @return String containing final message
+ */
+@Command(shortDescription="Opens the NUI editor for a ui skin",requiredPermission=PermissionManager.NO_PERMISSION) public String editSkin(@CommandParam(value="uri",suggester=SkinSuggester.class) String uri){
+  if (!nuiSkinEditorSystem.isEditorActive()) {
+    nuiSkinEditorSystem.toggleEditor();
+  }
+  Set<ResourceUrn> urns=assetManager.resolve(uri,UISkinAsset.class);
+switch (urns.size()) {
+case 0:
+    return String.format("No asset found for screen '%s'",uri);
+case 1:
+  ResourceUrn urn=urns.iterator().next();
+((NUISkinEditorScreen)nuiManager.getScreen(NUISkinEditorScreen.ASSET_URI)).selectAsset(urn);
+return "Success";
+default :
+return String.format("Multiple matches for screen '%s': {%s}",uri,Arrays.toString(urns.toArray()));
+}
+}

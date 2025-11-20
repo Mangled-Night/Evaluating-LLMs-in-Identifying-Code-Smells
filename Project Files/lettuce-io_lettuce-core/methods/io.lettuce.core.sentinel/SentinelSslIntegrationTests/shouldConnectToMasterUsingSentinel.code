@@ -1,0 +1,10 @@
+@Test void shouldConnectToMasterUsingSentinel(){
+  RedisURI redisURI=RedisURI.create("rediss-sentinel://" + TestSettings.host() + ":"+ RedisURI.DEFAULT_SENTINEL_PORT+ "?sentinelMasterId=mymaster");
+  SslOptions options=SslOptions.builder().truststore(TRUSTSTORE_FILE).build();
+  RedisClient client=RedisClient.create(clientResources);
+  client.setOptions(ClientOptions.builder().sslOptions(options).build());
+  StatefulRedisConnection<String,String> connection=client.connect(redisURI);
+  assertThat(connection.sync().ping()).isNotNull();
+  connection.close();
+  FastShutdown.shutdown(client);
+}

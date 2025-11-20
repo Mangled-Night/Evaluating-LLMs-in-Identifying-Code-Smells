@@ -1,0 +1,35 @@
+public synchronized static void updateToFile(String host,List<UserConfig> userConfigs) throws Exception {
+  LOGGER.debug("set white host:" + host + "user:"+ userConfigs);
+  String filename=SystemConfig.getHomePath() + File.separator + "conf"+ File.separator+ "server.xml";
+  DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
+  factory.setNamespaceAware(false);
+  factory.setValidating(false);
+  DocumentBuilder builder=factory.newDocumentBuilder();
+  builder.setEntityResolver(new IgnoreDTDEntityResolver());
+  Document xmldoc=builder.parse(filename);
+  Element whitehost=(Element)xmldoc.getElementsByTagName("whitehost").item(0);
+  Element firewall=(Element)xmldoc.getElementsByTagName("firewall").item(0);
+  if (firewall == null) {
+    firewall=xmldoc.createElement("firewall");
+    Element root=xmldoc.getDocumentElement();
+    root.appendChild(firewall);
+    if (whitehost == null) {
+      whitehost=xmldoc.createElement("whitehost");
+      firewall.appendChild(whitehost);
+    }
+  }
+  for (  UserConfig userConfig : userConfigs) {
+    String user=userConfig.getName();
+    Element hostEle=xmldoc.createElement("host");
+    hostEle.setAttribute("host",host);
+    hostEle.setAttribute("user",user);
+    whitehost.appendChild(hostEle);
+  }
+  TransformerFactory factory2=TransformerFactory.newInstance();
+  Transformer former=factory2.newTransformer();
+  String systemId=xmldoc.getDoctype().getSystemId();
+  if (systemId != null) {
+    former.setOutputProperty(javax.xml.transform.OutputKeys.DOCTYPE_SYSTEM,systemId);
+  }
+  former.transform(new DOMSource(xmldoc),new StreamResult(new File(filename)));
+}

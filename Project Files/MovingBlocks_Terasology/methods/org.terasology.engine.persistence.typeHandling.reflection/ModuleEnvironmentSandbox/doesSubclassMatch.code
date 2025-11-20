@@ -1,0 +1,20 @@
+private boolean doesSubclassMatch(Class<?> subclass,String subTypeIdentifier){
+  if (subclass == null) {
+    return false;
+  }
+  SimpleUri subTypeUri=new SimpleUri(subTypeIdentifier);
+  Name subTypeName=subTypeUri.isValid() ? subTypeUri.getObjectName() : new Name(subTypeIdentifier);
+  boolean fullNameEquals=subTypeName.toString().equals((subclass.getName()));
+  if (fullNameEquals) {
+    return true;
+  }
+  Name providingModule=getModuleProviding(subclass);
+  Name givenModuleName;
+  if (subTypeUri.isValid()) {
+    givenModuleName=subTypeUri.getModuleName();
+  }
+ else {
+    givenModuleName=ModuleContext.getContext() != null ? ModuleContext.getContext().getId() : null;
+  }
+  return Objects.equals(givenModuleName,providingModule) && subTypeName.toString().equals(subclass.getSimpleName());
+}

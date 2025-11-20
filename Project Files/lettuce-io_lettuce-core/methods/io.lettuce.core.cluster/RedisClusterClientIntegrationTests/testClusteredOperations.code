@@ -1,0 +1,15 @@
+@Test void testClusteredOperations(){
+  SlotHash.getSlot(ClusterTestSettings.KEY_B.getBytes());
+  SlotHash.getSlot(ClusterTestSettings.KEY_A.getBytes());
+  RedisFuture<String> result=redis1.async().set(ClusterTestSettings.KEY_B,value);
+  assertThat(result.getError()).isEqualTo(null);
+  assertThat(redissync1.set(ClusterTestSettings.KEY_B,"value")).isEqualTo("OK");
+  RedisFuture<String> resultMoved=redis1.async().set(ClusterTestSettings.KEY_A,value);
+  assertThatThrownBy(() -> TestFutures.awaitOrTimeout(resultMoved)).hasMessageContaining("MOVED 15495");
+  clusterClient.reloadPartitions();
+  RedisAdvancedClusterCommands<String,String> connection=clusterClient.connect().sync();
+  assertThat(connection.set(ClusterTestSettings.KEY_A,value)).isEqualTo("OK");
+  assertThat(connection.set(ClusterTestSettings.KEY_B,"myValue2")).isEqualTo("OK");
+  assertThat(connection.set(ClusterTestSettings.KEY_D,"myValue2")).isEqualTo("OK");
+  connection.getStatefulConnection().close();
+}

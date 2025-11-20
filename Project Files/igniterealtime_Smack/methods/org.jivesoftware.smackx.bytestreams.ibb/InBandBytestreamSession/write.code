@@ -1,0 +1,33 @@
+@Override public synchronized void write(int b) throws IOException {
+  if (this.isClosed) {
+    throw new IOException("Stream is closed");
+  }
+  if (bufferPointer >= buffer.length) {
+    flushBuffer();
+  }
+  buffer[bufferPointer++]=(byte)b;
+}
+@Override public synchronized void write(byte[] b,int off,int len) throws IOException {
+  if (b == null) {
+    throw new NullPointerException();
+  }
+ else   if ((off < 0) || (off > b.length) || (len < 0)|| ((off + len) > b.length)|| ((off + len) < 0)) {
+    throw new IndexOutOfBoundsException();
+  }
+ else   if (len == 0) {
+    return;
+  }
+  if (this.isClosed) {
+    throw new IOException("Stream is closed");
+  }
+  if (len >= buffer.length) {
+    writeOut(b,off,buffer.length);
+    write(b,off + buffer.length,len - buffer.length);
+  }
+ else {
+    writeOut(b,off,len);
+  }
+}
+@Override public synchronized void write(byte[] b) throws IOException {
+  write(b,0,b.length);
+}

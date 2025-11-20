@@ -1,0 +1,86 @@
+/** 
+ * An UnsafeSorterIterator that support spilling.
+ */
+public class SpillableIterator extends UnsafeSorterIterator {
+  private UnsafeSorterIterator upstream;
+  private UnsafeSorterIterator nextUpstream=null;
+  private MemoryBlock lastPage=null;
+  private boolean loaded=false;
+  private int numRecords=0;
+  SpillableIterator(  UnsafeInMemorySorter.SortedIterator inMemIterator){
+    this.upstream=inMemIterator;
+    this.numRecords=inMemIterator.getNumRecords();
+  }
+  public int getNumRecords(){
+    return numRecords;
+  }
+  public long spill() throws IOException {
+synchronized (this) {
+      if (!(upstream instanceof UnsafeInMemorySorter.SortedIterator && nextUpstream == null && numRecords > 0)) {
+        return 0L;
+      }
+      UnsafeInMemorySorter.SortedIterator inMemIterator=((UnsafeInMemorySorter.SortedIterator)upstream).clone();
+      final UnsafeSorterSpillWriter spillWriter=new UnsafeSorterSpillWriter(blockManager,fileBufferSizeBytes,numRecords);
+      while (inMemIterator.hasNext()) {
+        inMemIterator.loadNext();
+        final Object baseObject=inMemIterator.getBaseObject();
+        final long baseOffset=inMemIterator.getBaseOffset();
+        final int recordLength=inMemIterator.getRecordLength();
+        spillWriter.write(baseObject,baseOffset,recordLength,inMemIterator.getKeyPrefix());
+      }
+      spillWriter.close();
+      spillWriters.add(spillWriter);
+      nextUpstream=spillWriter.getReader(serializerManager);
+      long released=0L;
+synchronized (UnsafeExternalSorter.this) {
+        for (        MemoryBlock page : allocatedPages) {
+          if (!loaded || page.getBaseObject() != upstream.getBaseObject()) {
+            released+=page.size();
+            freePage(page);
+          }
+ else {
+            lastPage=page;
+          }
+        }
+        allocatedPages.clear();
+      }
+      assert (inMemSorter != null);
+      released+=inMemSorter.getMemoryUsage();
+      totalSortTimeNanos+=inMemSorter.getSortTimeNanos();
+      inMemSorter.free();
+      inMemSorter=null;
+      totalSpillBytes+=released;
+      return released;
+    }
+  }
+  @Override public boolean hasNext(){
+    return numRecords > 0;
+  }
+  @Override public void loadNext() throws IOException {
+synchronized (this) {
+      loaded=true;
+      if (nextUpstream != null) {
+        if (lastPage != null) {
+          freePage(lastPage);
+          lastPage=null;
+        }
+        upstream=nextUpstream;
+        nextUpstream=null;
+      }
+      numRecords--;
+      upstream.loadNext();
+    }
+  }
+  @Override public Object getBaseObject(){
+    return upstream.getBaseObject();
+  }
+  @Override public long getBaseOffset(){
+    return upstream.getBaseOffset();
+  }
+  @Override public int getRecordLength(){
+    return upstream.getRecordLength();
+  }
+  @Override public long getKeyPrefix(){
+    return upstream.getKeyPrefix();
+  }
+}

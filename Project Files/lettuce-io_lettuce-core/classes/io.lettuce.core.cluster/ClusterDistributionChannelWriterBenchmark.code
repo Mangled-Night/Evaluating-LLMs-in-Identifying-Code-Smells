@@ -1,0 +1,46 @@
+/** 
+ * Benchmark for  {@link ClusterDistributionChannelWriter}.
+ * @author Mark Paluch
+ */
+@State(Scope.Benchmark) public class ClusterDistributionChannelWriterBenchmark {
+  private static final ClientOptions CLIENT_OPTIONS=ClientOptions.create();
+  private static final RedisChannelWriter EMPTY_WRITER=EmptyRedisChannelWriter.INSTANCE;
+  private static final EmptyStatefulRedisConnection CONNECTION=EmptyStatefulRedisConnection.INSTANCE;
+  private static final ValueOutput<byte[],byte[]> VALUE_OUTPUT=new ValueOutput<>(ByteArrayCodec.INSTANCE);
+  private static final Command<byte[],byte[],byte[]> KEYED_COMMAND1=new Command<>(CommandType.GET,VALUE_OUTPUT,new CommandArgs<>(ByteArrayCodec.INSTANCE).addKey("benchmark1".getBytes()));
+  private static final Command<byte[],byte[],byte[]> KEYED_COMMAND2=new Command<>(CommandType.GET,VALUE_OUTPUT,new CommandArgs<>(ByteArrayCodec.INSTANCE).addKey("benchmark2".getBytes()));
+  private static final Command<byte[],byte[],byte[]> KEYED_COMMAND3=new Command<>(CommandType.GET,VALUE_OUTPUT,new CommandArgs<>(ByteArrayCodec.INSTANCE).addKey("benchmark3".getBytes()));
+  private static final Command<byte[],byte[],byte[]> PLAIN_COMMAND=new Command<>(CommandType.GET,VALUE_OUTPUT,new CommandArgs<>(ByteArrayCodec.INSTANCE));
+  private static final List<Command<byte[],byte[],byte[]>> COMMANDS=Arrays.asList(KEYED_COMMAND1,KEYED_COMMAND2,KEYED_COMMAND3);
+  private ClusterDistributionChannelWriter writer;
+  @Setup public void setup(){
+    writer=new ClusterDistributionChannelWriter(CLIENT_OPTIONS,EMPTY_WRITER,ClusterEventListener.NO_OP);
+    Partitions partitions=new Partitions();
+    partitions.add(new RedisClusterNode(RedisURI.create("localhost",1),"1",true,null,0,0,0,IntStream.range(0,8191).boxed().collect(Collectors.toList()),new HashSet<>()));
+    partitions.add(new RedisClusterNode(RedisURI.create("localhost",2),"2",true,null,0,0,0,IntStream.range(8192,SlotHash.SLOT_COUNT).boxed().collect(Collectors.toList()),new HashSet<>()));
+    partitions.updateCache();
+    CompletableFuture<EmptyStatefulRedisConnection> connectionFuture=CompletableFuture.completedFuture(CONNECTION);
+    writer.setPartitions(partitions);
+    writer.setClusterConnectionProvider(new PooledClusterConnectionProvider(new EmptyRedisClusterClient(RedisURI.create("localhost",7379)),EMPTY_WRITER,ByteArrayCodec.INSTANCE,ClusterEventListener.NO_OP){
+      public CompletableFuture getConnectionAsync(      ConnectionIntent connectionIntent,      int slot){
+        return connectionFuture;
+      }
+    }
+);
+    writer.setPartitions(partitions);
+  }
+  @Benchmark public void writeKeyedCommand(){
+    writer.write(KEYED_COMMAND1);
+  }
+  @Benchmark public void write3KeyedCommands(){
+    writer.write(KEYED_COMMAND1);
+    writer.write(KEYED_COMMAND2);
+    writer.write(KEYED_COMMAND3);
+  }
+  @Benchmark public void write3KeyedCommandsAsBatch(){
+    writer.write(COMMANDS);
+  }
+  @Benchmark public void writePlainCommand(){
+    writer.write(PLAIN_COMMAND);
+  }
+}

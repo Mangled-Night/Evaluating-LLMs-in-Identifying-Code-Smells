@@ -1,0 +1,29 @@
+/** 
+ * From client to server when the client do heartbeat between mycat cluster. <pre> Bytes         Name -----         ---- 1             command n             id
+ * @author mycat
+ */
+public class HeartbeatPacket extends MySQLPacket {
+  public byte command;
+  public long id;
+  public void read(  byte[] data){
+    MySQLMessage mm=new MySQLMessage(data);
+    packetLength=mm.readUB3();
+    packetId=mm.read();
+    command=mm.read();
+    id=mm.readLength();
+  }
+  @Override public void write(  BackendAIOConnection c){
+    ByteBuffer buffer=c.allocate();
+    BufferUtil.writeUB3(buffer,calcPacketSize());
+    buffer.put(packetId);
+    buffer.put(command);
+    BufferUtil.writeLength(buffer,id);
+    c.write(buffer);
+  }
+  @Override public int calcPacketSize(){
+    return 1 + BufferUtil.getLength(id);
+  }
+  @Override protected String getPacketInfo(){
+    return "Mycat Heartbeat Packet";
+  }
+}

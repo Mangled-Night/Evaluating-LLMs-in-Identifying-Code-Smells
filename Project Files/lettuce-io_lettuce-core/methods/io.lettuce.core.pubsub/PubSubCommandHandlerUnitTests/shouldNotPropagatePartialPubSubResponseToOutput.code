@@ -1,0 +1,16 @@
+@Test void shouldNotPropagatePartialPubSubResponseToOutput() throws Exception {
+  Command<String,String,String> command1=new Command<>(CommandType.SUBSCRIBE,new PubSubOutput<>(StringCodec.UTF8),null);
+  Command<String,String,String> command2=new Command<>(CommandType.SUBSCRIBE,new PubSubOutput<>(StringCodec.UTF8),null);
+  sut.channelRegistered(context);
+  sut.channelActive(context);
+  stack.add(command1);
+  stack.add(command2);
+  sut.channelRead(context,responseBytes("*3\r\n$9\r\nsubscribe\r\n$1\r\na\r\n:2\r\n*3\r\n$9\r\nsubscribe\r\n"));
+  assertThat(command1.isDone()).isTrue();
+  assertThat(command2.isDone()).isFalse();
+  assertThat(stack).hasSize(1);
+  ArgumentCaptor<PubSubOutput> captor=ArgumentCaptor.forClass(PubSubOutput.class);
+  verify(endpoint).notifyMessage(captor.capture());
+  assertThat(captor.getValue().channel()).isEqualTo("a");
+  assertThat(captor.getValue().count()).isEqualTo(2);
+}

@@ -1,0 +1,38 @@
+@Override public boolean accept(Stanza packet){
+  if (packet instanceof IQ) {
+    IQ iq=(IQ)packet;
+    Jid me=getConnection().getUser();
+    if (!iq.getTo().equals(me)) {
+      return false;
+    }
+    Jid other=getResponder().equals(me) ? getInitiator() : getResponder();
+    if (iq.getFrom() == null || !iq.getFrom().equals(other == null ? "" : other)) {
+      return false;
+    }
+    if (iq instanceof Jingle) {
+      Jingle jin=(Jingle)iq;
+      String sid=jin.getSid();
+      if (sid == null || !sid.equals(getSid())) {
+        LOGGER.fine("Ignored Jingle(SID) " + sid + "|"+ getSid()+ " :"+ iq.toXML());
+        return false;
+      }
+      Jid ini=jin.getInitiator();
+      if (!ini.equals(getInitiator())) {
+        LOGGER.fine("Ignored Jingle(INI): " + iq.toXML());
+        return false;
+      }
+    }
+ else {
+      if (iq.getType().equals(IQ.Type.set)) {
+        LOGGER.fine("Ignored Jingle(TYPE): " + iq.toXML());
+        return false;
+      }
+ else       if (iq.getType().equals(IQ.Type.get)) {
+        LOGGER.fine("Ignored Jingle(TYPE): " + iq.toXML());
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}

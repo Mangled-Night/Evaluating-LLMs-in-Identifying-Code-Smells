@@ -1,0 +1,26 @@
+ByteBuffer allocate(int reqCapacity){
+  for (  ByteBufferChunk cur : byteBufferChunks) {
+    ByteBuffer buf=cur.allocateRun(reqCapacity);
+    if (buf == null) {
+      continue;
+    }
+ else {
+      final int usage=cur.usage();
+      if (usage >= maxUsage) {
+        ByteBufferChunkList next=nextList;
+        ByteBufferChunkList current=this;
+        while (next != null) {
+          current.byteBufferChunks.remove(cur);
+          next.byteBufferChunks.add(cur);
+          if (next.maxUsage > usage) {
+            break;
+          }
+          current=next;
+          next=next.nextList;
+        }
+      }
+      return buf;
+    }
+  }
+  return null;
+}

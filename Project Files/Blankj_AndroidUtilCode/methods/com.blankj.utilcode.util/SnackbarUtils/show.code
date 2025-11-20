@@ -1,0 +1,64 @@
+/** 
+ * Show the snackbar.
+ */
+public Snackbar show(){
+  return show(false);
+}
+/** 
+ * Show the snackbar.
+ * @param isShowTop True to show the snack bar on the top, false otherwise.
+ */
+public Snackbar show(boolean isShowTop){
+  View view=this.view;
+  if (view == null)   return null;
+  if (isShowTop) {
+    ViewGroup suitableParent=findSuitableParentCopyFromSnackbar(view);
+    View topSnackBarContainer=suitableParent.findViewWithTag("topSnackBarCoordinatorLayout");
+    if (topSnackBarContainer == null) {
+      CoordinatorLayout topSnackBarCoordinatorLayout=new CoordinatorLayout(view.getContext());
+      topSnackBarCoordinatorLayout.setTag("topSnackBarCoordinatorLayout");
+      topSnackBarCoordinatorLayout.setRotation(180);
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        topSnackBarCoordinatorLayout.setElevation(100);
+      }
+      suitableParent.addView(topSnackBarCoordinatorLayout,ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT);
+      topSnackBarContainer=topSnackBarCoordinatorLayout;
+    }
+    view=topSnackBarContainer;
+  }
+  if (messageColor != COLOR_DEFAULT) {
+    SpannableString spannableString=new SpannableString(message);
+    ForegroundColorSpan colorSpan=new ForegroundColorSpan(messageColor);
+    spannableString.setSpan(colorSpan,0,spannableString.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    sWeakSnackbar=new WeakReference<>(Snackbar.make(view,spannableString,duration));
+  }
+ else {
+    sWeakSnackbar=new WeakReference<>(Snackbar.make(view,message,duration));
+  }
+  final Snackbar snackbar=sWeakSnackbar.get();
+  final Snackbar.SnackbarLayout snackbarView=(Snackbar.SnackbarLayout)snackbar.getView();
+  if (isShowTop) {
+    for (int i=0; i < snackbarView.getChildCount(); i++) {
+      View child=snackbarView.getChildAt(i);
+      child.setRotation(180);
+    }
+  }
+  if (bgResource != -1) {
+    snackbarView.setBackgroundResource(bgResource);
+  }
+ else   if (bgColor != COLOR_DEFAULT) {
+    snackbarView.setBackgroundColor(bgColor);
+  }
+  if (bottomMargin != 0) {
+    ViewGroup.MarginLayoutParams params=(ViewGroup.MarginLayoutParams)snackbarView.getLayoutParams();
+    params.bottomMargin=bottomMargin;
+  }
+  if (actionText.length() > 0 && actionListener != null) {
+    if (actionTextColor != COLOR_DEFAULT) {
+      snackbar.setActionTextColor(actionTextColor);
+    }
+    snackbar.setAction(actionText,actionListener);
+  }
+  snackbar.show();
+  return snackbar;
+}

@@ -1,0 +1,38 @@
+@Override public StateTransitionResult.AttemptResult transitionInto(WalkStateGraphContext walkStateGraphContext) throws InterruptedException, IOException, SmackException, XMPPException {
+  ConnectionAttemptState connectionAttemptState=new ConnectionAttemptState(connectionInternal,discoveredTcpEndpoints,this);
+  StateTransitionResult.Failure failure=connectionAttemptState.establishTcpConnection();
+  if (failure != null) {
+    return failure;
+  }
+  socketChannel=connectionAttemptState.socketChannel;
+  remoteAddress=(InetSocketAddress)socketChannel.socket().getRemoteSocketAddress();
+  selectionKey=connectionInternal.registerWithSelector(socketChannel,SelectionKey.OP_READ,XmppTcpTransportModule.this::onChannelSelected);
+  selectionKeyAttachment=(SelectionKeyAttachment)selectionKey.attachment();
+  connectionInternal.setTransport(tcpNioTransport);
+  connectionInternal.newStreamOpenWaitForFeaturesSequence("stream features after initial connection");
+  return new TcpSocketConnectedResult(remoteAddress);
+}
+@Override public StateTransitionResult.AttemptResult transitionInto(WalkStateGraphContext walkStateGraphContext) throws IOException, InterruptedException, SmackException, XMPPException {
+  connectionInternal.sendAndWaitForResponse(StartTls.INSTANCE,TlsProceed.class,TlsFailure.class);
+  SmackTlsContext smackTlsContext=connectionInternal.getSmackTlsContext();
+  tlsState=new TlsState(smackTlsContext);
+  connectionInternal.addXmppInputOutputFilter(tlsState);
+  channelSelectedCallbackLock.lock();
+  try {
+    pendingOutputFilterData=true;
+    tlsState.engine.beginHandshake();
+    tlsState.handshakeStatus=TlsHandshakeStatus.initiated;
+  }
+  finally {
+    channelSelectedCallbackLock.unlock();
+  }
+  connectionInternal.setInterestOps(selectionKey,SelectionKey.OP_WRITE | SelectionKey.OP_READ);
+  try {
+    tlsState.waitForHandshakeFinished();
+  }
+ catch (  CertificateException e) {
+    throw new SmackCertificateException(e);
+  }
+  connectionInternal.newStreamOpenWaitForFeaturesSequence("stream features after TLS established");
+  return new TlsEstablishedResult(tlsState.engine);
+}

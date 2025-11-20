@@ -1,0 +1,16 @@
+@Test void shouldBatchWithDefaultSize(){
+  RedisCommand<Object,Object,Object> c1=createCommand();
+  RedisCommand<Object,Object,Object> c2=createCommand();
+  RedisCommand<Object,Object,Object> c3=createCommand();
+  RedisCommand<Object,Object,Object> c4=createCommand();
+  SimpleBatcher batcher=new SimpleBatcher(connection,2);
+  assertThat(batcher.batch(c1,null)).isEqualTo(BatchTasks.EMPTY);
+  verifyNoInteractions(connection);
+  BatchTasks batch=batcher.batch(c2,null);
+  verify(connection).dispatch(Arrays.asList(c1,c2));
+  assertThat(batch).contains(c1,c2);
+  batcher.batch(c3,null);
+  verifyNoMoreInteractions(connection);
+  batcher.batch(c4,null);
+  verify(connection).dispatch(Arrays.asList(c3,c4));
+}

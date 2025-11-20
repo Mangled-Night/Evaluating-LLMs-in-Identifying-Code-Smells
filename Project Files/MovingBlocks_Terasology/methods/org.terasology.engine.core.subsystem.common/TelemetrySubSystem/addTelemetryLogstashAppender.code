@@ -1,0 +1,16 @@
+private void addTelemetryLogstashAppender(Context rootContext){
+  LoggerContext lc=(LoggerContext)LoggerFactory.getILoggerFactory();
+  TelemetryLogstashAppender telemetryLogstashAppender=new TelemetryLogstashAppender(rootContext);
+  lc.getLogger(Logger.ROOT_LOGGER_NAME).addAppender(telemetryLogstashAppender);
+  Config config=rootContext.get(Config.class);
+  TelemetryConfig telemetryConfig=config.getTelemetryConfig();
+  String errorReportingDestination=telemetryConfig.getErrorReportingDestination();
+  if (errorReportingDestination == null) {
+    errorReportingDestination=TelemetryLogstashAppender.DEFAULT_LOGSTASH_HOST + ":" + TelemetryLogstashAppender.DEFAULT_LOGSTASH_PORT;
+    telemetryConfig.setErrorReportingDestination(errorReportingDestination);
+  }
+  if (telemetryConfig.isErrorReportingEnabled()) {
+    telemetryLogstashAppender.addDestination(errorReportingDestination);
+    telemetryLogstashAppender.start();
+  }
+}

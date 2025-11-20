@@ -1,0 +1,24 @@
+/** 
+ * 当SQLJob的结果有多行时，利用该处理器进行处理
+ * @author digdeep@126.com
+ */
+public class MultiRowSQLQueryResultHandler extends OneRawSQLQueryResultHandler {
+  private static final Logger LOGGER=LoggerFactory.getLogger(MultiRowSQLQueryResultHandler.class);
+  private final SQLQueryResultListener<SQLQueryResult<List<Map<String,String>>>> callback;
+  private List<Map<String,String>> resultRows=new LinkedList<>();
+  public MultiRowSQLQueryResultHandler(  String[] fetchCols,  SQLQueryResultListener<SQLQueryResult<List<Map<String,String>>>> callback){
+    super(fetchCols,null);
+    this.callback=callback;
+  }
+  @Override public boolean onRowData(  String dataNode,  byte[] rowData){
+    super.onRowData(dataNode,rowData);
+    resultRows.add(getResult());
+    return false;
+  }
+  @Override public void finished(  String dataNode,  boolean failed,  String errorMsg){
+    SQLQueryResult<List<Map<String,String>>> queryResult=new SQLQueryResult<List<Map<String,String>>>(this.resultRows,!failed);
+    queryResult.setErrMsg(errorMsg);
+    if (callback != null)     this.callback.onResult(queryResult);
+ else     LOGGER.warn(" callback is null ");
+  }
+}

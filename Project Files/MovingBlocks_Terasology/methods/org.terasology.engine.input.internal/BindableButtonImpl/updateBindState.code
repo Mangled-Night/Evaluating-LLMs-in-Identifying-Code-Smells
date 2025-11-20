@@ -1,0 +1,45 @@
+@Override public boolean updateBindState(Input input,boolean pressed,float delta,EntityRef[] inputEntities,EntityRef target,Vector3ic targetBlockPos,Vector3fc hitPosition,Vector3fc hitNormal,boolean initialKeyConsumed,long gameTimeInMs){
+  boolean keyConsumed=initialKeyConsumed;
+  if (pressed) {
+    boolean previouslyEmpty=activeInputs.isEmpty();
+    activeInputs.add(input);
+    if (previouslyEmpty && mode.isActivatedOnPress()) {
+      lastActivateTime=gameTimeInMs;
+      consumedActivation=keyConsumed;
+      if (!keyConsumed) {
+        keyConsumed=triggerOnPress(delta,target);
+      }
+      if (!keyConsumed) {
+        buttonEvent.prepare(id,ButtonState.DOWN,delta);
+        buttonEvent.setTargetInfo(target,targetBlockPos,hitPosition,hitNormal);
+        for (        EntityRef entity : inputEntities) {
+          entity.send(buttonEvent);
+          if (buttonEvent.isConsumed()) {
+            break;
+          }
+        }
+        keyConsumed=buttonEvent.isConsumed();
+      }
+    }
+  }
+ else   if (!activeInputs.isEmpty()) {
+    activeInputs.remove(input);
+    if (activeInputs.isEmpty() && mode.isActivatedOnRelease()) {
+      if (!keyConsumed) {
+        keyConsumed=triggerOnRelease(delta,target);
+      }
+      if (!keyConsumed) {
+        buttonEvent.prepare(id,ButtonState.UP,delta);
+        buttonEvent.setTargetInfo(target,targetBlockPos,hitPosition,hitNormal);
+        for (        EntityRef entity : inputEntities) {
+          entity.send(buttonEvent);
+          if (buttonEvent.isConsumed()) {
+            break;
+          }
+        }
+        keyConsumed=buttonEvent.isConsumed();
+      }
+    }
+  }
+  return keyConsumed;
+}

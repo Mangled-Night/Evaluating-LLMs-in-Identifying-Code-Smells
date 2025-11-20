@@ -1,0 +1,17 @@
+/** 
+ * Parse second_nano string in ss.nnnnnnnnn format to microseconds
+ */
+public static long parseSecondNano(String secondNano) throws IllegalArgumentException {
+  String[] parts=secondNano.split("\\.");
+  if (parts.length == 1) {
+    return toLongWithRange("second",parts[0],Long.MIN_VALUE / MICROS_PER_SECOND,Long.MAX_VALUE / MICROS_PER_SECOND) * MICROS_PER_SECOND;
+  }
+ else   if (parts.length == 2) {
+    long seconds=parts[0].equals("") ? 0L : toLongWithRange("second",parts[0],Long.MIN_VALUE / MICROS_PER_SECOND,Long.MAX_VALUE / MICROS_PER_SECOND);
+    long nanos=toLongWithRange("nanosecond",parts[1],0L,999999999L);
+    return seconds * MICROS_PER_SECOND + nanos / 1000L;
+  }
+ else {
+    throw new IllegalArgumentException("Interval string does not match second-nano format of ss.nnnnnnnnn");
+  }
+}

@@ -1,0 +1,43 @@
+/** 
+ * Test roster versioning with roster pushes.
+ * @throws Throwable in case a throwable is thrown.
+ */
+@SuppressWarnings("UndefinedEquals") @Test(timeout=5000) public void testRosterVersioningWithCachedRosterAndPushes() throws Throwable {
+  answerWithEmptyRosterResult();
+  rosterListener.waitAndReset();
+  RosterStore store=roster.getRosterStore();
+{
+    RosterPacket rosterPush=new RosterPacket();
+    rosterPush.setTo(JidCreate.from("rostertest@example.com/home"));
+    rosterPush.setType(IQ.Type.set);
+    rosterPush.setVersion("v97");
+    Item pushedItem=vaglafItem();
+    rosterPush.addRosterItem(pushedItem);
+    rosterListener.reset();
+    connection.processStanza(rosterPush);
+    rosterListener.waitAndReset();
+    assertEquals("Expect store version after push","v97",store.getRosterVersion());
+    Item storedItem=store.getEntry(JidCreate.from("vaglaf@example.com"));
+    assertNotNull("Expect vaglaf to be added",storedItem);
+    assertEquals("Expect vaglaf to be equal to pushed item",pushedItem,storedItem);
+    Collection<Item> rosterItems=new HashSet<>();
+    for (    RosterEntry entry : roster.getEntries()) {
+      rosterItems.add(RosterEntry.toRosterItem(entry));
+    }
+    assertEquals(rosterItems,new HashSet<>(store.getEntries()));
+  }
+{
+    RosterPacket rosterPush=new RosterPacket();
+    rosterPush.setTo(JidCreate.from("rostertest@example.com/home"));
+    rosterPush.setType(IQ.Type.set);
+    rosterPush.setVersion("v98");
+    Item item=new Item(JidCreate.entityBareFrom("vaglaf@example.com"),"vaglaf the only");
+    item.setItemType(ItemType.remove);
+    rosterPush.addRosterItem(item);
+    rosterListener.reset();
+    connection.processStanza(rosterPush);
+    rosterListener.waitAndReset();
+    assertNull("Store doses not contain vaglaf",store.getEntry(JidCreate.entityBareFrom("vaglaf@example.com")));
+    assertEquals("Expect store version after push","v98",store.getRosterVersion());
+  }
+}

@@ -1,0 +1,15 @@
+@Test void reuseClientConnections() throws Exception {
+  DefaultClientResources clientResources=DefaultClientResources.create();
+  Map<Class<? extends EventExecutorGroup>,EventExecutorGroup> eventLoopGroups=getExecutors(clientResources);
+  RedisClient redisClient1=newClient(clientResources);
+  RedisClient redisClient2=newClient(clientResources);
+  connectAndClose(redisClient1);
+  connectAndClose(redisClient2);
+  EventExecutorGroup executor=eventLoopGroups.values().iterator().next();
+  redisClient1.shutdown(0,0,TimeUnit.MILLISECONDS);
+  connectAndClose(redisClient2);
+  TestFutures.awaitOrTimeout(clientResources.shutdown(0,0,TimeUnit.MILLISECONDS));
+  assertThat(eventLoopGroups).isEmpty();
+  assertThat(executor.isShuttingDown()).isTrue();
+  assertThat(clientResources.eventExecutorGroup().isShuttingDown()).isTrue();
+}

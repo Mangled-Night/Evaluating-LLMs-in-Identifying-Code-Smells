@@ -1,0 +1,43 @@
+private static void hashTest() throws IOException {
+  PartitionByCRC32PreSlot hash=new PartitionByCRC32PreSlot();
+  hash.setRuleName("test");
+  RuleConfig rule=new RuleConfig("id","crc32slot");
+  int count=1024;
+  String sb=genDataNodesString(count);
+  TableConfig tableConf=new TableConfig("test","id",true,false,-1,sb,null,rule,true,null,false,null,null,null,false);
+  hash.setTableConfig(tableConf);
+  hash.reInit();
+  long start=System.currentTimeMillis();
+  int[] bucket=new int[hash.getCount()];
+  Map<Integer,List<Integer>> hashed=new HashMap<>();
+  int total=1000_0000;
+  int c=0;
+  for (int i=100_0000; i < total + 100_0000; i++) {
+    c++;
+    int h=hash.calculate(StringUtil.removeBackquote(Integer.toString(i)));
+    if (h >= count) {
+      System.out.println("error:" + h);
+    }
+    bucket[h]++;
+    List<Integer> list=hashed.get(h);
+    if (list == null) {
+      list=new ArrayList<>();
+      hashed.put(h,list);
+    }
+    list.add(i);
+  }
+  System.out.println(c + "   " + total);
+  double d=0;
+  c=0;
+  int idx=0;
+  System.out.println("index    bucket   ratio");
+  for (  int i : bucket) {
+    d+=i / (double)total;
+    c+=i;
+    System.out.println(idx++ + "  " + i+ "   "+ (i / (double)total));
+  }
+  System.out.println(d + "  " + c);
+  long used=System.currentTimeMillis() - start;
+  System.out.println("tps " + total * 1000.0 / used);
+  System.out.println("****************************************************");
+}

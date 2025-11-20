@@ -1,0 +1,34 @@
+/** 
+ * Dispatch an incoming packet. The method is responsible for recognizing the stanza type and, depending on the current state, delivering the stanza to the right event handler and wait for a response.
+ * @param iq TODO javadoc me pleasethe stanza received
+ * @return the new Jingle stanza to send.
+ * @throws XMPPException if an XMPP protocol error was received.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+@Override public List<IQ> dispatchIncomingPacket(IQ iq,String id) throws XMPPException, SmackException, InterruptedException {
+  List<IQ> responses=new ArrayList<>();
+  IQ response=null;
+  if (iq != null) {
+    if (iq.getType().equals(IQ.Type.error)) {
+    }
+ else     if (iq.getType().equals(IQ.Type.result)) {
+      if (isExpectedId(iq.getStanzaId())) {
+        if (iq.getStanzaId().equals(sessionInitPacketID)) {
+          startNegotiators();
+        }
+        removeExpectedId(iq.getStanzaId());
+      }
+    }
+ else     if (iq instanceof Jingle) {
+      Jingle jin=(Jingle)iq;
+      JingleActionEnum action=jin.getAction();
+      response=getSessionState().processJingle(this,jin,action);
+    }
+  }
+  if (response != null) {
+    addExpectedId(response.getStanzaId());
+    responses.add(response);
+  }
+  return responses;
+}

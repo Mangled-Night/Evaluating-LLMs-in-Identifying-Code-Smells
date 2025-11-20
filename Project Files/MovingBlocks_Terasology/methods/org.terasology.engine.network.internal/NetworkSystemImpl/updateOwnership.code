@@ -1,0 +1,36 @@
+public void updateOwnership(EntityRef entity){
+  NetworkComponent netComponent=entity.getComponent(NetworkComponent.class);
+  if (netComponent == null || netComponent.getNetworkId() == NULL_NET_ID) {
+    return;
+  }
+  EntityRef lastOwnerEntity=ownerLookup.get(entity);
+  if (lastOwnerEntity == null) {
+    lastOwnerEntity=EntityRef.NULL;
+  }
+  EntityRef newOwnerEntity=entity.getOwner();
+  if (!Objects.equal(lastOwnerEntity,newOwnerEntity)) {
+    NetClient lastOwner=getNetOwner(lastOwnerEntity);
+    NetClient newOwner=getNetOwner(newOwnerEntity);
+    if (!Objects.equal(lastOwner,newOwner)) {
+      recursiveUpdateOwnership(entity,lastOwner,newOwner);
+      if (newOwner != null) {
+        int id=netComponent.getNetworkId();
+        for (        Component component : entity.iterateComponents()) {
+          if (componentLibrary.getMetadata(component.getClass()).isReplicated()) {
+            newOwner.setComponentDirty(id,component.getClass());
+          }
+        }
+      }
+    }
+    if (lastOwnerEntity.exists()) {
+      ownedLookup.remove(lastOwnerEntity,entity);
+    }
+    if (newOwnerEntity.exists()) {
+      ownerLookup.put(entity,newOwnerEntity);
+      ownedLookup.put(newOwnerEntity,entity);
+    }
+ else {
+      ownerLookup.remove(entity);
+    }
+  }
+}

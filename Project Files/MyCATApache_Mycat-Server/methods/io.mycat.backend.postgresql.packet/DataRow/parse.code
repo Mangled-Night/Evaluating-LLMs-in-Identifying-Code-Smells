@@ -1,0 +1,26 @@
+public static DataRow parse(ByteBuffer buffer,int offset){
+  if (buffer.get(offset) != PacketMarker.B_DataRow.getValue()) {
+    throw new IllegalArgumentException("this packetData not is DataRow");
+  }
+  int _offset=offset + 1;
+  DataRow pack=new DataRow();
+  pack.length=PIOUtils.redInteger4(buffer,_offset);
+  _offset+=4;
+  pack.columnNumber=PIOUtils.redInteger2(buffer,_offset);
+  _offset+=2;
+  pack.columns=new DataColumn[pack.columnNumber];
+  for (int i=0; i < pack.columns.length; i++) {
+    DataColumn col=new DataColumn();
+    col.length=PIOUtils.redInteger4(buffer,_offset);
+    _offset+=4;
+    if (col.length == -1) {
+      col.isNull=true;
+    }
+ else {
+      col.data=PIOUtils.redByteArray(buffer,_offset,col.length);
+      _offset+=col.length;
+    }
+    pack.columns[i]=col;
+  }
+  return pack;
+}

@@ -1,0 +1,22 @@
+public C construct(Configuration sinttestConfiguration) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+  return construct(sinttestConfiguration,Collections.emptyList());
+}
+public C construct(Configuration sinttestConfiguration,ConnectionConfigurationBuilderApplier... customConnectionConfigurationAppliers) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+  List<ConnectionConfigurationBuilderApplier> customConnectionConfigurationAppliersList=new ArrayList<ConnectionConfigurationBuilderApplier>(Arrays.asList(customConnectionConfigurationAppliers));
+  return construct(sinttestConfiguration,customConnectionConfigurationAppliersList);
+}
+public C construct(Configuration sinttestConfiguration,Collection<ConnectionConfigurationBuilderApplier> customConnectionConfigurationAppliers) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+  CCB connectionConfigurationBuilder=getNewBuilder();
+  if (extraBuilder != null) {
+    extraBuilder.accept(connectionConfigurationBuilder);
+  }
+  for (  ConnectionConfigurationBuilderApplier customConnectionConfigurationApplier : customConnectionConfigurationAppliers) {
+    customConnectionConfigurationApplier.applyConfigurationTo(connectionConfigurationBuilder);
+  }
+  sinttestConfiguration.configurationApplier.applyConfigurationTo(connectionConfigurationBuilder);
+  ConnectionConfiguration connectionConfiguration=connectionConfigurationBuilder.build();
+  CC concreteConnectionConfiguration=connectionConfigurationClass.cast(connectionConfiguration);
+  C connection=connectionConstructor.newInstance(concreteConnectionConfiguration);
+  connection.setReplyTimeout(sinttestConfiguration.replyTimeout);
+  return connection;
+}

@@ -1,0 +1,15 @@
+@Test public void checkMamResultProvider() throws Exception {
+  XmlPullParser parser=PacketParserUtils.getParserFor(exampleMamResultXml);
+  MamResultExtension mamResultExtension=new MamResultProvider().parse(parser);
+  assertEquals(mamResultExtension.getQueryId(),"f27");
+  assertEquals(mamResultExtension.getId(),"28482-98726-73623");
+  GregorianCalendar calendar=new GregorianCalendar(2010,7 - 1,10,23,8,25);
+  calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
+  Date date=calendar.getTime();
+  Forwarded<Message> forwarded=mamResultExtension.getForwarded();
+  assertEquals(forwarded.getDelayInformation().getStamp(),date);
+  Message message=forwarded.getForwardedStanza();
+  assertEquals(message.getFrom().toString(),"romeo@montague.lit/orchard");
+  assertEquals(message.getTo().toString(),"juliet@capulet.lit/balcony");
+  assertEquals(message.getBody(),"Call me but love, and I'll be new baptized; Henceforth I never will be Romeo.");
+}

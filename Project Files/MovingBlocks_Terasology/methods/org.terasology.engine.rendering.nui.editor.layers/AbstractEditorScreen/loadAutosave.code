@@ -1,0 +1,28 @@
+/** 
+ * Resets the editor based on the state of the autosave file.
+ */
+protected void loadAutosave(){
+  if (!disableAutosave) {
+    try (JsonReader reader=new JsonReader(new InputStreamReader(Files.newInputStream(getAutosaveFile())))){
+      reader.setLenient(true);
+      String autosaveString=new JsonParser().parse(reader).toString();
+      JsonObject autosaveObject=new JsonParser().parse(autosaveString).getAsJsonObject();
+      String selectedAsset=autosaveObject.get("selectedAsset").getAsString();
+      setSelectedAsset(selectedAsset);
+      try {
+        ResourceUrn urn=new ResourceUrn(selectedAsset);
+        setSelectedAssetPath(urn);
+      }
+ catch (      InvalidUrnException ignored) {
+      }
+      JsonTree editorContents=JsonTreeConverter.serialize(autosaveObject.get("editorContents"));
+      resetState(editorContents);
+      setUnsavedChangesPresent(true);
+    }
+ catch (    NoSuchFileException ignored) {
+    }
+catch (    IOException e) {
+      logger.warn("Could not load autosaved info",e);
+    }
+  }
+}

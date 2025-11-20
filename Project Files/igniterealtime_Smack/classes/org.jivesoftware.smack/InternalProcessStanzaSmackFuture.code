@@ -1,0 +1,22 @@
+public abstract static class InternalProcessStanzaSmackFuture<V,E extends Exception> extends InternalSmackFuture<V,E> implements StanzaListener, ExceptionCallback<E> {
+  /** 
+ * This method checks if the given exception is <b>not</b> fatal. If this method returns <code>false</code>, then the future will automatically set the given exception as failure reason and notify potential waiting threads.
+ * @param exception the exception to check.
+ * @return <code>true</code> if the exception is not fatal, <code>false</code> otherwise.
+ */
+  protected abstract boolean isNonFatalException(  E exception);
+  protected abstract void handleStanza(  Stanza stanza);
+  @Override public final synchronized void processException(  E exception){
+    if (!isNonFatalException(exception)) {
+      this.exception=exception;
+      this.notifyAll();
+      maybeInvokeCallbacks();
+    }
+  }
+  /** 
+ * Wrapper method for  {@link #handleStanza(Stanza)}. Note that this method is <code>synchronized</code>.
+ */
+  @Override public final synchronized void processStanza(  Stanza stanza){
+    handleStanza(stanza);
+  }
+}

@@ -1,0 +1,36 @@
+public static Failed failed(XmlPullParser parser) throws XmlPullParserException, IOException {
+  ParserUtils.assertAtStartTag(parser);
+  String name;
+  StanzaError.Condition condition=null;
+  List<StanzaErrorTextElement> textElements=new ArrayList<>(4);
+  outerloop:   while (true) {
+    XmlPullParser.Event event=parser.next();
+switch (event) {
+case START_ELEMENT:
+      name=parser.getName();
+    String namespace=parser.getNamespace();
+  if (StanzaError.ERROR_CONDITION_AND_TEXT_NAMESPACE.equals(namespace)) {
+    if (name.equals(AbstractTextElement.ELEMENT)) {
+      String lang=ParserUtils.getXmlLang(parser);
+      String text=parser.nextText();
+      StanzaErrorTextElement stanzaErrorTextElement=new StanzaErrorTextElement(text,lang);
+      textElements.add(stanzaErrorTextElement);
+    }
+ else {
+      condition=StanzaError.Condition.fromString(name);
+    }
+  }
+break;
+case END_ELEMENT:
+name=parser.getName();
+if (Failed.ELEMENT.equals(name)) {
+break outerloop;
+}
+break;
+default :
+break;
+}
+}
+ParserUtils.assertAtEndTag(parser);
+return new Failed(condition,textElements);
+}

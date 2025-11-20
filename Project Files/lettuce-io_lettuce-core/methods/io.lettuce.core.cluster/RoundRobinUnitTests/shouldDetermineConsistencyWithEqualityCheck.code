@@ -1,0 +1,12 @@
+@Test void shouldDetermineConsistencyWithEqualityCheck(){
+  RedisClusterNode node1=new RedisClusterNode(RedisURI.create("127.0.0.1",1),"1",true,"",0,0,0,new ArrayList<>(),new HashSet<>());
+  RedisClusterNode node2=new RedisClusterNode(RedisURI.create("127.0.0.0",1),"2",true,"",0,0,0,new ArrayList<>(),new HashSet<>());
+  RedisClusterNode newNode1=new RedisClusterNode(RedisURI.create("127.0.0.0",1),"1",true,"",0,0,0,new ArrayList<>(),new HashSet<>());
+  RoundRobin<RedisClusterNode> roundRobin=new RoundRobin<>((l,r) -> l.getUri().equals(r.getUri()));
+  roundRobin.rebuild(Arrays.asList(node1,node2));
+  assertThat(roundRobin.isConsistent(Arrays.asList(node1,node2))).isTrue();
+  assertThat(roundRobin.isConsistent(Arrays.asList(newNode1,node2))).isFalse();
+  assertThat(roundRobin.isConsistent(Collections.singletonList(newNode1))).isFalse();
+  assertThat(roundRobin.isConsistent(Collections.singletonList(node2))).isFalse();
+  assertThat(roundRobin.isConsistent(Arrays.asList(RedisClusterNode.of("1"),node2))).isFalse();
+}

@@ -1,0 +1,14 @@
+@Test public void testReferenceRemainsValidOverStorageRestoral(StorageManager esm,BlockManager blockManager,ExtraBlockDataManager extraDataManager,Context context) throws Exception {
+  EntityRef someEntity=entityManager.create();
+  character.addComponent(new EntityRefComponent(someEntity));
+  esm.waitForCompletionOfPreviousSaveAndStartSaving();
+  esm.finishSavingAndShutdown();
+  EntitySystemSetupUtil.addReflectionBasedLibraries(context);
+  EntitySystemSetupUtil.addEntityManagementRelatedClasses(context);
+  EngineEntityManager newEntityManager=context.get(EngineEntityManager.class);
+  StorageManager newSM=new ReadWriteStorageManager(savePath,moduleEnvironment,newEntityManager,blockManager,extraDataManager,false,recordAndReplaySerializer,recordAndReplayUtils,recordAndReplayCurrentStatus);
+  newSM.loadGlobalStore();
+  PlayerStore restored=newSM.loadPlayerStore(playerId);
+  restored.restoreEntities();
+  assertTrue(restored.getCharacter().getComponent(EntityRefComponent.class).entityRef.exists());
+}

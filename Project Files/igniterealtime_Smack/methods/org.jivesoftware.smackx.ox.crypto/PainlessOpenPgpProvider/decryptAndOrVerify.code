@@ -1,0 +1,55 @@
+@Override public OpenPgpMessage decryptAndOrVerify(XMPPConnection connection,OpenPgpElement element,final OpenPgpSelf self,final OpenPgpContact sender) throws IOException, PGPException {
+  ByteArrayOutputStream plainText=new ByteArrayOutputStream();
+  InputStream cipherText=element.toInputStream();
+  PGPPublicKeyRingCollection announcedPublicKeys=sender.getAnnouncedPublicKeys();
+  if (announcedPublicKeys == null) {
+    try {
+      sender.updateKeys(connection);
+      announcedPublicKeys=sender.getAnnouncedPublicKeys();
+    }
+ catch (    InterruptedException|NotALeafNodeException|NotAPubSubNodeException|NotConnectedException|NoResponseException|XMPPErrorException e) {
+      throw new PGPException("Abort decryption due to lack of keys",e);
+    }
+  }
+  MissingPublicKeyCallback missingPublicKeyCallback=new MissingPublicKeyCallback(){
+    @Override public PGPPublicKeyRing onMissingPublicKeyEncountered(    Long keyId){
+      try {
+        sender.updateKeys(connection);
+        PGPPublicKeyRingCollection anyKeys=sender.getAnyPublicKeys();
+        for (        PGPPublicKeyRing ring : anyKeys) {
+          if (ring.getPublicKey(keyId) != null) {
+            return ring;
+          }
+        }
+        return null;
+      }
+ catch (      InterruptedException|NotALeafNodeException|NotAPubSubNodeException|NotConnectedException|NoResponseException|XMPPErrorException|IOException|PGPException e) {
+        LOGGER.log(Level.WARNING,"Cannot fetch missing key " + keyId,e);
+        return null;
+      }
+    }
+  }
+;
+  DecryptionStream cipherStream=PGPainless.decryptAndOrVerify().onInputStream(cipherText).withOptions(new ConsumerOptions().addDecryptionKeys(self.getSecretKeys(),getStore().getKeyRingProtector()).addVerificationCerts(announcedPublicKeys).setMissingCertificateCallback(missingPublicKeyCallback));
+  Streams.pipeAll(cipherStream,plainText);
+  cipherText.close();
+  cipherStream.close();
+  plainText.close();
+  OpenPgpMetadata info=cipherStream.getResult();
+  OpenPgpMessage.State state;
+  if (info.isSigned()) {
+    if (info.isEncrypted()) {
+      state=OpenPgpMessage.State.signcrypt;
+    }
+ else {
+      state=OpenPgpMessage.State.sign;
+    }
+  }
+ else   if (info.isEncrypted()) {
+    state=OpenPgpMessage.State.crypt;
+  }
+ else {
+    throw new PGPException("Received message appears to be neither encrypted, nor signed.");
+  }
+  return new OpenPgpMessage(plainText.toByteArray(),state,info);
+}

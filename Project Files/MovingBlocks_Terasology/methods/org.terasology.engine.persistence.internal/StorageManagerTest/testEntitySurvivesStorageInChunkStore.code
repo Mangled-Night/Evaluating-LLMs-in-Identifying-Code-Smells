@@ -1,0 +1,30 @@
+@Test public void testEntitySurvivesStorageInChunkStore(ReadWriteStorageManager esm,BlockManager blockManager,ExtraBlockDataManager extraDataManager,Context context) throws Exception {
+  Chunk chunk=new ChunkImpl(CHUNK_POS,blockManager,extraDataManager);
+  chunk.setBlock(0,0,0,testBlock);
+  chunk.markReady();
+  ChunkProvider chunkProvider=mock(ChunkProvider.class);
+  when(chunkProvider.getAllChunks()).thenReturn(List.of(chunk));
+  CoreRegistry.put(ChunkProvider.class,chunkProvider);
+  EntityRef entity=entityManager.create();
+  long id=entity.getId();
+  LocationComponent locationComponent=new LocationComponent();
+  AABBfc aabb=chunk.getAABB();
+  Vector3f positionInChunk=new Vector3f(aabb.minX(),aabb.minY(),aabb.minZ());
+  positionInChunk.x+=1;
+  positionInChunk.y+=1;
+  positionInChunk.z+=1;
+  locationComponent.setWorldPosition(positionInChunk);
+  entity.addComponent(locationComponent);
+  esm.waitForCompletionOfPreviousSaveAndStartSaving();
+  esm.finishSavingAndShutdown();
+  EntitySystemSetupUtil.addReflectionBasedLibraries(context);
+  EntitySystemSetupUtil.addEntityManagementRelatedClasses(context);
+  EngineEntityManager newEntityManager=context.get(EngineEntityManager.class);
+  StorageManager newSM=new ReadWriteStorageManager(savePath,moduleEnvironment,newEntityManager,blockManager,extraDataManager,esm.isStoreChunksInZips(),recordAndReplaySerializer,recordAndReplayUtils,recordAndReplayCurrentStatus);
+  newSM.loadGlobalStore();
+  ChunkStore restored=newSM.loadChunkStore(CHUNK_POS);
+  restored.restoreEntities();
+  EntityRef ref=newEntityManager.getEntity(id);
+  assertTrue(ref.exists());
+  assertTrue(ref.isActive());
+}

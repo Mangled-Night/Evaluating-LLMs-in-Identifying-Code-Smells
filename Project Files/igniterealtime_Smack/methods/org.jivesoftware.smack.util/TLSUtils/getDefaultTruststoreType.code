@@ -1,0 +1,14 @@
+public static DefaultTrustStoreType getDefaultTruststoreType() throws IOException {
+  try (InputStream inputStream=getDefaultTruststoreStreamIfPossible()){
+    if (inputStream == null) {
+      return DefaultTrustStoreType.no_default;
+    }
+    DataInputStream dis=new DataInputStream(inputStream);
+    int magic=dis.readInt();
+    int version=dis.readInt();
+    if (magic == JKS_MAGIC && (version == JKS_VERSION_1 || version == JKS_VERSION_2)) {
+      return DefaultTrustStoreType.jks;
+    }
+  }
+   return DefaultTrustStoreType.unknown;
+}

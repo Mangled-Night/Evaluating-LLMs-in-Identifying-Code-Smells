@@ -1,0 +1,43 @@
+private void repairExpr(SQLTableSource source,RouteResultsetNode node) throws SQLNonTransientException {
+  Map<String,String> subTableNames=node.getSubTableNames();
+  if (source instanceof SQLJoinTableSource) {
+    SQLJoinTableSource joinsource=(SQLJoinTableSource)source;
+    SQLTableSource right=joinsource.getRight();
+    String alias=right.getAlias();
+    if (right instanceof SQLExprTableSource) {
+      SQLIdentifierExpr expr=(SQLIdentifierExpr)((SQLExprTableSource)right).getExpr();
+      alias=Strings.isBlank(alias) ? expr.getName() : alias;
+      String subTableName=subTableNames.get(WildcardUtil.wildcard(expr.getName().toUpperCase()));
+      if (Strings.isNotBlank(subTableName)) {
+        String tableName=expr.getName();
+        alias=Strings.isBlank(alias) ? tableName : alias;
+        right.setAlias(alias);
+        expr.setName(subTableName);
+      }
+    }
+    if (right instanceof SQLSubqueryTableSource) {
+      SQLSubqueryTableSource from=(SQLSubqueryTableSource)right;
+      MySqlSelectQueryBlock query=(MySqlSelectQueryBlock)from.getSelect().getQuery();
+      repairExpr(query.getFrom(),node);
+    }
+    repairExpr(joinsource.getLeft(),node);
+  }
+ else   if (source instanceof SQLExprTableSource) {
+    SQLExprTableSource exprTableSource=(SQLExprTableSource)source;
+    String alias=exprTableSource.getAlias();
+    SQLIdentifierExpr expr=(SQLIdentifierExpr)exprTableSource.getExpr();
+    alias=Strings.isBlank(alias) ? expr.getName() : alias;
+    String subTableName=subTableNames.get(WildcardUtil.wildcard(expr.getName().toUpperCase()));
+    if (Strings.isNotBlank(subTableName)) {
+      String tableName=expr.getName();
+      alias=Strings.isBlank(alias) ? tableName : alias;
+      exprTableSource.setAlias(alias);
+      expr.setName(subTableName);
+    }
+  }
+ else   if (source instanceof SQLSubqueryTableSource) {
+    SQLSelect select=((SQLSubqueryTableSource)source).getSelect();
+    MySqlSelectQueryBlock query=(MySqlSelectQueryBlock)select.getQuery();
+    repairExpr(query.getFrom(),node);
+  }
+}

@@ -1,0 +1,29 @@
+public void registerNetworkEntity(EntityRef entity){
+  if (mode == NetworkMode.NONE) {
+    return;
+  }
+  if (mode.isServer()) {
+    NetworkComponent netComponent=entity.getComponent(NetworkComponent.class);
+    netComponent.setNetworkId(nextNetId++);
+    entity.saveComponent(netComponent);
+    netIdToEntityId.put(netComponent.getNetworkId(),entity.getId());
+switch (netComponent.replicateMode) {
+case OWNER:
+      NetClient clientPlayer=getNetOwner(entity);
+    if (clientPlayer != null) {
+      clientPlayer.setNetInitial(netComponent.getNetworkId());
+    }
+  break;
+default :
+for (NetClient client : netClientList) {
+  client.setNetInitial(netComponent.getNetworkId());
+}
+break;
+}
+EntityRef owner=entity.getOwner();
+if (owner.exists()) {
+ownerLookup.put(entity,owner);
+ownedLookup.put(owner,entity);
+}
+}
+}

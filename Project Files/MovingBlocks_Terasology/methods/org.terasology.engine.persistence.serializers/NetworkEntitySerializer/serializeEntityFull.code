@@ -1,0 +1,14 @@
+private EntityData.PackedEntity.Builder serializeEntityFull(EntityRef entityRef,FieldSerializeCheck<Component> fieldCheck){
+  EntityData.PackedEntity.Builder entity=EntityData.PackedEntity.newBuilder();
+  ByteString.Output fieldIds=ByteString.newOutput();
+  ByteString.Output componentFieldCounts=ByteString.newOutput();
+  for (  Component component : entityRef.iterateComponents()) {
+    if (!componentSerializeCheck.serialize(componentLibrary.getMetadata(component.getClass()))) {
+      continue;
+    }
+    serializeComponentFull(component,false,fieldCheck,entity,fieldIds,componentFieldCounts,true);
+  }
+  entity.setFieldIds(fieldIds.toByteString());
+  entity.setComponentFieldCounts(componentFieldCounts.toByteString());
+  return entity;
+}

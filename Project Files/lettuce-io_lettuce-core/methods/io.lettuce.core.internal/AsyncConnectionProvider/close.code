@@ -1,0 +1,25 @@
+/** 
+ * Close all connections. Pending connections are closed using future chaining.
+ */
+@SuppressWarnings("unchecked") public CompletableFuture<Void> close(){
+  this.closed=true;
+  List<CompletableFuture<Void>> futures=new ArrayList<>();
+  forEach((connectionKey,closeable) -> {
+    futures.add(closeable.closeAsync());
+    connections.remove(connectionKey);
+  }
+);
+  return Futures.allOf(futures);
+}
+/** 
+ * Close a connection by its connection  {@code key}. Pending connections are closed using future chaining.
+ * @param key the connection {@code key}, must not be  {@code null}.
+ */
+public void close(K key){
+  LettuceAssert.notNull(key,"ConnectionKey must not be null!");
+  Sync<K,T,F> sync=connections.get(key);
+  if (sync != null) {
+    connections.remove(key);
+    sync.doWithConnection(AsyncCloseable::closeAsync);
+  }
+}

@@ -1,0 +1,16 @@
+@Test public void parseSimplePayloadItem() throws Exception {
+  String itemContent="<foo xmlns='smack:test'>Some text</foo>";
+  XmlPullParser parser=PacketParserUtils.getParserFor("<message from='pubsub.myserver.com' to='francisco@denmark.lit' id='foo'>" + "<event xmlns='http://jabber.org/protocol/pubsub#event'>" + "<items node='testNode'>"+ "<item id='testid1' >" + itemContent + "</item>"+ "</items>"+ "</event>"+ "</message>");
+  Stanza message=PacketParserUtils.parseMessage(parser);
+  XmlElement eventExt=message.getExtension(PubSubNamespace.event.getXmlns());
+  EventElement event=(EventElement)eventExt;
+  NamedElement itemExt=((ItemsExtension)event.getExtensions().get(0)).items.get(0);
+  assertTrue(itemExt instanceof PayloadItem<?>);
+  PayloadItem<?> item=(PayloadItem<?>)itemExt;
+  assertEquals("testid1",item.getId());
+  assertTrue(item.getPayload() instanceof SimplePayload);
+  SimplePayload payload=(SimplePayload)item.getPayload();
+  assertEquals("foo",payload.getElementName());
+  assertEquals("smack:test",payload.getNamespace());
+  assertXmlSimilar(itemContent,payload.toXML().toString());
+}

@@ -1,0 +1,27 @@
+private String getShardingValue(SQLExpr expr) throws SQLNonTransientException {
+  String shardingValue=null;
+  if (expr instanceof SQLIntegerExpr) {
+    SQLIntegerExpr intExpr=(SQLIntegerExpr)expr;
+    shardingValue=intExpr.getNumber() + "";
+  }
+ else   if (expr instanceof SQLCharExpr) {
+    SQLCharExpr charExpr=(SQLCharExpr)expr;
+    shardingValue=charExpr.getText();
+  }
+ else   if (expr instanceof SQLMethodInvokeExpr) {
+    SQLMethodInvokeExpr methodInvokeExpr=(SQLMethodInvokeExpr)expr;
+    try {
+      shardingValue=tryInvokeSQLMethod(methodInvokeExpr);
+    }
+ catch (    Exception e) {
+      LOGGER.error("",e);
+    }
+    if (shardingValue == null) {
+      shardingValue=expr.toString();
+    }
+  }
+ else {
+    shardingValue=expr.toString();
+  }
+  return shardingValue;
+}

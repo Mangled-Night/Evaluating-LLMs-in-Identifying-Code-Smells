@@ -1,0 +1,49 @@
+@Override public OfferRequestPacket parse(XmlPullParser parser,int initialDepth,IqData iqData,XmlEnvironment xmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+  XmlPullParser.Event eventType=parser.getEventType();
+  String sessionID=null;
+  int timeout=-1;
+  OfferContent content=null;
+  boolean done=false;
+  Map<String,List<String>> metaData=new HashMap<>();
+  if (eventType != XmlPullParser.Event.START_ELEMENT) {
+  }
+  Jid userJID=ParserUtils.getJidAttribute(parser);
+  Jid userID=userJID;
+  while (!done) {
+    eventType=parser.next();
+    if (eventType == XmlPullParser.Event.START_ELEMENT) {
+      String elemName=parser.getName();
+      if ("timeout".equals(elemName)) {
+        timeout=Integer.parseInt(parser.nextText());
+      }
+ else       if (MetaData.ELEMENT_NAME.equals(elemName)) {
+        metaData=MetaDataUtils.parseMetaData(parser);
+      }
+ else       if (SessionID.ELEMENT_NAME.equals(elemName)) {
+        sessionID=parser.getAttributeValue("","id");
+      }
+ else       if (UserID.ELEMENT_NAME.equals(elemName)) {
+        userID=ParserUtils.getJidAttribute(parser,"id");
+      }
+ else       if ("user-request".equals(elemName)) {
+        content=UserRequest.getInstance();
+      }
+ else       if (RoomInvitation.ELEMENT_NAME.equals(elemName)) {
+        RoomInvitation invitation=(RoomInvitation)PacketParserUtils.parseExtensionElement(RoomInvitation.ELEMENT_NAME,RoomInvitation.NAMESPACE,parser,xmlEnvironment);
+        content=new InvitationRequest(invitation.getInviter(),invitation.getRoom(),invitation.getReason());
+      }
+ else       if (RoomTransfer.ELEMENT_NAME.equals(elemName)) {
+        RoomTransfer transfer=(RoomTransfer)PacketParserUtils.parseExtensionElement(RoomTransfer.ELEMENT_NAME,RoomTransfer.NAMESPACE,parser,xmlEnvironment);
+        content=new TransferRequest(transfer.getInviter(),transfer.getRoom(),transfer.getReason());
+      }
+    }
+ else     if (eventType == XmlPullParser.Event.END_ELEMENT) {
+      if ("offer".equals(parser.getName())) {
+        done=true;
+      }
+    }
+  }
+  OfferRequestPacket offerRequest=new OfferRequestPacket(userJID,userID,timeout,metaData,sessionID,content);
+  offerRequest.setType(IQ.Type.set);
+  return offerRequest;
+}

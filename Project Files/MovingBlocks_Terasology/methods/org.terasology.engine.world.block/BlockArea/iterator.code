@@ -1,0 +1,48 @@
+/** 
+ * Iterates over each position in the BlockArea, in x-first order. For example: (0, 0), (1, 0), (2, 0), (0, 1), (1, 1), ...
+ */
+@Override public Iterator<Vector2ic> iterator(){
+  return new Iterator<Vector2ic>(){
+    private Vector2i current=null;
+    private final Vector2i next=getMin(new Vector2i());
+    public boolean findNext(){
+      if (current.equals(next)) {
+        next.x++;
+        if (next.x > maxX) {
+          next.x=minX;
+          next.y++;
+        }
+        return contains(next);
+      }
+      return true;
+    }
+    @Override public boolean hasNext(){
+      if (!isValid()) {
+        return false;
+      }
+      if (current == null) {
+        return true;
+      }
+      if (current.equals(next)) {
+        return findNext();
+      }
+      return contains(next);
+    }
+    @Override public Vector2ic next(){
+      if (current == null) {
+        current=new Vector2i(next);
+        return next;
+      }
+      if (current.equals(next)) {
+        if (findNext()) {
+          current.set(next);
+          return next;
+        }
+        return null;
+      }
+      current.set(next);
+      return next;
+    }
+  }
+;
+}

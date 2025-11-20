@@ -1,0 +1,13 @@
+/** 
+ * 处理查询出错数据包
+ * @param con
+ * @param errorResponse
+ */
+private void doProcessErrorResponse(PostgreSQLBackendConnection con,ErrorResponse errorResponse){
+  LOGGER.debug("查询出错了!");
+  ErrorPacket err=new ErrorPacket();
+  err.packetId=++packetId;
+  err.message=errorResponse.getErrMsg().trim().replaceAll("\0"," ").getBytes();
+  err.errno=ErrorCode.ER_UNKNOWN_ERROR;
+  con.getResponseHandler().errorResponse(err.writeToBytes(),con);
+}

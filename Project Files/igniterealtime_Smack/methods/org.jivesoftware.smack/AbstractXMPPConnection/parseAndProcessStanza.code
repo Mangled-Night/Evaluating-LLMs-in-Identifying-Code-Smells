@@ -1,0 +1,20 @@
+protected void parseAndProcessStanza(XmlPullParser parser) throws XmlPullParserException, IOException, InterruptedException {
+  ParserUtils.assertAtStartTag(parser);
+  int parserDepth=parser.getDepth();
+  Stanza stanza=null;
+  try {
+    stanza=PacketParserUtils.parseStanza(parser,incomingStreamXmlEnvironment);
+  }
+ catch (  XmlPullParserException|SmackParsingException|IOException|IllegalArgumentException e) {
+    CharSequence content=PacketParserUtils.parseContentDepth(parser,parserDepth);
+    UnparseableStanza message=new UnparseableStanza(content,e);
+    ParsingExceptionCallback callback=getParsingExceptionCallback();
+    if (callback != null) {
+      callback.handleUnparsableStanza(message);
+    }
+  }
+  ParserUtils.assertAtEndTag(parser);
+  if (stanza != null) {
+    processStanza(stanza);
+  }
+}

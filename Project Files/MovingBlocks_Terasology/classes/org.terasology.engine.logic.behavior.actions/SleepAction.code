@@ -1,0 +1,21 @@
+/** 
+ * Sleeps for a given amount of time (RUNNING), then returns with SUCCESS.
+ */
+@API @BehaviorAction(name="sleep") public class SleepAction extends BaseAction {
+  @Range(min=0,max=20) private float time;
+  @Override public void construct(  Actor actor){
+    actor.setValue(getId(),time);
+  }
+  @Override public BehaviorState modify(  Actor actor,  BehaviorState result){
+    float timeRemaining=0;
+    try {
+      timeRemaining=actor.getValue(getId());
+    }
+ catch (    NullPointerException e) {
+      construct(actor);
+    }
+    timeRemaining-=actor.getDelta();
+    actor.setValue(getId(),timeRemaining);
+    return timeRemaining > 0 ? BehaviorState.RUNNING : BehaviorState.SUCCESS;
+  }
+}

@@ -1,0 +1,20 @@
+public void testGetSpecifiedItems() throws Exception {
+  LeafNode node=getPubnode(true,true);
+  node.send(new PayloadItem<SimplePayload>("1",new SimplePayload("a","pubsub:test","<a xmlns='pubsub:test' href='1'/>")));
+  node.send(new PayloadItem<SimplePayload>("2",new SimplePayload("a","pubsub:test","<a xmlns='pubsub:test' href='2'/>")));
+  node.send(new PayloadItem<SimplePayload>("3",new SimplePayload("a","pubsub:test","<a xmlns='pubsub:test' href='3'/>")));
+  node.send(new PayloadItem<SimplePayload>("4",new SimplePayload("a","pubsub:test","<a xmlns='pubsub:test' href='4'/>")));
+  node.send(new PayloadItem<SimplePayload>("5",new SimplePayload("a","pubsub:test","<a xmlns='pubsub:test' href='5'/>")));
+  Collection<String> ids=new ArrayList<String>(3);
+  ids.add("1");
+  ids.add("3");
+  ids.add("4");
+  List<PayloadItem<SimplePayload>> items=node.getItems(ids);
+  assertEquals(3,items.size());
+  assertEquals("1",items.get(0).getId());
+  assertXmlSimilar("<a xmlns='pubsub:test' href='1'/>",items.get(0).getPayload().toXML());
+  assertEquals("3",items.get(1).getId());
+  assertXmlSimilar("<a xmlns='pubsub:test' href='3'/>",items.get(1).getPayload().toXML());
+  assertEquals("4",items.get(2).getId());
+  assertXmlSimilar("<a xmlns='pubsub:test' href='4'/>",items.get(2).getPayload().toXML());
+}

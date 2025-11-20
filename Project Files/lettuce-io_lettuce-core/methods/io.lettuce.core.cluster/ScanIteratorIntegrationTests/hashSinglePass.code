@@ -1,0 +1,11 @@
+@Test void hashSinglePass(){
+  redis.hmset(key,KeysAndValues.MAP);
+  ScanIterator<KeyValue<String,String>> scan=ScanIterator.hscan(redis,key,ScanArgs.Builder.limit(50).match("key-11*"));
+  assertThat(scan.hasNext()).isTrue();
+  assertThat(scan.hasNext()).isTrue();
+  for (int i=0; i < 11; i++) {
+    assertThat(scan.hasNext()).isTrue();
+    assertThat(scan.next()).isNotNull();
+  }
+  assertThat(scan.hasNext()).isFalse();
+}

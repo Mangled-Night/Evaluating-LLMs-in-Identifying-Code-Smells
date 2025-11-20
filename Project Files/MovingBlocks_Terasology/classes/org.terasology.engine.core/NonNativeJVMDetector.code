@@ -1,0 +1,31 @@
+public final class NonNativeJVMDetector {
+  /** 
+ * This is <code>true</code> if the engine is running in a 32-bit JVM on a 64-bit system.
+ */
+  public static final boolean JVM_ARCH_IS_NONNATIVE=jvmIsNotNative();
+  private NonNativeJVMDetector(){
+  }
+  private static boolean jvmIsNotNative(){
+    if (System.getProperty("os.name").contains("Windows")) {
+      return System.getenv("PROCESSOR_ARCHITEW6432") != null;
+    }
+ else {
+      try {
+        return !jvmIs64() && posixSystemIs64();
+      }
+ catch (      Exception ex) {
+        return false;
+      }
+    }
+  }
+  private static boolean posixSystemIs64() throws IOException, InterruptedException {
+    Process unameProc=new ProcessBuilder("uname","-m").start();
+    unameProc.waitFor();
+    try (BufferedReader unameStdout=new BufferedReader(new InputStreamReader(unameProc.getInputStream()))){
+      return unameStdout.readLine().endsWith("64");
+    }
+   }
+  private static boolean jvmIs64(){
+    return System.getProperty("os.arch").endsWith("64");
+  }
+}

@@ -1,0 +1,29 @@
+private static void parseTimeout(Builder builder,String queryParam){
+  int index=queryParam.indexOf('=');
+  if (index < 0) {
+    return;
+  }
+  String timeoutString=queryParam.substring(index + 1);
+  int numbersEnd=0;
+  while (numbersEnd < timeoutString.length() && Character.isDigit(timeoutString.charAt(numbersEnd))) {
+    numbersEnd++;
+  }
+  if (numbersEnd == 0) {
+    if (timeoutString.startsWith("-")) {
+      builder.withTimeout(Duration.ZERO);
+    }
+ else {
+    }
+  }
+ else {
+    String timeoutValueString=timeoutString.substring(0,numbersEnd);
+    long timeoutValue=Long.parseLong(timeoutValueString);
+    builder.withTimeout(Duration.ofMillis(timeoutValue));
+    String suffix=timeoutString.substring(numbersEnd);
+    LongFunction<Duration> converter=CONVERTER_MAP.get(suffix);
+    if (converter == null) {
+      converter=Duration::ofMillis;
+    }
+    builder.withTimeout(converter.apply(timeoutValue));
+  }
+}

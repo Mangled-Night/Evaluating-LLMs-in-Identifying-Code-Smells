@@ -1,0 +1,24 @@
+protected void writeEof(){
+  boolean t=jointTableIsData;
+  if (ctx.getIsStreamOutputResult() || (!jointTableIsData)) {
+    ctx.writeEof();
+  }
+ else {
+    int start=joinParser.getOffset();
+    int end=start + joinParser.getRowCount();
+    List<RowDataPacket> results=sorter.getSortedResult();
+    if (start < 0) {
+      start=0;
+    }
+    if (joinParser.getRowCount() <= 0) {
+      end=results.size();
+    }
+    if (end > results.size()) {
+      end=results.size();
+    }
+    for (int i=start; i < end; i++) {
+      ctx.writeRow(results.get(i));
+    }
+    ctx.writeEof();
+  }
+}

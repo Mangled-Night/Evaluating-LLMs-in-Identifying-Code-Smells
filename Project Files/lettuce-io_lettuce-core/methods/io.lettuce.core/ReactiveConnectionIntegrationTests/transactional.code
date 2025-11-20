@@ -1,0 +1,17 @@
+@Test @Inject void transactional(RedisClient client) throws Exception {
+  final CountDownLatch sync=new CountDownLatch(1);
+  RedisReactiveCommands<String,String> reactive=client.connect().reactive();
+  reactive.multi().subscribe(multiResponse -> {
+    reactive.set(key,"1").subscribe();
+    reactive.incr(key).subscribe(getResponse -> {
+      sync.countDown();
+    }
+);
+    reactive.exec().subscribe();
+  }
+);
+  sync.await(5,TimeUnit.SECONDS);
+  String result=redis.get(key);
+  assertThat(result).isEqualTo("2");
+  reactive.getStatefulConnection().close();
+}

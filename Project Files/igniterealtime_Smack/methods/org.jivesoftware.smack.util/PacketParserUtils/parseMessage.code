@@ -1,0 +1,51 @@
+public static Message parseMessage(XmlPullParser parser) throws XmlPullParserException, IOException, SmackParsingException {
+  return parseMessage(parser,XmlEnvironment.EMPTY);
+}
+/** 
+ * Parses a message packet.
+ * @param parser the XML parser, positioned at the start of a message packet.
+ * @param outerXmlEnvironment the outer XML environment (optional).
+ * @return a Message packet.
+ * @throws XmlPullParserException if an error in the XML parser occurred.
+ * @throws IOException if an I/O error occurred.
+ * @throws SmackParsingException if the Smack parser (provider) encountered invalid input.
+ */
+public static Message parseMessage(XmlPullParser parser,XmlEnvironment outerXmlEnvironment) throws XmlPullParserException, IOException, SmackParsingException {
+  ParserUtils.assertAtStartTag(parser);
+  assert parser.getName().equals(Message.ELEMENT);
+  XmlEnvironment messageXmlEnvironment=XmlEnvironment.from(parser,outerXmlEnvironment);
+  final int initialDepth=parser.getDepth();
+  MessageBuilder message=parseCommonStanzaAttributes(id -> {
+    return StanzaBuilder.buildMessage(id);
+  }
+,parser,outerXmlEnvironment);
+  String typeString=parser.getAttributeValue("","type");
+  if (typeString != null) {
+    message.ofType(Message.Type.fromString(typeString));
+  }
+  outerloop:   while (true) {
+    XmlPullParser.Event eventType=parser.next();
+switch (eventType) {
+case START_ELEMENT:
+      String elementName=parser.getName();
+    String namespace=parser.getNamespace();
+switch (elementName) {
+case "error":
+    message.setError(parseError(parser,messageXmlEnvironment));
+  break;
+default :
+XmlElement extensionElement=parseExtensionElement(elementName,namespace,parser,messageXmlEnvironment);
+message.addExtension(extensionElement);
+break;
+}
+break;
+case END_ELEMENT:
+if (parser.getDepth() == initialDepth) {
+break outerloop;
+}
+break;
+default :
+}
+}
+return message.build();
+}

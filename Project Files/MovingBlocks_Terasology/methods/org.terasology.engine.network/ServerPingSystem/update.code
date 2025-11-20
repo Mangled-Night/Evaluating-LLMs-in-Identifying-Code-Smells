@@ -1,0 +1,36 @@
+@Override public void update(float delta){
+  long time=Duration.between(lastPingTime,Instant.now()).toMillis();
+  if (time > PING_PERIOD) {
+    if (entityManager.getCountOfEntitiesWith(PingSubscriberComponent.class) != 0) {
+      Iterable<EntityRef> clients=entityManager.getEntitiesWith(ClientComponent.class);
+      for (      EntityRef client : clients) {
+        if (client.equals(localPlayer.getClientEntity())) {
+          continue;
+        }
+        Instant lastPingFromClient=endMap.get(client);
+        Instant lastPingToClient=startMap.get(client);
+        if (lastPingFromClient != null && lastPingToClient != null && lastPingFromClient.isBefore(lastPingToClient)) {
+          continue;
+        }
+        Instant start=Instant.now();
+        startMap.put(client,start);
+        client.send(new PingFromServerEvent());
+      }
+    }
+    for (    EntityRef client : entityManager.getEntitiesWith(PingSubscriberComponent.class)) {
+      PingStockComponent pingStockComponent;
+      if (!client.hasComponent(PingStockComponent.class)) {
+        pingStockComponent=new PingStockComponent();
+      }
+ else {
+        pingStockComponent=client.getComponent(PingStockComponent.class);
+      }
+      if (localPlayer != null && localPlayer.getClientEntity() != null) {
+        pingMap.put(localPlayer.getClientEntity(),new Long(5));
+      }
+      pingStockComponent.setValues(pingMap);
+      client.addOrSaveComponent(pingStockComponent);
+    }
+    lastPingTime=Instant.now();
+  }
+}

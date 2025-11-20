@@ -1,0 +1,32 @@
+public void testListenerMultipleNodes() throws Exception {
+  String nodeId1="Node-1-" + System.currentTimeMillis();
+  PubSubManager creatorMgr=new PubSubManager(getConnection(0),getService());
+  String nodeId2="Node-2-" + System.currentTimeMillis();
+  LeafNode creatorNode1=getPubnode(creatorMgr,nodeId1,true,false);
+  LeafNode creatorNode2=getPubnode(creatorMgr,nodeId2,true,false);
+  BlockingQueue<ItemEventCoordinator<Item>> queue=new ArrayBlockingQueue<ItemEventCoordinator<Item>>(3);
+  PubSubManager subMgr=new PubSubManager(getConnection(1),getService());
+  LeafNode subNode1=(LeafNode)subMgr.getNode(nodeId1);
+  LeafNode subNode2=(LeafNode)subMgr.getNode(nodeId2);
+  subNode1.addItemEventListener(new ItemEventCoordinator<Item>(queue,"sub1"));
+  subNode2.addItemEventListener(new ItemEventCoordinator<Item>(queue,"sub2"));
+  subNode1.subscribe(getConnection(1).getUser());
+  subNode2.subscribe(getConnection(1).getUser());
+  creatorNode1.send(new Item("item1"));
+  creatorNode2.send(new Item("item2"));
+  boolean check1=false;
+  boolean check2=false;
+  for (int i=0; i < 2; i++) {
+    ItemEventCoordinator<Item> event=queue.poll(5,TimeUnit.SECONDS);
+    if (event.id.equals("sub1")) {
+      assertEquals(event.events.getNodeId(),nodeId1);
+      check1=true;
+    }
+ else {
+      assertEquals(event.events.getNodeId(),nodeId2);
+      check2=true;
+    }
+  }
+  assertTrue(check1);
+  assertTrue(check2);
+}

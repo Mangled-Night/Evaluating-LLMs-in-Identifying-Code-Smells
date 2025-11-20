@@ -1,0 +1,61 @@
+private void drawShadow(Canvas canvas){
+  if (isCircle) {
+    int saved=canvas.save();
+    canvas.translate(mContentBounds.centerX(),mContentBounds.centerY());
+    canvas.drawPath(mCornerShadowPath,mCornerShadowPaint);
+    canvas.restoreToCount(saved);
+    return;
+  }
+  final int rotateSaved=canvas.save();
+  canvas.rotate(mRotation,mContentBounds.centerX(),mContentBounds.centerY());
+  final float edgeShadowTop=-mCornerRadius - mShadowSize;
+  final float shadowOffset=mCornerRadius;
+  final boolean drawHorizontalEdges=mContentBounds.width() - 2 * shadowOffset > 0;
+  final boolean drawVerticalEdges=mContentBounds.height() - 2 * shadowOffset > 0;
+  final float shadowOffsetTop=mRawShadowSize - (mRawShadowSize * mShadowTopScale);
+  final float shadowOffsetHorizontal=mRawShadowSize - (mRawShadowSize * mShadowHorizScale);
+  final float shadowOffsetBottom=mRawShadowSize - (mRawShadowSize * mShadowBottomScale);
+  final float shadowScaleHorizontal=shadowOffset == 0 ? 1 : shadowOffset / (shadowOffset + shadowOffsetHorizontal);
+  final float shadowScaleTop=shadowOffset == 0 ? 1 : shadowOffset / (shadowOffset + shadowOffsetTop);
+  final float shadowScaleBottom=shadowOffset == 0 ? 1 : shadowOffset / (shadowOffset + shadowOffsetBottom);
+  int saved=canvas.save();
+  canvas.translate(mContentBounds.left + shadowOffset,mContentBounds.top + shadowOffset);
+  canvas.scale(shadowScaleHorizontal,shadowScaleTop);
+  canvas.drawPath(mCornerShadowPath,mCornerShadowPaint);
+  if (drawHorizontalEdges) {
+    canvas.scale(1f / shadowScaleHorizontal,1f);
+    canvas.drawRect(0,edgeShadowTop,mContentBounds.width() - 2 * shadowOffset,-mCornerRadius,mEdgeShadowPaint);
+  }
+  canvas.restoreToCount(saved);
+  saved=canvas.save();
+  canvas.translate(mContentBounds.right - shadowOffset,mContentBounds.bottom - shadowOffset);
+  canvas.scale(shadowScaleHorizontal,shadowScaleBottom);
+  canvas.rotate(180f);
+  canvas.drawPath(mCornerShadowPath,mCornerShadowPaint);
+  if (drawHorizontalEdges) {
+    canvas.scale(1f / shadowScaleHorizontal,1f);
+    canvas.drawRect(0,edgeShadowTop,mContentBounds.width() - 2 * shadowOffset,-mCornerRadius,mEdgeShadowPaint);
+  }
+  canvas.restoreToCount(saved);
+  saved=canvas.save();
+  canvas.translate(mContentBounds.left + shadowOffset,mContentBounds.bottom - shadowOffset);
+  canvas.scale(shadowScaleHorizontal,shadowScaleBottom);
+  canvas.rotate(270f);
+  canvas.drawPath(mCornerShadowPath,mCornerShadowPaint);
+  if (drawVerticalEdges) {
+    canvas.scale(1f / shadowScaleBottom,1f);
+    canvas.drawRect(0,edgeShadowTop,mContentBounds.height() - 2 * shadowOffset,-mCornerRadius,mEdgeShadowPaint);
+  }
+  canvas.restoreToCount(saved);
+  saved=canvas.save();
+  canvas.translate(mContentBounds.right - shadowOffset,mContentBounds.top + shadowOffset);
+  canvas.scale(shadowScaleHorizontal,shadowScaleTop);
+  canvas.rotate(90f);
+  canvas.drawPath(mCornerShadowPath,mCornerShadowPaint);
+  if (drawVerticalEdges) {
+    canvas.scale(1f / shadowScaleTop,1f);
+    canvas.drawRect(0,edgeShadowTop,mContentBounds.height() - 2 * shadowOffset,-mCornerRadius,mEdgeShadowPaint);
+  }
+  canvas.restoreToCount(saved);
+  canvas.restoreToCount(rotateSaved);
+}

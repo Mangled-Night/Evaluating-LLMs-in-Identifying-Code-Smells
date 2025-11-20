@@ -1,0 +1,56 @@
+/** 
+ * In the UNKNOWN state we received a <session-initiate> action. This method processes that action.
+ * @throws SmackException if Smack detected an exceptional situation.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+private static IQ receiveSessionInitiateAction(JingleSession session,Jingle inJingle) throws SmackException, InterruptedException {
+  IQ response;
+  boolean shouldAck=true;
+  if (!shouldAck) {
+    response=session.createJingleError(inJingle,JingleError.NEGOTIATION_ERROR);
+  }
+ else {
+    response=session.createAck(inJingle);
+    session.setSessionState(JingleSessionStatePending.getInstance());
+    for (    JingleContent jingleContent : inJingle.getContentsList()) {
+      ContentNegotiator contentNeg=new ContentNegotiator(session,jingleContent.getCreator(),jingleContent.getName());
+      JingleDescription jingleDescription=jingleContent.getDescription();
+      JingleMediaManager chosenMediaManager=session.getMediaManagers().get(0);
+      for (      JingleMediaManager mediaManager : session.getMediaManagers()) {
+        boolean matches=true;
+        for (        PayloadType mediaPayloadType : mediaManager.getPayloads()) {
+          for (          PayloadType descPayloadType2 : jingleDescription.getPayloadTypesList()) {
+            if (mediaPayloadType.getId() != descPayloadType2.getId()) {
+              matches=false;
+            }
+          }
+          if (matches) {
+            chosenMediaManager=mediaManager;
+          }
+        }
+      }
+      contentNeg.setMediaNegotiator(new MediaNegotiator(session,chosenMediaManager,jingleDescription.getPayloadTypesList(),contentNeg));
+      for (      JingleTransport jingleTransport : jingleContent.getJingleTransportsList()) {
+        for (        JingleMediaManager mediaManager : session.getMediaManagers()) {
+          JingleTransportManager transportManager=mediaManager.getTransportManager();
+          TransportResolver resolver=null;
+          try {
+            resolver=transportManager.getResolver(session);
+          }
+ catch (          XMPPException e) {
+            LOGGER.log(Level.WARNING,"exception",e);
+          }
+          if (resolver.getType().equals(TransportResolver.Type.rawupd)) {
+            contentNeg.setTransportNegotiator(new TransportNegotiator.RawUdp(session,resolver,contentNeg));
+          }
+          if (resolver.getType().equals(TransportResolver.Type.ice)) {
+            contentNeg.setTransportNegotiator(new TransportNegotiator.Ice(session,resolver,contentNeg));
+          }
+        }
+      }
+      session.addContentNegotiator(contentNeg);
+    }
+    session.setupListeners();
+  }
+  return response;
+}

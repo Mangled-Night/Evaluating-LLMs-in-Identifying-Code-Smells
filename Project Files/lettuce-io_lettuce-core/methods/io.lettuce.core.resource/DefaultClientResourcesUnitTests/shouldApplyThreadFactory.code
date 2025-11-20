@@ -1,0 +1,18 @@
+@Test void shouldApplyThreadFactory(){
+  ClientResources clientResources=ClientResources.builder().threadFactoryProvider(name -> runnable -> {
+    return new MyThread(runnable,name);
+  }
+).ioThreadPoolSize(2).computationThreadPoolSize(2).build();
+  HashedWheelTimer hwt=(HashedWheelTimer)clientResources.timer();
+  assertThat(hwt).extracting("workerThread").isInstanceOf(MyThread.class);
+  AtomicReference<Thread> eventExecutorThread=new AtomicReference<>();
+  EventExecutor eventExecutor=clientResources.eventExecutorGroup().next();
+  eventExecutor.submit(() -> eventExecutorThread.set(Thread.currentThread())).awaitUninterruptibly();
+  AtomicReference<Thread> eventLoopThread=new AtomicReference<>();
+  NioEventLoopGroup eventLoopGroup=clientResources.eventLoopGroupProvider().allocate(NioEventLoopGroup.class);
+  eventLoopGroup.next().submit(() -> eventLoopThread.set(Thread.currentThread())).awaitUninterruptibly();
+  clientResources.eventLoopGroupProvider().release(eventLoopGroup,0,0,TimeUnit.SECONDS);
+  clientResources.shutdown(0,0,TimeUnit.SECONDS);
+  assertThat(MyThread.started).hasValue(5);
+  Wait.untilEquals(5,() -> MyThread.finished).waitOrTimeout();
+}

@@ -1,0 +1,7 @@
+@Test void xgroupDelconsumer(){
+  redis.xgroupCreate(StreamOffset.latest(key),"group",XGroupCreateArgs.Builder.mkstream());
+  redis.xadd(key,Collections.singletonMap("key","value"));
+  redis.xreadgroup(Consumer.from("group","consumer1"),StreamOffset.lastConsumed(key));
+  assertThat(redis.xgroupDelconsumer(key,Consumer.from("group","consumer1"))).isOne();
+  assertThat(redis.xgroupDelconsumer(key,Consumer.from("group","consumer1"))).isZero();
+}

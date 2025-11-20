@@ -1,0 +1,37 @@
+public static void mergeFiles(File outFile,File f) throws IOException {
+  FileChannel outChannel=null;
+  FileOutputStream fos=null;
+  FileInputStream fis=null;
+  try {
+    fos=new FileOutputStream(outFile,true);
+    fis=new FileInputStream(f);
+    outChannel=fos.getChannel();
+    FileChannel fc=fis.getChannel();
+    ByteBuffer bb=ByteBuffer.allocate(BUFSIZE);
+    while (fc.read(bb) != -1) {
+      bb.flip();
+      outChannel.write(bb);
+      bb.clear();
+    }
+    fc.close();
+  }
+ catch (  IOException e) {
+    throw e;
+  }
+ finally {
+    try {
+      if (fos != null) {
+        fos.close();
+      }
+      if (fis != null) {
+        fis.close();
+      }
+      if (outChannel != null) {
+        outChannel.close();
+      }
+    }
+ catch (    IOException e) {
+      LOGGER.error("error",e);
+    }
+  }
+}

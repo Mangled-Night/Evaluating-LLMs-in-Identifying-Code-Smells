@@ -1,0 +1,17 @@
+private Prefab loadPrefab(EntityData.Prefab prefabData,Map<String,EntityData.Prefab> pendingPrefabs){
+  Optional<Prefab> result=Assets.getPrefab(prefabData.getName());
+  if (!result.isPresent()) {
+    if (prefabData.hasParentName() && pendingPrefabs.containsKey(prefabData.getParentName())) {
+      loadPrefab(pendingPrefabs.get(prefabData.getParentName()),pendingPrefabs);
+    }
+    Module module=environment.get(new SimpleUri(prefabData.getName()).getModuleName());
+    try (ModuleContext.ContextSpan ignored=ModuleContext.setContext(module)){
+      return createPrefab(prefabData);
+    }
+ catch (    Exception e) {
+      logger.error("Failed to load prefab {}",prefabData.getParentName(),e);
+      return null;
+    }
+  }
+  return result.get();
+}

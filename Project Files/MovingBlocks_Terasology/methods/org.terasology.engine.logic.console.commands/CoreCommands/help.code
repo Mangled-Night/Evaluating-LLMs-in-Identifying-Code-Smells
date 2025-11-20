@@ -1,0 +1,54 @@
+/** 
+ * Prints out short descriptions for all available commands, or a longer help text if a command is provided.
+ * @param commandName String containing command for which will be displayed help
+ * @return String containing short description of all commands or longer help text if command is provided
+ */
+@Command(shortDescription="Prints out short descriptions for all available commands, or a longer help text if a command is provided.",requiredPermission=PermissionManager.NO_PERMISSION) public String help(@CommandParam(value="command",required=false,suggester=CommandNameSuggester.class) Name commandName){
+  if (commandName == null) {
+    StringBuilder msg=new StringBuilder();
+    List<ConsoleCommand> commands=Ordering.natural().immutableSortedCopy(console.getCommands());
+    for (    ConsoleCommand cmd : commands) {
+      if (!msg.toString().isEmpty()) {
+        msg.append(Console.NEW_LINE);
+      }
+      msg.append(FontColor.getColored(cmd.getUsage(),ConsoleColors.COMMAND));
+      msg.append(" - ");
+      msg.append(cmd.getDescription());
+    }
+    return msg.toString();
+  }
+ else {
+    ConsoleCommand cmd=console.getCommand(commandName);
+    if (cmd == null) {
+      return "No help available for command '" + commandName + "'. Unknown command.";
+    }
+ else {
+      StringBuilder msg=new StringBuilder();
+      msg.append("===========================================================================================================");
+      msg.append(Console.NEW_LINE);
+      msg.append(cmd.getUsage());
+      msg.append(Console.NEW_LINE);
+      msg.append("===========================================================================================================");
+      msg.append(Console.NEW_LINE);
+      if (!cmd.getHelpText().isEmpty()) {
+        msg.append(cmd.getHelpText());
+        msg.append(Console.NEW_LINE);
+        msg.append("===========================================================================================================");
+        msg.append(Console.NEW_LINE);
+      }
+ else       if (!cmd.getDescription().isEmpty()) {
+        msg.append(cmd.getDescription());
+        msg.append(Console.NEW_LINE);
+        msg.append("===========================================================================================================");
+        msg.append(Console.NEW_LINE);
+      }
+      if (!cmd.getRequiredPermission().isEmpty()) {
+        msg.append("Required permission level - " + cmd.getRequiredPermission());
+        msg.append(Console.NEW_LINE);
+        msg.append("===========================================================================================================");
+        msg.append(Console.NEW_LINE);
+      }
+      return msg.toString();
+    }
+  }
+}

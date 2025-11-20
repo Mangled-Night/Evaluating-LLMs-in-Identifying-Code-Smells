@@ -1,0 +1,15 @@
+/** 
+ * Apply the extra-data changes from the message to the local world.
+ */
+private void processExtraDataChanges(NetData.NetMessage message){
+  WorldProvider worldProvider=context.get(WorldProvider.class);
+  for (  NetData.ExtraDataChangeMessage extraDataChange : message.getExtraDataChangeList()) {
+    Vector3i pos=NetMessageUtil.convert(extraDataChange.getPos());
+    if (worldProvider.isBlockRelevant(pos)) {
+      worldProvider.setExtraData(extraDataChange.getIndex(),pos,extraDataChange.getNewData());
+    }
+ else {
+      awaitingChunkReadyExtraDataUpdates.put(Chunks.toChunkPos(pos),extraDataChange);
+    }
+  }
+}

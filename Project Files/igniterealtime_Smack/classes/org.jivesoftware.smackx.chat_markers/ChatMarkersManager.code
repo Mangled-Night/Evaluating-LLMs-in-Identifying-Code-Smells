@@ -1,0 +1,111 @@
+/** 
+ * Chat Markers Manager class (XEP-0333).
+ * @see <a href="http://xmpp.org/extensions/xep-0333.html">XEP-0333: Chat
+ *      Markers</a>
+ * @author Miguel Hincapie
+ * @author Fernando Ramirez
+ */
+public final class ChatMarkersManager extends Manager {
+static {
+    XMPPConnectionRegistry.addConnectionCreationListener(new ConnectionCreationListener(){
+      @Override public void connectionCreated(      XMPPConnection connection){
+        getInstanceFor(connection);
+      }
+    }
+);
+  }
+  private static final Map<XMPPConnection,ChatMarkersManager> INSTANCES=new WeakHashMap<>();
+  private static final StanzaFilter INCOMING_MESSAGE_FILTER=new AndFilter(MessageTypeFilter.NORMAL_OR_CHAT,new StanzaExtensionFilter(ChatMarkersElements.NAMESPACE),PossibleFromTypeFilter.ENTITY_BARE_JID,EligibleForChatMarkerFilter.INSTANCE);
+  private static final StanzaFilter OUTGOING_MESSAGE_FILTER=new AndFilter(MessageTypeFilter.NORMAL_OR_CHAT,MessageWithBodiesFilter.INSTANCE,new NotFilter(ChatMarkersFilter.INSTANCE),EligibleForChatMarkerFilter.INSTANCE);
+  private final Set<ChatMarkersListener> incomingListeners=new HashSet<>();
+  private final AsyncButOrdered<Chat> asyncButOrdered=new AsyncButOrdered<>();
+  private final ChatManager chatManager;
+  private final ServiceDiscoveryManager serviceDiscoveryManager;
+  private boolean enabled;
+  /** 
+ * Get the singleton instance of ChatMarkersManager.
+ * @param connection the connection used to get the ChatMarkersManager instance.
+ * @return the instance of ChatMarkersManager
+ */
+  public static synchronized ChatMarkersManager getInstanceFor(  XMPPConnection connection){
+    ChatMarkersManager chatMarkersManager=INSTANCES.get(connection);
+    if (chatMarkersManager == null) {
+      chatMarkersManager=new ChatMarkersManager(connection);
+      INSTANCES.put(connection,chatMarkersManager);
+    }
+    return chatMarkersManager;
+  }
+  private ChatMarkersManager(  XMPPConnection connection){
+    super(connection);
+    chatManager=ChatManager.getInstanceFor(connection);
+    connection.addMessageInterceptor(mb -> mb.addExtension(ChatMarkersElements.MarkableExtension.INSTANCE),m -> {
+      return OUTGOING_MESSAGE_FILTER.accept(m);
+    }
+);
+    connection.addSyncStanzaListener(new StanzaListener(){
+      @Override public void processStanza(      Stanza packet) throws NotConnectedException, InterruptedException, SmackException.NotLoggedInException {
+        final Message message=(Message)packet;
+        EntityBareJid bareFrom=message.getFrom().asEntityBareJidOrThrow();
+        final Chat chat=chatManager.chatWith(bareFrom);
+        asyncButOrdered.performAsyncButOrdered(chat,new Runnable(){
+          @Override public void run(){
+            for (            ChatMarkersListener listener : incomingListeners) {
+              if (ChatMarkersElements.MarkableExtension.from(message) != null) {
+                listener.newChatMarkerMessage(ChatMarkersState.markable,message,chat);
+              }
+ else               if (ChatMarkersElements.ReceivedExtension.from(message) != null) {
+                listener.newChatMarkerMessage(ChatMarkersState.received,message,chat);
+              }
+ else               if (ChatMarkersElements.DisplayedExtension.from(message) != null) {
+                listener.newChatMarkerMessage(ChatMarkersState.displayed,message,chat);
+              }
+ else               if (ChatMarkersElements.AcknowledgedExtension.from(message) != null) {
+                listener.newChatMarkerMessage(ChatMarkersState.acknowledged,message,chat);
+              }
+            }
+          }
+        }
+);
+      }
+    }
+,INCOMING_MESSAGE_FILTER);
+    serviceDiscoveryManager=ServiceDiscoveryManager.getInstanceFor(connection);
+  }
+  /** 
+ * Returns true if Chat Markers is supported by the server.
+ * @return true if Chat Markers is supported by the server.
+ * @throws NotConnectedException if the connection is not connected.
+ * @throws XMPPErrorException in case an error response was received.
+ * @throws NoResponseException if no response was received.
+ * @throws InterruptedException if the connection is interrupted.
+ */
+  public boolean isSupportedByServer() throws NoResponseException, XMPPErrorException, NotConnectedException, InterruptedException {
+    return ServiceDiscoveryManager.getInstanceFor(connection()).serverSupportsFeature(ChatMarkersElements.NAMESPACE);
+  }
+  /** 
+ * Register a ChatMarkersListener. That listener will be informed about new incoming markable messages.
+ * @param listener ChatMarkersListener
+ * @return true, if the listener was not registered before
+ */
+  public synchronized boolean addIncomingChatMarkerMessageListener(  ChatMarkersListener listener){
+    boolean res=incomingListeners.add(listener);
+    if (!enabled) {
+      serviceDiscoveryManager.addFeature(ChatMarkersElements.NAMESPACE);
+      enabled=true;
+    }
+    return res;
+  }
+  /** 
+ * Unregister a ChatMarkersListener.
+ * @param listener ChatMarkersListener
+ * @return true, if the listener was registered before
+ */
+  public synchronized boolean removeIncomingChatMarkerMessageListener(  ChatMarkersListener listener){
+    boolean res=incomingListeners.remove(listener);
+    if (incomingListeners.isEmpty() && enabled) {
+      serviceDiscoveryManager.removeFeature(ChatMarkersElements.NAMESPACE);
+      enabled=false;
+    }
+    return res;
+  }
+}

@@ -1,0 +1,35 @@
+private synchronized void saveByteOrToFile(byte[] data,boolean isForce){
+  if (data != null) {
+    tempByteBuffrSize=tempByteBuffrSize + data.length;
+    try {
+      tempByteBuffer.write(data);
+    }
+ catch (    IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+  if ((isForce && isHasStoreToFile) || tempByteBuffrSize > 200 * 1024 * 1024) {
+    FileOutputStream channel=null;
+    try {
+      File file=new File(tempFile);
+      Files.createParentDirs(file);
+      channel=new FileOutputStream(file,true);
+      tempByteBuffer.writeTo(channel);
+      tempByteBuffer=new ByteArrayOutputStream();
+      tempByteBuffrSize=0;
+      isHasStoreToFile=true;
+    }
+ catch (    IOException e) {
+      throw new RuntimeException(e);
+    }
+ finally {
+      try {
+        if (channel != null) {
+          channel.close();
+        }
+      }
+ catch (      IOException ignored) {
+      }
+    }
+  }
+}

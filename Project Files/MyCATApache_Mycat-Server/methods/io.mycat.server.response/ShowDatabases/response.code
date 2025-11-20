@@ -1,0 +1,34 @@
+public static void response(ServerConnection c){
+  ByteBuffer buffer=c.allocate();
+  buffer=header.write(buffer,c,true);
+  for (  FieldPacket field : fields) {
+    buffer=field.write(buffer,c,true);
+  }
+  buffer=eof.write(buffer,c,true);
+  byte packetId=eof.packetId;
+  MycatConfig conf=MycatServer.getInstance().getConfig();
+  Map<String,UserConfig> users=conf.getUsers();
+  UserConfig user=users == null ? null : users.get(c.getUser());
+  if (user != null) {
+    TreeSet<String> schemaSet=new TreeSet<String>();
+    Set<String> schemaList=user.getSchemas();
+    if (schemaList == null || schemaList.size() == 0) {
+      schemaSet.addAll(conf.getSchemas().keySet());
+    }
+ else {
+      for (      String schema : schemaList) {
+        schemaSet.add(schema);
+      }
+    }
+    for (    String name : schemaSet) {
+      RowDataPacket row=new RowDataPacket(FIELD_COUNT);
+      row.add(StringUtil.encode(name,c.getCharset()));
+      row.packetId=++packetId;
+      buffer=row.write(buffer,c,true);
+    }
+  }
+  EOFPacket lastEof=new EOFPacket();
+  lastEof.packetId=++packetId;
+  buffer=lastEof.write(buffer,c,true);
+  c.write(buffer);
+}

@@ -1,0 +1,31 @@
+public Map<Object,Object> orderInfo(Integer userId){
+  LitemallOrderExample example=new LitemallOrderExample();
+  example.or().andUserIdEqualTo(userId).andDeletedEqualTo(false);
+  List<LitemallOrder> orders=litemallOrderMapper.selectByExampleSelective(example,LitemallOrder.Column.orderStatus,LitemallOrder.Column.comments);
+  int unpaid=0;
+  int unship=0;
+  int unrecv=0;
+  int uncomment=0;
+  for (  LitemallOrder order : orders) {
+    if (OrderUtil.isCreateStatus(order)) {
+      unpaid++;
+    }
+ else     if (OrderUtil.isPayStatus(order)) {
+      unship++;
+    }
+ else     if (OrderUtil.isShipStatus(order)) {
+      unrecv++;
+    }
+ else     if (OrderUtil.isConfirmStatus(order) || OrderUtil.isAutoConfirmStatus(order)) {
+      uncomment+=order.getComments();
+    }
+ else {
+    }
+  }
+  Map<Object,Object> orderInfo=new HashMap<Object,Object>();
+  orderInfo.put("unpaid",unpaid);
+  orderInfo.put("unship",unship);
+  orderInfo.put("unrecv",unrecv);
+  orderInfo.put("uncomment",uncomment);
+  return orderInfo;
+}

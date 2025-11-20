@@ -1,0 +1,12 @@
+@SmackIntegrationTest public void testChatStateListeners() throws Exception {
+  ChatStateManager manOne=ChatStateManager.getInstance(conOne);
+  ChatStateManager manTwo=ChatStateManager.getInstance(conTwo);
+  manTwo.addChatStateListener(this::composingListener);
+  manTwo.addChatStateListener(this::activeListener);
+  Chat chatOne=ChatManager.getInstanceFor(conOne).chatWith(conTwo.getUser().asEntityBareJid());
+  manOne.setCurrentState(ChatState.composing,chatOne);
+  composingSyncPoint.waitForResult(timeout);
+  Chat chat=ChatManager.getInstanceFor(conOne).chatWith(conTwo.getUser().asEntityBareJid());
+  chat.send("Hi!");
+  activeSyncPoint.waitForResult(timeout);
+}

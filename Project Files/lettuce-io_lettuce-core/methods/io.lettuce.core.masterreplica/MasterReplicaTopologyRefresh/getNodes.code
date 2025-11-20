@@ -1,0 +1,18 @@
+/** 
+ * Load master replica nodes. Result contains an ordered list of  {@link RedisNodeDescription}s. The sort key is the latency. Nodes with lower latency come first.
+ * @param seed collection of {@link RedisURI}s
+ * @return mapping between {@link RedisURI} and {@link Partitions}
+ */
+public Mono<List<RedisNodeDescription>> getNodes(RedisURI seed){
+  CompletableFuture<List<RedisNodeDescription>> future=topologyProvider.getNodesAsync();
+  Mono<List<RedisNodeDescription>> initialNodes=Mono.fromFuture(future).doOnNext(nodes -> {
+    applyAuthenticationCredentials(nodes,seed);
+  }
+);
+  return initialNodes.map(this::getConnections).flatMap(asyncConnections -> asyncConnections.asMono(seed.getTimeout(),eventExecutors)).flatMap(connections -> {
+    Requests requests=connections.requestPing();
+    CompletionStage<List<RedisNodeDescription>> nodes=requests.getOrTimeout(seed.getTimeout(),eventExecutors);
+    return Mono.fromCompletionStage(nodes).flatMap(it -> ResumeAfter.close(connections).thenEmit(it));
+  }
+);
+}

@@ -1,0 +1,47 @@
+private EntityCapsManager(XMPPConnection connection){
+  super(connection);
+  this.sdm=ServiceDiscoveryManager.getInstanceFor(connection);
+  instances.put(connection,this);
+  connection.addConnectionListener(new ConnectionListener(){
+    @Override public void connected(    XMPPConnection connection){
+      processCapsStreamFeatureIfAvailable(connection);
+    }
+    @Override public void authenticated(    XMPPConnection connection,    boolean resumed){
+      processCapsStreamFeatureIfAvailable(connection);
+    }
+    private void processCapsStreamFeatureIfAvailable(    XMPPConnection connection){
+      CapsExtension capsExtension=connection.getFeature(CapsExtension.class);
+      if (capsExtension == null) {
+        return;
+      }
+      DomainBareJid from=connection.getXMPPServiceDomain();
+      addCapsExtensionInfo(from,capsExtension);
+    }
+  }
+);
+  if (autoEnableEntityCaps)   enableEntityCaps();
+  connection.addAsyncStanzaListener(new StanzaListener(){
+    @Override public void processStanza(    Stanza packet){
+      if (!entityCapsEnabled())       return;
+      CapsExtension capsExtension=CapsExtension.from(packet);
+      Jid from=packet.getFrom();
+      addCapsExtensionInfo(from,capsExtension);
+    }
+  }
+,PRESENCES_WITH_CAPS);
+  Roster.getInstanceFor(connection).addPresenceEventListener(new AbstractPresenceEventListener(){
+    @Override public void presenceUnavailable(    FullJid from,    Presence presence){
+      JID_TO_NODEVER_CACHE.remove(from);
+    }
+  }
+);
+  sdm.addEntityCapabilitiesChangedListener(new EntityCapabilitiesChangedListener(){
+    @Override public void onEntityCapabilitiesChanged(    DiscoverInfo synthesizedDiscoveryInfo){
+      if (!entityCapsEnabled()) {
+        return;
+      }
+      updateLocalEntityCaps(synthesizedDiscoveryInfo);
+    }
+  }
+);
+}

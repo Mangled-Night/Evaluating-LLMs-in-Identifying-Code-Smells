@@ -1,0 +1,25 @@
+@SuppressWarnings("ModifyCollectionInEnhancedForLoop") public B addFormFieldChildElement(FormFieldChildElement newFormFieldChildElement){
+  if (disallowFurtherFormFieldChildElements) {
+    throw new IllegalArgumentException();
+  }
+  if (newFormFieldChildElement.requiresNoTypeSet() && type != null) {
+    throw new IllegalArgumentException("Elements of type " + newFormFieldChildElement.getClass() + " can only be added to form fields where no type is set");
+  }
+  ensureThatFormFieldChildElementsIsSet();
+  if (!formFieldChildElements.isEmpty() && newFormFieldChildElement.isExclusiveElement()) {
+    throw new IllegalArgumentException("Elements of type " + newFormFieldChildElement.getClass() + " must be the only child elements of a form field.");
+  }
+  disallowType=disallowType || newFormFieldChildElement.requiresNoTypeSet();
+  disallowFurtherFormFieldChildElements=newFormFieldChildElement.isExclusiveElement();
+  formFieldChildElements.add(newFormFieldChildElement);
+  for (  FormFieldChildElement formFieldChildElement : formFieldChildElements) {
+    try {
+      formFieldChildElement.checkConsistency(this);
+    }
+ catch (    IllegalArgumentException e) {
+      formFieldChildElements.remove(newFormFieldChildElement);
+      throw e;
+    }
+  }
+  return getThis();
+}

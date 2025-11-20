@@ -1,0 +1,12 @@
+@Test public void storeLoadRemoveOmemoIdentityKeyPair() throws IOException, CorruptedOmemoKeyException {
+  T_IdKeyPair before=store.generateOmemoIdentityKeyPair();
+  assertNull(store.loadOmemoIdentityKeyPair(alice));
+  store.storeOmemoIdentityKeyPair(alice,before);
+  T_IdKeyPair after=store.loadOmemoIdentityKeyPair(alice);
+  assertNotNull(after);
+  assertEquals(store.keyUtil().getFingerprintOfIdentityKeyPair(before),store.keyUtil().getFingerprintOfIdentityKeyPair(after));
+  assertTrue(Arrays.equals(store.keyUtil().identityKeyPairToBytes(before),store.keyUtil().identityKeyPairToBytes(after)));
+  assertNull("Must return null for non-existing key pairs.",store.loadOmemoIdentityKeyPair(bob));
+  store.removeOmemoIdentityKeyPair(alice);
+  assertNull(store.loadOmemoIdentityKeyPair(alice));
+}

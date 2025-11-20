@@ -1,0 +1,19 @@
+/** 
+ * Returns the next available packet. The method call will block (not return) until a stanza is available.
+ * @param < P > type of the result stanza.
+ * @return the next available packet.
+ * @throws InterruptedException if the calling thread was interrupted.
+ */
+@SuppressWarnings("unchecked") public synchronized <P extends Stanza>P nextResultBlockForever() throws InterruptedException {
+  throwIfCancelled();
+  while (true) {
+    P res=(P)resultQueue.poll();
+    if (res != null) {
+      return res;
+    }
+    if (cancelled) {
+      return null;
+    }
+    wait();
+  }
+}

@@ -1,0 +1,28 @@
+/** 
+ * Simulates a failure on reconnect by changing the port to a invalid server and triggering a reconnect. Meanwhile a command is fired to the connection and the watchdog is triggered afterwards to reconnect. Expectation: Command after failed reconnect contains the reconnect exception.
+ * @throws Exception
+ */
+@Test void failOnReconnect() throws Exception {
+  ClientOptions clientOptions=ClientOptions.builder().suspendReconnectOnProtocolFailure(true).build();
+  client.setOptions(clientOptions);
+  RandomResponseServer ts=getRandomResponseServer();
+  RedisURI redisUri=RedisURI.Builder.redis(TestSettings.host(),TestSettings.port()).build();
+  redisUri.setTimeout(Duration.ofSeconds(5));
+  try {
+    RedisAsyncCommands<String,String> connection=client.connect(redisUri).async();
+    ConnectionWatchdog connectionWatchdog=ConnectionTestUtil.getConnectionWatchdog(connection.getStatefulConnection());
+    assertThat(connectionWatchdog.isListenOnChannelInactive()).isTrue();
+    assertThat(connectionWatchdog.isReconnectSuspended()).isFalse();
+    assertThat(clientOptions.isSuspendReconnectOnProtocolFailure()).isTrue();
+    assertThat(connectionWatchdog.getReconnectionHandler().getClientOptions()).isSameAs(clientOptions);
+    redisUri.setPort(TestSettings.nonexistentPort());
+    connection.quit();
+    Wait.untilTrue(() -> connectionWatchdog.isReconnectSuspended()).waitOrTimeout();
+    assertThat(connectionWatchdog.isListenOnChannelInactive()).isTrue();
+    assertThatThrownBy(() -> TestFutures.awaitOrTimeout(connection.info())).hasRootCauseInstanceOf(RedisException.class).hasMessageContaining("Invalid first byte");
+    connection.getStatefulConnection().close();
+  }
+  finally {
+    ts.shutdown();
+  }
+}

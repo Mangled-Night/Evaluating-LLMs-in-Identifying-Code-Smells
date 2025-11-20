@@ -1,0 +1,16 @@
+@Override public StateTransitionResult.TransitionImpossible isTransitionToPossible(WalkStateGraphContext walkStateGraphContext){
+  final ConnectionConfiguration config=connectionInternal.connection.getConfiguration();
+  if (!config.isCompressionEnabled()) {
+    return new StateTransitionResult.TransitionImpossibleReason("Stream compression disabled by connection configuration");
+  }
+  Compress.Feature compressFeature=connectionInternal.connection.getFeature(Compress.Feature.class);
+  if (compressFeature == null) {
+    return new StateTransitionResult.TransitionImpossibleReason("Stream compression not supported or enabled by service");
+  }
+  selectedCompressionFactory=XmppCompressionManager.getBestFactory(compressFeature);
+  if (selectedCompressionFactory == null) {
+    return new StateTransitionResult.TransitionImpossibleReason("No matching compression factory for " + compressFeature.getMethods());
+  }
+  usedXmppInputOutputCompressionFitler=selectedCompressionFactory.fabricate(config);
+  return null;
+}

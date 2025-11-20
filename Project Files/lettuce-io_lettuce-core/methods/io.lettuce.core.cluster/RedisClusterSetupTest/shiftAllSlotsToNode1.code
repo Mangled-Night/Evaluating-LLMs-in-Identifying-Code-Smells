@@ -1,0 +1,27 @@
+private void shiftAllSlotsToNode1(){
+  redis1.clusterDelSlots(createSlots(12000,16384));
+  redis2.clusterDelSlots(createSlots(12000,16384));
+  waitForSlots(redis2,0);
+  RedisClusterNode redis2Partition=getOwnPartition(redis2);
+  Wait.untilTrue(new Supplier<Boolean>(){
+    @Override public Boolean get(){
+      Partitions partitions=ClusterPartitionParser.parse(redis1.clusterNodes());
+      RedisClusterNode partition=partitions.getPartitionByNodeId(redis2Partition.getNodeId());
+      if (!partition.getSlots().isEmpty()) {
+        removeRemaining(partition);
+      }
+      return partition.getSlots().size() == 0;
+    }
+    private void removeRemaining(    RedisClusterNode partition){
+      try {
+        redis1.clusterDelSlots(toIntArray(partition.getSlots()));
+      }
+ catch (      Exception o_O) {
+      }
+    }
+  }
+).waitOrTimeout();
+  redis1.clusterAddSlots(createSlots(12000,16384));
+  waitForSlots(redis1,16384);
+  Wait.untilTrue(clusterHelper::isStable).waitOrTimeout();
+}

@@ -1,0 +1,23 @@
+@Test void mutateResources(){
+  EventExecutorGroup executorMock=mock(EventExecutorGroup.class);
+  EventLoopGroupProvider groupProviderMock=mock(EventLoopGroupProvider.class);
+  Timer timerMock=mock(Timer.class);
+  Timer timerMock2=mock(Timer.class);
+  EventBus eventBusMock=mock(EventBus.class);
+  CommandLatencyCollector latencyCollectorMock=mock(CommandLatencyCollector.class);
+  AddressResolverGroup<?> addressResolverGroupMock=mock(AddressResolverGroup.class);
+  ClientResources sut=ClientResources.builder().eventExecutorGroup(executorMock).eventLoopGroupProvider(groupProviderMock).timer(timerMock).eventBus(eventBusMock).commandLatencyRecorder(latencyCollectorMock).addressResolverGroup(addressResolverGroupMock).build();
+  ClientResources copy=sut.mutate().timer(timerMock2).build();
+  assertThat(sut.eventExecutorGroup()).isSameAs(executorMock);
+  assertThat(sut.eventLoopGroupProvider()).isSameAs(groupProviderMock);
+  assertThat(sut.timer()).isSameAs(timerMock);
+  assertThat(copy.timer()).isSameAs(timerMock2).isNotSameAs(timerMock);
+  assertThat(sut.eventBus()).isSameAs(eventBusMock);
+  assertThat(sut.addressResolverGroup()).isSameAs(addressResolverGroupMock);
+  assertThat(TestFutures.getOrTimeout(sut.shutdown())).isTrue();
+  assertThat(sut).hasFieldOrPropertyWithValue("shutdownCheck",false);
+  assertThat(copy).hasFieldOrPropertyWithValue("shutdownCheck",true);
+  verifyNoMoreInteractions(executorMock);
+  verifyNoMoreInteractions(groupProviderMock);
+  verifyNoMoreInteractions(timerMock);
+}

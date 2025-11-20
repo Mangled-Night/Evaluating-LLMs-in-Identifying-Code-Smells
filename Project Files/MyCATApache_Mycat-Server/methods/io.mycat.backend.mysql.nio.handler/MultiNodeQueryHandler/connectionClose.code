@@ -1,0 +1,11 @@
+/** 
+ * wangkai 后端的mysql连接被关闭调用到这里； 2019年3月13日,异常走executeError，保证最后走handleEndPacket，保证XA顺利释放资源
+ */
+@Override public void connectionClose(BackendConnection conn,String reason){
+  LOGGER.warn("backend connect" + reason + ", conn info:"+ conn);
+  ErrorPacket errPacket=new ErrorPacket();
+  errPacket.errno=ErrorCode.ER_ABORTING_CONNECTION;
+  reason="Connection {DataHost[" + conn.getHost() + ":"+ conn.getPort()+ "],Schema["+ conn.getSchema()+ "],threadID["+ ((MySQLConnection)conn).getThreadId()+ "]} was closed ,reason is ["+ reason+ "]";
+  errPacket.message=StringUtil.encode(reason,session.getSource().getCharset());
+  executeError(conn,errPacket);
+}

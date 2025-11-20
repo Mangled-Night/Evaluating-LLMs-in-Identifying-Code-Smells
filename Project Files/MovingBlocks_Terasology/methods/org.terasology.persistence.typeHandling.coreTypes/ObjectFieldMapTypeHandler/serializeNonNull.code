@@ -1,0 +1,28 @@
+@Override public PersistedData serializeNonNull(T value,PersistedDataSerializer serializer){
+  Map<String,PersistedData> mappedData=Maps.newLinkedHashMap();
+  for (  Map.Entry<Field,TypeHandler<?>> entry : mappedFields.entrySet()) {
+    Field field=entry.getKey();
+    Object val;
+    try {
+      val=field.get(value);
+    }
+ catch (    IllegalAccessException e) {
+      logger.error("Field {} is inaccessible",field);
+      continue;
+    }
+    if (!Objects.equals(val,Defaults.defaultValue(field.getType()))) {
+      TypeHandler handler=entry.getValue();
+      try {
+        PersistedData fieldValue=handler.serialize(val,serializer);
+        if (fieldValue != null) {
+          mappedData.put(getFieldName(field),fieldValue);
+        }
+      }
+ catch (      StackOverflowError e) {
+        logger.error("Likely circular reference in field {}.",field);
+        throw e;
+      }
+    }
+  }
+  return serializer.serialize(mappedData);
+}

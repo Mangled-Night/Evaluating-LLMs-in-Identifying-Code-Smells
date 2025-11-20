@@ -1,0 +1,61 @@
+public class AbstractSingleStringValueFormField extends SingleValueFormField {
+  private final String value;
+  protected AbstractSingleStringValueFormField(  Builder<?,?> builder){
+    super(builder);
+    value=builder.value;
+  }
+  @Override public final String getValue(){
+    return value;
+  }
+  public final Integer getValueAsInt(){
+    if (value == null) {
+      return null;
+    }
+    return Integer.valueOf(value);
+  }
+public abstract static class Builder<F extends SingleValueFormField,B extends SingleValueFormField.Builder<F,B>> extends SingleValueFormField.Builder<F,B> {
+    private String value;
+    protected Builder(    AbstractSingleStringValueFormField abstractSingleFormField){
+      super(abstractSingleFormField);
+      value=abstractSingleFormField.getValue();
+    }
+    protected Builder(    String fieldName,    FormField.Type type){
+      super(fieldName,type);
+    }
+    @Override protected void resetInternal(){
+      value=null;
+    }
+    /** 
+ * Set the value.
+ * @param value the value to set.
+ * @return a reference to this builder.
+ * @deprecated use {@link #setValue(CharSequence)} instead.
+ */
+    @Deprecated public B addValue(    CharSequence value){
+      return setValue(value);
+    }
+    public B setValue(    Value value){
+      this.value=value.getValue().toString();
+      this.rawValue=value;
+      return getThis();
+    }
+    public B setValue(    CharSequence value){
+      this.value=value.toString();
+      rawValue=new Value(this.value);
+      return getThis();
+    }
+    public B setValue(    Enum<?> value){
+      return setValue(value.toString());
+    }
+    public B setValue(    int value){
+      return setValue(Integer.toString(value));
+    }
+    public B setValue(    URL value){
+      return setValue(value.toString());
+    }
+    public B setValue(    Date date){
+      String dateString=XmppDateTime.formatXEP0082Date(date);
+      return setValue(dateString);
+    }
+  }
+}

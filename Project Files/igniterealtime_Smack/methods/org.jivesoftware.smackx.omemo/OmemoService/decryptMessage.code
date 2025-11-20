@@ -1,0 +1,32 @@
+/** 
+ * Decrypt an OMEMO message.
+ * @param managerGuard authenticated OmemoManager.
+ * @param senderJid BareJid of the sender.
+ * @param omemoElement omemoElement.
+ * @return decrypted OmemoMessage object.
+ * @throws CorruptedOmemoKeyException if the identityKey of the sender is damaged.
+ * @throws CryptoFailedException if decryption fails.
+ * @throws NoRawSessionException if we have no session with the device and it sent a normal (non-preKey) message.
+ * @throws IOException if an I/O error occurred.
+ */
+OmemoMessage.Received decryptMessage(OmemoManager.LoggedInOmemoManager managerGuard,BareJid senderJid,OmemoElement omemoElement) throws CorruptedOmemoKeyException, CryptoFailedException, NoRawSessionException, IOException {
+  OmemoManager manager=managerGuard.get();
+  int senderId=omemoElement.getHeader().getSid();
+  OmemoDevice senderDevice=new OmemoDevice(senderJid,senderId);
+  CipherAndAuthTag cipherAndAuthTag=getOmemoRatchet(manager).retrieveMessageKeyAndAuthTag(senderDevice,omemoElement);
+  OmemoFingerprint senderFingerprint;
+  try {
+    senderFingerprint=getOmemoStoreBackend().getFingerprint(manager.getOwnDevice(),senderDevice);
+  }
+ catch (  NoIdentityKeyException e) {
+    throw new AssertionError("Cannot retrieve OmemoFingerprint of sender although decryption was successful: " + e);
+  }
+  omemoStore.storeOmemoMessageCounter(manager.getOwnDevice(),senderDevice,0);
+  if (omemoElement.isMessageElement()) {
+    String plaintext=OmemoRatchet.decryptMessageElement(omemoElement,cipherAndAuthTag);
+    return new OmemoMessage.Received(omemoElement,cipherAndAuthTag.getKey(),cipherAndAuthTag.getIv(),plaintext,senderFingerprint,senderDevice,cipherAndAuthTag.wasPreKeyEncrypted());
+  }
+ else {
+    return new OmemoMessage.Received(omemoElement,cipherAndAuthTag.getKey(),cipherAndAuthTag.getIv(),null,senderFingerprint,senderDevice,cipherAndAuthTag.wasPreKeyEncrypted());
+  }
+}

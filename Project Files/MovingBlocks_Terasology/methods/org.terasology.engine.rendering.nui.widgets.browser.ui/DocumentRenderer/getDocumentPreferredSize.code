@@ -1,0 +1,12 @@
+public static Vector2i getDocumentPreferredSize(DocumentData documentData,Font defaultFont,Color defaultColor,int availableWidth){
+  DefaultDocumentRenderStyle defaultDocumentRenderStyle=new DefaultDocumentRenderStyle(defaultFont,defaultColor);
+  DocumentRenderStyle documentRenderStyle=getDocumentRenderStyle(defaultDocumentRenderStyle,documentData);
+  Collection<ParagraphData> paragraphs=documentData.getParagraphs();
+  int minParagraphsWidth=getParagraphsMinimumWidth(availableWidth,documentRenderStyle,paragraphs);
+  int documentSideMargins=documentRenderStyle.getDocumentMarginLeft().getValue(availableWidth) + documentRenderStyle.getDocumentMarginRight().getValue(availableWidth);
+  int documentWidth=Math.max(availableWidth,minParagraphsWidth + documentSideMargins);
+  ContainerFlowContainerRenderSpace containerRenderSpace=new ContainerFlowContainerRenderSpace(documentWidth);
+  int preferredHeight=Math.max(getParagraphsPreferredHeight(documentRenderStyle,paragraphs,containerRenderSpace,0),containerRenderSpace.getNextClearYPosition(ParagraphRenderStyle.ClearStyle.BOTH));
+  int documentVerticalMargins=documentRenderStyle.getDocumentMarginTop().getValue(documentWidth) + documentRenderStyle.getDocumentMarginBottom().getValue(documentWidth);
+  return new Vector2i(documentWidth,preferredHeight + documentVerticalMargins);
+}

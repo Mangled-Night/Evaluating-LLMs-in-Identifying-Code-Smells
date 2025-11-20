@@ -1,0 +1,14 @@
+@Test public void testAddOverlappingLights(){
+  Vector3i lightPos=new Vector3i(5,0,0);
+  StubPropagatorWorldView worldView=new StubPropagatorWorldView(Chunks.CHUNK_REGION,air);
+  worldView.setBlockAt(new Vector3i(0,0,0),fullLight);
+  worldView.setBlockAt(lightPos,fullLight);
+  BatchPropagator propagator=new StandardBatchPropagator(lightRules,worldView);
+  propagator.process(new BlockChange(ZERO_VECTOR,air,fullLight),new BlockChange(lightPos,air,fullLight));
+  assertEquals(fullLight.getLuminance(),worldView.getValueAt(new Vector3i(0,0,0)));
+  assertEquals(fullLight.getLuminance() - 1,worldView.getValueAt(new Vector3i(1,0,0)));
+  assertEquals(fullLight.getLuminance() - 2,worldView.getValueAt(new Vector3i(2,0,0)));
+  assertEquals(fullLight.getLuminance() - 2,worldView.getValueAt(new Vector3i(3,0,0)));
+  assertEquals(fullLight.getLuminance() - 1,worldView.getValueAt(new Vector3i(4,0,0)));
+  assertEquals(fullLight.getLuminance(),worldView.getValueAt(new Vector3i(5,0,0)));
+}

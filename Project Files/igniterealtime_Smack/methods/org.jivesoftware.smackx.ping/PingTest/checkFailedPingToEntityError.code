@@ -1,0 +1,13 @@
+/** 
+ * Server returns an exception for entity.
+ * @throws Exception if an exception occurs.
+ */
+@Test public void checkFailedPingToEntityError() throws Exception {
+  ThreadedDummyConnection threadedCon=getAuthenticatedDummyConnection();
+  String reply="<iq type='error' id='qrzSp-16' to='test@myserver.com'>" + "<ping xmlns='urn:xmpp:ping'/>" + "<error type='cancel'>"+ "<service-unavailable xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>"+ "</error>"+ "</iq>";
+  IQ serviceUnavailable=PacketParserUtils.parseStanza(reply);
+  threadedCon.addIQReply(serviceUnavailable);
+  PingManager pinger=PingManager.getInstanceFor(threadedCon);
+  boolean pingSuccess=pinger.ping(DUMMY_AT_EXAMPLE_ORG);
+  assertFalse(pingSuccess);
+}

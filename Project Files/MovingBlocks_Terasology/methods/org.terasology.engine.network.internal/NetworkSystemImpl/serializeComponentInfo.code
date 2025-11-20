@@ -1,0 +1,14 @@
+private void serializeComponentInfo(NetData.ServerInfoMessage.Builder serverInfoMessageBuilder){
+  Map<Class<? extends Component>,Integer> componentIdTable=entitySerializer.getIdMapping();
+  for (  Map.Entry<Class<? extends Component>,Integer> componentIdMapping : componentIdTable.entrySet()) {
+    ByteString.Output fieldIds=ByteString.newOutput();
+    ComponentMetadata<?> metadata=componentLibrary.getMetadata(componentIdMapping.getKey());
+    NetData.SerializationInfo.Builder info=NetData.SerializationInfo.newBuilder().setId(componentIdMapping.getValue()).setName(metadata.getId().toString());
+    for (    FieldMetadata<?,?> field : metadata.getFields()) {
+      fieldIds.write(field.getId());
+      info.addFieldName(field.getName());
+    }
+    info.setFieldIds(fieldIds.toByteString());
+    serverInfoMessageBuilder.addComponent(info);
+  }
+}

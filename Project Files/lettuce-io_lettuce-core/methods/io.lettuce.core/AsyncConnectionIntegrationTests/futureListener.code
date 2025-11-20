@@ -1,0 +1,19 @@
+@Test void futureListener(){
+  final List<Object> run=new ArrayList<>();
+  Runnable listener=() -> run.add(new Object());
+  List<RedisFuture<?>> futures=new ArrayList<>();
+  for (int i=0; i < 1000; i++) {
+    futures.add(async.lpush(key,"" + i));
+  }
+  TestFutures.awaitOrTimeout(futures);
+  RedisAsyncCommands<String,String> connection=client.connect().async();
+  Long len=TestFutures.getOrTimeout(connection.llen(key));
+  assertThat(len.intValue()).isEqualTo(1000);
+  RedisFuture<List<String>> sort=connection.sort(key);
+  assertThat(sort.isCancelled()).isFalse();
+  sort.thenRun(listener);
+  TestFutures.awaitOrTimeout(sort);
+  Delay.delay(Duration.ofMillis(100));
+  assertThat(run).hasSize(1);
+  connection.getStatefulConnection().close();
+}

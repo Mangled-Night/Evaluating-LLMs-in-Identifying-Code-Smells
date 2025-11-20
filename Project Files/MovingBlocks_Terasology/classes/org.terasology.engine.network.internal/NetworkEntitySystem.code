@@ -1,0 +1,27 @@
+/** 
+ * This system handles a number of events relevant to the Network System: <ul> <li>Notifies the network system when network entities are created, destroyed or updated</li> <li>Notifies the network system when a client requests a change of view range</li> </ul>
+ */
+public class NetworkEntitySystem extends BaseComponentSystem {
+  @In private EntityManager entityManager;
+  @In private WorldRenderer worldRenderer;
+  private NetworkSystemImpl networkSystem;
+  public NetworkEntitySystem(  NetworkSystemImpl networkSystem){
+    this.networkSystem=networkSystem;
+  }
+  @Override public void initialise(){
+    for (    EntityRef entity : entityManager.getEntitiesWith(NetworkComponent.class)) {
+      networkSystem.registerNetworkEntity(entity);
+    }
+  }
+  @NetFilterEvent(netFilter=RegisterMode.AUTHORITY) @Priority(EventPriority.PRIORITY_CRITICAL) @ReceiveEvent(components=NetworkComponent.class) public void onAddNetworkComponent(  OnActivatedComponent event,  EntityRef entity){
+    if (networkSystem.getMode().isServer()) {
+      networkSystem.registerNetworkEntity(entity);
+    }
+  }
+  @ReceiveEvent(components=EntityInfoComponent.class) public void onOwnershipChanged(  OnChangedComponent event,  EntityRef entity){
+    networkSystem.updateOwnership(entity);
+  }
+  @ReceiveEvent(components=NetworkComponent.class) public void onDeactivateNetworkComponent(  BeforeDeactivateComponent event,  EntityRef entity){
+    networkSystem.unregisterNetworkEntity(entity);
+  }
+}

@@ -1,0 +1,20 @@
+@Test public void testLimitToSqlServerPage() throws SQLNonTransientException {
+  String sql="select * from offer order by id desc limit 5,10";
+  SchemaConfig schema=schemaMap.get("sqlserverdb");
+  RouteResultset rrs=routeStrategy.route(new SystemConfig(),schema,-1,sql,null,null,cachePool);
+  Assert.assertEquals(2,rrs.getNodes().length);
+  Assert.assertEquals(5,rrs.getLimitStart());
+  Assert.assertEquals(10,rrs.getLimitSize());
+  Assert.assertEquals(0,rrs.getNodes()[0].getLimitStart());
+  Assert.assertEquals(15,rrs.getNodes()[0].getLimitSize());
+  Assert.assertEquals("sqlserver_1",rrs.getNodes()[0].getName());
+  Assert.assertEquals("sqlserver_2",rrs.getNodes()[1].getName());
+  sql="select * from offer1 order by id desc limit 5,10";
+  rrs=routeStrategy.route(new SystemConfig(),schema,-1,sql,null,null,cachePool);
+  Assert.assertEquals(1,rrs.getNodes().length);
+  Assert.assertEquals(5,rrs.getLimitStart());
+  Assert.assertEquals(10,rrs.getLimitSize());
+  Assert.assertEquals(5,rrs.getNodes()[0].getLimitStart());
+  Assert.assertEquals(10,rrs.getNodes()[0].getLimitSize());
+  Assert.assertEquals("sqlserver_1",rrs.getNodes()[0].getName());
+}

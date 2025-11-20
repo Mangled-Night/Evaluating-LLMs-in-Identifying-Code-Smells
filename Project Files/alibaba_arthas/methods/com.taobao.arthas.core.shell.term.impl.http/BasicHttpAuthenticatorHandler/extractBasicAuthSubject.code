@@ -1,0 +1,28 @@
+/** 
+ * Extracts the username and password details from the HTTP basic header Authorization. <p/> This requires that the <tt>Authorization</tt> HTTP header is provided, and its using Basic. Currently Digest is <b>not</b> supported.
+ * @return {@link HttpPrincipal} with username and password details, or<tt>null</tt> if not possible to extract
+ */
+protected static BasicPrincipal extractBasicAuthSubject(HttpRequest request){
+  String auth=request.headers().get(HttpHeaderNames.AUTHORIZATION);
+  if (auth != null) {
+    String constraint=StringUtils.before(auth," ");
+    if (constraint != null) {
+      if ("Basic".equalsIgnoreCase(constraint.trim())) {
+        String decoded=StringUtils.after(auth," ");
+        if (decoded == null) {
+          logger.error("Extracted Basic Auth principal failed, bad auth String: {}",auth);
+          return null;
+        }
+        ByteBuf buf=Unpooled.wrappedBuffer(decoded.getBytes());
+        ByteBuf out=Base64.decode(buf);
+        String userAndPw=out.toString(Charset.defaultCharset());
+        String username=StringUtils.before(userAndPw,":");
+        String password=StringUtils.after(userAndPw,":");
+        BasicPrincipal principal=new BasicPrincipal(username,password);
+        logger.debug("Extracted Basic Auth principal from HTTP header: {}",principal);
+        return principal;
+      }
+    }
+  }
+  return null;
+}

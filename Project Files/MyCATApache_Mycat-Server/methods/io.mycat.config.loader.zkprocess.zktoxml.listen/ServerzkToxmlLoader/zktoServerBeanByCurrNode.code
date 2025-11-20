@@ -1,0 +1,26 @@
+/** 
+ * 加载当前节点的特殊配制信息 方法描述
+ * @param zkDirectory
+ * @return
+ * @创建日期 2016年9月17日
+ */
+private Server zktoServerBeanByCurrNode(DiretoryInf zkDirectory){
+  Server server=null;
+  DiretoryInf directory=this.getZkDirectory(zkDirectory,ZookeeperPath.FLOW_ZK_PATH_SERVER_CLUSTER.getKey());
+  if (null != directory) {
+    String myid=ZkConfig.getInstance().getValue(ZkParamCfg.ZK_CFG_MYID);
+    DataInf currDataCfg=this.getZkData(directory,myid);
+    if (null != currDataCfg) {
+      server=new Server();
+      System systemValue=parseJsonSystem.parseJsonToBean(currDataCfg.getDataValue());
+      server.setSystem(systemValue);
+      if (currDataCfg instanceof ZkDataImpl) {
+        ZkDataImpl zkData=(ZkDataImpl)currDataCfg;
+        String defaultWatchPath=ZookeeperPath.FLOW_ZK_PATH_SERVER_CLUSTER.getKey();
+        defaultWatchPath=defaultWatchPath + ZookeeperPath.ZK_SEPARATOR.getKey() + zkData.getName();
+        this.zookeeperListen.watchPath(currZkPath,defaultWatchPath);
+      }
+    }
+  }
+  return server;
+}

@@ -1,0 +1,21 @@
+@Override public void importData(TableMigrateInfo table,DataNode dn,String tableName,File file) throws IOException, InterruptedException {
+  String ip=dn.getIp();
+  int port=dn.getPort();
+  String user=dn.getUserName();
+  String pwd=dn.getPwd();
+  String db=dn.getDb();
+  String loadData="?mysql -h? -P? -u? -p? -D?  -f --default-character-set=? -e \"source ?\"";
+  loadData=DataMigratorUtil.paramsAssignment(loadData,"?",mysqlBin,ip,port,user,pwd,db,charset,file.getAbsolutePath());
+  LOGGER.info(table.getSchemaAndTableName() + " " + loadData);
+  Process process=DataMigratorUtil.exeCmdByOs(loadData);
+  InputStreamReader in=new InputStreamReader(process.getErrorStream(),isWindows() ? "GBK" : Charset.defaultCharset().name());
+  BufferedReader br=new BufferedReader(in);
+  String errMessage=null;
+  while ((errMessage=br.readLine()) != null) {
+    if (errMessage.trim().toLowerCase().contains("err")) {
+      System.out.println(errMessage + " -> " + loadData);
+      throw new DataMigratorException(errMessage + " -> " + loadData);
+    }
+  }
+  process.waitFor();
+}

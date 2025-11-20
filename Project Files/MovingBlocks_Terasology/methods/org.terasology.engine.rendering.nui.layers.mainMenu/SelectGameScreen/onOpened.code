@@ -1,0 +1,21 @@
+@Override public void onOpened(){
+  super.onOpened();
+  if (isValidScreen()) {
+    if (GameProvider.isSavesFolderEmpty()) {
+      final NewGameScreen newGameScreen=getManager().createScreen(NewGameScreen.ASSET_URI,NewGameScreen.class);
+      newGameScreen.setUniverseWrapper(universeWrapper);
+      triggerForwardAnimation(newGameScreen);
+    }
+    if (isLoadingAsServer() && super.playerConfig.playerName.getDefaultValue().equals(super.playerConfig.playerName.get())) {
+      getManager().pushScreen(EnterUsernamePopup.ASSET_URI,EnterUsernamePopup.class);
+    }
+    refreshGameInfoList(GameProvider.getSavedGames());
+  }
+ else {
+    final MessagePopup popup=getManager().createScreen(MessagePopup.ASSET_URI,MessagePopup.class);
+    popup.setMessage(translationSystem.translate("${engine:menu#game-details-errors-message-title}"),translationSystem.translate("${engine:menu#game-details-errors-message-body}"));
+    popup.subscribeButton(e -> triggerBackAnimation());
+    getManager().pushScreen(popup);
+    setEnabled(false);
+  }
+}

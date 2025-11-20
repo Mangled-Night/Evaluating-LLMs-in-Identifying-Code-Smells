@@ -1,0 +1,22 @@
+@Override public void update(){
+  if (mode != NetworkMode.NONE) {
+    if (entityManager != null) {
+      processPendingConnections();
+      processPendingDisconnects();
+      long currentTimer=time.getRealTimeInMs();
+      boolean netTick=false;
+      if (currentTimer > nextNetworkTick) {
+        nextNetworkTick+=NET_TICK_RATE;
+        netTick=true;
+      }
+      PerformanceMonitor.startActivity("Client update");
+      for (      Client client : clientList) {
+        client.update(netTick);
+      }
+      PerformanceMonitor.endActivity();
+      if (server != null) {
+        server.update(netTick);
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+@Override public void run(){
+  int preSize=mListeners.size();
+  mListeners.add(listener);
+  if (preSize == 0 && mListeners.size() == 1) {
+    IntentFilter intentFilter=new IntentFilter();
+    intentFilter.addAction(Intent.ACTION_BATTERY_CHANGED);
+    Utils.getApp().registerReceiver(BatteryChangedReceiver.getInstance(),intentFilter);
+  }
+}
+@Override public void run(){
+  int preSize=mListeners.size();
+  mListeners.remove(listener);
+  if (preSize == 1 && mListeners.size() == 0) {
+    Utils.getApp().unregisterReceiver(BatteryChangedReceiver.getInstance());
+  }
+}
+@Override public void run(){
+  int level=intent.getIntExtra(BatteryManager.EXTRA_LEVEL,-1);
+  int status=intent.getIntExtra(BatteryManager.EXTRA_STATUS,BatteryStatus.UNKNOWN);
+  for (  OnBatteryStatusChangedListener listener : mListeners) {
+    listener.onBatteryStatusChanged(new Status(level,status));
+  }
+}

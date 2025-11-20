@@ -1,0 +1,52 @@
+public void testCompleteMulti(){
+  try {
+    XMPPTCPConnection x0=getConnection(0);
+    XMPPTCPConnection x1=getConnection(1);
+    ICETransportManager icetm0=new ICETransportManager(x0,"jivesoftware.com",3478);
+    ICETransportManager icetm1=new ICETransportManager(x1,"jivesoftware.com",3478);
+    MultiMediaManager jingleMediaManager0=new MultiMediaManager(icetm0);
+    jingleMediaManager0.addMediaManager(new JmfMediaManager(icetm0));
+    jingleMediaManager0.addMediaManager(new SpeexMediaManager(icetm0));
+    jingleMediaManager0.setPreferredPayloadType(jingleMediaManager0.getPayloads().get(1));
+    List<JingleMediaManager> jml0=new ArrayList<JingleMediaManager>();
+    jml0.add(jingleMediaManager0);
+    MultiMediaManager jingleMediaManager1=new MultiMediaManager(icetm1);
+    jingleMediaManager1.addMediaManager(new JmfMediaManager(icetm1));
+    jingleMediaManager1.addMediaManager(new SpeexMediaManager(icetm1));
+    jingleMediaManager1.setPreferredPayloadType(jingleMediaManager1.getPayloads().get(2));
+    List<JingleMediaManager> jml1=new ArrayList<JingleMediaManager>();
+    jml1.add(jingleMediaManager1);
+    final JingleManager jm0=new JingleManager(x0,jml0);
+    final JingleManager jm1=new JingleManager(x1,jml1);
+    jm0.addCreationListener(icetm0);
+    jm1.addCreationListener(icetm1);
+    jm1.addJingleSessionRequestListener(new JingleSessionRequestListener(){
+      public void sessionRequested(      final JingleSessionRequest request){
+        try {
+          JingleSession session=request.accept();
+          try {
+            Thread.sleep(12000);
+          }
+ catch (          InterruptedException e) {
+            LOGGER.log(Level.WARNING,"exception",e);
+          }
+          session.startIncoming();
+        }
+ catch (        XMPPException e) {
+          LOGGER.log(Level.WARNING,"exception",e);
+        }
+      }
+    }
+);
+    for (int i=0; i < 10; i++) {
+      JingleSession js0=jm0.createOutgoingJingleSession(x1.getUser());
+      js0.startOutgoing();
+      Thread.sleep(45000);
+      js0.terminate();
+      Thread.sleep(1500);
+    }
+  }
+ catch (  Exception e) {
+    LOGGER.log(Level.WARNING,"exception",e);
+  }
+}

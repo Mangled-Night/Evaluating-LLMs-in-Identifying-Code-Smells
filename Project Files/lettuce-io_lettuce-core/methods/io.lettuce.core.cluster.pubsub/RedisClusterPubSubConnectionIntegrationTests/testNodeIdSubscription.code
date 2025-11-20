@@ -1,0 +1,9 @@
+@Test void testNodeIdSubscription() throws Exception {
+  RedisClusterNode partition=pubSubConnection.getPartitions().getPartition(0);
+  StatefulRedisPubSubConnection<String,String> node=pubSubConnection.getConnection(partition.getNodeId());
+  node.addListener(nodeListener);
+  node.sync().subscribe("channel");
+  pubSubConnection2.sync().publish("channel","message");
+  assertThat(nodeListener.getMessages().take()).isEqualTo("message");
+  assertThat(connectionListener.getMessages().poll()).isNull();
+}

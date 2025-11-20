@@ -1,0 +1,20 @@
+@Override public Flux<PatternMessage<K,V>> observePatterns(){
+  return observePatterns(FluxSink.OverflowStrategy.BUFFER);
+}
+@Override public Flux<PatternMessage<K,V>> observePatterns(FluxSink.OverflowStrategy overflowStrategy){
+  return Flux.create(sink -> {
+    RedisPubSubAdapter<K,V> listener=new RedisPubSubAdapter<K,V>(){
+      @Override public void message(      K pattern,      K channel,      V message){
+        sink.next(new PatternMessage<>(pattern,channel,message));
+      }
+    }
+;
+    StatefulRedisPubSubConnection<K,V> statefulConnection=getStatefulConnection();
+    statefulConnection.addListener(listener);
+    sink.onDispose(() -> {
+      statefulConnection.removeListener(listener);
+    }
+);
+  }
+,overflowStrategy);
+}

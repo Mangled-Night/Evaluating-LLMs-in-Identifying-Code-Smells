@@ -1,18 +1,19 @@
-Evaluating Large Language Models (LLMs) in Identifying Code Smells
+# Evaluating Large Language Models (LLMs) in Identifying Code Smells
 
 Ethan Diemer  
-Student
-Florida Polytechnic University  
-Lakeland, US
-
+Student 
 [ediemer0636@floridapoly.edu](mailto:ediemer0636@floridapoly.edu)
+
+_Florida Polytechnic University_  
+Lakeland, US
 
 Daniel Dewar  
 Student
-Florida Polytechnic University  
-Lakeland, US 
-
 [ddewar3190@floridapoly.edu](mailto:ddewar3190@floridapoly.edu)
+
+_Florida Polytechnic University_  
+Lakeland, US
+
 
 **_Abstract_-Code smells are indicators of weakness in code that can lead to an increase in bugs and errors. Uncaught code smells can indicate the need to refactor the code to improve or further develop it. With the increased popularity and use of Large Language Models (LLMs) to write, correct, and test code, there is the question of whether LLMs can accurately identify code smells in software systems. We tested several popular LLMs against a database consisting of several types of code smells and assessed their precision, recall, and F1-score. We then compared their performance to a static analysis tool (SAT).**
 
